@@ -1,0 +1,32 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Círculo verde exterior grueso y sólido -->
+  <circle cx="60" cy="60" r="55" fill="#2E7D32"/>
+  
+  <!-- Fondo blanco dentro del círculo -->
+  <circle cx="60" cy="60" r="42" fill="#FFFFFF"/>
+  
+  <!-- Letra "m" en verde (mismo verde que el círculo exterior) -->
+  <text 
+    x="62" 
+    y="80" 
+    font-family="Arial, sans-serif" 
+    font-size="56" 
+    font-weight="bold" 
+    fill="#2E7D32" 
+    text-anchor="middle"
+    style="letter-spacing: -4px; font-style: normal;"
+  >m</text>
+  
+  <!-- Letra "t" en amarillo/naranja dorado brillante (superpuesta sobre la m) -->
+  <text 
+    x="38" 
+    y="80" 
+    font-family="Arial, sans-serif" 
+    font-size="56" 
+    font-weight="bold" 
+    fill="#FFA726" 
+    text-anchor="middle"
+    style="letter-spacing: -4px; font-style: normal;"
+  >t</text>
+</svg>
+
