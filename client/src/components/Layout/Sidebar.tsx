@@ -3,13 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Drawer,
   List,
-  ListItem,
   ListItemButton,
   ListItemIcon,
-  ListItemText,
-  Toolbar,
-  Divider,
   Tooltip,
+  Box,
 } from '@mui/material';
 import {
   Dashboard,
@@ -21,13 +18,14 @@ import {
   Settings,
   Timeline,
   Support,
+  PieChart,
+  Add,
 } from '@mui/icons-material';
-import { useSidebar } from '../../context/SidebarContext';
+import { taxiMonterricoColors } from '../../theme/colors';
 
-const drawerWidth = 240;
-const collapsedWidth = 64;
+const drawerWidth = 80;
 
-const menuItems = [
+const mainMenuItems = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/' },
   { text: 'Contactos', icon: <People />, path: '/contacts' },
   { text: 'Empresas', icon: <Business />, path: '/companies' },
@@ -36,83 +34,259 @@ const menuItems = [
   { text: 'Tickets', icon: <Support />, path: '/tickets' },
   { text: 'Campañas', icon: <Campaign />, path: '/campaigns' },
   { text: 'Automatizaciones', icon: <Timeline />, path: '/automations' },
-  { text: 'Configuración', icon: <Settings />, path: '/settings' },
 ];
+
+const settingsMenuItem = { text: 'Configuración', icon: <Settings />, path: '/settings' };
 
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { open } = useSidebar();
 
   return (
     <Drawer
       variant="permanent"
       sx={{
-        width: open ? drawerWidth : collapsedWidth,
+        width: drawerWidth,
         flexShrink: 0,
-        transition: 'width 0.3s ease',
         '& .MuiDrawer-paper': {
-          width: open ? drawerWidth : collapsedWidth,
+          width: drawerWidth,
           boxSizing: 'border-box',
-          transition: 'width 0.3s ease',
           overflowX: 'hidden',
+          bgcolor: '#f8f9fa',
+          borderRight: '1px solid #e9ecef',
+          boxShadow: 'none',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          py: 2,
         },
       }}
     >
-      <Toolbar />
-      <Divider />
-      <List>
-        {menuItems.map((item) => {
+      {/* Logo/Icono superior */}
+      <Box sx={{ 
+        mb: 3, 
+        display: 'flex', 
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: 48,
+        height: 48,
+        borderRadius: 2,
+        bgcolor: 'white',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+      }}>
+        <PieChart sx={{ 
+          fontSize: 24, 
+          color: taxiMonterricoColors.green,
+        }} />
+      </Box>
+
+      {/* Lista de items del menú */}
+      <List sx={{ 
+        width: '100%', 
+        px: 1.5, 
+        py: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 0.5,
+      }}>
+        {mainMenuItems.map((item) => {
           const isSelected = location.pathname === item.path;
           return (
-            <ListItem key={item.text} disablePadding>
-              <Tooltip title={!open ? item.text : ''} placement="right">
-                <ListItemButton
-                  selected={isSelected}
-                  onClick={() => navigate(item.path)}
-                  sx={{
-                    minHeight: 48,
-                    justifyContent: open ? 'initial' : 'center',
-                    px: 2.5,
-                    '&.Mui-selected': {
-                      backgroundColor: '#e3f2fd',
-                      borderLeft: '3px solid #1976d2',
-                      '&:hover': {
-                        backgroundColor: '#e3f2fd',
-                      },
-                    },
+            <Tooltip 
+              key={item.text}
+              title={item.text} 
+              placement="right"
+              arrow
+              componentsProps={{
+                tooltip: {
+                  sx: {
+                    bgcolor: '#424242',
+                    fontSize: '0.75rem',
+                    fontWeight: 500,
+                    px: 1.5,
+                    py: 0.75,
+                    borderRadius: 1,
+                    ml: 1,
+                  },
+                },
+                arrow: {
+                  sx: {
+                    color: '#424242',
+                  },
+                },
+              }}
+            >
+              <ListItemButton
+                selected={isSelected}
+                onClick={() => navigate(item.path)}
+                sx={{
+                  minHeight: 48,
+                  width: 48,
+                  height: 48,
+                  borderRadius: 2,
+                  justifyContent: 'center',
+                  p: 0,
+                  mb: 0.5,
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&.Mui-selected': {
+                    backgroundColor: taxiMonterricoColors.green,
+                    color: 'white',
                     '&:hover': {
-                      backgroundColor: '#f5f5f5',
+                      backgroundColor: taxiMonterricoColors.greenDark,
+                    },
+                  },
+                  '&:hover': {
+                    backgroundColor: isSelected ? taxiMonterricoColors.greenDark : '#e9ecef',
+                  },
+                  '&:not(.Mui-selected)': {
+                    color: '#6c757d',
+                  },
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    minWidth: 0,
+                    justifyContent: 'center',
+                    color: 'inherit',
+                    '& svg': {
+                      fontSize: 22,
                     },
                   }}
                 >
-                  <ListItemIcon
-                    sx={{
-                      minWidth: 0,
-                      mr: open ? 3 : 'auto',
-                      justifyContent: 'center',
-                      color: isSelected ? '#1976d2' : 'inherit',
-                    }}
-                  >
-                    {item.icon}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={item.text}
-                    sx={{
-                      opacity: open ? 1 : 0,
-                      transition: 'opacity 0.2s',
-                      '& .MuiListItemText-primary': {
-                        fontSize: '0.875rem',
-                        fontWeight: isSelected ? 600 : 400,
-                      },
-                    }}
-                  />
-                </ListItemButton>
-              </Tooltip>
-            </ListItem>
+                  {item.icon}
+                </ListItemIcon>
+              </ListItemButton>
+            </Tooltip>
           );
         })}
       </List>
+      
+      {/* Separador y Configuración al final */}
+      <Box sx={{ flex: 1 }} />
+      <Box sx={{ width: '100%', px: 1.5 }}>
+        <Tooltip 
+          title={settingsMenuItem.text} 
+          placement="right"
+          arrow
+          componentsProps={{
+            tooltip: {
+              sx: {
+                bgcolor: '#424242',
+                fontSize: '0.75rem',
+                fontWeight: 500,
+                px: 1.5,
+                py: 0.75,
+                borderRadius: 1,
+                ml: 1,
+              },
+            },
+            arrow: {
+              sx: {
+                color: '#424242',
+              },
+            },
+          }}
+        >
+          <ListItemButton
+            selected={location.pathname === settingsMenuItem.path}
+            onClick={() => navigate(settingsMenuItem.path)}
+            sx={{
+              minHeight: 48,
+              width: 48,
+              height: 48,
+              borderRadius: 2,
+              justifyContent: 'center',
+              p: 0,
+              mb: 0.5,
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&.Mui-selected': {
+                backgroundColor: taxiMonterricoColors.green,
+                color: 'white',
+                '&:hover': {
+                  backgroundColor: taxiMonterricoColors.greenDark,
+                },
+              },
+              '&:hover': {
+                backgroundColor: location.pathname === settingsMenuItem.path ? taxiMonterricoColors.greenDark : '#e9ecef',
+              },
+              '&:not(.Mui-selected)': {
+                color: '#6c757d',
+              },
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                minWidth: 0,
+                justifyContent: 'center',
+                color: 'inherit',
+                '& svg': {
+                  fontSize: 22,
+                },
+              }}
+            >
+              {settingsMenuItem.icon}
+            </ListItemIcon>
+          </ListItemButton>
+        </Tooltip>
+      </Box>
+
+      {/* Botón de agregar al final */}
+      <Box sx={{ width: '100%', px: 1.5, mt: 1 }}>
+        <Tooltip 
+          title="Crear nuevo" 
+          placement="right"
+          arrow
+          componentsProps={{
+            tooltip: {
+              sx: {
+                bgcolor: '#424242',
+                fontSize: '0.75rem',
+                fontWeight: 500,
+                px: 1.5,
+                py: 0.75,
+                borderRadius: 1,
+                ml: 1,
+              },
+            },
+            arrow: {
+              sx: {
+                color: '#424242',
+              },
+            },
+          }}
+        >
+          <ListItemButton
+            onClick={() => navigate('/contacts')}
+            sx={{
+              minHeight: 48,
+              width: 48,
+              height: 48,
+              borderRadius: 2,
+              justifyContent: 'center',
+              p: 0,
+              backgroundColor: '#e9ecef',
+              color: '#6c757d',
+              '&:hover': {
+                backgroundColor: '#dee2e6',
+                color: taxiMonterricoColors.green,
+              },
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                minWidth: 0,
+                justifyContent: 'center',
+                color: 'inherit',
+                '& svg': {
+                  fontSize: 22,
+                },
+              }}
+            >
+              <Add />
+            </ListItemIcon>
+          </ListItemButton>
+        </Tooltip>
+      </Box>
     </Drawer>
   );
 };

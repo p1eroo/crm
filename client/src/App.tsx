@@ -18,17 +18,29 @@ import Campaigns from './pages/Campaigns';
 import Automations from './pages/Automations';
 import Profile from './pages/Profile';
 
+import { taxiMonterricoColors } from './theme/colors';
+
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#2E7D32', // Verde vibrante Taxi Monterrico
-      light: '#4CAF50',
-      dark: '#1B5E20',
+      main: taxiMonterricoColors.green, // Verde vibrante Taxi Monterrico
+      light: taxiMonterricoColors.greenLight,
+      dark: taxiMonterricoColors.greenDark,
     },
     secondary: {
-      main: '#FF9800', // Amarillo/Naranja dorado Taxi Monterrico
-      light: '#FFA726',
-      dark: '#F57C00',
+      main: taxiMonterricoColors.orangeDark, // Naranja/Amarillo dorado Taxi Monterrico
+      light: taxiMonterricoColors.orange,
+      dark: taxiMonterricoColors.orangeDark,
+    },
+    success: {
+      main: taxiMonterricoColors.green,
+      light: taxiMonterricoColors.greenLight,
+      dark: taxiMonterricoColors.greenDark,
+    },
+    warning: {
+      main: taxiMonterricoColors.orange,
+      light: taxiMonterricoColors.orangeLight,
+      dark: taxiMonterricoColors.orangeDark,
     },
   },
 });

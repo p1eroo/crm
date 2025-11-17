@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  Paper,
   Typography,
   Box,
   Card,
@@ -8,24 +7,25 @@ import {
   CircularProgress,
   LinearProgress,
   Chip,
-  Avatar,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  Divider,
+  Button,
+  Select,
+  MenuItem,
+  FormControl,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from '@mui/material';
 import {
   AttachMoney,
   TrendingUp,
   Assignment,
-  Business,
-  CheckCircle,
-  Pending,
-  Cancel,
-  AccountBalance,
-  Refresh,
-  Build,
+  Download,
+  FilterList,
+  CalendarToday,
 } from '@mui/icons-material';
 import { 
   BarChart, 
@@ -36,12 +36,15 @@ import {
   Tooltip, 
   Legend, 
   ResponsiveContainer, 
-  AreaChart,
-  Area,
   LineChart,
   Line,
+  PieChart,
+  Pie,
+  Cell,
 } from 'recharts';
 import api from '../config/api';
+import { useAuth } from '../context/AuthContext';
+import { taxiMonterricoColors } from '../theme/colors';
 
 interface DashboardStats {
   contacts: {
@@ -93,6 +96,7 @@ interface DashboardStats {
 }
 
 const Dashboard: React.FC = () => {
+  const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -103,16 +107,9 @@ const Dashboard: React.FC = () => {
   const fetchStats = async () => {
     try {
       const response = await api.get('/dashboard/stats');
-      console.log('Dashboard stats response:', response.data);
       setStats(response.data);
     } catch (error: any) {
       console.error('Error fetching stats:', error);
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
-      // Establecer datos por defecto para evitar que se muestre el error
       setStats({
         contacts: { total: 0, byStage: [] },
         companies: { total: 0, byStage: [] },
@@ -148,9 +145,6 @@ const Dashboard: React.FC = () => {
         <Typography variant="h6" color="error">
           Error al cargar estadísticas
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-          Por favor, recarga la página o verifica la conexión con el servidor.
-        </Typography>
       </Box>
     );
   }
@@ -164,381 +158,469 @@ const Dashboard: React.FC = () => {
     monthly: [],
   };
 
-  const leads = stats.leads || { total: 0, converted: 0 };
+  // Datos para gráficos
+  const salesData = payments.monthly.length > 0 ? payments.monthly : [
+    { month: 'Ene', amount: 10000 },
+    { month: 'Feb', amount: 15000 },
+    { month: 'Mar', amount: 20000 },
+    { month: 'Abr', amount: 18000 },
+    { month: 'May', amount: 25000 },
+    { month: 'Jun', amount: 30000 },
+    { month: 'Jul', amount: 28000 },
+    { month: 'Ago', amount: 35000 },
+    { month: 'Sep', amount: 40000 },
+    { month: 'Oct', amount: 38000 },
+    { month: 'Nov', amount: 45000 },
+    { month: 'Dic', amount: 50000 },
+  ];
 
-  // Calcular porcentajes para las barras de progreso
-  const pendingPaymentPercent = payments.total > 0 
-    ? (payments.pending.count / payments.total) * 100 
-    : 0;
-  const convertedLeadsPercent = leads.total > 0 
-    ? (leads.converted / (leads.total + leads.converted)) * 100 
-    : 0;
-  const projectsPercent = stats.deals.total > 0 
-    ? (stats.deals.wonThisMonth / stats.deals.total) * 100 
-    : 0;
-  const conversionRate = stats.deals.total > 0 
-    ? ((stats.deals.wonThisMonth / stats.deals.total) * 100).toFixed(2)
-    : '0.00';
+  const weeklySalesData = [
+    { day: 'Mon', amount: 8000 },
+    { day: 'Tue', amount: 12000 },
+    { day: 'Wed', amount: 15000 },
+    { day: 'Thu', amount: 10000 },
+    { day: 'Fri', amount: 18000 },
+    { day: 'Sat', amount: 14000 },
+  ];
 
-  const totalSales = payments.revenue || stats.deals.totalValue || 0;
-  const salesGrowth = 12; // Porcentaje de crecimiento (podría calcularse)
+  const pieData = [
+    { name: 'Facebook', value: 35, color: '#FF6B9D' },
+    { name: 'Youtube', value: 25, color: '#4ECDC4' },
+    { name: 'Instagram', value: 25, color: '#FFA726' },
+    { name: 'Website', value: 15, color: taxiMonterricoColors.green },
+  ];
+
+  // Datos de ejemplo para la tabla
+  const customerData = [
+    { id: 1, customer: 'Juan Pérez', date: '2024-01-15', amount: 1500, status: 'Shipped' },
+    { id: 2, customer: 'María García', date: '2024-01-16', amount: 2300, status: 'Delivered' },
+    { id: 3, customer: 'Carlos López', date: '2024-01-17', amount: 1800, status: 'Paid' },
+    { id: 4, customer: 'Ana Martínez', date: '2024-01-18', amount: 3200, status: 'Shipped' },
+  ];
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Delivered': return taxiMonterricoColors.green;
+      case 'Shipped': return '#1976d2';
+      case 'Paid': return '#1976d2';
+      default: return '#757575';
+    }
+  };
 
   return (
-    <Box sx={{ p: 3, bgcolor: '#f5f5f5', minHeight: '100vh' }}>
-      {/* Breadcrumbs */}
-      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Typography variant="body2" color="text.secondary">
-          Dashboard &gt; Home &gt; Dashboard
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <Typography variant="body2" color="text.secondary">
-            OCT 16, 25 - NOV 14, 25
-          </Typography>
-          <Chip label="FILTER" size="small" clickable />
-        </Box>
+    <Box sx={{ 
+      bgcolor: '#f5f7fa', 
+      minHeight: '100vh',
+      pb: { xs: 3, sm: 6, md: 8 },
+      px: { xs: 3, sm: 6, md: 8 },
+      pt: { xs: 4, sm: 6, md: 6 },
+    }}>
+      {/* Saludo personalizado */}
+      <Typography
+        sx={{
+          fontSize: '2rem',
+          fontWeight: 600,
+          color: '#1a1a1a',
+          mb: 4,
+        }}
+      >
+        Hello, {user?.firstName || 'Usuario'}
+      </Typography>
+
+      {/* Tarjetas principales con gradientes */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 3, mb: 4 }}>
+        {/* Weekly Balance */}
+        <Card
+          sx={{
+            borderRadius: 3,
+            background: 'linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%)',
+            color: 'white',
+            position: 'relative',
+            overflow: 'hidden',
+            minHeight: 200,
+          }}
+        >
+          <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
+            <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
+              Weekly Balance
+            </Typography>
+            <Typography variant="h3" sx={{ fontWeight: 700, mb: 2 }}>
+              ${(payments.revenue / 1000).toFixed(0)}k
+            </Typography>
+            <Button
+              variant="text"
+              sx={{
+                color: 'white',
+                textTransform: 'none',
+                textDecoration: 'underline',
+                p: 0,
+                minWidth: 'auto',
+                '&:hover': {
+                  textDecoration: 'underline',
+                  bgcolor: 'transparent',
+                },
+              }}
+            >
+              View entire list
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Orders In Line */}
+        <Card
+          sx={{
+            borderRadius: 3,
+            background: 'linear-gradient(135deg, #FFA726 0%, #FB8C00 100%)',
+            color: 'white',
+            position: 'relative',
+            overflow: 'hidden',
+            minHeight: 200,
+          }}
+        >
+          <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
+            <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
+              Orders In Line
+            </Typography>
+            <Typography variant="h3" sx={{ fontWeight: 700, mb: 2 }}>
+              {stats.deals.total || 750}
+            </Typography>
+            <Button
+              variant="text"
+              sx={{
+                color: 'white',
+                textTransform: 'none',
+                textDecoration: 'underline',
+                p: 0,
+                minWidth: 'auto',
+                '&:hover': {
+                  textDecoration: 'underline',
+                  bgcolor: 'transparent',
+                },
+              }}
+            >
+              View entire list
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* New Clients */}
+        <Card
+          sx={{
+            borderRadius: 3,
+            background: 'linear-gradient(135deg, #FF6B9D 0%, #C44569 100%)',
+            color: 'white',
+            position: 'relative',
+            overflow: 'hidden',
+            minHeight: 200,
+          }}
+        >
+          <CardContent sx={{ p: 3, position: 'relative', zIndex: 1 }}>
+            <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
+              New Clients
+            </Typography>
+            <Typography variant="h3" sx={{ fontWeight: 700, mb: 2 }}>
+              {stats.contacts.total || 150}
+            </Typography>
+            <Button
+              variant="text"
+              sx={{
+                color: 'white',
+                textTransform: 'none',
+                textDecoration: 'underline',
+                p: 0,
+                minWidth: 'auto',
+                '&:hover': {
+                  textDecoration: 'underline',
+                  bgcolor: 'transparent',
+                },
+              }}
+            >
+              View entire list
+            </Button>
+          </CardContent>
+        </Card>
       </Box>
 
-      {/* KPI Cards */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mb: 3 }}>
-        {/* Facturas Pendientes */}
-        <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)', md: '1 1 calc(25% - 18px)' }, minWidth: { xs: '100%', sm: '200px' } }}>
-          <Card sx={{ borderRadius: 2, boxShadow: 2 }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                <Box>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Facturas Pendientes
-                  </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                    {payments.pending.count}/{payments.total || 0}
-                  </Typography>
-                </Box>
-                <Avatar sx={{ bgcolor: '#1976d2', width: 48, height: 48 }}>
-                  <AttachMoney />
-                </Avatar>
-              </Box>
-              <Box sx={{ mb: 1 }}>
-                <Typography variant="body2" color="text.secondary">
-                  ${payments.pending.amount.toLocaleString()} ({pendingPaymentPercent.toFixed(0)}%)
-                </Typography>
-              </Box>
-              <LinearProgress 
-                variant="determinate" 
-                value={pendingPaymentPercent} 
-                sx={{ height: 8, borderRadius: 1 }}
-              />
-            </CardContent>
-          </Card>
-        </Box>
-
-        {/* Leads Convertidos */}
-        <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)', md: '1 1 calc(25% - 18px)' }, minWidth: { xs: '100%', sm: '200px' } }}>
-          <Card sx={{ borderRadius: 2, boxShadow: 2 }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                <Box>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Leads Convertidos
-                  </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                    {leads.converted}/{leads.total + leads.converted}
-                  </Typography>
-                </Box>
-                <Avatar sx={{ bgcolor: '#2e7d32', width: 48, height: 48 }}>
-                  <Refresh />
-                </Avatar>
-              </Box>
-              <Box sx={{ mb: 1 }}>
-                <Typography variant="body2" color="text.secondary">
-                  {leads.converted} Completados ({convertedLeadsPercent.toFixed(0)}%)
-                </Typography>
-              </Box>
-              <LinearProgress 
-                variant="determinate" 
-                value={convertedLeadsPercent} 
-                color="success"
-                sx={{ height: 8, borderRadius: 1 }}
-              />
-            </CardContent>
-          </Card>
-        </Box>
-
-        {/* Proyectos en Progreso */}
-        <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)', md: '1 1 calc(25% - 18px)' }, minWidth: { xs: '100%', sm: '200px' } }}>
-          <Card sx={{ borderRadius: 2, boxShadow: 2 }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                <Box>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Proyectos en Progreso
-                  </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                    {stats.deals.wonThisMonth}/{stats.deals.total}
-                  </Typography>
-                </Box>
-                <Avatar sx={{ bgcolor: '#ed6c02', width: 48, height: 48 }}>
-                  <Build />
-                </Avatar>
-              </Box>
-              <Box sx={{ mb: 1 }}>
-                <Typography variant="body2" color="text.secondary">
-                  {stats.deals.wonThisMonth} Completados ({projectsPercent.toFixed(0)}%)
-                </Typography>
-              </Box>
-              <LinearProgress 
-                variant="determinate" 
-                value={projectsPercent} 
-                color="warning"
-                sx={{ height: 8, borderRadius: 1 }}
-              />
-            </CardContent>
-          </Card>
-        </Box>
-
-        {/* Tasa de Conversión */}
-        <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 12px)', md: '1 1 calc(25% - 18px)' }, minWidth: { xs: '100%', sm: '200px' } }}>
-          <Card sx={{ borderRadius: 2, boxShadow: 2 }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                <Box>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Tasa de Conversión
-                  </Typography>
-                  <Typography variant="h5" sx={{ fontWeight: 600 }}>
-                    {conversionRate}%
-                  </Typography>
-                </Box>
-                <Avatar sx={{ bgcolor: '#9c27b0', width: 48, height: 48 }}>
-                  <TrendingUp />
-                </Avatar>
-              </Box>
-              <Box sx={{ mb: 1 }}>
-                <Typography variant="body2" color="text.secondary">
-                  ${stats.deals.wonValueThisMonth.toLocaleString()} ({conversionRate}%)
-                </Typography>
-              </Box>
-              <LinearProgress 
-                variant="determinate" 
-                value={parseFloat(conversionRate)} 
-                color="secondary"
-                sx={{ height: 8, borderRadius: 1 }}
-              />
-            </CardContent>
-          </Card>
-        </Box>
-      </Box>
-
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-        {/* Gráfico de Payment Record */}
-        <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 calc(66.666% - 12px)' }, minWidth: { xs: '100%', md: '300px' } }}>
-          <Card sx={{ borderRadius: 2, boxShadow: 2 }}>
-            <CardContent>
-              <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-                Registro de Pagos
+      {/* Gráfico de Sales y Calendario */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, gap: 3, mb: 4 }}>
+        {/* Sales Chart */}
+        <Card sx={{ borderRadius: 3, bgcolor: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+          <CardContent sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Sales
               </Typography>
-              <ResponsiveContainer width="100%" height={350}>
-                <BarChart data={payments.monthly.length > 0 ? payments.monthly : [
-                  { month: 'Ene', amount: 0 },
-                  { month: 'Feb', amount: 0 },
-                  { month: 'Mar', amount: 0 },
-                ]}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                  <XAxis 
-                    dataKey="month" 
-                    tick={{ fill: '#666' }}
-                    style={{ fontSize: '12px' }}
-                  />
-                  <YAxis 
-                    tick={{ fill: '#666' }}
-                    style={{ fontSize: '12px' }}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#fff', 
-                      border: '1px solid #e0e0e0',
-                      borderRadius: '8px'
-                    }}
-                  />
-                  <Bar dataKey="amount" fill="#1976d2" radius={[8, 8, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </Box>
-
-        {/* Total Sales Card */}
-        <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 calc(33.333% - 12px)' }, minWidth: { xs: '100%', md: '300px' } }}>
-          <Card sx={{ borderRadius: 2, boxShadow: 2, bgcolor: '#1976d2', color: 'white' }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                <Box>
-                  <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
-                    Total de Ventas
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 600 }}>
-                    ${totalSales.toLocaleString()}
-                  </Typography>
-                </Box>
-                <Chip 
-                  label={`+${salesGrowth}%`} 
-                  size="small" 
-                  sx={{ bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }}
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <FormControl size="small" sx={{ minWidth: 100 }}>
+                  <Select defaultValue="2024" sx={{ fontSize: '0.875rem' }}>
+                    <MenuItem value="2024">2024</MenuItem>
+                    <MenuItem value="2023">2023</MenuItem>
+                  </Select>
+                </FormControl>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<Download />}
+                  sx={{ textTransform: 'none' }}
+                >
+                  Download
+                </Button>
+              </Box>
+            </Box>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={salesData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis dataKey="month" tick={{ fill: '#666', fontSize: 12 }} />
+                <YAxis tick={{ fill: '#666', fontSize: 12 }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#fff',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '8px',
+                  }}
                 />
-              </Box>
-              <Box sx={{ height: 200, mt: 3 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={payments.monthly.length > 0 ? payments.monthly : [
-                    { month: 'Ene', amount: 0 },
-                    { month: 'Feb', amount: 0 },
-                  ]}>
-                    <Area 
-                      type="monotone" 
-                      dataKey="amount" 
-                      stroke="#fff" 
-                      fill="rgba(255,255,255,0.3)" 
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </Box>
-              <Divider sx={{ my: 2, bgcolor: 'rgba(255,255,255,0.2)' }} />
-              <List dense>
-                <ListItem sx={{ px: 0 }}>
-                  <ListItemText 
-                    primary="Proyectos Activos" 
-                    secondary={`${stats.deals.total} proyectos`}
-                    primaryTypographyProps={{ style: { color: 'white', fontSize: '14px' } }}
-                    secondaryTypographyProps={{ style: { color: 'rgba(255,255,255,0.7)', fontSize: '12px' } }}
-                  />
-                </ListItem>
-              </List>
-            </CardContent>
-          </Card>
-        </Box>
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="amount"
+                  stroke="#9C27B0"
+                  strokeWidth={2}
+                  name="Sales"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-        {/* Summary Statistics */}
-        <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 calc(66.666% - 12px)' }, minWidth: { xs: '100%', md: '300px' } }}>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-            <Box sx={{ flex: { xs: '1 1 calc(50% - 8px)', md: '1 1 calc(25% - 12px)' }, minWidth: { xs: '100%', md: '150px' } }}>
-              <Card sx={{ borderRadius: 2, boxShadow: 2 }}>
-                <CardContent>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Pendientes
-                  </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                    ${payments.pending.amount.toLocaleString()}
-                  </Typography>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={pendingPaymentPercent} 
-                    sx={{ height: 6, borderRadius: 1 }}
-                  />
-                </CardContent>
-              </Card>
-            </Box>
-            <Box sx={{ flex: { xs: '1 1 calc(50% - 8px)', md: '1 1 calc(25% - 12px)' }, minWidth: { xs: '100%', md: '150px' } }}>
-              <Card sx={{ borderRadius: 2, boxShadow: 2 }}>
-                <CardContent>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Completados
-                  </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                    ${payments.completed.amount.toLocaleString()}
-                  </Typography>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={payments.total > 0 ? (payments.completed.count / payments.total) * 100 : 0} 
-                    color="success"
-                    sx={{ height: 6, borderRadius: 1 }}
-                  />
-                </CardContent>
-              </Card>
-            </Box>
-            <Box sx={{ flex: { xs: '1 1 calc(50% - 8px)', md: '1 1 calc(25% - 12px)' }, minWidth: { xs: '100%', md: '150px' } }}>
-              <Card sx={{ borderRadius: 2, boxShadow: 2 }}>
-                <CardContent>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Rechazados
-                  </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                    ${payments.failed.amount.toLocaleString()}
-                  </Typography>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={payments.total > 0 ? (payments.failed.count / payments.total) * 100 : 0} 
-                    color="error"
-                    sx={{ height: 6, borderRadius: 1 }}
-                  />
-                </CardContent>
-              </Card>
-            </Box>
-            <Box sx={{ flex: { xs: '1 1 calc(50% - 8px)', md: '1 1 calc(25% - 12px)' }, minWidth: { xs: '100%', md: '150px' } }}>
-              <Card sx={{ borderRadius: 2, boxShadow: 2 }}>
-                <CardContent>
-                  <Typography variant="body2" color="text.secondary" gutterBottom>
-                    Ingresos
-                  </Typography>
-                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
-                    ${payments.revenue.toLocaleString()}
-                  </Typography>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={100} 
-                    sx={{ height: 6, borderRadius: 1, bgcolor: '#424242' }}
-                  />
-                </CardContent>
-              </Card>
-            </Box>
-          </Box>
-
-          {/* Tasks Cards */}
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 1 }}>
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)' }, minWidth: { xs: '100%', sm: '200px' } }}>
-              <Card sx={{ borderRadius: 2, boxShadow: 2 }}>
-                <CardContent>
-                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                    Tareas Completadas
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 600, color: '#2e7d32' }}>
-                    {stats.tasks.completed || 0}/{stats.tasks.total}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Box>
-            <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 calc(50% - 8px)' }, minWidth: { xs: '100%', sm: '200px' } }}>
-              <Card sx={{ borderRadius: 2, boxShadow: 2 }}>
-                <CardContent>
-                  <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                    Nuevas Tareas
-                  </Typography>
-                  <Typography variant="h4" sx={{ fontWeight: 600, color: '#1976d2' }}>
-                    {stats.tasks.new || 0}/{stats.tasks.total}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Box>
-          </Box>
-        </Box>
-
-        {/* Project Done Card */}
-        <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 calc(33.333% - 12px)' }, minWidth: { xs: '100%', md: '300px' } }}>
-          <Card sx={{ borderRadius: 2, boxShadow: 2 }}>
-            <CardContent>
-              <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-                Proyectos Completados
+        {/* Calendar */}
+        <Card sx={{ borderRadius: 3, bgcolor: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+          <CardContent sx={{ p: 3 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Calendar
               </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 600, mb: 2 }}>
-                {stats.deals.wonThisMonth}/{stats.deals.total}
-              </Typography>
-              <LinearProgress 
-                variant="determinate" 
-                value={projectsPercent} 
-                color="success"
-                sx={{ height: 10, borderRadius: 1 }}
-              />
-            </CardContent>
-          </Card>
-        </Box>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <FormControl size="small" sx={{ minWidth: 120 }}>
+                  <Select defaultValue="feb2024" sx={{ fontSize: '0.875rem' }}>
+                    <MenuItem value="feb2024">Feb 2024</MenuItem>
+                    <MenuItem value="mar2024">Mar 2024</MenuItem>
+                  </Select>
+                </FormControl>
+                <Button size="small" variant="outlined" sx={{ textTransform: 'none' }}>
+                  View
+                </Button>
+              </Box>
+            </Box>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
+              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, idx) => (
+                <Typography
+                  key={idx}
+                  sx={{
+                    textAlign: 'center',
+                    fontSize: '0.75rem',
+                    color: '#666',
+                    fontWeight: 600,
+                    mb: 1,
+                  }}
+                >
+                  {day}
+                </Typography>
+              ))}
+              {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
+                <Box
+                  key={day}
+                  sx={{
+                    aspectRatio: '1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 1,
+                    bgcolor: day >= 3 && day <= 7 ? '#FFA726' : 'transparent',
+                    color: day >= 3 && day <= 7 ? 'white' : '#1a1a1a',
+                    fontWeight: day >= 3 && day <= 7 ? 600 : 400,
+                    fontSize: '0.875rem',
+                  }}
+                >
+                  {day}
+                </Box>
+              ))}
+            </Box>
+          </CardContent>
+        </Card>
       </Box>
+
+      {/* Pie Chart y Weekly Sales */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 3, mb: 4 }}>
+        {/* Pie Chart Card */}
+        <Card sx={{ borderRadius: 3, bgcolor: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+              Sales Distribution
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 4 }}>
+              <ResponsiveContainer width="50%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={80}
+                    dataKey="value"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 2 }}>
+                {pieData.map((item, idx) => (
+                  <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box
+                      sx={{
+                        width: 12,
+                        height: 12,
+                        borderRadius: '50%',
+                        bgcolor: item.color,
+                      }}
+                    />
+                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                      {item.name}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+            </Box>
+            <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid #e0e0e0' }}>
+              <Typography variant="body2" sx={{ color: '#666', mb: 2 }}>
+                Distributions of sales across platform
+              </Typography>
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
+                <Box>
+                  <Typography variant="caption" sx={{ color: '#666' }}>
+                    Total Intake
+                  </Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    {payments.revenue > 0 ? (payments.revenue / 1000).toFixed(0) : 1500}k
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" sx={{ color: '#666' }}>
+                    New Customers
+                  </Typography>
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    {stats.contacts.total || 7}k
+                    <Chip
+                      label="+1k"
+                      size="small"
+                      sx={{
+                        ml: 1,
+                        bgcolor: `${taxiMonterricoColors.green}15`,
+                        color: taxiMonterricoColors.green,
+                        fontSize: '0.625rem',
+                        height: 20,
+                      }}
+                    />
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+          </CardContent>
+        </Card>
+
+        {/* Weekly Sales Chart */}
+        <Card sx={{ borderRadius: 3, bgcolor: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+          <CardContent sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
+              Weekly Sales
+            </Typography>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={weeklySalesData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                <XAxis dataKey="day" tick={{ fill: '#666', fontSize: 12 }} />
+                <YAxis tick={{ fill: '#666', fontSize: 12 }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#fff',
+                    border: '1px solid #e0e0e0',
+                    borderRadius: '8px',
+                  }}
+                />
+                <Bar dataKey="amount" radius={[8, 8, 0, 0]}>
+                  {weeklySalesData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={pieData[index % pieData.length].color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </Box>
+
+      {/* Customer Details Table */}
+      <Card sx={{ borderRadius: 3, bgcolor: 'white', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }}>
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Customer Details
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<FilterList />}
+                sx={{ textTransform: 'none' }}
+              >
+                Filter
+              </Button>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<Download />}
+                sx={{ textTransform: 'none' }}
+              >
+                Download
+              </Button>
+            </Box>
+          </Box>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 600 }}>Id</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Customer</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Invoiced Amount</TableCell>
+                  <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {customerData.map((row) => (
+                  <TableRow key={row.id}>
+                    <TableCell>{row.id}</TableCell>
+                    <TableCell>{row.customer}</TableCell>
+                    <TableCell>{row.date}</TableCell>
+                    <TableCell>${row.amount.toLocaleString()}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={row.status}
+                        size="small"
+                        sx={{
+                          bgcolor: `${getStatusColor(row.status)}15`,
+                          color: getStatusColor(row.status),
+                          fontWeight: 500,
+                        }}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </CardContent>
+      </Card>
     </Box>
   );
 };
