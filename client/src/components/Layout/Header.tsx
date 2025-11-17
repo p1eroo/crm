@@ -8,6 +8,7 @@ import {
   Divider,
   InputBase,
   IconButton,
+  Badge,
 } from '@mui/material';
 import { 
   Search, 
@@ -15,30 +16,18 @@ import {
   Logout, 
   Settings,
   KeyboardArrowDown,
+  Edit,
+  Notifications,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { taxiMonterricoColors } from '../../theme/colors';
-
-// Mapeo de rutas a títulos
-const routeTitles: Record<string, string> = {
-  '/': 'Dashboard',
-  '/contacts': 'Contactos',
-  '/companies': 'Empresas',
-  '/deals': 'Negocios',
-  '/tasks': 'Tareas',
-  '/tickets': 'Tickets',
-  '/campaigns': 'Campañas',
-  '/automations': 'Automatizaciones',
-  '/settings': 'Configuración',
-  '/profile': 'Perfil',
-};
 
 const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null);
   const [searchValue, setSearchValue] = useState('');
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -59,12 +48,22 @@ const Header: React.FC = () => {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
   };
 
-  // Obtener el título basado en la ruta actual
-  const getPageTitle = () => {
-    const path = location.pathname;
-    // Si es una ruta con ID, obtener el título base
-    const basePath = path.split('/').slice(0, 2).join('/');
-    return routeTitles[path] || routeTitles[basePath] || 'Dashboard';
+  const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setProfileMenuAnchor(event.currentTarget);
+  };
+
+  const handleProfileMenuClose = () => {
+    setProfileMenuAnchor(null);
+  };
+
+  const handleProfileClick = () => {
+    navigate('/profile');
+    handleProfileMenuClose();
+  };
+
+  const handleSettingsClick = () => {
+    navigate('/settings');
+    handleProfileMenuClose();
   };
 
   return (
@@ -122,83 +121,63 @@ const Header: React.FC = () => {
         />
       </Box>
 
-      {/* Título centrado */}
-      <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-        <Typography
-          sx={{
-            fontSize: '1.5rem',
-            fontWeight: 400,
-            fontStyle: 'italic',
-            color: '#1a1a1a',
-            letterSpacing: '0.02em',
-            fontFamily: '"Georgia", "Times New Roman", serif',
-          }}
-        >
-          {getPageTitle()}
-        </Typography>
-      </Box>
+      {/* Título centrado - Oculto */}
+      <Box sx={{ flex: 1 }} />
 
-      {/* Información del usuario */}
-      <Box 
-        sx={{ 
-          flex: '0 1 auto',
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 1.5,
-          cursor: 'pointer',
-        }}
-        onClick={handleMenu}
-      >
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-          <Typography
-            sx={{
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              color: '#1a1a1a',
-              lineHeight: 1.2,
-            }}
-          >
-            {user?.firstName} {user?.lastName}
-          </Typography>
-          <Typography
-            sx={{
-              fontSize: '0.75rem',
-              color: '#6c757d',
-              lineHeight: 1.2,
-            }}
-          >
-            {user?.email}
-          </Typography>
-        </Box>
-
-        <Avatar
-          sx={{
-            width: 40,
+      {/* Elementos del lado derecho */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        {/* Notificaciones */}
+        <IconButton 
+          size="medium"
+          sx={{ 
+            bgcolor: '#F3F4F6', 
+            borderRadius: 1.5, 
+            width: 40, 
             height: 40,
-            bgcolor: user?.avatar ? 'transparent' : taxiMonterricoColors.green,
-            fontSize: '0.875rem',
-            fontWeight: 600,
-            border: '2px solid #e9ecef',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            '&:hover': {
+              bgcolor: '#E5E7EB',
+            },
           }}
-          src={user?.avatar}
         >
-          {!user?.avatar && getInitials(user?.firstName, user?.lastName)}
-        </Avatar>
+          <Badge badgeContent={3} color="error">
+            <Notifications sx={{ fontSize: 20, color: '#1F2937' }} />
+          </Badge>
+        </IconButton>
 
-        <KeyboardArrowDown
-          sx={{
-            fontSize: 20,
-            color: '#6c757d',
-            transition: 'transform 0.2s ease',
-            transform: anchorEl ? 'rotate(180deg)' : 'rotate(0deg)',
+        {/* Profile Text */}
+        <Typography 
+          variant="body1" 
+          sx={{ 
+            fontWeight: 600, 
+            color: '#1F2937', 
+            fontSize: '0.9375rem',
+            cursor: 'pointer',
           }}
-        />
+        >
+          Profile
+        </Typography>
+
+        {/* Edit Button */}
+        <IconButton 
+          size="medium"
+          onClick={handleProfileMenuOpen}
+          sx={{ 
+            bgcolor: '#F3F4F6', 
+            borderRadius: 1.5, 
+            width: 40, 
+            height: 40,
+            '&:hover': {
+              bgcolor: '#E5E7EB',
+            },
+          }}
+        >
+          <Edit sx={{ fontSize: 20, color: '#1F2937' }} />
+        </IconButton>
 
         <Menu
-          anchorEl={anchorEl}
-          open={Boolean(anchorEl)}
-          onClose={handleClose}
+          anchorEl={profileMenuAnchor}
+          open={Boolean(profileMenuAnchor)}
+          onClose={handleProfileMenuClose}
           anchorOrigin={{
             vertical: 'bottom',
             horizontal: 'right',
@@ -209,7 +188,7 @@ const Header: React.FC = () => {
           }}
           PaperProps={{
             sx: {
-              mt: 1.5,
+              mt: 1,
               minWidth: 200,
               borderRadius: 2,
               boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
@@ -225,47 +204,15 @@ const Header: React.FC = () => {
             },
           }}
         >
-          <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid #e0e0e0' }}>
-            <Typography
-              sx={{
-                fontWeight: 600,
-                color: '#1a1a1a',
-                fontSize: '0.875rem',
-              }}
-            >
-              {user?.firstName} {user?.lastName}
-            </Typography>
-            <Typography
-              sx={{
-                color: '#757575',
-                fontSize: '0.75rem',
-              }}
-            >
-              {user?.email}
-            </Typography>
-          </Box>
-
-          <MenuItem
-            onClick={() => {
-              navigate('/profile');
-              handleClose();
-            }}
-          >
+          <MenuItem onClick={handleProfileClick}>
             <AccountCircle sx={{ mr: 1.5, fontSize: 20, color: '#757575' }} />
             Perfil
           </MenuItem>
-          <MenuItem
-            onClick={() => {
-              navigate('/settings');
-              handleClose();
-            }}
-          >
+          <MenuItem onClick={handleSettingsClick}>
             <Settings sx={{ mr: 1.5, fontSize: 20, color: '#757575' }} />
             Configuración
           </MenuItem>
-
           <Divider sx={{ my: 0.5 }} />
-
           <MenuItem
             onClick={handleLogout}
             sx={{

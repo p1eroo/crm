@@ -18,7 +18,7 @@ interface CompanyAttributes {
   numberOfEmployees?: number;
   annualRevenue?: number;
   description?: string;
-  ownerId: number;
+  ownerId?: number | null;
   lifecycleStage: 'subscriber' | 'lead' | 'marketing qualified lead' | 'sales qualified lead' | 'opportunity' | 'customer' | 'evangelist';
   tags?: string[];
   notes?: string;
@@ -26,7 +26,7 @@ interface CompanyAttributes {
   updatedAt?: Date;
 }
 
-interface CompanyCreationAttributes extends Optional<CompanyAttributes, 'id' | 'domain' | 'industry' | 'type' | 'phone' | 'address' | 'city' | 'state' | 'country' | 'postalCode' | 'website' | 'numberOfEmployees' | 'annualRevenue' | 'description' | 'tags' | 'notes' | 'createdAt' | 'updatedAt'> {}
+interface CompanyCreationAttributes extends Optional<CompanyAttributes, 'id' | 'domain' | 'industry' | 'type' | 'phone' | 'address' | 'city' | 'state' | 'country' | 'postalCode' | 'website' | 'numberOfEmployees' | 'annualRevenue' | 'description' | 'ownerId' | 'tags' | 'notes' | 'createdAt' | 'updatedAt'> {}
 
 export class Company extends Model<CompanyAttributes, CompanyCreationAttributes> implements CompanyAttributes {
   public id!: number;
@@ -44,7 +44,7 @@ export class Company extends Model<CompanyAttributes, CompanyCreationAttributes>
   public numberOfEmployees?: number;
   public annualRevenue?: number;
   public description?: string;
-  public ownerId!: number;
+  public ownerId?: number | null;
   public lifecycleStage!: string;
   public tags?: string[];
   public notes?: string;
@@ -119,7 +119,7 @@ Company.init(
     },
     ownerId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: 'users',
         key: 'id',
@@ -145,7 +145,7 @@ Company.init(
   }
 );
 
-Company.belongsTo(User, { foreignKey: 'ownerId', as: 'Owner' });
+Company.belongsTo(User, { foreignKey: 'ownerId', as: 'Owner', required: false });
 
 // Relación muchos-a-muchos con contactos se inicializa en models/index.ts después de que todos los modelos estén cargados
 

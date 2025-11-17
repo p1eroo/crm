@@ -2,6 +2,8 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
+import { Op } from 'sequelize';
+import axios from 'axios';
 import { User } from '../models/User';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 
@@ -11,6 +13,7 @@ const router = express.Router();
 router.post(
   '/register',
   [
+    body('usuario').notEmpty().trim(),
     body('email').isEmail().normalizeEmail(),
     body('password').isLength({ min: 6 }),
     body('firstName').notEmpty().trim(),
@@ -23,15 +26,23 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { email, password, firstName, lastName, role } = req.body;
+      const { usuario, email, password, firstName, lastName, role } = req.body;
 
-      const existingUser = await User.findOne({ where: { email } });
+      const existingUser = await User.findOne({ 
+        where: { 
+          [Op.or]: [
+            { usuario },
+            { email }
+          ]
+        } 
+      });
       if (existingUser) {
-        return res.status(400).json({ error: 'El usuario ya existe' });
+        return res.status(400).json({ error: 'El usuario o email ya existe' });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
       const user = await User.create({
+        usuario,
         email,
         password: hashedPassword,
         firstName,
@@ -40,7 +51,7 @@ router.post(
       });
 
       const token = jwt.sign(
-        { userId: user.id, email: user.email, role: user.role },
+        { userId: user.id, usuario: user.usuario, email: user.email, role: user.role },
         process.env.JWT_SECRET || 'secret',
         { expiresIn: '7d' }
       );
@@ -49,6 +60,7 @@ router.post(
         token,
         user: {
           id: user.id,
+          usuario: user.usuario,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
@@ -61,11 +73,11 @@ router.post(
   }
 );
 
-// Login
+// Login con API de Monterrico
 router.post(
-  '/login',
+  '/login-monterrico',
   [
-    body('email').isEmail().normalizeEmail(),
+    body('usuario').notEmpty().trim(),
     body('password').notEmpty(),
   ],
   async (req, res) => {
@@ -75,9 +87,81 @@ router.post(
         return res.status(400).json({ errors: errors.array() });
       }
 
-      const { email, password } = req.body;
+      const { usuario, password } = req.body;
 
-      const user = await User.findOne({ where: { email } });
+      // Llamar a la API de Monterrico
+      let monterricoData;
+      try {
+        const monterricoResponse = await axios.post('https://rest.monterrico.app/api/Licencias/Login', {
+          idacceso: usuario,
+          contraseña: password,
+          idempresas: 0,
+          ipregistro: "0.0.0.0"
+        });
+        monterricoData = monterricoResponse.data;
+      } catch (error: any) {
+        return res.status(401).json({ error: 'Credenciales inválidas en Monterrico' });
+      }
+
+      // Buscar o crear usuario local
+      let user = await User.findOne({ where: { usuario } });
+      
+      if (!user) {
+        // Crear usuario local basado en datos de Monterrico
+        const hashedPassword = await bcrypt.hash(password, 10);
+        user = await User.create({
+          usuario,
+          email: monterricoData.email || `${usuario}@monterrico.app`,
+          password: hashedPassword,
+          firstName: monterricoData.nombre || monterricoData.firstName || usuario,
+          lastName: monterricoData.apellido || monterricoData.lastName || '',
+          role: monterricoData.rol || monterricoData.role || 'user',
+          isActive: true,
+        });
+      }
+
+      // Generar JWT válido para el backend local
+      const token = jwt.sign(
+        { userId: user.id, usuario: user.usuario, email: user.email, role: user.role },
+        process.env.JWT_SECRET || 'secret',
+        { expiresIn: '7d' }
+      );
+
+      res.json({
+        token,
+        user: {
+          id: user.id,
+          usuario: user.usuario,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role,
+          avatar: user.avatar,
+        },
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// Login local (mantener para compatibilidad)
+router.post(
+  '/login',
+  [
+    body('usuario').notEmpty().trim(),
+    body('password').notEmpty(),
+  ],
+  async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+
+      const { usuario, password } = req.body;
+
+      const user = await User.findOne({ where: { usuario } });
       if (!user || !user.isActive) {
         return res.status(401).json({ error: 'Credenciales inválidas' });
       }
@@ -88,7 +172,7 @@ router.post(
       }
 
       const token = jwt.sign(
-        { userId: user.id, email: user.email, role: user.role },
+        { userId: user.id, usuario: user.usuario, email: user.email, role: user.role },
         process.env.JWT_SECRET || 'secret',
         { expiresIn: '7d' }
       );
@@ -97,6 +181,7 @@ router.post(
         token,
         user: {
           id: user.id,
+          usuario: user.usuario,
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,

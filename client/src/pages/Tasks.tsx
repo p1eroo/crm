@@ -9,7 +9,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   IconButton,
   TextField,
   Dialog,
@@ -19,9 +18,17 @@ import {
   MenuItem,
   Chip,
   CircularProgress,
+  Card,
+  CardContent,
+  Divider,
+  Avatar,
+  FormControl,
+  Select,
+  Tooltip,
 } from '@mui/material';
-import { Add, Edit, Delete } from '@mui/icons-material';
+import { Add, Edit, Delete, Search, Assignment, CheckCircle, TrendingUp, Computer, Visibility } from '@mui/icons-material';
 import api from '../config/api';
+import { taxiMonterricoColors } from '../theme/colors';
 
 interface Task {
   id: number;
@@ -41,6 +48,8 @@ const Tasks: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -50,9 +59,29 @@ const Tasks: React.FC = () => {
     dueDate: '',
   });
 
+  // Calcular estadísticas
+  const totalTasks = tasks.length;
+  const completedTasks = tasks.filter(t => t.status === 'completed').length;
+  const inProgressTasks = tasks.filter(t => t.status === 'in progress').length;
+
+  // Función para obtener iniciales
+  const getInitials = (title: string) => {
+    if (!title) return '--';
+    const words = title.trim().split(' ');
+    if (words.length >= 2) {
+      return `${words[0][0]}${words[1][0]}`.toUpperCase();
+    }
+    return title.substring(0, 2).toUpperCase();
+  };
+
+  // Función para vista previa
+  const handlePreview = (task: Task) => {
+    console.log('Preview task:', task);
+  };
+
   useEffect(() => {
     fetchTasks();
-  }, []);
+  }, [search]);
 
   const fetchTasks = async () => {
     try {
@@ -205,56 +234,438 @@ const Tasks: React.FC = () => {
   }
 
   return (
-    <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">Tareas</Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={() => handleOpen()}>
-          Nueva Tarea
-        </Button>
-      </Box>
+    <Box sx={{ 
+      bgcolor: '#f5f7fa', 
+      minHeight: '100vh',
+      pb: { xs: 3, sm: 6, md: 8 },
+      px: { xs: 3, sm: 6, md: 8 },
+      pt: { xs: 4, sm: 6, md: 6 },
+    }}>
+      {/* Cards de resumen */}
+      <Card sx={{ 
+        borderRadius: 6,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        bgcolor: 'white',
+        mb: 4,
+      }}>
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'stretch', flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
+            {/* Total Tasks */}
+            <Box sx={{ 
+              flex: { xs: '1 1 100%', sm: 1 },
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              px: 1,
+              py: 1,
+              borderRadius: 1.5,
+              bgcolor: 'transparent',
+            }}>
+              <Box sx={{ 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 120,
+                height: 120,
+                borderRadius: '50%',
+                bgcolor: `${taxiMonterricoColors.green}15`,
+                flexShrink: 0,
+              }}>
+                <Assignment sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
+                <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                  Total Tasks
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                  {totalTasks.toLocaleString()}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <TrendingUp sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+                  <Typography variant="caption" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '1rem' }}>
+                    5% this month
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Título</TableCell>
-              <TableCell>Tipo</TableCell>
-              <TableCell>Estado</TableCell>
-              <TableCell>Prioridad</TableCell>
-              <TableCell>Fecha Límite</TableCell>
-              <TableCell>Asignado a</TableCell>
-              <TableCell>Acciones</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {tasks.map((task) => (
-              <TableRow key={task.id}>
-                <TableCell>{task.title || task.subject}</TableCell>
-                <TableCell>{task.type}</TableCell>
-                <TableCell>
-                  <Chip label={task.status} color={getStatusColor(task.status)} size="small" />
+            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
+
+            {/* Completed Tasks */}
+            <Box sx={{ 
+              flex: { xs: '1 1 100%', sm: 1 },
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              px: 1,
+              py: 1,
+              borderRadius: 1.5,
+              bgcolor: 'transparent',
+            }}>
+              <Box sx={{ 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 120,
+                height: 120,
+                borderRadius: '50%',
+                bgcolor: `${taxiMonterricoColors.green}15`,
+                flexShrink: 0,
+              }}>
+                <CheckCircle sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
+                <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                  Completed Tasks
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                  {completedTasks.toLocaleString()}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <TrendingUp sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+                  <Typography variant="caption" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '1rem' }}>
+                    2% this month
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+
+            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
+
+            {/* In Progress */}
+            <Box sx={{ 
+              flex: { xs: '1 1 100%', sm: 1 },
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              px: 1,
+              py: 1,
+              borderRadius: 1.5,
+              bgcolor: 'transparent',
+            }}>
+              <Box sx={{ 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 120,
+                height: 120,
+                borderRadius: '50%',
+                bgcolor: `${taxiMonterricoColors.green}15`,
+                flexShrink: 0,
+              }}>
+                <Computer sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
+                <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                  In Progress
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                  {inProgressTasks.toLocaleString()}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: -0.75 }}>
+                  {Array.from({ length: Math.min(5, totalTasks) }).map((_, idx) => {
+                    const task = tasks[idx];
+                    return (
+                      <Avatar
+                        key={idx}
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          border: '2px solid white',
+                          ml: idx > 0 ? -0.75 : 0,
+                          bgcolor: taxiMonterricoColors.green,
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          zIndex: 5 - idx,
+                        }}
+                      >
+                        {task ? getInitials(task.title || task.subject || '') : String.fromCharCode(65 + idx)}
+                      </Avatar>
+                    );
+                  })}
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Sección de tabla */}
+      <Card sx={{ 
+        borderRadius: 6,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        overflow: 'hidden',
+        bgcolor: 'white',
+      }}>
+        <Box sx={{ px: 3, pt: 3, pb: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+            <Box>
+              <Typography variant="h5" sx={{ fontWeight: 600, color: '#1a1a1a', mb: 0.5 }}>
+                All Tasks
+              </Typography>
+              <Typography
+                component="a"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                }}
+                sx={{
+                  fontSize: '0.875rem',
+                  color: '#1976d2',
+                  textDecoration: 'none',
+                  cursor: 'pointer',
+                  '&:hover': {
+                    textDecoration: 'underline',
+                  },
+                }}
+              >
+                Completed Tasks
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <TextField
+                size="small"
+                placeholder="Search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                InputProps={{
+                  startAdornment: <Search sx={{ mr: 1, color: '#9e9e9e', fontSize: 20 }} />,
+                }}
+                sx={{ 
+                  minWidth: 200,
+                  bgcolor: 'white',
+                  borderRadius: 1.5,
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderColor: '#e0e0e0',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#bdbdbd',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#1976d2',
+                    },
+                  },
+                }}
+              />
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <Select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  displayEmpty
+                  sx={{
+                    borderRadius: 1.5,
+                    bgcolor: 'white',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#e0e0e0',
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#bdbdbd',
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#1976d2',
+                    },
+                  }}
+                >
+                  <MenuItem value="newest">Sort by: Newest</MenuItem>
+                  <MenuItem value="oldest">Sort by: Oldest</MenuItem>
+                  <MenuItem value="name">Sort by: Name A-Z</MenuItem>
+                  <MenuItem value="nameDesc">Sort by: Name Z-A</MenuItem>
+                </Select>
+              </FormControl>
+              <Button 
+                variant="contained" 
+                startIcon={<Add />} 
+                onClick={() => handleOpen()}
+                sx={{
+                  bgcolor: taxiMonterricoColors.green,
+                  '&:hover': {
+                    bgcolor: taxiMonterricoColors.green,
+                    opacity: 0.9,
+                  },
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  borderRadius: 1.5,
+                  px: 2.5,
+                  py: 1,
+                }}
+              >
+                Nueva Tarea
+              </Button>
+            </Box>
+          </Box>
+        </Box>
+
+        <TableContainer sx={{ overflow: 'hidden' }}>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ bgcolor: '#fafafa' }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', py: 2, px: 3 }}>
+                  Task Name
                 </TableCell>
-                <TableCell>
-                  <Chip label={task.priority} color={getPriorityColor(task.priority)} size="small" />
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                  Type
                 </TableCell>
-                <TableCell>{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}</TableCell>
-                <TableCell>
-                  {task.AssignedTo ? `${task.AssignedTo.firstName} ${task.AssignedTo.lastName}` :
-                   task.User ? `${task.User.firstName} ${task.User.lastName}` : '-'}
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                  Status
                 </TableCell>
-                <TableCell>
-                  <IconButton size="small" onClick={() => handleOpen(task)}>
-                    <Edit />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => handleDelete(task.id, task.isActivity)}>
-                    <Delete />
-                  </IconButton>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                  Priority
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                  Due Date
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                  Assigned To
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2, width: 60 }}>
+                  Actions
                 </TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {tasks.map((task) => (
+                <TableRow 
+                  key={task.id}
+                  hover
+                  sx={{ 
+                    '&:hover': { bgcolor: '#fafafa' },
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s',
+                  }}
+                >
+                  <TableCell sx={{ py: 2, px: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Avatar
+                        sx={{
+                          width: 40,
+                          height: 40,
+                          bgcolor: taxiMonterricoColors.green,
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                        }}
+                      >
+                        {getInitials(task.title || task.subject || '')}
+                      </Avatar>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontWeight: 500, 
+                          color: '#1a1a1a',
+                          fontSize: '0.875rem',
+                        }}
+                      >
+                        {task.title || task.subject}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ px: 2 }}>
+                    <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                      {task.type}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ px: 2 }}>
+                    <Chip
+                      label={task.status}
+                      size="small"
+                      sx={{ 
+                        fontWeight: 500,
+                        fontSize: '0.75rem',
+                        height: 24,
+                        bgcolor: task.status === 'completed' 
+                          ? '#E8F5E9' 
+                          : task.status === 'in progress'
+                          ? '#E3F2FD'
+                          : '#FFF3E0',
+                        color: task.status === 'completed'
+                          ? '#2E7D32'
+                          : task.status === 'in progress'
+                          ? '#1976D2'
+                          : '#E65100',
+                        border: 'none',
+                        borderRadius: 1,
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ px: 2 }}>
+                    <Chip
+                      label={task.priority}
+                      size="small"
+                      sx={{ 
+                        fontWeight: 500,
+                        fontSize: '0.75rem',
+                        height: 24,
+                        bgcolor: task.priority === 'urgent' || task.priority === 'high'
+                          ? '#FFEBEE'
+                          : task.priority === 'medium'
+                          ? '#FFF3E0'
+                          : '#E8F5E9',
+                        color: task.priority === 'urgent' || task.priority === 'high'
+                          ? '#C62828'
+                          : task.priority === 'medium'
+                          ? '#E65100'
+                          : '#2E7D32',
+                        border: 'none',
+                        borderRadius: 1,
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ px: 2 }}>
+                    {task.dueDate ? (
+                      <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                        {new Date(task.dueDate).toLocaleDateString()}
+                      </Typography>
+                    ) : (
+                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: '0.875rem' }}>
+                        --
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell sx={{ px: 2 }}>
+                    {task.AssignedTo ? (
+                      <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                        {task.AssignedTo.firstName} {task.AssignedTo.lastName}
+                      </Typography>
+                    ) : task.User ? (
+                      <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                        {task.User.firstName} {task.User.lastName}
+                      </Typography>
+                    ) : (
+                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: '0.875rem' }}>
+                        --
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell sx={{ px: 2 }}>
+                    <Tooltip title="Vista previa">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePreview(task);
+                        }}
+                        sx={{
+                          color: '#757575',
+                          '&:hover': {
+                            color: taxiMonterricoColors.green,
+                            bgcolor: `${taxiMonterricoColors.green}15`,
+                          },
+                        }}
+                      >
+                        <Visibility fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Card>
 
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>

@@ -3,6 +3,7 @@ import api from '../config/api';
 
 interface User {
   id: number;
+  usuario: string;
   email: string;
   firstName: string;
   lastName: string;
@@ -13,7 +14,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   setUser: (user: User | null) => void;
-  login: (email: string, password: string) => Promise<void>;
+  login: (usuario: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   loading: boolean;
@@ -36,10 +37,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(false);
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (usuario: string, password: string) => {
     try {
-      console.log('AuthContext: Intentando login en:', api.defaults.baseURL);
-      const response = await api.post('/auth/login', { email, password });
+      console.log('AuthContext: Intentando login con API de Monterrico');
+      
+      // Llamar al endpoint del backend que maneja la autenticación con Monterrico
+      const response = await api.post('/auth/login-monterrico', {
+        usuario,
+        password,
+      });
+
       const { token, user: userData } = response.data;
       
       localStorage.setItem('token', token);
@@ -48,9 +55,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(userData);
     } catch (error: any) {
       console.error('AuthContext: Error en login:', error);
-      console.error('AuthContext: Response:', error.response?.data);
-      console.error('AuthContext: Request URL:', error.config?.url);
-      console.error('AuthContext: Base URL:', api.defaults.baseURL);
       
       // Propagar el error completo para mejor manejo
       if (error.response) {
@@ -66,6 +70,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('monterricoData');
     delete api.defaults.headers.common['Authorization'];
     setUser(null);
   };

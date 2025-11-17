@@ -20,6 +20,10 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Card,
+  CardContent,
+  Avatar,
+  Tooltip,
 } from '@mui/material';
 import {
   Add,
@@ -34,8 +38,14 @@ import {
   Edit,
   KeyboardArrowDown,
   Close,
+  Support,
+  CheckCircle,
+  TrendingUp,
+  Computer,
+  Visibility,
 } from '@mui/icons-material';
 import api from '../config/api';
+import { taxiMonterricoColors } from '../theme/colors';
 
 interface Ticket {
   id: number;
@@ -73,6 +83,26 @@ const Tickets: React.FC = () => {
   const [actionsMenuAnchor, setActionsMenuAnchor] = useState<null | HTMLElement>(null);
   const [viewMenuAnchor, setViewMenuAnchor] = useState<null | HTMLElement>(null);
 
+  // Calcular estadísticas
+  const totalTickets = tickets.length;
+  const openTickets = tickets.filter(t => t.status === 'open').length;
+  const resolvedTickets = tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length;
+
+  // Función para obtener iniciales
+  const getInitials = (subject: string) => {
+    if (!subject) return '--';
+    const words = subject.trim().split(' ');
+    if (words.length >= 2) {
+      return `${words[0][0]}${words[1][0]}`.toUpperCase();
+    }
+    return subject.substring(0, 2).toUpperCase();
+  };
+
+  // Función para vista previa
+  const handlePreview = (ticket: Ticket) => {
+    console.log('Preview ticket:', ticket);
+  };
+
   useEffect(() => {
     fetchTickets();
   }, []);
@@ -105,7 +135,165 @@ const Tickets: React.FC = () => {
   };
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ 
+      bgcolor: '#f5f7fa', 
+      minHeight: '100vh',
+      pb: { xs: 3, sm: 6, md: 8 },
+      px: { xs: 3, sm: 6, md: 8 },
+      pt: { xs: 4, sm: 6, md: 6 },
+    }}>
+      {/* Cards de resumen */}
+      <Card sx={{ 
+        borderRadius: 6,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        bgcolor: 'white',
+        mb: 4,
+      }}>
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'stretch', flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
+            {/* Total Tickets */}
+            <Box sx={{ 
+              flex: { xs: '1 1 100%', sm: 1 },
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              px: 1,
+              py: 1,
+              borderRadius: 1.5,
+              bgcolor: 'transparent',
+            }}>
+              <Box sx={{ 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 120,
+                height: 120,
+                borderRadius: '50%',
+                bgcolor: `${taxiMonterricoColors.green}15`,
+                flexShrink: 0,
+              }}>
+                <Support sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
+                <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                  Total Tickets
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                  {totalTickets.toLocaleString()}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <TrendingUp sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+                  <Typography variant="caption" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '1rem' }}>
+                    6% this month
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+
+            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
+
+            {/* Open Tickets */}
+            <Box sx={{ 
+              flex: { xs: '1 1 100%', sm: 1 },
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              px: 1,
+              py: 1,
+              borderRadius: 1.5,
+              bgcolor: 'transparent',
+            }}>
+              <Box sx={{ 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 120,
+                height: 120,
+                borderRadius: '50%',
+                bgcolor: `${taxiMonterricoColors.green}15`,
+                flexShrink: 0,
+              }}>
+                <Computer sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
+                <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                  Open Tickets
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                  {openTickets.toLocaleString()}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <TrendingUp sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+                  <Typography variant="caption" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '1rem' }}>
+                    2% this month
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+
+            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
+
+            {/* Resolved Tickets */}
+            <Box sx={{ 
+              flex: { xs: '1 1 100%', sm: 1 },
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              px: 1,
+              py: 1,
+              borderRadius: 1.5,
+              bgcolor: 'transparent',
+            }}>
+              <Box sx={{ 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 120,
+                height: 120,
+                borderRadius: '50%',
+                bgcolor: `${taxiMonterricoColors.green}15`,
+                flexShrink: 0,
+              }}>
+                <CheckCircle sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
+                <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                  Resolved Tickets
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                  {resolvedTickets.toLocaleString()}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: -0.75 }}>
+                  {Array.from({ length: Math.min(5, totalTickets) }).map((_, idx) => {
+                    const ticket = tickets[idx];
+                    return (
+                      <Avatar
+                        key={idx}
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          border: '2px solid white',
+                          ml: idx > 0 ? -0.75 : 0,
+                          bgcolor: taxiMonterricoColors.green,
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          zIndex: 5 - idx,
+                        }}
+                      >
+                        {ticket ? getInitials(ticket.subject) : String.fromCharCode(65 + idx)}
+                      </Avatar>
+                    );
+                  })}
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+
       {/* Header */}
       <Box sx={{ mb: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -361,63 +549,177 @@ const Tickets: React.FC = () => {
           </Box>
         </Paper>
       ) : (
-        <Paper sx={{ p: 2 }}>
-          <TableContainer>
+        <Card sx={{ 
+          borderRadius: 6,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          overflow: 'hidden',
+          bgcolor: 'white',
+        }}>
+          <TableContainer sx={{ overflow: 'hidden' }}>
             <Table>
               <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Asunto</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Contacto</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Estado</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Prioridad</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Asignado a</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Fecha de creación</TableCell>
+                <TableRow sx={{ bgcolor: '#fafafa' }}>
+                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', py: 2, px: 3 }}>
+                    Subject
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                    Contact
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                    Status
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                    Priority
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                    Assigned To
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                    Created Date
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2, width: 60 }}>
+                    Actions
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {tickets.map((ticket) => (
-                  <TableRow key={ticket.id} hover>
-                    <TableCell>{ticket.subject}</TableCell>
-                    <TableCell>
-                      {ticket.Contact ? `${ticket.Contact.firstName} ${ticket.Contact.lastName}` : '-'}
+                  <TableRow 
+                    key={ticket.id} 
+                    hover
+                    sx={{ 
+                      '&:hover': { bgcolor: '#fafafa' },
+                      cursor: 'pointer',
+                      transition: 'background-color 0.2s',
+                    }}
+                  >
+                    <TableCell sx={{ py: 2, px: 3 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Avatar
+                          sx={{
+                            width: 40,
+                            height: 40,
+                            bgcolor: taxiMonterricoColors.green,
+                            fontSize: '0.875rem',
+                            fontWeight: 600,
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                          }}
+                        >
+                          {getInitials(ticket.subject)}
+                        </Avatar>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            fontWeight: 500, 
+                            color: '#1a1a1a',
+                            fontSize: '0.875rem',
+                          }}
+                        >
+                          {ticket.subject}
+                        </Typography>
+                      </Box>
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ px: 2 }}>
+                      {ticket.Contact ? (
+                        <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                          {ticket.Contact.firstName} {ticket.Contact.lastName}
+                        </Typography>
+                      ) : (
+                        <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: '0.875rem' }}>
+                          --
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell sx={{ px: 2 }}>
                       <Chip 
                         label={ticket.status} 
                         size="small" 
                         sx={{ 
-                          bgcolor: ticket.status === 'closed' ? '#e0e0e0' : 
-                                  ticket.status === 'resolved' ? '#c8e6c9' :
-                                  ticket.status === 'pending' ? '#fff9c4' :
-                                  ticket.status === 'open' ? '#bbdefb' : '#f5f5f5',
+                          fontWeight: 500,
+                          fontSize: '0.75rem',
+                          height: 24,
+                          bgcolor: ticket.status === 'closed' ? '#E0E0E0' : 
+                                  ticket.status === 'resolved' ? '#E8F5E9' :
+                                  ticket.status === 'pending' ? '#FFF9C4' :
+                                  ticket.status === 'open' ? '#E3F2FD' : '#F5F5F5',
+                          color: ticket.status === 'closed' ? '#757575' :
+                                 ticket.status === 'resolved' ? '#2E7D32' :
+                                 ticket.status === 'pending' ? '#F57F17' :
+                                 ticket.status === 'open' ? '#1976D2' : '#757575',
+                          border: 'none',
+                          borderRadius: 1,
                           textTransform: 'capitalize'
                         }} 
                       />
                     </TableCell>
-                    <TableCell>
+                    <TableCell sx={{ px: 2 }}>
                       <Chip 
                         label={ticket.priority} 
                         size="small" 
                         sx={{ 
-                          bgcolor: ticket.priority === 'urgent' ? '#ffcdd2' :
-                                  ticket.priority === 'high' ? '#ffe0b2' :
-                                  ticket.priority === 'medium' ? '#fff9c4' : '#e8f5e9',
+                          fontWeight: 500,
+                          fontSize: '0.75rem',
+                          height: 24,
+                          bgcolor: ticket.priority === 'urgent' ? '#FFEBEE' :
+                                  ticket.priority === 'high' ? '#FFF3E0' :
+                                  ticket.priority === 'medium' ? '#FFF9C4' : '#E8F5E9',
+                          color: ticket.priority === 'urgent' ? '#C62828' :
+                                 ticket.priority === 'high' ? '#E65100' :
+                                 ticket.priority === 'medium' ? '#F57F17' : '#2E7D32',
+                          border: 'none',
+                          borderRadius: 1,
                           textTransform: 'capitalize'
                         }} 
                       />
                     </TableCell>
-                    <TableCell>
-                      {ticket.AssignedTo ? `${ticket.AssignedTo.firstName} ${ticket.AssignedTo.lastName}` : '-'}
+                    <TableCell sx={{ px: 2 }}>
+                      {ticket.AssignedTo ? (
+                        <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                          {ticket.AssignedTo.firstName} {ticket.AssignedTo.lastName}
+                        </Typography>
+                      ) : (
+                        <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: '0.875rem' }}>
+                          --
+                        </Typography>
+                      )}
                     </TableCell>
-                    <TableCell>
-                      {ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString('es-ES') : '-'}
+                    <TableCell sx={{ px: 2 }}>
+                      {ticket.createdAt ? (
+                        <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                          {new Date(ticket.createdAt).toLocaleDateString('es-ES')}
+                        </Typography>
+                      ) : (
+                        <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: '0.875rem' }}>
+                          --
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell sx={{ px: 2 }}>
+                      <Tooltip title="Vista previa">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePreview(ticket);
+                          }}
+                          sx={{
+                            color: '#757575',
+                            '&:hover': {
+                              color: taxiMonterricoColors.green,
+                              bgcolor: `${taxiMonterricoColors.green}15`,
+                            },
+                          }}
+                        >
+                          <Visibility fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
-        </Paper>
+        </Card>
       )}
     </Box>
   );

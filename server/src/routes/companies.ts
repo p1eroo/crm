@@ -34,7 +34,7 @@ router.get('/', async (req: AuthRequest, res) => {
     const companies = await Company.findAndCountAll({
       where,
       include: [
-        { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
+        { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
       ],
       limit: Number(limit),
       offset,
@@ -77,7 +77,8 @@ router.post('/', async (req: AuthRequest, res) => {
   try {
     const companyData = {
       ...req.body,
-      ownerId: req.body.ownerId || req.userId,
+      // No asignar ownerId automáticamente para que todos los usuarios vean los mismos datos
+      ownerId: req.body.ownerId || null,
     };
 
     const company = await Company.create(companyData);

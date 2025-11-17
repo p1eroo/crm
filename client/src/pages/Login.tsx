@@ -27,7 +27,7 @@ const colors = {
 };
 
 const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
+  const [usuario, setUsuario] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -41,25 +41,20 @@ const Login: React.FC = () => {
 
     try {
       // Log para debug
-      console.log('Intentando iniciar sesión con:', { email });
-      console.log('API URL:', process.env.REACT_APP_API_URL || `http://${window.location.hostname}:5000/api`);
+      console.log('Intentando iniciar sesión con:', { usuario });
+      console.log('API Monterrico: https://rest.monterrico.app/api/Licencias/Login');
       
-      await login(email, password);
+      await login(usuario, password);
       navigate('/');
     } catch (err: any) {
       console.error('Error en login:', err);
       let errorMessage = 'Error al iniciar sesión';
       
-      if (err.response) {
-        // Error de respuesta del servidor
-        errorMessage = err.response.data?.error || err.response.data?.message || `Error ${err.response.status}: ${err.response.statusText}`;
-      } else if (err.request) {
-        // Error de red (no se recibió respuesta)
-        errorMessage = 'No se pudo conectar al servidor. Verifica que el backend esté ejecutándose.';
-        console.error('Detalles del error de red:', err.request);
+      // Manejar errores de la API de Monterrico
+      if (err.message) {
+        errorMessage = err.message;
       } else {
-        // Otro tipo de error
-        errorMessage = err.message || 'Error desconocido al iniciar sesión';
+        errorMessage = 'No se pudo conectar al servidor. Verifica la conexión de red.';
       }
       
       setError(errorMessage);
@@ -171,13 +166,13 @@ const Login: React.FC = () => {
                 margin="normal"
                 required
                 fullWidth
-                id="email"
-                label="Email"
-                name="email"
-                autoComplete="email"
+                id="usuario"
+                label="Usuario"
+                name="usuario"
+                autoComplete="username"
                 autoFocus
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={usuario}
+                onChange={(e) => setUsuario(e.target.value)}
                 sx={{
                   mb: 2,
                   '& .MuiOutlinedInput-root': {
@@ -279,7 +274,7 @@ const Login: React.FC = () => {
               }}
             >
               <Typography variant="caption" sx={{ color: colors.white, opacity: 0.9 }}>
-                Usuario: admin@crm.com / Contraseña: admin123
+                Usuario: admin / Contraseña: admin123
               </Typography>
             </Box>
           )}

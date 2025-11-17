@@ -4,6 +4,7 @@ import { sequelize } from '../config/database';
 interface UserAttributes {
   id: number;
   email: string;
+  usuario: string;
   password: string;
   firstName: string;
   lastName: string;
@@ -22,6 +23,7 @@ interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'avatar
 export class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   public id!: number;
   public email!: string;
+  public usuario!: string;
   public password!: string;
   public firstName!: string;
   public lastName!: string;
@@ -49,6 +51,11 @@ User.init(
       validate: {
         isEmail: true,
       },
+    },
+    usuario: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
     },
     password: {
       type: DataTypes.STRING,

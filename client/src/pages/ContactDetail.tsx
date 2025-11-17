@@ -37,6 +37,7 @@ import {
   TableRow,
   Collapse,
   Tooltip,
+  Card,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -44,9 +45,12 @@ import {
   Note,
   Email,
   Phone,
+  LocationOn,
   Assignment,
   Event,
   Business,
+  Flag,
+  Person,
   AttachMoney,
   Support,
   Refresh,
@@ -74,6 +78,7 @@ import {
   Settings,
   ArrowUpward,
   ArrowDownward,
+  TrendingUp,
   OpenInNew,
   ContentCopy,
   KeyboardArrowRight,
@@ -82,6 +87,7 @@ import {
   PushPin,
   History,
   Delete,
+  CheckCircle,
 } from '@mui/icons-material';
 import {
   Facebook,
@@ -92,6 +98,7 @@ import {
 } from '@mui/icons-material';
 import api from '../config/api';
 import RichTextEditor from '../components/RichTextEditor';
+import { taxiMonterricoColors } from '../theme/colors';
 
 interface ContactDetail {
   id: number;
@@ -112,6 +119,7 @@ interface ContactDetail {
   github?: string;
   linkedin?: string;
   youtube?: string;
+  avatar?: string;
   lifecycleStage: string;
   leadStatus?: string;
   tags?: string[];
@@ -211,7 +219,7 @@ const ContactDetail: React.FC = () => {
   const [expandedActivities, setExpandedActivities] = useState<Set<number>>(new Set());
   const [noteActionMenus, setNoteActionMenus] = useState<{ [key: number]: HTMLElement | null }>({});
   const [noteComments, setNoteComments] = useState<{ [key: number]: string }>({});
-  const [summaryExpanded, setSummaryExpanded] = useState<boolean>(true);
+  const [summaryExpanded, setSummaryExpanded] = useState<boolean>(false);
   const [dealSortOrder, setDealSortOrder] = useState<'asc' | 'desc'>('asc');
   const [dealSortField, setDealSortField] = useState<string>('');
   const [companySortOrder, setCompanySortOrder] = useState<'asc' | 'desc'>('asc');
@@ -1382,127 +1390,43 @@ const ContactDetail: React.FC = () => {
 
   return (
     <Box sx={{ 
-      height: 'calc(100vh - 120px)', 
+      bgcolor: '#f5f7fa',
+      minHeight: '100vh',
+      pb: { xs: 3, sm: 6, md: 8 },
+      px: { xs: 3, sm: 6, md: 8 },
+      pt: { xs: 4, sm: 6, md: 6 },
       display: 'flex', 
       flexDirection: 'column',
-      overflow: 'hidden',
     }}>
-      {/* Header */}
-      <Box sx={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        mb: 2, 
-        pb: 2, 
-        borderBottom: '1px solid #e0e0e0',
-        transition: 'all 0.3s ease',
-        flexShrink: 0,
-      }}>
-        <IconButton 
-          onClick={() => navigate('/contacts')} 
-          sx={{ 
-            mr: 1,
-            transition: 'all 0.2s ease',
-            '&:hover': {
-              transform: 'translateX(-4px)',
-              backgroundColor: 'rgba(46, 125, 50, 0.08)',
-            },
-          }}
-        >
-          <ArrowBack />
-        </IconButton>
-        <Typography variant="h6" sx={{ flexGrow: 1 }}>
-          Contactos
-        </Typography>
-        <IconButton 
-          onClick={handleMenuOpen}
-          sx={{
-            transition: 'all 0.2s ease',
-            '&:hover': {
-              transform: 'rotate(90deg)',
-              backgroundColor: 'rgba(46, 125, 50, 0.08)',
-            },
-          }}
-        >
-          <MoreVert />
-        </IconButton>
-        <Menu 
-          anchorEl={anchorEl} 
-          open={Boolean(anchorEl)} 
-          onClose={handleMenuClose}
-          TransitionProps={{
-            timeout: 200,
-          }}
-          PaperProps={{
-            sx: {
-              mt: 1,
-              borderRadius: 2,
-              boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-              animation: 'slideDown 0.2s ease',
-              '@keyframes slideDown': {
-                '0%': {
-                  opacity: 0,
-                  transform: 'translateY(-10px)',
-                },
-                '100%': {
-                  opacity: 1,
-                  transform: 'translateY(0)',
-                },
-              },
-            },
-          }}
-        >
-          <MenuItem 
-            onClick={handleMenuClose}
-            sx={{
-              transition: 'all 0.15s ease',
-              '&:hover': {
-                backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                transform: 'translateX(4px)',
-              },
-            }}
-          >
-            Editar
-          </MenuItem>
-          <MenuItem 
-            onClick={handleMenuClose}
-            sx={{
-              transition: 'all 0.15s ease',
-              '&:hover': {
-                backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                transform: 'translateX(4px)',
-              },
-            }}
-          >
-            Eliminar
-          </MenuItem>
-          <MenuItem 
-            onClick={handleMenuClose}
-            sx={{
-              transition: 'all 0.15s ease',
-              '&:hover': {
-                backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                transform: 'translateX(4px)',
-              },
-            }}
-          >
-            Duplicar
-          </MenuItem>
-        </Menu>
-      </Box>
 
-      {/* Contenido principal - 3 columnas */}
+      {/* Contenido principal - Separado en 2 partes */}
       <Box sx={{ 
-        display: 'flex', 
-        gap: summaryExpanded ? 2 : 0,
-        flex: 1, 
+        display: 'flex',
+        gap: 3,
+        flex: 1,
         overflow: 'hidden',
-        transition: 'gap 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+        minHeight: 0,
       }}>
+        {/* Parte 1: Columna Izquierda - Información del Contacto */}
+        <Card sx={{ 
+          borderRadius: 6,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          overflow: 'hidden',
+          bgcolor: 'white',
+          display: 'flex',
+          flexDirection: 'column',
+          width: '500px',
+          flexShrink: 0,
+          height: 'calc(100vh - 100px)',
+          maxHeight: 'calc(100vh - 100px)',
+          p: 2,
+        }}>
         {/* Columna Izquierda - Información del Contacto */}
         <Box sx={{ 
-          width: '320px', 
+          width: '100%', 
           flexShrink: 0, 
           height: '100%',
+          maxHeight: '100%',
           overflowY: 'auto',
           overflowX: 'hidden',
           animation: 'slideInLeft 0.4s ease',
@@ -1516,24 +1440,13 @@ const ContactDetail: React.FC = () => {
               transform: 'translateX(0)',
             },
           },
-          // Estilos personalizados para la scrollbar
+          // Ocultar scrollbar pero mantener scroll funcional
           '&::-webkit-scrollbar': {
-            width: '8px',
-          },
-          '&::-webkit-scrollbar-track': {
-            background: '#f1f1f1',
-            borderRadius: '4px',
-          },
-          '&::-webkit-scrollbar-thumb': {
-            background: '#A5B5A5',
-            borderRadius: '4px',
-            '&:hover': {
-              background: '#95A595',
-            },
+            display: 'none',
+            width: 0,
           },
           // Para Firefox
-          scrollbarWidth: 'thin',
-          scrollbarColor: '#A5B5A5 #f1f1f1',
+          scrollbarWidth: 'none',
         }}>
           <Paper sx={{ 
             p: 3,
@@ -1544,226 +1457,298 @@ const ContactDetail: React.FC = () => {
           }}>
             {/* Avatar y Nombre */}
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
-              <Avatar
+              <Box sx={{ position: 'relative', mb: 2 }}>
+                <Avatar
+                  sx={{
+                    width: 120,
+                    height: 120,
+                    bgcolor: contact.avatar ? 'transparent' : '#2E7D32',
+                    fontSize: '3rem',
+                    transition: 'all 0.3s ease',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      transform: 'scale(1.05)',
+                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                    },
+                  }}
+                  src={contact.avatar}
+                >
+                  {!contact.avatar && getInitials(contact.firstName, contact.lastName)}
+                </Avatar>
+                <CheckCircle 
+                  sx={{ 
+                    position: 'absolute',
+                    bottom: 0,
+                    right: 0,
+                    fontSize: 28,
+                    color: '#10B981',
+                    bgcolor: 'white',
+                    borderRadius: '50%',
+                    border: '2px solid white',
+                  }} 
+                />
+              </Box>
+              <Typography 
+                variant="h6" 
+                align="center"
                 sx={{
-                  width: 80,
-                  height: 80,
-                  bgcolor: '#2E7D32',
-                  fontSize: '2rem',
-                  mb: 2,
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    transform: 'scale(1.1)',
-                    boxShadow: '0 4px 20px rgba(46, 125, 50, 0.4)',
-                  },
+                  fontWeight: 700,
+                  fontSize: '1.1rem',
+                  color: '#1F2937',
+                  mb: 0.25,
                 }}
               >
-                {getInitials(contact.firstName, contact.lastName)}
-              </Avatar>
-              <Typography variant="h6" align="center">
                 {contact.firstName} {contact.lastName}
               </Typography>
-              {contact.Company && (
-                <Typography variant="body2" color="text.secondary" align="center">
-                  {contact.Company.name}
-                </Typography>
-              )}
               {contact.email && (
-                <Box sx={{ display: 'flex', alignItems: 'center', mt: 1, gap: 0.5 }}>
-                  <Email fontSize="small" />
-                  <Typography variant="body2">{contact.email}</Typography>
-                </Box>
+                <Typography 
+                  variant="body2"
+                  align="center"
+                  sx={{
+                    fontSize: '0.875rem',
+                    color: '#757575',
+                    fontWeight: 400,
+                  }}
+                >
+                  {contact.email}
+                </Typography>
               )}
             </Box>
 
             {/* Acciones Rápidas */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3 }}>
-              <Button 
-                size="small" 
-                startIcon={<Note />} 
-                variant="outlined" 
-                fullWidth
-                onClick={handleOpenNote}
-                sx={{ 
-                  borderColor: '#2E7D32', 
-                  color: '#2E7D32',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    borderColor: '#1B5E20',
-                    backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
-                  },
-                  '&:active': {
-                    transform: 'translateY(0)',
-                  },
-                }}
-              >
-                Nota
-              </Button>
-              <Button 
-                size="small" 
-                startIcon={<Email />} 
-                variant="outlined" 
-                fullWidth
-                onClick={handleOpenEmail}
-                sx={{ 
-                  borderColor: '#2E7D32', 
-                  color: '#2E7D32',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    borderColor: '#1B5E20',
-                    backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
-                  },
-                  '&:active': {
-                    transform: 'translateY(0)',
-                  },
-                }}
-              >
-                Correo
-              </Button>
-              <Button 
-                size="small" 
-                startIcon={<Phone />} 
-                variant="outlined" 
-                fullWidth
-                onClick={handleOpenCall}
-                sx={{ 
-                  borderColor: '#2E7D32', 
-                  color: '#2E7D32',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    borderColor: '#1B5E20',
-                    backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
-                  },
-                  '&:active': {
-                    transform: 'translateY(0)',
-                  },
-                }}
-              >
-                Llamada
-              </Button>
-              <Button 
-                size="small" 
-                startIcon={<Assignment />} 
-                variant="outlined" 
-                fullWidth
-                onClick={handleOpenTask}
-                sx={{ 
-                  borderColor: '#2E7D32', 
-                  color: '#2E7D32',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    borderColor: '#1B5E20',
-                    backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
-                  },
-                  '&:active': {
-                    transform: 'translateY(0)',
-                  },
-                }}
-              >
-                Tarea
-              </Button>
-              <Button 
-                size="small" 
-                startIcon={<Event />} 
-                variant="outlined" 
-                fullWidth
-                onClick={handleOpenMeeting}
-                sx={{ 
-                  borderColor: '#2E7D32', 
-                  color: '#2E7D32',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    borderColor: '#1B5E20',
-                    backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
-                  },
-                  '&:active': {
-                    transform: 'translateY(0)',
-                  },
-                }}
-              >
-                Reunión
-              </Button>
+            <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1.5, mb: 3, justifyContent: 'center', flexWrap: 'nowrap' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
+                <IconButton
+                  onClick={handleOpenNote}
+                  sx={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: '50%',
+                    bgcolor: '#E8F5E9',
+                    color: taxiMonterricoColors.green,
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: '#C8E6C9',
+                      transform: 'scale(1.05)',
+                    },
+                  }}
+                >
+                  <Note sx={{ fontSize: 22 }} />
+                </IconButton>
+                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#1F2937', fontWeight: 500 }}>
+                  Nota
+                </Typography>
+              </Box>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
+                <IconButton
+                  onClick={handleOpenEmail}
+                  sx={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: '50%',
+                    bgcolor: '#E8F5E9',
+                    color: taxiMonterricoColors.green,
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: '#C8E6C9',
+                      transform: 'scale(1.05)',
+                    },
+                  }}
+                >
+                  <Email sx={{ fontSize: 22 }} />
+                </IconButton>
+                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#1F2937', fontWeight: 500 }}>
+                  Correo
+                </Typography>
+              </Box>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
+                <IconButton
+                  onClick={handleOpenCall}
+                  sx={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: '50%',
+                    bgcolor: '#E8F5E9',
+                    color: taxiMonterricoColors.green,
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: '#C8E6C9',
+                      transform: 'scale(1.05)',
+                    },
+                  }}
+                >
+                  <Phone sx={{ fontSize: 22 }} />
+                </IconButton>
+                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#1F2937', fontWeight: 500 }}>
+                  Llamada
+                </Typography>
+              </Box>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
+                <IconButton
+                  onClick={handleOpenTask}
+                  sx={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: '50%',
+                    bgcolor: '#E8F5E9',
+                    color: taxiMonterricoColors.green,
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: '#C8E6C9',
+                      transform: 'scale(1.05)',
+                    },
+                  }}
+                >
+                  <Assignment sx={{ fontSize: 22 }} />
+                </IconButton>
+                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#1F2937', fontWeight: 500 }}>
+                  Tarea
+                </Typography>
+              </Box>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
+                <IconButton
+                  onClick={handleOpenMeeting}
+                  sx={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: '50%',
+                    bgcolor: '#E8F5E9',
+                    color: taxiMonterricoColors.green,
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: '#C8E6C9',
+                      transform: 'scale(1.05)',
+                    },
+                  }}
+                >
+                  <Event sx={{ fontSize: 22 }} />
+                </IconButton>
+                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#1F2937', fontWeight: 500 }}>
+                  Reunión
+                </Typography>
+              </Box>
+              
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
+                <IconButton
+                  sx={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: '50%',
+                    bgcolor: '#E8F5E9',
+                    color: taxiMonterricoColors.green,
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: '#C8E6C9',
+                      transform: 'scale(1.05)',
+                    },
+                  }}
+                >
+                  <MoreVert sx={{ fontSize: 22 }} />
+                </IconButton>
+                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#1F2937', fontWeight: 500 }}>
+                  Más
+                </Typography>
+              </Box>
             </Box>
 
             <Divider sx={{ my: 2 }} />
 
-            {/* Acerca de este objeto Contacto */}
-            <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 'bold' }}>
-              Acerca de este objeto Contacto
-            </Typography>
+            {/* Estadísticas */}
+            <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
+              <Box sx={{ 
+                flex: 1, 
+                border: '1px dashed #E0E0E0', 
+                borderRadius: 2, 
+                p: 2, 
+                textAlign: 'center',
+                bgcolor: 'white',
+              }}>
+                <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#37474F', mb: 0.5 }}>
+                  28.65K
+                </Typography>
+                <Typography sx={{ fontSize: '0.75rem', color: '#9E9E9E', fontWeight: 400 }}>
+                  Followers
+                </Typography>
+              </Box>
+              <Box sx={{ 
+                flex: 1, 
+                border: '1px dashed #E0E0E0', 
+                borderRadius: 2, 
+                p: 2, 
+                textAlign: 'center',
+                bgcolor: 'white',
+              }}>
+                <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#37474F', mb: 0.5 }}>
+                  38.85K
+                </Typography>
+                <Typography sx={{ fontSize: '0.75rem', color: '#9E9E9E', fontWeight: 400 }}>
+                  Following
+                </Typography>
+              </Box>
+              <Box sx={{ 
+                flex: 1, 
+                border: '1px dashed #E0E0E0', 
+                borderRadius: 2, 
+                p: 2, 
+                textAlign: 'center',
+                bgcolor: 'white',
+              }}>
+                <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#37474F', mb: 0.5 }}>
+                  43.67K
+                </Typography>
+                <Typography sx={{ fontSize: '0.75rem', color: '#9E9E9E', fontWeight: 400 }}>
+                  Engagement
+                </Typography>
+              </Box>
+            </Box>
 
-            {/* Correo */}
-            <Box sx={{ mb: 2.5 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', display: 'block', mb: 0.5 }}>
-                Correo
-              </Typography>
-              {editingEmail ? (
-                <TextField
-                  size="small"
-                  value={emailValue}
-                  onChange={(e) => setEmailValue(e.target.value)}
-                  onBlur={async () => {
-                    try {
-                      await api.put(`/contacts/${contact.id}`, { email: emailValue });
-                      setContact({ ...contact, email: emailValue });
-                      setEditingEmail(false);
-                    } catch (error) {
-                      console.error('Error updating email:', error);
-                      setEmailValue(contact.email || '');
-                      setEditingEmail(false);
-                    }
-                  }}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      (e.target as HTMLInputElement).blur();
-                    }
-                  }}
-                  autoFocus
-                  fullWidth
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      fontSize: '0.875rem',
-                      '& fieldset': {
-                        borderColor: '#00bcd4',
-                      },
-                    },
-                  }}
-                />
-              ) : (
+            {/* Location */}
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                <LocationOn sx={{ fontSize: 20, color: '#9E9E9E' }} />
                 <Typography 
                   variant="body2" 
                   sx={{ 
                     fontSize: '0.875rem',
-                    color: contact.email ? 'text.primary' : 'text.secondary',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      textDecoration: 'underline',
-                      textDecorationColor: '#00bcd4',
-                    },
+                    fontWeight: 400,
+                    color: '#757575',
                   }}
-                  onClick={() => setEditingEmail(true)}
                 >
-                  {contact.email || '--'}
+                  Location
                 </Typography>
-              )}
+              </Box>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  fontSize: '0.875rem',
+                  fontWeight: 400,
+                  color: (contact.city || contact.address) ? '#424242' : '#9CA3AF',
+                  textAlign: 'right',
+                }}
+              >
+                {contact.city || contact.address || '--'}
+              </Typography>
             </Box>
 
             {/* Número de teléfono */}
-            <Box sx={{ mb: 2.5 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', display: 'block', mb: 0.5 }}>
-                Número de teléfono
-              </Typography>
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                <Phone sx={{ fontSize: 20, color: '#9E9E9E' }} />
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: '0.875rem',
+                    fontWeight: 400,
+                    color: '#757575',
+                  }}
+                >
+                  Phone
+                </Typography>
+              </Box>
               {editingPhone ? (
                 <TextField
                   size="small"
@@ -1786,10 +1771,11 @@ const ContactDetail: React.FC = () => {
                     }
                   }}
                   autoFocus
-                  fullWidth
                   sx={{
+                    width: '200px',
                     '& .MuiOutlinedInput-root': {
                       fontSize: '0.875rem',
+                      fontWeight: 400,
                       '& fieldset': {
                         borderColor: '#00bcd4',
                       },
@@ -1801,8 +1787,10 @@ const ContactDetail: React.FC = () => {
                   variant="body2" 
                   sx={{ 
                     fontSize: '0.875rem',
-                    color: contact.phone ? 'text.primary' : 'text.secondary',
+                    fontWeight: 400,
+                    color: contact.phone ? '#424242' : '#9CA3AF',
                     cursor: 'pointer',
+                    textAlign: 'right',
                     '&:hover': {
                       textDecoration: 'underline',
                       textDecorationColor: '#00bcd4',
@@ -1815,11 +1803,90 @@ const ContactDetail: React.FC = () => {
               )}
             </Box>
 
+            {/* Correo */}
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                <Email sx={{ fontSize: 20, color: '#9E9E9E' }} />
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: '0.875rem',
+                    fontWeight: 400,
+                    color: '#757575',
+                  }}
+                >
+                  Email
+                </Typography>
+              </Box>
+              {editingEmail ? (
+                <TextField
+                  size="small"
+                  value={emailValue}
+                  onChange={(e) => setEmailValue(e.target.value)}
+                  onBlur={async () => {
+                    try {
+                      await api.put(`/contacts/${contact.id}`, { email: emailValue });
+                      setContact({ ...contact, email: emailValue });
+                      setEditingEmail(false);
+                    } catch (error) {
+                      console.error('Error updating email:', error);
+                      setEmailValue(contact.email || '');
+                      setEditingEmail(false);
+                    }
+                  }}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      (e.target as HTMLInputElement).blur();
+                    }
+                  }}
+                  autoFocus
+                  sx={{
+                    width: '200px',
+                    '& .MuiOutlinedInput-root': {
+                      fontSize: '0.875rem',
+                      fontWeight: 400,
+                      '& fieldset': {
+                        borderColor: '#00bcd4',
+                      },
+                    },
+                  }}
+                />
+              ) : (
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: '0.875rem',
+                    fontWeight: 400,
+                    color: contact.email ? '#424242' : '#9CA3AF',
+                    cursor: 'pointer',
+                    textAlign: 'right',
+                    '&:hover': {
+                      textDecoration: 'underline',
+                      textDecorationColor: '#00bcd4',
+                    },
+                  }}
+                  onClick={() => setEditingEmail(true)}
+                >
+                  {contact.email || '--'}
+                </Typography>
+              )}
+            </Box>
+
             {/* Nombre de la empresa */}
-            <Box sx={{ mb: 2.5 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', display: 'block', mb: 0.5 }}>
-                Nombre de la empresa
-              </Typography>
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                <Business sx={{ fontSize: 20, color: '#9E9E9E' }} />
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: '0.875rem',
+                    fontWeight: 400,
+                    color: '#757575',
+                  }}
+                >
+                  Nombre de la empresa
+                </Typography>
+              </Box>
               {editingCompany ? (
                 <TextField
                   size="small"
@@ -1898,10 +1965,11 @@ const ContactDetail: React.FC = () => {
                     }
                   }}
                   autoFocus
-                  fullWidth
                   sx={{
+                    width: '200px',
                     '& .MuiOutlinedInput-root': {
                       fontSize: '0.875rem',
+                      fontWeight: 400,
                       '& fieldset': {
                         borderColor: '#00bcd4',
                       },
@@ -1909,59 +1977,73 @@ const ContactDetail: React.FC = () => {
                   }}
                 />
               ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      fontSize: '0.875rem',
+                      fontWeight: 400,
+                      color: companyValue || (contact.Companies && contact.Companies.length > 0) ? '#424242' : '#9CA3AF',
+                      cursor: 'pointer',
+                      textAlign: 'right',
+                      '&:hover': {
+                        textDecoration: 'underline',
+                        textDecorationColor: '#00bcd4',
+                      },
+                    }}
+                    onClick={() => {
+                      // Inicializar el valor con la primera empresa asociada o la empresa principal
+                      const companies = (contact.Companies && Array.isArray(contact.Companies))
+                        ? contact.Companies
+                        : (contact.Company ? [contact.Company] : []);
+                      setCompanyValue(companies.length > 0 ? companies[0].name : '');
+                      setEditingCompany(true);
+                    }}
+                  >
+                    {companyValue || (contact.Companies && contact.Companies.length > 0 
+                      ? contact.Companies[0].name 
+                      : (contact.Company?.name || '--'))}
+                  </Typography>
+                  <KeyboardArrowDown sx={{ fontSize: 14, color: '#9E9E9E' }} />
+                </Box>
+              )}
+            </Box>
+
+            {/* Estado del lead */}
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                <Flag sx={{ fontSize: 20, color: '#9E9E9E' }} />
                 <Typography 
                   variant="body2" 
                   sx={{ 
                     fontSize: '0.875rem',
-                    color: companyValue || (contact.Companies && contact.Companies.length > 0) ? 'text.primary' : 'text.secondary',
+                    fontWeight: 400,
+                    color: '#757575',
+                  }}
+                >
+                  Estado del lead
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Typography
+                  variant="body2"
+                  onClick={(e) => setLeadStatusMenuAnchor(e.currentTarget)}
+                  sx={{
+                    fontSize: '0.875rem',
+                    fontWeight: 400,
+                    color: contact.leadStatus ? '#424242' : '#9CA3AF',
                     cursor: 'pointer',
-                    textDecoration: companyValue || (contact.Companies && contact.Companies.length > 0) ? 'underline' : 'none',
-                    textDecorationColor: '#00bcd4',
+                    textAlign: 'right',
                     '&:hover': {
                       textDecoration: 'underline',
                       textDecorationColor: '#00bcd4',
                     },
                   }}
-                  onClick={() => {
-                    // Inicializar el valor con la primera empresa asociada o la empresa principal
-                    const companies = (contact.Companies && Array.isArray(contact.Companies))
-                      ? contact.Companies
-                      : (contact.Company ? [contact.Company] : []);
-                    setCompanyValue(companies.length > 0 ? companies[0].name : '');
-                    setEditingCompany(true);
-                  }}
                 >
-                  {companyValue || (contact.Companies && contact.Companies.length > 0 
-                    ? contact.Companies[0].name 
-                    : (contact.Company?.name || '--'))}
+                  {contact.leadStatus || '--'}
                 </Typography>
-              )}
-            </Box>
-
-            {/* Estado del lead */}
-            <Box sx={{ mb: 2.5 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', display: 'block', mb: 0.5 }}>
-                Estado del lead
-              </Typography>
-              <Typography
-                variant="body2"
-                onClick={(e) => setLeadStatusMenuAnchor(e.currentTarget)}
-                sx={{
-                  fontSize: '0.875rem',
-                  color: contact.leadStatus ? 'text.primary' : 'text.secondary',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 0.5,
-                  '&:hover': {
-                    textDecoration: 'underline',
-                    textDecorationColor: '#00bcd4',
-                  },
-                }}
-              >
-                {contact.leadStatus || '--'}
-                {contact.leadStatus && <KeyboardArrowDown sx={{ fontSize: 14 }} />}
-              </Typography>
+                <KeyboardArrowDown sx={{ fontSize: 14, color: '#9E9E9E' }} />
+              </Box>
               <Menu
                 anchorEl={leadStatusMenuAnchor}
                 open={Boolean(leadStatusMenuAnchor)}
@@ -1997,47 +2079,58 @@ const ContactDetail: React.FC = () => {
             </Box>
 
             {/* Etapa del ciclo de vida */}
-            <Box sx={{ mb: 2.5 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                  Etapa del ciclo de vida
-                </Typography>
-                <Link
-                  component="button"
-                  onClick={() => {}}
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                <TrendingUp sx={{ fontSize: 20, color: '#9E9E9E' }} />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      fontSize: '0.875rem',
+                      fontWeight: 400,
+                      color: '#757575',
+                    }}
+                  >
+                    Etapa del ciclo de vida
+                  </Typography>
+                  <Link
+                    component="button"
+                    onClick={() => {}}
+                    sx={{
+                      fontSize: '0.75rem',
+                      color: '#00bcd4',
+                      textDecoration: 'none',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        textDecoration: 'underline',
+                      },
+                    }}
+                  >
+                    Detalles
+                  </Link>
+                </Box>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Typography
+                  variant="body2"
+                  onClick={(e) => setLifecycleStageMenuAnchor(e.currentTarget)}
                   sx={{
-                    fontSize: '0.75rem',
-                    color: '#00bcd4',
-                    textDecoration: 'none',
+                    fontSize: '0.875rem',
+                    fontWeight: 400,
+                    color: '#424242',
                     cursor: 'pointer',
+                    textAlign: 'right',
+                    textDecoration: 'underline',
+                    textDecorationColor: '#00bcd4',
                     '&:hover': {
-                      textDecoration: 'underline',
+                      textDecorationColor: '#0097a7',
                     },
                   }}
                 >
-                  Detalles
-                </Link>
+                  {contact.lifecycleStage}
+                </Typography>
+                <KeyboardArrowDown sx={{ fontSize: 14, color: '#9E9E9E' }} />
               </Box>
-              <Typography
-                variant="body2"
-                onClick={(e) => setLifecycleStageMenuAnchor(e.currentTarget)}
-                sx={{
-                  fontSize: '0.875rem',
-                  color: 'text.primary',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 0.5,
-                  textDecoration: 'underline',
-                  textDecorationColor: '#00bcd4',
-                  '&:hover': {
-                    textDecorationColor: '#0097a7',
-                  },
-                }}
-              >
-                {contact.lifecycleStage}
-                <KeyboardArrowDown sx={{ fontSize: 14 }} />
-              </Typography>
               <Menu
                 anchorEl={lifecycleStageMenuAnchor}
                 open={Boolean(lifecycleStageMenuAnchor)}
@@ -2092,29 +2185,40 @@ const ContactDetail: React.FC = () => {
             )}
 
             {/* Rol de compra */}
-            <Box sx={{ mb: 2.5 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', display: 'block', mb: 0.5 }}>
-                Rol de compra
-              </Typography>
-              <Typography
-                variant="body2"
-                onClick={(e) => setBuyingRoleMenuAnchor(e.currentTarget)}
-                sx={{
-                  fontSize: '0.875rem',
-                  color: 'text.secondary',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 0.5,
-                  '&:hover': {
-                    textDecoration: 'underline',
-                    textDecorationColor: '#00bcd4',
-                  },
-                }}
-              >
-                --
-                <KeyboardArrowDown sx={{ fontSize: 14 }} />
-              </Typography>
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                <Person sx={{ fontSize: 20, color: '#9E9E9E' }} />
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    fontSize: '0.875rem',
+                    fontWeight: 400,
+                    color: '#757575',
+                  }}
+                >
+                  Rol de compra
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Typography
+                  variant="body2"
+                  onClick={(e) => setBuyingRoleMenuAnchor(e.currentTarget)}
+                  sx={{
+                    fontSize: '0.875rem',
+                    fontWeight: 400,
+                    color: '#9CA3AF',
+                    cursor: 'pointer',
+                    textAlign: 'right',
+                    '&:hover': {
+                      textDecoration: 'underline',
+                      textDecorationColor: '#00bcd4',
+                    },
+                  }}
+                >
+                  --
+                </Typography>
+                <KeyboardArrowDown sx={{ fontSize: 14, color: '#9E9E9E' }} />
+              </Box>
               <Menu
                 anchorEl={buyingRoleMenuAnchor}
                 open={Boolean(buyingRoleMenuAnchor)}
@@ -2366,7 +2470,29 @@ const ContactDetail: React.FC = () => {
             </Typography>
           </Paper>
         </Box>
+        </Card>
 
+        {/* Parte 2: Columnas Central y Derecha */}
+        <Card sx={{ 
+          borderRadius: 6,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          overflow: 'hidden',
+          bgcolor: 'white',
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          height: 'calc(100vh - 100px)',
+          maxHeight: 'calc(100vh - 100px)',
+          p: 2,
+        }}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: summaryExpanded ? 2 : 0,
+            flex: 1, 
+            overflow: 'hidden',
+            minHeight: 0,
+            transition: 'gap 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}>
         {/* Columna Central - Pestañas */}
         <Box sx={{ 
           flex: 1, 
@@ -2374,6 +2500,7 @@ const ContactDetail: React.FC = () => {
           flexDirection: 'column', 
           overflow: 'hidden',
           height: '100%',
+          minHeight: 0,
           transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
           animation: 'fadeIn 0.5s ease',
           '@keyframes fadeIn': {
@@ -2391,6 +2518,7 @@ const ContactDetail: React.FC = () => {
             flexDirection: 'column', 
             overflow: 'hidden',
             height: '100%',
+            minHeight: 0,
             transition: 'all 0.3s ease',
             '&:hover': {
               boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
@@ -2400,6 +2528,7 @@ const ContactDetail: React.FC = () => {
               value={tabValue} 
               onChange={(e, newValue) => setTabValue(newValue)}
               sx={{
+                flexShrink: 0,
                 '& .MuiTab-root': {
                   transition: 'all 0.2s ease',
                   '&:hover': {
@@ -2426,29 +2555,27 @@ const ContactDetail: React.FC = () => {
               flex: 1, 
               overflowY: 'auto',
               overflowX: 'hidden',
-              height: '100%',
-              // Estilos personalizados para la scrollbar
+              p: 3,
+              minHeight: 0,
+              // Ocultar scrollbar pero mantener scroll funcional
               '&::-webkit-scrollbar': {
-                width: '8px',
-              },
-              '&::-webkit-scrollbar-track': {
-                background: '#f1f1f1',
-                borderRadius: '4px',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                background: '#A5B5A5',
-                borderRadius: '4px',
-                '&:hover': {
-                  background: '#95A595',
-                },
+                display: 'none',
+                width: 0,
               },
               // Para Firefox
-              scrollbarWidth: 'thin',
-              scrollbarColor: '#A5B5A5 #f1f1f1',
+              scrollbarWidth: 'none',
             }}>
               <TabPanel value={tabValue} index={0}>
                 {/* Aspectos destacados de los datos */}
-                <Box sx={{ mb: 4 }}>
+                <Card sx={{ 
+                  borderRadius: 6,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  overflow: 'hidden',
+                  bgcolor: 'white',
+                  mb: 4,
+                  p: 3,
+                  mx: -3,
+                }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Aspectos destacados de los datos
@@ -2504,10 +2631,18 @@ const ContactDetail: React.FC = () => {
                       </Typography>
                     </Box>
                   </Box>
-                </Box>
+                </Card>
 
                 {/* Actividades recientes */}
-                <Box sx={{ mb: 4 }}>
+                <Card sx={{ 
+                  borderRadius: 6,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  overflow: 'hidden',
+                  bgcolor: 'white',
+                  mb: 4,
+                  p: 3,
+                  mx: -3,
+                }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Actividades recientes
@@ -4303,58 +4438,67 @@ const ContactDetail: React.FC = () => {
                       </Typography>
                     </Box>
                   )}
-                </Box>
+                </Card>
 
                 {/* Empresas */}
-                <Box sx={{ mb: 4 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                      Empresas
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Link 
-                        sx={{ fontSize: '0.875rem', cursor: 'pointer' }}
-                        onClick={handleOpenAddCompanyDialog}
-                      >
-                        + Agregar
-                      </Link>
-                      <IconButton size="small">
-                        <Settings fontSize="small" />
-                      </IconButton>
+                <Card sx={{ 
+                  borderRadius: 6,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  overflow: 'hidden',
+                  bgcolor: 'white',
+                  mb: 4,
+                  mx: -3,
+                }}>
+                  <Box sx={{ px: 3, pt: 3, pb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                        Empresas
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Link 
+                          sx={{ fontSize: '0.875rem', cursor: 'pointer' }}
+                          onClick={handleOpenAddCompanyDialog}
+                        >
+                          + Agregar
+                        </Link>
+                        <IconButton size="small">
+                          <Settings fontSize="small" />
+                        </IconButton>
+                      </Box>
                     </Box>
+                    <TextField
+                      size="small"
+                      placeholder="Buscar"
+                      value={companySearch}
+                      onChange={(e) => setCompanySearch(e.target.value)}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Search fontSize="small" />
+                          </InputAdornment>
+                        ),
+                      }}
+                      fullWidth
+                      sx={{ 
+                        mb: 2,
+                        transition: 'all 0.3s ease',
+                        '& .MuiOutlinedInput-root': {
+                          '&:hover': {
+                            '& fieldset': {
+                              borderColor: '#2E7D32',
+                            },
+                          },
+                          '&.Mui-focused': {
+                            transform: 'scale(1.02)',
+                            '& fieldset': {
+                              borderColor: '#2E7D32',
+                              borderWidth: 2,
+                            },
+                          },
+                        },
+                      }}
+                    />
                   </Box>
-                  <TextField
-                    size="small"
-                    placeholder="Buscar"
-                    value={companySearch}
-                    onChange={(e) => setCompanySearch(e.target.value)}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Search fontSize="small" />
-                        </InputAdornment>
-                      ),
-                    }}
-                    fullWidth
-                    sx={{ 
-                      mb: 2,
-                      transition: 'all 0.3s ease',
-                      '& .MuiOutlinedInput-root': {
-                        '&:hover': {
-                          '& fieldset': {
-                            borderColor: '#2E7D32',
-                          },
-                        },
-                        '&.Mui-focused': {
-                          transform: 'scale(1.02)',
-                          '& fieldset': {
-                            borderColor: '#2E7D32',
-                            borderWidth: 2,
-                          },
-                        },
-                      },
-                    }}
-                  />
                   {filteredCompanies.length > 0 ? (
                     <TableContainer>
                       <Table size="small">
@@ -4520,61 +4664,72 @@ const ContactDetail: React.FC = () => {
                       </Table>
                     </TableContainer>
                   ) : (
-                    <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-                      No existen objetos asociados de este tipo o no tienes permiso para verlos.
-                    </Typography>
-                  )}
-                </Box>
-
-                {/* Negocios */}
-                <Box sx={{ mb: 4 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                      Negocios
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Link 
-                        sx={{ fontSize: '0.875rem', cursor: 'pointer' }}
-                        onClick={() => {
-                          setDealFormData({ name: '', amount: '', stage: 'qualification', closeDate: '', probability: '' });
-                          setAddDealOpen(true);
-                        }}
-                      >
-                        + Agregar
-                      </Link>
-                      <IconButton size="small">
-                        <Settings fontSize="small" />
-                      </IconButton>
+                    <Box sx={{ px: 3, pb: 3 }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                        No existen objetos asociados de este tipo o no tienes permiso para verlos.
+                      </Typography>
                     </Box>
-                  </Box>
-                  <TextField
-                    size="small"
-                    placeholder="Buscar"
-                    value={dealSearch}
-                    onChange={(e) => setDealSearch(e.target.value)}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Search fontSize="small" />
-                        </InputAdornment>
-                      ),
-                    }}
-                    fullWidth
-                    sx={{ mb: 2 }}
-                  />
-                  <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-                    <Button size="small" variant="outlined" endIcon={<ExpandMore />}>
-                      Propietario del negocio
-                    </Button>
-                    <Button size="small" variant="outlined" endIcon={<ExpandMore />}>
-                      Fecha de cierre
-                    </Button>
-                    <Button size="small" variant="outlined" endIcon={<ExpandMore />}>
-                      Fecha de creación
-                    </Button>
-                    <Button size="small" variant="outlined" endIcon={<ExpandMore />}>
-                      Más
-                    </Button>
+                  )}
+                </Card>
+
+                {/* Negocios Section */}
+                <Card sx={{ 
+                  borderRadius: 6,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  overflow: 'hidden',
+                  bgcolor: 'white',
+                  mb: 4,
+                  mx: -3,
+                }}>
+                  <Box sx={{ px: 3, pt: 3, pb: 2 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                        Negocios
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Link 
+                          sx={{ fontSize: '0.875rem', cursor: 'pointer' }}
+                          onClick={() => {
+                            setDealFormData({ name: '', amount: '', stage: 'qualification', closeDate: '', probability: '' });
+                            setAddDealOpen(true);
+                          }}
+                        >
+                          + Agregar
+                        </Link>
+                        <IconButton size="small">
+                          <Settings fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </Box>
+                    <TextField
+                      size="small"
+                      placeholder="Buscar"
+                      value={dealSearch}
+                      onChange={(e) => setDealSearch(e.target.value)}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Search fontSize="small" />
+                          </InputAdornment>
+                        ),
+                      }}
+                      fullWidth
+                      sx={{ mb: 2 }}
+                    />
+                    <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+                      <Button size="small" variant="outlined" endIcon={<ExpandMore />}>
+                        Propietario del negocio
+                      </Button>
+                      <Button size="small" variant="outlined" endIcon={<ExpandMore />}>
+                        Fecha de cierre
+                      </Button>
+                      <Button size="small" variant="outlined" endIcon={<ExpandMore />}>
+                        Fecha de creación
+                      </Button>
+                      <Button size="small" variant="outlined" endIcon={<ExpandMore />}>
+                        Más
+                      </Button>
+                    </Box>
                   </Box>
                   {filteredDeals.length > 0 ? (
                     <TableContainer>
@@ -4642,11 +4797,13 @@ const ContactDetail: React.FC = () => {
                       </Table>
                     </TableContainer>
                   ) : (
-                    <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-                      No existen objetos asociados de este tipo o no tienes permiso para verlos.
-                    </Typography>
+                    <Box sx={{ px: 3, pb: 3 }}>
+                      <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
+                        No existen objetos asociados de este tipo o no tienes permiso para verlos.
+                      </Typography>
+                    </Box>
                   )}
-                </Box>
+                </Card>
 
                 {/* Tickets */}
                 <Box sx={{ mb: 4 }}>
@@ -5311,9 +5468,18 @@ const ContactDetail: React.FC = () => {
           width: summaryExpanded ? '320px' : '40px',
           flexShrink: 0,
           height: '100%',
-          overflow: 'hidden',
+          maxHeight: '100%',
+          overflowY: 'auto',
+          overflowX: 'hidden',
           transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
           position: 'relative',
+          // Ocultar scrollbar pero mantener scroll funcional
+          '&::-webkit-scrollbar': {
+            display: 'none',
+            width: 0,
+          },
+          // Para Firefox
+          scrollbarWidth: 'none',
         }}>
           {/* Botón para expandir cuando está contraído */}
           {!summaryExpanded && (
@@ -5396,24 +5562,13 @@ const ContactDetail: React.FC = () => {
                 opacity: summaryExpanded ? 1 : 0,
                 transform: summaryExpanded ? 'translateX(0)' : 'translateX(-100%)',
                 visibility: summaryExpanded ? 'visible' : 'hidden',
-                // Estilos personalizados para la scrollbar
+                // Ocultar scrollbar pero mantener scroll funcional
                 '&::-webkit-scrollbar': {
-                  width: '8px',
-                },
-                '&::-webkit-scrollbar-track': {
-                  background: '#f1f1f1',
-                  borderRadius: '4px',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  background: '#A5B5A5',
-                  borderRadius: '4px',
-                  '&:hover': {
-                    background: '#95A595',
-                  },
+                  display: 'none',
+                  width: 0,
                 },
                 // Para Firefox
-                scrollbarWidth: 'thin',
-                scrollbarColor: '#A5B5A5 #f1f1f1',
+                scrollbarWidth: 'none',
               }}
             >
               {/* Resumen AI */}
@@ -5773,6 +5928,8 @@ const ContactDetail: React.FC = () => {
             </Box>
           </Paper>
         </Box>
+          </Box>
+        </Card>
       </Box>
 
       {/* Mensaje de éxito */}

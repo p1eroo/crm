@@ -33,8 +33,8 @@ router.get('/', async (req: AuthRequest, res) => {
     const contacts = await Contact.findAndCountAll({
       where,
       include: [
-        { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
-        { model: Company, as: 'Company', attributes: ['id', 'name'] },
+        { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
+        { model: Company, as: 'Company', attributes: ['id', 'name'], required: false },
       ],
       limit: Number(limit),
       offset,
@@ -78,7 +78,8 @@ router.post('/', async (req: AuthRequest, res) => {
   try {
     const contactData = {
       ...req.body,
-      ownerId: req.body.ownerId || req.userId,
+      // No asignar ownerId automáticamente para que todos los usuarios vean los mismos datos
+      ownerId: req.body.ownerId || null,
     };
 
     const contact = await Contact.create(contactData);

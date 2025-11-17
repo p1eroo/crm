@@ -9,17 +9,18 @@ async function initDatabase() {
     console.log('Base de datos sincronizada correctamente.');
 
     // Crear usuario admin por defecto si no existe
-    const adminExists = await User.findOne({ where: { email: 'admin@crm.com' } });
+    const adminExists = await User.findOne({ where: { usuario: 'admin' } });
     if (!adminExists) {
       const hashedPassword = await bcrypt.hash('admin123', 10);
       await User.create({
+        usuario: 'admin',
         email: 'admin@crm.com',
         password: hashedPassword,
         firstName: 'Admin',
         lastName: 'User',
         role: 'admin',
       });
-      console.log('Usuario admin creado: admin@crm.com / admin123');
+      console.log('Usuario admin creado: usuario=admin / contraseña=admin123');
     }
 
     console.log('Base de datos inicializada correctamente.');

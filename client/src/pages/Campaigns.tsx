@@ -9,7 +9,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   IconButton,
   TextField,
   Dialog,
@@ -19,9 +18,17 @@ import {
   MenuItem,
   Chip,
   CircularProgress,
+  Card,
+  CardContent,
+  Divider,
+  Avatar,
+  FormControl,
+  Select,
+  Tooltip,
 } from '@mui/material';
-import { Add, Edit, Delete } from '@mui/icons-material';
+import { Add, Edit, Delete, Search, Campaign, TrendingUp, Computer, Visibility, CheckCircle } from '@mui/icons-material';
 import api from '../config/api';
+import { taxiMonterricoColors } from '../theme/colors';
 
 interface Campaign {
   id: number;
@@ -40,6 +47,8 @@ const Campaigns: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
   const [formData, setFormData] = useState({
     name: '',
     type: 'email',
@@ -50,13 +59,34 @@ const Campaigns: React.FC = () => {
     description: '',
   });
 
+  // Calcular estadísticas
+  const totalCampaigns = campaigns.length;
+  const activeCampaigns = campaigns.filter(c => c.status === 'active').length;
+  const totalBudget = campaigns.reduce((sum, campaign) => sum + (campaign.budget || 0), 0);
+
+  // Función para obtener iniciales
+  const getInitials = (name: string) => {
+    if (!name) return '--';
+    const words = name.trim().split(' ');
+    if (words.length >= 2) {
+      return `${words[0][0]}${words[1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  // Función para vista previa
+  const handlePreview = (campaign: Campaign) => {
+    console.log('Preview campaign:', campaign);
+  };
+
   useEffect(() => {
     fetchCampaigns();
-  }, []);
+  }, [search]);
 
   const fetchCampaigns = async () => {
     try {
-      const response = await api.get('/campaigns');
+      const params = search ? { search } : {};
+      const response = await api.get('/campaigns', { params });
       setCampaigns(response.data.campaigns || response.data);
     } catch (error) {
       console.error('Error fetching campaigns:', error);
@@ -126,18 +156,6 @@ const Campaigns: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    const colors: { [key: string]: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' } = {
-      'draft': 'default',
-      'scheduled': 'info',
-      'active': 'success',
-      'paused': 'warning',
-      'completed': 'success',
-      'cancelled': 'error',
-    };
-    return colors[status] || 'default';
-  };
-
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -147,55 +165,436 @@ const Campaigns: React.FC = () => {
   }
 
   return (
-    <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h4">Campañas</Typography>
-        <Button variant="contained" startIcon={<Add />} onClick={() => handleOpen()}>
-          Nueva Campaña
-        </Button>
-      </Box>
+    <Box sx={{ 
+      bgcolor: '#f5f7fa', 
+      minHeight: '100vh',
+      pb: { xs: 3, sm: 6, md: 8 },
+      px: { xs: 3, sm: 6, md: 8 },
+      pt: { xs: 4, sm: 6, md: 6 },
+    }}>
+      {/* Cards de resumen */}
+      <Card sx={{ 
+        borderRadius: 6,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        bgcolor: 'white',
+        mb: 4,
+      }}>
+        <CardContent sx={{ p: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'stretch', flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
+            {/* Total Campaigns */}
+            <Box sx={{ 
+              flex: { xs: '1 1 100%', sm: 1 },
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              px: 1,
+              py: 1,
+              borderRadius: 1.5,
+              bgcolor: 'transparent',
+            }}>
+              <Box sx={{ 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 120,
+                height: 120,
+                borderRadius: '50%',
+                bgcolor: `${taxiMonterricoColors.green}15`,
+                flexShrink: 0,
+              }}>
+                <Campaign sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
+                <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                  Total Campaigns
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                  {totalCampaigns.toLocaleString()}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <TrendingUp sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+                  <Typography variant="caption" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '1rem' }}>
+                    10% this month
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Nombre</TableCell>
-              <TableCell>Tipo</TableCell>
-              <TableCell>Estado</TableCell>
-              <TableCell>Presupuesto</TableCell>
-              <TableCell>Gastado</TableCell>
-              <TableCell>Impresiones</TableCell>
-              <TableCell>Clics</TableCell>
-              <TableCell>Conversiones</TableCell>
-              <TableCell>Acciones</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {campaigns.map((campaign) => (
-              <TableRow key={campaign.id}>
-                <TableCell>{campaign.name}</TableCell>
-                <TableCell>{campaign.type}</TableCell>
-                <TableCell>
-                  <Chip label={campaign.status} color={getStatusColor(campaign.status)} size="small" />
+            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
+
+            {/* Active Campaigns */}
+            <Box sx={{ 
+              flex: { xs: '1 1 100%', sm: 1 },
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              px: 1,
+              py: 1,
+              borderRadius: 1.5,
+              bgcolor: 'transparent',
+            }}>
+              <Box sx={{ 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 120,
+                height: 120,
+                borderRadius: '50%',
+                bgcolor: `${taxiMonterricoColors.green}15`,
+                flexShrink: 0,
+              }}>
+                <CheckCircle sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
+                <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                  Active Campaigns
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                  {activeCampaigns.toLocaleString()}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <TrendingUp sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+                  <Typography variant="caption" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '1rem' }}>
+                    4% this month
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+
+            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
+
+            {/* Total Budget */}
+            <Box sx={{ 
+              flex: { xs: '1 1 100%', sm: 1 },
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              px: 1,
+              py: 1,
+              borderRadius: 1.5,
+              bgcolor: 'transparent',
+            }}>
+              <Box sx={{ 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 120,
+                height: 120,
+                borderRadius: '50%',
+                bgcolor: `${taxiMonterricoColors.green}15`,
+                flexShrink: 0,
+              }}>
+                <Computer sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
+                <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                  Total Budget
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                  ${(totalBudget / 1000).toFixed(0)}k
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: -0.75 }}>
+                  {Array.from({ length: Math.min(5, totalCampaigns) }).map((_, idx) => {
+                    const campaign = campaigns[idx];
+                    return (
+                      <Avatar
+                        key={idx}
+                        sx={{
+                          width: 36,
+                          height: 36,
+                          border: '2px solid white',
+                          ml: idx > 0 ? -0.75 : 0,
+                          bgcolor: taxiMonterricoColors.green,
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          zIndex: 5 - idx,
+                        }}
+                      >
+                        {campaign ? getInitials(campaign.name) : String.fromCharCode(65 + idx)}
+                      </Avatar>
+                    );
+                  })}
+                </Box>
+              </Box>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Sección de tabla */}
+      <Card sx={{ 
+        borderRadius: 6,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        overflow: 'hidden',
+        bgcolor: 'white',
+      }}>
+        <Box sx={{ px: 3, pt: 3, pb: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+            <Box>
+              <Typography variant="h5" sx={{ fontWeight: 600, color: '#1a1a1a', mb: 0.5 }}>
+                All Campaigns
+              </Typography>
+              <Typography
+                component="a"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                }}
+                sx={{
+                  fontSize: '0.875rem',
+                  color: '#1976d2',
+                  textDecoration: 'none',
+                  cursor: 'pointer',
+                  '&:hover': {
+                    textDecoration: 'underline',
+                  },
+                }}
+              >
+                Active Campaigns
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <TextField
+                size="small"
+                placeholder="Search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                InputProps={{
+                  startAdornment: <Search sx={{ mr: 1, color: '#9e9e9e', fontSize: 20 }} />,
+                }}
+                sx={{ 
+                  minWidth: 200,
+                  bgcolor: 'white',
+                  borderRadius: 1.5,
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderColor: '#e0e0e0',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#bdbdbd',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#1976d2',
+                    },
+                  },
+                }}
+              />
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <Select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  displayEmpty
+                  sx={{
+                    borderRadius: 1.5,
+                    bgcolor: 'white',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#e0e0e0',
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#bdbdbd',
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#1976d2',
+                    },
+                  }}
+                >
+                  <MenuItem value="newest">Sort by: Newest</MenuItem>
+                  <MenuItem value="oldest">Sort by: Oldest</MenuItem>
+                  <MenuItem value="name">Sort by: Name A-Z</MenuItem>
+                  <MenuItem value="nameDesc">Sort by: Name Z-A</MenuItem>
+                </Select>
+              </FormControl>
+              <Button 
+                variant="contained" 
+                startIcon={<Add />} 
+                onClick={() => handleOpen()}
+                sx={{
+                  bgcolor: taxiMonterricoColors.green,
+                  '&:hover': {
+                    bgcolor: taxiMonterricoColors.green,
+                    opacity: 0.9,
+                  },
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  borderRadius: 1.5,
+                  px: 2.5,
+                  py: 1,
+                }}
+              >
+                Nueva Campaña
+              </Button>
+            </Box>
+          </Box>
+        </Box>
+
+        <TableContainer sx={{ overflow: 'hidden' }}>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ bgcolor: '#fafafa' }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', py: 2, px: 3 }}>
+                  Campaign Name
                 </TableCell>
-                <TableCell>{campaign.budget ? `$${campaign.budget.toLocaleString()}` : '-'}</TableCell>
-                <TableCell>{campaign.spent ? `$${campaign.spent.toLocaleString()}` : '-'}</TableCell>
-                <TableCell>{campaign.impressions || 0}</TableCell>
-                <TableCell>{campaign.clicks || 0}</TableCell>
-                <TableCell>{campaign.conversions || 0}</TableCell>
-                <TableCell>
-                  <IconButton size="small" onClick={() => handleOpen(campaign)}>
-                    <Edit />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => handleDelete(campaign.id)}>
-                    <Delete />
-                  </IconButton>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                  Type
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                  Status
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                  Budget
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                  Spent
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                  Impressions
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                  Clicks
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                  Conversions
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2, width: 60 }}>
+                  Actions
                 </TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {campaigns.map((campaign) => (
+                <TableRow 
+                  key={campaign.id}
+                  hover
+                  sx={{ 
+                    '&:hover': { bgcolor: '#fafafa' },
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s',
+                  }}
+                >
+                  <TableCell sx={{ py: 2, px: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                      <Avatar
+                        sx={{
+                          width: 40,
+                          height: 40,
+                          bgcolor: taxiMonterricoColors.green,
+                          fontSize: '0.875rem',
+                          fontWeight: 600,
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                        }}
+                      >
+                        {getInitials(campaign.name)}
+                      </Avatar>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontWeight: 500, 
+                          color: '#1a1a1a',
+                          fontSize: '0.875rem',
+                        }}
+                      >
+                        {campaign.name}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ px: 2 }}>
+                    <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                      {campaign.type}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ px: 2 }}>
+                    <Chip
+                      label={campaign.status}
+                      size="small"
+                      sx={{ 
+                        fontWeight: 500,
+                        fontSize: '0.75rem',
+                        height: 24,
+                        bgcolor: campaign.status === 'active' 
+                          ? '#E8F5E9' 
+                          : campaign.status === 'completed'
+                          ? '#E3F2FD'
+                          : campaign.status === 'paused'
+                          ? '#FFF3E0'
+                          : '#F5F5F5',
+                        color: campaign.status === 'active'
+                          ? '#2E7D32'
+                          : campaign.status === 'completed'
+                          ? '#1976D2'
+                          : campaign.status === 'paused'
+                          ? '#E65100'
+                          : '#757575',
+                        border: 'none',
+                        borderRadius: 1,
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell sx={{ px: 2 }}>
+                    {campaign.budget ? (
+                      <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem', fontWeight: 500 }}>
+                        ${campaign.budget.toLocaleString()}
+                      </Typography>
+                    ) : (
+                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: '0.875rem' }}>
+                        --
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell sx={{ px: 2 }}>
+                    {campaign.spent ? (
+                      <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem', fontWeight: 500 }}>
+                        ${campaign.spent.toLocaleString()}
+                      </Typography>
+                    ) : (
+                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: '0.875rem' }}>
+                        --
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell sx={{ px: 2 }}>
+                    <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                      {campaign.impressions || 0}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ px: 2 }}>
+                    <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                      {campaign.clicks || 0}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ px: 2 }}>
+                    <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                      {campaign.conversions || 0}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ px: 2 }}>
+                    <Tooltip title="Vista previa">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePreview(campaign);
+                        }}
+                        sx={{
+                          color: '#757575',
+                          '&:hover': {
+                            color: taxiMonterricoColors.green,
+                            bgcolor: `${taxiMonterricoColors.green}15`,
+                          },
+                        }}
+                      >
+                        <Visibility fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Card>
 
       <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
         <DialogTitle>
@@ -274,11 +673,3 @@ const Campaigns: React.FC = () => {
 };
 
 export default Campaigns;
-
-
-
-
-
-
-
-

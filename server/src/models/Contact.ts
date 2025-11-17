@@ -12,7 +12,7 @@ interface ContactAttributes {
   mobile?: string;
   jobTitle?: string;
   companyId?: number;
-  ownerId: number;
+  ownerId?: number | null;
   address?: string;
   city?: string;
   state?: string;
@@ -32,7 +32,7 @@ interface ContactAttributes {
   updatedAt?: Date;
 }
 
-interface ContactCreationAttributes extends Optional<ContactAttributes, 'id' | 'phone' | 'mobile' | 'jobTitle' | 'companyId' | 'address' | 'city' | 'state' | 'country' | 'postalCode' | 'website' | 'facebook' | 'twitter' | 'github' | 'linkedin' | 'youtube' | 'leadStatus' | 'tags' | 'notes' | 'createdAt' | 'updatedAt'> {}
+interface ContactCreationAttributes extends Optional<ContactAttributes, 'id' | 'phone' | 'mobile' | 'jobTitle' | 'companyId' | 'ownerId' | 'address' | 'city' | 'state' | 'country' | 'postalCode' | 'website' | 'facebook' | 'twitter' | 'github' | 'linkedin' | 'youtube' | 'leadStatus' | 'tags' | 'notes' | 'createdAt' | 'updatedAt'> {}
 
 export class Contact extends Model<ContactAttributes, ContactCreationAttributes> implements ContactAttributes {
   public id!: number;
@@ -43,7 +43,7 @@ export class Contact extends Model<ContactAttributes, ContactCreationAttributes>
   public mobile?: string;
   public jobTitle?: string;
   public companyId?: number;
-  public ownerId!: number;
+  public ownerId?: number | null;
   public address?: string;
   public city?: string;
   public state?: string;
@@ -110,7 +110,7 @@ Contact.init(
     },
     ownerId: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
       references: {
         model: 'users',
         key: 'id',
@@ -184,8 +184,8 @@ Contact.init(
   }
 );
 
-Contact.belongsTo(User, { foreignKey: 'ownerId', as: 'Owner' });
-Contact.belongsTo(Company, { foreignKey: 'companyId', as: 'Company' }); // Mantener para compatibilidad con empresa principal
+Contact.belongsTo(User, { foreignKey: 'ownerId', as: 'Owner', required: false });
+Contact.belongsTo(Company, { foreignKey: 'companyId', as: 'Company', required: false }); // Mantener para compatibilidad con empresa principal
 
 // Relación muchos-a-muchos con empresas se inicializa en models/index.ts después de que todos los modelos estén cargados
 

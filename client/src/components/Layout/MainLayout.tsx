@@ -1,7 +1,6 @@
 import React from 'react';
 import { Box } from '@mui/material';
 import Sidebar from './Sidebar';
-import Header from './Header';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -24,7 +23,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           bgcolor: '#f5f7fa',
         }}
       >
-        <Header />
         <Box sx={{ flex: 1, bgcolor: '#f5f7fa', overflow: 'auto' }}>
           {children}
         </Box>
