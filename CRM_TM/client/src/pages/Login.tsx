@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo-taxi-monterrico.svg';
+import { keyframes } from '@mui/system';
 
 // Paleta de colores Taxi Monterrico (basada en el logo)
 const colors = {
@@ -25,6 +26,19 @@ const colors = {
   gray: '#757575',
   grayLight: '#E0E0E0',
 };
+
+// Animación de movimiento del fondo
+const gradientMove = keyframes`
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+`;
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -75,80 +89,99 @@ const Login: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: `linear-gradient(135deg, ${colors.green} 0%, ${colors.greenLight} 50%, ${colors.orangeLight} 100%)`,
+        backgroundColor: '#f5f5f5',
         padding: 2,
+        position: 'relative',
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: '-50%',
+          left: '-50%',
+          width: '200%',
+          height: '200%',
+          background: `linear-gradient(45deg, ${colors.greenLight}08 0%, transparent 25%, ${colors.green}10 50%, transparent 75%, ${colors.greenLight}08 100%)`,
+          backgroundSize: '400% 400%',
+          animation: `${gradientMove} 15s ease infinite`,
+          pointerEvents: 'none',
+        },
+        '&::after': {
+          content: '""',
+          position: 'absolute',
+          top: '-50%',
+          right: '-50%',
+          width: '200%',
+          height: '200%',
+          background: `radial-gradient(circle at center, ${colors.greenLight}15 0%, ${colors.green}08 30%, transparent 70%)`,
+          backgroundSize: '200% 200%',
+          animation: `${gradientMove} 20s ease infinite reverse`,
+          pointerEvents: 'none',
+        },
       }}
     >
-      <Container component="main" maxWidth="xs">
-        <Box
+      <Container component="main" maxWidth="xs" sx={{ position: 'relative', zIndex: 1 }}>
+        <Paper
+          elevation={0}
           sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
+            p: 4,
+            width: '100%',
+            borderRadius: 4,
+            backgroundColor: colors.white,
+            border: `1px solid ${colors.grayLight}`,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
           }}
         >
-          {/* Logo/Título con estilo Taxi Monterrico */}
           <Box
             sx={{
-              mb: 4,
-              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
             }}
           >
+            {/* Logo dentro del recuadro */}
             <Box
               sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto',
-                mb: 2,
-                width: 120,
-                height: 120,
-                filter: 'drop-shadow(0 4px 20px rgba(46, 125, 50, 0.4))',
+                mb: 3,
+                textAlign: 'center',
               }}
             >
-              <img
-                src={logo}
-                alt="Taxi Monterrico Logo"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'contain',
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto',
+                  mb: 2,
+                  width: 96,
+                  height: 96,
                 }}
-              />
+              >
+                <img
+                  src={logo}
+                  alt="Taxi Monterrico Logo"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'contain',
+                  }}
+                />
+              </Box>
+              <Typography
+                component="h1"
+                variant="h5"
+                sx={{
+                  fontFamily: 'Inter, sans-serif',
+                  fontWeight: 700,
+                  fontSize: '1.75rem',
+                  color: colors.green,
+                  mb: 0.5,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                }}
+              >
+                CRM
+              </Typography>
             </Box>
-            <Typography
-              component="h1"
-              variant="h4"
-              sx={{
-                fontWeight: 'bold',
-                color: colors.white,
-                mb: 0.5,
-                textShadow: '0 2px 4px rgba(0,0,0,0.2)',
-              }}
-            >
-              CRM Taxi Monterrico
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{
-                color: colors.white,
-                opacity: 0.9,
-              }}
-            >
-              Inicia sesión para continuar
-            </Typography>
-          </Box>
-
-          <Paper
-            elevation={8}
-            sx={{
-              p: 4,
-              width: '100%',
-              borderRadius: 3,
-              backgroundColor: colors.white,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
-            }}
-          >
             {error && (
               <Alert
                 severity="error"
@@ -184,12 +217,14 @@ const Login: React.FC = () => {
                     borderRadius: 2,
                     '& fieldset': {
                       borderColor: colors.grayLight,
+                      borderWidth: '1px',
                     },
                     '&:hover fieldset': {
                       borderColor: colors.green,
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: colors.green,
+                      borderWidth: '1px',
                     },
                   },
                   '& .MuiInputLabel-root.Mui-focused': {
@@ -214,12 +249,14 @@ const Login: React.FC = () => {
                     borderRadius: 2,
                     '& fieldset': {
                       borderColor: colors.grayLight,
+                      borderWidth: '1px',
                     },
                     '&:hover fieldset': {
                       borderColor: colors.green,
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: colors.green,
+                      borderWidth: '1px',
                     },
                   },
                   '& .MuiInputLabel-root.Mui-focused': {
@@ -235,28 +272,24 @@ const Login: React.FC = () => {
                 sx={{
                   mt: 2,
                   mb: 2,
-                  py: 1.5,
+                  py: 1.25,
                   borderRadius: 2,
-                  fontSize: '1rem',
-                  fontWeight: 'bold',
-                  textTransform: 'uppercase',
-                  background: `linear-gradient(135deg, ${colors.orange} 0%, ${colors.orangeLight} 100%)`,
-                  boxShadow: `0 4px 15px rgba(255, 152, 0, 0.4)`,
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  textTransform: 'none',
+                  backgroundColor: colors.orange,
                   '&:hover': {
-                    background: `linear-gradient(135deg, ${colors.orangeLight} 0%, ${colors.orange} 100%)`,
-                    boxShadow: `0 6px 20px rgba(255, 152, 0, 0.6)`,
-                    transform: 'translateY(-2px)',
+                    backgroundColor: colors.orangeDark,
                   },
                   '&:disabled': {
-                    background: colors.grayLight,
+                    backgroundColor: colors.grayLight,
                     color: colors.gray,
                   },
-                  transition: 'all 0.3s ease',
                 }}
               >
                 {loading ? (
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CircularProgress size={20} sx={{ color: colors.white }} />
+                    <CircularProgress size={20} sx={{ color: '#fff' }} />
                     <span>Iniciando sesión...</span>
                   </Box>
                 ) : (
@@ -264,26 +297,8 @@ const Login: React.FC = () => {
                 )}
               </Button>
             </Box>
-          </Paper>
-
-          {/* Información de credenciales (solo en desarrollo) */}
-          {process.env.NODE_ENV === 'development' && (
-            <Box
-              sx={{
-                mt: 3,
-                p: 2,
-                borderRadius: 2,
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                backdropFilter: 'blur(10px)',
-                textAlign: 'center',
-              }}
-            >
-              <Typography variant="caption" sx={{ color: colors.white, opacity: 0.9 }}>
-                Usuario: admin@crm.com / Contraseña: admin123
-              </Typography>
-            </Box>
-          )}
-        </Box>
+          </Box>
+        </Paper>
       </Container>
     </Box>
   );

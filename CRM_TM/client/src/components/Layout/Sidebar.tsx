@@ -18,11 +18,12 @@ import {
   AttachMoney,
   Assignment,
   Campaign,
-  Settings,
   Timeline,
   Support,
+  Logout,
 } from '@mui/icons-material';
 import { useSidebar } from '../../context/SidebarContext';
+import { useAuth } from '../../context/AuthContext';
 
 const drawerWidth = 240;
 const collapsedWidth = 64;
@@ -36,13 +37,18 @@ const menuItems = [
   { text: 'Tickets', icon: <Support />, path: '/tickets' },
   { text: 'Campañas', icon: <Campaign />, path: '/campaigns' },
   { text: 'Automatizaciones', icon: <Timeline />, path: '/automations' },
-  { text: 'Configuración', icon: <Settings />, path: '/settings' },
 ];
 
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { open } = useSidebar();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <Drawer
@@ -112,6 +118,48 @@ const Sidebar: React.FC = () => {
             </ListItem>
           );
         })}
+      </List>
+      <Divider />
+      <List>
+        <ListItem disablePadding>
+          <Tooltip title={!open ? 'Cerrar sesión' : ''} placement="right">
+            <ListItemButton
+              onClick={handleLogout}
+              sx={{
+                minHeight: 48,
+                justifyContent: open ? 'initial' : 'center',
+                px: 2.5,
+                color: '#d32f2f',
+                '&:hover': {
+                  backgroundColor: '#ffebee',
+                  color: '#c62828',
+                },
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: 0,
+                  mr: open ? 3 : 'auto',
+                  justifyContent: 'center',
+                  color: 'inherit',
+                }}
+              >
+                <Logout />
+              </ListItemIcon>
+              <ListItemText
+                primary="Cerrar sesión"
+                sx={{
+                  opacity: open ? 1 : 0,
+                  transition: 'opacity 0.2s',
+                  '& .MuiListItemText-primary': {
+                    fontSize: '0.875rem',
+                    fontWeight: 400,
+                  },
+                }}
+              />
+            </ListItemButton>
+          </Tooltip>
+        </ListItem>
       </List>
     </Drawer>
   );

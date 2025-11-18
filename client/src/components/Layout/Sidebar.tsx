@@ -15,13 +15,13 @@ import {
   AttachMoney,
   Assignment,
   Campaign,
-  Settings,
   Timeline,
   Support,
   PieChart,
-  Add,
+  Logout,
 } from '@mui/icons-material';
 import { taxiMonterricoColors } from '../../theme/colors';
+import { useAuth } from '../../context/AuthContext';
 
 const drawerWidth = 80;
 
@@ -36,11 +36,15 @@ const mainMenuItems = [
   { text: 'Automatizaciones', icon: <Timeline />, path: '/automations' },
 ];
 
-const settingsMenuItem = { text: 'Configuración', icon: <Settings />, path: '/settings' };
-
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <Drawer
@@ -161,11 +165,11 @@ const Sidebar: React.FC = () => {
         })}
       </List>
       
-      {/* Separador y Configuración al final */}
+      {/* Separador y botón de cerrar sesión al final */}
       <Box sx={{ flex: 1 }} />
       <Box sx={{ width: '100%', px: 1.5 }}>
         <Tooltip 
-          title={settingsMenuItem.text} 
+          title="Cerrar sesión" 
           placement="right"
           arrow
           componentsProps={{
@@ -188,8 +192,7 @@ const Sidebar: React.FC = () => {
           }}
         >
           <ListItemButton
-            selected={location.pathname === settingsMenuItem.path}
-            onClick={() => navigate(settingsMenuItem.path)}
+            onClick={handleLogout}
             sx={{
               minHeight: 48,
               width: 48,
@@ -199,18 +202,10 @@ const Sidebar: React.FC = () => {
               p: 0,
               mb: 0.5,
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              '&.Mui-selected': {
-                backgroundColor: taxiMonterricoColors.green,
-                color: 'white',
-                '&:hover': {
-                  backgroundColor: taxiMonterricoColors.greenDark,
-                },
-              },
+              color: '#d32f2f',
               '&:hover': {
-                backgroundColor: location.pathname === settingsMenuItem.path ? taxiMonterricoColors.greenDark : '#e9ecef',
-              },
-              '&:not(.Mui-selected)': {
-                color: '#6c757d',
+                backgroundColor: '#ffebee',
+                color: '#c62828',
               },
             }}
           >
@@ -224,65 +219,7 @@ const Sidebar: React.FC = () => {
                 },
               }}
             >
-              {settingsMenuItem.icon}
-            </ListItemIcon>
-          </ListItemButton>
-        </Tooltip>
-      </Box>
-
-      {/* Botón de agregar al final */}
-      <Box sx={{ width: '100%', px: 1.5, mt: 1 }}>
-        <Tooltip 
-          title="Crear nuevo" 
-          placement="right"
-          arrow
-          componentsProps={{
-            tooltip: {
-              sx: {
-                bgcolor: '#424242',
-                fontSize: '0.75rem',
-                fontWeight: 500,
-                px: 1.5,
-                py: 0.75,
-                borderRadius: 1,
-                ml: 1,
-              },
-            },
-            arrow: {
-              sx: {
-                color: '#424242',
-              },
-            },
-          }}
-        >
-          <ListItemButton
-            onClick={() => navigate('/contacts')}
-            sx={{
-              minHeight: 48,
-              width: 48,
-              height: 48,
-              borderRadius: 2,
-              justifyContent: 'center',
-              p: 0,
-              backgroundColor: '#e9ecef',
-              color: '#6c757d',
-              '&:hover': {
-                backgroundColor: '#dee2e6',
-                color: taxiMonterricoColors.green,
-              },
-            }}
-          >
-            <ListItemIcon
-              sx={{
-                minWidth: 0,
-                justifyContent: 'center',
-                color: 'inherit',
-                '& svg': {
-                  fontSize: 22,
-                },
-              }}
-            >
-              <Add />
+              <Logout />
             </ListItemIcon>
           </ListItemButton>
         </Tooltip>

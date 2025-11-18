@@ -37,6 +37,7 @@ import {
   TableRow,
   Collapse,
   Tooltip,
+  Card,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -44,9 +45,13 @@ import {
   Note,
   Email,
   Phone,
+  LocationOn,
   Assignment,
   Event,
   Business,
+  Flag,
+  Person,
+  TrendingUp,
   AttachMoney,
   Support,
   Refresh,
@@ -82,9 +87,11 @@ import {
   PushPin,
   History,
   Delete,
+  CheckCircle,
 } from '@mui/icons-material';
 import api from '../config/api';
 import RichTextEditor from '../components/RichTextEditor';
+import { taxiMonterricoColors } from '../theme/colors';
 
 interface CompanyDetail {
   id: number;
@@ -1639,21 +1646,6 @@ const CompanyDetail: React.FC = () => {
                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                   Etapa del ciclo de vida
                 </Typography>
-                <Link
-                  component="button"
-                  onClick={() => {}}
-                  sx={{
-                    fontSize: '0.75rem',
-                    color: '#00bcd4',
-                    textDecoration: 'none',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      textDecoration: 'underline',
-                    },
-                  }}
-                >
-                  Detalles
-                </Link>
               </Box>
               <Typography
                 variant="body2"
@@ -1780,15 +1772,6 @@ const CompanyDetail: React.FC = () => {
               </Menu>
             </Box>
 
-            <Divider sx={{ my: 2 }} />
-
-            {/* Actividad del sitio web */}
-            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-              Actividad del sitio web
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-              No hay actividad del sitio web registrada para este contacto.
-            </Typography>
           </Paper>
         </Box>
 
@@ -1852,6 +1835,8 @@ const CompanyDetail: React.FC = () => {
               overflowY: 'auto',
               overflowX: 'hidden',
               height: '100%',
+              py: 3,
+              px: 0.5,
               // Estilos personalizados para la scrollbar
               '&::-webkit-scrollbar': {
                 width: '8px',
@@ -1873,26 +1858,14 @@ const CompanyDetail: React.FC = () => {
             }}>
               <TabPanel value={tabValue} index={0}>
                 {/* Aspectos destacados de los datos */}
-                <Box sx={{ mb: 4 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Aspectos destacados de los datos
                     </Typography>
-                    <IconButton 
-                      size="small"
-                      sx={{
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                          transform: 'rotate(90deg)',
-                        },
-                      }}
-                    >
-                      <Settings fontSize="small" />
-                    </IconButton>
                   </Box>
                   <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3 }}>
-                    <Box>
+                    <Box sx={{ textAlign: 'center' }}>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                         FECHA DE CREACIÓN
                       </Typography>
@@ -1908,11 +1881,11 @@ const CompanyDetail: React.FC = () => {
                           : '--'}
                       </Typography>
                     </Box>
-                    <Box>
+                    <Box sx={{ textAlign: 'center' }}>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                         ETAPA DEL CICLO DE VIDA
                       </Typography>
-                      <Box sx={{ mt: 0.5 }}>
+                      <Box sx={{ mt: 0.5, display: 'flex', justifyContent: 'center' }}>
                         <Chip 
                           label={company.lifecycleStage} 
                           color={getStageColor(company.lifecycleStage)} 
@@ -1920,7 +1893,7 @@ const CompanyDetail: React.FC = () => {
                         />
                       </Box>
                     </Box>
-                    <Box>
+                    <Box sx={{ textAlign: 'center' }}>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                         ÚLTIMA ACTIVIDAD
                       </Typography>
@@ -1929,10 +1902,10 @@ const CompanyDetail: React.FC = () => {
                       </Typography>
                     </Box>
                   </Box>
-                </Box>
+                </Card>
 
                 {/* Actividades recientes */}
-                <Box sx={{ mb: 4 }}>
+                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Actividades recientes
@@ -1945,16 +1918,17 @@ const CompanyDetail: React.FC = () => {
                       value={activitySearch}
                       onChange={(e) => setActivitySearch(e.target.value)}
                       sx={{
-                        flex: 1,
+                        width: '300px',
                         transition: 'all 0.3s ease',
                         '& .MuiOutlinedInput-root': {
+                          height: '32px',
+                          fontSize: '0.875rem',
                           '&:hover': {
                             '& fieldset': {
                               borderColor: '#2E7D32',
                             },
                           },
                           '&.Mui-focused': {
-                            transform: 'scale(1.02)',
                             '& fieldset': {
                               borderColor: '#2E7D32',
                               borderWidth: 2,
@@ -3638,7 +3612,7 @@ const CompanyDetail: React.FC = () => {
                       </Typography>
                     </Box>
                   )}
-                </Box>
+                </Card>
 
                 {/* Contactos */}
                 <Box sx={{ mb: 4 }}>

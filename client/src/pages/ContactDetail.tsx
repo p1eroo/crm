@@ -2093,21 +2093,6 @@ const ContactDetail: React.FC = () => {
                   >
                     Etapa del ciclo de vida
                   </Typography>
-                  <Link
-                    component="button"
-                    onClick={() => {}}
-                    sx={{
-                      fontSize: '0.75rem',
-                      color: '#00bcd4',
-                      textDecoration: 'none',
-                      cursor: 'pointer',
-                      '&:hover': {
-                        textDecoration: 'underline',
-                      },
-                    }}
-                  >
-                    Detalles
-                  </Link>
                 </Box>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -2459,15 +2444,6 @@ const ContactDetail: React.FC = () => {
               </Box>
             </Box>
 
-            <Divider sx={{ my: 2 }} />
-
-            {/* Actividad del sitio web */}
-            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-              Actividad del sitio web
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-              No hay actividad del sitio web registrada para este contacto.
-            </Typography>
           </Paper>
         </Box>
         </Card>
@@ -2491,7 +2467,8 @@ const ContactDetail: React.FC = () => {
             flex: 1, 
             overflow: 'hidden',
             minHeight: 0,
-            transition: 'gap 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+            position: 'relative',
+            transition: 'gap 0.2s ease',
           }}>
         {/* Columna Central - Pestañas */}
         <Box sx={{ 
@@ -2529,8 +2506,20 @@ const ContactDetail: React.FC = () => {
               onChange={(e, newValue) => setTabValue(newValue)}
               sx={{
                 flexShrink: 0,
+                '& .MuiTabs-flexContainer': {
+                  display: 'flex',
+                  width: '100%',
+                  padding: '0 24px',
+                },
                 '& .MuiTab-root': {
                   transition: 'all 0.2s ease',
+                  flex: 1,
+                  minWidth: 'auto',
+                  maxWidth: 'none',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
                   '&:hover': {
                     backgroundColor: 'rgba(46, 125, 50, 0.04)',
                   },
@@ -2538,6 +2527,7 @@ const ContactDetail: React.FC = () => {
                 '& .Mui-selected': {
                   color: '#2E7D32',
                   fontWeight: 'bold',
+                  backgroundColor: 'rgba(46, 125, 50, 0.08)',
                 },
                 '& .MuiTabs-indicator': {
                   backgroundColor: '#2E7D32',
@@ -2555,7 +2545,8 @@ const ContactDetail: React.FC = () => {
               flex: 1, 
               overflowY: 'auto',
               overflowX: 'hidden',
-              p: 3,
+              py: 0.5,
+              px: 0.5,
               minHeight: 0,
               // Ocultar scrollbar pero mantener scroll funcional
               '&::-webkit-scrollbar': {
@@ -2567,34 +2558,14 @@ const ContactDetail: React.FC = () => {
             }}>
               <TabPanel value={tabValue} index={0}>
                 {/* Aspectos destacados de los datos */}
-                <Card sx={{ 
-                  borderRadius: 6,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                  overflow: 'hidden',
-                  bgcolor: 'white',
-                  mb: 4,
-                  p: 3,
-                  mx: -3,
-                }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Aspectos destacados de los datos
                     </Typography>
-                    <IconButton 
-                      size="small"
-                      sx={{
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                          transform: 'rotate(90deg)',
-                        },
-                      }}
-                    >
-                      <Settings fontSize="small" />
-                    </IconButton>
                   </Box>
                   <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3 }}>
-                    <Box>
+                    <Box sx={{ textAlign: 'center' }}>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                         FECHA DE CREACIÓN
                       </Typography>
@@ -2610,11 +2581,11 @@ const ContactDetail: React.FC = () => {
                           : '--'}
                       </Typography>
                     </Box>
-                    <Box>
+                    <Box sx={{ textAlign: 'center' }}>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                         ETAPA DEL CICLO DE VIDA
                       </Typography>
-                      <Box sx={{ mt: 0.5 }}>
+                      <Box sx={{ mt: 0.5, display: 'flex', justifyContent: 'center' }}>
                         <Chip 
                           label={contact.lifecycleStage} 
                           color={getStageColor(contact.lifecycleStage)} 
@@ -2622,7 +2593,7 @@ const ContactDetail: React.FC = () => {
                         />
                       </Box>
                     </Box>
-                    <Box>
+                    <Box sx={{ textAlign: 'center' }}>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                         ÚLTIMA ACTIVIDAD
                       </Typography>
@@ -2634,15 +2605,7 @@ const ContactDetail: React.FC = () => {
                 </Card>
 
                 {/* Actividades recientes */}
-                <Card sx={{ 
-                  borderRadius: 6,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                  overflow: 'hidden',
-                  bgcolor: 'white',
-                  mb: 4,
-                  p: 3,
-                  mx: -3,
-                }}>
+                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Actividades recientes
@@ -2655,16 +2618,17 @@ const ContactDetail: React.FC = () => {
                       value={activitySearch}
                       onChange={(e) => setActivitySearch(e.target.value)}
                       sx={{
-                        flex: 1,
+                        width: '300px',
                         transition: 'all 0.3s ease',
                         '& .MuiOutlinedInput-root': {
+                          height: '32px',
+                          fontSize: '0.875rem',
                           '&:hover': {
                             '& fieldset': {
                               borderColor: '#2E7D32',
                             },
                           },
                           '&.Mui-focused': {
-                            transform: 'scale(1.02)',
                             '& fieldset': {
                               borderColor: '#2E7D32',
                               borderWidth: 2,
@@ -4441,15 +4405,8 @@ const ContactDetail: React.FC = () => {
                 </Card>
 
                 {/* Empresas */}
-                <Card sx={{ 
-                  borderRadius: 6,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                  overflow: 'hidden',
-                  bgcolor: 'white',
-                  mb: 4,
-                  mx: -3,
-                }}>
-                  <Box sx={{ px: 3, pt: 3, pb: 2 }}>
+                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                  <Box sx={{ mb: 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                       <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                         Empresas
@@ -4478,18 +4435,19 @@ const ContactDetail: React.FC = () => {
                           </InputAdornment>
                         ),
                       }}
-                      fullWidth
                       sx={{ 
+                        width: '300px',
                         mb: 2,
                         transition: 'all 0.3s ease',
                         '& .MuiOutlinedInput-root': {
+                          height: '32px',
+                          fontSize: '0.875rem',
                           '&:hover': {
                             '& fieldset': {
                               borderColor: '#2E7D32',
                             },
                           },
                           '&.Mui-focused': {
-                            transform: 'scale(1.02)',
                             '& fieldset': {
                               borderColor: '#2E7D32',
                               borderWidth: 2,
@@ -4664,7 +4622,7 @@ const ContactDetail: React.FC = () => {
                       </Table>
                     </TableContainer>
                   ) : (
-                    <Box sx={{ px: 3, pb: 3 }}>
+                    <Box>
                       <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
                         No existen objetos asociados de este tipo o no tienes permiso para verlos.
                       </Typography>
@@ -4673,15 +4631,8 @@ const ContactDetail: React.FC = () => {
                 </Card>
 
                 {/* Negocios Section */}
-                <Card sx={{ 
-                  borderRadius: 6,
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                  overflow: 'hidden',
-                  bgcolor: 'white',
-                  mb: 4,
-                  mx: -3,
-                }}>
-                  <Box sx={{ px: 3, pt: 3, pb: 2 }}>
+                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                  <Box sx={{ mb: 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                       <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                         Negocios
@@ -4713,8 +4664,14 @@ const ContactDetail: React.FC = () => {
                           </InputAdornment>
                         ),
                       }}
-                      fullWidth
-                      sx={{ mb: 2 }}
+                      sx={{ 
+                        width: '300px',
+                        mb: 2,
+                        '& .MuiOutlinedInput-root': {
+                          height: '32px',
+                          fontSize: '0.875rem',
+                        },
+                      }}
                     />
                     <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
                       <Button size="small" variant="outlined" endIcon={<ExpandMore />}>
@@ -4797,7 +4754,7 @@ const ContactDetail: React.FC = () => {
                       </Table>
                     </TableContainer>
                   ) : (
-                    <Box sx={{ px: 3, pb: 3 }}>
+                    <Box>
                       <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
                         No existen objetos asociados de este tipo o no tienes permiso para verlos.
                       </Typography>
@@ -4806,7 +4763,7 @@ const ContactDetail: React.FC = () => {
                 </Card>
 
                 {/* Tickets */}
-                <Box sx={{ mb: 4 }}>
+                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Tickets
@@ -4881,10 +4838,10 @@ const ContactDetail: React.FC = () => {
                       </Table>
                     </TableContainer>
                   )}
-                </Box>
+                </Card>
 
                 {/* Suscripciones */}
-                <Box sx={{ mb: 4 }}>
+                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Suscripciones ({associatedSubscriptions.length})
@@ -4951,17 +4908,19 @@ const ContactDetail: React.FC = () => {
                       </Table>
                     </TableContainer>
                   )}
-                </Box>
+                </Card>
 
                 {/* Pagos */}
-                <Box sx={{ mb: 4 }}>
+                
+                {/* Pagos */}
+                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Pagos ({associatedPayments.length})
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Link 
-                        component="button" 
+                      <Link
+                        component="button"
                         sx={{ fontSize: '0.875rem', cursor: 'pointer', border: 'none', background: 'none', color: 'primary.main' }}
                         onClick={() => setAddPaymentOpen(true)}
                       >
@@ -4972,6 +4931,7 @@ const ContactDetail: React.FC = () => {
                       </IconButton>
                     </Box>
                   </Box>
+                
                   {associatedPayments.length === 0 ? (
                     <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
                       No existen objetos asociados de este tipo o no tienes permiso para verlos.
@@ -4985,42 +4945,37 @@ const ContactDetail: React.FC = () => {
                             <TableCell sx={{ fontWeight: 'bold' }}>Estado</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Método</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Fecha pago</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Referencia</TableCell>
                           </TableRow>
                         </TableHead>
                         <TableBody>
                           {associatedPayments.map((payment) => (
                             <TableRow key={payment.id} hover>
+                              <TableCell>{payment.currency || 'USD'} ${parseFloat(payment.amount || 0).toLocaleString()}</TableCell>
                               <TableCell>
-                                {payment.currency || 'USD'} ${parseFloat(payment.amount || 0).toLocaleString()}
-                              </TableCell>
-                              <TableCell>
-                                <Chip 
-                                  label={payment.status} 
-                                  size="small" 
-                                  sx={{ 
-                                    bgcolor: payment.status === 'completed' ? '#c8e6c9' :
-                                            payment.status === 'failed' ? '#ffcdd2' :
-                                            payment.status === 'refunded' ? '#e0e0e0' :
-                                            payment.status === 'cancelled' ? '#e0e0e0' : '#fff9c4',
+                                <Chip
+                                  label={payment.status}
+                                  size="small"
+                                  sx={{
+                                    bgcolor:
+                                      payment.status === 'completed' ? '#c8e6c9' :
+                                      payment.status === 'failed' ? '#ffcdd2' :
+                                      payment.status === 'refunded' ? '#e0e0e0' :
+                                      payment.status === 'cancelled' ? '#e0e0e0' : '#fff9c4',
                                     textTransform: 'capitalize'
-                                  }} 
+                                  }}
                                 />
                               </TableCell>
-                              <TableCell sx={{ textTransform: 'capitalize' }}>
-                                {payment.paymentMethod?.replace('_', ' ')}
-                              </TableCell>
+                              <TableCell>{payment.paymentMethod?.replace('_', ' ')}</TableCell>
                               <TableCell>
                                 {payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString('es-ES') : '-'}
                               </TableCell>
-                              <TableCell>{payment.reference || '-'}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
                     </TableContainer>
                   )}
-                </Box>
+                </Card>
               </TabPanel>
 
               <TabPanel value={tabValue} index={1}>
@@ -5465,14 +5420,16 @@ const ContactDetail: React.FC = () => {
 
         {/* Columna Derecha - Registros Asociados */}
         <Box sx={{ 
-          width: summaryExpanded ? '320px' : '40px',
+          width: summaryExpanded ? '320px' : '24px',
           flexShrink: 0,
           height: '100%',
           maxHeight: '100%',
           overflowY: 'auto',
           overflowX: 'hidden',
-          transition: 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-          position: 'relative',
+          position: summaryExpanded ? 'relative' : 'absolute',
+          right: summaryExpanded ? 'auto' : 0,
+          top: 0,
+          transition: 'width 0.2s ease',
           // Ocultar scrollbar pero mantener scroll funcional
           '&::-webkit-scrollbar': {
             display: 'none',
@@ -5481,31 +5438,31 @@ const ContactDetail: React.FC = () => {
           // Para Firefox
           scrollbarWidth: 'none',
         }}>
-          {/* Botón para expandir cuando está contraído */}
+          {/* Columna delgada para expandir cuando está contraído */}
           {!summaryExpanded && (
-            <IconButton
-              onClick={() => setSummaryExpanded(true)}
+            <Box
               sx={{
-                position: 'absolute',
-                left: 0,
-                top: 16,
-                width: 40,
-                height: 40,
-                backgroundColor: '#2E7D32',
-                color: 'white',
-                borderRadius: '0 8px 8px 0',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                transition: 'all 0.2s ease',
-                zIndex: 10,
-                '&:hover': {
-                  backgroundColor: '#1B5E20',
-                  transform: 'scale(1.1)',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-                },
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              <KeyboardArrowLeft />
-            </IconButton>
+              <IconButton
+                onClick={() => setSummaryExpanded(true)}
+                sx={{
+                  backgroundColor: 'transparent',
+                  color: '#2E7D32',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                  },
+                }}
+              >
+                <KeyboardArrowLeft sx={{ fontSize: 20 }} />
+              </IconButton>
+            </Box>
           )}
           
           <Paper sx={{ 
@@ -5515,9 +5472,9 @@ const ContactDetail: React.FC = () => {
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
             opacity: summaryExpanded ? 1 : 0,
             visibility: summaryExpanded ? 'visible' : 'hidden',
+            transition: 'opacity 0.2s ease, width 0.2s ease',
           }}>
             <Box 
               sx={{ 
@@ -5525,25 +5482,18 @@ const ContactDetail: React.FC = () => {
                 justifyContent: 'space-between', 
                 alignItems: 'center', 
                 mb: 2,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
                 flexShrink: 0,
-                '&:hover': {
-                  backgroundColor: 'rgba(46, 125, 50, 0.04)',
-                  borderRadius: 1,
-                  px: 1,
-                },
               }}
-              onClick={() => setSummaryExpanded(!summaryExpanded)}
             >
               <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                 Resumen
               </Typography>
               <IconButton 
                 size="small"
+                onClick={() => setSummaryExpanded(!summaryExpanded)}
                 sx={{
-                  transition: 'transform 0.3s ease',
                   transform: summaryExpanded ? 'rotate(0deg)' : 'rotate(180deg)',
+                  transition: 'transform 0.2s ease',
                 }}
               >
                 <KeyboardArrowRight />
@@ -5556,11 +5506,9 @@ const ContactDetail: React.FC = () => {
                 flex: 1,
                 overflowY: 'auto',
                 overflowX: 'hidden',
-                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                 maxWidth: summaryExpanded ? '100%' : 0,
                 width: summaryExpanded ? '100%' : 0,
                 opacity: summaryExpanded ? 1 : 0,
-                transform: summaryExpanded ? 'translateX(0)' : 'translateX(-100%)',
                 visibility: summaryExpanded ? 'visible' : 'hidden',
                 // Ocultar scrollbar pero mantener scroll funcional
                 '&::-webkit-scrollbar': {

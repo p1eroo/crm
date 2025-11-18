@@ -17,6 +17,51 @@ import Campaigns from './pages/Campaigns';
 import Automations from './pages/Automations';
 
 const theme = createTheme({
+  typography: {
+    fontFamily: [
+      'Inter',
+      '-apple-system',
+      'BlinkMacSystemFont',
+      '"Segoe UI"',
+      'Roboto',
+      '"Helvetica Neue"',
+      'Arial',
+      'sans-serif',
+    ].join(','),
+    h1: {
+      fontWeight: 600,
+      letterSpacing: '-0.02em',
+    },
+    h2: {
+      fontWeight: 600,
+      letterSpacing: '-0.01em',
+    },
+    h3: {
+      fontWeight: 600,
+    },
+    h4: {
+      fontWeight: 600,
+    },
+    h5: {
+      fontWeight: 600,
+    },
+    h6: {
+      fontWeight: 600,
+    },
+    body1: {
+      fontWeight: 400,
+      letterSpacing: '0.01em',
+    },
+    body2: {
+      fontWeight: 400,
+      letterSpacing: '0.01em',
+    },
+    button: {
+      fontWeight: 500,
+      letterSpacing: '0.02em',
+      textTransform: 'none',
+    },
+  },
   palette: {
     primary: {
       main: '#2E7D32', // Verde vibrante Taxi Monterrico
