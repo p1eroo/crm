@@ -38,6 +38,8 @@ import {
   Collapse,
   Tooltip,
   Card,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import {
   ArrowBack,
@@ -100,7 +102,7 @@ import api from '../config/api';
 import RichTextEditor from '../components/RichTextEditor';
 import { taxiMonterricoColors } from '../theme/colors';
 
-interface ContactDetail {
+interface ContactDetailData {
   id: number;
   firstName: string;
   lastName: string;
@@ -171,7 +173,9 @@ function TabPanel(props: TabPanelProps) {
 const ContactDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [contact, setContact] = useState<ContactDetail | null>(null);
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const [contact, setContact] = useState<ContactDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -508,6 +512,11 @@ const ContactDetail: React.FC = () => {
       window.removeEventListener('keydown', handleEscKey);
     };
   }, [noteOpen, emailOpen, callOpen, taskOpen, meetingOpen]);
+
+  // Asegurar que el resumen esté contraído al cambiar de contacto
+  useEffect(() => {
+    setSummaryExpanded(false);
+  }, [id]);
 
   const fetchContact = async () => {
     try {
@@ -1392,9 +1401,9 @@ const ContactDetail: React.FC = () => {
     <Box sx={{ 
       bgcolor: '#f5f7fa',
       minHeight: '100vh',
-      pb: { xs: 3, sm: 6, md: 8 },
-      px: { xs: 3, sm: 6, md: 8 },
-      pt: { xs: 4, sm: 6, md: 6 },
+      pb: { xs: 2, sm: 4, md: 8 },
+      px: { xs: 1, sm: 3, md: 8 },
+      pt: { xs: 2, sm: 4, md: 6 },
       display: 'flex', 
       flexDirection: 'column',
     }}>
@@ -1402,24 +1411,25 @@ const ContactDetail: React.FC = () => {
       {/* Contenido principal - Separado en 2 partes */}
       <Box sx={{ 
         display: 'flex',
-        gap: 3,
+        flexDirection: { xs: 'column', md: 'row' },
+        gap: { xs: 2, md: 3 },
         flex: 1,
-        overflow: 'hidden',
-        minHeight: 0,
+        overflow: { xs: 'visible', md: 'hidden' },
+        minHeight: { xs: 'auto', md: 0 },
       }}>
         {/* Parte 1: Columna Izquierda - Información del Contacto */}
         <Card sx={{ 
-          borderRadius: 6,
+          borderRadius: { xs: 2, md: 6 },
           boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
           overflow: 'hidden',
           bgcolor: 'white',
           display: 'flex',
           flexDirection: 'column',
-          width: '500px',
+          width: { xs: '100%', md: '500px' },
           flexShrink: 0,
-          height: 'calc(100vh - 100px)',
-          maxHeight: 'calc(100vh - 100px)',
-          p: 2,
+          height: { xs: 'auto', md: 'calc(100vh - 100px)' },
+          maxHeight: { xs: 'none', md: 'calc(100vh - 100px)' },
+          p: { xs: 1, sm: 1.5, md: 2 },
         }}>
         {/* Columna Izquierda - Información del Contacto */}
         <Box sx={{ 
@@ -2254,36 +2264,38 @@ const ContactDetail: React.FC = () => {
             {/* Lista de redes sociales */}
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               {/* Facebook */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Avatar sx={{ width: 32, height: 32, bgcolor: '#1877f2' }}>
-                  <Facebook sx={{ fontSize: 18 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Avatar sx={{ width: 36, height: 36, bgcolor: '#1877f2' }}>
+                  <Facebook sx={{ fontSize: 20 }} />
                 </Avatar>
-                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-                  /
-                </Typography>
                 <Link
                   href={contact.facebook || '#'}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => {
-                    e.preventDefault();
-                    const currentUrl = contact.facebook || '';
-                    const url = prompt('Ingresa la URL de Facebook:', currentUrl || 'https://www.facebook.com/');
-                    if (url !== null) {
-                      api.put(`/contacts/${contact.id}`, { facebook: url || null }).then(() => {
-                        setContact({ ...contact, facebook: url || undefined });
-                        fetchContact();
-                      }).catch(err => console.error('Error al guardar:', err));
+                    if (!contact.facebook || contact.facebook === '#') {
+                      e.preventDefault();
+                      const currentUrl = contact.facebook || '';
+                      const url = prompt('Ingresa la URL de Facebook:', currentUrl || 'https://www.facebook.com/');
+                      if (url !== null) {
+                        api.put(`/contacts/${contact.id}`, { facebook: url || null }).then(() => {
+                          setContact({ ...contact, facebook: url || undefined });
+                          fetchContact();
+                        }).catch(err => console.error('Error al guardar:', err));
+                      }
                     }
+                    // Si existe URL, dejar que el link funcione normalmente
                   }}
                   sx={{
                     fontSize: '0.875rem',
-                    color: 'text.primary',
+                    color: contact.facebook ? '#1976d2' : '#9E9E9E',
                     textDecoration: 'none',
                     flex: 1,
                     cursor: 'pointer',
+                    wordBreak: 'break-all',
                     '&:hover': {
                       textDecoration: 'underline',
+                      color: contact.facebook ? '#1565c0' : '#757575',
                     },
                   }}
                 >
@@ -2292,36 +2304,38 @@ const ContactDetail: React.FC = () => {
               </Box>
 
               {/* Twitter */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Avatar sx={{ width: 32, height: 32, bgcolor: '#1da1f2' }}>
-                  <Twitter sx={{ fontSize: 18 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Avatar sx={{ width: 36, height: 36, bgcolor: '#1da1f2' }}>
+                  <Twitter sx={{ fontSize: 20 }} />
                 </Avatar>
-                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-                  /
-                </Typography>
                 <Link
                   href={contact.twitter || '#'}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => {
-                    e.preventDefault();
-                    const currentUrl = contact.twitter || '';
-                    const url = prompt('Ingresa la URL de Twitter:', currentUrl || 'https://www.twitter.com/');
-                    if (url !== null) {
-                      api.put(`/contacts/${contact.id}`, { twitter: url || null }).then(() => {
-                        setContact({ ...contact, twitter: url || undefined });
-                        fetchContact();
-                      }).catch(err => console.error('Error al guardar:', err));
+                    if (!contact.twitter || contact.twitter === '#') {
+                      e.preventDefault();
+                      const currentUrl = contact.twitter || '';
+                      const url = prompt('Ingresa la URL de Twitter:', currentUrl || 'https://www.twitter.com/');
+                      if (url !== null) {
+                        api.put(`/contacts/${contact.id}`, { twitter: url || null }).then(() => {
+                          setContact({ ...contact, twitter: url || undefined });
+                          fetchContact();
+                        }).catch(err => console.error('Error al guardar:', err));
+                      }
                     }
+                    // Si existe URL, dejar que el link funcione normalmente
                   }}
                   sx={{
                     fontSize: '0.875rem',
-                    color: 'text.primary',
+                    color: contact.twitter ? '#1976d2' : '#9E9E9E',
                     textDecoration: 'none',
                     flex: 1,
                     cursor: 'pointer',
+                    wordBreak: 'break-all',
                     '&:hover': {
                       textDecoration: 'underline',
+                      color: contact.twitter ? '#1565c0' : '#757575',
                     },
                   }}
                 >
@@ -2330,36 +2344,38 @@ const ContactDetail: React.FC = () => {
               </Box>
 
               {/* GitHub */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Avatar sx={{ width: 32, height: 32, bgcolor: '#24292e' }}>
-                  <GitHub sx={{ fontSize: 18 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Avatar sx={{ width: 36, height: 36, bgcolor: '#24292e' }}>
+                  <GitHub sx={{ fontSize: 20 }} />
                 </Avatar>
-                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-                  /
-                </Typography>
                 <Link
                   href={contact.github || '#'}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => {
-                    e.preventDefault();
-                    const currentUrl = contact.github || '';
-                    const url = prompt('Ingresa la URL de GitHub:', currentUrl || 'https://www.github.com/');
-                    if (url !== null) {
-                      api.put(`/contacts/${contact.id}`, { github: url || null }).then(() => {
-                        setContact({ ...contact, github: url || undefined });
-                        fetchContact();
-                      }).catch(err => console.error('Error al guardar:', err));
+                    if (!contact.github || contact.github === '#') {
+                      e.preventDefault();
+                      const currentUrl = contact.github || '';
+                      const url = prompt('Ingresa la URL de GitHub:', currentUrl || 'https://www.github.com/');
+                      if (url !== null) {
+                        api.put(`/contacts/${contact.id}`, { github: url || null }).then(() => {
+                          setContact({ ...contact, github: url || undefined });
+                          fetchContact();
+                        }).catch(err => console.error('Error al guardar:', err));
+                      }
                     }
+                    // Si existe URL, dejar que el link funcione normalmente
                   }}
                   sx={{
                     fontSize: '0.875rem',
-                    color: 'text.primary',
+                    color: contact.github ? '#1976d2' : '#9E9E9E',
                     textDecoration: 'none',
                     flex: 1,
                     cursor: 'pointer',
+                    wordBreak: 'break-all',
                     '&:hover': {
                       textDecoration: 'underline',
+                      color: contact.github ? '#1565c0' : '#757575',
                     },
                   }}
                 >
@@ -2368,36 +2384,38 @@ const ContactDetail: React.FC = () => {
               </Box>
 
               {/* LinkedIn */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Avatar sx={{ width: 32, height: 32, bgcolor: '#0077b5' }}>
-                  <LinkedIn sx={{ fontSize: 18 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Avatar sx={{ width: 36, height: 36, bgcolor: '#0077b5' }}>
+                  <LinkedIn sx={{ fontSize: 20 }} />
                 </Avatar>
-                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-                  /
-                </Typography>
                 <Link
                   href={contact.linkedin || '#'}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => {
-                    e.preventDefault();
-                    const currentUrl = contact.linkedin || '';
-                    const url = prompt('Ingresa la URL de LinkedIn:', currentUrl || 'https://www.linkedin.com/');
-                    if (url !== null) {
-                      api.put(`/contacts/${contact.id}`, { linkedin: url || null }).then(() => {
-                        setContact({ ...contact, linkedin: url || undefined });
-                        fetchContact();
-                      }).catch(err => console.error('Error al guardar:', err));
+                    if (!contact.linkedin || contact.linkedin === '#') {
+                      e.preventDefault();
+                      const currentUrl = contact.linkedin || '';
+                      const url = prompt('Ingresa la URL de LinkedIn:', currentUrl || 'https://www.linkedin.com/');
+                      if (url !== null) {
+                        api.put(`/contacts/${contact.id}`, { linkedin: url || null }).then(() => {
+                          setContact({ ...contact, linkedin: url || undefined });
+                          fetchContact();
+                        }).catch(err => console.error('Error al guardar:', err));
+                      }
                     }
+                    // Si existe URL, dejar que el link funcione normalmente
                   }}
                   sx={{
                     fontSize: '0.875rem',
-                    color: 'text.primary',
+                    color: contact.linkedin ? '#1976d2' : '#9E9E9E',
                     textDecoration: 'none',
                     flex: 1,
                     cursor: 'pointer',
+                    wordBreak: 'break-all',
                     '&:hover': {
                       textDecoration: 'underline',
+                      color: contact.linkedin ? '#1565c0' : '#757575',
                     },
                   }}
                 >
@@ -2406,36 +2424,38 @@ const ContactDetail: React.FC = () => {
               </Box>
 
               {/* YouTube */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Avatar sx={{ width: 32, height: 32, bgcolor: '#ff0000' }}>
-                  <YouTube sx={{ fontSize: 18 }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Avatar sx={{ width: 36, height: 36, bgcolor: '#ff0000' }}>
+                  <YouTube sx={{ fontSize: 20 }} />
                 </Avatar>
-                <Typography variant="body2" sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-                  /
-                </Typography>
                 <Link
                   href={contact.youtube || '#'}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => {
-                    e.preventDefault();
-                    const currentUrl = contact.youtube || '';
-                    const url = prompt('Ingresa la URL de YouTube:', currentUrl || 'https://www.youtube.com/');
-                    if (url !== null) {
-                      api.put(`/contacts/${contact.id}`, { youtube: url || null }).then(() => {
-                        setContact({ ...contact, youtube: url || undefined });
-                        fetchContact();
-                      }).catch(err => console.error('Error al guardar:', err));
+                    if (!contact.youtube || contact.youtube === '#') {
+                      e.preventDefault();
+                      const currentUrl = contact.youtube || '';
+                      const url = prompt('Ingresa la URL de YouTube:', currentUrl || 'https://www.youtube.com/');
+                      if (url !== null) {
+                        api.put(`/contacts/${contact.id}`, { youtube: url || null }).then(() => {
+                          setContact({ ...contact, youtube: url || undefined });
+                          fetchContact();
+                        }).catch(err => console.error('Error al guardar:', err));
+                      }
                     }
+                    // Si existe URL, dejar que el link funcione normalmente
                   }}
                   sx={{
                     fontSize: '0.875rem',
-                    color: 'text.primary',
+                    color: contact.youtube ? '#1976d2' : '#9E9E9E',
                     textDecoration: 'none',
                     flex: 1,
                     cursor: 'pointer',
+                    wordBreak: 'break-all',
                     '&:hover': {
                       textDecoration: 'underline',
+                      color: contact.youtube ? '#1565c0' : '#757575',
                     },
                   }}
                 >
@@ -2450,20 +2470,22 @@ const ContactDetail: React.FC = () => {
 
         {/* Parte 2: Columnas Central y Derecha */}
         <Card sx={{ 
-          borderRadius: 6,
+          borderRadius: { xs: 2, md: 6 },
           boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
           overflow: 'hidden',
           bgcolor: 'white',
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
-          height: 'calc(100vh - 100px)',
-          maxHeight: 'calc(100vh - 100px)',
-          p: 2,
+          width: { xs: '100%', md: 'auto' },
+          height: { xs: 'auto', md: 'calc(100vh - 100px)' },
+          maxHeight: { xs: 'none', md: 'calc(100vh - 100px)' },
+          p: { xs: 1, sm: 1.5, md: 2 },
         }}>
           <Box sx={{ 
-            display: 'flex', 
-            gap: summaryExpanded ? 2 : 0,
+            display: 'flex',
+            flexDirection: { xs: 'column', lg: 'row' },
+            gap: summaryExpanded ? { xs: 1, md: 2 } : 0,
             flex: 1, 
             overflow: 'hidden',
             minHeight: 0,
@@ -2476,8 +2498,10 @@ const ContactDetail: React.FC = () => {
           display: 'flex', 
           flexDirection: 'column', 
           overflow: 'hidden',
-          height: '100%',
-          minHeight: 0,
+          width: { xs: '100%', lg: 'auto' },
+          height: { xs: 'auto', md: '100%' },
+          minHeight: { xs: '400px', md: 0 },
+          maxHeight: { xs: '600px', md: 'none' },
           transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
           animation: 'fadeIn 0.5s ease',
           '@keyframes fadeIn': {
@@ -2504,19 +2528,22 @@ const ContactDetail: React.FC = () => {
             <Tabs 
               value={tabValue} 
               onChange={(e, newValue) => setTabValue(newValue)}
+              variant={isMobile ? 'scrollable' : 'standard'}
+              scrollButtons="auto"
               sx={{
                 flexShrink: 0,
                 '& .MuiTabs-flexContainer': {
                   display: 'flex',
                   width: '100%',
-                  padding: '0 24px',
+                  padding: { xs: '0 8px', md: '0 24px' },
                 },
                 '& .MuiTab-root': {
                   transition: 'all 0.2s ease',
-                  flex: 1,
-                  minWidth: 'auto',
-                  maxWidth: 'none',
-                  padding: '12px 16px',
+                  flex: { xs: '0 0 auto', md: 1 },
+                  minWidth: { xs: 'auto', md: 'auto' },
+                  maxWidth: { xs: 'none', md: 'none' },
+                  padding: { xs: '8px 12px', md: '12px 16px' },
+                  fontSize: { xs: '0.75rem', md: '0.875rem' },
                   display: 'flex',
                   justifyContent: 'center',
                   alignItems: 'center',
@@ -3400,20 +3427,8 @@ const ContactDetail: React.FC = () => {
                             {monthKey}
                           </Typography>
                           
-                          {/* Timeline y actividades */}
-                          <Box sx={{ position: 'relative', pl: 3 }}>
-                            {/* Línea vertical del timeline */}
-                            <Box
-                              sx={{
-                                position: 'absolute',
-                                left: 7,
-                                top: 0,
-                                bottom: 0,
-                                width: 2,
-                                bgcolor: '#e0e0e0',
-                              }}
-                            />
-                            
+                          {/* Actividades */}
+                          <Box>
                             {monthActivities.map((activity, index) => {
                               const isNote = activity.type === 'note';
                               const isExpanded = isNote ? expandedNotes.has(activity.id) : expandedActivities.has(activity.id);
@@ -3423,8 +3438,7 @@ const ContactDetail: React.FC = () => {
                                 <Box 
                                   key={activity.id} 
                                   sx={{ 
-                                    position: 'relative', 
-                                    mb: 2,
+                                    mb: 1.5,
                                     animation: 'slideInRight 0.3s ease',
                                     animationDelay: `${index * 0.05}s`,
                                     '@keyframes slideInRight': {
@@ -3439,223 +3453,195 @@ const ContactDetail: React.FC = () => {
                                     },
                                   }}
                                 >
-                                  {/* Círculo del timeline */}
-                                  <Box
-                                    sx={{
-                                      position: 'absolute',
-                                      left: -3,
-                                      top: 8,
-                                      width: 16,
-                                      height: 16,
-                                      borderRadius: '50%',
-                                      border: '2px solid #e0e0e0',
-                                      bgcolor: 'white',
-                                      zIndex: 1,
-                                      transition: 'all 0.3s ease',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                    }}
-                                  >
-                                    {isNote ? (
-                                      <Edit sx={{ fontSize: 10, color: '#757575' }} />
-                                    ) : (
-                                      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#e0e0e0' }} />
-                                    )}
-                                  </Box>
-                                  
                                   {isNote ? (
-                                    /* Nota estilo HubSpot - Versión resumida/expandida */
+                                    /* Nota estilo mejorado - Versión resumida/expandida */
                                     <Paper
                                       elevation={0}
                                       sx={{
                                         p: isExpanded ? 2 : 1.5,
                                         border: '1px solid #e0e0e0',
-                                        borderRadius: 1,
+                                        borderRadius: 2,
                                         bgcolor: 'white',
-                                        ml: 2,
                                         transition: 'all 0.3s ease',
                                         cursor: 'pointer',
                                         '&:hover': {
                                           borderColor: '#2E7D32',
-                                          boxShadow: '0 2px 8px rgba(46, 125, 50, 0.1)',
+                                          boxShadow: '0 2px 8px rgba(46, 125, 50, 0.08)',
                                         },
                                       }}
                                       onClick={() => toggleNoteExpand(activity.id)}
                                     >
                                       {/* Header de la nota - Siempre visible */}
-                                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                                          <ExpandMore 
-                                            fontSize="small" 
-                                            sx={{ 
-                                              color: '#2E7D32',
-                                              cursor: 'pointer',
-                                              transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                                              transition: 'transform 0.3s ease',
-                                            }} 
-                                          />
-                                          <Typography 
-                                            variant="body2" 
-                                            sx={{ 
-                                              fontWeight: 'bold',
-                                              color: '#2E7D32',
-                                              fontSize: '0.875rem',
-                                            }}
-                                          >
-                                            Nota
-                                          </Typography>
-                                          <Typography variant="body2" sx={{ color: '#2E7D32', fontSize: '0.875rem' }}>
-                                            creada por {activity.User ? `${activity.User.firstName} ${activity.User.lastName}`.toUpperCase() : 'Usuario'}
-                                          </Typography>
+                                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                                        {/* Iconos a la izquierda */}
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5, pt: 0.5 }}>
+                                          <Edit sx={{ fontSize: 18, color: '#9E9E9E' }} />
+                                          <CheckCircle sx={{ fontSize: 18, color: '#2E7D32' }} />
                                         </Box>
-                                        {isExpanded && (
-                                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                            <Link
-                                              component="button"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleNoteActionMenuOpen(e, activity.id);
-                                              }}
-                                              sx={{
-                                                color: '#2E7D32',
-                                                textDecoration: 'none',
-                                                fontSize: '0.875rem',
-                                                cursor: 'pointer',
-                                                border: 'none',
-                                                background: 'none',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 0.5,
-                                                transition: 'all 0.2s ease',
-                                                borderRadius: 1,
-                                                px: 1,
-                                                '&:hover': {
-                                                  textDecoration: 'underline',
-                                                  backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                                                },
-                                              }}
-                                            >
-                                              Acciones
-                                              <KeyboardArrowDown fontSize="small" />
-                                            </Link>
-                                            <Menu
-                                              anchorEl={actionMenuAnchor}
-                                              open={Boolean(actionMenuAnchor)}
-                                              onClose={() => handleNoteActionMenuClose(activity.id)}
-                                              anchorOrigin={{
-                                                vertical: 'bottom',
-                                                horizontal: 'right',
-                                              }}
-                                              transformOrigin={{
-                                                vertical: 'top',
-                                                horizontal: 'right',
-                                              }}
-                                              PaperProps={{
-                                                sx: {
-                                                  minWidth: 180,
-                                                  borderRadius: 1,
-                                                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                                },
-                                              }}
-                                            >
-                                              <MenuItem 
-                                                onClick={() => handlePinNote(activity.id)}
-                                                sx={{
-                                                  '&:hover': {
-                                                    backgroundColor: '#e3f2fd',
-                                                  },
+                                        
+                                        {/* Contenido principal */}
+                                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flex: 1 }}>
+                                              <Typography 
+                                                variant="body2" 
+                                                sx={{ 
+                                                  fontWeight: 'bold',
+                                                  color: '#2E7D32',
+                                                  fontSize: '0.875rem',
                                                 }}
                                               >
-                                                <PushPin sx={{ mr: 1.5, fontSize: 18 }} />
-                                                Anclar
-                                              </MenuItem>
-                                              <MenuItem 
-                                                onClick={() => handleViewHistory(activity.id)}
-                                                sx={{
-                                                  '&:hover': {
-                                                    backgroundColor: '#e3f2fd',
-                                                  },
-                                                }}
-                                              >
-                                                <History sx={{ mr: 1.5, fontSize: 18 }} />
-                                                Historial
-                                              </MenuItem>
-                                              <MenuItem 
-                                                onClick={() => handleCopyLink(activity.id)}
-                                                sx={{
-                                                  '&:hover': {
-                                                    backgroundColor: '#e3f2fd',
-                                                  },
-                                                }}
-                                              >
-                                                <ContentCopy sx={{ mr: 1.5, fontSize: 18 }} />
-                                                Copiar enlace
-                                              </MenuItem>
-                                              <MenuItem 
-                                                onClick={() => handleDeleteNote(activity.id)}
-                                                sx={{
-                                                  '&:hover': {
-                                                    backgroundColor: '#ffebee',
-                                                  },
-                                                  color: '#d32f2f',
-                                                }}
-                                              >
-                                                <Delete sx={{ mr: 1.5, fontSize: 18 }} />
-                                                Eliminar
-                                              </MenuItem>
-                                            </Menu>
-                                          </Box>
-                                        )}
-                                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                                          {activity.createdAt && new Date(activity.createdAt).toLocaleDateString('es-ES', {
-                                            day: 'numeric',
-                                            month: 'short',
-                                            year: 'numeric',
-                                          })} a la(s) {activity.createdAt && new Date(activity.createdAt).toLocaleTimeString('es-ES', {
-                                            hour: '2-digit',
-                                            minute: '2-digit',
-                                          })} GMT-5
-                                        </Typography>
-                                      </Box>
-                                      
-                                      {/* Contenido resumido cuando está colapsado */}
-                                      {!isExpanded && (
-                                        <Box sx={{ mt: 1 }}>
-                                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                                            {activity.description ? (
-                                              <Box
-                                                dangerouslySetInnerHTML={{ __html: activity.description.replace(/<[^>]*>/g, '').substring(0, 50) + (activity.description.replace(/<[^>]*>/g, '').length > 50 ? '...' : '') }}
-                                              />
-                                            ) : (
-                                              'Sin descripción'
-                                            )}
-                                          </Typography>
-                                        </Box>
-                                      )}
-                                      
-                                      {/* Contenido expandido */}
-                                      {isExpanded && (
-                                        <>
-                                          {/* Descripción de la nota */}
-                                          <Box sx={{ mb: 2, mt: 1.5 }}>
-                                            {activity.description ? (
-                                              <Box
-                                                dangerouslySetInnerHTML={{ __html: activity.description }}
-                                                sx={{
-                                                  '& p': { margin: 0, mb: 1 },
-                                                  '& *': { fontSize: '0.875rem', color: 'text.primary' },
-                                                }}
-                                              />
-                                            ) : (
-                                              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                                                Agregar descripción
+                                                Nota creada por {activity.User ? `${activity.User.firstName} ${activity.User.lastName}`.toUpperCase() : 'Usuario'}
                                               </Typography>
-                                            )}
+                                            </Box>
+                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', whiteSpace: 'nowrap', ml: 1 }}>
+                                              {activity.createdAt && new Date(activity.createdAt).toLocaleDateString('es-ES', {
+                                                day: 'numeric',
+                                                month: 'short',
+                                                year: 'numeric',
+                                              })} a la(s) {activity.createdAt && new Date(activity.createdAt).toLocaleTimeString('es-ES', {
+                                                hour: '2-digit',
+                                                minute: '2-digit',
+                                              })} GMT-5
+                                            </Typography>
                                           </Box>
                                           
-                                          {/* Footer de la nota */}
-                                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 1, borderTop: '1px solid #f0f0f0' }}>
+                                          {isExpanded && (
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+                                              <Link
+                                                component="button"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleNoteActionMenuOpen(e, activity.id);
+                                                }}
+                                                sx={{
+                                                  color: '#2E7D32',
+                                                  textDecoration: 'none',
+                                                  fontSize: '0.875rem',
+                                                  cursor: 'pointer',
+                                                  border: 'none',
+                                                  background: 'none',
+                                                  display: 'flex',
+                                                  alignItems: 'center',
+                                                  gap: 0.5,
+                                                  transition: 'all 0.2s ease',
+                                                  borderRadius: 1,
+                                                  px: 1,
+                                                  '&:hover': {
+                                                    textDecoration: 'underline',
+                                                    backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                                                  },
+                                                }}
+                                              >
+                                                Acciones
+                                                <KeyboardArrowDown fontSize="small" />
+                                              </Link>
+                                              <Menu
+                                                anchorEl={actionMenuAnchor}
+                                                open={Boolean(actionMenuAnchor)}
+                                                onClose={() => handleNoteActionMenuClose(activity.id)}
+                                                anchorOrigin={{
+                                                  vertical: 'bottom',
+                                                  horizontal: 'right',
+                                                }}
+                                                transformOrigin={{
+                                                  vertical: 'top',
+                                                  horizontal: 'right',
+                                                }}
+                                                PaperProps={{
+                                                  sx: {
+                                                    minWidth: 180,
+                                                    borderRadius: 1,
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                                  },
+                                                }}
+                                              >
+                                                <MenuItem 
+                                                  onClick={() => handlePinNote(activity.id)}
+                                                  sx={{
+                                                    '&:hover': {
+                                                      backgroundColor: '#e3f2fd',
+                                                    },
+                                                  }}
+                                                >
+                                                  <PushPin sx={{ mr: 1.5, fontSize: 18 }} />
+                                                  Anclar
+                                                </MenuItem>
+                                                <MenuItem 
+                                                  onClick={() => handleViewHistory(activity.id)}
+                                                  sx={{
+                                                    '&:hover': {
+                                                      backgroundColor: '#e3f2fd',
+                                                    },
+                                                  }}
+                                                >
+                                                  <History sx={{ mr: 1.5, fontSize: 18 }} />
+                                                  Historial
+                                                </MenuItem>
+                                                <MenuItem 
+                                                  onClick={() => handleCopyLink(activity.id)}
+                                                  sx={{
+                                                    '&:hover': {
+                                                      backgroundColor: '#e3f2fd',
+                                                    },
+                                                  }}
+                                                >
+                                                  <ContentCopy sx={{ mr: 1.5, fontSize: 18 }} />
+                                                  Copiar enlace
+                                                </MenuItem>
+                                                <MenuItem 
+                                                  onClick={() => handleDeleteNote(activity.id)}
+                                                  sx={{
+                                                    '&:hover': {
+                                                      backgroundColor: '#ffebee',
+                                                    },
+                                                    color: '#d32f2f',
+                                                  }}
+                                                >
+                                                  <Delete sx={{ mr: 1.5, fontSize: 18 }} />
+                                                  Eliminar
+                                                </MenuItem>
+                                              </Menu>
+                                            </Box>
+                                          )}
+                                          
+                                          {/* Contenido resumido cuando está colapsado */}
+                                          {!isExpanded && (
+                                            <Box sx={{ mt: 1 }}>
+                                              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                                                {activity.description ? (
+                                                  <Box
+                                                    dangerouslySetInnerHTML={{ __html: activity.description.replace(/<[^>]*>/g, '').substring(0, 50) + (activity.description.replace(/<[^>]*>/g, '').length > 50 ? '...' : '') }}
+                                                  />
+                                                ) : (
+                                                  'Sin descripción'
+                                                )}
+                                              </Typography>
+                                            </Box>
+                                          )}
+                                          
+                                          {/* Contenido expandido */}
+                                          {isExpanded && (
+                                            <>
+                                              {/* Descripción de la nota */}
+                                              <Box sx={{ mb: 2, mt: 1.5 }}>
+                                                {activity.description ? (
+                                                  <Box
+                                                    dangerouslySetInnerHTML={{ __html: activity.description }}
+                                                    sx={{
+                                                      '& p': { margin: 0, mb: 1 },
+                                                      '& *': { fontSize: '0.875rem', color: 'text.primary' },
+                                                    }}
+                                                  />
+                                                ) : (
+                                                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                                                    Agregar descripción
+                                                  </Typography>
+                                                )}
+                                              </Box>
+                                          
+                                              {/* Footer de la nota */}
+                                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 1, borderTop: '1px solid #f0f0f0' }}>
                                             <Link
                                               component="button"
                                               onClick={(e) => e.stopPropagation()}
@@ -4301,59 +4287,61 @@ const ContactDetail: React.FC = () => {
                                           </Box>
                                         </>
                                       )}
+                                        </Box>
+                                      </Box>
                                     </Paper>
                                   ) : (
-                                    /* Otras actividades (email, call, meeting, task) - Versión resumida/expandida */
+                                    /* Otras actividades (email, call, meeting, task) - Versión mejorada */
                                     <Paper
                                       elevation={0}
                                       sx={{
                                         p: isExpanded ? 2 : 1.5,
                                         border: '1px solid #e0e0e0',
-                                        borderRadius: 1,
+                                        borderRadius: 2,
                                         bgcolor: 'white',
-                                        ml: 2,
                                         transition: 'all 0.3s ease',
                                         cursor: 'pointer',
                                         '&:hover': {
                                           borderColor: '#2E7D32',
-                                          boxShadow: '0 2px 8px rgba(46, 125, 50, 0.1)',
+                                          boxShadow: '0 2px 8px rgba(46, 125, 50, 0.08)',
                                         },
                                       }}
                                       onClick={() => toggleActivityExpand(activity.id)}
                                     >
-                                      <Box sx={{ display: 'flex', alignItems: 'start', gap: 1.5 }}>
+                                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
                                         <Avatar sx={{ 
                                           bgcolor: activity.type === 'email' ? '#2E7D32' :
                                                    activity.type === 'call' ? '#4CAF50' :
                                                    activity.type === 'meeting' ? '#FF9800' :
                                                    activity.type === 'task' ? '#9C27B0' : '#757575',
-                                          width: 32,
-                                          height: 32,
+                                          width: 40,
+                                          height: 40,
                                         }}>
-                                          {activity.type === 'email' ? <Email sx={{ fontSize: 18 }} /> :
-                                           activity.type === 'call' ? <Phone sx={{ fontSize: 18 }} /> :
-                                           activity.type === 'meeting' ? <Event sx={{ fontSize: 18 }} /> :
-                                           activity.type === 'task' ? <Assignment sx={{ fontSize: 18 }} /> : <Comment sx={{ fontSize: 18 }} />}
+                                          {activity.type === 'email' ? <Email sx={{ fontSize: 20, color: 'white' }} /> :
+                                           activity.type === 'call' ? <Phone sx={{ fontSize: 20, color: 'white' }} /> :
+                                           activity.type === 'meeting' ? <Event sx={{ fontSize: 20, color: 'white' }} /> :
+                                           activity.type === 'task' ? <Assignment sx={{ fontSize: 20, color: 'white' }} /> : <Comment sx={{ fontSize: 20, color: 'white' }} />}
                                         </Avatar>
-                                        <Box sx={{ flex: 1 }}>
+                                        <Box sx={{ flex: 1, minWidth: 0 }}>
                                           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
                                             <Typography 
                                               variant="body2" 
                                               sx={{ 
                                                 fontWeight: 'bold',
-                                                color: '#2E7D32',
+                                                color: 'text.primary',
                                                 fontSize: '0.875rem',
                                               }}
                                             >
                                               {activity.subject || 'Sin título'}
                                             </Typography>
-                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', whiteSpace: 'nowrap', ml: 1 }}>
                                               {activity.createdAt && new Date(activity.createdAt).toLocaleDateString('es-ES', {
                                                 day: 'numeric',
                                                 month: 'short',
                                                 year: 'numeric',
+                                              })}, {activity.createdAt && new Date(activity.createdAt).toLocaleTimeString('es-ES', {
                                                 hour: '2-digit',
-                                                minute: '2-digit'
+                                                minute: '2-digit',
                                               })}
                                             </Typography>
                                           </Box>
@@ -5420,16 +5408,18 @@ const ContactDetail: React.FC = () => {
 
         {/* Columna Derecha - Registros Asociados */}
         <Box sx={{ 
-          width: summaryExpanded ? '320px' : '24px',
+          display: { xs: summaryExpanded ? 'block' : 'none', lg: 'block' },
+          width: { xs: '100%', lg: summaryExpanded ? '320px' : '24px' },
           flexShrink: 0,
-          height: '100%',
-          maxHeight: '100%',
+          height: { xs: 'auto', lg: '100%' },
+          maxHeight: { xs: '400px', lg: '100%' },
           overflowY: 'auto',
           overflowX: 'hidden',
-          position: summaryExpanded ? 'relative' : 'absolute',
-          right: summaryExpanded ? 'auto' : 0,
+          position: { xs: 'relative', lg: summaryExpanded ? 'relative' : 'absolute' },
+          right: { xs: 'auto', lg: summaryExpanded ? 'auto' : 0 },
           top: 0,
           transition: 'width 0.2s ease',
+          mt: { xs: 2, lg: 0 },
           // Ocultar scrollbar pero mantener scroll funcional
           '&::-webkit-scrollbar': {
             display: 'none',
@@ -5898,11 +5888,11 @@ const ContactDetail: React.FC = () => {
             position: 'fixed',
             top: 0,
             right: 0,
-            width: '500px',
-            maxWidth: '90vw',
+            width: { xs: '100vw', sm: '500px' },
+            maxWidth: { xs: '100vw', sm: '90vw' },
             height: '100vh',
             backgroundColor: 'white',
-            boxShadow: '-4px 0 20px rgba(0,0,0,0.15)',
+            boxShadow: { xs: 'none', sm: '-4px 0 20px rgba(0,0,0,0.15)' },
             zIndex: 1300,
             display: 'flex',
             flexDirection: 'column',
@@ -5924,25 +5914,49 @@ const ContactDetail: React.FC = () => {
             sx={{
               p: 0,
               m: 0,
-              backgroundColor: '#37474F',
+              background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
               color: 'white',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              minHeight: '50px',
+              minHeight: '56px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', pl: 2 }}>
-              <IconButton sx={{ color: 'white', mr: 1 }} size="small">
+            <Box sx={{ display: 'flex', alignItems: 'center', pl: 2.5 }}>
+              <IconButton 
+                sx={{ 
+                  color: 'white', 
+                  mr: 1,
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
+                }} 
+                size="small"
+              >
                 <KeyboardArrowDown />
               </IconButton>
-              <Typography variant="h6" sx={{ color: 'white', fontWeight: 500 }}>Nota</Typography>
+              <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, fontSize: '1.1rem' }}>
+                Nota
+              </Typography>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <IconButton sx={{ color: 'white' }} size="small">
+            <Box sx={{ display: 'flex', alignItems: 'center', pr: 0.5 }}>
+              <IconButton 
+                sx={{ 
+                  color: 'white',
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
+                }} 
+                size="small"
+              >
                 <Fullscreen fontSize="small" />
               </IconButton>
-              <IconButton sx={{ color: 'white', mr: 1 }} size="small" onClick={() => setNoteOpen(false)}>
+              <IconButton 
+                sx={{ 
+                  color: 'white', 
+                  mr: 0.5,
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.15)' }
+                }} 
+                size="small" 
+                onClick={() => setNoteOpen(false)}
+              >
                 <Close fontSize="small" />
               </IconButton>
             </Box>
@@ -5951,27 +5965,35 @@ const ContactDetail: React.FC = () => {
           <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2, overflow: 'hidden', overflowY: 'auto' }}>
           {/* Campo "Para" */}
           <Box sx={{ 
-            mb: 2, 
+            mb: 2.5, 
             display: 'flex', 
             alignItems: 'center', 
-            border: '1px solid #e0e0e0', 
-            borderRadius: 1, 
-            p: 1.5,
-            backgroundColor: '#fafafa',
+            flexWrap: 'wrap',
+            gap: 1,
+            border: `1px solid ${taxiMonterricoColors.greenLight}40`, 
+            borderRadius: 2, 
+            p: 2,
+            backgroundColor: `${taxiMonterricoColors.greenLight}10`,
+            boxShadow: `0 1px 3px ${taxiMonterricoColors.green}20`,
           }}>
-            <Typography variant="body2" sx={{ mr: 1.5, color: '#757575', fontWeight: 500 }}>
+            <Typography variant="body2" sx={{ mr: 1, color: taxiMonterricoColors.green, fontWeight: 600, fontSize: '0.875rem' }}>
               Para
             </Typography>
             <Chip
               label={`${contact?.firstName || ''} ${contact?.lastName || ''} (Sample Contact)`}
               sx={{ 
-                mr: 1, 
-                backgroundColor: '#e0e0e0',
-                height: '24px',
-                fontSize: '0.75rem',
+                mr: 0.5, 
+                backgroundColor: taxiMonterricoColors.green,
+                color: 'white',
+                height: '28px',
+                fontSize: '0.8125rem',
+                fontWeight: 500,
+                '& .MuiChip-label': {
+                  px: 1.5,
+                },
               }}
             />
-            <Typography variant="body2" sx={{ color: '#757575' }}>
+            <Typography variant="body2" sx={{ color: '#546e7a', fontSize: '0.8125rem' }}>
               y 2 registros
             </Typography>
           </Box>
@@ -5982,10 +6004,16 @@ const ContactDetail: React.FC = () => {
             display: 'flex', 
             flexDirection: 'column', 
             border: '1px solid #e0e0e0', 
-            borderRadius: 1,
+            borderRadius: 2,
             overflow: 'hidden',
-            mb: 2,
+            mb: 2.5,
             minHeight: '300px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+            transition: 'box-shadow 0.2s ease',
+            '&:focus-within': {
+              boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
+              borderColor: taxiMonterricoColors.green,
+            },
           }}>
             <RichTextEditor
               value={noteData.description}
@@ -5995,27 +6023,42 @@ const ContactDetail: React.FC = () => {
           </Box>
 
           {/* Sección "Asociado con X registros" - Siempre visible */}
-          <Box sx={{ mb: 2 }}>
+          <Box sx={{ mb: 2.5 }}>
             <Box sx={{ 
               border: '1px solid #e0e0e0', 
-              borderRadius: 1, 
+              borderRadius: 2, 
               p: 2, 
-              backgroundColor: '#fafafa',
+              backgroundColor: '#ffffff',
               display: 'flex',
               gap: 2,
               alignItems: 'flex-start',
               maxHeight: '500px',
               overflow: 'hidden',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
             }}>
               {/* Lista de categorías en el lado izquierdo */}
               <Box sx={{ 
                 width: '200px', 
                 flexShrink: 0,
-                borderRight: '1px solid #e0e0e0',
+                borderRight: '1px solid #e8eaf6',
                 pr: 2,
                 maxHeight: '500px',
                 overflowY: 'auto',
                 overflowX: 'hidden',
+                '&::-webkit-scrollbar': {
+                  width: '6px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  backgroundColor: '#f5f5f5',
+                  borderRadius: '3px',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  backgroundColor: '#bdbdbd',
+                  borderRadius: '3px',
+                  '&:hover': {
+                    backgroundColor: '#9e9e9e',
+                  },
+                },
               }}>
                 {/* Lista de categorías siempre visible */}
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
@@ -6026,19 +6069,29 @@ const ContactDetail: React.FC = () => {
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       p: 1.5,
-                      borderRadius: 1,
+                      borderRadius: 1.5,
                       cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Seleccionados' ? '#E3F2FD' : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Seleccionados' ? '3px solid #00bcd4' : '3px solid transparent',
+                      backgroundColor: selectedAssociationCategory === 'Seleccionados' ? `${taxiMonterricoColors.greenLight}20` : 'transparent',
+                      borderLeft: selectedAssociationCategory === 'Seleccionados' ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
+                      transition: 'all 0.2s ease',
                       '&:hover': {
-                        backgroundColor: '#f5f5f5',
+                        backgroundColor: selectedAssociationCategory === 'Seleccionados' ? `${taxiMonterricoColors.greenLight}20` : `${taxiMonterricoColors.greenLight}10`,
+                        transform: 'translateX(2px)',
                       },
                     }}
                   >
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: selectedAssociationCategory === 'Seleccionados' ? '#00bcd4' : '#666' }}>
+                    <Typography variant="body2" sx={{ 
+                      fontSize: '0.875rem', 
+                      color: selectedAssociationCategory === 'Seleccionados' ? taxiMonterricoColors.green : '#546e7a',
+                      fontWeight: selectedAssociationCategory === 'Seleccionados' ? 600 : 400,
+                    }}>
                       Seleccionados
                     </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: '#999' }}>
+                    <Typography variant="body2" sx={{ 
+                      fontSize: '0.875rem', 
+                      color: selectedAssociationCategory === 'Seleccionados' ? taxiMonterricoColors.green : '#90a4ae',
+                      fontWeight: 500,
+                    }}>
                       {totalAssociations}
                     </Typography>
                   </Box>
@@ -6052,14 +6105,20 @@ const ContactDetail: React.FC = () => {
                       p: 1.5,
                       borderRadius: 1,
                       cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Alertas' ? '#E3F2FD' : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Alertas' ? '3px solid #00bcd4' : '3px solid transparent',
+                      backgroundColor: selectedAssociationCategory === 'Alertas' ? `${taxiMonterricoColors.greenLight}20` : 'transparent',
+                      borderLeft: selectedAssociationCategory === 'Alertas' ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
+                      transition: 'all 0.2s ease',
                       '&:hover': {
-                        backgroundColor: '#f5f5f5',
+                        backgroundColor: selectedAssociationCategory === 'Alertas' ? `${taxiMonterricoColors.greenLight}20` : `${taxiMonterricoColors.greenLight}10`,
+                        transform: 'translateX(2px)',
                       },
                     }}
                   >
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: selectedAssociationCategory === 'Alertas' ? '#00bcd4' : '#666' }}>
+                    <Typography variant="body2" sx={{ 
+                      fontSize: '0.875rem', 
+                      color: selectedAssociationCategory === 'Alertas' ? taxiMonterricoColors.green : '#546e7a',
+                      fontWeight: selectedAssociationCategory === 'Alertas' ? 600 : 400,
+                    }}>
                       Alertas del esp...
                     </Typography>
                     <Typography variant="body2" sx={{ fontSize: '0.875rem', color: '#999' }}>
@@ -6076,14 +6135,20 @@ const ContactDetail: React.FC = () => {
                       p: 1.5,
                       borderRadius: 1,
                       cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Carritos' ? '#E3F2FD' : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Carritos' ? '3px solid #00bcd4' : '3px solid transparent',
+                      backgroundColor: selectedAssociationCategory === 'Carritos' ? `${taxiMonterricoColors.greenLight}20` : 'transparent',
+                      borderLeft: selectedAssociationCategory === 'Carritos' ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
+                      transition: 'all 0.2s ease',
                       '&:hover': {
-                        backgroundColor: '#f5f5f5',
+                        backgroundColor: selectedAssociationCategory === 'Carritos' ? `${taxiMonterricoColors.greenLight}20` : `${taxiMonterricoColors.greenLight}10`,
+                        transform: 'translateX(2px)',
                       },
                     }}
                   >
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: selectedAssociationCategory === 'Carritos' ? '#00bcd4' : '#666' }}>
+                    <Typography variant="body2" sx={{ 
+                      fontSize: '0.875rem', 
+                      color: selectedAssociationCategory === 'Carritos' ? taxiMonterricoColors.green : '#546e7a',
+                      fontWeight: selectedAssociationCategory === 'Carritos' ? 600 : 400,
+                    }}>
                       Carritos
                     </Typography>
                     <Typography variant="body2" sx={{ fontSize: '0.875rem', color: '#999' }}>
@@ -6100,14 +6165,20 @@ const ContactDetail: React.FC = () => {
                       p: 1.5,
                       borderRadius: 1,
                       cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Clientes' ? '#E3F2FD' : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Clientes' ? '3px solid #00bcd4' : '3px solid transparent',
+                      backgroundColor: selectedAssociationCategory === 'Clientes' ? `${taxiMonterricoColors.greenLight}20` : 'transparent',
+                      borderLeft: selectedAssociationCategory === 'Clientes' ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
+                      transition: 'all 0.2s ease',
                       '&:hover': {
-                        backgroundColor: '#f5f5f5',
+                        backgroundColor: selectedAssociationCategory === 'Clientes' ? `${taxiMonterricoColors.greenLight}20` : `${taxiMonterricoColors.greenLight}10`,
+                        transform: 'translateX(2px)',
                       },
                     }}
                   >
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: selectedAssociationCategory === 'Clientes' ? '#00bcd4' : '#666' }}>
+                    <Typography variant="body2" sx={{ 
+                      fontSize: '0.875rem', 
+                      color: selectedAssociationCategory === 'Clientes' ? taxiMonterricoColors.green : '#546e7a',
+                      fontWeight: selectedAssociationCategory === 'Clientes' ? 600 : 400,
+                    }}>
                       Clientes de par...
                     </Typography>
                     <Typography variant="body2" sx={{ fontSize: '0.875rem', color: '#999' }}>
@@ -6122,19 +6193,29 @@ const ContactDetail: React.FC = () => {
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       p: 1.5,
-                      borderRadius: 1,
+                      borderRadius: 1.5,
                       cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Contactos' ? '#E3F2FD' : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Contactos' ? '3px solid #00bcd4' : '3px solid transparent',
+                      backgroundColor: selectedAssociationCategory === 'Contactos' ? `${taxiMonterricoColors.greenLight}20` : 'transparent',
+                      borderLeft: selectedAssociationCategory === 'Contactos' ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
+                      transition: 'all 0.2s ease',
                       '&:hover': {
-                        backgroundColor: '#f5f5f5',
+                        backgroundColor: selectedAssociationCategory === 'Contactos' ? `${taxiMonterricoColors.greenLight}20` : `${taxiMonterricoColors.greenLight}10`,
+                        transform: 'translateX(2px)',
                       },
                     }}
                   >
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: selectedAssociationCategory === 'Contactos' ? '#00bcd4' : '#666' }}>
+                    <Typography variant="body2" sx={{ 
+                      fontSize: '0.875rem', 
+                      color: selectedAssociationCategory === 'Contactos' ? taxiMonterricoColors.green : '#546e7a',
+                      fontWeight: selectedAssociationCategory === 'Contactos' ? 600 : 400,
+                    }}>
                       Contactos
                     </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: '#999' }}>
+                    <Typography variant="body2" sx={{ 
+                      fontSize: '0.875rem', 
+                      color: selectedAssociationCategory === 'Contactos' ? taxiMonterricoColors.green : '#90a4ae',
+                      fontWeight: 500,
+                    }}>
                       {contact?.id && !excludedContacts.includes(contact.id) ? 1 : 0}
                     </Typography>
                   </Box>
@@ -6148,14 +6229,20 @@ const ContactDetail: React.FC = () => {
                       p: 1.5,
                       borderRadius: 1,
                       cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Empresas' ? '#E3F2FD' : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Empresas' ? '3px solid #00bcd4' : '3px solid transparent',
+                      backgroundColor: selectedAssociationCategory === 'Empresas' ? `${taxiMonterricoColors.greenLight}20` : 'transparent',
+                      borderLeft: selectedAssociationCategory === 'Empresas' ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
+                      transition: 'all 0.2s ease',
                       '&:hover': {
-                        backgroundColor: '#f5f5f5',
+                        backgroundColor: selectedAssociationCategory === 'Empresas' ? `${taxiMonterricoColors.greenLight}20` : `${taxiMonterricoColors.greenLight}10`,
+                        transform: 'translateX(2px)',
                       },
                     }}
                   >
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: selectedAssociationCategory === 'Empresas' ? '#00bcd4' : '#666' }}>
+                    <Typography variant="body2" sx={{ 
+                      fontSize: '0.875rem', 
+                      color: selectedAssociationCategory === 'Empresas' ? taxiMonterricoColors.green : '#546e7a',
+                      fontWeight: selectedAssociationCategory === 'Empresas' ? 600 : 400,
+                    }}>
                       Empresas
                     </Typography>
                     <Typography variant="body2" sx={{ fontSize: '0.875rem', color: '#999' }}>
@@ -6178,14 +6265,20 @@ const ContactDetail: React.FC = () => {
                       p: 1.5,
                       borderRadius: 1,
                       cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Leads' ? '#E3F2FD' : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Leads' ? '3px solid #00bcd4' : '3px solid transparent',
+                      backgroundColor: selectedAssociationCategory === 'Leads' ? `${taxiMonterricoColors.greenLight}20` : 'transparent',
+                      borderLeft: selectedAssociationCategory === 'Leads' ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
+                      transition: 'all 0.2s ease',
                       '&:hover': {
-                        backgroundColor: '#f5f5f5',
+                        backgroundColor: selectedAssociationCategory === 'Leads' ? `${taxiMonterricoColors.greenLight}20` : `${taxiMonterricoColors.greenLight}10`,
+                        transform: 'translateX(2px)',
                       },
                     }}
                   >
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: selectedAssociationCategory === 'Leads' ? '#00bcd4' : '#666' }}>
+                    <Typography variant="body2" sx={{ 
+                      fontSize: '0.875rem', 
+                      color: selectedAssociationCategory === 'Leads' ? taxiMonterricoColors.green : '#546e7a',
+                      fontWeight: selectedAssociationCategory === 'Leads' ? 600 : 400,
+                    }}>
                       Leads
                     </Typography>
                     <Typography variant="body2" sx={{ fontSize: '0.875rem', color: '#999' }}>
@@ -6202,14 +6295,20 @@ const ContactDetail: React.FC = () => {
                       p: 1.5,
                       borderRadius: 1,
                       cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Negocios' ? '#E3F2FD' : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Negocios' ? '3px solid #00bcd4' : '3px solid transparent',
+                      backgroundColor: selectedAssociationCategory === 'Negocios' ? `${taxiMonterricoColors.greenLight}20` : 'transparent',
+                      borderLeft: selectedAssociationCategory === 'Negocios' ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
+                      transition: 'all 0.2s ease',
                       '&:hover': {
-                        backgroundColor: '#f5f5f5',
+                        backgroundColor: selectedAssociationCategory === 'Negocios' ? `${taxiMonterricoColors.greenLight}20` : `${taxiMonterricoColors.greenLight}10`,
+                        transform: 'translateX(2px)',
                       },
                     }}
                   >
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: selectedAssociationCategory === 'Negocios' ? '#00bcd4' : '#666' }}>
+                    <Typography variant="body2" sx={{ 
+                      fontSize: '0.875rem', 
+                      color: selectedAssociationCategory === 'Negocios' ? taxiMonterricoColors.green : '#546e7a',
+                      fontWeight: selectedAssociationCategory === 'Negocios' ? 600 : 400,
+                    }}>
                       Negocios
                     </Typography>
                     <Typography variant="body2" sx={{ fontSize: '0.875rem', color: '#999' }}>
@@ -6233,14 +6332,20 @@ const ContactDetail: React.FC = () => {
                       p: 1.5,
                       borderRadius: 1,
                       cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Tickets' ? '#E3F2FD' : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Tickets' ? '3px solid #00bcd4' : '3px solid transparent',
+                      backgroundColor: selectedAssociationCategory === 'Tickets' ? `${taxiMonterricoColors.greenLight}20` : 'transparent',
+                      borderLeft: selectedAssociationCategory === 'Tickets' ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
+                      transition: 'all 0.2s ease',
                       '&:hover': {
-                        backgroundColor: '#f5f5f5',
+                        backgroundColor: selectedAssociationCategory === 'Tickets' ? `${taxiMonterricoColors.greenLight}20` : `${taxiMonterricoColors.greenLight}10`,
+                        transform: 'translateX(2px)',
                       },
                     }}
                   >
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: selectedAssociationCategory === 'Tickets' ? '#00bcd4' : '#666' }}>
+                    <Typography variant="body2" sx={{ 
+                      fontSize: '0.875rem', 
+                      color: selectedAssociationCategory === 'Tickets' ? taxiMonterricoColors.green : '#546e7a',
+                      fontWeight: selectedAssociationCategory === 'Tickets' ? 600 : 400,
+                    }}>
                       Tickets
                     </Typography>
                     <Typography variant="body2" sx={{ fontSize: '0.875rem', color: '#999' }}>
@@ -6260,7 +6365,7 @@ const ContactDetail: React.FC = () => {
               {/* Área de búsqueda y resultados - Siempre visible */}
               <Box sx={{ flex: 1, pl: 2, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, flexShrink: 0 }}>
-                  <Typography variant="body2" sx={{ color: '#00bcd4', fontWeight: 500, fontSize: '0.875rem' }}>
+                  <Typography variant="body2" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '0.875rem' }}>
                     {selectedAssociationCategory} ({
                       selectedAssociationCategory === 'Contactos' ? (contact?.id && !excludedContacts.includes(contact.id) ? 1 : 0) :
                       selectedAssociationCategory === 'Empresas' ? (() => {
@@ -6289,7 +6394,7 @@ const ContactDetail: React.FC = () => {
                       selectedAssociationCategory === 'Leads' ? selectedLeads.length : 0
                     })
                   </Typography>
-                  <KeyboardArrowDown sx={{ color: '#00bcd4', fontSize: 18 }} />
+                  <KeyboardArrowDown sx={{ color: taxiMonterricoColors.green, fontSize: 18 }} />
                 </Box>
                 <TextField
                   size="small"
@@ -6300,7 +6405,7 @@ const ContactDetail: React.FC = () => {
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
-                        <Search sx={{ color: '#00bcd4' }} />
+                        <Search sx={{ color: taxiMonterricoColors.green }} />
                       </InputAdornment>
                     ),
                   }}
@@ -6309,13 +6414,13 @@ const ContactDetail: React.FC = () => {
                     flexShrink: 0,
                     '& .MuiOutlinedInput-root': {
                       '& fieldset': {
-                        borderColor: '#00bcd4',
+                        borderColor: taxiMonterricoColors.green,
                       },
                       '&:hover fieldset': {
-                        borderColor: '#00bcd4',
+                        borderColor: taxiMonterricoColors.green,
                       },
                       '&.Mui-focused fieldset': {
-                        borderColor: '#00bcd4',
+                        borderColor: taxiMonterricoColors.green,
                       },
                     },
                   }}
@@ -6359,9 +6464,9 @@ const ContactDetail: React.FC = () => {
                                   }
                                 }}
                                 sx={{
-                                  color: '#00bcd4',
+                                  color: taxiMonterricoColors.green,
                                   '&.Mui-checked': {
-                                    color: '#00bcd4',
+                                    color: taxiMonterricoColors.green,
                                   },
                                 }}
                               />
@@ -6511,9 +6616,9 @@ const ContactDetail: React.FC = () => {
                                   }
                                 }}
                                 sx={{
-                                  color: '#00bcd4',
+                                  color: taxiMonterricoColors.green,
                                   '&.Mui-checked': {
-                                    color: '#00bcd4',
+                                    color: taxiMonterricoColors.green,
                                   },
                                 }}
                               />
@@ -6588,9 +6693,9 @@ const ContactDetail: React.FC = () => {
                                   }
                                 }}
                                 sx={{
-                                  color: '#00bcd4',
+                                  color: taxiMonterricoColors.green,
                                   '&.Mui-checked': {
-                                    color: '#00bcd4',
+                                    color: taxiMonterricoColors.green,
                                   },
                                 }}
                               />
@@ -6673,8 +6778,28 @@ const ContactDetail: React.FC = () => {
           </Box>
 
           {/* Footer con botones */}
-          <Box sx={{ p: 2, borderTop: '1px solid #e0e0e0', backgroundColor: '#fafafa', display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-            <Button onClick={() => setNoteOpen(false)} color="inherit" sx={{ textTransform: 'none' }}>
+          <Box sx={{ 
+            p: 2.5, 
+            borderTop: '1px solid #e0e0e0', 
+            backgroundColor: '#fafbfc', 
+            display: 'flex', 
+            justifyContent: 'flex-end', 
+            gap: 1.5,
+            boxShadow: '0 -2px 8px rgba(0,0,0,0.05)',
+          }}>
+            <Button 
+              onClick={() => setNoteOpen(false)} 
+              sx={{ 
+                textTransform: 'none',
+                px: 3,
+                py: 1,
+                color: '#546e7a',
+                fontWeight: 500,
+                '&:hover': {
+                  backgroundColor: '#eceff1',
+                },
+              }}
+            >
               Cancelar
             </Button>
             <Button 
@@ -6683,14 +6808,21 @@ const ContactDetail: React.FC = () => {
               disabled={saving || !noteData.description.trim()}
               sx={{ 
                 textTransform: 'none',
-                backgroundColor: saving ? '#bdbdbd' : '#757575',
+                px: 3,
+                py: 1,
+                backgroundColor: saving ? '#bdbdbd' : taxiMonterricoColors.green,
+                fontWeight: 600,
+                boxShadow: saving ? 'none' : `0 2px 8px ${taxiMonterricoColors.green}50`,
                 '&:hover': {
-                  backgroundColor: saving ? '#bdbdbd' : '#616161',
+                  backgroundColor: saving ? '#bdbdbd' : taxiMonterricoColors.greenDark,
+                  boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.green}60`,
                 },
                 '&:disabled': {
                   backgroundColor: '#e0e0e0',
                   color: '#9e9e9e',
-                }
+                  boxShadow: 'none',
+                },
+                transition: 'all 0.2s ease',
               }}
             >
               {saving ? 'Guardando...' : 'Crear nota'}
@@ -6862,34 +6994,51 @@ const ContactDetail: React.FC = () => {
           >
             <Box
               sx={{
-                p: 0,
-                m: 0,
-                backgroundColor: '#37474F',
+                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
                 color: 'white',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                minHeight: '50px',
+                minHeight: { xs: '48px', md: '56px' },
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                px: { xs: 2, md: 2.5 },
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', pl: 2 }}>
-                <Typography variant="h6" sx={{ color: 'white', fontWeight: 500 }}>Llamada</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Phone sx={{ fontSize: { xs: 18, md: 22 } }} />
+                <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, fontSize: { xs: '1rem', md: '1.1rem' } }}>
+                  Llamada
+                </Typography>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <IconButton sx={{ color: 'white', mr: 1 }} size="small" onClick={() => setCallOpen(false)}>
-                  <Close fontSize="small" />
-                </IconButton>
-              </Box>
+              <IconButton 
+                sx={{ 
+                  color: 'white',
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.15)' }
+                }} 
+                size="small" 
+                onClick={() => setCallOpen(false)}
+              >
+                <Close fontSize="small" />
+              </IconButton>
             </Box>
 
-            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2, overflow: 'hidden', overflowY: 'auto' }}>
+            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: { xs: 2, md: 3 }, overflow: 'hidden', overflowY: 'auto', bgcolor: '#fafafa' }}>
               <TextField
                 label="Asunto"
                 value={callData.subject}
                 onChange={(e) => setCallData({ ...callData, subject: e.target.value })}
                 required
                 fullWidth
-                sx={{ mb: 2 }}
+                sx={{ 
+                  mb: 2.5,
+                  bgcolor: 'white',
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                    '&.Mui-focused fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                    },
+                  },
+                }}
               />
               <TextField
                 label="Duración (minutos)"
@@ -6897,7 +7046,16 @@ const ContactDetail: React.FC = () => {
                 value={callData.duration}
                 onChange={(e) => setCallData({ ...callData, duration: e.target.value })}
                 fullWidth
-                sx={{ mb: 2 }}
+                sx={{ 
+                  mb: 2.5,
+                  bgcolor: 'white',
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                    '&.Mui-focused fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                    },
+                  },
+                }}
               />
               <TextField
                 label="Notas de la llamada"
@@ -6906,12 +7064,32 @@ const ContactDetail: React.FC = () => {
                 value={callData.description}
                 onChange={(e) => setCallData({ ...callData, description: e.target.value })}
                 fullWidth
-                sx={{ mb: 2 }}
+                sx={{ 
+                  mb: 2,
+                  bgcolor: 'white',
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                    '&.Mui-focused fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                    },
+                  },
+                }}
               />
             </Box>
 
-            <Box sx={{ p: 2, borderTop: '1px solid #e0e0e0', backgroundColor: '#fafafa', display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-              <Button onClick={() => setCallOpen(false)} color="inherit" sx={{ textTransform: 'none' }}>
+            <Box sx={{ p: 2.5, borderTop: '1px solid #e0e0e0', backgroundColor: 'white', display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
+              <Button 
+                onClick={() => setCallOpen(false)} 
+                sx={{ 
+                  textTransform: 'none',
+                  color: '#757575',
+                  fontWeight: 500,
+                  px: 2.5,
+                  '&:hover': {
+                    bgcolor: '#f5f5f5',
+                  },
+                }}
+              >
                 Cancelar
               </Button>
               <Button 
@@ -6920,9 +7098,17 @@ const ContactDetail: React.FC = () => {
                 disabled={saving || !callData.subject.trim()}
                 sx={{ 
                   textTransform: 'none',
-                  backgroundColor: saving ? '#bdbdbd' : '#757575',
+                  bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.green,
+                  fontWeight: 500,
+                  px: 3,
+                  boxShadow: saving ? 'none' : `0 2px 8px ${taxiMonterricoColors.green}30`,
                   '&:hover': {
-                    backgroundColor: saving ? '#bdbdbd' : '#616161',
+                    bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.greenDark,
+                    boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.green}40`,
+                  },
+                  '&.Mui-disabled': {
+                    bgcolor: '#bdbdbd',
+                    color: 'white',
                   },
                 }}
               >
@@ -6969,34 +7155,51 @@ const ContactDetail: React.FC = () => {
           >
             <Box
               sx={{
-                p: 0,
-                m: 0,
-                backgroundColor: '#37474F',
+                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
                 color: 'white',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                minHeight: '50px',
+                minHeight: { xs: '48px', md: '56px' },
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                px: { xs: 2, md: 2.5 },
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', pl: 2 }}>
-                <Typography variant="h6" sx={{ color: 'white', fontWeight: 500 }}>Tarea</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Assignment sx={{ fontSize: { xs: 18, md: 22 } }} />
+                <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, fontSize: { xs: '1rem', md: '1.1rem' } }}>
+                  Tarea
+                </Typography>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <IconButton sx={{ color: 'white', mr: 1 }} size="small" onClick={() => setTaskOpen(false)}>
-                  <Close fontSize="small" />
-                </IconButton>
-              </Box>
+              <IconButton 
+                sx={{ 
+                  color: 'white',
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.15)' }
+                }} 
+                size="small" 
+                onClick={() => setTaskOpen(false)}
+              >
+                <Close fontSize="small" />
+              </IconButton>
             </Box>
 
-            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2, overflow: 'hidden', overflowY: 'auto' }}>
+            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: { xs: 2, md: 3 }, overflow: 'hidden', overflowY: 'auto', bgcolor: '#fafafa' }}>
               <TextField
                 label="Título"
                 value={taskData.title}
                 onChange={(e) => setTaskData({ ...taskData, title: e.target.value })}
                 required
                 fullWidth
-                sx={{ mb: 2 }}
+                sx={{ 
+                  mb: 2.5,
+                  bgcolor: 'white',
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                    '&.Mui-focused fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                    },
+                  },
+                }}
               />
               <TextField
                 label="Descripción"
@@ -7005,37 +7208,72 @@ const ContactDetail: React.FC = () => {
                 value={taskData.description}
                 onChange={(e) => setTaskData({ ...taskData, description: e.target.value })}
                 fullWidth
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                select
-                label="Prioridad"
-                value={taskData.priority}
-                onChange={(e) => setTaskData({ ...taskData, priority: e.target.value })}
-                fullWidth
-                sx={{ mb: 2 }}
-                SelectProps={{
-                  native: true,
+                sx={{ 
+                  mb: 2.5,
+                  bgcolor: 'white',
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                    '&.Mui-focused fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                    },
+                  },
                 }}
-              >
-                <option value="low">Baja</option>
-                <option value="medium">Media</option>
-                <option value="high">Alta</option>
-                <option value="urgent">Urgente</option>
-              </TextField>
-              <TextField
-                label="Fecha límite"
-                type="date"
-                value={taskData.dueDate}
-                onChange={(e) => setTaskData({ ...taskData, dueDate: e.target.value })}
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-                sx={{ mb: 2 }}
               />
+              <Box sx={{ display: 'flex', gap: 2, mb: 2.5 }}>
+                <TextField
+                  select
+                  label="Prioridad"
+                  value={taskData.priority}
+                  onChange={(e) => setTaskData({ ...taskData, priority: e.target.value })}
+                  fullWidth
+                  sx={{ 
+                    bgcolor: 'white',
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                      '&.Mui-focused fieldset': {
+                        borderColor: taxiMonterricoColors.green,
+                      },
+                    },
+                  }}
+                >
+                  <MenuItem value="low">Baja</MenuItem>
+                  <MenuItem value="medium">Media</MenuItem>
+                  <MenuItem value="high">Alta</MenuItem>
+                  <MenuItem value="urgent">Urgente</MenuItem>
+                </TextField>
+                <TextField
+                  label="Fecha límite"
+                  type="date"
+                  value={taskData.dueDate}
+                  onChange={(e) => setTaskData({ ...taskData, dueDate: e.target.value })}
+                  fullWidth
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ 
+                    bgcolor: 'white',
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                      '&.Mui-focused fieldset': {
+                        borderColor: taxiMonterricoColors.green,
+                      },
+                    },
+                  }}
+                />
+              </Box>
             </Box>
 
-            <Box sx={{ p: 2, borderTop: '1px solid #e0e0e0', backgroundColor: '#fafafa', display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-              <Button onClick={() => setTaskOpen(false)} color="inherit" sx={{ textTransform: 'none' }}>
+            <Box sx={{ p: 2.5, borderTop: '1px solid #e0e0e0', backgroundColor: 'white', display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
+              <Button 
+                onClick={() => setTaskOpen(false)} 
+                sx={{ 
+                  textTransform: 'none',
+                  color: '#757575',
+                  fontWeight: 500,
+                  px: 2.5,
+                  '&:hover': {
+                    bgcolor: '#f5f5f5',
+                  },
+                }}
+              >
                 Cancelar
               </Button>
               <Button 
@@ -7044,9 +7282,17 @@ const ContactDetail: React.FC = () => {
                 disabled={saving || !taskData.title.trim()}
                 sx={{ 
                   textTransform: 'none',
-                  backgroundColor: saving ? '#bdbdbd' : '#757575',
+                  bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.green,
+                  fontWeight: 500,
+                  px: 3,
+                  boxShadow: saving ? 'none' : `0 2px 8px ${taxiMonterricoColors.green}30`,
                   '&:hover': {
-                    backgroundColor: saving ? '#bdbdbd' : '#616161',
+                    bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.greenDark,
+                    boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.green}40`,
+                  },
+                  '&.Mui-disabled': {
+                    bgcolor: '#bdbdbd',
+                    color: 'white',
                   },
                 }}
               >
@@ -7093,34 +7339,51 @@ const ContactDetail: React.FC = () => {
           >
             <Box
               sx={{
-                p: 0,
-                m: 0,
-                backgroundColor: '#37474F',
+                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
                 color: 'white',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                minHeight: '50px',
+                minHeight: { xs: '48px', md: '56px' },
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                px: { xs: 2, md: 2.5 },
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', pl: 2 }}>
-                <Typography variant="h6" sx={{ color: 'white', fontWeight: 500 }}>Reunión</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Event sx={{ fontSize: { xs: 18, md: 22 } }} />
+                <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, fontSize: { xs: '1rem', md: '1.1rem' } }}>
+                  Reunión
+                </Typography>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <IconButton sx={{ color: 'white', mr: 1 }} size="small" onClick={() => setMeetingOpen(false)}>
-                  <Close fontSize="small" />
-                </IconButton>
-              </Box>
+              <IconButton 
+                sx={{ 
+                  color: 'white',
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.15)' }
+                }} 
+                size="small" 
+                onClick={() => setMeetingOpen(false)}
+              >
+                <Close fontSize="small" />
+              </IconButton>
             </Box>
 
-            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2, overflow: 'hidden', overflowY: 'auto' }}>
+            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: { xs: 2, md: 3 }, overflow: 'hidden', overflowY: 'auto', bgcolor: '#fafafa' }}>
               <TextField
                 label="Asunto"
                 value={meetingData.subject}
                 onChange={(e) => setMeetingData({ ...meetingData, subject: e.target.value })}
                 required
                 fullWidth
-                sx={{ mb: 2 }}
+                sx={{ 
+                  mb: 2.5,
+                  bgcolor: 'white',
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                    '&.Mui-focused fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                    },
+                  },
+                }}
               />
               <TextField
                 label="Descripción"
@@ -7129,7 +7392,16 @@ const ContactDetail: React.FC = () => {
                 value={meetingData.description}
                 onChange={(e) => setMeetingData({ ...meetingData, description: e.target.value })}
                 fullWidth
-                sx={{ mb: 2 }}
+                sx={{ 
+                  mb: 2.5,
+                  bgcolor: 'white',
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                    '&.Mui-focused fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                    },
+                  },
+                }}
               />
               <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
                 <TextField
@@ -7139,6 +7411,15 @@ const ContactDetail: React.FC = () => {
                   onChange={(e) => setMeetingData({ ...meetingData, date: e.target.value })}
                   fullWidth
                   InputLabelProps={{ shrink: true }}
+                  sx={{ 
+                    bgcolor: 'white',
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                      '&.Mui-focused fieldset': {
+                        borderColor: taxiMonterricoColors.green,
+                      },
+                    },
+                  }}
                 />
                 <TextField
                   label="Hora"
@@ -7147,12 +7428,32 @@ const ContactDetail: React.FC = () => {
                   onChange={(e) => setMeetingData({ ...meetingData, time: e.target.value })}
                   fullWidth
                   InputLabelProps={{ shrink: true }}
+                  sx={{ 
+                    bgcolor: 'white',
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                      '&.Mui-focused fieldset': {
+                        borderColor: taxiMonterricoColors.green,
+                      },
+                    },
+                  }}
                 />
               </Box>
             </Box>
 
-            <Box sx={{ p: 2, borderTop: '1px solid #e0e0e0', backgroundColor: '#fafafa', display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-              <Button onClick={() => setMeetingOpen(false)} color="inherit" sx={{ textTransform: 'none' }}>
+            <Box sx={{ p: 2.5, borderTop: '1px solid #e0e0e0', backgroundColor: 'white', display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
+              <Button 
+                onClick={() => setMeetingOpen(false)} 
+                sx={{ 
+                  textTransform: 'none',
+                  color: '#757575',
+                  fontWeight: 500,
+                  px: 2.5,
+                  '&:hover': {
+                    bgcolor: '#f5f5f5',
+                  },
+                }}
+              >
                 Cancelar
               </Button>
               <Button 
@@ -7161,9 +7462,17 @@ const ContactDetail: React.FC = () => {
                 disabled={saving || !meetingData.subject.trim()}
                 sx={{ 
                   textTransform: 'none',
-                  backgroundColor: saving ? '#bdbdbd' : '#757575',
+                  bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.green,
+                  fontWeight: 500,
+                  px: 3,
+                  boxShadow: saving ? 'none' : `0 2px 8px ${taxiMonterricoColors.green}30`,
                   '&:hover': {
-                    backgroundColor: saving ? '#bdbdbd' : '#616161',
+                    bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.greenDark,
+                    boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.green}40`,
+                  },
+                  '&.Mui-disabled': {
+                    bgcolor: '#bdbdbd',
+                    color: 'white',
                   },
                 }}
               >
@@ -7679,4 +7988,3 @@ const ContactDetail: React.FC = () => {
 };
 
 export default ContactDetail;
-

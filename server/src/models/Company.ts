@@ -9,6 +9,7 @@ interface CompanyAttributes {
   industry?: string;
   type?: string;
   phone?: string;
+  ruc?: string;
   address?: string;
   city?: string;
   state?: string;
@@ -26,7 +27,7 @@ interface CompanyAttributes {
   updatedAt?: Date;
 }
 
-interface CompanyCreationAttributes extends Optional<CompanyAttributes, 'id' | 'domain' | 'industry' | 'type' | 'phone' | 'address' | 'city' | 'state' | 'country' | 'postalCode' | 'website' | 'numberOfEmployees' | 'annualRevenue' | 'description' | 'ownerId' | 'tags' | 'notes' | 'createdAt' | 'updatedAt'> {}
+interface CompanyCreationAttributes extends Optional<CompanyAttributes, 'id' | 'domain' | 'industry' | 'type' | 'phone' | 'ruc' | 'address' | 'city' | 'state' | 'country' | 'postalCode' | 'website' | 'numberOfEmployees' | 'annualRevenue' | 'description' | 'ownerId' | 'tags' | 'notes' | 'createdAt' | 'updatedAt'> {}
 
 export class Company extends Model<CompanyAttributes, CompanyCreationAttributes> implements CompanyAttributes {
   public id!: number;
@@ -35,6 +36,7 @@ export class Company extends Model<CompanyAttributes, CompanyCreationAttributes>
   public industry?: string;
   public type?: string;
   public phone?: string;
+  public ruc?: string;
   public address?: string;
   public city?: string;
   public state?: string;
@@ -78,6 +80,10 @@ Company.init(
       allowNull: true,
     },
     phone: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    ruc: {
       type: DataTypes.STRING,
       allowNull: true,
     },

@@ -318,26 +318,42 @@ const Dashboard: React.FC = () => {
     <Box sx={{ 
       backgroundColor: '#F5F5F5', 
       minHeight: '100vh',
-      px: { xs: 3, sm: 6, md: 8 },
-      pt: { xs: 4, sm: 6, md: 6 },
-      pb: 4,
+      px: { xs: 1.5, sm: 3, md: 6, lg: 8 },
+      pt: { xs: 2, sm: 3, md: 4, lg: 6 },
+      pb: { xs: 2, sm: 3, md: 4 },
     }}>
       {/* Header con Hello y Profile */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 4 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: { xs: 'column', sm: 'row' },
+        alignItems: { xs: 'flex-start', sm: 'center' },
+        justifyContent: 'space-between',
+        mb: { xs: 2, sm: 2.5, md: 3 },
+        gap: { xs: 2, sm: 0 },
+      }}>
         {/* Saludo */}
-        <Typography variant="h4" sx={{ fontWeight: 600, color: '#1F2937', mr: 3 }}>
+        <Typography 
+          variant="h4" 
+          sx={{ 
+            fontWeight: 600, 
+            color: '#1F2937', 
+            fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
+            mr: { xs: 0, sm: 3 },
+          }}
+        >
           Hola, {user?.firstName || 'Usuario'}
         </Typography>
         
         {/* Spacer */}
-        <Box sx={{ flex: 1 }} />
+        <Box sx={{ flex: 1, display: { xs: 'none', sm: 'block' } }} />
         
         {/* Contenedor alineado respecto a la columna derecha (320px) */}
         <Box sx={{ 
-          width: { xs: '100%', lg: 320 }, 
+          width: { xs: '100%', sm: 'auto', lg: 320 }, 
           display: 'flex', 
-          justifyContent: 'space-between',
+          justifyContent: { xs: 'flex-end', sm: 'space-between' },
           alignItems: 'center',
+          gap: 2,
         }}>
           {/* Profile Text */}
           <Typography 
@@ -345,8 +361,9 @@ const Dashboard: React.FC = () => {
             sx={{ 
               fontWeight: 600, 
               color: '#1F2937', 
-              fontSize: '1.25rem',
+              fontSize: { xs: '1rem', md: '1.25rem' },
               cursor: 'pointer',
+              display: { xs: 'none', sm: 'block' },
             }}
           >
             Perfil
@@ -359,14 +376,14 @@ const Dashboard: React.FC = () => {
             sx={{ 
               bgcolor: '#F3F4F6', 
               borderRadius: 1.5, 
-              width: 48, 
-              height: 48,
+              width: { xs: 40, md: 48 }, 
+              height: { xs: 40, md: 48 },
               '&:hover': {
                 bgcolor: '#E5E7EB',
               },
             }}
           >
-            <Edit sx={{ fontSize: 24, color: '#1F2937' }} />
+            <Edit sx={{ fontSize: { xs: 20, md: 24 }, color: '#1F2937' }} />
           </IconButton>
 
           <Menu
@@ -433,23 +450,64 @@ const Dashboard: React.FC = () => {
       {/* Columna Principal Izquierda */}
       <Box sx={{ flex: 1, minWidth: 0 }}>
 
-      {/* Tarjetas KPI con gradientes */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 3, mb: 4 }}>
+      {/* Tarjetas KPI con gradientes - Diseño compacto y equilibrado */}
+      <Box sx={{ 
+        display: 'grid', 
+        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, 
+        gap: { xs: 1.5, sm: 2, md: 2 }, 
+        mb: { xs: 3, md: 4 } 
+      }}>
         {/* Weekly Balance */}
         <Card sx={{ 
-          borderRadius: 6, 
-          boxShadow: 2,
+          borderRadius: 3, 
+          boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white',
+          transition: 'all 0.2s ease',
+          overflow: 'hidden',
+          '&:hover': {
+            transform: { xs: 'none', md: 'translateY(-2px)' },
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          },
         }}>
-          <CardContent>
-            <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
+          <CardContent sx={{ 
+            p: { xs: 1.75, sm: 2, md: 2.25 },
+          }}>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                opacity: 0.95, 
+                mb: 0.75,
+                fontSize: { xs: '0.75rem', md: '0.8rem' },
+                fontWeight: 500,
+              }}
+            >
               Balance Semanal
             </Typography>
-            <Typography variant="h3" sx={{ fontWeight: 700, mb: 2 }}>
+            <Typography 
+              variant="h5" 
+              sx={{ 
+                fontWeight: 700, 
+                mb: 1.25,
+                fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
+                lineHeight: 1.1,
+              }}
+            >
               ${(weeklyBalance / 1000).toFixed(0)}k
             </Typography>
-            <Link href="#" sx={{ color: 'white', textDecoration: 'underline', fontSize: '0.875rem' }}>
+            <Link 
+              href="#" 
+              sx={{ 
+                color: 'white', 
+                textDecoration: 'underline', 
+                fontSize: { xs: '0.7rem', md: '0.75rem' },
+                opacity: 0.9,
+                display: 'inline-block',
+                '&:hover': {
+                  opacity: 1,
+                },
+              }}
+            >
               Ver lista completa
             </Link>
           </CardContent>
@@ -457,19 +515,55 @@ const Dashboard: React.FC = () => {
 
         {/* Orders In Line */}
         <Card sx={{ 
-          borderRadius: 6, 
-          boxShadow: 2,
+          borderRadius: 3, 
+          boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
           background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
           color: 'white',
+          transition: 'all 0.2s ease',
+          overflow: 'hidden',
+          '&:hover': {
+            transform: { xs: 'none', md: 'translateY(-2px)' },
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          },
         }}>
-          <CardContent>
-            <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
+          <CardContent sx={{ 
+            p: { xs: 1.75, sm: 2, md: 2.25 },
+          }}>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                opacity: 0.95, 
+                mb: 0.75,
+                fontSize: { xs: '0.75rem', md: '0.8rem' },
+                fontWeight: 500,
+              }}
+            >
               Órdenes en Línea
             </Typography>
-            <Typography variant="h3" sx={{ fontWeight: 700, mb: 2 }}>
+            <Typography 
+              variant="h5" 
+              sx={{ 
+                fontWeight: 700, 
+                mb: 1.25,
+                fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
+                lineHeight: 1.1,
+              }}
+            >
               {ordersInLine}
             </Typography>
-            <Link href="#" sx={{ color: 'white', textDecoration: 'underline', fontSize: '0.875rem' }}>
+            <Link 
+              href="#" 
+              sx={{ 
+                color: 'white', 
+                textDecoration: 'underline', 
+                fontSize: { xs: '0.7rem', md: '0.75rem' },
+                opacity: 0.9,
+                display: 'inline-block',
+                '&:hover': {
+                  opacity: 1,
+                },
+              }}
+            >
               Ver lista completa
             </Link>
           </CardContent>
@@ -477,19 +571,55 @@ const Dashboard: React.FC = () => {
 
         {/* New Clients */}
         <Card sx={{ 
-          borderRadius: 6, 
-          boxShadow: 2,
+          borderRadius: 3, 
+          boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
           background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
           color: 'white',
+          transition: 'all 0.2s ease',
+          overflow: 'hidden',
+          '&:hover': {
+            transform: { xs: 'none', md: 'translateY(-2px)' },
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          },
         }}>
-          <CardContent>
-            <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
+          <CardContent sx={{ 
+            p: { xs: 1.75, sm: 2, md: 2.25 },
+          }}>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                opacity: 0.95, 
+                mb: 0.75,
+                fontSize: { xs: '0.75rem', md: '0.8rem' },
+                fontWeight: 500,
+              }}
+            >
               Nuevos Clientes
             </Typography>
-            <Typography variant="h3" sx={{ fontWeight: 700, mb: 2 }}>
+            <Typography 
+              variant="h5" 
+              sx={{ 
+                fontWeight: 700, 
+                mb: 1.25,
+                fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
+                lineHeight: 1.1,
+              }}
+            >
               {newClients}
             </Typography>
-            <Link href="#" sx={{ color: 'white', textDecoration: 'underline', fontSize: '0.875rem' }}>
+            <Link 
+              href="#" 
+              sx={{ 
+                color: 'white', 
+                textDecoration: 'underline', 
+                fontSize: { xs: '0.7rem', md: '0.75rem' },
+                opacity: 0.9,
+                display: 'inline-block',
+                '&:hover': {
+                  opacity: 1,
+                },
+              }}
+            >
               Ver lista completa
             </Link>
           </CardContent>
@@ -497,20 +627,48 @@ const Dashboard: React.FC = () => {
       </Box>
 
       {/* Sección principal: Sales Chart y Calendar */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, gap: 3, mb: 3 }}>
+      <Box sx={{ 
+        display: 'grid', 
+        gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, 
+        gap: { xs: 2, md: 3 }, 
+        mb: { xs: 2, md: 3 } 
+      }}>
         {/* Sales Chart */}
-        <Card sx={{ borderRadius: 6, boxShadow: 2 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: '#1F2937' }}>
+        <Card sx={{ 
+          borderRadius: { xs: 3, md: 6 }, 
+          boxShadow: { xs: 1, md: 2 },
+        }}>
+          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: { xs: 'column', sm: 'row' },
+              justifyContent: 'space-between', 
+              alignItems: { xs: 'flex-start', sm: 'center' },
+              mb: { xs: 2, md: 3 },
+              gap: { xs: 2, sm: 0 },
+            }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 600, 
+                  color: '#1F2937',
+                  fontSize: { xs: '1rem', md: '1.25rem' },
+                }}
+              >
                 Ventas
               </Typography>
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                <FormControl size="small" sx={{ minWidth: 100 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                gap: { xs: 1, md: 2 }, 
+                alignItems: 'center',
+                width: { xs: '100%', sm: 'auto' },
+                flexDirection: { xs: 'column', sm: 'row' },
+              }}>
+                <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 100 } }}>
                   <Select
                     value={selectedYear}
                     onChange={(e) => setSelectedYear(e.target.value)}
-                    sx={{ fontSize: '0.875rem' }}
+                    sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}
                   >
                     <MenuItem value="2024">2024</MenuItem>
                     <MenuItem value="2023">2023</MenuItem>
@@ -519,8 +677,12 @@ const Dashboard: React.FC = () => {
                 </FormControl>
                 <Button
                   size="small"
-                  startIcon={<Download />}
-                  sx={{ fontSize: '0.875rem', textTransform: 'none' }}
+                  startIcon={<Download sx={{ fontSize: { xs: 16, md: 18 } }} />}
+                  sx={{ 
+                    fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                    textTransform: 'none',
+                    width: { xs: '100%', sm: 'auto' },
+                  }}
                 >
                   Descargar
                 </Button>
@@ -553,18 +715,41 @@ const Dashboard: React.FC = () => {
         </Card>
 
         {/* Calendar */}
-        <Card sx={{ borderRadius: 6, boxShadow: 2 }}>
-          <CardContent>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: '#1F2937' }}>
+        <Card sx={{ 
+          borderRadius: { xs: 3, md: 6 }, 
+          boxShadow: { xs: 1, md: 2 },
+        }}>
+          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: { xs: 'column', sm: 'row' },
+              justifyContent: 'space-between', 
+              alignItems: { xs: 'flex-start', sm: 'center' },
+              mb: { xs: 2, md: 3 },
+              gap: { xs: 2, sm: 0 },
+            }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 600, 
+                  color: '#1F2937',
+                  fontSize: { xs: '1rem', md: '1.25rem' },
+                }}
+              >
                 Calendario
               </Typography>
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                <FormControl size="small" sx={{ minWidth: 120 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                gap: { xs: 1, md: 2 }, 
+                alignItems: 'center',
+                width: { xs: '100%', sm: 'auto' },
+                flexDirection: { xs: 'column', sm: 'row' },
+              }}>
+                <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 120 } }}>
                   <Select
                     value={selectedMonth}
                     onChange={(e) => setSelectedMonth(e.target.value)}
-                    sx={{ fontSize: '0.875rem' }}
+                    sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}
                   >
                     <MenuItem value={new Date().toLocaleString('es-ES', { month: 'short', year: 'numeric' })}>
                       {new Date().toLocaleString('es-ES', { month: 'short', year: 'numeric' })}
@@ -573,7 +758,11 @@ const Dashboard: React.FC = () => {
                 </FormControl>
                 <Button
                   size="small"
-                  sx={{ fontSize: '0.875rem', textTransform: 'none' }}
+                  sx={{ 
+                    fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                    textTransform: 'none',
+                    width: { xs: '100%', sm: 'auto' },
+                  }}
                 >
                   Ver
                 </Button>
@@ -633,11 +822,26 @@ const Dashboard: React.FC = () => {
       </Box>
 
       {/* Sección inferior: Sales Distribution y Weekly Sales */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 3 }}>
+      <Box sx={{ 
+        display: 'grid', 
+        gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, 
+        gap: { xs: 2, md: 3 } 
+      }}>
         {/* Sales Distribution */}
-        <Card sx={{ borderRadius: 6, boxShadow: 2 }}>
-          <CardContent>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: '#1F2937', mb: 3 }}>
+        <Card sx={{ 
+          borderRadius: { xs: 3, md: 6 }, 
+          boxShadow: { xs: 1, md: 2 },
+        }}>
+          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                fontWeight: 600, 
+                color: '#1F2937', 
+                mb: { xs: 2, md: 3 },
+                fontSize: { xs: '1rem', md: '1.25rem' },
+              }}
+            >
               Distribución de Ventas
             </Typography>
             <ResponsiveContainer width="100%" height={250}>
@@ -672,9 +876,20 @@ const Dashboard: React.FC = () => {
         </Card>
 
         {/* Weekly Sales */}
-        <Card sx={{ borderRadius: 6, boxShadow: 2 }}>
-          <CardContent>
-            <Typography variant="h6" sx={{ fontWeight: 600, color: '#1F2937', mb: 3 }}>
+        <Card sx={{ 
+          borderRadius: { xs: 3, md: 6 }, 
+          boxShadow: { xs: 1, md: 2 },
+        }}>
+          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                fontWeight: 600, 
+                color: '#1F2937', 
+                mb: { xs: 2, md: 3 },
+                fontSize: { xs: '1rem', md: '1.25rem' },
+              }}
+            >
               Ventas Semanales
             </Typography>
             <ResponsiveContainer width="100%" height={250}>
@@ -692,17 +907,21 @@ const Dashboard: React.FC = () => {
       </Box>
 
       {/* Columna Derecha - Perfil, Calendario y Tareas */}
-      <Box sx={{ width: { xs: '100%', lg: 320 }, flexShrink: 0 }}>
+      <Box sx={{ 
+        width: { xs: '100%', lg: 320 }, 
+        flexShrink: 0,
+        mt: { xs: 3, lg: 0 },
+      }}>
         {/* Perfil */}
-        <Box sx={{ mb: 4, position: 'relative' }}>
+        <Box sx={{ mb: { xs: 3, md: 4 }, position: 'relative' }}>
           {/* Avatar */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: { xs: 1.5, md: 2 } }}>
             <Avatar
               sx={{
-                width: 100,
-                height: 100,
+                width: { xs: 80, md: 100 },
+                height: { xs: 80, md: 100 },
                 bgcolor: user?.avatar ? 'transparent' : '#0088FE',
-                fontSize: '2rem',
+                fontSize: { xs: '1.5rem', md: '2rem' },
                 fontWeight: 600,
               }}
               src={user?.avatar}
@@ -714,12 +933,26 @@ const Dashboard: React.FC = () => {
           {/* Nombre y verificación */}
           <Box sx={{ textAlign: 'center', mb: 0.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-              <Typography variant="body1" sx={{ fontWeight: 700, color: '#1F2937', fontSize: '1.25rem' }}>
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  fontWeight: 700, 
+                  color: '#1F2937', 
+                  fontSize: { xs: '1rem', md: '1.25rem' },
+                }}
+              >
                 {user?.firstName} {user?.lastName}
               </Typography>
-              <CheckCircle sx={{ fontSize: 20, color: '#10B981' }} />
+              <CheckCircle sx={{ fontSize: { xs: 18, md: 20 }, color: '#10B981' }} />
             </Box>
-            <Typography variant="caption" sx={{ color: '#6B7280', mt: 0.5, fontSize: '0.875rem' }}>
+            <Typography 
+              variant="caption" 
+              sx={{ 
+                color: '#6B7280', 
+                mt: 0.5, 
+                fontSize: { xs: '0.8rem', md: '0.875rem' },
+              }}
+            >
               {user?.role || 'Usuario'}
             </Typography>
           </Box>
@@ -727,12 +960,12 @@ const Dashboard: React.FC = () => {
 
         {/* Calendario */}
         <Card sx={{ 
-          borderRadius: 6, 
-          boxShadow: 2, 
-          mb: 4,
+          borderRadius: { xs: 3, md: 6 }, 
+          boxShadow: { xs: 1, md: 2 }, 
+          mb: { xs: 3, md: 4 },
           bgcolor: '#F3F4F6',
         }}>
-          <CardContent sx={{ p: 2 }}>
+          <CardContent sx={{ p: { xs: 1.5, md: 2 } }}>
             {/* Header del calendario */}
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
               <IconButton size="small" onClick={handlePrevMonth} sx={{ width: 24, height: 24 }}>

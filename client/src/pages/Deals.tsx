@@ -214,7 +214,7 @@ const Deals: React.FC = () => {
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
                 <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
-                  Total Deals
+                  Total Negocios
                 </Typography>
                 <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
                   {totalDeals.toLocaleString()}
@@ -222,7 +222,7 @@ const Deals: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <TrendingUp sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
                   <Typography variant="caption" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '1rem' }}>
-                    8% this month
+                    8% este mes
                   </Typography>
                 </Box>
               </Box>
@@ -256,7 +256,7 @@ const Deals: React.FC = () => {
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
                 <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
-                  Won Deals
+                  Negocios Ganados
                 </Typography>
                 <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
                   {wonDeals.toLocaleString()}
@@ -264,7 +264,7 @@ const Deals: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <TrendingUp sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
                   <Typography variant="caption" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '1rem' }}>
-                    3% this month
+                    3% este mes
                   </Typography>
                 </Box>
               </Box>
@@ -298,7 +298,7 @@ const Deals: React.FC = () => {
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
                 <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
-                  Total Value
+                  Valor Total
                 </Typography>
                 <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
                   ${(totalValue / 1000).toFixed(0)}k
@@ -340,10 +340,10 @@ const Deals: React.FC = () => {
       }}>
         <Box sx={{ px: 3, pt: 3, pb: 2 }}>
           {/* Header de la tabla con título, búsqueda y ordenamiento */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
             <Box>
-              <Typography variant="h5" sx={{ fontWeight: 600, color: '#1a1a1a', mb: 0.5 }}>
-                All Deals
+              <Typography variant="h5" sx={{ fontWeight: 600, color: '#1a1a1a', mb: 0.25 }}>
+                Todos los Negocios
               </Typography>
               <Typography
                 component="a"
@@ -361,13 +361,13 @@ const Deals: React.FC = () => {
                   },
                 }}
               >
-                Won Deals
+                Negocios Ganados
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <TextField
                 size="small"
-                placeholder="Search"
+                placeholder="Buscar"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 InputProps={{
@@ -409,10 +409,10 @@ const Deals: React.FC = () => {
                     },
                   }}
                 >
-                  <MenuItem value="newest">Sort by: Newest</MenuItem>
-                  <MenuItem value="oldest">Sort by: Oldest</MenuItem>
-                  <MenuItem value="name">Sort by: Name A-Z</MenuItem>
-                  <MenuItem value="nameDesc">Sort by: Name Z-A</MenuItem>
+                  <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
+                  <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
+                  <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
+                  <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
                 </Select>
               </FormControl>
               <Button 
@@ -448,25 +448,25 @@ const Deals: React.FC = () => {
             <TableHead>
               <TableRow sx={{ bgcolor: '#fafafa' }}>
                 <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', py: 2, px: 3 }}>
-                  Deal Name
+                  Nombre del Negocio
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
-                  Amount
+                  Monto
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
-                  Stage
+                  Etapa
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
-                  Probability
+                  Probabilidad
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
-                  Contact
+                  Contacto
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
-                  Company
+                  Empresa
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2, width: 60 }}>
-                  Actions
+                  Acciones
                 </TableCell>
               </TableRow>
             </TableHead>

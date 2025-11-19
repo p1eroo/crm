@@ -26,10 +26,12 @@ import {
   FormControl,
   Select,
   Tooltip,
+  InputAdornment,
 } from '@mui/material';
 import { Add, Edit, Delete, Search, Business, Domain, TrendingUp, TrendingDown, Computer, Visibility } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
+import axios from 'axios';
 
 interface Company {
   id: number;
@@ -37,6 +39,11 @@ interface Company {
   domain?: string;
   industry?: string;
   phone?: string;
+  ruc?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
   lifecycleStage: string;
   Owner?: { firstName: string; lastName: string };
 }
@@ -55,7 +62,14 @@ const Companies: React.FC = () => {
     industry: '',
     phone: '',
     lifecycleStage: 'lead',
+    ruc: '',
+    address: '',
+    city: '',
+    state: '',
+    country: '',
   });
+  const [loadingRuc, setLoadingRuc] = useState(false);
+  const [rucError, setRucError] = useState('');
 
   // Calcular estadísticas
   const totalCompanies = companies.length;
@@ -101,6 +115,11 @@ const Companies: React.FC = () => {
         industry: company.industry || '',
         phone: company.phone || '',
         lifecycleStage: company.lifecycleStage,
+        ruc: company.ruc || '',
+        address: company.address || '',
+        city: company.city || '',
+        state: company.state || '',
+        country: company.country || '',
       });
     } else {
       setEditingCompany(null);
@@ -110,9 +129,73 @@ const Companies: React.FC = () => {
         industry: '',
         phone: '',
         lifecycleStage: 'lead',
+        ruc: '',
+        address: '',
+        city: '',
+        state: '',
+        country: '',
       });
     }
+    setRucError('');
     setOpen(true);
+  };
+
+  const handleSearchRuc = async () => {
+    if (!formData.ruc || formData.ruc.length < 11) {
+      setRucError('El RUC debe tener 11 dígitos');
+      return;
+    }
+
+    setLoadingRuc(true);
+    setRucError('');
+
+    try {
+      // Obtener el token de la API de Factiliza desde variables de entorno
+      const factilizaToken = process.env.REACT_APP_FACTILIZA_TOKEN || '';
+      
+      if (!factilizaToken) {
+        setRucError('Token de API no configurado. Por favor, configure REACT_APP_FACTILIZA_TOKEN');
+        setLoadingRuc(false);
+        return;
+      }
+
+      const response = await axios.get(
+        `https://api.factiliza.com/v1/ruc/info/${formData.ruc}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${factilizaToken}`,
+          },
+        }
+      );
+
+      if (response.data.success && response.data.data) {
+        const data = response.data.data;
+        
+        // Actualizar el formulario con los datos obtenidos
+        setFormData({
+          ...formData,
+          name: data.nombre_o_razon_social || '',
+          industry: data.tipo_contribuyente || '',
+          address: data.direccion_completa || data.direccion || '',
+          city: data.distrito || '',
+          state: data.provincia || '',
+          country: data.departamento || 'Perú',
+        });
+      } else {
+        setRucError('No se encontró información para este RUC');
+      }
+    } catch (error: any) {
+      console.error('Error al buscar RUC:', error);
+      if (error.response?.status === 400) {
+        setRucError('RUC no válido o no encontrado');
+      } else if (error.response?.status === 401) {
+        setRucError('Error de autenticación con la API');
+      } else {
+        setRucError('Error al consultar el RUC. Por favor, intente nuevamente');
+      }
+    } finally {
+      setLoadingRuc(false);
+    }
   };
 
   const handleClose = () => {
@@ -209,7 +292,7 @@ const Companies: React.FC = () => {
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
                 <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
-                  Total Companies
+                  Total Empresas
                 </Typography>
                 <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
                   {totalCompanies.toLocaleString()}
@@ -217,7 +300,7 @@ const Companies: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <TrendingUp sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
                   <Typography variant="caption" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '1rem' }}>
-                    12% this month
+                    12% este mes
                   </Typography>
                 </Box>
               </Box>
@@ -251,7 +334,7 @@ const Companies: React.FC = () => {
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
                 <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
-                  Active Companies
+                  Empresas Activas
                 </Typography>
                 <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
                   {activeCompanies.toLocaleString()}
@@ -259,7 +342,7 @@ const Companies: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <TrendingUp sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
                   <Typography variant="caption" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '1rem' }}>
-                    5% this month
+                    5% este mes
                   </Typography>
                 </Box>
               </Box>
@@ -293,7 +376,7 @@ const Companies: React.FC = () => {
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
                 <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
-                  New This Month
+                  Nuevas Este Mes
                 </Typography>
                 <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
                   {Math.min(totalCompanies, 15)}
@@ -335,10 +418,10 @@ const Companies: React.FC = () => {
       }}>
         <Box sx={{ px: 3, pt: 3, pb: 2 }}>
           {/* Header de la tabla con título, búsqueda y ordenamiento */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
             <Box>
-              <Typography variant="h5" sx={{ fontWeight: 600, color: '#1a1a1a', mb: 0.5 }}>
-                All Companies
+              <Typography variant="h5" sx={{ fontWeight: 600, color: '#1a1a1a', mb: 0.25 }}>
+                Todas las Empresas
               </Typography>
               <Typography
                 component="a"
@@ -356,13 +439,13 @@ const Companies: React.FC = () => {
                   },
                 }}
               >
-                Active Companies
+                Empresas Activas
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <TextField
                 size="small"
-                placeholder="Search"
+                placeholder="Buscar"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 InputProps={{
@@ -404,10 +487,10 @@ const Companies: React.FC = () => {
                     },
                   }}
                 >
-                  <MenuItem value="newest">Sort by: Newest</MenuItem>
-                  <MenuItem value="oldest">Sort by: Oldest</MenuItem>
-                  <MenuItem value="name">Sort by: Name A-Z</MenuItem>
-                  <MenuItem value="nameDesc">Sort by: Name Z-A</MenuItem>
+                  <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
+                  <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
+                  <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
+                  <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
                 </Select>
               </FormControl>
               <Button 
@@ -443,22 +526,22 @@ const Companies: React.FC = () => {
             <TableHead>
               <TableRow sx={{ bgcolor: '#fafafa' }}>
                 <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', py: 2, px: 3 }}>
-                  Company Name
+                  Nombre de Empresa
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
-                  Domain
+                  Dominio
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
-                  Industry
+                  Industria
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
-                  Phone
+                  Teléfono
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
-                  Stage
+                  Etapa
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2, width: 60 }}>
-                  Actions
+                  Acciones
                 </TableCell>
               </TableRow>
             </TableHead>
@@ -553,7 +636,7 @@ const Companies: React.FC = () => {
                   </TableCell>
                   <TableCell sx={{ px: 2 }}>
                     <Chip
-                      label={['customer', 'evangelist'].includes(company.lifecycleStage) ? 'Active' : 'Inactive'}
+                      label={['customer', 'evangelist'].includes(company.lifecycleStage) ? 'Activo' : 'Inactivo'}
                       size="small"
                       sx={{ 
                         fontWeight: 500,
@@ -603,26 +686,135 @@ const Companies: React.FC = () => {
         </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            {/* Campo RUC con botón de búsqueda */}
+            <TextField
+              label="RUC"
+              value={formData.ruc}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, ''); // Solo números
+                setFormData({ ...formData, ruc: value });
+                setRucError('');
+              }}
+              placeholder="Ingrese RUC (11 dígitos)"
+              error={!!rucError}
+              helperText={rucError}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={handleSearchRuc}
+                      disabled={loadingRuc || !formData.ruc || formData.ruc.length < 11}
+                      sx={{
+                        color: taxiMonterricoColors.green,
+                        '&:hover': {
+                          bgcolor: `${taxiMonterricoColors.green}15`,
+                        },
+                        '&.Mui-disabled': {
+                          color: '#bdbdbd',
+                        },
+                      }}
+                    >
+                      {loadingRuc ? (
+                        <CircularProgress size={20} />
+                      ) : (
+                        <Search />
+                      )}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
             <TextField
               label="Nombre"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
             />
             <TextField
               label="Dominio"
               value={formData.domain}
               onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
             />
             <TextField
-              label="Industria"
+              label="Tipo de Contribuyente / Industria"
               value={formData.industry}
               onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
             />
             <TextField
               label="Teléfono"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            <TextField
+              label="Dirección"
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              multiline
+              rows={2}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Distrito"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              <TextField
+                label="Provincia"
+                value={formData.state}
+                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+            </Box>
+            <TextField
+              label="Departamento"
+              value={formData.country}
+              onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
             />
             <TextField
               select

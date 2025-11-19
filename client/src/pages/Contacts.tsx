@@ -69,11 +69,14 @@ import {
   Computer,
   ArrowBack,
   ArrowForward,
+  CheckCircle,
+  Flag,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
 
 interface Contact {
   id: number;
@@ -139,7 +142,17 @@ const Contacts: React.FC = () => {
     phone: '',
     jobTitle: '',
     lifecycleStage: 'lead',
+    dni: '',
+    cee: '',
+    address: '',
+    city: '',
+    state: '',
+    country: '',
   });
+  const [loadingDni, setLoadingDni] = useState(false);
+  const [dniError, setDniError] = useState('');
+  const [loadingCee, setLoadingCee] = useState(false);
+  const [ceeError, setCeeError] = useState('');
 
   useEffect(() => {
     fetchContacts();
@@ -167,6 +180,12 @@ const Contacts: React.FC = () => {
         phone: contact.phone || '',
         jobTitle: contact.jobTitle || '',
         lifecycleStage: contact.lifecycleStage,
+    dni: '',
+    cee: '',
+    address: contact.address || '',
+    city: contact.city || '',
+    state: contact.state || '',
+    country: contact.country || '',
       });
     } else {
       setEditingContact(null);
@@ -177,9 +196,139 @@ const Contacts: React.FC = () => {
         phone: '',
         jobTitle: '',
         lifecycleStage: 'lead',
+        dni: '',
+        cee: '',
+        address: '',
+        city: '',
+        state: '',
+        country: '',
       });
     }
+    setDniError('');
+    setCeeError('');
     setOpen(true);
+  };
+
+  const handleSearchDni = async () => {
+    if (!formData.dni || formData.dni.length < 8) {
+      setDniError('El DNI debe tener al menos 8 dígitos');
+      return;
+    }
+
+    setLoadingDni(true);
+    setDniError('');
+
+    try {
+      // Obtener el token de la API de Factiliza desde variables de entorno o configuración
+      const factilizaToken = process.env.REACT_APP_FACTILIZA_TOKEN || '';
+      
+      if (!factilizaToken) {
+        setDniError('Token de API no configurado. Por favor, configure REACT_APP_FACTILIZA_TOKEN');
+        setLoadingDni(false);
+        return;
+      }
+
+      const response = await axios.get(
+        `https://api.factiliza.com/v1/dni/info/${formData.dni}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${factilizaToken}`,
+          },
+        }
+      );
+
+      if (response.data.success && response.data.data) {
+        const data = response.data.data;
+        
+        // Separar nombres y apellidos
+        const nombres = data.nombres || '';
+        const apellidoPaterno = data.apellido_paterno || '';
+        const apellidoMaterno = data.apellido_materno || '';
+        
+        // Actualizar el formulario con los datos obtenidos
+        setFormData({
+          ...formData,
+          firstName: nombres,
+          lastName: `${apellidoPaterno} ${apellidoMaterno}`.trim(),
+          address: data.direccion_completa || data.direccion || '',
+          city: data.distrito || '',
+          state: data.provincia || '',
+          country: data.departamento || 'Perú',
+        });
+      } else {
+        setDniError('No se encontró información para este DNI');
+      }
+    } catch (error: any) {
+      console.error('Error al buscar DNI:', error);
+      if (error.response?.status === 400) {
+        setDniError('DNI no válido o no encontrado');
+      } else if (error.response?.status === 401) {
+        setDniError('Error de autenticación con la API');
+      } else {
+        setDniError('Error al consultar el DNI. Por favor, intente nuevamente');
+      }
+    } finally {
+      setLoadingDni(false);
+    }
+  };
+
+  const handleSearchCee = async () => {
+    if (!formData.cee || formData.cee.length < 8) {
+      setCeeError('El CEE debe tener al menos 8 caracteres');
+      return;
+    }
+
+    setLoadingCee(true);
+    setCeeError('');
+
+    try {
+      // Obtener el token de la API de Factiliza desde variables de entorno o configuración
+      const factilizaToken = process.env.REACT_APP_FACTILIZA_TOKEN || '';
+      
+      if (!factilizaToken) {
+        setCeeError('Token de API no configurado. Por favor, configure REACT_APP_FACTILIZA_TOKEN');
+        setLoadingCee(false);
+        return;
+      }
+
+      const response = await axios.get(
+        `https://api.factiliza.com/v1/cee/info/${formData.cee}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${factilizaToken}`,
+          },
+        }
+      );
+
+      if (response.data.status === 200 && response.data.data) {
+        const data = response.data.data;
+        
+        // Separar nombres y apellidos
+        const nombres = data.nombres || '';
+        const apellidoPaterno = data.apellido_paterno || '';
+        const apellidoMaterno = data.apellido_materno || '';
+        
+        // Actualizar el formulario con los datos obtenidos
+        setFormData({
+          ...formData,
+          firstName: nombres,
+          lastName: `${apellidoPaterno} ${apellidoMaterno}`.trim(),
+        });
+      } else {
+        setCeeError('No se encontró información para este CEE');
+      }
+    } catch (error: any) {
+      console.error('Error al buscar CEE:', error);
+      if (error.response?.status === 400) {
+        setCeeError('CEE no válido o no encontrado');
+      } else if (error.response?.status === 401) {
+        setCeeError('Error de autenticación con la API');
+      } else {
+        setCeeError('Error al consultar el CEE. Por favor, intente nuevamente');
+      }
+    } finally {
+      setLoadingCee(false);
+    }
   };
 
   const handleClose = () => {
@@ -404,6 +553,15 @@ const Contacts: React.FC = () => {
   const totalContacts = contacts.length;
   const activeContacts = contacts.filter(c => ['customer', 'evangelist', 'cierre_ganado'].includes(c.lifecycleStage)).length;
   const totalCompanies = new Set(contacts.filter(c => c.Company).map(c => c.Company?.id)).size;
+  
+  // Calcular contactos nuevos este mes
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+  const newThisMonth = contacts.filter(c => {
+    if (!c.createdAt) return false;
+    const createdDate = new Date(c.createdAt);
+    return createdDate.getMonth() === currentMonth && createdDate.getFullYear() === currentYear;
+  }).length;
 
   // Paginación
   const paginatedContacts = filteredContacts.slice(
@@ -427,7 +585,7 @@ const Contacts: React.FC = () => {
       px: { xs: 3, sm: 6, md: 8 },
       pt: { xs: 4, sm: 6, md: 6 },
     }}>
-      {/* Cards de resumen - Diseño con todas las tarjetas en un contenedor */}
+      {/* Cards de resumen - Diseño igual al de Companies */}
       <Card sx={{ 
         borderRadius: 6,
         boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
@@ -441,8 +599,10 @@ const Contacts: React.FC = () => {
               flex: { xs: '1 1 100%', sm: 1 },
               display: 'flex',
               alignItems: 'center',
-              gap: 3,
-              p: 2.5,
+              justifyContent: 'center',
+              gap: 4,
+              px: 1,
+              py: 1,
               borderRadius: 1.5,
               bgcolor: 'transparent',
             }}>
@@ -450,25 +610,25 @@ const Contacts: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 80,
-                height: 80,
+                width: 120,
+                height: 120,
                 borderRadius: '50%',
                 bgcolor: `${taxiMonterricoColors.green}15`,
                 flexShrink: 0,
               }}>
-                <People sx={{ color: taxiMonterricoColors.green, fontSize: 40 }} />
+                <People sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
               </Box>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="body2" sx={{ color: '#757575', mb: 1, fontSize: '0.875rem', fontWeight: 400, lineHeight: 1.4 }}>
-                  Total Customers
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
+                <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                  Total de Clientes
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 1.5, fontSize: '2.5rem', lineHeight: 1.2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
                   {totalContacts.toLocaleString()}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <TrendingUp sx={{ fontSize: 16, color: taxiMonterricoColors.green }} />
-                  <Typography variant="caption" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '0.8125rem' }}>
-                    16% this month
+                  <TrendingUp sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+                  <Typography variant="caption" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '1rem' }}>
+                    16% este mes
                   </Typography>
                 </Box>
               </Box>
@@ -481,37 +641,38 @@ const Contacts: React.FC = () => {
               flex: { xs: '1 1 100%', sm: 1 },
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 2,
-              p: 2,
+              justifyContent: 'center',
+              gap: 4,
+              px: 1,
+              py: 1,
               borderRadius: 1.5,
               bgcolor: 'transparent',
             }}>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="body2" sx={{ color: '#757575', mb: 0.75, fontSize: '0.875rem', fontWeight: 400 }}>
-                  Members
-                </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 1, fontSize: '1.75rem', lineHeight: 1.2 }}>
-                  {activeContacts.toLocaleString()}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                  <TrendingDown sx={{ fontSize: 14, color: '#F44336' }} />
-                  <Typography variant="caption" sx={{ color: '#F44336', fontWeight: 500, fontSize: '0.75rem' }}>
-                    1% this month
-                  </Typography>
-                </Box>
-              </Box>
               <Box sx={{ 
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 56,
-                height: 56,
+                width: 120,
+                height: 120,
                 borderRadius: '50%',
                 bgcolor: `${taxiMonterricoColors.green}15`,
                 flexShrink: 0,
               }}>
-                <Person sx={{ color: taxiMonterricoColors.green, fontSize: 28 }} />
+                <Person sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
+                <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                  Miembros
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                  {activeContacts.toLocaleString()}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <TrendingDown sx={{ fontSize: 20, color: '#F44336' }} />
+                  <Typography variant="caption" sx={{ color: '#F44336', fontWeight: 500, fontSize: '1rem' }}>
+                    1% este mes
+                  </Typography>
+                </Box>
               </Box>
             </Box>
 
@@ -522,21 +683,34 @@ const Contacts: React.FC = () => {
               flex: { xs: '1 1 100%', sm: 1 },
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 2,
-              p: 2,
+              justifyContent: 'center',
+              gap: 4,
+              px: 1,
+              py: 1,
               borderRadius: 1.5,
               bgcolor: 'transparent',
             }}>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="body2" sx={{ color: '#757575', mb: 0.75, fontSize: '0.875rem', fontWeight: 400 }}>
-                  Active Now
+              <Box sx={{ 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 120,
+                height: 120,
+                borderRadius: '50%',
+                bgcolor: `${taxiMonterricoColors.green}15`,
+                flexShrink: 0,
+              }}>
+                <Computer sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
+                <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                  Activos Ahora
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 1.25, fontSize: '1.75rem', lineHeight: 1.2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
                   {Math.min(activeContacts, 189)}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: -0.75 }}>
-                  {Array.from({ length: Math.min(5, activeContacts) }).map((_, idx) => {
+                  {Array.from({ length: Math.min(5, Math.min(activeContacts, contacts.length)) }).map((_, idx) => {
                     // Usar avatares de contactos reales si están disponibles
                     const contact = contacts[idx];
                     return (
@@ -544,12 +718,12 @@ const Contacts: React.FC = () => {
                         key={idx}
                         src={contact?.avatar}
                         sx={{
-                          width: 28,
-                          height: 28,
+                          width: 36,
+                          height: 36,
                           border: '2px solid white',
                           ml: idx > 0 ? -0.75 : 0,
                           bgcolor: contact?.avatar ? 'transparent' : taxiMonterricoColors.green,
-                          fontSize: '0.7rem',
+                          fontSize: '0.875rem',
                           fontWeight: 600,
                           zIndex: 5 - idx,
                         }}
@@ -562,18 +736,6 @@ const Contacts: React.FC = () => {
                     );
                   })}
                 </Box>
-              </Box>
-              <Box sx={{ 
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 56,
-                height: 56,
-                borderRadius: '50%',
-                bgcolor: `${taxiMonterricoColors.green}15`,
-                flexShrink: 0,
-              }}>
-                <Computer sx={{ color: taxiMonterricoColors.green, fontSize: 28 }} />
               </Box>
             </Box>
           </Box>
@@ -589,10 +751,10 @@ const Contacts: React.FC = () => {
       }}>
         <Box sx={{ px: 3, pt: 3, pb: 2 }}>
           {/* Header de la tabla con título, búsqueda y ordenamiento */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 3 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
             <Box>
-              <Typography variant="h5" sx={{ fontWeight: 600, color: '#1a1a1a', mb: 0.5 }}>
-                All Customers
+              <Typography variant="h5" sx={{ fontWeight: 600, color: '#1a1a1a', mb: 0.25 }}>
+                Todos los Clientes
               </Typography>
               <Typography
                 component="a"
@@ -611,13 +773,13 @@ const Contacts: React.FC = () => {
                   },
                 }}
               >
-                Active Members
+                Miembros Activos
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <TextField
                 size="small"
-                placeholder="Search"
+                placeholder="Buscar"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 InputProps={{
@@ -659,45 +821,80 @@ const Contacts: React.FC = () => {
                     },
                   }}
                 >
-                  <MenuItem value="newest">Sort by: Newest</MenuItem>
-                  <MenuItem value="oldest">Sort by: Oldest</MenuItem>
-                  <MenuItem value="name">Sort by: Name A-Z</MenuItem>
-                  <MenuItem value="nameDesc">Sort by: Name Z-A</MenuItem>
+                  <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
+                  <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
+                  <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
+                  <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
                 </Select>
               </FormControl>
+              <Button 
+                variant="contained" 
+                startIcon={<Add />} 
+                onClick={() => handleOpen()}
+                sx={{
+                  bgcolor: taxiMonterricoColors.green,
+                  '&:hover': {
+                    bgcolor: taxiMonterricoColors.greenDark,
+                  },
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  borderRadius: 1.5,
+                  px: 2.5,
+                  py: 1,
+                  boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
+                }}
+              >
+                Nuevo Contacto
+              </Button>
             </Box>
           </Box>
         </Box>
 
         {/* Tabla de contactos con diseño mejorado */}
         <TableContainer 
+          component={Paper}
           sx={{ 
-            overflow: 'hidden',
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            maxWidth: '100%',
+            '&::-webkit-scrollbar': {
+              height: 8,
+            },
+            '&::-webkit-scrollbar-track': {
+              backgroundColor: '#f1f1f1',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: '#888',
+              borderRadius: 4,
+              '&:hover': {
+                backgroundColor: '#555',
+              },
+            },
           }}
         >
-          <Table>
+          <Table sx={{ minWidth: { xs: 800, md: 'auto' } }}>
             <TableHead>
               <TableRow sx={{ bgcolor: '#fafafa' }}>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', py: 2, px: 3 }}>
-                  Customer Name
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '25%' } }}>
+                  Nombre del Cliente
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
-                  Company
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '18%' } }}>
+                  Empresa
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
-                  Phone Number
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
+                  Teléfono
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
-                  Email
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 150, md: 200 }, width: { xs: 'auto', md: '20%' } }}>
+                  Correo
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
-                  Country
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}>
+                  País
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
-                  Status
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}>
+                  Estado
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2, width: 60 }}>
-                  Actions
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, width: { xs: 60, md: 80 }, minWidth: { xs: 60, md: 80 } }}>
+                  Acciones
                 </TableCell>
               </TableRow>
             </TableHead>
@@ -713,16 +910,17 @@ const Contacts: React.FC = () => {
                   }}
                   onClick={() => navigate(`/contacts/${contact.id}`)}
                 >
-                  <TableCell sx={{ py: 2, px: 3 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '25%' } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
                       <Avatar
                         sx={{
-                          width: 40,
-                          height: 40,
+                          width: { xs: 32, md: 40 },
+                          height: { xs: 32, md: 40 },
                           bgcolor: taxiMonterricoColors.green,
-                          fontSize: '0.875rem',
+                          fontSize: { xs: '0.75rem', md: '0.875rem' },
                           fontWeight: 600,
                           boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                          flexShrink: 0,
                         }}
                       >
                         {getInitials(contact.firstName, contact.lastName)}
@@ -732,71 +930,80 @@ const Contacts: React.FC = () => {
                         sx={{ 
                           fontWeight: 500, 
                           color: '#1a1a1a',
-                          fontSize: '0.875rem',
+                          fontSize: { xs: '0.75rem', md: '0.875rem' },
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
                         }}
                       >
                         {contact.firstName} {contact.lastName}
                       </Typography>
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
+                  <TableCell sx={{ px: 1, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '18%' } }}>
                     {contact.Company?.name ? (
                       <Typography 
                         variant="body2" 
                         sx={{ 
                           color: '#1a1a1a',
-                          fontSize: '0.875rem',
+                          fontSize: { xs: '0.75rem', md: '0.875rem' },
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
                         }}
                       >
                         {contact.Company.name}
                       </Typography>
                     ) : (
-                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: '0.875rem' }}>
+                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                         --
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
                     <Typography 
                       variant="body2" 
                       sx={{ 
                         color: '#1a1a1a',
-                        fontSize: '0.875rem',
+                        fontSize: { xs: '0.75rem', md: '0.875rem' },
                       }}
                     >
                       {contact.phone || contact.mobile || '--'}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 150, md: 200 }, width: { xs: 'auto', md: '20%' } }}>
                     <Typography 
                       variant="body2" 
                       sx={{ 
                         color: '#1a1a1a',
-                        fontSize: '0.875rem',
+                        fontSize: { xs: '0.75rem', md: '0.875rem' },
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
                       }}
                     >
                       {contact.email}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}>
                     <Typography 
                       variant="body2" 
                       sx={{ 
                         color: '#1a1a1a',
-                        fontSize: '0.875rem',
+                        fontSize: { xs: '0.75rem', md: '0.875rem' },
                       }}
                     >
                       {contact.country || '--'}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}>
                     <Chip
-                      label={['customer', 'evangelist', 'cierre_ganado'].includes(contact.lifecycleStage) ? 'Active' : 'Inactive'}
+                      label={['customer', 'evangelist', 'cierre_ganado'].includes(contact.lifecycleStage) ? 'Activo' : 'Inactivo'}
                       size="small"
                       sx={{ 
                         fontWeight: 500,
-                        fontSize: '0.75rem',
-                        height: 24,
+                        fontSize: { xs: '0.7rem', md: '0.75rem' },
+                        height: { xs: 20, md: 24 },
                         bgcolor: ['customer', 'evangelist', 'cierre_ganado'].includes(contact.lifecycleStage) 
                           ? '#E8F5E9' 
                           : '#FFEBEE',
@@ -808,7 +1015,7 @@ const Contacts: React.FC = () => {
                       }}
                     />
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
+                  <TableCell sx={{ px: 1, width: { xs: 60, md: 80 }, minWidth: { xs: 60, md: 80 } }}>
                     <Tooltip title="Vista previa">
                       <IconButton
                         size="small"
@@ -818,13 +1025,14 @@ const Contacts: React.FC = () => {
                         }}
                         sx={{
                           color: '#757575',
+                          padding: { xs: 0.5, md: 1 },
                           '&:hover': {
                             color: taxiMonterricoColors.green,
                             bgcolor: `${taxiMonterricoColors.green}15`,
                           },
                         }}
                       >
-                        <Visibility fontSize="small" />
+                        <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
                       </IconButton>
                     </Tooltip>
                   </TableCell>
@@ -859,7 +1067,7 @@ const Contacts: React.FC = () => {
           borderTop: '1px solid #e0e0e0',
         }}>
           <Typography variant="body2" sx={{ color: '#757575', fontSize: '0.875rem' }}>
-            Showing data {page * rowsPerPage + 1} to {Math.min((page + 1) * rowsPerPage, filteredContacts.length)} of {filteredContacts.length.toLocaleString()}K entries
+            Mostrando {page * rowsPerPage + 1} a {Math.min((page + 1) * rowsPerPage, filteredContacts.length)} de {filteredContacts.length.toLocaleString()} registros
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <IconButton
@@ -956,6 +1164,94 @@ const Contacts: React.FC = () => {
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+            {/* Campos DNI y CEE con botones de búsqueda */}
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+              <TextField
+                label="DNI"
+                value={formData.dni}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, ''); // Solo números
+                  setFormData({ ...formData, dni: value, cee: '' }); // Limpiar CEE si se ingresa DNI
+                  setDniError('');
+                  setCeeError('');
+                }}
+                placeholder="Ingrese DNI (8 dígitos)"
+                error={!!dniError}
+                helperText={dniError}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+                InputProps={{
+                  endAdornment: (
+                    <IconButton
+                      onClick={handleSearchDni}
+                      disabled={loadingDni || !formData.dni || formData.dni.length < 8}
+                      sx={{
+                        color: taxiMonterricoColors.green,
+                        '&:hover': {
+                          bgcolor: `${taxiMonterricoColors.green}15`,
+                        },
+                        '&.Mui-disabled': {
+                          color: '#bdbdbd',
+                        },
+                      }}
+                    >
+                      {loadingDni ? (
+                        <CircularProgress size={20} />
+                      ) : (
+                        <Search />
+                      )}
+                    </IconButton>
+                  ),
+                }}
+              />
+              <Typography sx={{ alignSelf: 'center', color: '#9e9e9e', px: 1 }}>o</Typography>
+              <TextField
+                label="CEE (Carnet de Extranjería)"
+                value={formData.cee}
+                onChange={(e) => {
+                  const value = e.target.value.toUpperCase(); // Convertir a mayúsculas
+                  setFormData({ ...formData, cee: value, dni: '' }); // Limpiar DNI si se ingresa CEE
+                  setCeeError('');
+                  setDniError('');
+                }}
+                placeholder="Ingrese CEE"
+                error={!!ceeError}
+                helperText={ceeError}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+                InputProps={{
+                  endAdornment: (
+                    <IconButton
+                      onClick={handleSearchCee}
+                      disabled={loadingCee || !formData.cee || formData.cee.length < 8}
+                      sx={{
+                        color: taxiMonterricoColors.green,
+                        '&:hover': {
+                          bgcolor: `${taxiMonterricoColors.green}15`,
+                        },
+                        '&.Mui-disabled': {
+                          color: '#bdbdbd',
+                        },
+                      }}
+                    >
+                      {loadingCee ? (
+                        <CircularProgress size={20} />
+                      ) : (
+                        <Search />
+                      )}
+                    </IconButton>
+                  ),
+                }}
+              />
+            </Box>
             <TextField
               label="Nombre"
               value={formData.firstName}
@@ -994,6 +1290,52 @@ const Contacts: React.FC = () => {
               label="Teléfono"
               value={formData.phone}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            <TextField
+              label="Dirección"
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              multiline
+              rows={2}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Distrito"
+                value={formData.city}
+                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              <TextField
+                label="Provincia"
+                value={formData.state}
+                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+            </Box>
+            <TextField
+              label="Departamento"
+              value={formData.country}
+              onChange={(e) => setFormData({ ...formData, country: e.target.value })}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 1.5,
