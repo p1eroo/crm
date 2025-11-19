@@ -97,12 +97,112 @@ router.post(
           contraseña: password,
           idempresas: 0,
           ipregistro: "0.0.0.0"
+        }, {
+          timeout: 10000, // 10 segundos de timeout
+          validateStatus: () => true, // Aceptar todos los status codes para validar manualmente
         });
+
+        console.log('Monterrico API Status:', monterricoResponse.status);
+        console.log('Monterrico API Response:', JSON.stringify(monterricoResponse.data, null, 2));
+
+        // Validar que la respuesta sea exitosa (200-299)
+        if (monterricoResponse.status < 200 || monterricoResponse.status >= 300) {
+          console.error('Monterrico API retornó status no exitoso:', monterricoResponse.status);
+          return res.status(401).json({ error: 'Credenciales inválidas' });
+        }
+
         monterricoData = monterricoResponse.data;
+
+        // Validar que la respuesta no sea null o undefined
+        if (!monterricoData) {
+          console.error('Monterrico API retornó datos vacíos');
+          return res.status(401).json({ error: 'Credenciales inválidas' });
+        }
+
+        // Validar errores explícitos en la respuesta
+        // Si es un string que contiene "error", rechazar
+        if (typeof monterricoData === 'string') {
+          const lowerData = monterricoData.toLowerCase();
+          if (lowerData.includes('error') || lowerData.includes('invalid') || lowerData.includes('incorrecto') || lowerData.includes('incorrecta')) {
+            console.error('Monterrico API retornó error en string:', monterricoData);
+            return res.status(401).json({ error: 'Credenciales inválidas' });
+          }
+        }
+        
+        // Si es un objeto, validar propiedades de error
+        if (typeof monterricoData === 'object' && monterricoData !== null) {
+          // Si tiene una propiedad 'error' con valor truthy, rechazar
+          if (monterricoData.error !== undefined && monterricoData.error !== null && monterricoData.error !== false) {
+            console.error('Monterrico API retornó error explícito:', monterricoData.error);
+            return res.status(401).json({ error: 'Credenciales inválidas' });
+          }
+          
+          // Si tiene 'mensajeError' con contenido, rechazar
+          if (monterricoData.mensajeError && typeof monterricoData.mensajeError === 'string' && monterricoData.mensajeError.trim() !== '') {
+            console.error('Monterrico API retornó mensajeError:', monterricoData.mensajeError);
+            return res.status(401).json({ error: 'Credenciales inválidas' });
+          }
+          
+          // Si tiene 'success' explícitamente en false, rechazar
+          if (monterricoData.success === false) {
+            console.error('Monterrico API retornó success: false');
+            return res.status(401).json({ error: 'Credenciales inválidas' });
+          }
+
+          // Validar que la respuesta contenga al menos algún dato que indique éxito
+          // La API de Monterrico debería retornar algún identificador o token cuando es exitoso
+          // Si no hay ningún campo que indique éxito, rechazar
+          const hasValidData = 
+            monterricoData.idacceso || 
+            monterricoData.id || 
+            monterricoData.usuario ||
+            monterricoData.token ||
+            monterricoData.accessToken ||
+            monterricoData.nombre ||
+            monterricoData.firstName ||
+            monterricoData.email ||
+            (Array.isArray(monterricoData) && monterricoData.length > 0);
+
+          if (!hasValidData) {
+            console.error('Monterrico API no retornó datos válidos de autenticación:', monterricoData);
+            return res.status(401).json({ error: 'Credenciales inválidas' });
+          }
+        }
+
+        // Si llegamos aquí, la respuesta parece válida
+        console.log('Monterrico API autenticación exitosa');
+
       } catch (error: any) {
-        return res.status(401).json({ error: 'Credenciales inválidas en Monterrico' });
+        console.error('Error al llamar a API de Monterrico:', error.message);
+        console.error('Error details:', {
+          code: error.code,
+          response: error.response?.data,
+          status: error.response?.status
+        });
+        
+        // Si es un error de timeout o conexión
+        if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') {
+          return res.status(503).json({ error: 'No se pudo conectar con el servidor de autenticación. Intenta nuevamente.' });
+        }
+        
+        // Si es un error de red con respuesta
+        if (error.response) {
+          // Si Monterrico retorna un error 401 o 403, las credenciales son inválidas
+          if (error.response.status === 401 || error.response.status === 403) {
+            return res.status(401).json({ error: 'Credenciales inválidas' });
+          }
+          // Si es otro error 4xx, también rechazar
+          if (error.response.status >= 400 && error.response.status < 500) {
+            return res.status(401).json({ error: 'Credenciales inválidas' });
+          }
+          return res.status(503).json({ error: 'Error al validar credenciales con el servidor de autenticación' });
+        }
+        
+        // Si no hay respuesta pero hay error, rechazar
+        return res.status(401).json({ error: 'Credenciales inválidas' });
       }
 
+      // Solo si la autenticación con Monterrico fue exitosa, proceder con el usuario local
       // Buscar o crear usuario local
       let user = await User.findOne({ where: { usuario } });
       
@@ -118,6 +218,11 @@ router.post(
           role: monterricoData.rol || monterricoData.role || 'user',
           isActive: true,
         });
+      } else {
+        // Si el usuario existe pero está inactivo, no permitir login
+        if (!user.isActive) {
+          return res.status(401).json({ error: 'Usuario inactivo' });
+        }
       }
 
       // Generar JWT válido para el backend local
@@ -140,7 +245,8 @@ router.post(
         },
       });
     } catch (error: any) {
-      res.status(500).json({ error: error.message });
+      console.error('Error en login-monterrico:', error);
+      res.status(500).json({ error: error.message || 'Error interno del servidor' });
     }
   }
 );
