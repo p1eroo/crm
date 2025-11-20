@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { sequelize } from './config/database';
 import './models'; // Import models to register associations
 import authRoutes from './routes/auth';
+import userRoutes from './routes/users';
 import contactRoutes from './routes/contacts';
 import companyRoutes from './routes/companies';
 import dealRoutes from './routes/deals';
@@ -40,6 +41,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/contacts', contactRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/deals', dealRoutes);

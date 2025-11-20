@@ -8,7 +8,7 @@ interface UserAttributes {
   password: string;
   firstName: string;
   lastName: string;
-  role: 'admin' | 'user' | 'manager';
+  role: 'admin' | 'user' | 'manager' | 'jefe_comercial';
   avatar?: string;
   phone?: string;
   language?: string;
@@ -27,7 +27,7 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
   public password!: string;
   public firstName!: string;
   public lastName!: string;
-  public role!: 'admin' | 'user' | 'manager';
+  public role!: 'admin' | 'user' | 'manager' | 'jefe_comercial';
   public avatar?: string;
   public phone?: string;
   public language?: string;
@@ -70,11 +70,11 @@ User.init(
       allowNull: false,
     },
     role: {
-      type: DataTypes.ENUM('admin', 'user', 'manager'),
+      type: DataTypes.ENUM('admin', 'user', 'manager', 'jefe_comercial'),
       defaultValue: 'user',
     },
     avatar: {
-      type: DataTypes.STRING,
+      type: DataTypes.TEXT,
       allowNull: true,
     },
     phone: {

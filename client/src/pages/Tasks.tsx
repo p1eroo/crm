@@ -25,6 +25,7 @@ import {
   FormControl,
   Select,
   Tooltip,
+  Paper,
 } from '@mui/material';
 import { Add, Edit, Delete, Search, Assignment, CheckCircle, TrendingUp, Computer, Visibility } from '@mui/icons-material';
 import api from '../config/api';
@@ -58,6 +59,9 @@ const Tasks: React.FC = () => {
     priority: 'medium',
     dueDate: '',
   });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState<{ id: number; isActivity?: boolean } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Calcular estadísticas
   const totalTasks = tasks.length;
@@ -188,21 +192,37 @@ const Tasks: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number, isActivity?: boolean) => {
-    if (window.confirm('¿Estás seguro de eliminar esta tarea?')) {
-      try {
-        // Si es una actividad, eliminar desde /activities
-        if (isActivity) {
-          await api.delete(`/activities/${id}`);
-        } else {
-          // Si es una tarea normal, eliminar desde /tasks
-          await api.delete(`/tasks/${id}`);
-        }
-        fetchTasks();
-      } catch (error) {
-        console.error('Error deleting task:', error);
+  const handleDelete = (id: number, isActivity?: boolean) => {
+    setTaskToDelete({ id, isActivity });
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!taskToDelete) return;
+    
+    setDeleting(true);
+    try {
+      // Si es una actividad, eliminar desde /activities
+      if (taskToDelete.isActivity) {
+        await api.delete(`/activities/${taskToDelete.id}`);
+      } else {
+        // Si es una tarea normal, eliminar desde /tasks
+        await api.delete(`/tasks/${taskToDelete.id}`);
       }
+      fetchTasks();
+      setDeleteDialogOpen(false);
+      setTaskToDelete(null);
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      alert('Error al eliminar la tarea. Por favor, intenta nuevamente.');
+    } finally {
+      setDeleting(false);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setTaskToDelete(null);
   };
 
   const getStatusColor = (status: string) => {
@@ -499,29 +519,49 @@ const Tasks: React.FC = () => {
           </Box>
         </Box>
 
-        <TableContainer sx={{ overflow: 'hidden' }}>
-          <Table>
+        <TableContainer 
+          component={Paper}
+          sx={{ 
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            maxWidth: '100%',
+            '&::-webkit-scrollbar': {
+              height: 8,
+            },
+            '&::-webkit-scrollbar-track': {
+              backgroundColor: '#f1f1f1',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: '#888',
+              borderRadius: 4,
+              '&:hover': {
+                backgroundColor: '#555',
+              },
+            },
+          }}
+        >
+          <Table sx={{ minWidth: { xs: 800, md: 'auto' } }}>
             <TableHead>
               <TableRow sx={{ bgcolor: '#fafafa' }}>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', py: 2, px: 3 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '30%' } }}>
                   Nombre de la Tarea
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
                   Tipo
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
                   Estado
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
                   Prioridad
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
                   Fecha de Vencimiento
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '13%' } }}>
                   Asignado a
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2, width: 60 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
                   Acciones
                 </TableCell>
               </TableRow>
@@ -537,16 +577,17 @@ const Tasks: React.FC = () => {
                     transition: 'background-color 0.2s',
                   }}
                 >
-                  <TableCell sx={{ py: 2, px: 3 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '30%' } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
                       <Avatar
                         sx={{
-                          width: 40,
-                          height: 40,
+                          width: { xs: 32, md: 40 },
+                          height: { xs: 32, md: 40 },
                           bgcolor: taxiMonterricoColors.green,
-                          fontSize: '0.875rem',
+                          fontSize: { xs: '0.75rem', md: '0.875rem' },
                           fontWeight: 600,
                           boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                          flexShrink: 0,
                         }}
                       >
                         {getInitials(task.title || task.subject || '')}
@@ -556,26 +597,29 @@ const Tasks: React.FC = () => {
                         sx={{ 
                           fontWeight: 500, 
                           color: '#1a1a1a',
-                          fontSize: '0.875rem',
+                          fontSize: { xs: '0.75rem', md: '0.875rem' },
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
                         }}
                       >
                         {task.title || task.subject}
                       </Typography>
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
-                    <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                  <TableCell sx={{ px: 1, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
+                    <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                       {task.type}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
                     <Chip
                       label={task.status}
                       size="small"
                       sx={{ 
                         fontWeight: 500,
-                        fontSize: '0.75rem',
-                        height: 24,
+                        fontSize: { xs: '0.7rem', md: '0.75rem' },
+                        height: { xs: 20, md: 24 },
                         bgcolor: task.status === 'completed' 
                           ? '#E8F5E9' 
                           : task.status === 'in progress'
@@ -591,14 +635,14 @@ const Tasks: React.FC = () => {
                       }}
                     />
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
                     <Chip
                       label={task.priority}
                       size="small"
                       sx={{ 
                         fontWeight: 500,
-                        fontSize: '0.75rem',
-                        height: 24,
+                        fontSize: { xs: '0.7rem', md: '0.75rem' },
+                        height: { xs: 20, md: 24 },
                         bgcolor: task.priority === 'urgent' || task.priority === 'high'
                           ? '#FFEBEE'
                           : task.priority === 'medium'
@@ -614,51 +658,73 @@ const Tasks: React.FC = () => {
                       }}
                     />
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
                     {task.dueDate ? (
-                      <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                      <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                         {new Date(task.dueDate).toLocaleDateString()}
                       </Typography>
                     ) : (
-                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: '0.875rem' }}>
+                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                         --
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '13%' } }}>
                     {task.AssignedTo ? (
-                      <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                      <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {task.AssignedTo.firstName} {task.AssignedTo.lastName}
                       </Typography>
                     ) : task.User ? (
-                      <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                      <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {task.User.firstName} {task.User.lastName}
                       </Typography>
                     ) : (
-                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: '0.875rem' }}>
+                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                         --
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
-                    <Tooltip title="Vista previa">
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePreview(task);
-                        }}
-                        sx={{
-                          color: '#757575',
-                          '&:hover': {
-                            color: taxiMonterricoColors.green,
-                            bgcolor: `${taxiMonterricoColors.green}15`,
-                          },
-                        }}
-                      >
-                        <Visibility fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+                  <TableCell sx={{ px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
+                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                      <Tooltip title="Vista previa">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePreview(task);
+                          }}
+                          sx={{
+                            color: '#757575',
+                            padding: { xs: 0.5, md: 1 },
+                            '&:hover': {
+                              color: taxiMonterricoColors.green,
+                              bgcolor: `${taxiMonterricoColors.green}15`,
+                            },
+                          }}
+                        >
+                          <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Eliminar">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(task.id, task.isActivity);
+                          }}
+                          sx={{
+                            color: '#757575',
+                            padding: { xs: 0.5, md: 1 },
+                            '&:hover': {
+                              color: '#d32f2f',
+                              bgcolor: '#ffebee',
+                            },
+                          }}
+                        >
+                          <Delete sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}
@@ -734,6 +800,84 @@ const Tasks: React.FC = () => {
           <Button onClick={handleClose}>Cancelar</Button>
           <Button onClick={handleSubmit} variant="contained">
             {editingTask ? 'Actualizar' : 'Crear'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      {/* Modal de Confirmación de Eliminación */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleCancelDelete}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          pb: 1.5,
+          borderBottom: '1px solid #e0e0e0',
+          fontWeight: 600,
+          fontSize: '1.25rem',
+          color: '#1a1a1a',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.5,
+        }}>
+          <Delete sx={{ color: '#d32f2f', fontSize: 28 }} />
+          Confirmar Eliminación
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Typography variant="body1" sx={{ color: '#1a1a1a', mb: 1 }}>
+            ¿Estás seguro de que deseas eliminar esta tarea?
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#757575' }}>
+            Esta acción no se puede deshacer. La tarea será eliminada permanentemente del sistema.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ 
+          px: 3, 
+          py: 2,
+          borderTop: '1px solid #e0e0e0',
+          gap: 1,
+        }}>
+          <Button 
+            onClick={handleCancelDelete}
+            disabled={deleting}
+            sx={{
+              textTransform: 'none',
+              color: '#757575',
+              fontWeight: 500,
+              '&:hover': {
+                bgcolor: '#f5f5f5',
+              }
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleConfirmDelete}
+            disabled={deleting}
+            variant="contained"
+            sx={{
+              textTransform: 'none',
+              fontWeight: 500,
+              borderRadius: 1.5,
+              px: 2.5,
+              bgcolor: '#d32f2f',
+              '&:hover': {
+                bgcolor: '#b71c1c',
+              },
+              '&.Mui-disabled': {
+                bgcolor: '#ffcdd2',
+                color: '#ffffff',
+              }
+            }}
+            startIcon={deleting ? <CircularProgress size={16} sx={{ color: '#ffffff' }} /> : <Delete />}
+          >
+            {deleting ? 'Eliminando...' : 'Eliminar'}
           </Button>
         </DialogActions>
       </Dialog>

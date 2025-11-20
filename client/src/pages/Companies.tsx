@@ -27,6 +27,8 @@ import {
   Select,
   Tooltip,
   InputAdornment,
+  Paper,
+  Menu,
 } from '@mui/material';
 import { Add, Edit, Delete, Search, Business, Domain, TrendingUp, TrendingDown, Computer, Visibility } from '@mui/icons-material';
 import api from '../config/api';
@@ -70,10 +72,15 @@ const Companies: React.FC = () => {
   });
   const [loadingRuc, setLoadingRuc] = useState(false);
   const [rucError, setRucError] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [companyToDelete, setCompanyToDelete] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState<{ [key: number]: HTMLElement | null }>({});
+  const [updatingStatus, setUpdatingStatus] = useState<{ [key: number]: boolean }>({});
 
   // Calcular estadísticas
   const totalCompanies = companies.length;
-  const activeCompanies = companies.filter(c => c.lifecycleStage === 'customer' || c.lifecycleStage === 'evangelist').length;
+  const activeCompanies = companies.filter(c => c.lifecycleStage === 'cierre_ganado').length;
 
   // Función para obtener iniciales
   const getInitials = (name: string) => {
@@ -217,14 +224,63 @@ const Companies: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('¿Estás seguro de eliminar esta empresa?')) {
-      try {
-        await api.delete(`/companies/${id}`);
-        fetchCompanies();
-      } catch (error) {
-        console.error('Error deleting company:', error);
-      }
+  const handleDelete = (id: number) => {
+    setCompanyToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!companyToDelete) return;
+    
+    setDeleting(true);
+    try {
+      await api.delete(`/companies/${companyToDelete}`);
+      fetchCompanies();
+      setDeleteDialogOpen(false);
+      setCompanyToDelete(null);
+    } catch (error) {
+      console.error('Error deleting company:', error);
+      alert('Error al eliminar la empresa. Por favor, intenta nuevamente.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setCompanyToDelete(null);
+  };
+
+  const handleStatusMenuOpen = (event: React.MouseEvent<HTMLElement>, companyId: number) => {
+    event.stopPropagation();
+    event.preventDefault();
+    setStatusMenuAnchor({ ...statusMenuAnchor, [companyId]: event.currentTarget });
+  };
+
+  const handleStatusMenuClose = (companyId: number) => {
+    setStatusMenuAnchor({ ...statusMenuAnchor, [companyId]: null });
+  };
+
+  const handleStatusChange = async (event: React.MouseEvent<HTMLElement>, companyId: number, isActive: boolean) => {
+    event.stopPropagation();
+    event.preventDefault();
+    setUpdatingStatus({ ...updatingStatus, [companyId]: true });
+    try {
+      // Si queremos activar, establecer a 'cierre_ganado', si queremos desactivar, establecer a 'lead'
+      const newStage = isActive ? 'cierre_ganado' : 'lead';
+      await api.put(`/companies/${companyId}`, { lifecycleStage: newStage });
+      // Actualizar la empresa en la lista
+      setCompanies(companies.map(company => 
+        company.id === companyId 
+          ? { ...company, lifecycleStage: newStage }
+          : company
+      ));
+      handleStatusMenuClose(companyId);
+    } catch (error) {
+      console.error('Error updating company status:', error);
+      alert('Error al actualizar el estado. Por favor, intenta nuevamente.');
+    } finally {
+      setUpdatingStatus({ ...updatingStatus, [companyId]: false });
     }
   };
 
@@ -518,29 +574,45 @@ const Companies: React.FC = () => {
 
         {/* Tabla de empresas con diseño mejorado */}
         <TableContainer 
+          component={Paper}
           sx={{ 
-            overflow: 'hidden',
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            maxWidth: '100%',
+            '&::-webkit-scrollbar': {
+              height: 8,
+            },
+            '&::-webkit-scrollbar-track': {
+              backgroundColor: '#f1f1f1',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: '#888',
+              borderRadius: 4,
+              '&:hover': {
+                backgroundColor: '#555',
+              },
+            },
           }}
         >
-          <Table>
+          <Table sx={{ minWidth: { xs: 800, md: 'auto' } }}>
             <TableHead>
               <TableRow sx={{ bgcolor: '#fafafa' }}>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', py: 2, px: 3 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '30%' } }}>
                   Nombre de Empresa
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '20%' } }}>
                   Dominio
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
                   Industria
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
                   Teléfono
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}>
                   Etapa
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2, width: 60 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
                   Acciones
                 </TableCell>
               </TableRow>
@@ -557,16 +629,17 @@ const Companies: React.FC = () => {
                   }}
                   onClick={() => navigate(`/companies/${company.id}`)}
                 >
-                  <TableCell sx={{ py: 2, px: 3 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '30%' } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
                       <Avatar
                         sx={{
-                          width: 40,
-                          height: 40,
+                          width: { xs: 32, md: 40 },
+                          height: { xs: 32, md: 40 },
                           bgcolor: taxiMonterricoColors.green,
-                          fontSize: '0.875rem',
+                          fontSize: { xs: '0.75rem', md: '0.875rem' },
                           fontWeight: 600,
                           boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                          flexShrink: 0,
                         }}
                       >
                         {getInitials(company.name)}
@@ -576,102 +649,198 @@ const Companies: React.FC = () => {
                         sx={{ 
                           fontWeight: 500, 
                           color: '#1a1a1a',
-                          fontSize: '0.875rem',
+                          fontSize: { xs: '0.75rem', md: '0.875rem' },
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
                         }}
                       >
                         {company.name}
                       </Typography>
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
+                  <TableCell sx={{ px: 1, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '20%' } }}>
                     {company.domain ? (
                       <Typography 
                         variant="body2" 
                         sx={{ 
                           color: '#1a1a1a',
-                          fontSize: '0.875rem',
+                          fontSize: { xs: '0.75rem', md: '0.875rem' },
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
                         }}
                       >
                         {company.domain}
                       </Typography>
                     ) : (
-                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: '0.875rem' }}>
+                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                         --
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
                     {company.industry ? (
                       <Typography 
                         variant="body2" 
                         sx={{ 
                           color: '#1a1a1a',
-                          fontSize: '0.875rem',
+                          fontSize: { xs: '0.75rem', md: '0.875rem' },
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
                         }}
                       >
                         {company.industry}
                       </Typography>
                     ) : (
-                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: '0.875rem' }}>
+                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                         --
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
                     {company.phone ? (
                       <Typography 
                         variant="body2" 
                         sx={{ 
                           color: '#1a1a1a',
-                          fontSize: '0.875rem',
+                          fontSize: { xs: '0.75rem', md: '0.875rem' },
                         }}
                       >
                         {company.phone}
                       </Typography>
                     ) : (
-                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: '0.875rem' }}>
+                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                         --
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
+                  <TableCell 
+                    sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Chip
-                      label={['customer', 'evangelist'].includes(company.lifecycleStage) ? 'Activo' : 'Inactivo'}
+                      label={company.lifecycleStage === 'cierre_ganado' ? 'Activo' : 'Inactivo'}
                       size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        handleStatusMenuOpen(e, company.id);
+                      }}
+                      disabled={updatingStatus[company.id]}
                       sx={{ 
                         fontWeight: 500,
-                        fontSize: '0.75rem',
-                        height: 24,
-                        bgcolor: ['customer', 'evangelist'].includes(company.lifecycleStage) 
+                        fontSize: { xs: '0.7rem', md: '0.75rem' },
+                        height: { xs: 20, md: 24 },
+                        bgcolor: company.lifecycleStage === 'cierre_ganado'
                           ? '#E8F5E9' 
                           : '#FFEBEE',
-                        color: ['customer', 'evangelist'].includes(company.lifecycleStage)
+                        color: company.lifecycleStage === 'cierre_ganado'
                           ? '#2E7D32'
                           : '#C62828',
                         border: 'none',
                         borderRadius: 1,
+                        cursor: 'pointer',
+                        '&:hover': {
+                          opacity: 0.8,
+                        },
                       }}
                     />
-                  </TableCell>
-                  <TableCell sx={{ px: 2 }}>
-                    <Tooltip title="Vista previa">
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePreview(company);
-                        }}
+                    <Menu
+                      anchorEl={statusMenuAnchor[company.id]}
+                      open={Boolean(statusMenuAnchor[company.id])}
+                      onClose={(e, reason) => {
+                        if (e && 'stopPropagation' in e) {
+                          (e as React.MouseEvent).stopPropagation();
+                        }
+                        handleStatusMenuClose(company.id);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      PaperProps={{
+                        sx: {
+                          minWidth: 150,
+                          mt: 0.5,
+                          borderRadius: 1.5,
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        }
+                      }}
+                    >
+                      <MenuItem
+                        onClick={(e) => handleStatusChange(e, company.id, true)}
+                        disabled={updatingStatus[company.id] || company.lifecycleStage === 'cierre_ganado'}
                         sx={{
-                          color: '#757575',
+                          fontSize: '0.875rem',
+                          color: '#2E7D32',
                           '&:hover': {
-                            color: taxiMonterricoColors.green,
-                            bgcolor: `${taxiMonterricoColors.green}15`,
+                            bgcolor: '#E8F5E9',
                           },
+                          '&.Mui-disabled': {
+                            opacity: 0.5,
+                          }
                         }}
                       >
-                        <Visibility fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+                        Activo
+                      </MenuItem>
+                      <MenuItem
+                        onClick={(e) => handleStatusChange(e, company.id, false)}
+                        disabled={updatingStatus[company.id] || company.lifecycleStage !== 'cierre_ganado'}
+                        sx={{
+                          fontSize: '0.875rem',
+                          color: '#C62828',
+                          '&:hover': {
+                            bgcolor: '#FFEBEE',
+                          },
+                          '&.Mui-disabled': {
+                            opacity: 0.5,
+                          }
+                        }}
+                      >
+                        Inactivo
+                      </MenuItem>
+                    </Menu>
+                  </TableCell>
+                  <TableCell sx={{ px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
+                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                      <Tooltip title="Vista previa">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePreview(company);
+                          }}
+                          sx={{
+                            color: '#757575',
+                            padding: { xs: 0.5, md: 1 },
+                            '&:hover': {
+                              color: taxiMonterricoColors.green,
+                              bgcolor: `${taxiMonterricoColors.green}15`,
+                            },
+                          }}
+                        >
+                          <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Eliminar">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(company.id);
+                          }}
+                          sx={{
+                            color: '#757575',
+                            padding: { xs: 0.5, md: 1 },
+                            '&:hover': {
+                              color: '#d32f2f',
+                              bgcolor: '#ffebee',
+                            },
+                          }}
+                        >
+                          <Delete sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}
@@ -822,13 +991,14 @@ const Companies: React.FC = () => {
               value={formData.lifecycleStage}
               onChange={(e) => setFormData({ ...formData, lifecycleStage: e.target.value })}
             >
-              <MenuItem value="subscriber">Suscriptor</MenuItem>
               <MenuItem value="lead">Lead</MenuItem>
-              <MenuItem value="marketing qualified lead">MQL</MenuItem>
-              <MenuItem value="sales qualified lead">SQL</MenuItem>
-              <MenuItem value="opportunity">Oportunidad</MenuItem>
-              <MenuItem value="customer">Cliente</MenuItem>
-              <MenuItem value="evangelist">Evangelista</MenuItem>
+              <MenuItem value="contacto">Contacto</MenuItem>
+              <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+              <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+              <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
+              <MenuItem value="negociacion">Negociación</MenuItem>
+              <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+              <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
             </TextField>
           </Box>
         </DialogContent>
@@ -836,6 +1006,85 @@ const Companies: React.FC = () => {
           <Button onClick={handleClose}>Cancelar</Button>
           <Button onClick={handleSubmit} variant="contained">
             {editingCompany ? 'Actualizar' : 'Crear'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal de Confirmación de Eliminación */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleCancelDelete}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          pb: 1.5,
+          borderBottom: '1px solid #e0e0e0',
+          fontWeight: 600,
+          fontSize: '1.25rem',
+          color: '#1a1a1a',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.5,
+        }}>
+          <Delete sx={{ color: '#d32f2f', fontSize: 28 }} />
+          Confirmar Eliminación
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Typography variant="body1" sx={{ color: '#1a1a1a', mb: 1 }}>
+            ¿Estás seguro de que deseas eliminar esta empresa?
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#757575' }}>
+            Esta acción no se puede deshacer. La empresa será eliminada permanentemente del sistema.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ 
+          px: 3, 
+          py: 2,
+          borderTop: '1px solid #e0e0e0',
+          gap: 1,
+        }}>
+          <Button 
+            onClick={handleCancelDelete}
+            disabled={deleting}
+            sx={{
+              textTransform: 'none',
+              color: '#757575',
+              fontWeight: 500,
+              '&:hover': {
+                bgcolor: '#f5f5f5',
+              }
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleConfirmDelete}
+            disabled={deleting}
+            variant="contained"
+            sx={{
+              textTransform: 'none',
+              fontWeight: 500,
+              borderRadius: 1.5,
+              px: 2.5,
+              bgcolor: '#d32f2f',
+              '&:hover': {
+                bgcolor: '#b71c1c',
+              },
+              '&.Mui-disabled': {
+                bgcolor: '#ffcdd2',
+                color: '#ffffff',
+              }
+            }}
+            startIcon={deleting ? <CircularProgress size={16} sx={{ color: '#ffffff' }} /> : <Delete />}
+          >
+            {deleting ? 'Eliminando...' : 'Eliminar'}
           </Button>
         </DialogActions>
       </Dialog>

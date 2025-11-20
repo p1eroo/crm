@@ -19,6 +19,7 @@ import {
   Support,
   PieChart,
   Logout,
+  AdminPanelSettings,
 } from '@mui/icons-material';
 import { taxiMonterricoColors } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
@@ -32,14 +33,14 @@ const mainMenuItems = [
   { text: 'Negocios', icon: <AttachMoney />, path: '/deals' },
   { text: 'Tareas', icon: <Assignment />, path: '/tasks' },
   { text: 'Tickets', icon: <Support />, path: '/tickets' },
-  { text: 'Campañas', icon: <Campaign />, path: '/campaigns' },
-  { text: 'Automatizaciones', icon: <Timeline />, path: '/automations' },
+  // { text: 'Campañas', icon: <Campaign />, path: '/campaigns' },
+  // { text: 'Automatizaciones', icon: <Timeline />, path: '/automations' },
 ];
 
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -163,6 +164,75 @@ const Sidebar: React.FC = () => {
             </Tooltip>
           );
         })}
+        
+        {/* Opción de Administrar Usuarios - Solo visible para admins */}
+        {user?.role === 'admin' && (
+          <Tooltip 
+            title="Administrar Usuarios" 
+            placement="right"
+            arrow
+            componentsProps={{
+              tooltip: {
+                sx: {
+                  bgcolor: '#424242',
+                  fontSize: '0.75rem',
+                  fontWeight: 500,
+                  px: 1.5,
+                  py: 0.75,
+                  borderRadius: 1,
+                  ml: 1,
+                },
+              },
+              arrow: {
+                sx: {
+                  color: '#424242',
+                },
+              },
+            }}
+          >
+            <ListItemButton
+              selected={location.pathname === '/users'}
+              onClick={() => navigate('/users')}
+              sx={{
+                minHeight: 48,
+                width: 48,
+                height: 48,
+                borderRadius: 2,
+                justifyContent: 'center',
+                p: 0,
+                mb: 0.5,
+                mt: 1,
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&.Mui-selected': {
+                  backgroundColor: taxiMonterricoColors.green,
+                  color: 'white',
+                  '&:hover': {
+                    backgroundColor: taxiMonterricoColors.greenDark,
+                  },
+                },
+                '&:hover': {
+                  backgroundColor: location.pathname === '/users' ? taxiMonterricoColors.greenDark : '#e9ecef',
+                },
+                '&:not(.Mui-selected)': {
+                  color: '#6c757d',
+                },
+              }}
+            >
+              <ListItemIcon
+                sx={{
+                  minWidth: 0,
+                  justifyContent: 'center',
+                  color: 'inherit',
+                  '& svg': {
+                    fontSize: 22,
+                  },
+                }}
+              >
+                <AdminPanelSettings />
+              </ListItemIcon>
+            </ListItemButton>
+          </Tooltip>
+        )}
       </List>
       
       {/* Separador y botón de cerrar sesión al final */}

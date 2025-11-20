@@ -1,5 +1,6 @@
 import express from 'express';
 import { Op } from 'sequelize';
+import { sequelize } from '../config/database';
 import { Contact } from '../models/Contact';
 import { Company } from '../models/Company';
 import { Deal } from '../models/Deal';
@@ -60,18 +61,49 @@ router.get('/stats', async (req: AuthRequest, res) => {
       group: ['stage'],
       raw: true,
     });
+    
+    // Log para depuración
+    console.log('Deals por etapa:', JSON.stringify(dealsByStage, null, 2));
 
     // Estadísticas de tareas
-    const totalTasks = await Task.count({ where: dateFilter });
-    const tasksByStatus = await Task.findAll({
-      attributes: [
-        'status',
-        [Task.sequelize!.fn('COUNT', Task.sequelize!.col('id')), 'count']
-      ],
-      where: dateFilter,
-      group: ['status'],
-      raw: true,
-    });
+    // Usar una consulta SQL directa para evitar problemas con ENUMs
+    let totalTasks = 0;
+    let tasksByStatus: any[] = [];
+    
+    try {
+      totalTasks = await Task.count({ where: dateFilter });
+      
+      // Construir la consulta SQL con filtros de fecha si existen
+      let whereClause = '';
+      const replacements: any = {};
+      
+      if (dateFilter.createdAt) {
+        whereClause = 'WHERE "createdAt" >= :startDate';
+        replacements.startDate = dateFilter.createdAt[Op.gte];
+        
+        if (dateFilter.createdAt[Op.lte]) {
+          whereClause += ' AND "createdAt" <= :endDate';
+          replacements.endDate = dateFilter.createdAt[Op.lte];
+        }
+      }
+      
+      // Usar consulta SQL directa para agrupar por status, evitando problemas con ENUMs
+      const tasksByStatusQuery = await sequelize.query(`
+        SELECT status, COUNT(id)::integer as count
+        FROM tasks
+        ${whereClause}
+        GROUP BY status
+      `, {
+        replacements,
+        type: sequelize.QueryTypes.SELECT,
+      });
+      
+      tasksByStatus = tasksByStatusQuery as any[];
+    } catch (error: any) {
+      console.error('Error al obtener estadísticas de tareas:', error);
+      // Si falla, usar array vacío para que el dashboard siga funcionando
+      tasksByStatus = [];
+    }
 
     // Estadísticas de campañas
     const totalCampaigns = await Campaign.count({ where: dateFilter });
@@ -86,14 +118,14 @@ router.get('/stats', async (req: AuthRequest, res) => {
     
     const wonDeals = await Deal.count({
       where: {
-        stage: 'won',
+        stage: { [Op.in]: ['won', 'closed won', 'cierre_ganado'] },
         createdAt: { [Op.gte]: currentMonthStart }
       }
     });
 
     const wonDealValue = await Deal.sum('amount', {
       where: {
-        stage: 'won',
+        stage: { [Op.in]: ['won', 'closed won', 'cierre_ganado'] },
         createdAt: { [Op.gte]: currentMonthStart }
       }
     }) || 0;
@@ -167,15 +199,63 @@ router.get('/stats', async (req: AuthRequest, res) => {
     });
 
     // Tareas completadas vs nuevas
-    const completedTasks = await Task.count({
-      where: { ...dateFilter, status: 'completed' }
-    });
-    const newTasks = await Task.count({
-      where: {
-        ...dateFilter,
-        status: { [Op.in]: ['pending', 'in_progress'] }
+    // Usar valores correctos del enum: 'not started', 'in progress', 'completed', 'cancelled'
+    let completedTasks = 0;
+    let newTasks = 0;
+    
+    try {
+      completedTasks = await Task.count({
+        where: { ...dateFilter, status: 'completed' }
+      });
+      
+      // Las tareas nuevas son las que están 'not started' o 'in progress'
+      newTasks = await Task.count({
+        where: {
+          ...dateFilter,
+          status: { [Op.in]: ['not started', 'in progress'] }
+        }
+      });
+    } catch (error: any) {
+      console.error('Error al contar tareas completadas/nuevas:', error);
+      // Si falla, usar consulta SQL directa
+      try {
+        let whereClause = '';
+        const replacements: any = {};
+        
+        if (dateFilter.createdAt) {
+          whereClause = 'AND "createdAt" >= :startDate';
+          replacements.startDate = dateFilter.createdAt[Op.gte];
+          
+          if (dateFilter.createdAt[Op.lte]) {
+            whereClause += ' AND "createdAt" <= :endDate';
+            replacements.endDate = dateFilter.createdAt[Op.lte];
+          }
+        }
+        
+        const completedResult = await sequelize.query(`
+          SELECT COUNT(id)::integer as count
+          FROM tasks
+          WHERE status = 'completed' ${whereClause}
+        `, {
+          replacements,
+          type: sequelize.QueryTypes.SELECT,
+        });
+        
+        const newResult = await sequelize.query(`
+          SELECT COUNT(id)::integer as count
+          FROM tasks
+          WHERE status IN ('not started', 'in progress') ${whereClause}
+        `, {
+          replacements,
+          type: sequelize.QueryTypes.SELECT,
+        });
+        
+        completedTasks = (completedResult[0] as any)?.count || 0;
+        newTasks = (newResult[0] as any)?.count || 0;
+      } catch (sqlError: any) {
+        console.error('Error en consulta SQL de tareas:', sqlError);
       }
-    });
+    }
 
     res.json({
       contacts: {

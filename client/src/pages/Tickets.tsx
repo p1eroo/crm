@@ -24,6 +24,11 @@ import {
   CardContent,
   Avatar,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
 } from '@mui/material';
 import {
   Add,
@@ -43,6 +48,7 @@ import {
   TrendingUp,
   Computer,
   Visibility,
+  Delete,
 } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
@@ -82,6 +88,9 @@ const Tickets: React.FC = () => {
   const [viewTab, setViewTab] = useState(0);
   const [actionsMenuAnchor, setActionsMenuAnchor] = useState<null | HTMLElement>(null);
   const [viewMenuAnchor, setViewMenuAnchor] = useState<null | HTMLElement>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [ticketToDelete, setTicketToDelete] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Calcular estadísticas
   const totalTickets = tickets.length;
@@ -101,6 +110,33 @@ const Tickets: React.FC = () => {
   // Función para vista previa
   const handlePreview = (ticket: Ticket) => {
     console.log('Preview ticket:', ticket);
+  };
+
+  const handleDelete = (id: number) => {
+    setTicketToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!ticketToDelete) return;
+    
+    setDeleting(true);
+    try {
+      await api.delete(`/tickets/${ticketToDelete}`);
+      fetchTickets();
+      setDeleteDialogOpen(false);
+      setTicketToDelete(null);
+    } catch (error) {
+      console.error('Error deleting ticket:', error);
+      alert('Error al eliminar el ticket. Por favor, intenta nuevamente.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setTicketToDelete(null);
   };
 
   useEffect(() => {
@@ -555,29 +591,49 @@ const Tickets: React.FC = () => {
           overflow: 'hidden',
           bgcolor: 'white',
         }}>
-          <TableContainer sx={{ overflow: 'hidden' }}>
-            <Table>
+          <TableContainer 
+            component={Paper}
+            sx={{ 
+              overflowX: 'auto',
+              overflowY: 'hidden',
+              maxWidth: '100%',
+              '&::-webkit-scrollbar': {
+                height: 8,
+              },
+              '&::-webkit-scrollbar-track': {
+                backgroundColor: '#f1f1f1',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: '#888',
+                borderRadius: 4,
+                '&:hover': {
+                  backgroundColor: '#555',
+                },
+              },
+            }}
+          >
+            <Table sx={{ minWidth: { xs: 800, md: 'auto' } }}>
               <TableHead>
                 <TableRow sx={{ bgcolor: '#fafafa' }}>
-                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', py: 2, px: 3 }}>
+                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '25%' } }}>
                     Subject
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '18%' } }}>
                     Contact
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
                     Status
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
                     Priority
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
                     Assigned To
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
                     Created Date
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2, width: 60 }}>
+                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
                     Actions
                   </TableCell>
                 </TableRow>
@@ -593,16 +649,17 @@ const Tickets: React.FC = () => {
                       transition: 'background-color 0.2s',
                     }}
                   >
-                    <TableCell sx={{ py: 2, px: 3 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '25%' } }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
                         <Avatar
                           sx={{
-                            width: 40,
-                            height: 40,
+                            width: { xs: 32, md: 40 },
+                            height: { xs: 32, md: 40 },
                             bgcolor: taxiMonterricoColors.green,
-                            fontSize: '0.875rem',
+                            fontSize: { xs: '0.75rem', md: '0.875rem' },
                             fontWeight: 600,
                             boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                            flexShrink: 0,
                           }}
                         >
                           {getInitials(ticket.subject)}
@@ -612,32 +669,35 @@ const Tickets: React.FC = () => {
                           sx={{ 
                             fontWeight: 500, 
                             color: '#1a1a1a',
-                            fontSize: '0.875rem',
+                            fontSize: { xs: '0.75rem', md: '0.875rem' },
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
                           }}
                         >
                           {ticket.subject}
                         </Typography>
                       </Box>
                     </TableCell>
-                    <TableCell sx={{ px: 2 }}>
+                    <TableCell sx={{ px: 1, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '18%' } }}>
                       {ticket.Contact ? (
-                        <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                        <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {ticket.Contact.firstName} {ticket.Contact.lastName}
                         </Typography>
                       ) : (
-                        <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: '0.875rem' }}>
+                        <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                           --
                         </Typography>
                       )}
                     </TableCell>
-                    <TableCell sx={{ px: 2 }}>
+                    <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
                       <Chip 
                         label={ticket.status} 
                         size="small" 
                         sx={{ 
                           fontWeight: 500,
-                          fontSize: '0.75rem',
-                          height: 24,
+                          fontSize: { xs: '0.7rem', md: '0.75rem' },
+                          height: { xs: 20, md: 24 },
                           bgcolor: ticket.status === 'closed' ? '#E0E0E0' : 
                                   ticket.status === 'resolved' ? '#E8F5E9' :
                                   ticket.status === 'pending' ? '#FFF9C4' :
@@ -652,14 +712,14 @@ const Tickets: React.FC = () => {
                         }} 
                       />
                     </TableCell>
-                    <TableCell sx={{ px: 2 }}>
+                    <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
                       <Chip 
                         label={ticket.priority} 
                         size="small" 
                         sx={{ 
                           fontWeight: 500,
-                          fontSize: '0.75rem',
-                          height: 24,
+                          fontSize: { xs: '0.7rem', md: '0.75rem' },
+                          height: { xs: 20, md: 24 },
                           bgcolor: ticket.priority === 'urgent' ? '#FFEBEE' :
                                   ticket.priority === 'high' ? '#FFF3E0' :
                                   ticket.priority === 'medium' ? '#FFF9C4' : '#E8F5E9',
@@ -672,47 +732,69 @@ const Tickets: React.FC = () => {
                         }} 
                       />
                     </TableCell>
-                    <TableCell sx={{ px: 2 }}>
+                    <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
                       {ticket.AssignedTo ? (
-                        <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                        <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {ticket.AssignedTo.firstName} {ticket.AssignedTo.lastName}
                         </Typography>
                       ) : (
-                        <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: '0.875rem' }}>
+                        <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                           --
                         </Typography>
                       )}
                     </TableCell>
-                    <TableCell sx={{ px: 2 }}>
+                    <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
                       {ticket.createdAt ? (
-                        <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                        <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                           {new Date(ticket.createdAt).toLocaleDateString('es-ES')}
                         </Typography>
                       ) : (
-                        <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: '0.875rem' }}>
+                        <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                           --
                         </Typography>
                       )}
                     </TableCell>
-                    <TableCell sx={{ px: 2 }}>
-                      <Tooltip title="Vista previa">
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handlePreview(ticket);
-                          }}
-                          sx={{
-                            color: '#757575',
-                            '&:hover': {
-                              color: taxiMonterricoColors.green,
-                              bgcolor: `${taxiMonterricoColors.green}15`,
-                            },
-                          }}
-                        >
-                          <Visibility fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+                    <TableCell sx={{ px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
+                      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                        <Tooltip title="Vista previa">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePreview(ticket);
+                            }}
+                            sx={{
+                              color: '#757575',
+                              padding: { xs: 0.5, md: 1 },
+                              '&:hover': {
+                                color: taxiMonterricoColors.green,
+                                bgcolor: `${taxiMonterricoColors.green}15`,
+                              },
+                            }}
+                          >
+                            <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Eliminar">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(ticket.id);
+                            }}
+                            sx={{
+                              color: '#757575',
+                              padding: { xs: 0.5, md: 1 },
+                              '&:hover': {
+                                color: '#d32f2f',
+                                bgcolor: '#ffebee',
+                              },
+                            }}
+                          >
+                            <Delete sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -721,6 +803,84 @@ const Tickets: React.FC = () => {
           </TableContainer>
         </Card>
       )}
+      {/* Modal de Confirmación de Eliminación */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleCancelDelete}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          pb: 1.5,
+          borderBottom: '1px solid #e0e0e0',
+          fontWeight: 600,
+          fontSize: '1.25rem',
+          color: '#1a1a1a',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.5,
+        }}>
+          <Delete sx={{ color: '#d32f2f', fontSize: 28 }} />
+          Confirmar Eliminación
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Typography variant="body1" sx={{ color: '#1a1a1a', mb: 1 }}>
+            ¿Estás seguro de que deseas eliminar este ticket?
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#757575' }}>
+            Esta acción no se puede deshacer. El ticket será eliminado permanentemente del sistema.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ 
+          px: 3, 
+          py: 2,
+          borderTop: '1px solid #e0e0e0',
+          gap: 1,
+        }}>
+          <Button 
+            onClick={handleCancelDelete}
+            disabled={deleting}
+            sx={{
+              textTransform: 'none',
+              color: '#757575',
+              fontWeight: 500,
+              '&:hover': {
+                bgcolor: '#f5f5f5',
+              }
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleConfirmDelete}
+            disabled={deleting}
+            variant="contained"
+            sx={{
+              textTransform: 'none',
+              fontWeight: 500,
+              borderRadius: 1.5,
+              px: 2.5,
+              bgcolor: '#d32f2f',
+              '&:hover': {
+                bgcolor: '#b71c1c',
+              },
+              '&.Mui-disabled': {
+                bgcolor: '#ffcdd2',
+                color: '#ffffff',
+              }
+            }}
+            startIcon={deleting ? <CircularProgress size={16} sx={{ color: '#ffffff' }} /> : <Delete />}
+          >
+            {deleting ? 'Eliminando...' : 'Eliminar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

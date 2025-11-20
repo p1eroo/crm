@@ -17,6 +17,7 @@ import Tickets from './pages/Tickets';
 import Campaigns from './pages/Campaigns';
 import Automations from './pages/Automations';
 import Profile from './pages/Profile';
+import Users from './pages/Users';
 
 import { taxiMonterricoColors } from './theme/colors';
 
@@ -189,7 +190,7 @@ const App: React.FC = () => {
                 </PrivateRoute>
               }
             />
-            <Route
+            {/* <Route
               path="/campaigns"
               element={
                 <PrivateRoute>
@@ -208,13 +209,23 @@ const App: React.FC = () => {
                   </MainLayout>
                 </PrivateRoute>
               }
-            />
+            /> */}
             <Route
               path="/profile"
               element={
                 <PrivateRoute>
                   <MainLayout>
                     <Profile />
+                  </MainLayout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/users"
+              element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <Users />
                   </MainLayout>
                 </PrivateRoute>
               }

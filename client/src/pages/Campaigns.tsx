@@ -25,8 +25,9 @@ import {
   FormControl,
   Select,
   Tooltip,
+  Paper,
 } from '@mui/material';
-import { Add, Edit, Delete, Search, Campaign, TrendingUp, Computer, Visibility, CheckCircle } from '@mui/icons-material';
+import { Add, Delete, Search, Campaign as CampaignIcon, TrendingUp, Computer, Visibility, CheckCircle } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 
@@ -58,6 +59,9 @@ const Campaigns: React.FC = () => {
     endDate: '',
     description: '',
   });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [campaignToDelete, setCampaignToDelete] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Calcular estadísticas
   const totalCampaigns = campaigns.length;
@@ -81,6 +85,7 @@ const Campaigns: React.FC = () => {
 
   useEffect(() => {
     fetchCampaigns();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
   const fetchCampaigns = async () => {
@@ -145,15 +150,31 @@ const Campaigns: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('¿Estás seguro de eliminar esta campaña?')) {
-      try {
-        await api.delete(`/campaigns/${id}`);
-        fetchCampaigns();
-      } catch (error) {
-        console.error('Error deleting campaign:', error);
-      }
+  const handleDelete = (id: number) => {
+    setCampaignToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!campaignToDelete) return;
+    
+    setDeleting(true);
+    try {
+      await api.delete(`/campaigns/${campaignToDelete}`);
+      fetchCampaigns();
+      setDeleteDialogOpen(false);
+      setCampaignToDelete(null);
+    } catch (error) {
+      console.error('Error deleting campaign:', error);
+      alert('Error al eliminar la campaña. Por favor, intenta nuevamente.');
+    } finally {
+      setDeleting(false);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setCampaignToDelete(null);
   };
 
   if (loading) {
@@ -203,7 +224,7 @@ const Campaigns: React.FC = () => {
                 bgcolor: `${taxiMonterricoColors.green}15`,
                 flexShrink: 0,
               }}>
-                <Campaign sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
+                <CampaignIcon sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
                 <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
@@ -430,35 +451,55 @@ const Campaigns: React.FC = () => {
           </Box>
         </Box>
 
-        <TableContainer sx={{ overflow: 'hidden' }}>
-          <Table>
+        <TableContainer 
+          component={Paper}
+          sx={{ 
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            maxWidth: '100%',
+            '&::-webkit-scrollbar': {
+              height: 8,
+            },
+            '&::-webkit-scrollbar-track': {
+              backgroundColor: '#f1f1f1',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: '#888',
+              borderRadius: 4,
+              '&:hover': {
+                backgroundColor: '#555',
+              },
+            },
+          }}
+        >
+          <Table sx={{ minWidth: { xs: 1000, md: 'auto' } }}>
             <TableHead>
               <TableRow sx={{ bgcolor: '#fafafa' }}>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', py: 2, px: 3 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '20%' } }}>
                   Campaign Name
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '10%' } }}>
                   Type
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '10%' } }}>
                   Status
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '10%' } }}>
                   Budget
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '10%' } }}>
                   Spent
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}>
                   Impressions
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}>
                   Clicks
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}>
                   Conversions
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: '0.875rem', px: 2, width: 60 }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
                   Actions
                 </TableCell>
               </TableRow>
@@ -474,16 +515,17 @@ const Campaigns: React.FC = () => {
                     transition: 'background-color 0.2s',
                   }}
                 >
-                  <TableCell sx={{ py: 2, px: 3 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '20%' } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
                       <Avatar
                         sx={{
-                          width: 40,
-                          height: 40,
+                          width: { xs: 32, md: 40 },
+                          height: { xs: 32, md: 40 },
                           bgcolor: taxiMonterricoColors.green,
-                          fontSize: '0.875rem',
+                          fontSize: { xs: '0.75rem', md: '0.875rem' },
                           fontWeight: 600,
                           boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                          flexShrink: 0,
                         }}
                       >
                         {getInitials(campaign.name)}
@@ -493,26 +535,29 @@ const Campaigns: React.FC = () => {
                         sx={{ 
                           fontWeight: 500, 
                           color: '#1a1a1a',
-                          fontSize: '0.875rem',
+                          fontSize: { xs: '0.75rem', md: '0.875rem' },
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
                         }}
                       >
                         {campaign.name}
                       </Typography>
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
-                    <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                  <TableCell sx={{ px: 1, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '10%' } }}>
+                    <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                       {campaign.type}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '10%' } }}>
                     <Chip
                       label={campaign.status}
                       size="small"
                       sx={{ 
                         fontWeight: 500,
-                        fontSize: '0.75rem',
-                        height: 24,
+                        fontSize: { xs: '0.7rem', md: '0.75rem' },
+                        height: { xs: 20, md: 24 },
                         bgcolor: campaign.status === 'active' 
                           ? '#E8F5E9' 
                           : campaign.status === 'completed'
@@ -532,62 +577,84 @@ const Campaigns: React.FC = () => {
                       }}
                     />
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '10%' } }}>
                     {campaign.budget ? (
-                      <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem', fontWeight: 500 }}>
+                      <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, fontWeight: 500 }}>
                         ${campaign.budget.toLocaleString()}
                       </Typography>
                     ) : (
-                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: '0.875rem' }}>
+                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                         --
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '10%' } }}>
                     {campaign.spent ? (
-                      <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem', fontWeight: 500 }}>
+                      <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, fontWeight: 500 }}>
                         ${campaign.spent.toLocaleString()}
                       </Typography>
                     ) : (
-                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: '0.875rem' }}>
+                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                         --
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
-                    <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}>
+                    <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                       {campaign.impressions || 0}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
-                    <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}>
+                    <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                       {campaign.clicks || 0}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
-                    <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.875rem' }}>
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}>
+                    <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                       {campaign.conversions || 0}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ px: 2 }}>
-                    <Tooltip title="Vista previa">
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePreview(campaign);
-                        }}
-                        sx={{
-                          color: '#757575',
-                          '&:hover': {
-                            color: taxiMonterricoColors.green,
-                            bgcolor: `${taxiMonterricoColors.green}15`,
-                          },
-                        }}
-                      >
-                        <Visibility fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
+                  <TableCell sx={{ px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
+                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                      <Tooltip title="Vista previa">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePreview(campaign);
+                          }}
+                          sx={{
+                            color: '#757575',
+                            padding: { xs: 0.5, md: 1 },
+                            '&:hover': {
+                              color: taxiMonterricoColors.green,
+                              bgcolor: `${taxiMonterricoColors.green}15`,
+                            },
+                          }}
+                        >
+                          <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Eliminar">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(campaign.id);
+                          }}
+                          sx={{
+                            color: '#757575',
+                            padding: { xs: 0.5, md: 1 },
+                            '&:hover': {
+                              color: '#d32f2f',
+                              bgcolor: '#ffebee',
+                            },
+                          }}
+                        >
+                          <Delete sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}
@@ -668,8 +735,88 @@ const Campaigns: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Modal de Confirmación de Eliminación */}
+      <Dialog
+        open={deleteDialogOpen}
+        onClose={handleCancelDelete}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          pb: 1.5,
+          borderBottom: '1px solid #e0e0e0',
+          fontWeight: 600,
+          fontSize: '1.25rem',
+          color: '#1a1a1a',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 1.5,
+        }}>
+          <Delete sx={{ color: '#d32f2f', fontSize: 28 }} />
+          Confirmar Eliminación
+        </DialogTitle>
+        <DialogContent sx={{ pt: 3 }}>
+          <Typography variant="body1" sx={{ color: '#1a1a1a', mb: 1 }}>
+            ¿Estás seguro de que deseas eliminar esta campaña?
+          </Typography>
+          <Typography variant="body2" sx={{ color: '#757575' }}>
+            Esta acción no se puede deshacer. La campaña será eliminada permanentemente del sistema.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ 
+          px: 3, 
+          py: 2,
+          borderTop: '1px solid #e0e0e0',
+          gap: 1,
+        }}>
+          <Button 
+            onClick={handleCancelDelete}
+            disabled={deleting}
+            sx={{
+              textTransform: 'none',
+              color: '#757575',
+              fontWeight: 500,
+              '&:hover': {
+                bgcolor: '#f5f5f5',
+              }
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleConfirmDelete}
+            disabled={deleting}
+            variant="contained"
+            sx={{
+              textTransform: 'none',
+              fontWeight: 500,
+              borderRadius: 1.5,
+              px: 2.5,
+              bgcolor: '#d32f2f',
+              '&:hover': {
+                bgcolor: '#b71c1c',
+              },
+              '&.Mui-disabled': {
+                bgcolor: '#ffcdd2',
+                color: '#ffffff',
+              }
+            }}
+            startIcon={deleting ? <CircularProgress size={16} sx={{ color: '#ffffff' }} /> : <Delete />}
+          >
+            {deleting ? 'Eliminando...' : 'Eliminar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
 
 export default Campaigns;
+

@@ -38,9 +38,11 @@ import {
   Security,
   Timeline,
   Person,
+  CheckCircle,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import api from '../config/api';
+import { taxiMonterricoColors } from '../theme/colors';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -59,7 +61,7 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`profile-tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+      {value === index && <Box sx={{ p: 4 }}>{children}</Box>}
     </div>
   );
 }
@@ -216,24 +218,44 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
-      <Typography variant="h4" sx={{ mb: 1, fontWeight: 600 }}>
-        General
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Estas preferencias solo se aplican a ti.
-      </Typography>
+    <Box sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 2, sm: 3, md: 4 }, py: 4 }}>
+      <Box sx={{ mb: 4 }}>
+        <Typography variant="h4" sx={{ mb: 1, fontWeight: 700, color: '#1a1a1a' }}>
+          General
+        </Typography>
+        <Typography variant="body1" sx={{ color: '#757575', fontSize: '0.9375rem' }}>
+          Estas preferencias solo se aplican a ti.
+        </Typography>
+      </Box>
 
-      <Paper sx={{ mb: 3 }}>
+      <Paper 
+        sx={{ 
+          mb: 3,
+          boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+          borderRadius: 2,
+          overflow: 'hidden',
+        }}
+      >
         <Tabs
           value={tabValue}
           onChange={handleTabChange}
           sx={{
             borderBottom: 1,
             borderColor: 'divider',
+            px: 2,
             '& .MuiTab-root': {
               textTransform: 'none',
               fontWeight: 500,
+              fontSize: '0.9375rem',
+              minHeight: 64,
+              px: 3,
+              '&.Mui-selected': {
+                color: taxiMonterricoColors.green,
+              },
+            },
+            '& .MuiTabs-indicator': {
+              backgroundColor: taxiMonterricoColors.green,
+              height: 3,
             },
           }}
         >
@@ -247,8 +269,14 @@ const Profile: React.FC = () => {
         </Tabs>
 
         {message && (
-          <Box sx={{ p: 2 }}>
-            <Alert severity={message.type} onClose={() => setMessage(null)}>
+          <Box sx={{ px: 4, pt: 3 }}>
+            <Alert 
+              severity={message.type} 
+              onClose={() => setMessage(null)}
+              sx={{
+                borderRadius: 2,
+              }}
+            >
               {message.text}
             </Alert>
           </Box>
@@ -256,145 +284,292 @@ const Profile: React.FC = () => {
 
         {/* Pestaña Perfil */}
         <TabPanel value={tabValue} index={0}>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-            Global
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Esto se aplica a todas las cuentas que tienes.
-          </Typography>
-
-          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3, flex: { md: '0 0 300px' } }}>
-              <Avatar
-                src={profileData.avatar}
-                sx={{ width: 100, height: 100, mb: 2 }}
-              >
-                {profileData.firstName?.[0]}{profileData.lastName?.[0]}
-              </Avatar>
-              <Button
-                variant="outlined"
-                component="label"
-                startIcon={<Edit />}
-                size="small"
-              >
-                Cambiar imagen
-                <input
-                  type="file"
-                  hidden
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                />
-              </Button>
-              <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-                Imagen de perfil
+          <Box
+            sx={{
+              bgcolor: 'white',
+              borderRadius: 2,
+              p: 4,
+            }}
+          >
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: '#1a1a1a' }}>
+                Global
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#757575', lineHeight: 1.7 }}>
+                Esto se aplica a todas las cuentas que tienes.
               </Typography>
             </Box>
-            <Box sx={{ flex: 1 }}>
-              <TextField
-                fullWidth
-                label="Nombre"
-                value={profileData.firstName}
-                onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                fullWidth
-                label="Apellidos"
-                value={profileData.lastName}
-                onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
-                sx={{ mb: 2 }}
-              />
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Idioma</InputLabel>
-                <Select
-                  value={profileData.language}
-                  label="Idioma"
-                  onChange={(e) => setProfileData({ ...profileData, language: e.target.value })}
-                  endAdornment={
-                    <InputAdornment position="end">
-                      <Info fontSize="small" color="action" />
-                    </InputAdornment>
-                  }
-                >
-                  <MenuItem value="es">Español</MenuItem>
-                  <MenuItem value="en">English</MenuItem>
-                  <MenuItem value="pt">Português</MenuItem>
-                </Select>
-              </FormControl>
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel>Formato de hora, fecha y número</InputLabel>
-                <Select
-                  value={profileData.dateFormat}
-                  label="Formato de hora, fecha y número"
-                  onChange={(e) => setProfileData({ ...profileData, dateFormat: e.target.value })}
-                  endAdornment={
-                    <InputAdornment position="end">
-                      <Info fontSize="small" color="action" />
-                    </InputAdornment>
-                  }
-                >
-                  <MenuItem value="es-ES">España</MenuItem>
-                  <MenuItem value="en-US">Estados Unidos</MenuItem>
-                  <MenuItem value="pt-BR">Brasil</MenuItem>
-                </Select>
-                <FormHelperText>
-                  Formato: {new Date().toLocaleDateString(profileData.dateFormat)} y {new Date().toLocaleTimeString(profileData.dateFormat)}
-                </FormHelperText>
-              </FormControl>
-              <TextField
-                fullWidth
-                label="Número de teléfono"
-                value={profileData.phone}
-                onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                helperText="Podríamos usar este número de teléfono para contactarte en referencia a eventos de seguridad. Consulta nuestra política de privacidad para obtener más información."
-              />
-              <Button
-                variant="contained"
-                onClick={handleProfileUpdate}
-                disabled={loading}
-                sx={{ mt: 3 }}
+
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  flex: { md: '0 0 280px' },
+                  p: 3,
+                  bgcolor: '#f8f9fa',
+                  borderRadius: 2,
+                  border: '1px solid #e9ecef',
+                }}
               >
-                Guardar cambios
-              </Button>
+                <Avatar
+                  src={profileData.avatar}
+                  sx={{ 
+                    width: 120, 
+                    height: 120, 
+                    mb: 2,
+                    fontSize: '2.5rem',
+                    bgcolor: taxiMonterricoColors.green,
+                  }}
+                >
+                  {profileData.firstName?.[0]}{profileData.lastName?.[0]}
+                </Avatar>
+                <Button
+                  variant="outlined"
+                  component="label"
+                  startIcon={<Edit />}
+                  size="medium"
+                  sx={{
+                    textTransform: 'none',
+                    borderRadius: 2,
+                    px: 2.5,
+                    borderColor: '#d0d0d0',
+                    color: '#1a1a1a',
+                    '&:hover': {
+                      borderColor: taxiMonterricoColors.green,
+                      bgcolor: `${taxiMonterricoColors.green}10`,
+                    },
+                  }}
+                >
+                  Cambiar imagen
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                  />
+                </Button>
+                <Typography variant="caption" sx={{ mt: 1.5, color: '#9e9e9e' }}>
+                  Imagen de perfil
+                </Typography>
+              </Box>
+              <Box sx={{ flex: 1 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                  <TextField
+                    fullWidth
+                    label="Nombre"
+                    value={profileData.firstName}
+                    onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 1.5,
+                      }
+                    }}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Apellidos"
+                    value={profileData.lastName}
+                    onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 1.5,
+                      }
+                    }}
+                  />
+                  <FormControl 
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 1.5,
+                      }
+                    }}
+                  >
+                    <InputLabel>Idioma</InputLabel>
+                    <Select
+                      value={profileData.language}
+                      label="Idioma"
+                      onChange={(e) => setProfileData({ ...profileData, language: e.target.value })}
+                    >
+                      <MenuItem value="es">Español</MenuItem>
+                      <MenuItem value="en">English</MenuItem>
+                      <MenuItem value="pt">Português</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <FormControl 
+                    fullWidth
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 1.5,
+                      }
+                    }}
+                  >
+                    <InputLabel>Formato de hora, fecha y número</InputLabel>
+                    <Select
+                      value={profileData.dateFormat}
+                      label="Formato de hora, fecha y número"
+                      onChange={(e) => setProfileData({ ...profileData, dateFormat: e.target.value })}
+                    >
+                      <MenuItem value="es-ES">España</MenuItem>
+                      <MenuItem value="en-US">Estados Unidos</MenuItem>
+                      <MenuItem value="pt-BR">Brasil</MenuItem>
+                    </Select>
+                    <FormHelperText sx={{ mt: 1 }}>
+                      Formato: {new Date().toLocaleDateString(profileData.dateFormat)} y {new Date().toLocaleTimeString(profileData.dateFormat)}
+                    </FormHelperText>
+                  </FormControl>
+                  <TextField
+                    fullWidth
+                    label="Número de teléfono"
+                    value={profileData.phone}
+                    onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                    helperText="Podríamos usar este número de teléfono para contactarte en referencia a eventos de seguridad. Consulta nuestra política de privacidad para obtener más información."
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 1.5,
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="contained"
+                    onClick={handleProfileUpdate}
+                    disabled={loading}
+                    sx={{ 
+                      mt: 2,
+                      textTransform: 'none',
+                      borderRadius: 2,
+                      px: 3,
+                      py: 1.5,
+                      bgcolor: taxiMonterricoColors.green,
+                      fontWeight: 600,
+                      '&:hover': {
+                        bgcolor: taxiMonterricoColors.greenDark,
+                      },
+                    }}
+                  >
+                    Guardar cambios
+                  </Button>
+                </Box>
+              </Box>
             </Box>
           </Box>
         </TabPanel>
 
         {/* Pestaña Correo */}
         <TabPanel value={tabValue} index={1}>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-            Correo
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Conecta tus cuentas personales de correo electrónico para registrar, hacer seguimiento, enviar y recibir correos. Para administrar los correos de cualquier equipo, ve a la{' '}
-            <Link href="#" underline="hover">
-              configuración de bandeja de entrada
-            </Link>
-            .
-          </Typography>
+          <Box
+            sx={{
+              bgcolor: 'white',
+              borderRadius: 2,
+              p: 4,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+              border: '1px solid #e0e0e0',
+            }}
+          >
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: '#1a1a1a' }}>
+                Correo
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7, color: '#757575' }}>
+                Conecta tus cuentas personales de correo electrónico para registrar, hacer seguimiento, enviar y recibir correos. Para administrar los correos de cualquier equipo, ve a la{' '}
+                <Link 
+                  href="#" 
+                  underline="hover"
+                  sx={{ 
+                    color: taxiMonterricoColors.green,
+                    fontWeight: 500,
+                    '&:hover': {
+                      color: taxiMonterricoColors.greenDark,
+                    }
+                  }}
+                >
+                  configuración de bandeja de entrada
+                </Link>
+                .
+              </Typography>
+            </Box>
 
-          <Box sx={{ mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Box sx={{ flex: 1 }}>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  ✓ Enviar y programar correos desde HubSpot
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  ✓ Registrar respuestas a correos en HubSpot automáticamente
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 1 }}>
-                  ✓ Sugerir tareas de seguimiento y capturar detalles de contactos desde tu correo
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
+            <Box 
+              sx={{ 
+                bgcolor: '#f8f9fa',
+                borderRadius: 2,
+                p: 3,
+                mb: 3,
+                border: '1px solid #e9ecef',
+              }}
+            >
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                  <CheckCircle 
+                    sx={{ 
+                      color: taxiMonterricoColors.green, 
+                      fontSize: 20, 
+                      mt: 0.25,
+                      flexShrink: 0,
+                    }} 
+                  />
+                  <Typography variant="body2" sx={{ color: '#1a1a1a', lineHeight: 1.6 }}>
+                    Enviar y programar correos desde el CRM
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                  <CheckCircle 
+                    sx={{ 
+                      color: taxiMonterricoColors.green, 
+                      fontSize: 20, 
+                      mt: 0.25,
+                      flexShrink: 0,
+                    }} 
+                  />
+                  <Typography variant="body2" sx={{ color: '#1a1a1a', lineHeight: 1.6 }}>
+                    Registrar respuestas a correos automáticamente
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                  <CheckCircle 
+                    sx={{ 
+                      color: taxiMonterricoColors.green, 
+                      fontSize: 20, 
+                      mt: 0.25,
+                      flexShrink: 0,
+                    }} 
+                  />
+                  <Typography variant="body2" sx={{ color: '#1a1a1a', lineHeight: 1.6 }}>
+                    Sugerir tareas de seguimiento y capturar detalles de contactos desde tu correo
+                  </Typography>
+                </Box>
+              </Box>
+              <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px solid #e0e0e0' }}>
+                <Typography variant="caption" sx={{ color: '#9e9e9e', fontStyle: 'italic' }}>
                   Requiere automatización de la bandeja de entrada
                 </Typography>
               </Box>
             </Box>
+
             <Button
               variant="contained"
-              color="secondary"
               onClick={handleEmailConnect}
               disabled={emailConnected}
+              startIcon={emailConnected ? <CheckCircle /> : <Email />}
+              sx={{
+                bgcolor: emailConnected ? taxiMonterricoColors.green : '#FF6B35',
+                color: 'white',
+                fontWeight: 600,
+                textTransform: 'none',
+                px: 3,
+                py: 1.5,
+                borderRadius: 2,
+                boxShadow: emailConnected ? 'none' : '0 4px 12px rgba(255, 107, 53, 0.3)',
+                '&:hover': {
+                  bgcolor: emailConnected ? taxiMonterricoColors.greenDark : '#E55A2B',
+                  boxShadow: emailConnected ? 'none' : '0 6px 16px rgba(255, 107, 53, 0.4)',
+                },
+                '&.Mui-disabled': {
+                  bgcolor: taxiMonterricoColors.green,
+                  color: 'white',
+                },
+              }}
             >
               {emailConnected ? 'Correo conectado' : 'Conectar correo personal'}
             </Button>
@@ -403,228 +578,361 @@ const Profile: React.FC = () => {
 
         {/* Pestaña Llamadas */}
         <TabPanel value={tabValue} index={2}>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-            Llamadas
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Configura tus preferencias de llamadas telefónicas.
-          </Typography>
-          <Alert severity="info">
-            La configuración de llamadas estará disponible próximamente.
-          </Alert>
+          <Box
+            sx={{
+              bgcolor: 'white',
+              borderRadius: 2,
+              p: 4,
+            }}
+          >
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: '#1a1a1a' }}>
+                Llamadas
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#757575', lineHeight: 1.7 }}>
+                Configura tus preferencias de llamadas telefónicas.
+              </Typography>
+            </Box>
+            <Alert 
+              severity="info"
+              sx={{
+                borderRadius: 2,
+                bgcolor: '#e3f2fd',
+              }}
+            >
+              La configuración de llamadas estará disponible próximamente.
+            </Alert>
+          </Box>
         </TabPanel>
 
         {/* Pestaña Calendario */}
         <TabPanel value={tabValue} index={3}>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-            Calendario
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Conecta tu calendario para sincronizar eventos y reuniones.
-          </Typography>
-          <Alert severity="info">
-            La configuración de calendario estará disponible próximamente.
-          </Alert>
+          <Box
+            sx={{
+              bgcolor: 'white',
+              borderRadius: 2,
+              p: 4,
+            }}
+          >
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: '#1a1a1a' }}>
+                Calendario
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#757575', lineHeight: 1.7 }}>
+                Conecta tu calendario para sincronizar eventos y reuniones.
+              </Typography>
+            </Box>
+            <Alert 
+              severity="info"
+              sx={{
+                borderRadius: 2,
+                bgcolor: '#e3f2fd',
+              }}
+            >
+              La configuración de calendario estará disponible próximamente.
+            </Alert>
+          </Box>
         </TabPanel>
 
         {/* Pestaña Tareas */}
         <TabPanel value={tabValue} index={4}>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-            Tareas
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Configura tus preferencias de tareas y recordatorios.
-          </Typography>
-          <Alert severity="info">
-            La configuración de tareas estará disponible próximamente.
-          </Alert>
+          <Box
+            sx={{
+              bgcolor: 'white',
+              borderRadius: 2,
+              p: 4,
+            }}
+          >
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: '#1a1a1a' }}>
+                Tareas
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#757575', lineHeight: 1.7 }}>
+                Configura tus preferencias de tareas y recordatorios.
+              </Typography>
+            </Box>
+            <Alert 
+              severity="info"
+              sx={{
+                borderRadius: 2,
+                bgcolor: '#e3f2fd',
+              }}
+            >
+              La configuración de tareas estará disponible próximamente.
+            </Alert>
+          </Box>
         </TabPanel>
 
         {/* Pestaña Seguridad */}
         <TabPanel value={tabValue} index={5}>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-            Seguridad
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Establece preferencias relacionadas con el inicio de sesión y la seguridad de tu cuenta personal.
-          </Typography>
-
-          <Divider sx={{ my: 3 }} />
-
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
-              Dirección de correo electrónico
-            </Typography>
-            <TextField
-              fullWidth
-              value={profileData.email}
-              disabled
-              sx={{ mb: 2 }}
-            />
-            <Button variant="outlined" size="small">
-              Editar dirección de correo
-            </Button>
-          </Box>
-
-          <Divider sx={{ my: 3 }} />
-
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
-              Contraseña
-            </Typography>
-            <Link
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                setTabValue(5);
-              }}
-              underline="hover"
-              sx={{ display: 'block', mb: 1 }}
-            >
-              Cambiar contraseña
-            </Link>
-            {passwordLastReset && (
-              <Typography variant="body2" color="text.secondary">
-                Restablecido por última vez el {passwordLastReset}
+          <Box
+            sx={{
+              bgcolor: 'white',
+              borderRadius: 2,
+              p: 4,
+            }}
+          >
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: '#1a1a1a' }}>
+                Seguridad
               </Typography>
-            )}
-            <Box sx={{ mt: 2 }}>
+              <Typography variant="body2" sx={{ color: '#757575', lineHeight: 1.7 }}>
+                Establece preferencias relacionadas con el inicio de sesión y la seguridad de tu cuenta personal.
+              </Typography>
+            </Box>
+
+            <Divider sx={{ my: 4 }} />
+
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#1a1a1a' }}>
+                Dirección de correo electrónico
+              </Typography>
               <TextField
                 fullWidth
-                type={showCurrentPassword ? 'text' : 'password'}
-                label="Contraseña actual"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                sx={{ mb: 2 }}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                        edge="end"
-                      >
-                        {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
+                value={profileData.email}
+                disabled
+                sx={{ 
+                  mb: 2,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
                 }}
               />
-              <TextField
-                fullWidth
-                type={showNewPassword ? 'text' : 'password'}
-                label="Nueva contraseña"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                sx={{ mb: 2 }}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        edge="end"
-                      >
-                        {showNewPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
+              <Button 
+                variant="outlined" 
+                size="medium"
+                sx={{
+                  textTransform: 'none',
+                  borderRadius: 2,
+                  px: 2.5,
+                  borderColor: '#d0d0d0',
+                  color: '#1a1a1a',
+                  '&:hover': {
+                    borderColor: taxiMonterricoColors.green,
+                    bgcolor: `${taxiMonterricoColors.green}10`,
+                  },
                 }}
-              />
-              <TextField
-                fullWidth
-                type={showConfirmPassword ? 'text' : 'password'}
-                label="Confirmar nueva contraseña"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                sx={{ mb: 2 }}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        edge="end"
-                      >
-                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-              />
-              <Button
-                variant="contained"
-                onClick={handlePasswordChange}
-                disabled={loading || !currentPassword || !newPassword || !confirmPassword}
               >
-                Cambiar contraseña
+                Editar dirección de correo
               </Button>
             </Box>
-          </Box>
 
-          <Divider sx={{ my: 3 }} />
+            <Divider sx={{ my: 4 }} />
 
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
-              Retirada
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Si no usas una contraseña para iniciar sesión en más de 90 días, HubSpot la eliminará.
-            </Typography>
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>ESTADO</TableCell>
-                    <TableCell>FECHA DE RETIRADA</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  <TableRow>
-                    <TableCell>
-                      <Chip label="Inelegible" size="small" color="default" />
-                    </TableCell>
-                    <TableCell>Ninguna</TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Box>
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#1a1a1a' }}>
+                Contraseña
+              </Typography>
+              {passwordLastReset && (
+                <Typography variant="body2" sx={{ mb: 2, color: '#757575' }}>
+                  Restablecido por última vez el {passwordLastReset}
+                </Typography>
+              )}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 2 }}>
+                <TextField
+                  fullWidth
+                  type={showCurrentPassword ? 'text' : 'password'}
+                  label="Contraseña actual"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          edge="end"
+                        >
+                          {showCurrentPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+                <TextField
+                  fullWidth
+                  type={showNewPassword ? 'text' : 'password'}
+                  label="Nueva contraseña"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          edge="end"
+                        >
+                          {showNewPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+                <TextField
+                  fullWidth
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  label="Confirmar nueva contraseña"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          edge="end"
+                        >
+                          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handlePasswordChange}
+                  disabled={loading || !currentPassword || !newPassword || !confirmPassword}
+                  sx={{
+                    textTransform: 'none',
+                    borderRadius: 2,
+                    px: 3,
+                    py: 1.5,
+                    bgcolor: taxiMonterricoColors.green,
+                    fontWeight: 600,
+                    '&:hover': {
+                      bgcolor: taxiMonterricoColors.greenDark,
+                    },
+                    alignSelf: 'flex-start',
+                  }}
+                >
+                  Cambiar contraseña
+                </Button>
+              </Box>
+            </Box>
 
-          <Divider sx={{ my: 3 }} />
+            <Divider sx={{ my: 4 }} />
 
-          <Box sx={{ mb: 3 }}>
-            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
-              Número de teléfono de confianza
-            </Typography>
-            <Link href="#" underline="hover" sx={{ display: 'block', mb: 1 }}>
-              Agrega un número de teléfono de confianza
-            </Link>
-            <Typography variant="body2" color="text.secondary">
-              Agrega un número de teléfono utilizado para verificar ocasionalmente tu identidad y recibir otras alertas relacionadas con la seguridad. Este número de teléfono nunca se utilizará para fines de ventas o marketing.
-            </Typography>
-          </Box>
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#1a1a1a' }}>
+                Retirada
+              </Typography>
+              <Typography variant="body2" sx={{ mb: 2.5, color: '#757575', lineHeight: 1.7 }}>
+                Si no usas una contraseña para iniciar sesión en más de 90 días, el sistema la eliminará.
+              </Typography>
+              <TableContainer
+                sx={{
+                  borderRadius: 2,
+                  border: '1px solid #e0e0e0',
+                }}
+              >
+                <Table size="small">
+                  <TableHead>
+                    <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                      <TableCell sx={{ fontWeight: 600, color: '#1a1a1a' }}>ESTADO</TableCell>
+                      <TableCell sx={{ fontWeight: 600, color: '#1a1a1a' }}>FECHA DE RETIRADA</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>
+                        <Chip label="Inelegible" size="small" sx={{ bgcolor: '#e0e0e0', color: '#1a1a1a' }} />
+                      </TableCell>
+                      <TableCell sx={{ color: '#757575' }}>Ninguna</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </Box>
 
-          <Divider sx={{ my: 3 }} />
+            <Divider sx={{ my: 4 }} />
 
-          <Box>
-            <Typography variant="subtitle1" sx={{ mb: 1, fontWeight: 600 }}>
-              Claves de acceso
-            </Typography>
-            <Link href="#" underline="hover">
-              Configurar claves de acceso
-            </Link>
+            <Box sx={{ mb: 4 }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#1a1a1a' }}>
+                Número de teléfono de confianza
+              </Typography>
+              <Link 
+                href="#" 
+                underline="hover" 
+                sx={{ 
+                  display: 'inline-block', 
+                  mb: 1.5,
+                  color: taxiMonterricoColors.green,
+                  fontWeight: 500,
+                  '&:hover': {
+                    color: taxiMonterricoColors.greenDark,
+                  }
+                }}
+              >
+                Agrega un número de teléfono de confianza
+              </Link>
+              <Typography variant="body2" sx={{ color: '#757575', lineHeight: 1.7 }}>
+                Agrega un número de teléfono utilizado para verificar ocasionalmente tu identidad y recibir otras alertas relacionadas con la seguridad. Este número de teléfono nunca se utilizará para fines de ventas o marketing.
+              </Typography>
+            </Box>
+
+            <Divider sx={{ my: 4 }} />
+
+            <Box>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#1a1a1a' }}>
+                Claves de acceso
+              </Typography>
+              <Link 
+                href="#" 
+                underline="hover"
+                sx={{
+                  color: taxiMonterricoColors.green,
+                  fontWeight: 500,
+                  '&:hover': {
+                    color: taxiMonterricoColors.greenDark,
+                  }
+                }}
+              >
+                Configurar claves de acceso
+              </Link>
+            </Box>
           </Box>
         </TabPanel>
 
         {/* Pestaña Automatización */}
         <TabPanel value={tabValue} index={6}>
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-            Automatización
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Configura tus preferencias de automatización y flujos de trabajo.
-          </Typography>
-          <Alert severity="info">
-            La configuración de automatización estará disponible próximamente.
-          </Alert>
+          <Box
+            sx={{
+              bgcolor: 'white',
+              borderRadius: 2,
+              p: 4,
+            }}
+          >
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: '#1a1a1a' }}>
+                Automatización
+              </Typography>
+              <Typography variant="body2" sx={{ color: '#757575', lineHeight: 1.7 }}>
+                Configura tus preferencias de automatización y flujos de trabajo.
+              </Typography>
+            </Box>
+            <Alert 
+              severity="info"
+              sx={{
+                borderRadius: 2,
+                bgcolor: '#e3f2fd',
+              }}
+            >
+              La configuración de automatización estará disponible próximamente.
+            </Alert>
+          </Box>
         </TabPanel>
       </Paper>
     </Box>

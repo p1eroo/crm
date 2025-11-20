@@ -223,7 +223,7 @@ const CompanyDetail: React.FC = () => {
   const [contactDialogTab, setContactDialogTab] = useState<'create' | 'existing'>('create');
   const [existingContactsSearch, setExistingContactsSearch] = useState('');
   const [selectedExistingContacts, setSelectedExistingContacts] = useState<number[]>([]);
-  const [dealFormData, setDealFormData] = useState({ name: '', amount: '', stage: 'qualification', closeDate: '', probability: '' });
+  const [dealFormData, setDealFormData] = useState({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'medium' });
   const [ticketFormData, setTicketFormData] = useState({ subject: '', description: '', status: 'new', priority: 'medium' });
   const [subscriptionFormData, setSubscriptionFormData] = useState({ name: '', description: '', status: 'active', amount: '', currency: 'USD', billingCycle: 'monthly', startDate: '', endDate: '', renewalDate: '' });
   const [paymentFormData, setPaymentFormData] = useState({ amount: '', currency: 'USD', status: 'pending', paymentDate: '', dueDate: '', paymentMethod: 'credit_card', reference: '', description: '' });
@@ -827,12 +827,11 @@ const CompanyDetail: React.FC = () => {
       await api.post('/deals', {
         ...dealFormData,
         amount: parseFloat(dealFormData.amount) || 0,
-        probability: dealFormData.probability ? parseInt(dealFormData.probability) : undefined,
         companyId: company?.id,
       });
       setSuccessMessage('Negocio agregado exitosamente');
       setAddDealOpen(false);
-      setDealFormData({ name: '', amount: '', stage: 'qualification', closeDate: '', probability: '' });
+      setDealFormData({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'medium' });
       fetchAssociatedRecords();
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
@@ -1912,46 +1911,47 @@ const CompanyDetail: React.FC = () => {
                 </Typography>
                 <KeyboardArrowDown sx={{ fontSize: { xs: 12, md: 14 }, color: '#9E9E9E' }} />
               </Box>
-              <Menu
-                anchorEl={lifecycleStageMenuAnchor}
-                open={Boolean(lifecycleStageMenuAnchor)}
-                onClose={() => setLifecycleStageMenuAnchor(null)}
-                PaperProps={{
-                  sx: {
-                    minWidth: 200,
-                    mt: 0.5,
-                  },
-                }}
-              >
-                {['subscriber', 'lead', 'marketing qualified lead', 'sales qualified lead', 'opportunity', 'customer', 'evangelist'].map((stage) => (
-                  <MenuItem
-                    key={stage}
-                    onClick={async () => {
-                      try {
-                        await api.put(`/companies/${company.id}`, { lifecycleStage: stage });
-                        setCompany({ ...company, lifecycleStage: stage });
-                        setLifecycleStageMenuAnchor(null);
-                        fetchCompany(); // Refrescar para obtener datos actualizados
-                      } catch (error) {
-                        console.error('Error updating lifecycle stage:', error);
-                      }
-                    }}
-                    sx={{
-                      fontSize: '0.875rem',
-                      backgroundColor: company.lifecycleStage === stage ? '#e3f2fd' : 'transparent',
-                    }}
-                  >
-                    {stage === 'subscriber' ? 'Suscriptor' :
-                     stage === 'lead' ? 'Lead' : 
-                     stage === 'marketing qualified lead' ? 'Marketing Qualified Lead' :
-                     stage === 'sales qualified lead' ? 'Sales Qualified Lead' :
-                     stage === 'opportunity' ? 'Oportunidad' :
-                     stage === 'customer' ? 'Cliente' :
-                     stage === 'evangelist' ? 'Evangelista' : stage}
-                  </MenuItem>
-                ))}
-              </Menu>
             </Box>
+            <Menu
+              anchorEl={lifecycleStageMenuAnchor}
+              open={Boolean(lifecycleStageMenuAnchor)}
+              onClose={() => setLifecycleStageMenuAnchor(null)}
+              PaperProps={{
+                sx: {
+                  minWidth: 200,
+                  mt: 0.5,
+                },
+              }}
+            >
+              {['lead', 'contacto', 'reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion', 'cierre_ganado', 'cierre_perdido'].map((stage) => (
+                <MenuItem
+                  key={stage}
+                  onClick={async () => {
+                    try {
+                      await api.put(`/companies/${company.id}`, { lifecycleStage: stage });
+                      setCompany({ ...company, lifecycleStage: stage });
+                      setLifecycleStageMenuAnchor(null);
+                      fetchCompany(); // Refrescar para obtener datos actualizados
+                    } catch (error) {
+                      console.error('Error updating lifecycle stage:', error);
+                    }
+                  }}
+                  sx={{
+                    fontSize: '0.875rem',
+                    backgroundColor: company.lifecycleStage === stage ? '#e3f2fd' : 'transparent',
+                  }}
+                >
+                  {stage === 'lead' ? 'Lead' : 
+                   stage === 'contacto' ? 'Contacto' :
+                   stage === 'reunion_agendada' ? 'Reunión Agendada' :
+                   stage === 'reunion_efectiva' ? 'Reunión Efectiva' :
+                   stage === 'propuesta_economica' ? 'Propuesta Económica' :
+                   stage === 'negociacion' ? 'Negociación' :
+                   stage === 'cierre_ganado' ? 'Cierre Ganado' :
+                   stage === 'cierre_perdido' ? 'Cierre Perdido' : stage}
+                </MenuItem>
+              ))}
+            </Menu>
 
             {/* Rol de compra */}
             <Box sx={{ mb: { xs: 1.5, md: 2 }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.5, sm: 0 } }}>
@@ -4134,7 +4134,7 @@ const CompanyDetail: React.FC = () => {
                       <Link 
                         sx={{ fontSize: '0.875rem', cursor: 'pointer' }}
                         onClick={() => {
-                          setDealFormData({ name: '', amount: '', stage: 'qualification', closeDate: '', probability: '' });
+                          setDealFormData({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'medium' });
                           setAddDealOpen(true);
                         }}
                       >
@@ -6935,13 +6935,14 @@ const CompanyDetail: React.FC = () => {
                 onChange={(e) => setContactFormData({ ...contactFormData, lifecycleStage: e.target.value })}
                 fullWidth
               >
-                <MenuItem value="subscriber">Suscriptor</MenuItem>
                 <MenuItem value="lead">Lead</MenuItem>
-                <MenuItem value="marketing qualified lead">MQL</MenuItem>
-                <MenuItem value="sales qualified lead">SQL</MenuItem>
-                <MenuItem value="opportunity">Oportunidad</MenuItem>
-                <MenuItem value="customer">Cliente</MenuItem>
-                <MenuItem value="evangelist">Evangelista</MenuItem>
+                <MenuItem value="contacto">Contacto</MenuItem>
+                <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+                <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+                <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
+                <MenuItem value="negociacion">Negociación</MenuItem>
+                <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+                <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
               </TextField>
             </Box>
           )}
@@ -7099,13 +7100,20 @@ const CompanyDetail: React.FC = () => {
               value={dealFormData.stage}
               onChange={(e) => setDealFormData({ ...dealFormData, stage: e.target.value })}
               fullWidth
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
             >
-              <MenuItem value="qualification">Calificación</MenuItem>
-              <MenuItem value="needs analysis">Análisis de necesidades</MenuItem>
-              <MenuItem value="proposal">Propuesta</MenuItem>
-              <MenuItem value="negotiation">Negociación</MenuItem>
-              <MenuItem value="closed won">Cerrado ganado</MenuItem>
-              <MenuItem value="closed lost">Cerrado perdido</MenuItem>
+              <MenuItem value="lead">Lead</MenuItem>
+              <MenuItem value="contacto">Contacto</MenuItem>
+              <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+              <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+              <MenuItem value="propuesta_economica">Propuesta económica</MenuItem>
+              <MenuItem value="negociacion">Negociación</MenuItem>
+              <MenuItem value="cierre_ganado">Cierre ganado</MenuItem>
+              <MenuItem value="cierre_perdido">Cierre perdido</MenuItem>
             </TextField>
             <TextField
               label="Fecha de cierre"
@@ -7116,13 +7124,22 @@ const CompanyDetail: React.FC = () => {
               InputLabelProps={{ shrink: true }}
             />
             <TextField
-              label="Probabilidad (%)"
-              type="number"
-              value={dealFormData.probability}
-              onChange={(e) => setDealFormData({ ...dealFormData, probability: e.target.value })}
+              select
+              label="Prioridad"
+              value={dealFormData.priority}
+              onChange={(e) => setDealFormData({ ...dealFormData, priority: e.target.value })}
               fullWidth
-              inputProps={{ min: 0, max: 100 }}
-            />
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            >
+              <MenuItem value="low">Baja</MenuItem>
+              <MenuItem value="medium">Media</MenuItem>
+              <MenuItem value="high">Alta</MenuItem>
+              <MenuItem value="urgent">Urgente</MenuItem>
+            </TextField>
           </Box>
         </DialogContent>
         <DialogActions>

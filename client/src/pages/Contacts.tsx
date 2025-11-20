@@ -59,18 +59,18 @@ import {
   KeyboardArrowDown,
   Settings,
   LocationOn,
+  Flag,
+  TrendingUp,
   BarChart,
   FilterList,
   AttachFile,
   Visibility,
   People,
-  TrendingUp,
   TrendingDown,
   Computer,
   ArrowBack,
   ArrowForward,
   CheckCircle,
-  Flag,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../config/api';
@@ -153,6 +153,11 @@ const Contacts: React.FC = () => {
   const [dniError, setDniError] = useState('');
   const [loadingCee, setLoadingCee] = useState(false);
   const [ceeError, setCeeError] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [contactToDelete, setContactToDelete] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState<{ [key: number]: HTMLElement | null }>({});
+  const [updatingStatus, setUpdatingStatus] = useState<{ [key: number]: boolean }>({});
 
   useEffect(() => {
     fetchContacts();
@@ -350,14 +355,63 @@ const Contacts: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
-    if (window.confirm('¿Estás seguro de eliminar este contacto?')) {
-      try {
-        await api.delete(`/contacts/${id}`);
-        fetchContacts();
-      } catch (error) {
-        console.error('Error deleting contact:', error);
-      }
+  const handleDelete = (id: number) => {
+    setContactToDelete(id);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!contactToDelete) return;
+    
+    setDeleting(true);
+    try {
+      await api.delete(`/contacts/${contactToDelete}`);
+      fetchContacts();
+      setDeleteDialogOpen(false);
+      setContactToDelete(null);
+    } catch (error) {
+      console.error('Error deleting contact:', error);
+      alert('Error al eliminar el contacto. Por favor, intenta nuevamente.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setContactToDelete(null);
+  };
+
+  const handleStatusMenuOpen = (event: React.MouseEvent<HTMLElement>, contactId: number) => {
+    event.stopPropagation();
+    event.preventDefault();
+    setStatusMenuAnchor({ ...statusMenuAnchor, [contactId]: event.currentTarget });
+  };
+
+  const handleStatusMenuClose = (contactId: number) => {
+    setStatusMenuAnchor({ ...statusMenuAnchor, [contactId]: null });
+  };
+
+  const handleStatusChange = async (event: React.MouseEvent<HTMLElement>, contactId: number, isActive: boolean) => {
+    event.stopPropagation();
+    event.preventDefault();
+    setUpdatingStatus({ ...updatingStatus, [contactId]: true });
+    try {
+      // Si queremos activar, establecer a 'cierre_ganado', si queremos desactivar, establecer a 'lead'
+      const newStage = isActive ? 'cierre_ganado' : 'lead';
+      await api.put(`/contacts/${contactId}`, { lifecycleStage: newStage });
+      // Actualizar el contacto en la lista
+      setContacts(contacts.map(contact => 
+        contact.id === contactId 
+          ? { ...contact, lifecycleStage: newStage }
+          : contact
+      ));
+      handleStatusMenuClose(contactId);
+    } catch (error) {
+      console.error('Error updating contact status:', error);
+      alert('Error al actualizar el estado. Por favor, intenta nuevamente.');
+    } finally {
+      setUpdatingStatus({ ...updatingStatus, [contactId]: false });
     }
   };
 
@@ -384,36 +438,28 @@ const Contacts: React.FC = () => {
 
   const getStageColor = (stage: string) => {
     const colors: { [key: string]: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' } = {
-      'subscriber': 'default',
       'lead': 'info',
       'contacto': 'info',
-      'marketing qualified lead': 'primary',
-      'sales qualified lead': 'primary',
+      'reunion_agendada': 'primary',
       'reunion_efectiva': 'primary',
       'propuesta_economica': 'warning',
       'negociacion': 'warning',
-      'opportunity': 'warning',
       'cierre_ganado': 'success',
-      'customer': 'success',
-      'evangelist': 'success',
+      'cierre_perdido': 'error',
     };
     return colors[stage] || 'default';
   };
 
   const getStageLabel = (stage: string) => {
     const labels: { [key: string]: string } = {
-      'subscriber': 'Suscriptor',
       'lead': 'Lead',
       'contacto': 'Contacto',
-      'marketing qualified lead': 'MQL',
-      'sales qualified lead': 'SQL',
+      'reunion_agendada': 'Reunión Agendada',
       'reunion_efectiva': 'Reunión Efectiva',
       'propuesta_economica': 'Propuesta Económica',
       'negociacion': 'Negociación',
-      'opportunity': 'Oportunidad',
       'cierre_ganado': 'Cierre Ganado',
-      'customer': 'Cliente',
-      'evangelist': 'Evangelista',
+      'cierre_perdido': 'Cierre Perdido',
     };
     return labels[stage] || stage;
   };
@@ -518,7 +564,7 @@ const Contacts: React.FC = () => {
     .filter((contact) => {
       // Filtro por tab (0 = Todos, 1 = Activos)
       if (activeTab === 1) {
-        const activeStages = ['customer', 'evangelist', 'cierre_ganado'];
+        const activeStages = ['cierre_ganado'];
         if (!activeStages.includes(contact.lifecycleStage)) {
           return false;
         }
@@ -551,7 +597,7 @@ const Contacts: React.FC = () => {
 
   // Calcular estadísticas
   const totalContacts = contacts.length;
-  const activeContacts = contacts.filter(c => ['customer', 'evangelist', 'cierre_ganado'].includes(c.lifecycleStage)).length;
+  const activeContacts = contacts.filter(c => c.lifecycleStage === 'cierre_ganado').length;
   const totalCompanies = new Set(contacts.filter(c => c.Company).map(c => c.Company?.id)).size;
   
   // Calcular contactos nuevos este mes
@@ -893,7 +939,7 @@ const Contacts: React.FC = () => {
                 <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}>
                   Estado
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, width: { xs: 60, md: 80 }, minWidth: { xs: 60, md: 80 } }}>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
                   Acciones
                 </TableCell>
               </TableRow>
@@ -996,45 +1042,131 @@ const Contacts: React.FC = () => {
                       {contact.country || '--'}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}>
+                  <TableCell 
+                    sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Chip
-                      label={['customer', 'evangelist', 'cierre_ganado'].includes(contact.lifecycleStage) ? 'Activo' : 'Inactivo'}
+                      label={contact.lifecycleStage === 'cierre_ganado' ? 'Activo' : 'Inactivo'}
                       size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        handleStatusMenuOpen(e, contact.id);
+                      }}
+                      disabled={updatingStatus[contact.id]}
                       sx={{ 
                         fontWeight: 500,
                         fontSize: { xs: '0.7rem', md: '0.75rem' },
                         height: { xs: 20, md: 24 },
-                        bgcolor: ['customer', 'evangelist', 'cierre_ganado'].includes(contact.lifecycleStage) 
+                        bgcolor: contact.lifecycleStage === 'cierre_ganado'
                           ? '#E8F5E9' 
                           : '#FFEBEE',
-                        color: ['customer', 'evangelist', 'cierre_ganado'].includes(contact.lifecycleStage)
+                        color: contact.lifecycleStage === 'cierre_ganado'
                           ? '#2E7D32'
                           : '#C62828',
                         border: 'none',
                         borderRadius: 1,
+                        cursor: 'pointer',
+                        '&:hover': {
+                          opacity: 0.8,
+                        },
                       }}
                     />
-                  </TableCell>
-                  <TableCell sx={{ px: 1, width: { xs: 60, md: 80 }, minWidth: { xs: 60, md: 80 } }}>
-                    <Tooltip title="Vista previa">
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePreview(contact);
-                        }}
+                    <Menu
+                      anchorEl={statusMenuAnchor[contact.id]}
+                      open={Boolean(statusMenuAnchor[contact.id])}
+                      onClose={(e, reason) => {
+                        if (e && 'stopPropagation' in e) {
+                          (e as React.MouseEvent).stopPropagation();
+                        }
+                        handleStatusMenuClose(contact.id);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      PaperProps={{
+                        sx: {
+                          minWidth: 150,
+                          mt: 0.5,
+                          borderRadius: 1.5,
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        }
+                      }}
+                    >
+                      <MenuItem
+                        onClick={(e) => handleStatusChange(e, contact.id, true)}
+                        disabled={updatingStatus[contact.id] || contact.lifecycleStage === 'cierre_ganado'}
                         sx={{
-                          color: '#757575',
-                          padding: { xs: 0.5, md: 1 },
+                          fontSize: '0.875rem',
+                          color: '#2E7D32',
                           '&:hover': {
-                            color: taxiMonterricoColors.green,
-                            bgcolor: `${taxiMonterricoColors.green}15`,
+                            bgcolor: '#E8F5E9',
                           },
+                          '&.Mui-disabled': {
+                            opacity: 0.5,
+                          }
                         }}
                       >
-                        <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
-                      </IconButton>
-                    </Tooltip>
+                        Activo
+                      </MenuItem>
+                      <MenuItem
+                        onClick={(e) => handleStatusChange(e, contact.id, false)}
+                        disabled={updatingStatus[contact.id] || contact.lifecycleStage !== 'cierre_ganado'}
+                        sx={{
+                          fontSize: '0.875rem',
+                          color: '#C62828',
+                          '&:hover': {
+                            bgcolor: '#FFEBEE',
+                          },
+                          '&.Mui-disabled': {
+                            opacity: 0.5,
+                          }
+                        }}
+                      >
+                        Inactivo
+                      </MenuItem>
+                    </Menu>
+                  </TableCell>
+                  <TableCell sx={{ px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
+                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                      <Tooltip title="Vista previa">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePreview(contact);
+                          }}
+                          sx={{
+                            color: '#757575',
+                            padding: { xs: 0.5, md: 1 },
+                            '&:hover': {
+                              color: taxiMonterricoColors.green,
+                              bgcolor: `${taxiMonterricoColors.green}15`,
+                            },
+                          }}
+                        >
+                          <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Eliminar">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(contact.id);
+                          }}
+                          sx={{
+                            color: '#757575',
+                            padding: { xs: 0.5, md: 1 },
+                            '&:hover': {
+                              color: '#d32f2f',
+                              bgcolor: '#ffebee',
+                            },
+                          }}
+                        >
+                          <Delete sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}
@@ -1365,16 +1497,12 @@ const Contacts: React.FC = () => {
             >
               <MenuItem value="lead">Lead</MenuItem>
               <MenuItem value="contacto">Contacto</MenuItem>
-              <MenuItem value="marketing qualified lead">MQL</MenuItem>
-              <MenuItem value="sales qualified lead">SQL</MenuItem>
+              <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
               <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
               <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
               <MenuItem value="negociacion">Negociación</MenuItem>
-              <MenuItem value="opportunity">Oportunidad</MenuItem>
               <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
-              <MenuItem value="customer">Cliente</MenuItem>
-              <MenuItem value="evangelist">Evangelista</MenuItem>
-              <MenuItem value="subscriber">Suscriptor</MenuItem>
+              <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
             </TextField>
           </Box>
         </DialogContent>
@@ -1423,7 +1551,7 @@ const Contacts: React.FC = () => {
           onClose={handleClosePreview}
           sx={{
             '& .MuiDrawer-paper': {
-              width: { xs: '100%', sm: 600 },
+              width: { xs: '100%', sm: 520 },
               maxWidth: '90vw',
               maxHeight: '90vh',
               margin: '0 auto',
@@ -1438,10 +1566,10 @@ const Contacts: React.FC = () => {
             </Box>
           ) : previewContact ? (
             <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              {/* Header con fondo teal */}
+              {/* Header con fondo verde */}
               <Box
                 sx={{
-                  bgcolor: 'primary.main',
+                  bgcolor: taxiMonterricoColors.green,
                   color: 'white',
                   p: 2,
                   display: 'flex',
@@ -1449,7 +1577,7 @@ const Contacts: React.FC = () => {
                   alignItems: 'center',
                 }}
               >
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, textTransform: 'uppercase' }}>
                   {previewContact.firstName} {previewContact.lastName}
                 </Typography>
                 <IconButton onClick={handleClosePreview} size="small" sx={{ color: 'white' }}>
@@ -1459,189 +1587,274 @@ const Contacts: React.FC = () => {
 
               {/* Contenido principal */}
               <Box sx={{ flex: 1, overflow: 'auto', bgcolor: 'background.paper' }}>
-                {/* Información principal del contacto */}
-                <Box sx={{ p: 3, bgcolor: 'background.paper' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 2 }}>
-                    <Avatar
+                <Paper sx={{ 
+                  p: 3,
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                  },
+                }}>
+                  {/* Avatar y Nombre */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
+                    <Box sx={{ position: 'relative', mb: 2 }}>
+                      <Avatar
+                        sx={{
+                          width: 120,
+                          height: 120,
+                          bgcolor: previewContact.avatar ? 'transparent' : taxiMonterricoColors.green,
+                          fontSize: '3rem',
+                          transition: 'all 0.3s ease',
+                          cursor: 'pointer',
+                          '&:hover': {
+                            transform: 'scale(1.05)',
+                            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                          },
+                        }}
+                        src={previewContact.avatar}
+                      >
+                        {!previewContact.avatar && getInitials(previewContact.firstName, previewContact.lastName)}
+                      </Avatar>
+                      <CheckCircle 
+                        sx={{ 
+                          position: 'absolute',
+                          bottom: 0,
+                          right: 0,
+                          fontSize: 28,
+                          color: '#10B981',
+                          bgcolor: 'white',
+                          borderRadius: '50%',
+                          border: '2px solid white',
+                        }} 
+                      />
+                    </Box>
+                    <Typography 
+                      variant="h6" 
+                      align="center"
                       sx={{
-                        width: 56,
-                        height: 56,
-                        bgcolor: 'primary.main',
-                        fontSize: '1.5rem',
+                        fontWeight: 700,
+                        fontSize: '1.1rem',
+                        color: '#1F2937',
+                        mb: 0.25,
                       }}
                     >
-                      {getInitials(previewContact.firstName, previewContact.lastName)}
-                    </Avatar>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-                        {previewContact.firstName} {previewContact.lastName}
+                      {previewContact.firstName} {previewContact.lastName}
+                    </Typography>
+                    {previewContact.jobTitle && (
+                      <Typography 
+                        variant="body2"
+                        align="center"
+                        sx={{
+                          fontSize: '0.875rem',
+                          color: '#757575',
+                          fontWeight: 400,
+                        }}
+                      >
+                        {previewContact.jobTitle}
+                        {(previewContact.Companies && previewContact.Companies.length > 0) || previewContact.Company
+                          ? ` en ${(previewContact.Companies && previewContact.Companies.length > 0) ? previewContact.Companies[0].name : previewContact.Company?.name}`
+                          : ''}
                       </Typography>
-                      {previewContact.jobTitle && (
-                        <Typography variant="body2" color="text.secondary">
-                          {previewContact.jobTitle}
-                          {(previewContact.Companies && previewContact.Companies.length > 0) || previewContact.Company
-                            ? ` en ${(previewContact.Companies && previewContact.Companies.length > 0) ? previewContact.Companies[0].name : previewContact.Company?.name}`
-                            : ''}
-                        </Typography>
-                      )}
-                    </Box>
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Button
-                        size="small"
-                        variant="outlined"
+                    )}
+                    {previewContact.email && (
+                      <Typography 
+                        variant="body2"
+                        align="center"
+                        sx={{
+                          fontSize: '0.875rem',
+                          color: '#757575',
+                          fontWeight: 400,
+                          mt: 0.5,
+                        }}
+                      >
+                        {previewContact.email}
+                      </Typography>
+                    )}
+                  </Box>
+
+                  {/* Acciones Rápidas */}
+                  <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1.5, mb: 3, justifyContent: 'center', flexWrap: 'wrap' }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
+                      <IconButton
                         onClick={() => {
                           navigate(`/contacts/${previewContact.id}`);
                           handleClosePreview();
                         }}
-                        sx={{ textTransform: 'none' }}
+                        sx={{
+                          width: 52,
+                          height: 52,
+                          borderRadius: '50%',
+                          bgcolor: '#E8F5E9',
+                          color: taxiMonterricoColors.green,
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            bgcolor: '#C8E6C9',
+                            transform: 'scale(1.05)',
+                          },
+                        }}
                       >
-                        Ver registro
-                      </Button>
-                      <IconButton size="small">
-                        <MoreVert />
+                        <Note sx={{ fontSize: 22 }} />
                       </IconButton>
-                    </Box>
-                  </Box>
-
-                  {/* Email con botón copiar */}
-                  {previewContact.email && (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
-                      <Email sx={{ color: 'text.secondary', fontSize: 20 }} />
-                      <Typography variant="body2" sx={{ flex: 1 }}>
-                        {previewContact.email}
+                      <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#1F2937', fontWeight: 500 }}>
+                        Nota
                       </Typography>
-                      <Tooltip title="Copiar">
-                        <IconButton
-                          size="small"
-                          onClick={() => {
-                            navigator.clipboard.writeText(previewContact.email || '');
-                          }}
-                        >
-                          <ContentCopy sx={{ fontSize: 18 }} />
-                        </IconButton>
-                      </Tooltip>
                     </Box>
-                  )}
-
-                  {/* Botones de acción rápida */}
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 3 }}>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Note />}
-                      onClick={() => {
-                        navigate(`/contacts/${previewContact.id}`);
-                        handleClosePreview();
-                      }}
-                      sx={{
-                        justifyContent: 'flex-start',
-                        textTransform: 'none',
-                        borderColor: 'primary.main',
-                        color: 'primary.main',
-                        '&:hover': {
-                          borderColor: 'primary.dark',
-                          bgcolor: 'rgba(46, 125, 50, 0.04)',
-                        },
-                        '& .MuiButton-startIcon': {
-                          color: 'primary.main',
-                        },
-                      }}
-                    >
-                      NOTA
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Email />}
-                      onClick={() => {
-                        navigate(`/contacts/${previewContact.id}`);
-                        handleClosePreview();
-                      }}
-                      sx={{
-                        justifyContent: 'flex-start',
-                        textTransform: 'none',
-                        borderColor: 'primary.main',
-                        color: 'primary.main',
-                        '&:hover': {
-                          borderColor: 'primary.dark',
-                          bgcolor: 'rgba(46, 125, 50, 0.04)',
-                        },
-                        '& .MuiButton-startIcon': {
-                          color: 'primary.main',
-                        },
-                      }}
-                    >
-                      CORREO
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Phone />}
-                      onClick={() => {
-                        navigate(`/contacts/${previewContact.id}`);
-                        handleClosePreview();
-                      }}
-                      sx={{
-                        justifyContent: 'flex-start',
-                        textTransform: 'none',
-                        borderColor: 'primary.main',
-                        color: 'primary.main',
-                        '&:hover': {
-                          borderColor: 'primary.dark',
-                          bgcolor: 'rgba(46, 125, 50, 0.04)',
-                        },
-                        '& .MuiButton-startIcon': {
-                          color: 'primary.main',
-                        },
-                      }}
-                    >
-                      LLAMADA
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Assignment />}
-                      onClick={() => {
-                        navigate(`/contacts/${previewContact.id}`);
-                        handleClosePreview();
-                      }}
-                      sx={{
-                        justifyContent: 'flex-start',
-                        textTransform: 'none',
-                        borderColor: 'primary.main',
-                        color: 'primary.main',
-                        '&:hover': {
-                          borderColor: 'primary.dark',
-                          bgcolor: 'rgba(46, 125, 50, 0.04)',
-                        },
-                        '& .MuiButton-startIcon': {
-                          color: 'primary.main',
-                        },
-                      }}
-                    >
-                      TAREA
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      startIcon={<Event />}
-                      onClick={() => {
-                        navigate(`/contacts/${previewContact.id}`);
-                        handleClosePreview();
-                      }}
-                      sx={{
-                        justifyContent: 'flex-start',
-                        textTransform: 'none',
-                        borderColor: 'primary.main',
-                        color: 'primary.main',
-                        '&:hover': {
-                          borderColor: 'primary.dark',
-                          bgcolor: 'rgba(46, 125, 50, 0.04)',
-                        },
-                        '& .MuiButton-startIcon': {
-                          color: 'primary.main',
-                        },
-                      }}
-                    >
-                      REUNIÓN
-                    </Button>
+                    
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
+                      <IconButton
+                        onClick={() => {
+                          navigate(`/contacts/${previewContact.id}`);
+                          handleClosePreview();
+                        }}
+                        sx={{
+                          width: 52,
+                          height: 52,
+                          borderRadius: '50%',
+                          bgcolor: '#E8F5E9',
+                          color: taxiMonterricoColors.green,
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            bgcolor: '#C8E6C9',
+                            transform: 'scale(1.05)',
+                          },
+                        }}
+                      >
+                        <Email sx={{ fontSize: 22 }} />
+                      </IconButton>
+                      <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#1F2937', fontWeight: 500 }}>
+                        Correo
+                      </Typography>
+                    </Box>
+                    
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
+                      <IconButton
+                        onClick={() => {
+                          navigate(`/contacts/${previewContact.id}`);
+                          handleClosePreview();
+                        }}
+                        sx={{
+                          width: 52,
+                          height: 52,
+                          borderRadius: '50%',
+                          bgcolor: '#E8F5E9',
+                          color: taxiMonterricoColors.green,
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            bgcolor: '#C8E6C9',
+                            transform: 'scale(1.05)',
+                          },
+                        }}
+                      >
+                        <Phone sx={{ fontSize: 22 }} />
+                      </IconButton>
+                      <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#1F2937', fontWeight: 500 }}>
+                        Llamada
+                      </Typography>
+                    </Box>
+                    
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
+                      <IconButton
+                        onClick={() => {
+                          navigate(`/contacts/${previewContact.id}`);
+                          handleClosePreview();
+                        }}
+                        sx={{
+                          width: 52,
+                          height: 52,
+                          borderRadius: '50%',
+                          bgcolor: '#E8F5E9',
+                          color: taxiMonterricoColors.green,
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            bgcolor: '#C8E6C9',
+                            transform: 'scale(1.05)',
+                          },
+                        }}
+                      >
+                        <Assignment sx={{ fontSize: 22 }} />
+                      </IconButton>
+                      <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#1F2937', fontWeight: 500 }}>
+                        Tarea
+                      </Typography>
+                    </Box>
+                    
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.75 }}>
+                      <IconButton
+                        onClick={() => {
+                          navigate(`/contacts/${previewContact.id}`);
+                          handleClosePreview();
+                        }}
+                        sx={{
+                          width: 52,
+                          height: 52,
+                          borderRadius: '50%',
+                          bgcolor: '#E8F5E9',
+                          color: taxiMonterricoColors.green,
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            bgcolor: '#C8E6C9',
+                            transform: 'scale(1.05)',
+                          },
+                        }}
+                      >
+                        <Event sx={{ fontSize: 22 }} />
+                      </IconButton>
+                      <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#1F2937', fontWeight: 500 }}>
+                        Reunión
+                      </Typography>
+                    </Box>
                   </Box>
-                </Box>
+
+                  <Divider sx={{ my: 2 }} />
+
+                  {/* Estadísticas */}
+                  <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
+                    <Box sx={{ 
+                      flex: 1, 
+                      border: '1px dashed #E0E0E0', 
+                      borderRadius: 2, 
+                      p: 2, 
+                      textAlign: 'center',
+                      bgcolor: 'white',
+                    }}>
+                      <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#37474F', mb: 0.5 }}>
+                        28.65K
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.75rem', color: '#9E9E9E', fontWeight: 400 }}>
+                        Followers
+                      </Typography>
+                    </Box>
+                    <Box sx={{ 
+                      flex: 1, 
+                      border: '1px dashed #E0E0E0', 
+                      borderRadius: 2, 
+                      p: 2, 
+                      textAlign: 'center',
+                      bgcolor: 'white',
+                    }}>
+                      <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#37474F', mb: 0.5 }}>
+                        38.85K
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.75rem', color: '#9E9E9E', fontWeight: 400 }}>
+                        Following
+                      </Typography>
+                    </Box>
+                    <Box sx={{ 
+                      flex: 1, 
+                      border: '1px dashed #E0E0E0', 
+                      borderRadius: 2, 
+                      p: 2, 
+                      textAlign: 'center',
+                      bgcolor: 'white',
+                    }}>
+                      <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#37474F', mb: 0.5 }}>
+                        43.67K
+                      </Typography>
+                      <Typography sx={{ fontSize: '0.75rem', color: '#9E9E9E', fontWeight: 400 }}>
+                        Engagement
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Paper>
 
                 {/* Sección "Acerca de este objeto Contacto" */}
                 <Box sx={{ borderTop: 1, borderColor: 'divider' }}>
@@ -1679,71 +1892,204 @@ const Contacts: React.FC = () => {
 
                   <Collapse in={aboutExpanded}>
                     <Box sx={{ px: 2, pb: 2 }}>
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                          Correo
-                        </Typography>
-                        <Typography variant="body2">
+                      {/* Correo */}
+                      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                          <Email sx={{ fontSize: 20, color: '#9E9E9E' }} />
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontSize: '0.875rem',
+                              fontWeight: 400,
+                              color: '#757575',
+                            }}
+                          >
+                            Correo
+                          </Typography>
+                        </Box>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            fontSize: '0.875rem',
+                            fontWeight: 400,
+                            color: previewContact.email ? '#424242' : '#9CA3AF',
+                            textAlign: 'right',
+                          }}
+                        >
                           {previewContact.email || '--'}
                         </Typography>
                       </Box>
 
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                          Número de teléfono
-                        </Typography>
-                        <Typography variant="body2">
+                      {/* Número de teléfono */}
+                      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                          <Phone sx={{ fontSize: 20, color: '#9E9E9E' }} />
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontSize: '0.875rem',
+                              fontWeight: 400,
+                              color: '#757575',
+                            }}
+                          >
+                            Número de teléfono
+                          </Typography>
+                        </Box>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            fontSize: '0.875rem',
+                            fontWeight: 400,
+                            color: (previewContact.phone || previewContact.mobile) ? '#424242' : '#9CA3AF',
+                            textAlign: 'right',
+                          }}
+                        >
                           {previewContact.phone || previewContact.mobile || '--'}
                         </Typography>
                       </Box>
 
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                          Nombre de la empresa
-                        </Typography>
-                        <Typography variant="body2">
+                      {/* Nombre de la empresa */}
+                      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                          <Business sx={{ fontSize: 20, color: '#9E9E9E' }} />
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontSize: '0.875rem',
+                              fontWeight: 400,
+                              color: '#757575',
+                            }}
+                          >
+                            Nombre de la empresa
+                          </Typography>
+                        </Box>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            fontSize: '0.875rem',
+                            fontWeight: 400,
+                            color: ((previewContact.Companies && previewContact.Companies.length > 0) || previewContact.Company) ? '#424242' : '#9CA3AF',
+                            textAlign: 'right',
+                          }}
+                        >
                           {(previewContact.Companies && previewContact.Companies.length > 0)
                             ? previewContact.Companies[0].name
                             : previewContact.Company?.name || '--'}
                         </Typography>
                       </Box>
 
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                          Estado del lead
-                        </Typography>
-                        <Typography variant="body2">
+                      {/* Estado del lead */}
+                      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                          <Flag sx={{ fontSize: 20, color: '#9E9E9E' }} />
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontSize: '0.875rem',
+                              fontWeight: 400,
+                              color: '#757575',
+                            }}
+                          >
+                            Estado del lead
+                          </Typography>
+                        </Box>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            fontSize: '0.875rem',
+                            fontWeight: 400,
+                            color: previewContact.leadStatus ? '#424242' : '#9CA3AF',
+                            textAlign: 'right',
+                          }}
+                        >
                           {previewContact.leadStatus || '--'}
                         </Typography>
                       </Box>
 
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                          Etapa del ciclo de vida
+                      {/* Etapa del ciclo de vida */}
+                      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                          <TrendingUp sx={{ fontSize: 20, color: '#9E9E9E' }} />
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontSize: '0.875rem',
+                              fontWeight: 400,
+                              color: '#757575',
+                            }}
+                          >
+                            Etapa del ciclo de vida
+                          </Typography>
+                        </Box>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            fontSize: '0.875rem',
+                            fontWeight: 400,
+                            color: previewContact.lifecycleStage ? '#424242' : '#9CA3AF',
+                            textAlign: 'right',
+                          }}
+                        >
+                          {previewContact.lifecycleStage ? getStageLabel(previewContact.lifecycleStage) : '--'}
                         </Typography>
-                        <Chip
-                          label={previewContact.lifecycleStage}
-                          color={getStageColor(previewContact.lifecycleStage)}
-                          size="small"
-                        />
                       </Box>
 
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                          Propietario del contacto
-                        </Typography>
-                        <Typography variant="body2">
-                          {previewContact.Owner
-                            ? `${previewContact.Owner.firstName} ${previewContact.Owner.lastName}`
-                            : 'Sin propietario'}
-                        </Typography>
-                      </Box>
+                      {/* Propietario del contacto */}
+                      {previewContact.Owner && (
+                        <Box sx={{ mb: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                            <Person sx={{ fontSize: 20, color: '#9E9E9E' }} />
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                fontSize: '0.875rem',
+                                fontWeight: 400,
+                                color: '#757575',
+                              }}
+                            >
+                              Propietario del contacto
+                            </Typography>
+                          </Box>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontSize: '0.875rem',
+                              fontWeight: 400,
+                              color: '#424242',
+                              textAlign: 'right',
+                            }}
+                          >
+                            {previewContact.Owner.firstName} {previewContact.Owner.lastName}
+                          </Typography>
+                        </Box>
+                      )}
 
-                      <Box sx={{ mb: 2 }}>
-                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-                          Rol de compra
+                      {/* Rol de compra */}
+                      <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                          <Person sx={{ fontSize: 20, color: '#9E9E9E' }} />
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontSize: '0.875rem',
+                              fontWeight: 400,
+                              color: '#757575',
+                            }}
+                          >
+                            Rol de compra
+                          </Typography>
+                        </Box>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            fontSize: '0.875rem',
+                            fontWeight: 400,
+                            color: '#9CA3AF',
+                            textAlign: 'right',
+                          }}
+                        >
+                          --
                         </Typography>
-                        <Typography variant="body2">--</Typography>
                       </Box>
                     </Box>
                   </Collapse>
@@ -1752,6 +2098,85 @@ const Contacts: React.FC = () => {
             </Box>
           ) : null}
         </Drawer>
+
+        {/* Modal de Confirmación de Eliminación */}
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={handleCancelDelete}
+          maxWidth="sm"
+          fullWidth
+          PaperProps={{
+            sx: {
+              borderRadius: 2,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+            }
+          }}
+        >
+          <DialogTitle sx={{ 
+            pb: 1.5,
+            borderBottom: '1px solid #e0e0e0',
+            fontWeight: 600,
+            fontSize: '1.25rem',
+            color: '#1a1a1a',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1.5,
+          }}>
+            <Delete sx={{ color: '#d32f2f', fontSize: 28 }} />
+            Confirmar Eliminación
+          </DialogTitle>
+          <DialogContent sx={{ pt: 3 }}>
+            <Typography variant="body1" sx={{ color: '#1a1a1a', mb: 1 }}>
+              ¿Estás seguro de que deseas eliminar este contacto?
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#757575' }}>
+              Esta acción no se puede deshacer. El contacto será eliminado permanentemente del sistema.
+            </Typography>
+          </DialogContent>
+          <DialogActions sx={{ 
+            px: 3, 
+            py: 2,
+            borderTop: '1px solid #e0e0e0',
+            gap: 1,
+          }}>
+            <Button 
+              onClick={handleCancelDelete}
+              disabled={deleting}
+              sx={{
+                textTransform: 'none',
+                color: '#757575',
+                fontWeight: 500,
+                '&:hover': {
+                  bgcolor: '#f5f5f5',
+                }
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+              variant="contained"
+              sx={{
+                textTransform: 'none',
+                fontWeight: 500,
+                borderRadius: 1.5,
+                px: 2.5,
+                bgcolor: '#d32f2f',
+                '&:hover': {
+                  bgcolor: '#b71c1c',
+                },
+                '&.Mui-disabled': {
+                  bgcolor: '#ffcdd2',
+                  color: '#ffffff',
+                }
+              }}
+              startIcon={deleting ? <CircularProgress size={16} sx={{ color: '#ffffff' }} /> : <Delete />}
+            >
+              {deleting ? 'Eliminando...' : 'Eliminar'}
+            </Button>
+          </DialogActions>
+        </Dialog>
     </Box>
   );
 };

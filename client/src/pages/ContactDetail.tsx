@@ -103,6 +103,7 @@ import {
 import api from '../config/api';
 import RichTextEditor from '../components/RichTextEditor';
 import { taxiMonterricoColors } from '../theme/colors';
+import axios from 'axios';
 
 interface ContactDetailData {
   id: number;
@@ -238,11 +239,24 @@ const ContactDetail: React.FC = () => {
   const [addSubscriptionOpen, setAddSubscriptionOpen] = useState(false);
   const [addPaymentOpen, setAddPaymentOpen] = useState(false);
   const [createActivityMenuAnchor, setCreateActivityMenuAnchor] = useState<null | HTMLElement>(null);
-  const [companyFormData, setCompanyFormData] = useState({ name: '', domain: '', phone: '', industry: '', lifecycleStage: 'lead' });
+  const [companyFormData, setCompanyFormData] = useState({ 
+    name: '', 
+    domain: '', 
+    phone: '', 
+    industry: '', 
+    lifecycleStage: 'lead',
+    ruc: '',
+    address: '',
+    city: '',
+    state: '',
+    country: '',
+  });
   const [companyDialogTab, setCompanyDialogTab] = useState<'create' | 'existing'>('create');
   const [existingCompaniesSearch, setExistingCompaniesSearch] = useState('');
   const [selectedExistingCompanies, setSelectedExistingCompanies] = useState<number[]>([]);
-  const [dealFormData, setDealFormData] = useState({ name: '', amount: '', stage: 'qualification', closeDate: '', probability: '' });
+  const [loadingRuc, setLoadingRuc] = useState(false);
+  const [rucError, setRucError] = useState('');
+  const [dealFormData, setDealFormData] = useState({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'medium' });
   const [ticketFormData, setTicketFormData] = useState({ subject: '', description: '', status: 'new', priority: 'medium' });
   const [subscriptionFormData, setSubscriptionFormData] = useState({ name: '', description: '', status: 'active', amount: '', currency: 'USD', billingCycle: 'monthly', startDate: '', endDate: '', renewalDate: '' });
   const [paymentFormData, setPaymentFormData] = useState({ amount: '', currency: 'USD', status: 'pending', paymentDate: '', dueDate: '', paymentMethod: 'credit_card', reference: '', description: '' });
@@ -876,6 +890,64 @@ const ContactDetail: React.FC = () => {
   };
 
   // Funciones para la pestaña Descripción
+  const handleSearchRuc = async () => {
+    if (!companyFormData.ruc || companyFormData.ruc.length < 11) {
+      setRucError('El RUC debe tener 11 dígitos');
+      return;
+    }
+
+    setLoadingRuc(true);
+    setRucError('');
+
+    try {
+      // Obtener el token de la API de Factiliza desde variables de entorno
+      const factilizaToken = process.env.REACT_APP_FACTILIZA_TOKEN || '';
+      
+      if (!factilizaToken) {
+        setRucError('Token de API no configurado. Por favor, configure REACT_APP_FACTILIZA_TOKEN');
+        setLoadingRuc(false);
+        return;
+      }
+
+      const response = await axios.get(
+        `https://api.factiliza.com/v1/ruc/info/${companyFormData.ruc}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${factilizaToken}`,
+          },
+        }
+      );
+
+      if (response.data.success && response.data.data) {
+        const data = response.data.data;
+        
+        // Actualizar el formulario con los datos obtenidos
+        setCompanyFormData({
+          ...companyFormData,
+          name: data.nombre_o_razon_social || '',
+          industry: data.tipo_contribuyente || '',
+          address: data.direccion_completa || data.direccion || '',
+          city: data.distrito || '',
+          state: data.provincia || '',
+          country: data.departamento || 'Perú',
+        });
+      } else {
+        setRucError('No se encontró información para este RUC');
+      }
+    } catch (error: any) {
+      console.error('Error al buscar RUC:', error);
+      if (error.response?.status === 400) {
+        setRucError('RUC no válido o no encontrado');
+      } else if (error.response?.status === 401) {
+        setRucError('Error de autenticación con la API');
+      } else {
+        setRucError('Error al buscar RUC. Por favor, intente nuevamente');
+      }
+    } finally {
+      setLoadingRuc(false);
+    }
+  };
+
   const handleAddCompany = async () => {
     try {
       const response = await api.post('/companies', {
@@ -884,7 +956,19 @@ const ContactDetail: React.FC = () => {
       });
       setSuccessMessage('Empresa creada exitosamente');
       setAddCompanyOpen(false);
-      setCompanyFormData({ name: '', domain: '', phone: '', industry: '', lifecycleStage: 'lead' });
+      setCompanyFormData({ 
+        name: '', 
+        domain: '', 
+        phone: '', 
+        industry: '', 
+        lifecycleStage: 'lead',
+        ruc: '',
+        address: '',
+        city: '',
+        state: '',
+        country: '',
+      });
+      setRucError('');
       setCompanyDialogTab('create');
       fetchAssociatedRecords();
       setTimeout(() => setSuccessMessage(''), 3000);
@@ -937,7 +1021,19 @@ const ContactDetail: React.FC = () => {
     setCompanyDialogTab('create');
     setSelectedExistingCompanies([]);
     setExistingCompaniesSearch('');
-    setCompanyFormData({ name: '', domain: '', phone: '', industry: '', lifecycleStage: 'lead' });
+    setCompanyFormData({ 
+      name: '', 
+      domain: '', 
+      phone: '', 
+      industry: '', 
+      lifecycleStage: 'lead',
+      ruc: '',
+      address: '',
+      city: '',
+      state: '',
+      country: '',
+    });
+    setRucError('');
     setAddCompanyOpen(true);
     // Cargar empresas disponibles cuando se abre el diálogo
     if (allCompanies.length === 0) {
@@ -1006,13 +1102,12 @@ const ContactDetail: React.FC = () => {
       await api.post('/deals', {
         ...dealFormData,
         amount: parseFloat(dealFormData.amount) || 0,
-        probability: dealFormData.probability ? parseInt(dealFormData.probability) : undefined,
         contactId: id,
         companyId: contact?.Company?.id,
       });
       setSuccessMessage('Negocio agregado exitosamente');
       setAddDealOpen(false);
-      setDealFormData({ name: '', amount: '', stage: 'qualification', closeDate: '', probability: '' });
+      setDealFormData({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'medium' });
       fetchAssociatedRecords();
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
@@ -1427,8 +1522,11 @@ const ContactDetail: React.FC = () => {
           bgcolor: 'white',
           display: 'flex',
           flexDirection: 'column',
-          width: { xs: '100%', md: '500px' },
-          flexShrink: 0,
+          width: { xs: '100%', sm: '100%', md: '400px', lg: '450px', xl: '500px' },
+          minWidth: { xs: '100%', sm: '280px', md: '350px' },
+          maxWidth: { xs: '100%', md: '500px' },
+          flexShrink: 1,
+          flexGrow: 0,
           height: { xs: 'auto', md: 'calc(100vh - 100px)' },
           maxHeight: { xs: 'none', md: 'calc(100vh - 100px)' },
           p: { xs: 1, sm: 1.5, md: 2 },
@@ -2139,7 +2237,7 @@ const ContactDetail: React.FC = () => {
                   },
                 }}
               >
-                {['lead', 'marketingqualifiedlead', 'salesqualifiedlead', 'opportunity', 'customer', 'evangelist', 'other'].map((stage) => (
+                {['lead', 'contacto', 'reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion', 'cierre_ganado', 'cierre_perdido'].map((stage) => (
                   <MenuItem
                     key={stage}
                     onClick={async () => {
@@ -2158,12 +2256,13 @@ const ContactDetail: React.FC = () => {
                     }}
                   >
                     {stage === 'lead' ? 'Lead' : 
-                     stage === 'marketingqualifiedlead' ? 'Marketing Qualified Lead' :
-                     stage === 'salesqualifiedlead' ? 'Sales Qualified Lead' :
-                     stage === 'opportunity' ? 'Oportunidad' :
-                     stage === 'customer' ? 'Cliente' :
-                     stage === 'evangelist' ? 'Evangelista' :
-                     stage === 'other' ? 'Otro' : stage}
+                     stage === 'contacto' ? 'Contacto' :
+                     stage === 'reunion_agendada' ? 'Reunión Agendada' :
+                     stage === 'reunion_efectiva' ? 'Reunión Efectiva' :
+                     stage === 'propuesta_economica' ? 'Propuesta Económica' :
+                     stage === 'negociacion' ? 'Negociación' :
+                     stage === 'cierre_ganado' ? 'Cierre Ganado' :
+                     stage === 'cierre_perdido' ? 'Cierre Perdido' : stage}
                   </MenuItem>
                 ))}
               </Menu>
@@ -2479,6 +2578,7 @@ const ContactDetail: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
+          minWidth: { xs: '100%', sm: '300px', md: '400px' },
           width: { xs: '100%', md: 'auto' },
           height: { xs: 'auto', md: 'calc(100vh - 100px)' },
           maxHeight: { xs: 'none', md: 'calc(100vh - 100px)' },
@@ -4631,7 +4731,7 @@ const ContactDetail: React.FC = () => {
                         <Link 
                           sx={{ fontSize: '0.875rem', cursor: 'pointer' }}
                           onClick={() => {
-                            setDealFormData({ name: '', amount: '', stage: 'qualification', closeDate: '', probability: '' });
+                            setDealFormData({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'medium' });
                             setAddDealOpen(true);
                           }}
                         >
@@ -7499,12 +7599,40 @@ const ContactDetail: React.FC = () => {
       )}
 
       {/* Diálogo para agregar empresa */}
-      <Dialog open={addCompanyOpen} onClose={() => { setAddCompanyOpen(false); setCompanyDialogTab('create'); setSelectedExistingCompanies([]); setExistingCompaniesSearch(''); }} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          {companyDialogTab === 'create' ? 'Crear nueva empresa' : 'Agregar Empresa existente'}
-          <IconButton onClick={() => { setAddCompanyOpen(false); setCompanyDialogTab('create'); setSelectedExistingCompanies([]); setExistingCompaniesSearch(''); }} size="small">
-            <Close />
-          </IconButton>
+      <Dialog open={addCompanyOpen} onClose={() => { 
+        setAddCompanyOpen(false); 
+        setCompanyDialogTab('create'); 
+        setSelectedExistingCompanies([]); 
+        setExistingCompaniesSearch('');
+        setCompanyFormData({ 
+          name: '', 
+          domain: '', 
+          phone: '', 
+          industry: '', 
+          lifecycleStage: 'lead',
+          ruc: '',
+          address: '',
+          city: '',
+          state: '',
+          country: '',
+        });
+        setRucError('');
+      }} maxWidth="sm" fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 2,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+        }
+      }}
+      >
+        <DialogTitle sx={{ 
+          pb: 1.5,
+          borderBottom: '1px solid #e0e0e0',
+          fontWeight: 600,
+          fontSize: '1.25rem',
+          color: '#1a1a1a',
+        }}>
+          {companyDialogTab === 'create' ? 'Nueva Empresa' : 'Agregar Empresa existente'}
         </DialogTitle>
         <DialogContent>
           {/* Pestañas */}
@@ -7517,45 +7645,155 @@ const ContactDetail: React.FC = () => {
 
           {companyDialogTab === 'create' && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+              {/* Campo RUC con botón de búsqueda */}
+              <TextField
+                label="RUC"
+                value={companyFormData.ruc}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, ''); // Solo números
+                  setCompanyFormData({ ...companyFormData, ruc: value });
+                  setRucError('');
+                }}
+                placeholder="Ingrese RUC (11 dígitos)"
+                error={!!rucError}
+                helperText={rucError}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={handleSearchRuc}
+                        disabled={loadingRuc || !companyFormData.ruc || companyFormData.ruc.length < 11}
+                        sx={{
+                          color: taxiMonterricoColors.green,
+                          '&:hover': {
+                            bgcolor: `${taxiMonterricoColors.green}15`,
+                          },
+                          '&.Mui-disabled': {
+                            color: '#bdbdbd',
+                          },
+                        }}
+                      >
+                        {loadingRuc ? (
+                          <CircularProgress size={20} />
+                        ) : (
+                          <Search />
+                        )}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
               <TextField
                 label="Nombre"
                 value={companyFormData.name}
                 onChange={(e) => setCompanyFormData({ ...companyFormData, name: e.target.value })}
                 required
-                fullWidth
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
               />
               <TextField
                 label="Dominio"
                 value={companyFormData.domain}
                 onChange={(e) => setCompanyFormData({ ...companyFormData, domain: e.target.value })}
-                fullWidth
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              <TextField
+                label="Tipo de Contribuyente / Industria"
+                value={companyFormData.industry}
+                onChange={(e) => setCompanyFormData({ ...companyFormData, industry: e.target.value })}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
               />
               <TextField
                 label="Teléfono"
                 value={companyFormData.phone}
                 onChange={(e) => setCompanyFormData({ ...companyFormData, phone: e.target.value })}
-                fullWidth
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
               />
               <TextField
-                label="Industria"
-                value={companyFormData.industry}
-                onChange={(e) => setCompanyFormData({ ...companyFormData, industry: e.target.value })}
-                fullWidth
+                label="Dirección"
+                value={companyFormData.address}
+                onChange={(e) => setCompanyFormData({ ...companyFormData, address: e.target.value })}
+                multiline
+                rows={2}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  label="Distrito"
+                  value={companyFormData.city}
+                  onChange={(e) => setCompanyFormData({ ...companyFormData, city: e.target.value })}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+                <TextField
+                  label="Provincia"
+                  value={companyFormData.state}
+                  onChange={(e) => setCompanyFormData({ ...companyFormData, state: e.target.value })}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+              </Box>
+              <TextField
+                label="Departamento"
+                value={companyFormData.country}
+                onChange={(e) => setCompanyFormData({ ...companyFormData, country: e.target.value })}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
               />
               <TextField
                 select
                 label="Etapa del Ciclo de Vida"
                 value={companyFormData.lifecycleStage}
                 onChange={(e) => setCompanyFormData({ ...companyFormData, lifecycleStage: e.target.value })}
-                fullWidth
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
               >
-                <MenuItem value="subscriber">Suscriptor</MenuItem>
                 <MenuItem value="lead">Lead</MenuItem>
-                <MenuItem value="marketing qualified lead">MQL</MenuItem>
-                <MenuItem value="sales qualified lead">SQL</MenuItem>
-                <MenuItem value="opportunity">Oportunidad</MenuItem>
-                <MenuItem value="customer">Cliente</MenuItem>
-                <MenuItem value="evangelist">Evangelista</MenuItem>
+                <MenuItem value="contacto">Contacto</MenuItem>
+                <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+                <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+                <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
+                <MenuItem value="negociacion">Negociación</MenuItem>
+                <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+                <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
               </TextField>
             </Box>
           )}
@@ -7670,16 +7908,77 @@ const ContactDetail: React.FC = () => {
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => { setAddCompanyOpen(false); setCompanyDialogTab('create'); setSelectedExistingCompanies([]); setExistingCompaniesSearch(''); }}>
+        <DialogActions sx={{ 
+          px: 3, 
+          py: 2,
+          borderTop: '1px solid #e0e0e0',
+          gap: 1,
+        }}>
+          <Button 
+            onClick={() => { 
+              setAddCompanyOpen(false); 
+              setCompanyDialogTab('create'); 
+              setSelectedExistingCompanies([]); 
+              setExistingCompaniesSearch('');
+              setCompanyFormData({ 
+                name: '', 
+                domain: '', 
+                phone: '', 
+                industry: '', 
+                lifecycleStage: 'lead',
+                ruc: '',
+                address: '',
+                city: '',
+                state: '',
+                country: '',
+              });
+              setRucError('');
+            }}
+            sx={{
+              textTransform: 'none',
+              color: '#757575',
+              fontWeight: 500,
+              '&:hover': {
+                bgcolor: '#f5f5f5',
+              }
+            }}
+          >
             Cancelar
           </Button>
           {companyDialogTab === 'create' ? (
-            <Button onClick={handleAddCompany} variant="contained" disabled={!companyFormData.name.trim()}>
-              Agregar
+            <Button 
+              onClick={handleAddCompany} 
+              variant="contained" 
+              disabled={!companyFormData.name.trim()}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 500,
+                borderRadius: 1.5,
+                px: 2.5,
+                bgcolor: taxiMonterricoColors.green,
+                '&:hover': {
+                  bgcolor: taxiMonterricoColors.greenDark,
+                }
+              }}
+            >
+              Crear
             </Button>
           ) : (
-            <Button onClick={handleAddExistingCompanies} variant="contained" disabled={selectedExistingCompanies.length === 0}>
+            <Button 
+              onClick={handleAddExistingCompanies} 
+              variant="contained" 
+              disabled={selectedExistingCompanies.length === 0}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 500,
+                borderRadius: 1.5,
+                px: 2.5,
+                bgcolor: taxiMonterricoColors.green,
+                '&:hover': {
+                  bgcolor: taxiMonterricoColors.greenDark,
+                }
+              }}
+            >
               Agregar ({selectedExistingCompanies.length})
             </Button>
           )}
@@ -7711,13 +8010,20 @@ const ContactDetail: React.FC = () => {
               value={dealFormData.stage}
               onChange={(e) => setDealFormData({ ...dealFormData, stage: e.target.value })}
               fullWidth
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
             >
-              <MenuItem value="qualification">Calificación</MenuItem>
-              <MenuItem value="needs analysis">Análisis de necesidades</MenuItem>
-              <MenuItem value="proposal">Propuesta</MenuItem>
-              <MenuItem value="negotiation">Negociación</MenuItem>
-              <MenuItem value="closed won">Cerrado ganado</MenuItem>
-              <MenuItem value="closed lost">Cerrado perdido</MenuItem>
+              <MenuItem value="lead">Lead</MenuItem>
+              <MenuItem value="contacto">Contacto</MenuItem>
+              <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+              <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+              <MenuItem value="propuesta_economica">Propuesta económica</MenuItem>
+              <MenuItem value="negociacion">Negociación</MenuItem>
+              <MenuItem value="cierre_ganado">Cierre ganado</MenuItem>
+              <MenuItem value="cierre_perdido">Cierre perdido</MenuItem>
             </TextField>
             <TextField
               label="Fecha de cierre"
@@ -7728,13 +8034,22 @@ const ContactDetail: React.FC = () => {
               InputLabelProps={{ shrink: true }}
             />
             <TextField
-              label="Probabilidad (%)"
-              type="number"
-              value={dealFormData.probability}
-              onChange={(e) => setDealFormData({ ...dealFormData, probability: e.target.value })}
+              select
+              label="Prioridad"
+              value={dealFormData.priority}
+              onChange={(e) => setDealFormData({ ...dealFormData, priority: e.target.value })}
               fullWidth
-              inputProps={{ min: 0, max: 100 }}
-            />
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            >
+              <MenuItem value="low">Baja</MenuItem>
+              <MenuItem value="medium">Media</MenuItem>
+              <MenuItem value="high">Alta</MenuItem>
+              <MenuItem value="urgent">Urgente</MenuItem>
+            </TextField>
           </Box>
         </DialogContent>
         <DialogActions>

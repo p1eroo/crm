@@ -25,8 +25,6 @@ import {
   ChevronRight,
   Edit,
   AccountCircle,
-  Settings,
-  Logout,
   Search,
 } from '@mui/icons-material';
 import {
@@ -47,6 +45,7 @@ import {
 import api from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import ProfileModal from '../components/ProfileModal';
 
 interface DashboardStats {
   contacts: {
@@ -92,15 +91,15 @@ interface Task {
 }
 
 const Dashboard: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [selectedMonth, setSelectedMonth] = useState(new Date().toLocaleString('es-ES', { month: 'short', year: 'numeric' }));
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [calendarDate, setCalendarDate] = useState(new Date());
-  const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null);
 
   useEffect(() => {
     fetchStats();
@@ -111,6 +110,7 @@ const Dashboard: React.FC = () => {
     try {
       const response = await api.get('/dashboard/stats');
       console.log('Dashboard stats recibidos:', response.data);
+      console.log('Deals por etapa:', response.data.deals?.byStage);
       setStats(response.data);
     } catch (error: any) {
       console.error('Error fetching stats:', error);
@@ -215,13 +215,95 @@ const Dashboard: React.FC = () => {
         };
       });
 
+  // Función para obtener el label de la etapa
+  const getStageLabel = (stage: string) => {
+    const stageLabels: { [key: string]: string } = {
+      'lead': 'Lead',
+      'contacto': 'Contacto',
+      'reunion_agendada': 'Reunión Agendada',
+      'reunion_efectiva': 'Reunión Efectiva',
+      'propuesta_economica': 'Propuesta económica',
+      'negociacion': 'Negociación',
+      'cierre_ganado': 'Cierre ganado',
+      'cierre_perdido': 'Cierre perdido',
+      'won': 'Ganados',
+      'closed won': 'Ganados',
+      'lost': 'Perdidos',
+      'closed lost': 'Perdidos',
+    };
+    return stageLabels[stage] || stage;
+  };
+
   // Datos para Sales Distribution (pie chart)
+  // Priorizar etapas ganadas y perdidas, luego ordenar por cantidad
   const salesDistributionData = stats.deals.byStage && stats.deals.byStage.length > 0
-    ? stats.deals.byStage.slice(0, 5).map((deal, index) => ({
-        name: deal.stage === 'won' ? 'Ganados' : deal.stage === 'lost' ? 'Perdidos' : deal.stage,
-        value: deal.count || 0,
-        color: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'][index % 5],
-      }))
+    ? (() => {
+        console.log('Procesando deals por etapa:', stats.deals.byStage);
+        
+        // Normalizar los datos - Sequelize puede devolver count como string o number
+        const normalizedStages = stats.deals.byStage.map((d: any) => ({
+          stage: d.stage || d.stage,
+          count: typeof d.count === 'string' ? parseInt(d.count, 10) : (d.count || 0),
+          total: typeof d.total === 'string' ? parseFloat(d.total) : (d.total || 0),
+        }));
+        
+        console.log('Etapas normalizadas:', normalizedStages);
+        
+        // Separar etapas ganadas, perdidas y otras
+        const wonStages = normalizedStages.filter(d => 
+          ['won', 'closed won', 'cierre_ganado'].includes(d.stage)
+        );
+        const lostStages = normalizedStages.filter(d => 
+          ['lost', 'closed lost', 'cierre_perdido'].includes(d.stage)
+        );
+        const otherStages = normalizedStages.filter(d => 
+          !['won', 'closed won', 'cierre_ganado', 'lost', 'closed lost', 'cierre_perdido'].includes(d.stage)
+        );
+        
+        console.log('Etapas ganadas:', wonStages);
+        console.log('Etapas perdidas:', lostStages);
+        console.log('Otras etapas:', otherStages);
+        
+        // Agregar etapas ganadas y perdidas agrupadas si existen
+        const wonTotal = wonStages.reduce((sum, d) => sum + d.count, 0);
+        const lostTotal = lostStages.reduce((sum, d) => sum + d.count, 0);
+        
+        console.log('Total ganados:', wonTotal);
+        console.log('Total perdidos:', lostTotal);
+        
+        const chartData: Array<{ name: string; value: number; color: string }> = [];
+        
+        if (wonTotal > 0) {
+          chartData.push({
+            name: 'Ganados',
+            value: wonTotal,
+            color: '#4BC0C0',
+          });
+        }
+        
+        if (lostTotal > 0) {
+          chartData.push({
+            name: 'Perdidos',
+            value: lostTotal,
+            color: '#FF6384',
+          });
+        }
+        
+        // Agregar otras etapas (hasta completar 5 elementos totales)
+        const remainingSlots = 5 - chartData.length;
+        const sortedOtherStages = otherStages.sort((a, b) => b.count - a.count);
+        sortedOtherStages.slice(0, remainingSlots).forEach((deal, index) => {
+          chartData.push({
+            name: getStageLabel(deal.stage),
+            value: deal.count,
+            color: ['#FFCE56', '#36A2EB', '#9966FF'][index % 3],
+          });
+        });
+        
+        console.log('Datos finales del gráfico:', chartData);
+        
+        return chartData.length > 0 ? chartData : [{ name: 'Sin datos', value: 1, color: '#E5E7EB' }];
+      })()
     : [
         { name: 'Sin datos', value: 1, color: '#E5E7EB' }
       ];
@@ -247,7 +329,8 @@ const Dashboard: React.FC = () => {
   const firstDay = new Date(calendarYear, calendarMonth, 1);
   const lastDay = new Date(calendarYear, calendarMonth + 1, 0);
   const daysInMonth = lastDay.getDate();
-  const startingDayOfWeek = firstDay.getDay();
+  // Ajustar para que lunes sea 0 (getDay() devuelve 0=domingo, 1=lunes, etc.)
+  const startingDayOfWeek = (firstDay.getDay() + 6) % 7; // Convierte domingo=0 a lunes=0
 
   const calendarDaysMain = [];
   // Días vacíos al inicio
@@ -263,18 +346,20 @@ const Dashboard: React.FC = () => {
   const today = new Date();
   const currentDay = today.getDate();
   
-  // Obtener el primer día de la semana actual (domingo = 0)
-  const firstDayOfWeek = new Date(calendarYear, calendarMonth, currentDay);
-  firstDayOfWeek.setDate(currentDay - firstDayOfWeek.getDay());
+  // Obtener el primer día de la semana actual (lunes = 0)
+  const firstDayOfWeekRight = new Date(calendarYear, calendarMonth, currentDay);
+  const dayOfWeek = (firstDayOfWeekRight.getDay() + 6) % 7; // Convierte domingo=0 a lunes=0
+  firstDayOfWeekRight.setDate(currentDay - dayOfWeek);
   
   // Generar los 7 días de la semana
   const calendarDaysRight = [];
   for (let i = 0; i < 7; i++) {
-    const date = new Date(firstDayOfWeek);
-    date.setDate(firstDayOfWeek.getDate() + i);
+    const date = new Date(firstDayOfWeekRight);
+    date.setDate(firstDayOfWeekRight.getDate() + i);
+    const dayOfWeekIndex = (date.getDay() + 6) % 7; // Convierte domingo=0 a lunes=0
     calendarDaysRight.push({
       day: date.getDate(),
-      dayOfWeek: ['D', 'L', 'M', 'M', 'J', 'V', 'S'][date.getDay()],
+      dayOfWeek: ['L', 'M', 'M', 'J', 'V', 'S', 'D'][dayOfWeekIndex],
       isCurrentMonth: date.getMonth() === calendarMonth,
     });
   }
@@ -287,29 +372,10 @@ const Dashboard: React.FC = () => {
     setCalendarDate(new Date(calendarYear, calendarMonth + 1, 1));
   };
 
-  const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setProfileMenuAnchor(event.currentTarget);
-  };
-
-  const handleProfileMenuClose = () => {
-    setProfileMenuAnchor(null);
-  };
-
   const handleProfileClick = () => {
-    navigate('/profile');
-    handleProfileMenuClose();
+    setProfileModalOpen(true);
   };
 
-  const handleSettingsClick = () => {
-    navigate('/settings');
-    handleProfileMenuClose();
-  };
-
-  const handleLogoutClick = () => {
-    logout();
-    navigate('/login');
-    handleProfileMenuClose();
-  };
 
   const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   const currentMonthName = monthNames[calendarMonth];
@@ -372,7 +438,7 @@ const Dashboard: React.FC = () => {
           {/* Edit Button */}
           <IconButton 
             size="large"
-            onClick={handleProfileMenuOpen}
+            onClick={handleProfileClick}
             sx={{ 
               bgcolor: '#F3F4F6', 
               borderRadius: 1.5, 
@@ -385,59 +451,6 @@ const Dashboard: React.FC = () => {
           >
             <Edit sx={{ fontSize: { xs: 20, md: 24 }, color: '#1F2937' }} />
           </IconButton>
-
-          <Menu
-            anchorEl={profileMenuAnchor}
-            open={Boolean(profileMenuAnchor)}
-            onClose={handleProfileMenuClose}
-            anchorOrigin={{
-              vertical: 'bottom',
-              horizontal: 'right',
-            }}
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
-            PaperProps={{
-              sx: {
-                mt: 1,
-                minWidth: 200,
-                borderRadius: 2,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                border: '1px solid #e0e0e0',
-                '& .MuiMenuItem-root': {
-                  fontSize: '0.875rem',
-                  py: 1.25,
-                  px: 2,
-                  '&:hover': {
-                    bgcolor: '#f5f5f5',
-                  },
-                },
-              },
-            }}
-          >
-            <MenuItem onClick={handleProfileClick}>
-              <AccountCircle sx={{ mr: 1.5, fontSize: 20, color: '#757575' }} />
-              Perfil
-            </MenuItem>
-            <MenuItem onClick={handleSettingsClick}>
-              <Settings sx={{ mr: 1.5, fontSize: 20, color: '#757575' }} />
-              Configuración
-            </MenuItem>
-            <Divider sx={{ my: 0.5 }} />
-            <MenuItem
-              onClick={handleLogoutClick}
-              sx={{
-                color: '#d32f2f',
-                '&:hover': {
-                  bgcolor: '#ffebee',
-                },
-              }}
-            >
-              <Logout sx={{ mr: 1.5, fontSize: 20 }} />
-              Cerrar Sesión
-            </MenuItem>
-          </Menu>
         </Box>
       </Box>
 
@@ -771,7 +784,7 @@ const Dashboard: React.FC = () => {
             <Box>
               {/* Días de la semana */}
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, mb: 1 }}>
-                {['D', 'L', 'M', 'M', 'J', 'V', 'S'].map((day, index) => (
+                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day, index) => (
                   <Typography
                     key={index}
                     variant="caption"
@@ -979,24 +992,6 @@ const Dashboard: React.FC = () => {
               </IconButton>
             </Box>
 
-            {/* Días de la semana */}
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 0.5, mb: 1 }}>
-              {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day, index) => (
-                <Typography
-                  key={index}
-                  variant="caption"
-                  sx={{ 
-                    textAlign: 'center', 
-                    fontWeight: 500, 
-                    color: '#9CA3AF',
-                    fontSize: '0.7rem',
-                  }}
-                >
-                  {day}
-                </Typography>
-              ))}
-            </Box>
-
             {/* Días de la semana - solo una semana */}
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 0.5 }}>
               {calendarDaysRight.map((dateInfo, index) => {
@@ -1033,7 +1028,7 @@ const Dashboard: React.FC = () => {
                           flexDirection: 'column',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: 0.25,
+                          gap: 1.25,
                         }}
                       >
                         {/* Día de la semana dentro del óvalo */}
@@ -1076,7 +1071,7 @@ const Dashboard: React.FC = () => {
                             fontSize: '0.65rem',
                             fontWeight: 400,
                             color: '#9CA3AF',
-                            mb: 0.5,
+                            mb: 1.5,
                           }}
                         >
                           {dateInfo.dayOfWeek}
@@ -1179,6 +1174,7 @@ const Dashboard: React.FC = () => {
         </Box>
       </Box>
       </Box>
+      <ProfileModal open={profileModalOpen} onClose={() => setProfileModalOpen(false)} />
     </Box>
   );
 };
