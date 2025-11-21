@@ -7,6 +7,7 @@ import { Deal } from '../models/Deal';
 import { Task } from '../models/Task';
 import { Campaign } from '../models/Campaign';
 import { Payment } from '../models/Payment';
+import { User } from '../models/User';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
@@ -130,6 +131,59 @@ router.get('/stats', async (req: AuthRequest, res) => {
       }
     }) || 0;
 
+    // Estadísticas de desempeño por usuario (cierres ganados)
+    // Usar consulta SQL directa para obtener estadísticas por usuario
+    let whereClause = '';
+    const replacements: any = {};
+    
+    if (dateFilter.createdAt) {
+      whereClause = 'WHERE d."createdAt" >= :startDate';
+      replacements.startDate = dateFilter.createdAt[Op.gte];
+      
+      if (dateFilter.createdAt[Op.lte]) {
+        whereClause += ' AND d."createdAt" <= :endDate';
+        replacements.endDate = dateFilter.createdAt[Op.lte];
+      }
+    } else {
+      whereClause = 'WHERE 1=1';
+    }
+
+    const userPerformanceQuery = await sequelize.query(`
+      SELECT 
+        u.id as "userId",
+        u."firstName",
+        u."lastName",
+        u.email,
+        COUNT(d.id)::integer as "totalDeals",
+        COUNT(CASE WHEN d.stage IN ('won', 'closed won', 'cierre_ganado') THEN 1 END)::integer as "wonDeals"
+      FROM users u
+      INNER JOIN deals d ON u.id = d."ownerId"
+      ${whereClause}
+      GROUP BY u.id, u."firstName", u."lastName", u.email
+      HAVING COUNT(d.id) > 0
+      ORDER BY "wonDeals" DESC, "totalDeals" DESC
+    `, {
+      replacements,
+      type: sequelize.QueryTypes.SELECT,
+    });
+
+    // Procesar estadísticas por usuario
+    const userPerformance = (userPerformanceQuery as any[]).map((item: any) => {
+      const totalDeals = parseInt(item.totalDeals) || 0;
+      const wonDeals = parseInt(item.wonDeals) || 0;
+      const performance = totalDeals > 0 ? (wonDeals / totalDeals) * 100 : 0;
+      
+      return {
+        userId: item.userId,
+        firstName: item.firstName || 'Sin nombre',
+        lastName: item.lastName || '',
+        email: item.email || '',
+        totalDeals,
+        wonDeals,
+        performance: Math.round(performance * 100) / 100, // Redondear a 2 decimales
+      };
+    });
+
     // Estadísticas de pagos
     const totalPayments = await Payment.count({ where: dateFilter });
     const pendingPayments = await Payment.count({ 
@@ -155,35 +209,142 @@ router.get('/stats', async (req: AuthRequest, res) => {
       where: { ...dateFilter, status: 'completed' } 
     }) || 0;
 
-    // Pagos por mes (últimos 12 meses)
+    // Ventas por mes basadas en deals ganados - Si hay filtro de fecha, usar ese rango, sino últimos 12 meses
     const monthlyPayments = [];
-    for (let i = 11; i >= 0; i--) {
-      const monthStart = new Date();
-      monthStart.setMonth(monthStart.getMonth() - i);
-      monthStart.setDate(1);
-      monthStart.setHours(0, 0, 0, 0);
+    
+    if (dateFilter.createdAt && dateFilter.createdAt[Op.gte] && dateFilter.createdAt[Op.lte]) {
+      const startDate = new Date(dateFilter.createdAt[Op.gte]);
+      const endDate = new Date(dateFilter.createdAt[Op.lte]);
+      const year = startDate.getFullYear();
+      const startMonth = startDate.getMonth();
+      const endMonth = endDate.getMonth();
       
-      const monthEnd = new Date(monthStart);
-      monthEnd.setMonth(monthEnd.getMonth() + 1);
-      monthEnd.setHours(0, 0, 0, 0);
-      
-      const monthName = monthStart.toLocaleString('es-ES', { month: 'short' });
-      const year = monthStart.getFullYear();
-      
-      const monthTotal = await Payment.sum('amount', {
-        where: {
-          status: 'completed',
-          paymentDate: {
-            [Op.gte]: monthStart,
-            [Op.lt]: monthEnd
+      // Si el rango es de un solo mes (mismo mes de inicio y fin), mostrar solo ese mes
+      if (startMonth === endMonth && startDate.getFullYear() === endDate.getFullYear()) {
+        const monthStart = new Date(year, startMonth, 1);
+        monthStart.setHours(0, 0, 0, 0);
+        
+        const monthEnd = new Date(year, startMonth + 1, 1);
+        monthEnd.setHours(0, 0, 0, 0);
+        
+        const monthName = monthStart.toLocaleString('es-ES', { month: 'short' });
+        
+        // Sumar el valor de los deals ganados en este mes
+        // Usar closeDate si existe, sino usar updatedAt cuando el stage cambió a ganado
+        const monthTotal = await Deal.sum('amount', {
+          where: {
+            stage: { [Op.in]: ['won', 'closed won', 'cierre_ganado'] },
+            [Op.or]: [
+              {
+                closeDate: {
+                  [Op.gte]: monthStart,
+                  [Op.lt]: monthEnd
+                }
+              },
+              {
+                // Si no hay closeDate, usar updatedAt cuando el stage es ganado
+                updatedAt: {
+                  [Op.gte]: monthStart,
+                  [Op.lt]: monthEnd
+                },
+                closeDate: null
+              }
+            ]
           }
+        }) || 0;
+        
+        monthlyPayments.push({
+          month: `${monthName} ${year}`,
+          amount: Number(monthTotal),
+        });
+      } else {
+        // Si es un rango de meses (año completo o varios meses), mostrar todos los meses del rango
+        const currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+          const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+          monthStart.setHours(0, 0, 0, 0);
+          
+          const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+          monthEnd.setHours(0, 0, 0, 0);
+          
+          const monthName = monthStart.toLocaleString('es-ES', { month: 'short' });
+          const monthYear = monthStart.getFullYear();
+          
+          // Sumar el valor de los deals ganados en este mes
+          const monthTotal = await Deal.sum('amount', {
+            where: {
+              stage: { [Op.in]: ['won', 'closed won', 'cierre_ganado'] },
+              [Op.or]: [
+                {
+                  closeDate: {
+                    [Op.gte]: monthStart,
+                    [Op.lt]: monthEnd
+                  }
+                },
+                {
+                  // Si no hay closeDate, usar updatedAt cuando el stage es ganado
+                  updatedAt: {
+                    [Op.gte]: monthStart,
+                    [Op.lt]: monthEnd
+                  },
+                  closeDate: null
+                }
+              ]
+            }
+          }) || 0;
+          
+          monthlyPayments.push({
+            month: `${monthName} ${monthYear}`,
+            amount: Number(monthTotal),
+          });
+          
+          // Avanzar al siguiente mes
+          currentDate.setMonth(currentDate.getMonth() + 1);
         }
-      }) || 0;
-      
-      monthlyPayments.push({
-        month: `${monthName} ${year}`,
-        amount: Number(monthTotal),
-      });
+      }
+    } else {
+      // Sin filtro: mostrar últimos 12 meses
+      for (let i = 11; i >= 0; i--) {
+        const monthStart = new Date();
+        monthStart.setMonth(monthStart.getMonth() - i);
+        monthStart.setDate(1);
+        monthStart.setHours(0, 0, 0, 0);
+        
+        const monthEnd = new Date(monthStart);
+        monthEnd.setMonth(monthEnd.getMonth() + 1);
+        monthEnd.setHours(0, 0, 0, 0);
+        
+        const monthName = monthStart.toLocaleString('es-ES', { month: 'short' });
+        const year = monthStart.getFullYear();
+        
+        // Sumar el valor de los deals ganados en este mes
+        const monthTotal = await Deal.sum('amount', {
+          where: {
+            stage: { [Op.in]: ['won', 'closed won', 'cierre_ganado'] },
+            [Op.or]: [
+              {
+                closeDate: {
+                  [Op.gte]: monthStart,
+                  [Op.lt]: monthEnd
+                }
+              },
+              {
+                // Si no hay closeDate, usar updatedAt cuando el stage es ganado
+                updatedAt: {
+                  [Op.gte]: monthStart,
+                  [Op.lt]: monthEnd
+                },
+                closeDate: null
+              }
+            ]
+          }
+        }) || 0;
+        
+        monthlyPayments.push({
+          month: `${monthName} ${year}`,
+          amount: Number(monthTotal),
+        });
+      }
     }
 
     // Leads convertidos (contactos que pasaron de lead a customer)
@@ -272,6 +433,7 @@ router.get('/stats', async (req: AuthRequest, res) => {
         byStage: dealsByStage,
         wonThisMonth: wonDeals,
         wonValueThisMonth: wonDealValue,
+        userPerformance: userPerformance,
       },
       tasks: {
         total: totalTasks,

@@ -17,7 +17,6 @@ DROP TABLE IF EXISTS companies CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
 
 -- Eliminar tipos ENUM si existen
-DROP TYPE IF EXISTS user_role_enum CASCADE;
 DROP TYPE IF EXISTS lifecycle_stage_enum CASCADE;
 DROP TYPE IF EXISTS task_type_enum CASCADE;
 DROP TYPE IF EXISTS task_status_enum CASCADE;
@@ -34,7 +33,6 @@ DROP TYPE IF EXISTS subscription_status_enum CASCADE;
 DROP TYPE IF EXISTS billing_cycle_enum CASCADE;
 
 -- Crear tipos ENUM
-CREATE TYPE user_role_enum AS ENUM ('admin', 'user', 'manager');
 CREATE TYPE lifecycle_stage_enum AS ENUM (
     'subscriber', 
     'lead', 
@@ -66,6 +64,24 @@ CREATE TYPE subscription_status_enum AS ENUM ('active', 'cancelled', 'expired', 
 CREATE TYPE billing_cycle_enum AS ENUM ('monthly', 'quarterly', 'yearly', 'one-time');
 
 -- ============================================
+-- Tabla: roles
+-- ============================================
+CREATE TABLE roles (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE,
+    description VARCHAR(255),
+    "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Insertar roles por defecto
+INSERT INTO roles (name, description) VALUES
+    ('admin', 'Administrador del sistema'),
+    ('user', 'Usuario estándar'),
+    ('manager', 'Gerente'),
+    ('jefe_comercial', 'Jefe Comercial');
+
+-- ============================================
 -- Tabla: users
 -- ============================================
 CREATE TABLE users (
@@ -75,7 +91,7 @@ CREATE TABLE users (
     password VARCHAR(255) NOT NULL,
     "firstName" VARCHAR(255) NOT NULL,
     "lastName" VARCHAR(255) NOT NULL,
-    role user_role_enum NOT NULL DEFAULT 'user',
+    "roleId" INTEGER NOT NULL,
     avatar VARCHAR(255),
     phone VARCHAR(255),
     language VARCHAR(255) DEFAULT 'es',
@@ -83,8 +99,12 @@ CREATE TABLE users (
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_users_role FOREIGN KEY ("roleId") REFERENCES roles(id) ON DELETE RESTRICT,
     CONSTRAINT email_check CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
 );
+
+-- Crear índice para mejorar el rendimiento
+CREATE INDEX idx_users_roleId ON users("roleId");
 
 -- ============================================
 -- Tabla: companies

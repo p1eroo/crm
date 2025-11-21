@@ -19,6 +19,25 @@ IF OBJECT_ID('automations', 'U') IS NOT NULL DROP TABLE automations;
 IF OBJECT_ID('contacts', 'U') IS NOT NULL DROP TABLE contacts;
 IF OBJECT_ID('companies', 'U') IS NOT NULL DROP TABLE companies;
 IF OBJECT_ID('users', 'U') IS NOT NULL DROP TABLE users;
+IF OBJECT_ID('roles', 'U') IS NOT NULL DROP TABLE roles;
+
+-- ============================================
+-- Tabla: roles
+-- ============================================
+CREATE TABLE roles (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    name NVARCHAR(50) NOT NULL UNIQUE,
+    description NVARCHAR(255),
+    createdAt DATETIME2 NOT NULL DEFAULT GETDATE(),
+    updatedAt DATETIME2 NOT NULL DEFAULT GETDATE()
+);
+
+-- Insertar roles por defecto
+INSERT INTO roles (name, description) VALUES
+    ('admin', 'Administrador del sistema'),
+    ('user', 'Usuario estándar'),
+    ('manager', 'Gerente'),
+    ('jefe_comercial', 'Jefe Comercial');
 
 -- ============================================
 -- Tabla: users
@@ -30,7 +49,7 @@ CREATE TABLE users (
     password NVARCHAR(255) NOT NULL,
     firstName NVARCHAR(255) NOT NULL,
     lastName NVARCHAR(255) NOT NULL,
-    role NVARCHAR(50) NOT NULL DEFAULT 'user',
+    roleId INT NOT NULL,
     avatar NVARCHAR(255),
     phone NVARCHAR(255),
     language NVARCHAR(255) DEFAULT 'es',
@@ -38,9 +57,12 @@ CREATE TABLE users (
     isActive BIT NOT NULL DEFAULT 1,
     createdAt DATETIME2 NOT NULL DEFAULT GETDATE(),
     updatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
-    CONSTRAINT CHK_users_role CHECK (role IN ('admin', 'user', 'manager')),
+    CONSTRAINT FK_users_role FOREIGN KEY (roleId) REFERENCES roles(id) ON DELETE NO ACTION,
     CONSTRAINT CHK_users_email CHECK (email LIKE '%@%.%')
 );
+
+-- Crear índice para mejorar el rendimiento
+CREATE INDEX idx_users_roleId ON users(roleId);
 
 -- ============================================
 -- Tabla: companies

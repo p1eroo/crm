@@ -62,6 +62,15 @@ interface DashboardStats {
     byStage: Array<{ stage: string; count: number; total: number }>;
     wonThisMonth: number;
     wonValueThisMonth: number;
+    userPerformance?: Array<{
+      userId: number;
+      firstName: string;
+      lastName: string;
+      email: string;
+      totalDeals: number;
+      wonDeals: number;
+      performance: number;
+    }>;
   };
   tasks: {
     total: number;
@@ -96,19 +105,65 @@ const Dashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
-  const [selectedMonth, setSelectedMonth] = useState(new Date().toLocaleString('es-ES', { month: 'short', year: 'numeric' }));
+  const currentYear = new Date().getFullYear();
+  const [selectedYear, setSelectedYear] = useState(currentYear.toString());
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null); // null = todos los meses
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [calendarDate, setCalendarDate] = useState(new Date());
+
+  // Generar lista de años: año actual y 5 años anteriores
+  const availableYears = Array.from({ length: 6 }, (_, i) => currentYear - i);
+  
+  // Generar lista de meses
+  const monthNames = [
+    { value: '0', label: 'Enero' },
+    { value: '1', label: 'Febrero' },
+    { value: '2', label: 'Marzo' },
+    { value: '3', label: 'Abril' },
+    { value: '4', label: 'Mayo' },
+    { value: '5', label: 'Junio' },
+    { value: '6', label: 'Julio' },
+    { value: '7', label: 'Agosto' },
+    { value: '8', label: 'Septiembre' },
+    { value: '9', label: 'Octubre' },
+    { value: '10', label: 'Noviembre' },
+    { value: '11', label: 'Diciembre' },
+  ];
 
   useEffect(() => {
     fetchStats();
     fetchTasks();
   }, []);
 
+  // Recargar estadísticas cuando cambia el año o mes seleccionado
+  useEffect(() => {
+    fetchStats();
+  }, [selectedYear, selectedMonth]);
+
   const fetchStats = async () => {
     try {
-      const response = await api.get('/dashboard/stats');
+      // Calcular fechas de inicio y fin según el año y mes seleccionado
+      const year = parseInt(selectedYear);
+      let startDate: Date;
+      let endDate: Date;
+      
+      if (selectedMonth !== null) {
+        // Si hay un mes seleccionado, filtrar solo ese mes
+        const month = parseInt(selectedMonth);
+        startDate = new Date(year, month, 1);
+        endDate = new Date(year, month + 1, 0, 23, 59, 59); // Último día del mes
+      } else {
+        // Si no hay mes seleccionado, mostrar todo el año
+        startDate = new Date(year, 0, 1); // 1 de enero
+        endDate = new Date(year, 11, 31, 23, 59, 59); // 31 de diciembre
+      }
+      
+      const response = await api.get('/dashboard/stats', {
+        params: {
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        },
+      });
       console.log('Dashboard stats recibidos:', response.data);
       console.log('Deals por etapa:', response.data.deals?.byStage);
       setStats(response.data);
@@ -206,14 +261,25 @@ const Dashboard: React.FC = () => {
         month: item.month.split(' ')[0].substring(0, 3),
         value: item.amount,
       }))
-    : Array.from({ length: 12 }, (_, i) => {
-        const date = new Date();
-        date.setMonth(date.getMonth() - (11 - i));
-        return {
-          month: date.toLocaleString('es-ES', { month: 'short' }).substring(0, 3),
-          value: 0,
-        };
-      });
+    : (() => {
+        // Si hay un mes seleccionado, mostrar solo ese mes
+        if (selectedMonth !== null) {
+          const monthIndex = parseInt(selectedMonth);
+          const monthName = monthNames[monthIndex]?.label || '';
+          return [{
+            month: monthName.substring(0, 3),
+            value: 0,
+          }];
+        }
+        // Si no hay mes seleccionado, mostrar los 12 meses del año
+        return Array.from({ length: 12 }, (_, i) => {
+          const date = new Date(parseInt(selectedYear), i, 1);
+          return {
+            month: date.toLocaleString('es-ES', { month: 'short' }).substring(0, 3),
+            value: 0,
+          };
+        });
+      })();
 
   // Función para obtener el label de la etapa
   const getStageLabel = (stage: string) => {
@@ -377,8 +443,9 @@ const Dashboard: React.FC = () => {
   };
 
 
-  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-  const currentMonthName = monthNames[calendarMonth];
+  // Array de nombres de meses para el calendario
+  const monthNamesArray = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const currentMonthName = monthNamesArray[calendarMonth];
 
   return (
     <Box sx={{ 
@@ -683,9 +750,26 @@ const Dashboard: React.FC = () => {
                     onChange={(e) => setSelectedYear(e.target.value)}
                     sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}
                   >
-                    <MenuItem value="2024">2024</MenuItem>
-                    <MenuItem value="2023">2023</MenuItem>
-                    <MenuItem value="2022">2022</MenuItem>
+                    {availableYears.map((year) => (
+                      <MenuItem key={year} value={year.toString()}>
+                        {year}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 } }}>
+                  <Select
+                    value={selectedMonth || 'all'}
+                    onChange={(e) => setSelectedMonth(e.target.value === 'all' ? null : e.target.value)}
+                    displayEmpty
+                    sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}
+                  >
+                    <MenuItem value="all">Todos los meses</MenuItem>
+                    {monthNames.map((month) => (
+                      <MenuItem key={month.value} value={month.value}>
+                        {month.label}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
                 <Button
@@ -834,12 +918,20 @@ const Dashboard: React.FC = () => {
         </Card>
       </Box>
 
-      {/* Sección inferior: Sales Distribution y Weekly Sales */}
-      <Box sx={{ 
-        display: 'grid', 
-        gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, 
-        gap: { xs: 2, md: 3 } 
-      }}>
+      {/* Sección inferior: Sales Distribution, Weekly Sales y Desempeño por Usuario */}
+      {/* Verificar si el usuario tiene permisos para ver KPIs comerciales */}
+      {(() => {
+        const canViewCommercialKPIs = user?.role === 'admin' || user?.role === 'jefe_comercial';
+        const gridCols = canViewCommercialKPIs 
+          ? { xs: '1fr', md: '1fr 1fr', lg: '1fr 1fr 1fr' } 
+          : { xs: '1fr', md: '1fr 1fr' };
+        
+        return (
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: gridCols, 
+            gap: { xs: 2, md: 3 } 
+          }}>
         {/* Sales Distribution */}
         <Card sx={{ 
           borderRadius: { xs: 3, md: 6 }, 
@@ -916,7 +1008,124 @@ const Dashboard: React.FC = () => {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-      </Box>
+
+        {/* Desempeño por Usuario - Solo visible para admin y jefe_comercial */}
+        {(user?.role === 'admin' || user?.role === 'jefe_comercial') && (
+          <Card sx={{ 
+            borderRadius: { xs: 3, md: 6 }, 
+            boxShadow: { xs: 1, md: 2 },
+          }}>
+            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 600, 
+                  color: '#1F2937', 
+                  mb: { xs: 2, md: 3 },
+                  fontSize: { xs: '1rem', md: '1.25rem' },
+                }}
+              >
+                KPI's Área Comercial
+              </Typography>
+              {stats.deals.userPerformance && stats.deals.userPerformance.length > 0 ? (
+                <Box>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={stats.deals.userPerformance.map((user) => ({
+                          name: `${user.firstName} ${user.lastName}`,
+                          value: user.performance,
+                          percentage: user.performance,
+                        }))}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={(props: any) => {
+                          const { name, percentage, cx, cy, midAngle, innerRadius, outerRadius } = props;
+                          if (midAngle === undefined || innerRadius === undefined || outerRadius === undefined) {
+                            return null;
+                          }
+                          const RADIAN = Math.PI / 180;
+                          const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                          const xPos = cx + radius * Math.cos(-midAngle * RADIAN);
+                          const yPos = cy + radius * Math.sin(-midAngle * RADIAN);
+                          
+                          return (
+                            <text
+                              x={xPos}
+                              y={yPos}
+                              fill="#1F2937"
+                              textAnchor={xPos > cx ? 'start' : 'end'}
+                              dominantBaseline="central"
+                              fontSize={12}
+                              fontWeight={600}
+                            >
+                              {name}: {percentage.toFixed(1)}%
+                            </text>
+                          );
+                        }}
+                        outerRadius={100}
+                        innerRadius={60}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {stats.deals.userPerformance.map((user, index) => {
+                          // Colores similares a la imagen: negro, dorado, teal
+                          const colors = ['#1F2937', '#F59E0B', '#10B981', '#8B5CF6', '#EF4444', '#06B6D4'];
+                          return (
+                            <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                          );
+                        })}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value: number) => `${value.toFixed(1)}%`}
+                        contentStyle={{
+                          backgroundColor: '#fff',
+                          border: '1px solid #E5E7EB',
+                          borderRadius: '8px',
+                          padding: '8px',
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  {/* Leyenda con detalles */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 2 }}>
+                    {stats.deals.userPerformance.map((user, index) => {
+                      const colors = ['#1F2937', '#F59E0B', '#10B981', '#8B5CF6', '#EF4444', '#06B6D4'];
+                      return (
+                        <Box key={user.userId} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                          <Box 
+                            sx={{ 
+                              width: 16, 
+                              height: 16, 
+                              borderRadius: '50%', 
+                              bgcolor: colors[index % colors.length] 
+                            }} 
+                          />
+                          <Typography variant="body2" sx={{ color: '#1F2937', fontSize: '0.875rem', fontWeight: 500 }}>
+                            {user.firstName} {user.lastName}
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: '#6B7280', fontSize: '0.875rem', ml: 'auto' }}>
+                            {user.wonDeals} de {user.totalDeals} cierres
+                          </Typography>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                </Box>
+              ) : (
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Typography variant="body2" sx={{ color: '#6B7280' }}>
+                    No hay datos de desempeño disponibles
+                  </Typography>
+                </Box>
+              )}
+            </CardContent>
+          </Card>
+        )}
+          </Box>
+        );
+      })()}
       </Box>
 
       {/* Columna Derecha - Perfil, Calendario y Tareas */}
@@ -985,7 +1194,7 @@ const Dashboard: React.FC = () => {
                 <ChevronLeft sx={{ fontSize: 16 }} />
               </IconButton>
               <Typography variant="body2" sx={{ fontWeight: 600, color: '#1F2937', fontSize: '0.875rem' }}>
-                {currentMonthName} {calendarYear}
+                {`${currentMonthName} ${calendarYear}`}
               </Typography>
               <IconButton size="small" onClick={handleNextMonth} sx={{ width: 24, height: 24 }}>
                 <ChevronRight sx={{ fontSize: 16 }} />

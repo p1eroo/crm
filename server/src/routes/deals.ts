@@ -9,6 +9,15 @@ import { authenticateToken, AuthRequest } from '../middleware/auth';
 const router = express.Router();
 router.use(authenticateToken);
 
+// Función helper para transformar deals y asegurar que amount sea un número
+const transformDeal = (deal: any) => {
+  const dealJson = deal.toJSON ? deal.toJSON() : deal;
+  return {
+    ...dealJson,
+    amount: typeof dealJson.amount === 'string' ? parseFloat(dealJson.amount) : (Number(dealJson.amount) || 0),
+  };
+};
+
 // Obtener todos los deals
 router.get('/', async (req: AuthRequest, res) => {
   try {
@@ -47,8 +56,10 @@ router.get('/', async (req: AuthRequest, res) => {
       order: [['createdAt', 'DESC']],
     });
 
+    const transformedDeals = deals.rows.map(deal => transformDeal(deal));
+    
     res.json({
-      deals: deals.rows,
+      deals: transformedDeals,
       total: deals.count,
       page: Number(page),
       totalPages: Math.ceil(deals.count / Number(limit)),
@@ -73,7 +84,7 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Deal no encontrado' });
     }
 
-    res.json(deal);
+    res.json(transformDeal(deal));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -96,7 +107,7 @@ router.post('/', async (req: AuthRequest, res) => {
       ],
     });
 
-    res.status(201).json(newDeal);
+    res.status(201).json(transformDeal(newDeal));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -119,7 +130,7 @@ router.put('/:id', async (req, res) => {
       ],
     });
 
-    res.json(updatedDeal);
+    res.json(transformDeal(updatedDeal));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -153,7 +164,8 @@ router.get('/pipeline/:pipelineId', async (req, res) => {
       order: [['createdAt', 'DESC']],
     });
 
-    res.json(deals);
+    const transformedDeals = deals.map(deal => transformDeal(deal));
+    res.json(transformedDeals);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

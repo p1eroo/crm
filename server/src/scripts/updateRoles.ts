@@ -1,8 +1,9 @@
-// Script para actualizar roles de usuario en PostgreSQL
+// Script para actualizar roles de usuario
 // Ejecutar con: npm run update-roles o ts-node src/scripts/updateRoles.ts
 
 import { sequelize } from '../config/database';
 import { User } from '../models/User';
+import { Role } from '../models/Role';
 
 async function updateRoles() {
   try {
@@ -10,26 +11,20 @@ async function updateRoles() {
     await sequelize.authenticate();
     console.log('✓ Conexión establecida.\n');
 
-    // 1. Actualizar el ENUM en PostgreSQL si es necesario
-    console.log('Actualizando el ENUM de roles en PostgreSQL...');
-    try {
-      await sequelize.query(`
-        DO $$ 
-        BEGIN
-            IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role_enum') THEN
-                IF NOT EXISTS (
-                    SELECT 1 FROM pg_enum 
-                    WHERE enumlabel = 'jefe_comercial' 
-                    AND enumtypid = (SELECT oid FROM pg_type WHERE typname = 'user_role_enum')
-                ) THEN
-                    ALTER TYPE user_role_enum ADD VALUE 'jefe_comercial';
-                END IF;
-            END IF;
-        END $$;
-      `);
-      console.log('✓ ENUM actualizado (si era necesario).\n');
-    } catch (error: any) {
-      console.log('⚠ El ENUM puede no existir o ya estar actualizado. Continuando...\n');
+    // 1. Verificar que existan los roles necesarios
+    console.log('Verificando roles en la base de datos...');
+    const adminRole = await Role.findOne({ where: { name: 'admin' } });
+    if (!adminRole) {
+      console.log('⚠ El rol "admin" no existe. Creando roles...');
+      await Role.bulkCreate([
+        { name: 'admin', description: 'Administrador del sistema' },
+        { name: 'user', description: 'Usuario estándar' },
+        { name: 'manager', description: 'Gerente' },
+        { name: 'jefe_comercial', description: 'Jefe Comercial' },
+      ], { ignoreDuplicates: true });
+      console.log('✓ Roles creados.\n');
+    } else {
+      console.log('✓ Roles verificados.\n');
     }
 
     // 2. Asignar rol de administrador a los usuarios especificados
@@ -37,12 +32,21 @@ async function updateRoles() {
     const usuarios = ['asistema', 'jvaldivia'];
     let updatedCount = 0;
 
+    const adminRoleFinal = await Role.findOne({ where: { name: 'admin' } });
+    if (!adminRoleFinal) {
+      throw new Error('No se pudo encontrar el rol de administrador');
+    }
+
     for (const usuario of usuarios) {
-      const user = await User.findOne({ where: { usuario } });
+      const user = await User.findOne({ 
+        where: { usuario },
+        include: [{ model: Role, as: 'Role' }]
+      });
       
       if (user) {
         if (user.role !== 'admin') {
-          await user.update({ role: 'admin' });
+          await user.update({ roleId: adminRoleFinal.id });
+          await user.reload({ include: [{ model: Role, as: 'Role' }] });
           console.log(`✓ Rol de administrador asignado a: ${usuario} (${user.firstName} ${user.lastName})`);
           updatedCount++;
         } else {
@@ -55,27 +59,32 @@ async function updateRoles() {
 
     // 3. Verificar los cambios
     console.log('\n--- Usuarios con rol de administrador ---');
-    const admins = await User.findAll({ 
-      where: { role: 'admin' },
-      attributes: ['id', 'usuario', 'email', 'firstName', 'lastName', 'role', 'isActive'],
-      order: [['usuario', 'ASC']]
-    });
-    
-    if (admins.length > 0) {
-      admins.forEach(admin => {
-        console.log(`  - ${admin.usuario} (${admin.firstName} ${admin.lastName}) - ${admin.email}`);
+    const adminRoleForQuery = await Role.findOne({ where: { name: 'admin' } });
+    if (adminRoleForQuery) {
+      const admins = await User.findAll({ 
+        where: { roleId: adminRoleForQuery.id },
+        attributes: ['id', 'usuario', 'email', 'firstName', 'lastName', 'isActive'],
+        include: [{ model: Role, as: 'Role' }],
+        order: [['usuario', 'ASC']]
       });
-    } else {
-      console.log('  No se encontraron administradores.');
+      
+      if (admins.length > 0) {
+        admins.forEach(admin => {
+          console.log(`  - ${admin.usuario} (${admin.firstName} ${admin.lastName}) - ${admin.email}`);
+        });
+      } else {
+        console.log('  No se encontraron administradores.');
+      }
     }
 
     // 4. Mostrar resumen de todos los roles
     console.log('\n--- Resumen de roles ---');
     const roleCounts = await sequelize.query(`
-      SELECT role, COUNT(*)::text as count
-      FROM users
-      GROUP BY role
-      ORDER BY role;
+      SELECT r.name as role, COUNT(u.id)::text as count
+      FROM roles r
+      LEFT JOIN users u ON r.id = u."roleId"
+      GROUP BY r.id, r.name
+      ORDER BY r.name;
     `, { type: 'SELECT' }) as Array<{ role: string; count: string }>;
 
     roleCounts.forEach((row) => {

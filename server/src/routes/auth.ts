@@ -5,6 +5,7 @@ import { body, validationResult } from 'express-validator';
 import { Op } from 'sequelize';
 import axios from 'axios';
 import { User } from '../models/User';
+import { Role } from '../models/Role';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
@@ -40,6 +41,13 @@ router.post(
         return res.status(400).json({ error: 'El usuario o email ya existe' });
       }
 
+      // Obtener el roleId basado en el nombre del rol
+      const roleName = role || 'user';
+      const userRole = await Role.findOne({ where: { name: roleName } });
+      if (!userRole) {
+        return res.status(400).json({ error: `Rol '${roleName}' no encontrado` });
+      }
+
       const hashedPassword = await bcrypt.hash(password, 10);
       const user = await User.create({
         usuario,
@@ -47,8 +55,11 @@ router.post(
         password: hashedPassword,
         firstName,
         lastName,
-        role: role || 'user',
+        roleId: userRole.id,
       });
+
+      // Cargar la relación con Role para acceder a user.role
+      await user.reload({ include: [{ model: Role, as: 'Role' }] });
 
       const token = jwt.sign(
         { userId: user.id, usuario: user.usuario, email: user.email, role: user.role },
@@ -204,9 +215,21 @@ router.post(
 
       // Solo si la autenticación con Monterrico fue exitosa, proceder con el usuario local
       // Buscar o crear usuario local
-      let user = await User.findOne({ where: { usuario } });
+      let user = await User.findOne({ 
+        where: { usuario },
+        include: [{ model: Role, as: 'Role' }]
+      });
       
       if (!user) {
+        // Obtener el roleId basado en el nombre del rol
+        const roleName = monterricoData.rol || monterricoData.role || 'user';
+        const userRole = await Role.findOne({ where: { name: roleName } });
+        const defaultRole = userRole || await Role.findOne({ where: { name: 'user' } });
+        
+        if (!defaultRole) {
+          return res.status(500).json({ error: 'No se pudo asignar un rol al usuario' });
+        }
+
         // Crear usuario local basado en datos de Monterrico
         const hashedPassword = await bcrypt.hash(password, 10);
         user = await User.create({
@@ -215,13 +238,21 @@ router.post(
           password: hashedPassword,
           firstName: monterricoData.nombre || monterricoData.firstName || usuario,
           lastName: monterricoData.apellido || monterricoData.lastName || '',
-          role: monterricoData.rol || monterricoData.role || 'user',
+          roleId: defaultRole.id,
           isActive: true,
         });
+        
+        // Cargar la relación con Role
+        await user.reload({ include: [{ model: Role, as: 'Role' }] });
       } else {
         // Si el usuario existe pero está inactivo, no permitir login
         if (!user.isActive) {
           return res.status(401).json({ error: 'Usuario inactivo' });
+        }
+        
+        // Asegurar que la relación Role esté cargada
+        if (!user.Role) {
+          await user.reload({ include: [{ model: Role, as: 'Role' }] });
         }
       }
 
@@ -267,7 +298,10 @@ router.post(
 
       const { usuario, password } = req.body;
 
-      const user = await User.findOne({ where: { usuario } });
+      const user = await User.findOne({ 
+        where: { usuario },
+        include: [{ model: Role, as: 'Role' }]
+      });
       if (!user || !user.isActive) {
         return res.status(401).json({ error: 'Credenciales inválidas' });
       }
@@ -306,6 +340,7 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const user = await User.findByPk(req.userId, {
       attributes: { exclude: ['password'] },
+      include: [{ model: Role, as: 'Role' }],
     });
 
     if (!user) {
@@ -340,6 +375,7 @@ router.put('/profile', authenticateToken, async (req: AuthRequest, res) => {
 
     const updatedUser = await User.findByPk(req.userId, {
       attributes: { exclude: ['password'] },
+      include: [{ model: Role, as: 'Role' }],
     });
 
     res.json(updatedUser);

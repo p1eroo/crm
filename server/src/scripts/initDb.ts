@@ -1,5 +1,6 @@
 import { sequelize } from '../config/database';
 import { User } from '../models/User';
+import { Role } from '../models/Role';
 import bcrypt from 'bcryptjs';
 
 async function initDatabase() {
@@ -8,9 +9,26 @@ async function initDatabase() {
     await sequelize.sync({ alter: true });
     console.log('Base de datos sincronizada correctamente.');
 
+    // Asegurar que existan los roles
+    const roles = await Role.findAll();
+    if (roles.length === 0) {
+      await Role.bulkCreate([
+        { name: 'admin', description: 'Administrador del sistema' },
+        { name: 'user', description: 'Usuario estándar' },
+        { name: 'manager', description: 'Gerente' },
+        { name: 'jefe_comercial', description: 'Jefe Comercial' },
+      ]);
+      console.log('Roles por defecto creados.');
+    }
+
     // Crear usuario admin por defecto si no existe
     const adminExists = await User.findOne({ where: { usuario: 'admin' } });
     if (!adminExists) {
+      const adminRole = await Role.findOne({ where: { name: 'admin' } });
+      if (!adminRole) {
+        throw new Error('No se pudo encontrar el rol de administrador');
+      }
+
       const hashedPassword = await bcrypt.hash('admin123', 10);
       await User.create({
         usuario: 'admin',
@@ -18,7 +36,7 @@ async function initDatabase() {
         password: hashedPassword,
         firstName: 'Admin',
         lastName: 'User',
-        role: 'admin',
+        roleId: adminRole.id,
       });
       console.log('Usuario admin creado: usuario=admin / contraseña=admin123');
     }

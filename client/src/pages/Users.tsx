@@ -67,7 +67,12 @@ const Users: React.FC = () => {
     try {
       setLoading(true);
       const response = await api.get('/users');
-      setUsers(response.data);
+      // Asegurar que cada usuario tenga el campo role correctamente mapeado
+      const usersWithRole = response.data.map((user: any) => ({
+        ...user,
+        role: user.role || user.Role?.name || 'user',
+      }));
+      setUsers(usersWithRole);
     } catch (error: any) {
       setMessage({ 
         type: 'error', 
@@ -81,8 +86,10 @@ const Users: React.FC = () => {
   const handleRoleChange = async (userId: number, newRole: string) => {
     try {
       setUpdating(userId);
-      await api.put(`/users/${userId}/role`, { role: newRole });
-      setUsers(users.map(u => u.id === userId ? { ...u, role: newRole as any } : u));
+      const response = await api.put(`/users/${userId}/role`, { role: newRole });
+      // Actualizar con los datos del servidor para asegurar que tenemos el rol correcto
+      const updatedUser = response.data;
+      setUsers(users.map(u => u.id === userId ? { ...u, role: updatedUser.role || newRole } : u));
       setMessage({ type: 'success', text: 'Rol actualizado correctamente' });
       setTimeout(() => setMessage(null), 3000);
     } catch (error: any) {
@@ -91,6 +98,8 @@ const Users: React.FC = () => {
         text: error.response?.data?.error || 'Error al actualizar el rol' 
       });
       setTimeout(() => setMessage(null), 5000);
+      // Recargar usuarios para obtener el estado correcto
+      fetchUsers();
     } finally {
       setUpdating(null);
     }

@@ -1,5 +1,6 @@
 import { DataTypes, Model, Optional } from 'sequelize';
 import { sequelize } from '../config/database';
+import { Role } from './Role';
 
 interface UserAttributes {
   id: number;
@@ -8,7 +9,7 @@ interface UserAttributes {
   password: string;
   firstName: string;
   lastName: string;
-  role: 'admin' | 'user' | 'manager' | 'jefe_comercial';
+  roleId: number;
   avatar?: string;
   phone?: string;
   language?: string;
@@ -27,7 +28,7 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
   public password!: string;
   public firstName!: string;
   public lastName!: string;
-  public role!: 'admin' | 'user' | 'manager' | 'jefe_comercial';
+  public roleId!: number;
   public avatar?: string;
   public phone?: string;
   public language?: string;
@@ -35,6 +36,14 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
   public isActive!: boolean;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
+
+  // Relación con Role
+  public Role?: Role;
+
+  // Getter para mantener compatibilidad con código existente que usa user.role
+  public get role(): string {
+    return this.Role?.name || '';
+  }
 }
 
 User.init(
@@ -69,9 +78,13 @@ User.init(
       type: DataTypes.STRING,
       allowNull: false,
     },
-    role: {
-      type: DataTypes.ENUM('admin', 'user', 'manager', 'jefe_comercial'),
-      defaultValue: 'user',
+    roleId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'roles',
+        key: 'id',
+      },
     },
     avatar: {
       type: DataTypes.TEXT,
@@ -102,6 +115,19 @@ User.init(
     timestamps: true,
   }
 );
+
+// Definir la relación con Role
+User.belongsTo(Role, { foreignKey: 'roleId', as: 'Role' });
+
+// Hook para establecer roleId por defecto si no se proporciona
+User.beforeCreate(async (user) => {
+  if (!user.roleId) {
+    const defaultRole = await Role.findOne({ where: { name: 'user' } });
+    if (defaultRole) {
+      user.roleId = defaultRole.id;
+    }
+  }
+});
 
 
 

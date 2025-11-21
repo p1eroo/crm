@@ -1,9 +1,20 @@
 import express, { Request, Response } from 'express';
 import { Op } from 'sequelize';
 import { User } from '../models/User';
+import { Role } from '../models/Role';
 import { authenticateToken, AuthRequest, requireRole } from '../middleware/auth';
 
 const router = express.Router();
+
+// Función helper para transformar usuarios y asegurar que el campo 'role' esté presente
+const transformUser = (user: any) => {
+  const userJson = user.toJSON ? user.toJSON() : user;
+  return {
+    ...userJson,
+    role: userJson.Role?.name || userJson.role || '',
+    Role: userJson.Role, // Mantener también el objeto Role completo por si se necesita
+  };
+};
 
 // Todas las rutas requieren autenticación y rol de administrador
 router.use(authenticateToken);
@@ -14,10 +25,12 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const users = await User.findAll({
       attributes: { exclude: ['password'] },
+      include: [{ model: Role, as: 'Role' }],
       order: [['createdAt', 'DESC']],
     });
 
-    res.json(users);
+    const transformedUsers = users.map(user => transformUser(user));
+    res.json(transformedUsers);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -28,13 +41,14 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const user = await User.findByPk(req.params.id, {
       attributes: { exclude: ['password'] },
+      include: [{ model: Role, as: 'Role' }],
     });
 
     if (!user) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    res.json(user);
+    res.json(transformUser(user));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -44,15 +58,20 @@ router.get('/:id', async (req: AuthRequest, res: Response) => {
 router.put('/:id/role', async (req: AuthRequest, res: Response) => {
   try {
     const { role } = req.body;
-    const validRoles = ['admin', 'user', 'manager', 'jefe_comercial'];
 
-    if (!role || !validRoles.includes(role)) {
-      return res.status(400).json({ 
-        error: `Rol inválido. Roles válidos: ${validRoles.join(', ')}` 
-      });
+    if (!role) {
+      return res.status(400).json({ error: 'Se requiere un rol' });
     }
 
-    const user = await User.findByPk(req.params.id);
+    // Buscar el rol por nombre
+    const userRole = await Role.findOne({ where: { name: role } });
+    if (!userRole) {
+      return res.status(400).json({ error: `Rol '${role}' no encontrado` });
+    }
+
+    const user = await User.findByPk(req.params.id, {
+      include: [{ model: Role, as: 'Role' }],
+    });
 
     if (!user) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -60,21 +79,30 @@ router.put('/:id/role', async (req: AuthRequest, res: Response) => {
 
     // No permitir cambiar el rol del último administrador
     if (user.role === 'admin' && role !== 'admin') {
-      const adminCount = await User.count({ where: { role: 'admin' } });
-      if (adminCount <= 1) {
-        return res.status(400).json({ 
-          error: 'No se puede eliminar el último administrador del sistema' 
-        });
+      const adminRole = await Role.findOne({ where: { name: 'admin' } });
+      if (adminRole) {
+        const adminCount = await User.count({ where: { roleId: adminRole.id } });
+        if (adminCount <= 1) {
+          return res.status(400).json({ 
+            error: 'No se puede eliminar el último administrador del sistema' 
+          });
+        }
       }
     }
 
-    await user.update({ role });
+    await user.update({ roleId: userRole.id });
+    await user.reload({ include: [{ model: Role, as: 'Role' }] });
 
     const updatedUser = await User.findByPk(req.params.id, {
       attributes: { exclude: ['password'] },
+      include: [{ model: Role, as: 'Role' }],
     });
 
-    res.json(updatedUser);
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    res.json(transformUser(updatedUser));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -89,7 +117,9 @@ router.put('/:id/status', async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'isActive debe ser un valor booleano' });
     }
 
-    const user = await User.findByPk(req.params.id);
+    const user = await User.findByPk(req.params.id, {
+      include: [{ model: Role, as: 'Role' }],
+    });
 
     if (!user) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -97,23 +127,32 @@ router.put('/:id/status', async (req: AuthRequest, res: Response) => {
 
     // No permitir desactivar el último administrador activo
     if (user.role === 'admin' && !isActive) {
-      const activeAdminCount = await User.count({ 
-        where: { role: 'admin', isActive: true } 
-      });
-      if (activeAdminCount <= 1) {
-        return res.status(400).json({ 
-          error: 'No se puede desactivar el último administrador activo del sistema' 
+      const adminRole = await Role.findOne({ where: { name: 'admin' } });
+      if (adminRole) {
+        const activeAdminCount = await User.count({ 
+          where: { roleId: adminRole.id, isActive: true } 
         });
+        if (activeAdminCount <= 1) {
+          return res.status(400).json({ 
+            error: 'No se puede desactivar el último administrador activo del sistema' 
+          });
+        }
       }
     }
 
     await user.update({ isActive });
+    await user.reload({ include: [{ model: Role, as: 'Role' }] });
 
     const updatedUser = await User.findByPk(req.params.id, {
       attributes: { exclude: ['password'] },
+      include: [{ model: Role, as: 'Role' }],
     });
 
-    res.json(updatedUser);
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    res.json(transformUser(updatedUser));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -152,9 +191,14 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
 
     const updatedUser = await User.findByPk(req.params.id, {
       attributes: { exclude: ['password'] },
+      include: [{ model: Role, as: 'Role' }],
     });
 
-    res.json(updatedUser);
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    res.json(transformUser(updatedUser));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -163,7 +207,9 @@ router.put('/:id', async (req: AuthRequest, res: Response) => {
 // Eliminar usuario
 router.delete('/:id', async (req: AuthRequest, res: Response) => {
   try {
-    const user = await User.findByPk(req.params.id);
+    const user = await User.findByPk(req.params.id, {
+      include: [{ model: Role, as: 'Role' }],
+    });
 
     if (!user) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -171,11 +217,14 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
 
     // No permitir eliminar el último administrador
     if (user.role === 'admin') {
-      const adminCount = await User.count({ where: { role: 'admin' } });
-      if (adminCount <= 1) {
-        return res.status(400).json({ 
-          error: 'No se puede eliminar el último administrador del sistema' 
-        });
+      const adminRole = await Role.findOne({ where: { name: 'admin' } });
+      if (adminRole) {
+        const adminCount = await User.count({ where: { roleId: adminRole.id } });
+        if (adminCount <= 1) {
+          return res.status(400).json({ 
+            error: 'No se puede eliminar el último administrador del sistema' 
+          });
+        }
       }
     }
 

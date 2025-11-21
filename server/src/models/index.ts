@@ -1,5 +1,6 @@
 // Export all models
 export { User } from './User';
+export { Role } from './Role';
 export { Contact } from './Contact';
 export { Company } from './Company';
 export { Deal } from './Deal';
@@ -14,6 +15,7 @@ export { ContactCompany } from './ContactCompany';
 
 // Import all models to ensure they are registered
 // Importar modelos base primero
+import './Role';
 import './User';
 import './Company';
 import './Contact';

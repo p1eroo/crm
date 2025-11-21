@@ -41,6 +41,7 @@ interface Deal {
   probability?: number;
   Contact?: { firstName: string; lastName: string };
   Company?: { name: string };
+  Owner?: { id: number; firstName: string; lastName: string; email?: string };
 }
 
 const Deals: React.FC = () => {
@@ -62,23 +63,71 @@ const Deals: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [stageMenuAnchor, setStageMenuAnchor] = useState<{ [key: number]: HTMLElement | null }>({});
   const [updatingStage, setUpdatingStage] = useState<{ [key: number]: boolean }>({});
+  const [filterStage, setFilterStage] = useState<string | null>(null); // Filtro de etapa activo
 
-  // Calcular estadísticas
-  const totalDeals = deals.length;
+  // Función helper para convertir amount a número de forma segura
+  const parseAmount = (amount: any): number => {
+    if (amount === null || amount === undefined || amount === '') return 0;
+    const num = typeof amount === 'string' ? parseFloat(amount) : Number(amount);
+    return isNaN(num) ? 0 : num;
+  };
+
+  // Función helper para formatear valores monetarios
+  const formatCurrency = (value: number): string => {
+    if (value >= 1000000) {
+      const millions = value / 1000000;
+      return millions % 1 === 0 ? `$${millions.toFixed(0)}M` : `$${millions.toFixed(1)}M`;
+    } else if (value >= 1000) {
+      const thousands = value / 1000;
+      return thousands % 1 === 0 ? `$${thousands.toFixed(0)}k` : `$${thousands.toFixed(1)}k`;
+    }
+    return `$${value.toFixed(0)}`;
+  };
+
+  // Filtrar deals según el filtro activo
+  const filteredDeals = filterStage 
+    ? deals.filter(d => {
+        if (filterStage === 'won') {
+          return d.stage === 'cierre_ganado' || d.stage === 'closed won' || d.stage === 'won';
+        }
+        return d.stage === filterStage;
+      })
+    : deals;
+
+  // Calcular estadísticas basadas en deals filtrados
+  const totalDeals = filteredDeals.length;
   const wonDeals = deals.filter(d => d.stage === 'cierre_ganado' || d.stage === 'closed won' || d.stage === 'won').length;
-  const totalValue = deals.reduce((sum, deal) => sum + (deal.amount || 0), 0);
+  
+  // El valor total debe reflejar los deals filtrados, no todos
+  const totalValue = filteredDeals.reduce((sum, deal) => {
+    const amount = parseAmount(deal.amount);
+    return sum + amount;
+  }, 0);
+  
   const wonValue = deals
     .filter(d => d.stage === 'cierre_ganado' || d.stage === 'closed won' || d.stage === 'won')
-    .reduce((sum, deal) => sum + (deal.amount || 0), 0);
+    .reduce((sum, deal) => {
+      const amount = parseAmount(deal.amount);
+      return sum + amount;
+    }, 0);
 
   // Función para obtener iniciales
-  const getInitials = (name: string) => {
-    if (!name) return '--';
-    const words = name.trim().split(' ');
-    if (words.length >= 2) {
-      return `${words[0][0]}${words[1][0]}`.toUpperCase();
+  const getInitials = (firstName?: string, lastName?: string) => {
+    if (firstName && lastName) {
+      return `${firstName[0]}${lastName[0]}`.toUpperCase();
     }
-    return name.substring(0, 2).toUpperCase();
+    if (firstName) {
+      return firstName.substring(0, 2).toUpperCase();
+    }
+    if (typeof firstName === 'string' && !lastName) {
+      // Si solo se pasa un string (nombre del deal)
+      const words = firstName.trim().split(' ');
+      if (words.length >= 2) {
+        return `${words[0][0]}${words[1][0]}`.toUpperCase();
+      }
+      return firstName.substring(0, 2).toUpperCase();
+    }
+    return '--';
   };
 
   // Función para vista previa
@@ -376,11 +425,11 @@ const Deals: React.FC = () => {
                   Valor Total
                 </Typography>
                 <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
-                  ${(totalValue / 1000).toFixed(0)}k
+                  {formatCurrency(totalValue)}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: -0.75 }}>
-                  {Array.from({ length: Math.min(5, totalDeals) }).map((_, idx) => {
-                    const deal = deals[idx];
+                  {Array.from({ length: Math.min(5, filteredDeals.length) }).map((_, idx) => {
+                    const deal = filteredDeals[idx];
                     return (
                       <Avatar
                         key={idx}
@@ -425,12 +474,14 @@ const Deals: React.FC = () => {
                 href="#"
                 onClick={(e) => {
                   e.preventDefault();
+                  setFilterStage(filterStage === 'won' ? null : 'won');
                 }}
                 sx={{
                   fontSize: '0.875rem',
-                  color: '#1976d2',
-                  textDecoration: 'none',
+                  color: filterStage === 'won' ? '#1976d2' : '#1976d2',
+                  textDecoration: filterStage === 'won' ? 'underline' : 'none',
                   cursor: 'pointer',
+                  fontWeight: filterStage === 'won' ? 600 : 400,
                   '&:hover': {
                     textDecoration: 'underline',
                   },
@@ -556,13 +607,42 @@ const Deals: React.FC = () => {
                 <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
                   Empresa
                 </TableCell>
+                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
+                  Propietario
+                </TableCell>
                 <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
                   Acciones
                 </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {deals.map((deal) => (
+              {(() => {
+                // Aplicar ordenamiento a los deals filtrados
+                let sortedDeals = [...filteredDeals];
+                switch (sortBy) {
+                  case 'newest':
+                    sortedDeals.sort((a, b) => {
+                      const dateA = a.closeDate ? new Date(a.closeDate).getTime() : 0;
+                      const dateB = b.closeDate ? new Date(b.closeDate).getTime() : 0;
+                      return dateB - dateA;
+                    });
+                    break;
+                  case 'oldest':
+                    sortedDeals.sort((a, b) => {
+                      const dateA = a.closeDate ? new Date(a.closeDate).getTime() : 0;
+                      const dateB = b.closeDate ? new Date(b.closeDate).getTime() : 0;
+                      return dateA - dateB;
+                    });
+                    break;
+                  case 'name':
+                    sortedDeals.sort((a, b) => a.name.localeCompare(b.name));
+                    break;
+                  case 'nameDesc':
+                    sortedDeals.sort((a, b) => b.name.localeCompare(a.name));
+                    break;
+                }
+                return sortedDeals;
+              })().map((deal) => (
                 <TableRow 
                   key={deal.id}
                   hover
@@ -585,7 +665,7 @@ const Deals: React.FC = () => {
                           flexShrink: 0,
                         }}
                       >
-                        {getInitials(deal.name)}
+                        {getInitials(deal.name, undefined)}
                       </Avatar>
                       <Typography 
                         variant="body2" 
@@ -732,6 +812,39 @@ const Deals: React.FC = () => {
                       >
                         {deal.Company.name}
                       </Typography>
+                    ) : (
+                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
+                        --
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
+                    {deal.Owner ? (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Avatar
+                          sx={{
+                            width: { xs: 28, md: 32 },
+                            height: { xs: 28, md: 32 },
+                            bgcolor: taxiMonterricoColors.green,
+                            fontSize: { xs: '0.7rem', md: '0.75rem' },
+                            fontWeight: 600,
+                          }}
+                        >
+                          {getInitials(deal.Owner.firstName, deal.Owner.lastName)}
+                        </Avatar>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: '#1a1a1a',
+                            fontSize: { xs: '0.75rem', md: '0.875rem' },
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {deal.Owner.firstName} {deal.Owner.lastName}
+                        </Typography>
+                      </Box>
                     ) : (
                       <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                         --
