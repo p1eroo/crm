@@ -61,7 +61,7 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`profile-tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ p: 4 }}>{children}</Box>}
+      {value === index && <Box sx={{ p: 0 }}>{children}</Box>}
     </div>
   );
 }
@@ -218,8 +218,8 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 2, sm: 3, md: 4 }, py: 4 }}>
-      <Box sx={{ mb: 4 }}>
+    <Box sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 2, sm: 3, md: 4 }, py: { xs: 2, sm: 3 } }}>
+      <Box sx={{ mb: 2 }}>
         <Typography variant="h4" sx={{ mb: 1, fontWeight: 700, color: '#1a1a1a' }}>
           General
         </Typography>
@@ -288,18 +288,9 @@ const Profile: React.FC = () => {
             sx={{
               bgcolor: 'white',
               borderRadius: 2,
-              p: 4,
+              p: { xs: 2.5, sm: 3 },
             }}
           >
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: '#1a1a1a' }}>
-                Global
-              </Typography>
-              <Typography variant="body2" sx={{ color: '#757575', lineHeight: 1.7 }}>
-                Esto se aplica a todas las cuentas que tienes.
-              </Typography>
-            </Box>
-
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
               <Box 
                 sx={{ 
@@ -378,47 +369,6 @@ const Profile: React.FC = () => {
                       }
                     }}
                   />
-                  <FormControl 
-                    fullWidth
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 1.5,
-                      }
-                    }}
-                  >
-                    <InputLabel>Idioma</InputLabel>
-                    <Select
-                      value={profileData.language}
-                      label="Idioma"
-                      onChange={(e) => setProfileData({ ...profileData, language: e.target.value })}
-                    >
-                      <MenuItem value="es">Español</MenuItem>
-                      <MenuItem value="en">English</MenuItem>
-                      <MenuItem value="pt">Português</MenuItem>
-                    </Select>
-                  </FormControl>
-                  <FormControl 
-                    fullWidth
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 1.5,
-                      }
-                    }}
-                  >
-                    <InputLabel>Formato de hora, fecha y número</InputLabel>
-                    <Select
-                      value={profileData.dateFormat}
-                      label="Formato de hora, fecha y número"
-                      onChange={(e) => setProfileData({ ...profileData, dateFormat: e.target.value })}
-                    >
-                      <MenuItem value="es-ES">España</MenuItem>
-                      <MenuItem value="en-US">Estados Unidos</MenuItem>
-                      <MenuItem value="pt-BR">Brasil</MenuItem>
-                    </Select>
-                    <FormHelperText sx={{ mt: 1 }}>
-                      Formato: {new Date().toLocaleDateString(profileData.dateFormat)} y {new Date().toLocaleTimeString(profileData.dateFormat)}
-                    </FormHelperText>
-                  </FormControl>
                   <TextField
                     fullWidth
                     label="Número de teléfono"

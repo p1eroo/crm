@@ -7,6 +7,7 @@ import {
   ListItemIcon,
   Tooltip,
   Box,
+  useTheme,
 } from '@mui/material';
 import {
   Dashboard,
@@ -41,6 +42,7 @@ const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user } = useAuth();
+  const theme = useTheme();
 
   const handleLogout = () => {
     logout();
@@ -57,9 +59,9 @@ const Sidebar: React.FC = () => {
           width: drawerWidth,
           boxSizing: 'border-box',
           overflowX: 'hidden',
-          bgcolor: '#f8f9fa',
-          borderRight: '1px solid #e9ecef',
-          boxShadow: 'none',
+          bgcolor: theme.palette.background.paper,
+          borderRight: `1px solid ${theme.palette.divider}`,
+          boxShadow: theme.palette.mode === 'dark' ? '2px 0 8px rgba(0,0,0,0.3)' : 'none',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -76,8 +78,8 @@ const Sidebar: React.FC = () => {
         width: 48,
         height: 48,
         borderRadius: 2,
-        bgcolor: 'white',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
+        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
       }}>
         <PieChart sx={{ 
           fontSize: 24, 
@@ -95,7 +97,11 @@ const Sidebar: React.FC = () => {
         gap: 0.5,
       }}>
         {mainMenuItems.map((item) => {
-          const isSelected = location.pathname === item.path;
+          // Para Dashboard, solo coincidir exactamente con '/'
+          // Para otros, coincidir si el pathname comienza con el path del item
+          const isSelected = item.path === '/' 
+            ? location.pathname === '/' 
+            : location.pathname === item.path || location.pathname.startsWith(item.path + '/');
           return (
             <Tooltip 
               key={item.text}
@@ -105,7 +111,7 @@ const Sidebar: React.FC = () => {
               componentsProps={{
                 tooltip: {
                   sx: {
-                    bgcolor: '#424242',
+                    bgcolor: theme.palette.mode === 'dark' ? '#424242' : '#424242',
                     fontSize: '0.75rem',
                     fontWeight: 500,
                     px: 1.5,
@@ -116,7 +122,7 @@ const Sidebar: React.FC = () => {
                 },
                 arrow: {
                   sx: {
-                    color: '#424242',
+                    color: theme.palette.mode === 'dark' ? '#424242' : '#424242',
                   },
                 },
               }}
@@ -141,10 +147,10 @@ const Sidebar: React.FC = () => {
                     },
                   },
                   '&:hover': {
-                    backgroundColor: isSelected ? taxiMonterricoColors.greenDark : '#e9ecef',
+                    backgroundColor: isSelected ? taxiMonterricoColors.greenDark : theme.palette.action.hover,
                   },
                   '&:not(.Mui-selected)': {
-                    color: '#6c757d',
+                    color: theme.palette.text.secondary,
                   },
                 }}
               >
@@ -211,10 +217,10 @@ const Sidebar: React.FC = () => {
                   },
                 },
                 '&:hover': {
-                  backgroundColor: location.pathname === '/users' ? taxiMonterricoColors.greenDark : '#e9ecef',
+                  backgroundColor: location.pathname === '/users' ? taxiMonterricoColors.greenDark : theme.palette.action.hover,
                 },
                 '&:not(.Mui-selected)': {
-                  color: '#6c757d',
+                  color: theme.palette.text.secondary,
                 },
               }}
             >
@@ -272,10 +278,10 @@ const Sidebar: React.FC = () => {
               p: 0,
               mb: 0.5,
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              color: '#d32f2f',
+              color: theme.palette.error.main,
               '&:hover': {
-                backgroundColor: '#ffebee',
-                color: '#c62828',
+                backgroundColor: theme.palette.mode === 'dark' ? `${theme.palette.error.main}20` : `${theme.palette.error.main}10`,
+                color: theme.palette.error.dark,
               },
             }}
           >

@@ -1,6 +1,7 @@
 import React from 'react';
-import { Box } from '@mui/material';
+import { Box, useTheme } from '@mui/material';
 import Sidebar from './Sidebar';
+import ThemeToggleButton from '../ThemeToggleButton';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -9,8 +10,10 @@ interface MainLayoutProps {
 const drawerWidth = 80;
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
+  const theme = useTheme();
+  
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f5f7fa' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: theme.palette.background.default }}>
       <Sidebar />
       <Box
         component="main"
@@ -20,13 +23,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           display: 'flex',
           flexDirection: 'column',
           minHeight: '100vh',
-          bgcolor: '#f5f7fa',
+          bgcolor: theme.palette.background.default,
         }}
       >
-        <Box sx={{ flex: 1, bgcolor: '#f5f7fa', overflow: 'auto' }}>
+        <Box sx={{ flex: 1, bgcolor: theme.palette.background.default, overflow: 'auto' }}>
           {children}
         </Box>
       </Box>
+      <ThemeToggleButton />
     </Box>
   );
 };

@@ -38,6 +38,7 @@ import {
   CardContent,
   Tabs,
   Tab,
+  useTheme,
 } from '@mui/material';
 import { 
   Add, 
@@ -71,12 +72,15 @@ import {
   ArrowBack,
   ArrowForward,
   CheckCircle,
+  FileDownload,
+  UploadFile,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+import * as XLSX from 'xlsx';
 
 interface Contact {
   id: number;
@@ -120,6 +124,7 @@ interface Contact {
 const Contacts: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const theme = useTheme();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -158,10 +163,128 @@ const Contacts: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<{ [key: number]: HTMLElement | null }>({});
   const [updatingStatus, setUpdatingStatus] = useState<{ [key: number]: boolean }>({});
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetchContacts();
   }, [search]);
+
+  const handleExportToExcel = () => {
+    // Preparar los datos para exportar
+    const exportData = contacts.map((contact) => ({
+      'Nombre': `${contact.firstName || ''} ${contact.lastName || ''}`.trim(),
+      'Empresa': contact.Company?.name || contact.Companies?.[0]?.name || '--',
+      'Teléfono': contact.phone || contact.mobile || '--',
+      'Correo': contact.email || '--',
+      'País': contact.country || '--',
+      'Ciudad': contact.city || '--',
+      'Estado/Provincia': contact.state || '--',
+      'Cargo': contact.jobTitle || '--',
+      'Etapa': contact.lifecycleStage || '--',
+      'Estado': contact.lifecycleStage === 'cierre_ganado' ? 'Activo' : 'Inactivo',
+      'Fecha de Creación': contact.createdAt ? new Date(contact.createdAt).toLocaleDateString('es-ES') : '--',
+    }));
+
+    // Crear un libro de trabajo
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+
+    // Ajustar el ancho de las columnas
+    const colWidths = [
+      { wch: 30 }, // Nombre
+      { wch: 20 }, // Empresa
+      { wch: 15 }, // Teléfono
+      { wch: 25 }, // Correo
+      { wch: 15 }, // País
+      { wch: 15 }, // Ciudad
+      { wch: 18 }, // Estado/Provincia
+      { wch: 20 }, // Cargo
+      { wch: 15 }, // Etapa
+      { wch: 12 }, // Estado
+      { wch: 18 }, // Fecha de Creación
+    ];
+    ws['!cols'] = colWidths;
+
+    // Agregar la hoja al libro
+    XLSX.utils.book_append_sheet(wb, ws, 'Contactos');
+
+    // Generar el nombre del archivo con la fecha actual
+    const fecha = new Date().toISOString().split('T')[0];
+    const fileName = `Contactos_${fecha}.xlsx`;
+
+    // Descargar el archivo
+    XLSX.writeFile(wb, fileName);
+  };
+
+  const handleImportFromExcel = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      // Leer el archivo Excel
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(firstSheet) as any[];
+
+      // Procesar cada fila y crear contactos
+      const contactsToCreate = jsonData.map((row) => {
+        // Mapear columnas del Excel a los campos del contacto
+        const fullName = (row['Nombre'] || '').toString().trim();
+        const nameParts = fullName.split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
+        return {
+          firstName: firstName || 'Sin nombre',
+          lastName: lastName || 'Sin apellido',
+          email: (row['Correo'] || '').toString().trim() || undefined,
+          phone: (row['Teléfono'] || '').toString().trim() || undefined,
+          jobTitle: (row['Cargo'] || '').toString().trim() || undefined,
+          city: (row['Ciudad'] || '').toString().trim() || undefined,
+          state: (row['Estado/Provincia'] || '').toString().trim() || undefined,
+          country: (row['País'] || '').toString().trim() || undefined,
+          lifecycleStage: 'lead',
+        };
+      }).filter(contact => contact.firstName !== 'Sin nombre' || contact.email); // Filtrar filas vacías
+
+      // Crear contactos en el backend
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const contactData of contactsToCreate) {
+        try {
+          await api.post('/contacts', contactData);
+          successCount++;
+        } catch (error) {
+          console.error('Error creating contact:', error);
+          errorCount++;
+        }
+      }
+
+      // Limpiar el input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+
+      // Mostrar mensaje de resultado
+      alert(`Importación completada:\n${successCount} contactos creados exitosamente\n${errorCount} contactos con errores`);
+
+      // Recargar la lista de contactos
+      fetchContacts();
+    } catch (error) {
+      console.error('Error importing file:', error);
+      alert('Error al importar el archivo. Por favor, verifica que el formato sea correcto.');
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const fetchContacts = async () => {
     try {
@@ -625,7 +748,7 @@ const Contacts: React.FC = () => {
 
   return (
     <Box sx={{ 
-      bgcolor: '#f5f7fa', 
+      bgcolor: theme.palette.background.default, 
       minHeight: '100vh',
       pb: { xs: 3, sm: 6, md: 8 },
       px: { xs: 3, sm: 6, md: 8 },
@@ -873,25 +996,69 @@ const Contacts: React.FC = () => {
                   <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
                 </Select>
               </FormControl>
-              <Button 
-                variant="contained" 
-                startIcon={<Add />} 
-                onClick={() => handleOpen()}
-                sx={{
-                  bgcolor: taxiMonterricoColors.green,
-                  '&:hover': {
-                    bgcolor: taxiMonterricoColors.greenDark,
-                  },
-                  textTransform: 'none',
-                  fontWeight: 500,
-                  borderRadius: 1.5,
-                  px: 2.5,
-                  py: 1,
-                  boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
-                }}
-              >
-                Nuevo Contacto
-              </Button>
+              <Tooltip title={importing ? 'Importando...' : 'Importar'}>
+                <IconButton
+                  onClick={handleImportFromExcel}
+                  disabled={importing}
+                  sx={{
+                    border: `1px solid ${taxiMonterricoColors.green}`,
+                    color: taxiMonterricoColors.green,
+                    '&:hover': {
+                      borderColor: taxiMonterricoColors.greenDark,
+                      bgcolor: `${taxiMonterricoColors.green}10`,
+                    },
+                    '&:disabled': {
+                      borderColor: '#e0e0e0',
+                      color: '#9e9e9e',
+                    },
+                    borderRadius: 1.5,
+                    p: 1.25,
+                  }}
+                >
+                  <UploadFile />
+                </IconButton>
+              </Tooltip>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".xlsx,.xls"
+                style={{ display: 'none' }}
+              />
+              <Tooltip title="Exportar">
+                <IconButton
+                  onClick={handleExportToExcel}
+                  sx={{
+                    border: `1px solid ${taxiMonterricoColors.green}`,
+                    color: taxiMonterricoColors.green,
+                    '&:hover': {
+                      borderColor: taxiMonterricoColors.greenDark,
+                      bgcolor: `${taxiMonterricoColors.green}10`,
+                    },
+                    borderRadius: 1.5,
+                    p: 1.25,
+                  }}
+                >
+                  <FileDownload />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Nuevo Contacto">
+                <IconButton
+                  onClick={() => handleOpen()}
+                  sx={{
+                    bgcolor: taxiMonterricoColors.green,
+                    color: 'white',
+                    '&:hover': {
+                      bgcolor: taxiMonterricoColors.greenDark,
+                    },
+                    borderRadius: 1.5,
+                    p: 1.25,
+                    boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
+                  }}
+                >
+                  <Add />
+                </IconButton>
+              </Tooltip>
             </Box>
           </Box>
         </Box>
@@ -1633,7 +1800,7 @@ const Contacts: React.FC = () => {
                       sx={{
                         fontWeight: 700,
                         fontSize: '1.1rem',
-                        color: '#1F2937',
+                        color: theme.palette.text.primary,
                         mb: 0.25,
                       }}
                     >
@@ -1884,9 +2051,11 @@ const Contacts: React.FC = () => {
                       <IconButton size="small">
                         <MoreVert />
                       </IconButton>
-                      <IconButton size="small">
-                        <Settings />
-                      </IconButton>
+                      {user?.role !== 'user' && (
+                        <IconButton size="small">
+                          <Settings />
+                        </IconButton>
+                      )}
                     </Box>
                   </Box>
 
@@ -1912,7 +2081,7 @@ const Contacts: React.FC = () => {
                           sx={{ 
                             fontSize: '0.875rem',
                             fontWeight: 400,
-                            color: previewContact.email ? '#424242' : '#9CA3AF',
+                            color: previewContact.email ? theme.palette.text.primary : theme.palette.text.secondary,
                             textAlign: 'right',
                           }}
                         >
@@ -1940,7 +2109,7 @@ const Contacts: React.FC = () => {
                           sx={{ 
                             fontSize: '0.875rem',
                             fontWeight: 400,
-                            color: (previewContact.phone || previewContact.mobile) ? '#424242' : '#9CA3AF',
+                            color: (previewContact.phone || previewContact.mobile) ? theme.palette.text.primary : theme.palette.text.secondary,
                             textAlign: 'right',
                           }}
                         >
@@ -1968,7 +2137,7 @@ const Contacts: React.FC = () => {
                           sx={{ 
                             fontSize: '0.875rem',
                             fontWeight: 400,
-                            color: ((previewContact.Companies && previewContact.Companies.length > 0) || previewContact.Company) ? '#424242' : '#9CA3AF',
+                            color: ((previewContact.Companies && previewContact.Companies.length > 0) || previewContact.Company) ? theme.palette.text.primary : theme.palette.text.secondary,
                             textAlign: 'right',
                           }}
                         >

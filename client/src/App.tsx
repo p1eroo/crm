@@ -1,9 +1,10 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider as MUIThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SidebarProvider } from './context/SidebarContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 import MainLayout from './components/Layout/MainLayout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
@@ -21,7 +22,46 @@ import Users from './pages/Users';
 
 import { taxiMonterricoColors } from './theme/colors';
 
-const theme = createTheme({
+const getTheme = (mode: 'light' | 'dark') => createTheme({
+  palette: {
+    mode,
+    primary: {
+      main: taxiMonterricoColors.green, // Verde vibrante Taxi Monterrico
+      light: taxiMonterricoColors.greenLight,
+      dark: taxiMonterricoColors.greenDark,
+    },
+    secondary: {
+      main: taxiMonterricoColors.orangeDark, // Naranja/Amarillo dorado Taxi Monterrico
+      light: taxiMonterricoColors.orange,
+      dark: taxiMonterricoColors.orangeDark,
+    },
+    success: {
+      main: taxiMonterricoColors.green,
+      light: taxiMonterricoColors.greenLight,
+      dark: taxiMonterricoColors.greenDark,
+    },
+    warning: {
+      main: taxiMonterricoColors.orange,
+      light: taxiMonterricoColors.orangeLight,
+      dark: taxiMonterricoColors.orangeDark,
+    },
+    background: {
+      default: mode === 'light' ? '#f5f7fa' : '#0a0a0a',
+      paper: mode === 'light' ? '#ffffff' : '#1a1a1a',
+    },
+    text: {
+      primary: mode === 'light' ? '#1F2937' : '#e5e5e5',
+      secondary: mode === 'light' ? '#6B7280' : '#a0a0a0',
+    },
+    divider: mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.12)',
+    action: {
+      active: mode === 'light' ? 'rgba(0, 0, 0, 0.54)' : 'rgba(255, 255, 255, 0.7)',
+      hover: mode === 'light' ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.08)',
+      selected: mode === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.16)',
+      disabled: mode === 'light' ? 'rgba(0, 0, 0, 0.26)' : 'rgba(255, 255, 255, 0.3)',
+      disabledBackground: mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.12)',
+    },
+  },
   typography: {
     fontFamily: [
       'Inter',
@@ -67,28 +107,6 @@ const theme = createTheme({
       textTransform: 'none',
     },
   },
-  palette: {
-    primary: {
-      main: taxiMonterricoColors.green, // Verde vibrante Taxi Monterrico
-      light: taxiMonterricoColors.greenLight,
-      dark: taxiMonterricoColors.greenDark,
-    },
-    secondary: {
-      main: taxiMonterricoColors.orangeDark, // Naranja/Amarillo dorado Taxi Monterrico
-      light: taxiMonterricoColors.orange,
-      dark: taxiMonterricoColors.orangeDark,
-    },
-    success: {
-      main: taxiMonterricoColors.green,
-      light: taxiMonterricoColors.greenLight,
-      dark: taxiMonterricoColors.greenDark,
-    },
-    warning: {
-      main: taxiMonterricoColors.orange,
-      light: taxiMonterricoColors.orangeLight,
-      dark: taxiMonterricoColors.orangeDark,
-    },
-  },
 });
 
 const PrivateRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
@@ -101,9 +119,12 @@ const PrivateRoute: React.FC<{ children: React.ReactElement }> = ({ children }) 
   return isAuthenticated ? children : <Navigate to="/login" />;
 };
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
+  const { mode } = useTheme();
+  const theme = React.useMemo(() => getTheme(mode), [mode]);
+
   return (
-    <ThemeProvider theme={theme}>
+    <MUIThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
         <SidebarProvider>
@@ -234,6 +255,14 @@ const App: React.FC = () => {
         </Router>
         </SidebarProvider>
       </AuthProvider>
+    </MUIThemeProvider>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <ThemeProvider>
+      <AppContent />
     </ThemeProvider>
   );
 };

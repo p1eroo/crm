@@ -26,6 +26,7 @@ import {
   Select,
   Tooltip,
   Paper,
+  useTheme,
 } from '@mui/material';
 import { Add, Edit, Delete, Search, Assignment, CheckCircle, TrendingUp, Computer, Visibility } from '@mui/icons-material';
 import api from '../config/api';
@@ -45,6 +46,7 @@ interface Task {
 }
 
 const Tasks: React.FC = () => {
+  const theme = useTheme();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -255,7 +257,7 @@ const Tasks: React.FC = () => {
 
   return (
     <Box sx={{ 
-      bgcolor: '#f5f7fa', 
+      bgcolor: theme.palette.background.default, 
       minHeight: '100vh',
       pb: { xs: 3, sm: 6, md: 8 },
       px: { xs: 3, sm: 6, md: 8 },
@@ -264,8 +266,8 @@ const Tasks: React.FC = () => {
       {/* Cards de resumen */}
       <Card sx={{ 
         borderRadius: 6,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-        bgcolor: 'white',
+        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
+        bgcolor: theme.palette.background.paper,
         mb: 4,
       }}>
         <CardContent sx={{ p: 3 }}>

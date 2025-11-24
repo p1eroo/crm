@@ -103,6 +103,7 @@ import {
 import api from '../config/api';
 import RichTextEditor from '../components/RichTextEditor';
 import { taxiMonterricoColors } from '../theme/colors';
+import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 
 interface ContactDetailData {
@@ -176,6 +177,7 @@ function TabPanel(props: TabPanelProps) {
 const ContactDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [contact, setContact] = useState<ContactDetailData | null>(null);
@@ -637,8 +639,10 @@ const ContactDetail: React.FC = () => {
   };
 
   const handleOpenEmail = () => {
-    setEmailData({ subject: '', description: '', to: contact?.email || '' });
-    setEmailOpen(true);
+    // Abrir Gmail con el correo del contacto prellenado
+    const email = contact?.email || '';
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email)}`;
+    window.open(gmailUrl, '_blank');
   };
 
   const handleOpenCall = () => {
@@ -1175,7 +1179,10 @@ const ContactDetail: React.FC = () => {
         handleOpenNote();
         break;
       case 'email':
-        handleOpenEmail();
+        // Abrir Gmail con el correo del contacto prellenado
+        const email = contact?.email || '';
+        const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email)}`;
+        window.open(gmailUrl, '_blank');
         break;
       case 'call':
         handleOpenCall();
@@ -1496,7 +1503,7 @@ const ContactDetail: React.FC = () => {
 
   return (
     <Box sx={{ 
-      bgcolor: '#f5f7fa',
+      bgcolor: theme.palette.background.default,
       minHeight: '100vh',
       pb: { xs: 2, sm: 4, md: 8 },
       px: { xs: 1, sm: 3, md: 8 },
@@ -2215,10 +2222,9 @@ const ContactDetail: React.FC = () => {
                     color: '#424242',
                     cursor: 'pointer',
                     textAlign: 'right',
-                    textDecoration: 'underline',
-                    textDecorationColor: '#00bcd4',
+                    textDecoration: 'none',
                     '&:hover': {
-                      textDecorationColor: '#0097a7',
+                      opacity: 0.8,
                     },
                   }}
                 >
@@ -4508,9 +4514,11 @@ const ContactDetail: React.FC = () => {
                         >
                           + Agregar
                         </Link>
-                        <IconButton size="small">
-                          <Settings fontSize="small" />
-                        </IconButton>
+                        {user?.role !== 'user' && (
+                          <IconButton size="small">
+                            <Settings fontSize="small" />
+                          </IconButton>
+                        )}
                       </Box>
                     </Box>
                     <TextField
@@ -4737,9 +4745,11 @@ const ContactDetail: React.FC = () => {
                         >
                           + Agregar
                         </Link>
-                        <IconButton size="small">
-                          <Settings fontSize="small" />
-                        </IconButton>
+                        {user?.role !== 'user' && (
+                          <IconButton size="small">
+                            <Settings fontSize="small" />
+                          </IconButton>
+                        )}
                       </Box>
                     </Box>
                     <TextField
@@ -4866,9 +4876,11 @@ const ContactDetail: React.FC = () => {
                       >
                         + Agregar
                       </Link>
-                      <IconButton size="small">
-                        <Settings fontSize="small" />
-                      </IconButton>
+                      {user?.role !== 'usuario' && (
+                        <IconButton size="small">
+                          <Settings fontSize="small" />
+                        </IconButton>
+                      )}
                     </Box>
                   </Box>
                   {associatedTickets.length === 0 ? (
@@ -4944,9 +4956,11 @@ const ContactDetail: React.FC = () => {
                       >
                         + Agregar
                       </Link>
-                      <IconButton size="small">
-                        <Settings fontSize="small" />
-                      </IconButton>
+                      {user?.role !== 'usuario' && (
+                        <IconButton size="small">
+                          <Settings fontSize="small" />
+                        </IconButton>
+                      )}
                     </Box>
                   </Box>
                   {associatedSubscriptions.length === 0 ? (
@@ -5016,9 +5030,11 @@ const ContactDetail: React.FC = () => {
                       >
                         + Agregar
                       </Link>
-                      <IconButton size="small">
-                        <Settings fontSize="small" />
-                      </IconButton>
+                      {user?.role !== 'usuario' && (
+                        <IconButton size="small">
+                          <Settings fontSize="small" />
+                        </IconButton>
+                      )}
                     </Box>
                   </Box>
                 
@@ -5069,163 +5085,156 @@ const ContactDetail: React.FC = () => {
               </TabPanel>
 
               <TabPanel value={tabValue} index={1}>
-                <Box sx={{ p: 3 }}>
+                <Box sx={{ p: { xs: 2, sm: 3 } }}>
                   {/* Barra de búsqueda y controles */}
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    justifyContent: 'space-between', 
+                    alignItems: { xs: 'stretch', sm: 'center' }, 
+                    gap: 2,
+                    mb: 3,
+                  }}>
                     <TextField
                       size="small"
-                      placeholder="Buscar actividac"
+                      placeholder="Buscar actividad"
                       value={activitySearch}
                       onChange={(e) => setActivitySearch(e.target.value)}
                       InputProps={{
-                        endAdornment: (
-                          <InputAdornment position="end">
-                            <Search fontSize="small" />
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Search sx={{ color: taxiMonterricoColors.green, fontSize: 20 }} />
                           </InputAdornment>
                         ),
                       }}
-                      sx={{ width: '300px' }}
+                      sx={{ 
+                        width: { xs: '100%', sm: '320px' },
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          bgcolor: '#F9FAFB',
+                          '&:hover': {
+                            bgcolor: '#F3F4F6',
+                          },
+                          '&.Mui-focused': {
+                            bgcolor: 'white',
+                          },
+                        },
+                      }}
                     />
+                    
+                    {/* Filtros dropdown */}
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      <Chip
+                        label={`Filtrar actividad (${filteredActivities.length}/${activities.length})`}
+                        size="small"
+                        deleteIcon={<KeyboardArrowDown fontSize="small" />}
+                        onDelete={() => {}}
+                        onClick={() => {}}
+                        sx={{
+                          bgcolor: `${taxiMonterricoColors.greenLight}20`,
+                          color: taxiMonterricoColors.greenDark,
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          border: `1px solid ${taxiMonterricoColors.greenLight}40`,
+                          '&:hover': {
+                            bgcolor: `${taxiMonterricoColors.greenLight}30`,
+                            borderColor: taxiMonterricoColors.green,
+                          },
+                          '& .MuiChip-deleteIcon': {
+                            color: taxiMonterricoColors.green,
+                            '&:hover': {
+                              color: taxiMonterricoColors.greenDark,
+                            },
+                          },
+                        }}
+                      />
+                      <Chip
+                        label="Todos los usuarios"
+                        size="small"
+                        deleteIcon={<KeyboardArrowDown fontSize="small" />}
+                        onDelete={() => {}}
+                        onClick={() => {}}
+                        sx={{
+                          bgcolor: `${taxiMonterricoColors.greenLight}20`,
+                          color: taxiMonterricoColors.greenDark,
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          border: `1px solid ${taxiMonterricoColors.greenLight}40`,
+                          '&:hover': {
+                            bgcolor: `${taxiMonterricoColors.greenLight}30`,
+                            borderColor: taxiMonterricoColors.green,
+                          },
+                          '& .MuiChip-deleteIcon': {
+                            color: taxiMonterricoColors.green,
+                            '&:hover': {
+                              color: taxiMonterricoColors.greenDark,
+                            },
+                          },
+                        }}
+                      />
+                    </Box>
                   </Box>
 
-                  {/* Filtros de tipo de actividad */}
-                  <Box sx={{ display: 'flex', gap: 1, mb: 3, borderBottom: '1px solid #e0e0e0', pb: 1 }}>
-                    <Button
-                      size="small"
-                      onClick={() => setSelectedActivityType('all')}
-                      sx={{
-                        color: selectedActivityType === 'all' ? '#1976d2' : 'text.secondary',
-                        textTransform: 'none',
-                        borderBottom: selectedActivityType === 'all' ? '2px solid #1976d2' : 'none',
-                        borderRadius: 0,
-                        minWidth: 'auto',
-                        px: 2,
-                        '&:hover': {
-                          backgroundColor: 'rgba(0,0,0,0.04)',
-                        },
-                      }}
-                    >
-                      Actividad
-                    </Button>
-                    <Button
-                      size="small"
-                      onClick={() => setSelectedActivityType('note')}
-                      sx={{
-                        color: selectedActivityType === 'note' ? '#1976d2' : 'text.secondary',
-                        textTransform: 'none',
-                        borderBottom: selectedActivityType === 'note' ? '2px solid #1976d2' : 'none',
-                        borderRadius: 0,
-                        minWidth: 'auto',
-                        px: 2,
-                        '&:hover': {
-                          backgroundColor: 'rgba(0,0,0,0.04)',
-                        },
-                      }}
-                    >
-                      Notas
-                    </Button>
-                    <Button
-                      size="small"
-                      onClick={() => setSelectedActivityType('email')}
-                      sx={{
-                        color: selectedActivityType === 'email' ? '#1976d2' : 'text.secondary',
-                        textTransform: 'none',
-                        borderBottom: selectedActivityType === 'email' ? '2px solid #1976d2' : 'none',
-                        borderRadius: 0,
-                        minWidth: 'auto',
-                        px: 2,
-                        '&:hover': {
-                          backgroundColor: 'rgba(0,0,0,0.04)',
-                        },
-                      }}
-                    >
-                      Correos
-                    </Button>
-                    <Button
-                      size="small"
-                      onClick={() => setSelectedActivityType('call')}
-                      sx={{
-                        color: selectedActivityType === 'call' ? '#1976d2' : 'text.secondary',
-                        textTransform: 'none',
-                        borderBottom: selectedActivityType === 'call' ? '2px solid #1976d2' : 'none',
-                        borderRadius: 0,
-                        minWidth: 'auto',
-                        px: 2,
-                        '&:hover': {
-                          backgroundColor: 'rgba(0,0,0,0.04)',
-                        },
-                      }}
-                    >
-                      Llamadas
-                    </Button>
-                    <Button
-                      size="small"
-                      onClick={() => setSelectedActivityType('task')}
-                      sx={{
-                        color: selectedActivityType === 'task' ? '#1976d2' : 'text.secondary',
-                        textTransform: 'none',
-                        borderBottom: selectedActivityType === 'task' ? '2px solid #1976d2' : 'none',
-                        borderRadius: 0,
-                        minWidth: 'auto',
-                        px: 2,
-                        '&:hover': {
-                          backgroundColor: 'rgba(0,0,0,0.04)',
-                        },
-                      }}
-                    >
-                      Tareas
-                    </Button>
-                    <Button
-                      size="small"
-                      onClick={() => setSelectedActivityType('meeting')}
-                      sx={{
-                        color: selectedActivityType === 'meeting' ? '#1976d2' : 'text.secondary',
-                        textTransform: 'none',
-                        borderBottom: selectedActivityType === 'meeting' ? '2px solid #1976d2' : 'none',
-                        borderRadius: 0,
-                        minWidth: 'auto',
-                        px: 2,
-                        '&:hover': {
-                          backgroundColor: 'rgba(0,0,0,0.04)',
-                        },
-                      }}
-                    >
-                      Reuniones
-                    </Button>
-                  </Box>
-
-                  {/* Filtros dropdown */}
-                  <Box sx={{ display: 'flex', gap: 1, mb: 3 }}>
-                    <Chip
-                      label="Filtrar por: Filtrar actividad (23/33)"
-                      size="small"
-                      deleteIcon={<KeyboardArrowDown fontSize="small" />}
-                      onDelete={() => {}}
-                      onClick={() => {}}
-                      sx={{
-                        bgcolor: '#e3f2fd',
-                        color: '#1976d2',
-                        cursor: 'pointer',
-                        '&:hover': {
-                          bgcolor: '#bbdefb',
-                        },
-                      }}
-                    />
-                    <Chip
-                      label="Todos los usuarios"
-                      size="small"
-                      deleteIcon={<KeyboardArrowDown fontSize="small" />}
-                      onDelete={() => {}}
-                      onClick={() => {}}
-                      sx={{
-                        bgcolor: '#e3f2fd',
-                        color: '#1976d2',
-                        cursor: 'pointer',
-                        '&:hover': {
-                          bgcolor: '#bbdefb',
-                        },
-                      }}
-                    />
+                  {/* Filtros de tipo de actividad - Tabs mejorados */}
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: { xs: 0.5, sm: 1 }, 
+                    mb: 3, 
+                    borderBottom: '2px solid #E5E7EB',
+                    overflowX: 'auto',
+                    '&::-webkit-scrollbar': {
+                      height: '4px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                      background: '#F3F4F6',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      background: '#D1D5DB',
+                      borderRadius: '2px',
+                    },
+                  }}>
+                    {[
+                      { value: 'all', label: 'Actividad' },
+                      { value: 'note', label: 'Notas' },
+                      { value: 'email', label: 'Correos' },
+                      { value: 'call', label: 'Llamadas' },
+                      { value: 'task', label: 'Tareas' },
+                      { value: 'meeting', label: 'Reuniones' },
+                    ].map((tab) => (
+                      <Button
+                        key={tab.value}
+                        size="small"
+                        onClick={() => setSelectedActivityType(tab.value)}
+                        sx={{
+                          color: selectedActivityType === tab.value ? taxiMonterricoColors.greenDark : '#6B7280',
+                          textTransform: 'none',
+                          fontWeight: selectedActivityType === tab.value ? 600 : 500,
+                          borderBottom: selectedActivityType === tab.value ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
+                          borderRadius: 0,
+                          minWidth: 'auto',
+                          px: { xs: 1.5, sm: 2.5 },
+                          py: 1.5,
+                          position: 'relative',
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            color: taxiMonterricoColors.greenDark,
+                            bgcolor: selectedActivityType === tab.value ? 'transparent' : '#F9FAFB',
+                          },
+                          '&::after': {
+                            content: '""',
+                            position: 'absolute',
+                            bottom: -2,
+                            left: 0,
+                            right: 0,
+                            height: selectedActivityType === tab.value ? '3px' : '0px',
+                            bgcolor: taxiMonterricoColors.green,
+                            transition: 'height 0.2s ease',
+                          },
+                        }}
+                      >
+                        {tab.label}
+                      </Button>
+                    ))}
                   </Box>
 
                   {/* Actividades agrupadas */}
@@ -5464,9 +5473,38 @@ const ContactDetail: React.FC = () => {
                         ))}
 
                         {upcomingActivities.length === 0 && Object.keys(pastGrouped).length === 0 && (
-                          <Box sx={{ textAlign: 'center', py: 4 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              No hay actividades registradas para este contacto.
+                          <Box sx={{ 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            py: 8,
+                            textAlign: 'center',
+                          }}>
+                            <Box sx={{ 
+                              width: 80, 
+                              height: 80, 
+                              borderRadius: '50%', 
+                              bgcolor: '#F3F4F6',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              mb: 3,
+                            }}>
+                              <Assignment sx={{ fontSize: 40, color: '#9CA3AF' }} />
+                            </Box>
+                            <Typography variant="h6" sx={{ 
+                              color: '#1F2937', 
+                              fontWeight: 600,
+                              mb: 1,
+                            }}>
+                              No hay actividades registradas
+                            </Typography>
+                            <Typography variant="body2" sx={{ 
+                              color: '#6B7280',
+                              maxWidth: 400,
+                            }}>
+                              No hay actividades registradas para este contacto. Crea una nueva actividad para comenzar.
                             </Typography>
                           </Box>
                         )}

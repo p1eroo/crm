@@ -29,11 +29,13 @@ import {
   InputAdornment,
   Paper,
   Menu,
+  useTheme,
 } from '@mui/material';
-import { Add, Edit, Delete, Search, Business, Domain, TrendingUp, TrendingDown, Computer, Visibility } from '@mui/icons-material';
+import { Add, Edit, Delete, Search, Business, Domain, TrendingUp, TrendingDown, Computer, Visibility, UploadFile, FileDownload } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import axios from 'axios';
+import * as XLSX from 'xlsx';
 
 interface Company {
   id: number;
@@ -52,6 +54,7 @@ interface Company {
 
 const Companies: React.FC = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -77,6 +80,8 @@ const Companies: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<{ [key: number]: HTMLElement | null }>({});
   const [updatingStatus, setUpdatingStatus] = useState<{ [key: number]: boolean }>({});
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Calcular estadísticas
   const totalCompanies = companies.length;
@@ -110,6 +115,119 @@ const Companies: React.FC = () => {
       console.error('Error fetching companies:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportToExcel = () => {
+    // Preparar los datos para exportar
+    const exportData = companies.map((company) => ({
+      'Nombre': company.name || '--',
+      'Dominio': company.domain || '--',
+      'Industria': company.industry || '--',
+      'Teléfono': company.phone || '--',
+      'RUC': company.ruc || '--',
+      'Dirección': company.address || '--',
+      'Ciudad': company.city || '--',
+      'Estado/Provincia': company.state || '--',
+      'País': company.country || '--',
+      'Etapa': company.lifecycleStage || '--',
+      'Estado': company.lifecycleStage === 'cierre_ganado' ? 'Activo' : 'Inactivo',
+      'Fecha de Creación': (company as any).createdAt ? new Date((company as any).createdAt).toLocaleDateString('es-ES') : '--',
+    }));
+
+    // Crear un libro de trabajo
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+
+    // Ajustar el ancho de las columnas
+    const colWidths = [
+      { wch: 30 }, // Nombre
+      { wch: 25 }, // Dominio
+      { wch: 20 }, // Industria
+      { wch: 15 }, // Teléfono
+      { wch: 15 }, // RUC
+      { wch: 30 }, // Dirección
+      { wch: 15 }, // Ciudad
+      { wch: 18 }, // Estado/Provincia
+      { wch: 15 }, // País
+      { wch: 15 }, // Etapa
+      { wch: 12 }, // Estado
+      { wch: 18 }, // Fecha de Creación
+    ];
+    ws['!cols'] = colWidths;
+
+    // Agregar la hoja al libro
+    XLSX.utils.book_append_sheet(wb, ws, 'Empresas');
+
+    // Generar el nombre del archivo con la fecha actual
+    const fecha = new Date().toISOString().split('T')[0];
+    const fileName = `Empresas_${fecha}.xlsx`;
+
+    // Descargar el archivo
+    XLSX.writeFile(wb, fileName);
+  };
+
+  const handleImportFromExcel = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      // Leer el archivo Excel
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(firstSheet) as any[];
+
+      // Procesar cada fila y crear empresas
+      const companiesToCreate = jsonData.map((row) => {
+        return {
+          name: (row['Nombre'] || '').toString().trim() || 'Sin nombre',
+          domain: (row['Dominio'] || '').toString().trim() || undefined,
+          industry: (row['Industria'] || '').toString().trim() || undefined,
+          phone: (row['Teléfono'] || '').toString().trim() || undefined,
+          ruc: (row['RUC'] || '').toString().trim() || undefined,
+          address: (row['Dirección'] || '').toString().trim() || undefined,
+          city: (row['Ciudad'] || '').toString().trim() || undefined,
+          state: (row['Estado/Provincia'] || '').toString().trim() || undefined,
+          country: (row['País'] || '').toString().trim() || undefined,
+          lifecycleStage: 'lead',
+        };
+      }).filter(company => company.name !== 'Sin nombre'); // Filtrar filas vacías
+
+      // Crear empresas en el backend
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const companyData of companiesToCreate) {
+        try {
+          await api.post('/companies', companyData);
+          successCount++;
+        } catch (error) {
+          console.error('Error creating company:', error);
+          errorCount++;
+        }
+      }
+
+      // Limpiar el input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+
+      // Mostrar mensaje de resultado
+      alert(`Importación completada:\n${successCount} empresas creadas exitosamente\n${errorCount} empresas con errores`);
+
+      // Recargar la lista de empresas
+      fetchCompanies();
+    } catch (error) {
+      console.error('Error importing file:', error);
+      alert('Error al importar el archivo. Por favor, verifica que el formato sea correcto.');
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -307,7 +425,7 @@ const Companies: React.FC = () => {
 
   return (
     <Box sx={{ 
-      bgcolor: '#f5f7fa', 
+      bgcolor: theme.palette.background.default, 
       minHeight: '100vh',
       pb: { xs: 3, sm: 6, md: 8 },
       px: { xs: 3, sm: 6, md: 8 },
@@ -549,25 +667,69 @@ const Companies: React.FC = () => {
                   <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
                 </Select>
               </FormControl>
-              <Button 
-                variant="contained" 
-                startIcon={<Add />} 
-                onClick={() => handleOpen()}
-                sx={{
-                  bgcolor: taxiMonterricoColors.green,
-                  '&:hover': {
+              <Tooltip title={importing ? 'Importando...' : 'Importar'}>
+                <IconButton
+                  onClick={handleImportFromExcel}
+                  disabled={importing}
+                  sx={{
+                    border: `1px solid ${taxiMonterricoColors.green}`,
+                    color: taxiMonterricoColors.green,
+                    '&:hover': {
+                      borderColor: taxiMonterricoColors.greenDark,
+                      bgcolor: `${taxiMonterricoColors.green}10`,
+                    },
+                    '&:disabled': {
+                      borderColor: '#e0e0e0',
+                      color: '#9e9e9e',
+                    },
+                    borderRadius: 1.5,
+                    p: 1.25,
+                  }}
+                >
+                  <UploadFile />
+                </IconButton>
+              </Tooltip>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".xlsx,.xls"
+                style={{ display: 'none' }}
+              />
+              <Tooltip title="Exportar">
+                <IconButton
+                  onClick={handleExportToExcel}
+                  sx={{
+                    border: `1px solid ${taxiMonterricoColors.green}`,
+                    color: taxiMonterricoColors.green,
+                    '&:hover': {
+                      borderColor: taxiMonterricoColors.greenDark,
+                      bgcolor: `${taxiMonterricoColors.green}10`,
+                    },
+                    borderRadius: 1.5,
+                    p: 1.25,
+                  }}
+                >
+                  <FileDownload />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Nueva Empresa">
+                <IconButton
+                  onClick={() => handleOpen()}
+                  sx={{
                     bgcolor: taxiMonterricoColors.green,
-                    opacity: 0.9,
-                  },
-                  textTransform: 'none',
-                  fontWeight: 500,
-                  borderRadius: 1.5,
-                  px: 2.5,
-                  py: 1,
-                }}
-              >
-                Nueva Empresa
-              </Button>
+                    color: 'white',
+                    '&:hover': {
+                      bgcolor: taxiMonterricoColors.greenDark,
+                    },
+                    borderRadius: 1.5,
+                    p: 1.25,
+                    boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
+                  }}
+                >
+                  <Add />
+                </IconButton>
+              </Tooltip>
             </Box>
           </Box>
         </Box>

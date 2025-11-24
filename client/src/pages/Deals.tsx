@@ -27,6 +27,7 @@ import {
   Tooltip,
   Paper,
   Menu,
+  useTheme,
 } from '@mui/material';
 import { Add, Edit, Delete, Search, AttachMoney, TrendingUp, TrendingDown, Computer, Visibility } from '@mui/icons-material';
 import api from '../config/api';
@@ -45,6 +46,7 @@ interface Deal {
 }
 
 const Deals: React.FC = () => {
+  const theme = useTheme();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -297,7 +299,7 @@ const Deals: React.FC = () => {
 
   return (
     <Box sx={{ 
-      bgcolor: '#f5f7fa', 
+      bgcolor: theme.palette.background.default, 
       minHeight: '100vh',
       pb: { xs: 3, sm: 6, md: 8 },
       px: { xs: 3, sm: 6, md: 8 },

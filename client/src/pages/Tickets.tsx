@@ -6,13 +6,10 @@ import {
   Paper,
   IconButton,
   TextField,
-  InputAdornment,
   Chip,
   Menu,
   MenuItem,
   Divider,
-  Tabs,
-  Tab,
   Link,
   Table,
   TableBody,
@@ -29,20 +26,13 @@ import {
   DialogContent,
   DialogActions,
   CircularProgress,
+  FormControl,
+  Select,
+  useTheme,
 } from '@mui/material';
 import {
   Add,
   Search,
-  MoreVert,
-  ImportExport,
-  FilterList,
-  ViewList,
-  ViewModule,
-  Refresh,
-  ContentCopy,
-  Edit,
-  KeyboardArrowDown,
-  Close,
   Support,
   CheckCircle,
   TrendingUp,
@@ -82,12 +72,11 @@ interface Ticket {
 }
 
 const Tickets: React.FC = () => {
+  const theme = useTheme();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [viewTab, setViewTab] = useState(0);
-  const [actionsMenuAnchor, setActionsMenuAnchor] = useState<null | HTMLElement>(null);
-  const [viewMenuAnchor, setViewMenuAnchor] = useState<null | HTMLElement>(null);
+  const [sortBy, setSortBy] = useState('newest');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [ticketToDelete, setTicketToDelete] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -105,6 +94,28 @@ const Tickets: React.FC = () => {
       return `${words[0][0]}${words[1][0]}`.toUpperCase();
     }
     return subject.substring(0, 2).toUpperCase();
+  };
+
+  // Función para traducir estado
+  const getStatusLabel = (status: string) => {
+    const statusMap: { [key: string]: string } = {
+      'open': 'Abierto',
+      'closed': 'Cerrado',
+      'resolved': 'Resuelto',
+      'pending': 'Pendiente',
+    };
+    return statusMap[status] || status;
+  };
+
+  // Función para traducir prioridad
+  const getPriorityLabel = (priority: string) => {
+    const priorityMap: { [key: string]: string } = {
+      'urgent': 'Urgente',
+      'high': 'Alta',
+      'medium': 'Media',
+      'low': 'Baja',
+    };
+    return priorityMap[priority] || priority;
   };
 
   // Función para vista previa
@@ -154,25 +165,11 @@ const Tickets: React.FC = () => {
     }
   };
 
-  const handleActionsMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setActionsMenuAnchor(event.currentTarget);
-  };
 
-  const handleActionsMenuClose = () => {
-    setActionsMenuAnchor(null);
-  };
-
-  const handleViewMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setViewMenuAnchor(event.currentTarget);
-  };
-
-  const handleViewMenuClose = () => {
-    setViewMenuAnchor(null);
-  };
 
   return (
     <Box sx={{ 
-      bgcolor: '#f5f7fa', 
+      bgcolor: theme.palette.background.default, 
       minHeight: '100vh',
       pb: { xs: 3, sm: 6, md: 8 },
       px: { xs: 3, sm: 6, md: 8 },
@@ -330,216 +327,115 @@ const Tickets: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="h5" sx={{ fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: 1 }}>
-              Tickets
-              <KeyboardArrowDown fontSize="small" />
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {tickets.length} registros
-            </Typography>
+      {/* Sección de tabla */}
+      <Card sx={{ 
+        borderRadius: 6,
+        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        overflow: 'hidden',
+        bgcolor: 'white',
+      }}>
+        <Box sx={{ px: 3, pt: 3, pb: 2 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+            <Box>
+              <Typography variant="h5" sx={{ fontWeight: 600, color: '#1a1a1a', mb: 0.25 }}>
+                Tickets
+              </Typography>
+              <Typography
+                component="a"
+                href="#"
+                onClick={(e) => {
+                  e.preventDefault();
+                }}
+                sx={{
+                  fontSize: '0.875rem',
+                  color: '#1976d2',
+                  textDecoration: 'none',
+                  cursor: 'pointer',
+                  '&:hover': {
+                    textDecoration: 'underline',
+                  },
+                }}
+              >
+                Tickets resueltos
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <TextField
+                size="small"
+                placeholder="Buscar"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                InputProps={{
+                  startAdornment: <Search sx={{ mr: 1, color: '#9e9e9e', fontSize: 20 }} />,
+                }}
+                sx={{ 
+                  minWidth: 200,
+                  bgcolor: 'white',
+                  borderRadius: 1.5,
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderColor: '#e0e0e0',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#bdbdbd',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#1976d2',
+                    },
+                  },
+                }}
+              />
+              <FormControl size="small" sx={{ minWidth: 150 }}>
+                <Select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  displayEmpty
+                  sx={{
+                    borderRadius: 1.5,
+                    bgcolor: 'white',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#e0e0e0',
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#bdbdbd',
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#1976d2',
+                    },
+                  }}
+                >
+                  <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
+                  <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
+                  <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
+                  <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
+                </Select>
+              </FormControl>
+              <Button 
+                variant="contained" 
+                startIcon={<Add />} 
+                onClick={() => {
+                  // TODO: Implementar creación de ticket
+                }}
+                sx={{
+                  bgcolor: taxiMonterricoColors.green,
+                  '&:hover': {
+                    bgcolor: taxiMonterricoColors.green,
+                    opacity: 0.9,
+                  },
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  borderRadius: 1.5,
+                  px: 2.5,
+                  py: 1,
+                }}
+              >
+                Crear ticket
+              </Button>
+            </Box>
           </Box>
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              variant="outlined"
-              endIcon={<KeyboardArrowDown />}
-              onClick={handleActionsMenuOpen}
-              sx={{
-                borderColor: '#2E7D32',
-                color: '#2E7D32',
-                '&:hover': {
-                  borderColor: '#1B5E20',
-                  backgroundColor: 'rgba(46, 125, 50, 0.04)',
-                },
-              }}
-            >
-              Acciones
-            </Button>
-            <Menu
-              anchorEl={actionsMenuAnchor}
-              open={Boolean(actionsMenuAnchor)}
-              onClose={handleActionsMenuClose}
-            >
-              <MenuItem onClick={handleActionsMenuClose}>Importar</MenuItem>
-              <MenuItem onClick={handleActionsMenuClose}>Exportar</MenuItem>
-            </Menu>
-            <Button
-              variant="outlined"
-              startIcon={<ImportExport />}
-              sx={{
-                borderColor: '#FF9800',
-                color: '#FF9800',
-                '&:hover': {
-                  borderColor: '#F57C00',
-                  backgroundColor: 'rgba(255, 152, 0, 0.04)',
-                },
-              }}
-            >
-              Importar
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              sx={{
-                bgcolor: '#FF9800',
-                '&:hover': {
-                  bgcolor: '#F57C00',
-                },
-              }}
-            >
-              Crear ticket
-            </Button>
-          </Box>
         </Box>
-
-        {/* Tabs de vistas */}
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-          <Tabs
-            value={viewTab}
-            onChange={(e, newValue) => setViewTab(newValue)}
-            sx={{
-              '& .MuiTab-root': {
-                textTransform: 'none',
-                minHeight: 48,
-                fontSize: '0.875rem',
-              },
-            }}
-          >
-            <Tab
-              label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  Todos tickets
-                  <IconButton
-                    size="small"
-                    sx={{
-                      width: 20,
-                      height: 20,
-                      '&:hover': { bgcolor: 'rgba(0,0,0,0.1)' },
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                    }}
-                  >
-                    <Close fontSize="small" />
-                  </IconButton>
-                </Box>
-              }
-            />
-            <Tab label="Mis tickets abiertos" />
-            <Tab label="Tickets no asignados" />
-            <Tab
-              label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Add fontSize="small" />
-                  Agregar vista (3/5)
-                </Box>
-              }
-            />
-            <Tab label="Todas las vistas" />
-          </Tabs>
-        </Box>
-
-        {/* Toolbar de filtros */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
-            <IconButton size="small" sx={{ bgcolor: '#e3f2fd' }}>
-              <ViewList fontSize="small" />
-            </IconButton>
-            <IconButton size="small">
-              <ViewModule fontSize="small" />
-            </IconButton>
-          </Box>
-          <Chip
-            label="Todos los pipelines"
-            size="small"
-            deleteIcon={<KeyboardArrowDown fontSize="small" />}
-            onDelete={() => {}}
-            onClick={() => {}}
-            sx={{ cursor: 'pointer' }}
-          />
-          <Chip
-            label="Propietario del ticket"
-            size="small"
-            deleteIcon={<KeyboardArrowDown fontSize="small" />}
-            onDelete={() => {}}
-            onClick={() => {}}
-            sx={{ cursor: 'pointer' }}
-          />
-          <Chip
-            label="Fecha de creación"
-            size="small"
-            deleteIcon={<KeyboardArrowDown fontSize="small" />}
-            onDelete={() => {}}
-            onClick={() => {}}
-            sx={{ cursor: 'pointer' }}
-          />
-          <Chip
-            label="Última actividad"
-            size="small"
-            deleteIcon={<KeyboardArrowDown fontSize="small" />}
-            onDelete={() => {}}
-            onClick={() => {}}
-            sx={{ cursor: 'pointer' }}
-          />
-          <Chip
-            label="Prioridad"
-            size="small"
-            deleteIcon={<KeyboardArrowDown fontSize="small" />}
-            onDelete={() => {}}
-            onClick={() => {}}
-            sx={{ cursor: 'pointer' }}
-          />
-          <Chip
-            label="+ Más"
-            size="small"
-            onClick={() => {}}
-            sx={{ cursor: 'pointer' }}
-          />
-          <IconButton size="small" onClick={handleViewMenuOpen}>
-            <FilterList fontSize="small" />
-          </IconButton>
-          <Box sx={{ flexGrow: 1 }} />
-          <IconButton size="small">
-            <Refresh fontSize="small" />
-          </IconButton>
-          <IconButton size="small">
-            <ContentCopy fontSize="small" />
-          </IconButton>
-          <IconButton size="small">
-            <Edit fontSize="small" />
-          </IconButton>
-        </Box>
-
-        {/* Barra de búsqueda */}
-        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-          <TextField
-            size="small"
-            placeholder="Buscar"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <Search fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ flex: 1 }}
-          />
-          <Button variant="outlined" size="small">
-            Exportar
-          </Button>
-          <Button variant="outlined" size="small">
-            Editar columnas
-          </Button>
-        </Box>
-      </Box>
-
-      {/* Contenido principal */}
-      {tickets.length === 0 ? (
+        {/* Contenido principal */}
+        {tickets.length === 0 ? (
         <Paper
           sx={{
             flex: 1,
@@ -574,10 +470,16 @@ const Tickets: React.FC = () => {
               variant="contained"
               startIcon={<Add />}
               sx={{
-                bgcolor: '#FF9800',
+                bgcolor: taxiMonterricoColors.green,
                 '&:hover': {
-                  bgcolor: '#F57C00',
+                  bgcolor: taxiMonterricoColors.green,
+                  opacity: 0.9,
                 },
+                textTransform: 'none',
+                fontWeight: 500,
+                borderRadius: 1.5,
+                px: 2.5,
+                py: 1,
               }}
             >
               Crear ticket
@@ -585,13 +487,7 @@ const Tickets: React.FC = () => {
           </Box>
         </Paper>
       ) : (
-        <Card sx={{ 
-          borderRadius: 6,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-          overflow: 'hidden',
-          bgcolor: 'white',
-        }}>
-          <TableContainer 
+        <TableContainer 
             component={Paper}
             sx={{ 
               overflowX: 'auto',
@@ -616,25 +512,25 @@ const Tickets: React.FC = () => {
               <TableHead>
                 <TableRow sx={{ bgcolor: '#fafafa' }}>
                   <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '25%' } }}>
-                    Subject
+                    Asunto
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '18%' } }}>
-                    Contact
+                    Contacto
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
-                    Status
+                    Estado
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
-                    Priority
+                    Prioridad
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
-                    Assigned To
+                    Asignado a
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
-                    Created Date
+                    Fecha de Creación
                   </TableCell>
                   <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
-                    Actions
+                    Acciones
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -692,7 +588,7 @@ const Tickets: React.FC = () => {
                     </TableCell>
                     <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
                       <Chip 
-                        label={ticket.status} 
+                        label={getStatusLabel(ticket.status)} 
                         size="small" 
                         sx={{ 
                           fontWeight: 500,
@@ -708,13 +604,12 @@ const Tickets: React.FC = () => {
                                  ticket.status === 'open' ? '#1976D2' : '#757575',
                           border: 'none',
                           borderRadius: 1,
-                          textTransform: 'capitalize'
                         }} 
                       />
                     </TableCell>
                     <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
                       <Chip 
-                        label={ticket.priority} 
+                        label={getPriorityLabel(ticket.priority)} 
                         size="small" 
                         sx={{ 
                           fontWeight: 500,
@@ -728,7 +623,6 @@ const Tickets: React.FC = () => {
                                  ticket.priority === 'medium' ? '#F57F17' : '#2E7D32',
                           border: 'none',
                           borderRadius: 1,
-                          textTransform: 'capitalize'
                         }} 
                       />
                     </TableCell>
@@ -801,8 +695,8 @@ const Tickets: React.FC = () => {
               </TableBody>
             </Table>
           </TableContainer>
-        </Card>
-      )}
+        )}
+      </Card>
       {/* Modal de Confirmación de Eliminación */}
       <Dialog
         open={deleteDialogOpen}

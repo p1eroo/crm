@@ -17,6 +17,11 @@ import {
   Divider,
   Menu,
   InputBase,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Chip,
+  useTheme,
 } from '@mui/material';
 import {
   Download,
@@ -26,6 +31,7 @@ import {
   Edit,
   AccountCircle,
   Search,
+  People,
 } from '@mui/icons-material';
 import {
   LineChart,
@@ -46,6 +52,7 @@ import api from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import ProfileModal from '../components/ProfileModal';
+import { taxiMonterricoColors } from '../theme/colors';
 
 interface DashboardStats {
   contacts: {
@@ -102,14 +109,20 @@ interface Task {
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear.toString());
-  const [selectedMonth, setSelectedMonth] = useState<string | null>(null); // null = todos los meses
+  const [selectedMonth, setSelectedMonth] = useState<string | null>(null); // null = todos los meses (para Ventas)
+  const [calendarSelectedMonth, setCalendarSelectedMonth] = useState<string | null>(new Date().getMonth().toString()); // Para Calendario (mes actual por defecto)
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [calendarDate, setCalendarDate] = useState(new Date());
+  const [calendarModalOpen, setCalendarModalOpen] = useState(false);
+  const [allTasksWithDates, setAllTasksWithDates] = useState<Task[]>([]);
+  const [calendarModalDate, setCalendarModalDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   // Generar lista de años: año actual y 5 años anteriores
   const availableYears = Array.from({ length: 6 }, (_, i) => currentYear - i);
@@ -133,12 +146,60 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     fetchStats();
     fetchTasks();
+    fetchAllTasksWithDates();
   }, []);
+
+  const fetchAllTasksWithDates = async () => {
+    try {
+      // Obtener tareas desde /tasks
+      const tasksResponse = await api.get('/tasks?limit=1000');
+      const tasksFromTasks = (tasksResponse.data.tasks || tasksResponse.data || []).map((task: Task) => ({
+        ...task,
+        isActivity: false,
+      }));
+
+      // Obtener actividades de tipo 'task' desde /activities
+      try {
+        const activitiesResponse = await api.get('/activities', {
+          params: { type: 'task' },
+        });
+        const tasksFromActivities = (activitiesResponse.data.activities || activitiesResponse.data || []).map((activity: any) => ({
+          id: activity.id,
+          title: activity.subject || activity.description || 'Sin título',
+          type: activity.type,
+          status: 'not started',
+          priority: 'medium',
+          dueDate: activity.dueDate,
+          isActivity: true,
+        }));
+
+        // Combinar ambas listas
+        const allTasks = [...tasksFromTasks, ...tasksFromActivities];
+        // Filtrar solo tareas que tienen dueDate
+        const tasksWithDates = allTasks.filter((task: Task) => task.dueDate);
+        setAllTasksWithDates(tasksWithDates);
+      } catch (activitiesError) {
+        // Si falla obtener actividades, usar solo tareas
+        const tasksWithDates = tasksFromTasks.filter((task: Task) => task.dueDate);
+        setAllTasksWithDates(tasksWithDates);
+      }
+    } catch (error) {
+      console.error('Error fetching tasks with dates:', error);
+      setAllTasksWithDates([]);
+    }
+  };
 
   // Recargar estadísticas cuando cambia el año o mes seleccionado
   useEffect(() => {
     fetchStats();
   }, [selectedYear, selectedMonth]);
+
+  // Recargar tareas cuando cambia el mes en el modal del calendario
+  useEffect(() => {
+    if (calendarModalOpen) {
+      fetchAllTasksWithDates();
+    }
+  }, [calendarModalDate, calendarModalOpen]);
 
   const fetchStats = async () => {
     try {
@@ -240,16 +301,16 @@ const Dashboard: React.FC = () => {
   if (!stats) {
     return (
       <Box sx={{ 
-        backgroundColor: '#F5F5F5', 
+        backgroundColor: theme.palette.background.default, 
         minHeight: '100vh',
         px: { xs: 3, sm: 6, md: 8 },
         pt: { xs: 4, sm: 6, md: 6 },
         pb: 4,
       }}>
-        <Typography variant="h4" sx={{ fontWeight: 600, color: '#1F2937', mb: 4 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 4 }}>
           Hola, {user?.firstName || 'Usuario'}
         </Typography>
-        <Typography>No hay datos disponibles</Typography>
+        <Typography sx={{ color: theme.palette.text.secondary }}>No hay datos disponibles</Typography>
       </Box>
     );
   }
@@ -449,7 +510,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <Box sx={{ 
-      backgroundColor: '#F5F5F5', 
+      backgroundColor: theme.palette.background.default, 
       minHeight: '100vh',
       px: { xs: 1.5, sm: 3, md: 6, lg: 8 },
       pt: { xs: 2, sm: 3, md: 4, lg: 6 },
@@ -469,7 +530,7 @@ const Dashboard: React.FC = () => {
           variant="h4" 
           sx={{ 
             fontWeight: 600, 
-            color: '#1F2937', 
+            color: theme.palette.text.primary, 
             fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
             mr: { xs: 0, sm: 3 },
           }}
@@ -493,7 +554,7 @@ const Dashboard: React.FC = () => {
             variant="body1" 
             sx={{ 
               fontWeight: 600, 
-              color: '#1F2937', 
+              color: theme.palette.text.primary, 
               fontSize: { xs: '1rem', md: '1.25rem' },
               cursor: 'pointer',
               display: { xs: 'none', sm: 'block' },
@@ -507,16 +568,16 @@ const Dashboard: React.FC = () => {
             size="large"
             onClick={handleProfileClick}
             sx={{ 
-              bgcolor: '#F3F4F6', 
+              bgcolor: theme.palette.action.hover, 
               borderRadius: 1.5, 
               width: { xs: 40, md: 48 }, 
               height: { xs: 40, md: 48 },
               '&:hover': {
-                bgcolor: '#E5E7EB',
+                bgcolor: theme.palette.action.selected,
               },
             }}
           >
-            <Edit sx={{ fontSize: { xs: 20, md: 24 }, color: '#1F2937' }} />
+            <Edit sx={{ fontSize: { xs: 20, md: 24 }, color: theme.palette.text.primary }} />
           </IconButton>
         </Box>
       </Box>
@@ -540,14 +601,21 @@ const Dashboard: React.FC = () => {
         {/* Weekly Balance */}
         <Card sx={{ 
           borderRadius: 3, 
-          boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 4px 12px rgba(102, 126, 234, 0.3)' 
+            : '0 2px 4px rgba(0,0,0,0.08)',
+          background: theme.palette.mode === 'dark'
+            ? 'linear-gradient(135deg, #4F63D2 0%, #5A3F8C 100%)'
+            : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
           color: 'white',
           transition: 'all 0.2s ease',
           overflow: 'hidden',
+          border: theme.palette.mode === 'dark' ? '1px solid rgba(102, 126, 234, 0.3)' : 'none',
           '&:hover': {
             transform: { xs: 'none', md: 'translateY(-2px)' },
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 6px 16px rgba(102, 126, 234, 0.4)'
+              : '0 4px 12px rgba(0,0,0,0.15)',
           },
         }}>
           <CardContent sx={{ 
@@ -596,14 +664,21 @@ const Dashboard: React.FC = () => {
         {/* Orders In Line */}
         <Card sx={{ 
           borderRadius: 3, 
-          boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
-          background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 4px 12px rgba(240, 147, 251, 0.3)' 
+            : '0 2px 4px rgba(0,0,0,0.08)',
+          background: theme.palette.mode === 'dark'
+            ? 'linear-gradient(135deg, #C873DB 0%, #D64A5F 100%)'
+            : 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
           color: 'white',
           transition: 'all 0.2s ease',
           overflow: 'hidden',
+          border: theme.palette.mode === 'dark' ? '1px solid rgba(240, 147, 251, 0.3)' : 'none',
           '&:hover': {
             transform: { xs: 'none', md: 'translateY(-2px)' },
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 6px 16px rgba(240, 147, 251, 0.4)'
+              : '0 4px 12px rgba(0,0,0,0.15)',
           },
         }}>
           <CardContent sx={{ 
@@ -652,56 +727,79 @@ const Dashboard: React.FC = () => {
         {/* New Clients */}
         <Card sx={{ 
           borderRadius: 3, 
-          boxShadow: '0 2px 4px rgba(0,0,0,0.08)',
-          background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 4px 12px rgba(250, 112, 154, 0.3)' 
+            : '0 2px 4px rgba(0,0,0,0.08)',
+          background: theme.palette.mode === 'dark'
+            ? 'linear-gradient(135deg, #D85A7A 0%, #E6C840 100%)'
+            : 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
           color: 'white',
           transition: 'all 0.2s ease',
           overflow: 'hidden',
+          position: 'relative',
+          border: theme.palette.mode === 'dark' ? '1px solid rgba(250, 112, 154, 0.3)' : 'none',
           '&:hover': {
             transform: { xs: 'none', md: 'translateY(-2px)' },
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 6px 16px rgba(250, 112, 154, 0.4)'
+              : '0 4px 12px rgba(0,0,0,0.15)',
           },
         }}>
           <CardContent sx={{ 
             p: { xs: 1.75, sm: 2, md: 2.25 },
+            position: 'relative',
+            zIndex: 1,
           }}>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                opacity: 0.95, 
-                mb: 0.75,
-                fontSize: { xs: '0.75rem', md: '0.8rem' },
-                fontWeight: 500,
-              }}
-            >
-              Nuevos Clientes
-            </Typography>
-            <Typography 
-              variant="h5" 
-              sx={{ 
-                fontWeight: 700, 
-                mb: 1.25,
-                fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
-                lineHeight: 1.1,
-              }}
-            >
-              {newClients}
-            </Typography>
-            <Link 
-              href="#" 
-              sx={{ 
-                color: 'white', 
-                textDecoration: 'underline', 
-                fontSize: { xs: '0.7rem', md: '0.75rem' },
-                opacity: 0.9,
-                display: 'inline-block',
-                '&:hover': {
-                  opacity: 1,
-                },
-              }}
-            >
-              Ver lista completa
-            </Link>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <Box sx={{ flex: 1 }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    opacity: 0.95, 
+                    mb: 0.75,
+                    fontSize: { xs: '0.75rem', md: '0.8rem' },
+                    fontWeight: 500,
+                  }}
+                >
+                  Nuevos Clientes
+                </Typography>
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    fontWeight: 700, 
+                    mb: 1.25,
+                    fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
+                    lineHeight: 1.1,
+                  }}
+                >
+                  {newClients}
+                </Typography>
+                <Link 
+                  href="#" 
+                  sx={{ 
+                    color: 'white', 
+                    textDecoration: 'underline', 
+                    fontSize: { xs: '0.7rem', md: '0.75rem' },
+                    opacity: 0.9,
+                    display: 'inline-block',
+                    '&:hover': {
+                      opacity: 1,
+                    },
+                  }}
+                >
+                  Ver lista completa
+                </Link>
+              </Box>
+              <Box sx={{ 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: 0.3,
+                ml: 2,
+              }}>
+                <People sx={{ fontSize: { xs: 48, sm: 56, md: 64 } }} />
+              </Box>
+            </Box>
           </CardContent>
         </Card>
       </Box>
@@ -716,7 +814,11 @@ const Dashboard: React.FC = () => {
         {/* Sales Chart */}
         <Card sx={{ 
           borderRadius: { xs: 3, md: 6 }, 
-          boxShadow: { xs: 1, md: 2 },
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 4px 12px rgba(0,0,0,0.3)' 
+            : { xs: 1, md: 2 },
+          bgcolor: theme.palette.background.paper,
+          border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
         }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
             <Box sx={{ 
@@ -731,7 +833,7 @@ const Dashboard: React.FC = () => {
                 variant="h6" 
                 sx={{ 
                   fontWeight: 600, 
-                  color: '#1F2937',
+                  color: theme.palette.text.primary,
                   fontSize: { xs: '1rem', md: '1.25rem' },
                 }}
               >
@@ -787,9 +889,9 @@ const Dashboard: React.FC = () => {
             </Box>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={salesChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="month" stroke="#6B7280" />
-                <YAxis stroke="#6B7280" />
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                <XAxis dataKey="month" stroke={theme.palette.text.secondary} />
+                <YAxis stroke={theme.palette.text.secondary} />
                 <Tooltip />
                 <Line 
                   type="monotone" 
@@ -803,7 +905,7 @@ const Dashboard: React.FC = () => {
             <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Box sx={{ width: 20, height: 2, bgcolor: '#8B5CF6' }} />
-                <Typography variant="caption" sx={{ color: '#6B7280' }}>
+                <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
                   → Ventas
                 </Typography>
               </Box>
@@ -814,7 +916,11 @@ const Dashboard: React.FC = () => {
         {/* Calendar */}
         <Card sx={{ 
           borderRadius: { xs: 3, md: 6 }, 
-          boxShadow: { xs: 1, md: 2 },
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 4px 12px rgba(0,0,0,0.3)' 
+            : { xs: 1, md: 2 },
+          bgcolor: theme.palette.background.paper,
+          border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
         }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
             <Box sx={{ 
@@ -829,7 +935,7 @@ const Dashboard: React.FC = () => {
                 variant="h6" 
                 sx={{ 
                   fontWeight: 600, 
-                  color: '#1F2937',
+                  color: theme.palette.text.primary,
                   fontSize: { xs: '1rem', md: '1.25rem' },
                 }}
               >
@@ -842,19 +948,41 @@ const Dashboard: React.FC = () => {
                 width: { xs: '100%', sm: 'auto' },
                 flexDirection: { xs: 'column', sm: 'row' },
               }}>
-                <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 120 } }}>
+                <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 } }}>
                   <Select
-                    value={selectedMonth}
-                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    value={calendarSelectedMonth || new Date().getMonth().toString()}
+                    onChange={(e) => {
+                      const monthValue = e.target.value;
+                      setCalendarSelectedMonth(monthValue);
+                      // Actualizar calendarDate con el mes seleccionado
+                      const newDate = new Date(calendarDate);
+                      newDate.setMonth(parseInt(monthValue));
+                      setCalendarDate(newDate);
+                    }}
+                    displayEmpty
                     sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}
                   >
-                    <MenuItem value={new Date().toLocaleString('es-ES', { month: 'short', year: 'numeric' })}>
-                      {new Date().toLocaleString('es-ES', { month: 'short', year: 'numeric' })}
-                    </MenuItem>
+                    {monthNames.map((month) => (
+                      <MenuItem key={month.value} value={month.value}>
+                        {month.label}
+                      </MenuItem>
+                    ))}
                   </Select>
                 </FormControl>
                 <Button
                   size="small"
+                  onClick={() => {
+                    // Usar el mes seleccionado en el calendario o el mes actual
+                    const monthToUse = calendarSelectedMonth !== null 
+                      ? parseInt(calendarSelectedMonth) 
+                      : calendarDate.getMonth();
+                    const yearToUse = calendarDate.getFullYear();
+                    const dateToUse = new Date(yearToUse, monthToUse, 1);
+                    setCalendarModalDate(dateToUse);
+                    setSelectedDate(new Date(yearToUse, monthToUse, new Date().getDate()));
+                    fetchAllTasksWithDates();
+                    setCalendarModalOpen(true);
+                  }}
                   sx={{ 
                     fontSize: { xs: '0.75rem', md: '0.875rem' }, 
                     textTransform: 'none',
@@ -875,7 +1003,7 @@ const Dashboard: React.FC = () => {
                     sx={{ 
                       textAlign: 'center', 
                       fontWeight: 600, 
-                      color: '#6B7280',
+                      color: theme.palette.text.secondary,
                       fontSize: '0.75rem',
                     }}
                   >
@@ -886,8 +1014,23 @@ const Dashboard: React.FC = () => {
               {/* Días del mes */}
               <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
                 {calendarDaysMain.map((day: number | null, index: number) => {
-                  const isHighlighted = day && day >= 3 && day <= 7;
-                  return day ? (
+                  if (!day) {
+                    return <Box key={index} />;
+                  }
+
+                  // Verificar si hay tareas para este día
+                  const calendarMonth = calendarDate.getMonth();
+                  const calendarYear = calendarDate.getFullYear();
+                  const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                  const dayTasks = allTasksWithDates.filter((task) => {
+                    if (!task.dueDate) return false;
+                    const taskDate = new Date(task.dueDate);
+                    const taskDateStr = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`;
+                    return taskDateStr === dateStr;
+                  });
+                  const hasTasks = dayTasks.length > 0;
+
+                  return (
                     <Box
                       key={index}
                       sx={{
@@ -896,20 +1039,18 @@ const Dashboard: React.FC = () => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         borderRadius: 1,
-                        bgcolor: isHighlighted ? '#F97316' : 'transparent',
-                        color: isHighlighted ? 'white' : '#1F2937',
-                        fontWeight: isHighlighted ? 600 : 400,
+                        bgcolor: hasTasks ? '#F97316' : 'transparent',
+                        color: hasTasks ? 'white' : theme.palette.text.primary,
+                        fontWeight: hasTasks ? 600 : 400,
                         fontSize: '0.875rem',
                         cursor: 'pointer',
                         '&:hover': {
-                          bgcolor: isHighlighted ? '#EA580C' : '#F3F4F6',
+                          bgcolor: hasTasks ? '#EA580C' : theme.palette.action.hover,
                         },
                       }}
                     >
                       {day}
                     </Box>
-                  ) : (
-                    <Box key={index} />
                   );
                 })}
               </Box>
@@ -935,14 +1076,18 @@ const Dashboard: React.FC = () => {
         {/* Sales Distribution */}
         <Card sx={{ 
           borderRadius: { xs: 3, md: 6 }, 
-          boxShadow: { xs: 1, md: 2 },
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 4px 12px rgba(0,0,0,0.3)' 
+            : { xs: 1, md: 2 },
+          bgcolor: theme.palette.background.paper,
+          border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
         }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
             <Typography 
               variant="h6" 
               sx={{ 
                 fontWeight: 600, 
-                color: '#1F2937', 
+                color: theme.palette.text.primary, 
                 mb: { xs: 2, md: 3 },
                 fontSize: { xs: '1rem', md: '1.25rem' },
               }}
@@ -971,7 +1116,7 @@ const Dashboard: React.FC = () => {
               {salesDistributionData.map((entry, index) => (
                 <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: entry.color }} />
-                  <Typography variant="caption" sx={{ color: '#6B7280' }}>
+                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
                     {entry.name}
                   </Typography>
                 </Box>
@@ -983,14 +1128,18 @@ const Dashboard: React.FC = () => {
         {/* Weekly Sales */}
         <Card sx={{ 
           borderRadius: { xs: 3, md: 6 }, 
-          boxShadow: { xs: 1, md: 2 },
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 4px 12px rgba(0,0,0,0.3)' 
+            : { xs: 1, md: 2 },
+          bgcolor: theme.palette.background.paper,
+          border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
         }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
             <Typography 
               variant="h6" 
               sx={{ 
                 fontWeight: 600, 
-                color: '#1F2937', 
+                color: theme.palette.text.primary, 
                 mb: { xs: 2, md: 3 },
                 fontSize: { xs: '1rem', md: '1.25rem' },
               }}
@@ -999,9 +1148,9 @@ const Dashboard: React.FC = () => {
             </Typography>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={weeklySalesData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="week" stroke="#6B7280" />
-                <YAxis stroke="#6B7280" />
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                <XAxis dataKey="week" stroke={theme.palette.text.secondary} />
+                <YAxis stroke={theme.palette.text.secondary} />
                 <Tooltip />
                 <Bar dataKey="value" fill="#8B5CF6" radius={[8, 8, 0, 0]} />
               </BarChart>
@@ -1013,14 +1162,18 @@ const Dashboard: React.FC = () => {
         {(user?.role === 'admin' || user?.role === 'jefe_comercial') && (
           <Card sx={{ 
             borderRadius: { xs: 3, md: 6 }, 
-            boxShadow: { xs: 1, md: 2 },
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 4px 12px rgba(0,0,0,0.3)' 
+              : { xs: 1, md: 2 },
+            bgcolor: theme.palette.background.paper,
+            border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
           }}>
             <CardContent sx={{ p: { xs: 2, md: 3 } }}>
               <Typography 
                 variant="h6" 
                 sx={{ 
                   fontWeight: 600, 
-                  color: '#1F2937', 
+                  color: theme.palette.text.primary, 
                   mb: { xs: 2, md: 3 },
                   fontSize: { xs: '1rem', md: '1.25rem' },
                 }}
@@ -1039,14 +1192,15 @@ const Dashboard: React.FC = () => {
                         }))}
                         cx="50%"
                         cy="50%"
-                        labelLine={false}
+                        labelLine={true}
                         label={(props: any) => {
                           const { name, percentage, cx, cy, midAngle, innerRadius, outerRadius } = props;
                           if (midAngle === undefined || innerRadius === undefined || outerRadius === undefined) {
                             return null;
                           }
                           const RADIAN = Math.PI / 180;
-                          const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                          // Calcular posición fuera del círculo
+                          const radius = outerRadius + 20; // 20px fuera del círculo
                           const xPos = cx + radius * Math.cos(-midAngle * RADIAN);
                           const yPos = cy + radius * Math.sin(-midAngle * RADIAN);
                           
@@ -1054,7 +1208,7 @@ const Dashboard: React.FC = () => {
                             <text
                               x={xPos}
                               y={yPos}
-                              fill="#1F2937"
+                              fill={theme.palette.text.primary}
                               textAnchor={xPos > cx ? 'start' : 'end'}
                               dominantBaseline="central"
                               fontSize={12}
@@ -1064,8 +1218,8 @@ const Dashboard: React.FC = () => {
                             </text>
                           );
                         }}
-                        outerRadius={100}
-                        innerRadius={60}
+                        outerRadius={80}
+                        innerRadius={50}
                         fill="#8884d8"
                         dataKey="value"
                       >
@@ -1080,42 +1234,19 @@ const Dashboard: React.FC = () => {
                       <Tooltip 
                         formatter={(value: number) => `${value.toFixed(1)}%`}
                         contentStyle={{
-                          backgroundColor: '#fff',
-                          border: '1px solid #E5E7EB',
+                          backgroundColor: theme.palette.background.paper,
+                          border: `1px solid ${theme.palette.divider}`,
                           borderRadius: '8px',
                           padding: '8px',
+                          color: theme.palette.text.primary,
                         }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
-                  {/* Leyenda con detalles */}
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 2 }}>
-                    {stats.deals.userPerformance.map((user, index) => {
-                      const colors = ['#1F2937', '#F59E0B', '#10B981', '#8B5CF6', '#EF4444', '#06B6D4'];
-                      return (
-                        <Box key={user.userId} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                          <Box 
-                            sx={{ 
-                              width: 16, 
-                              height: 16, 
-                              borderRadius: '50%', 
-                              bgcolor: colors[index % colors.length] 
-                            }} 
-                          />
-                          <Typography variant="body2" sx={{ color: '#1F2937', fontSize: '0.875rem', fontWeight: 500 }}>
-                            {user.firstName} {user.lastName}
-                          </Typography>
-                          <Typography variant="body2" sx={{ color: '#6B7280', fontSize: '0.875rem', ml: 'auto' }}>
-                            {user.wonDeals} de {user.totalDeals} cierres
-                          </Typography>
-                        </Box>
-                      );
-                    })}
-                  </Box>
                 </Box>
               ) : (
                 <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography variant="body2" sx={{ color: '#6B7280' }}>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
                     No hay datos de desempeño disponibles
                   </Typography>
                 </Box>
@@ -1159,7 +1290,7 @@ const Dashboard: React.FC = () => {
                 variant="body1" 
                 sx={{ 
                   fontWeight: 700, 
-                  color: '#1F2937', 
+                  color: theme.palette.text.primary, 
                   fontSize: { xs: '1rem', md: '1.25rem' },
                 }}
               >
@@ -1170,7 +1301,7 @@ const Dashboard: React.FC = () => {
             <Typography 
               variant="caption" 
               sx={{ 
-                color: '#6B7280', 
+                color: theme.palette.text.secondary, 
                 mt: 0.5, 
                 fontSize: { xs: '0.8rem', md: '0.875rem' },
               }}
@@ -1193,7 +1324,7 @@ const Dashboard: React.FC = () => {
               <IconButton size="small" onClick={handlePrevMonth} sx={{ width: 24, height: 24 }}>
                 <ChevronLeft sx={{ fontSize: 16 }} />
               </IconButton>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: '#1F2937', fontSize: '0.875rem' }}>
+              <Typography variant="body2" sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: '0.875rem' }}>
                 {`${currentMonthName} ${calendarYear}`}
               </Typography>
               <IconButton size="small" onClick={handleNextMonth} sx={{ width: 24, height: 24 }}>
@@ -1279,7 +1410,7 @@ const Dashboard: React.FC = () => {
                           sx={{
                             fontSize: '0.65rem',
                             fontWeight: 400,
-                            color: '#9CA3AF',
+                            color: theme.palette.text.secondary,
                             mb: 1.5,
                           }}
                         >
@@ -1292,10 +1423,16 @@ const Dashboard: React.FC = () => {
                           sx={{
                             fontSize: '0.75rem',
                             fontWeight: isToday ? 600 : 400,
-                            color: dateInfo.isCurrentMonth ? (isToday ? '#1F2937' : '#9CA3AF') : '#D1D5DB',
+                            color: dateInfo.isCurrentMonth 
+                              ? (isToday 
+                                ? theme.palette.mode === 'dark' 
+                                  ? taxiMonterricoColors.orange 
+                                  : '#1F2937' 
+                                : theme.palette.text.secondary) 
+                              : theme.palette.text.disabled,
                             cursor: 'pointer',
                             '&:hover': {
-                              color: dateInfo.isCurrentMonth ? '#1F2937' : '#9CA3AF',
+                              color: dateInfo.isCurrentMonth ? theme.palette.text.primary : theme.palette.text.secondary,
                             },
                           }}
                         >
@@ -1311,11 +1448,11 @@ const Dashboard: React.FC = () => {
         </Card>
 
         {/* Línea divisoria */}
-        <Divider sx={{ my: 3, borderColor: '#E5E7EB', borderWidth: 1 }} />
+        <Divider sx={{ my: 3, borderColor: theme.palette.divider, borderWidth: 1 }} />
 
         {/* To Do List */}
         <Box>
-          <Typography variant="body1" sx={{ fontWeight: 700, color: '#1F2937', mb: 2, fontSize: '1.125rem' }}>
+          <Typography variant="body1" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 2, fontSize: '1.125rem' }}>
             Lista de Tareas
           </Typography>
 
@@ -1331,7 +1468,7 @@ const Dashboard: React.FC = () => {
                         checked={isCompleted}
                         onChange={() => handleTaskToggle(task.id, task.status)}
                         sx={{
-                          color: '#6B7280',
+                          color: theme.palette.text.secondary,
                           '&.Mui-checked': {
                             color: '#10B981',
                           },
@@ -1346,7 +1483,7 @@ const Dashboard: React.FC = () => {
                           variant="body2"
                           sx={{
                             fontWeight: 500,
-                            color: isCompleted ? '#9CA3AF' : '#1F2937',
+                            color: isCompleted ? theme.palette.text.secondary : theme.palette.text.primary,
                             textDecoration: isCompleted ? 'line-through' : 'none',
                             fontSize: '0.9375rem',
                             lineHeight: 1.4,
@@ -1355,7 +1492,7 @@ const Dashboard: React.FC = () => {
                           {task.title}
                         </Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.25 }}>
-                          <Typography variant="caption" sx={{ color: '#9CA3AF', fontSize: '0.8125rem' }}>
+                          <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem' }}>
                             {getTaskTypeLabel(task.type)}
                           </Typography>
                           {task.dueDate && (
@@ -1384,6 +1521,345 @@ const Dashboard: React.FC = () => {
       </Box>
       </Box>
       <ProfileModal open={profileModalOpen} onClose={() => setProfileModalOpen(false)} />
+      
+      {/* Modal del Calendario */}
+      <Dialog
+        open={calendarModalOpen}
+        onClose={() => {
+          setCalendarModalOpen(false);
+          setSelectedDate(null);
+        }}
+        maxWidth="lg"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            maxHeight: '90vh',
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          pb: 2,
+        }}>
+          <Typography variant="h6" sx={{ fontWeight: 600, color: '#1F2937' }}>
+            Calendario
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+            <IconButton size="small" onClick={() => {
+              const newDate = new Date(calendarModalDate);
+              newDate.setMonth(newDate.getMonth() - 1);
+              setCalendarModalDate(newDate);
+              setSelectedDate(null);
+            }}>
+              <ChevronLeft />
+            </IconButton>
+            <Typography variant="body1" sx={{ minWidth: 150, textAlign: 'center', fontWeight: 500 }}>
+              {calendarModalDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' })}
+            </Typography>
+            <IconButton size="small" onClick={() => {
+              const newDate = new Date(calendarModalDate);
+              newDate.setMonth(newDate.getMonth() + 1);
+              setCalendarModalDate(newDate);
+              setSelectedDate(null);
+            }}>
+              <ChevronRight />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3, display: 'flex', gap: 3, overflow: 'hidden' }}>
+          {(() => {
+            const modalMonth = calendarModalDate.getMonth();
+            const modalYear = calendarModalDate.getFullYear();
+            const firstDay = new Date(modalYear, modalMonth, 1);
+            const lastDay = new Date(modalYear, modalMonth + 1, 0);
+            const daysInMonth = lastDay.getDate();
+            const startingDayOfWeek = (firstDay.getDay() + 6) % 7;
+
+            const modalCalendarDays = [];
+            for (let i = 0; i < startingDayOfWeek; i++) {
+              modalCalendarDays.push(null);
+            }
+            for (let i = 1; i <= daysInMonth; i++) {
+              modalCalendarDays.push(i);
+            }
+
+            // Función para obtener tareas de un día específico
+            const getTasksForDay = (day: number) => {
+              const dateStr = `${modalYear}-${String(modalMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              return allTasksWithDates.filter((task) => {
+                if (!task.dueDate) return false;
+                const taskDate = new Date(task.dueDate);
+                const taskDateStr = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`;
+                return taskDateStr === dateStr;
+              });
+            };
+
+            // Obtener tareas del día seleccionado
+            const selectedDayTasks = selectedDate ? (() => {
+              const selectedDay = selectedDate.getDate();
+              const selectedMonth = selectedDate.getMonth();
+              const selectedYear = selectedDate.getFullYear();
+              if (selectedMonth === modalMonth && selectedYear === modalYear) {
+                return getTasksForDay(selectedDay);
+              }
+              return [];
+            })() : [];
+
+            return (
+              <Box sx={{ display: 'flex', gap: 3, width: '100%' }}>
+                {/* Columna izquierda: Calendario */}
+                <Box sx={{ flex: 1 }}>
+                  {/* Días de la semana */}
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, mb: 1 }}>
+                    {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day, index) => (
+                      <Typography
+                        key={index}
+                        variant="caption"
+                        sx={{ 
+                          textAlign: 'center', 
+                          fontWeight: 600, 
+                          color: theme.palette.text.secondary,
+                          fontSize: '0.875rem',
+                          py: 1,
+                        }}
+                      >
+                        {day}
+                      </Typography>
+                    ))}
+                  </Box>
+                  {/* Días del mes */}
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
+                    {modalCalendarDays.map((day: number | null, index: number) => {
+                      if (!day) {
+                        return <Box key={index} />;
+                      }
+
+                      const dayTasks = getTasksForDay(day);
+                      const today = new Date();
+                      const isToday = day === today.getDate() && 
+                                     modalMonth === today.getMonth() && 
+                                     modalYear === today.getFullYear();
+                      
+                      const isSelected = selectedDate && 
+                                        day === selectedDate.getDate() && 
+                                        modalMonth === selectedDate.getMonth() && 
+                                        modalYear === selectedDate.getFullYear();
+
+                      const hasTasks = dayTasks.length > 0;
+
+                      return (
+                        <Box
+                          key={index}
+                          onClick={() => {
+                            const clickedDate = new Date(modalYear, modalMonth, day);
+                            setSelectedDate(clickedDate);
+                          }}
+                          sx={{
+                            minHeight: 80,
+                            border: isSelected ? `2px solid ${taxiMonterricoColors.orange}` : `1px solid ${theme.palette.divider}`,
+                            borderRadius: 1,
+                            p: 1,
+                            bgcolor: isSelected 
+                              ? `${taxiMonterricoColors.orangeLight}30` 
+                              : (isToday 
+                                ? theme.palette.mode === 'dark' 
+                                  ? `${taxiMonterricoColors.orange}20` 
+                                  : '#F0F9FF' 
+                                : theme.palette.background.paper),
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            position: 'relative',
+                            '&:hover': {
+                              bgcolor: isSelected 
+                                ? `${taxiMonterricoColors.orangeLight}50` 
+                                : (isToday 
+                                  ? theme.palette.mode === 'dark' 
+                                    ? `${taxiMonterricoColors.orange}30` 
+                                    : '#E0F2FE' 
+                                  : theme.palette.action.hover),
+                              borderColor: isSelected ? taxiMonterricoColors.orangeDark : theme.palette.divider,
+                            },
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontWeight: isSelected || isToday ? 700 : 500,
+                              color: isSelected 
+                                ? taxiMonterricoColors.orangeDark 
+                                : (isToday 
+                                  ? theme.palette.mode === 'dark' 
+                                    ? taxiMonterricoColors.orange 
+                                    : '#0284C7' 
+                                  : theme.palette.text.primary),
+                              fontSize: '0.875rem',
+                            }}
+                          >
+                            {day}
+                          </Typography>
+                          {hasTasks && (
+                            <Box
+                              sx={{
+                                position: 'absolute',
+                                bottom: 6,
+                                width: 6,
+                                height: 6,
+                                borderRadius: '50%',
+                                bgcolor: isSelected ? taxiMonterricoColors.orangeDark : (isToday ? '#0284C7' : '#EF4444'),
+                              }}
+                            />
+                          )}
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                </Box>
+
+                {/* Columna derecha: Listado de tareas del día seleccionado */}
+                <Box sx={{ 
+                  width: 320, 
+                  borderLeft: '1px solid #E5E7EB',
+                  pl: 3,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  maxHeight: '60vh',
+                  overflow: 'hidden',
+                  pt: 0.5,
+                  pb: 0.5,
+                }}>
+                  {selectedDate ? (
+                    <>
+                      {selectedDayTasks.length > 0 ? (
+                        <Box sx={{ 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          gap: 1.5,
+                          overflowY: 'auto',
+                          pr: 1,
+                          pt: 0.5,
+                          pb: 0.5,
+                          '&::-webkit-scrollbar': {
+                            width: '6px',
+                          },
+                          '&::-webkit-scrollbar-track': {
+                            background: '#F3F4F6',
+                            borderRadius: '3px',
+                          },
+                          '&::-webkit-scrollbar-thumb': {
+                            background: '#D1D5DB',
+                            borderRadius: '3px',
+                            '&:hover': {
+                              background: '#9CA3AF',
+                            },
+                          },
+                        }}>
+                          {selectedDayTasks.map((task) => (
+                            <Card
+                              key={task.id}
+                              sx={{
+                                p: 2,
+                                borderRadius: 2,
+                                border: `1px solid ${taxiMonterricoColors.green}`,
+                                bgcolor: `${taxiMonterricoColors.greenLight}20`,
+                                transition: 'all 0.2s',
+                                '&:hover': {
+                                  boxShadow: 2,
+                                  transform: 'translateY(-2px)',
+                                  bgcolor: `${taxiMonterricoColors.greenLight}30`,
+                                },
+                              }}
+                            >
+                              <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                                <Box sx={{ flex: 1 }}>
+                                  <Typography
+                                    variant="body1"
+                                    sx={{
+                                      fontWeight: 600,
+                                      color: taxiMonterricoColors.greenDark,
+                                      mb: 0.5,
+                                      fontSize: '0.9375rem',
+                                    }}
+                                  >
+                                    {task.title}
+                                  </Typography>
+                                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                                    {task.type && (
+                                      <Chip
+                                        label={getTaskTypeLabel(task.type)}
+                                        size="small"
+                                        sx={{
+                                          fontSize: '0.7rem',
+                                          height: 22,
+                                          bgcolor: '#F3F4F6',
+                                          color: '#6B7280',
+                                        }}
+                                      />
+                                    )}
+                                    {task.priority && (
+                                      <Chip
+                                        label={task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Media' : 'Baja'}
+                                        size="small"
+                                        sx={{
+                                          fontSize: '0.7rem',
+                                          height: 22,
+                                          bgcolor: task.priority === 'high' ? '#FEE2E2' : task.priority === 'medium' ? '#FEF3C7' : '#D1FAE5',
+                                          color: task.priority === 'high' ? '#991B1B' : task.priority === 'medium' ? '#92400E' : '#065F46',
+                                        }}
+                                      />
+                                    )}
+                                    {task.dueDate && (
+                                      <Typography variant="caption" sx={{ color: '#6B7280', fontSize: '0.75rem', alignSelf: 'center' }}>
+                                        {new Date(task.dueDate).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                      </Typography>
+                                    )}
+                                  </Box>
+                                </Box>
+                              </Box>
+                            </Card>
+                          ))}
+                        </Box>
+                      ) : (
+                        <Box sx={{ 
+                          display: 'flex', 
+                          flexDirection: 'column', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          py: 6,
+                          textAlign: 'center',
+                        }}>
+                          <Typography variant="body2" sx={{ color: '#9CA3AF', mb: 1 }}>
+                            No hay tareas programadas para este día
+                          </Typography>
+                        </Box>
+                      )}
+                    </>
+                  ) : (
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      py: 6,
+                      textAlign: 'center',
+                    }}>
+                      <Typography variant="body2" sx={{ color: '#9CA3AF' }}>
+                        Selecciona una fecha para ver las tareas
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };
