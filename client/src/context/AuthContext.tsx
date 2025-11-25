@@ -14,7 +14,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   setUser: (user: User | null) => void;
-  login: (usuario: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
   loading: boolean;
@@ -37,13 +37,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(false);
   }, []);
 
-  const login = async (usuario: string, password: string) => {
+  const login = async (username: string, password: string) => {
     try {
       console.log('AuthContext: Intentando login con API de Monterrico');
       
       // Llamar al endpoint del backend que maneja la autenticación con Monterrico
       const response = await api.post('/auth/login-monterrico', {
-        usuario,
+        usuario: username,
         password,
       });
 

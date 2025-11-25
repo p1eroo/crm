@@ -28,6 +28,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  useTheme,
+  Tooltip,
 } from '@mui/material';
 import {
   Visibility,
@@ -56,6 +58,7 @@ interface TabPanelProps {
 
 function TabPanel(props: TabPanelProps) {
   const { children, value, index, ...other } = props;
+  const theme = useTheme();
 
   return (
     <div
@@ -65,18 +68,21 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`profile-tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ p: 4 }}>{children}</Box>}
+      {value === index && <Box sx={{ p: 0, bgcolor: theme.palette.background.paper }}>{children}</Box>}
     </div>
   );
 }
 
+
 interface ProfileModalProps {
   open: boolean;
   onClose: () => void;
+  onSuccess?: (message: string) => void;
 }
 
-const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
+const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose, onSuccess }) => {
   const { user, setUser } = useAuth();
+  const theme = useTheme();
   const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -170,7 +176,14 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
         avatar: updatedUser.avatar,
       }));
 
-      setMessage({ type: 'success', text: 'Perfil actualizado correctamente' });
+      // Cerrar el modal inmediatamente
+      onClose();
+      // Mostrar mensaje de éxito fuera del modal
+      if (onSuccess) {
+        setTimeout(() => {
+          onSuccess('Perfil actualizado correctamente');
+        }, 100);
+      }
     } catch (error: any) {
       setMessage({ type: 'error', text: error.response?.data?.error || 'Error al actualizar el perfil' });
     } finally {
@@ -289,47 +302,30 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
     <Dialog
       open={open}
       onClose={onClose}
-      maxWidth="lg"
+      maxWidth="sm"
       fullWidth
       PaperProps={{
         sx: {
           borderRadius: 2,
-          maxHeight: '90vh',
-          height: '90vh',
+          maxHeight: '85vh',
+          maxWidth: 500,
+          bgcolor: theme.palette.background.paper,
+        }
+      }}
+      BackdropProps={{
+        sx: {
+          backdropFilter: 'blur(4px)',
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
         }
       }}
     >
-      <DialogTitle
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          pb: 2,
-          borderBottom: '1px solid #e0e0e0',
-        }}
-      >
-        <Typography variant="h5" sx={{ fontWeight: 600, color: '#1a1a1a' }}>
-          General
-        </Typography>
-        <IconButton
-          onClick={onClose}
-          size="small"
-          sx={{
-            color: '#757575',
-            '&:hover': {
-              bgcolor: '#f5f5f5',
-            },
-          }}
-        >
-          <Close />
-        </IconButton>
-      </DialogTitle>
-      <DialogContent sx={{ p: 0, overflow: 'auto' }}>
+      <DialogContent sx={{ p: 0, overflow: 'auto', bgcolor: theme.palette.background.paper }}>
         <Paper 
           sx={{ 
             boxShadow: 'none',
             borderRadius: 0,
             overflow: 'hidden',
+            bgcolor: theme.palette.background.paper,
           }}
         >
           <Tabs
@@ -339,12 +335,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
               borderBottom: 1,
               borderColor: 'divider',
               px: 2,
+              minHeight: 48,
+              bgcolor: theme.palette.background.paper,
               '& .MuiTab-root': {
-                textTransform: 'none',
-                fontWeight: 500,
-                fontSize: '0.9375rem',
-                minHeight: 64,
-                px: 3,
+                minWidth: 64,
+                minHeight: 48,
+                px: 2,
+                color: theme.palette.text.secondary,
                 '&.Mui-selected': {
                   color: taxiMonterricoColors.green,
                 },
@@ -355,13 +352,55 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
               },
             }}
           >
-            <Tab icon={<Person />} iconPosition="start" label="Perfil" />
-            <Tab icon={<Email />} iconPosition="start" label="Correo" />
-            <Tab icon={<Phone />} iconPosition="start" label="Llamadas" />
-            <Tab icon={<CalendarToday />} iconPosition="start" label="Calendario" />
-            <Tab icon={<Assignment />} iconPosition="start" label="Tareas" />
-            <Tab icon={<Security />} iconPosition="start" label="Seguridad" />
-            <Tab icon={<Timeline />} iconPosition="start" label="Automatización" />
+            <Tab 
+              icon={
+                <Tooltip title="Perfil" placement="bottom">
+                  <span><Person /></span>
+                </Tooltip>
+              } 
+            />
+            <Tab 
+              icon={
+                <Tooltip title="Correo" placement="bottom">
+                  <span><Email /></span>
+                </Tooltip>
+              } 
+            />
+            <Tab 
+              icon={
+                <Tooltip title="Llamadas" placement="bottom">
+                  <span><Phone /></span>
+                </Tooltip>
+              } 
+            />
+            <Tab 
+              icon={
+                <Tooltip title="Calendario" placement="bottom">
+                  <span><CalendarToday /></span>
+                </Tooltip>
+              } 
+            />
+            <Tab 
+              icon={
+                <Tooltip title="Tareas" placement="bottom">
+                  <span><Assignment /></span>
+                </Tooltip>
+              } 
+            />
+            <Tab 
+              icon={
+                <Tooltip title="Seguridad" placement="bottom">
+                  <span><Security /></span>
+                </Tooltip>
+              } 
+            />
+            <Tab 
+              icon={
+                <Tooltip title="Automatización" placement="bottom">
+                  <span><Timeline /></span>
+                </Tooltip>
+              } 
+            />
           </Tabs>
 
           {message && (
@@ -380,22 +419,19 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
 
           {/* Pestaña Perfil */}
           <TabPanel value={tabValue} index={0}>
-            <Box
-              sx={{
-                bgcolor: 'white',
-                borderRadius: 2,
-                p: 4,
-              }}
-            >
-              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
-                <Box 
-                  sx={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center', 
-                    flex: { md: '0 0 280px' },
-                    p: 3,
-                    borderRadius: 2,
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', px: 3, pt: 4, pb: 3, bgcolor: theme.palette.background.paper }}>
+              <Box 
+                sx={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  width: '100%',
+                }}
+              >
+                <Box
+                  sx={{
+                    position: 'relative',
+                    display: 'inline-block',
                   }}
                 >
                   <Avatar
@@ -403,98 +439,95 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
                     sx={{ 
                       width: 120, 
                       height: 120, 
-                      mb: 2,
                       fontSize: '2.5rem',
                       bgcolor: taxiMonterricoColors.green,
                     }}
                   >
                     {profileData.firstName?.[0]}{profileData.lastName?.[0]}
                   </Avatar>
-                  <Button
-                    variant="outlined"
+                  <IconButton
                     component="label"
-                    startIcon={<Edit />}
-                    size="medium"
                     sx={{
-                      textTransform: 'none',
-                      borderRadius: 2,
-                      px: 2.5,
-                      borderColor: '#d0d0d0',
-                      color: '#1a1a1a',
+                      position: 'absolute',
+                      bottom: 0,
+                      right: 0,
+                      bgcolor: taxiMonterricoColors.green,
+                      color: 'white',
+                      width: 36,
+                      height: 36,
+                      border: '3px solid white',
                       '&:hover': {
-                        borderColor: taxiMonterricoColors.green,
-                        bgcolor: `${taxiMonterricoColors.green}10`,
+                        bgcolor: taxiMonterricoColors.greenDark,
                       },
                     }}
                   >
-                    Cambiar imagen
+                    <Edit sx={{ fontSize: 18 }} />
                     <input
                       type="file"
                       hidden
                       accept="image/*"
                       onChange={handleAvatarChange}
                     />
-                  </Button>
-                  <Typography variant="caption" sx={{ mt: 1.5, color: '#9e9e9e' }}>
-                    Imagen de perfil
-                  </Typography>
+                  </IconButton>
                 </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                    <TextField
-                      fullWidth
-                      label="Nombre"
-                      value={profileData.firstName}
-                      onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 1.5,
-                        }
-                      }}
-                    />
-                    <TextField
-                      fullWidth
-                      label="Apellidos"
-                      value={profileData.lastName}
-                      onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 1.5,
-                        }
-                      }}
-                    />
-                    <TextField
-                      fullWidth
-                      label="Número de teléfono"
-                      value={profileData.phone}
-                      onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                      helperText="Podríamos usar este número de teléfono para contactarte en referencia a eventos de seguridad. Consulta nuestra política de privacidad para obtener más información."
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          borderRadius: 1.5,
-                        }
-                      }}
-                    />
-                    <Button
-                      variant="contained"
-                      onClick={handleProfileUpdate}
-                      disabled={loading}
-                      sx={{ 
-                        mt: 2,
-                        textTransform: 'none',
-                        borderRadius: 2,
-                        px: 3,
-                        py: 1.5,
-                        bgcolor: taxiMonterricoColors.green,
-                        fontWeight: 600,
-                        '&:hover': {
-                          bgcolor: taxiMonterricoColors.greenDark,
-                        },
-                      }}
-                    >
-                      Guardar cambios
-                    </Button>
-                  </Box>
+              </Box>
+              <Box sx={{ width: '100%', maxWidth: 500, display: 'flex', justifyContent: 'center' }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, width: '100%', maxWidth: 400 }}>
+                  <TextField
+                    fullWidth
+                    label="Nombre"
+                    value={profileData.firstName}
+                    onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 1.5,
+                      }
+                    }}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Apellidos"
+                    value={profileData.lastName}
+                    onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 1.5,
+                      }
+                    }}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Número de teléfono"
+                    value={profileData.phone}
+                    onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 1.5,
+                      }
+                    }}
+                  />
+                  <Button
+                    variant="contained"
+                    onClick={handleProfileUpdate}
+                    disabled={loading}
+                    sx={{ 
+                      mt: 2,
+                      mb: 2,
+                      textTransform: 'none',
+                      borderRadius: 2,
+                      px: 3,
+                      py: 1.5,
+                      bgcolor: taxiMonterricoColors.green,
+                      fontWeight: 600,
+                      alignSelf: 'center',
+                      minWidth: 200,
+                      '&:hover': {
+                        bgcolor: taxiMonterricoColors.greenDark,
+                      },
+                    }}
+                  >
+                    Guardar cambios
+                  </Button>
                 </Box>
               </Box>
             </Box>
@@ -502,20 +535,12 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
 
           {/* Pestaña Correo */}
           <TabPanel value={tabValue} index={1}>
-            <Box
-              sx={{
-                bgcolor: 'white',
-                borderRadius: 2,
-                p: 4,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                border: '1px solid #e0e0e0',
-              }}
-            >
+            <Box sx={{ px: 3, pt: 4, pb: 1, bgcolor: theme.palette.background.paper }}>
               <Box sx={{ mb: 3 }}>
-                <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: '#1a1a1a' }}>
+                <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: theme.palette.text.primary }}>
                   Correo
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7, color: '#757575' }}>
+                <Typography variant="body2" sx={{ lineHeight: 1.7, color: theme.palette.text.secondary }}>
                   Conecta tus cuentas personales de correo electrónico para registrar, hacer seguimiento, enviar y recibir correos. Para administrar los correos de cualquier equipo, ve a la{' '}
                   <Link 
                     href="#" 
@@ -536,11 +561,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
 
               <Box 
                 sx={{ 
-                  bgcolor: '#f8f9fa',
+                  bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#f8f9fa',
                   borderRadius: 2,
                   p: 3,
                   mb: 3,
-                  border: '1px solid #e9ecef',
+                  border: `1px solid ${theme.palette.divider}`,
                 }}
               >
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -553,7 +578,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
                         flexShrink: 0,
                       }} 
                     />
-                    <Typography variant="body2" sx={{ color: '#1a1a1a', lineHeight: 1.6 }}>
+                    <Typography variant="body2" sx={{ color: theme.palette.text.primary, lineHeight: 1.6 }}>
                       Enviar y programar correos desde el CRM
                     </Typography>
                   </Box>
@@ -566,7 +591,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
                         flexShrink: 0,
                       }} 
                     />
-                    <Typography variant="body2" sx={{ color: '#1a1a1a', lineHeight: 1.6 }}>
+                    <Typography variant="body2" sx={{ color: theme.palette.text.primary, lineHeight: 1.6 }}>
                       Registrar respuestas a correos automáticamente
                     </Typography>
                   </Box>
@@ -579,13 +604,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
                         flexShrink: 0,
                       }} 
                     />
-                    <Typography variant="body2" sx={{ color: '#1a1a1a', lineHeight: 1.6 }}>
+                    <Typography variant="body2" sx={{ color: theme.palette.text.primary, lineHeight: 1.6 }}>
                       Sugerir tareas de seguimiento y capturar detalles de contactos desde tu correo
                     </Typography>
                   </Box>
                 </Box>
-                <Box sx={{ mt: 2.5, pt: 2, borderTop: '1px solid #e0e0e0' }}>
-                  <Typography variant="caption" sx={{ color: '#9e9e9e', fontStyle: 'italic' }}>
+                <Box sx={{ mt: 2.5, pt: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
+                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic' }}>
                     Requiere automatización de la bandeja de entrada
                   </Typography>
                 </Box>
@@ -622,18 +647,12 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
 
           {/* Pestaña Llamadas */}
           <TabPanel value={tabValue} index={2}>
-            <Box
-              sx={{
-                bgcolor: 'white',
-                borderRadius: 2,
-                p: 4,
-              }}
-            >
+            <Box sx={{ px: 3, pt: 4, pb: 1, bgcolor: theme.palette.background.paper }}>
               <Box sx={{ mb: 3 }}>
-                <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: '#1a1a1a' }}>
+                <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: theme.palette.text.primary }}>
                   Llamadas
                 </Typography>
-                <Typography variant="body2" sx={{ color: '#757575', lineHeight: 1.7 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, lineHeight: 1.7 }}>
                   Configura tus preferencias de llamadas telefónicas.
                 </Typography>
               </Box>
@@ -641,7 +660,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
                 severity="info"
                 sx={{
                   borderRadius: 2,
-                  bgcolor: '#e3f2fd',
                 }}
               >
                 La configuración de llamadas estará disponible próximamente.
@@ -651,18 +669,12 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
 
           {/* Pestaña Calendario */}
           <TabPanel value={tabValue} index={3}>
-            <Box
-              sx={{
-                bgcolor: 'white',
-                borderRadius: 2,
-                p: 4,
-              }}
-            >
+            <Box sx={{ px: 3, pt: 4, pb: 1, bgcolor: theme.palette.background.paper }}>
               <Box sx={{ mb: 3 }}>
-                <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: '#1a1a1a' }}>
+                <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: theme.palette.text.primary }}>
                   Calendario
                 </Typography>
-                <Typography variant="body2" sx={{ color: '#757575', lineHeight: 1.7 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, lineHeight: 1.7 }}>
                   Conecta tu calendario para sincronizar eventos y reuniones.
                 </Typography>
               </Box>
@@ -670,7 +682,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
                 severity="info"
                 sx={{
                   borderRadius: 2,
-                  bgcolor: '#e3f2fd',
                 }}
               >
                 La configuración de calendario estará disponible próximamente.
@@ -680,18 +691,12 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
 
           {/* Pestaña Tareas */}
           <TabPanel value={tabValue} index={4}>
-            <Box
-              sx={{
-                bgcolor: 'white',
-                borderRadius: 2,
-                p: 4,
-              }}
-            >
+            <Box sx={{ px: 3, pt: 4, pb: 1, bgcolor: theme.palette.background.paper }}>
               <Box sx={{ mb: 3 }}>
-                <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: '#1a1a1a' }}>
+                <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: theme.palette.text.primary }}>
                   Tareas
                 </Typography>
-                <Typography variant="body2" sx={{ color: '#757575', lineHeight: 1.7 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, lineHeight: 1.7 }}>
                   Configura tus preferencias de tareas y recordatorios.
                 </Typography>
               </Box>
@@ -699,7 +704,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
                 severity="info"
                 sx={{
                   borderRadius: 2,
-                  bgcolor: '#e3f2fd',
                 }}
               >
                 La configuración de tareas estará disponible próximamente.
@@ -709,26 +713,10 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
 
           {/* Pestaña Seguridad */}
           <TabPanel value={tabValue} index={5}>
-            <Box
-              sx={{
-                bgcolor: 'white',
-                borderRadius: 2,
-                p: 4,
-              }}
-            >
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: '#1a1a1a' }}>
-                  Seguridad
-                </Typography>
-                <Typography variant="body2" sx={{ color: '#757575', lineHeight: 1.7 }}>
-                  Establece preferencias relacionadas con el inicio de sesión y la seguridad de tu cuenta personal.
-                </Typography>
-              </Box>
-
-              <Divider sx={{ my: 4 }} />
+            <Box sx={{ px: 3, pt: 4, pb: 1, bgcolor: theme.palette.background.paper }}>
 
               <Box sx={{ mb: 4 }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#1a1a1a' }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
                   Dirección de correo electrónico
                 </Typography>
                 <TextField
@@ -749,8 +737,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
                     textTransform: 'none',
                     borderRadius: 2,
                     px: 2.5,
-                    borderColor: '#d0d0d0',
-                    color: '#1a1a1a',
+                    borderColor: theme.palette.divider,
+                    color: theme.palette.text.primary,
                     '&:hover': {
                       borderColor: taxiMonterricoColors.green,
                       bgcolor: `${taxiMonterricoColors.green}10`,
@@ -764,11 +752,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
               <Divider sx={{ my: 4 }} />
 
               <Box sx={{ mb: 4 }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#1a1a1a' }}>
+                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
                   Contraseña
                 </Typography>
                 {passwordLastReset && (
-                  <Typography variant="body2" sx={{ mb: 2, color: '#757575' }}>
+                  <Typography variant="body2" sx={{ mb: 2, color: theme.palette.text.secondary }}>
                     Restablecido por última vez el {passwordLastReset}
                   </Typography>
                 )}
@@ -867,103 +855,17 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
                 </Box>
               </Box>
 
-              <Divider sx={{ my: 4 }} />
-
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#1a1a1a' }}>
-                  Retirada
-                </Typography>
-                <Typography variant="body2" sx={{ mb: 2.5, color: '#757575', lineHeight: 1.7 }}>
-                  Si no usas una contraseña para iniciar sesión en más de 90 días, el sistema la eliminará.
-                </Typography>
-                <TableContainer
-                  sx={{
-                    borderRadius: 2,
-                    border: '1px solid #e0e0e0',
-                  }}
-                >
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                        <TableCell sx={{ fontWeight: 600, color: '#1a1a1a' }}>ESTADO</TableCell>
-                        <TableCell sx={{ fontWeight: 600, color: '#1a1a1a' }}>FECHA DE RETIRADA</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      <TableRow>
-                        <TableCell>
-                          <Chip label="Inelegible" size="small" sx={{ bgcolor: '#e0e0e0', color: '#1a1a1a' }} />
-                        </TableCell>
-                        <TableCell sx={{ color: '#757575' }}>Ninguna</TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Box>
-
-              <Divider sx={{ my: 4 }} />
-
-              <Box sx={{ mb: 4 }}>
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#1a1a1a' }}>
-                  Número de teléfono de confianza
-                </Typography>
-                <Link 
-                  href="#" 
-                  underline="hover" 
-                  sx={{ 
-                    display: 'inline-block', 
-                    mb: 1.5,
-                    color: taxiMonterricoColors.green,
-                    fontWeight: 500,
-                    '&:hover': {
-                      color: taxiMonterricoColors.greenDark,
-                    }
-                  }}
-                >
-                  Agrega un número de teléfono de confianza
-                </Link>
-                <Typography variant="body2" sx={{ color: '#757575', lineHeight: 1.7 }}>
-                  Agrega un número de teléfono utilizado para verificar ocasionalmente tu identidad y recibir otras alertas relacionadas con la seguridad. Este número de teléfono nunca se utilizará para fines de ventas o marketing.
-                </Typography>
-              </Box>
-
-              <Divider sx={{ my: 4 }} />
-
-              <Box>
-                <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#1a1a1a' }}>
-                  Claves de acceso
-                </Typography>
-                <Link 
-                  href="#" 
-                  underline="hover"
-                  sx={{
-                    color: taxiMonterricoColors.green,
-                    fontWeight: 500,
-                    '&:hover': {
-                      color: taxiMonterricoColors.greenDark,
-                    }
-                  }}
-                >
-                  Configurar claves de acceso
-                </Link>
-              </Box>
             </Box>
           </TabPanel>
 
           {/* Pestaña Automatización */}
           <TabPanel value={tabValue} index={6}>
-            <Box
-              sx={{
-                bgcolor: 'white',
-                borderRadius: 2,
-                p: 4,
-              }}
-            >
+            <Box sx={{ px: 3, pt: 4, pb: 1, bgcolor: theme.palette.background.paper }}>
               <Box sx={{ mb: 3 }}>
-                <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: '#1a1a1a' }}>
+                <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: theme.palette.text.primary }}>
                   Automatización
                 </Typography>
-                <Typography variant="body2" sx={{ color: '#757575', lineHeight: 1.7 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, lineHeight: 1.7 }}>
                   Configura tus preferencias de automatización y flujos de trabajo.
                 </Typography>
               </Box>
@@ -971,7 +873,6 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose }) => {
                 severity="info"
                 sx={{
                   borderRadius: 2,
-                  bgcolor: '#e3f2fd',
                 }}
               >
                 La configuración de automatización estará disponible próximamente.

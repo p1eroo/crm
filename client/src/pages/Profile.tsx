@@ -374,7 +374,6 @@ const Profile: React.FC = () => {
                     label="Número de teléfono"
                     value={profileData.phone}
                     onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                    helperText="Podríamos usar este número de teléfono para contactarte en referencia a eventos de seguridad. Consulta nuestra política de privacidad para obtener más información."
                     sx={{
                       '& .MuiOutlinedInput-root': {
                         borderRadius: 1.5,

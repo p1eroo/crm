@@ -6,6 +6,8 @@ import {
   InputBase,
   IconButton,
   Badge,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import { 
   Search, 
@@ -21,6 +23,7 @@ const Header: React.FC = () => {
   const { user } = useAuth();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState('');
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -148,7 +151,25 @@ const Header: React.FC = () => {
           <Edit sx={{ fontSize: 20, color: '#1F2937' }} />
         </IconButton>
       </Box>
-      <ProfileModal open={profileModalOpen} onClose={() => setProfileModalOpen(false)} />
+      <ProfileModal 
+        open={profileModalOpen} 
+        onClose={() => setProfileModalOpen(false)}
+        onSuccess={(message) => setSuccessMessage(message)}
+      />
+      <Snackbar
+        open={!!successMessage}
+        autoHideDuration={4000}
+        onClose={() => setSuccessMessage(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setSuccessMessage(null)} 
+          severity="success" 
+          sx={{ width: '100%' }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

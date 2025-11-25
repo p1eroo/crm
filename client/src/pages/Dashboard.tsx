@@ -22,6 +22,8 @@ import {
   DialogContent,
   Chip,
   useTheme,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import {
   Download,
@@ -32,6 +34,9 @@ import {
   AccountCircle,
   Search,
   People,
+  AccountBalance,
+  ShoppingCart,
+  AttachMoney,
 } from '@mui/icons-material';
 import {
   LineChart,
@@ -53,6 +58,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import ProfileModal from '../components/ProfileModal';
 import { taxiMonterricoColors } from '../theme/colors';
+import * as XLSX from 'xlsx';
 
 interface DashboardStats {
   contacts: {
@@ -76,6 +82,7 @@ interface DashboardStats {
       email: string;
       totalDeals: number;
       wonDeals: number;
+      wonDealsValue?: number;
       performance: number;
     }>;
   };
@@ -118,6 +125,7 @@ const Dashboard: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null); // null = todos los meses (para Ventas)
   const [calendarSelectedMonth, setCalendarSelectedMonth] = useState<string | null>(new Date().getMonth().toString()); // Para Calendario (mes actual por defecto)
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [calendarModalOpen, setCalendarModalOpen] = useState(false);
   const [allTasksWithDates, setAllTasksWithDates] = useState<Task[]>([]);
@@ -290,6 +298,67 @@ const Dashboard: React.FC = () => {
     return types[type || 'todo'] || 'Task';
   };
 
+  const handleDownloadSales = () => {
+    if (!stats) {
+      console.warn('No hay datos disponibles para descargar');
+      return;
+    }
+    
+    // Obtener los datos de ventas
+    const salesData = stats.payments?.monthly || [];
+    
+    // Preparar datos para Excel
+    let excelData: Array<{ Mes: string; Ventas: number }> = [];
+    
+    if (salesData.length > 0) {
+      // Si hay datos reales, usarlos
+      excelData = salesData.map(item => ({
+        Mes: item.month,
+        Ventas: item.amount,
+      }));
+    } else {
+      // Si no hay datos, generar estructura con meses del año seleccionado
+      const year = parseInt(selectedYear);
+      if (selectedMonth !== null) {
+        // Solo un mes
+        const monthIndex = parseInt(selectedMonth);
+        const monthName = monthNames[monthIndex]?.label || '';
+        excelData = [{
+          Mes: `${monthName} ${year}`,
+          Ventas: 0,
+        }];
+      } else {
+        // Todos los meses del año
+        excelData = monthNames.map(month => ({
+          Mes: `${month.label} ${year}`,
+          Ventas: 0,
+        }));
+      }
+    }
+    
+    // Crear un libro de trabajo
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    
+    // Ajustar el ancho de las columnas
+    ws['!cols'] = [
+      { wch: 25 }, // Mes
+      { wch: 15 }, // Ventas
+    ];
+    
+    // Agregar la hoja al libro
+    XLSX.utils.book_append_sheet(wb, ws, 'Ventas');
+    
+    // Nombre del archivo con año y mes si aplica
+    const monthFilter = selectedMonth !== null 
+      ? `_${monthNames[parseInt(selectedMonth)]?.label || ''}` 
+      : '';
+    const fileName = `ventas_${selectedYear}${monthFilter}.xlsx`;
+    
+    // Descargar el archivo
+    XLSX.writeFile(wb, fileName);
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -449,6 +518,16 @@ const Dashboard: React.FC = () => {
   const weeklyBalance = stats.payments?.revenue || 0;
   const ordersInLine = stats.deals.total || 0;
   const newClients = stats.leads?.converted || stats.contacts.total || 0;
+  
+  // Calcular presupuesto del mes actual
+  const currentMonth = new Date().getMonth();
+  const currentMonthNameForBudget = monthNames[currentMonth]?.label || '';
+  const currentMonthAbbr = currentMonthNameForBudget.substring(0, 3) + '.';
+  const currentMonthData = stats.payments?.monthly?.find(item => {
+    const monthStr = item.month.toLowerCase();
+    return monthStr.includes(currentMonthNameForBudget.toLowerCase());
+  });
+  const monthlyBudget = currentMonthData?.amount || 0;
 
   // Generar calendario para el calendario principal (izquierda) - mes completo
   const calendarMonth = calendarDate.getMonth();
@@ -594,70 +673,133 @@ const Dashboard: React.FC = () => {
       {/* Tarjetas KPI con gradientes - Diseño compacto y equilibrado */}
       <Box sx={{ 
         display: 'grid', 
-        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, 
+        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, 
         gap: { xs: 1.5, sm: 2, md: 2 }, 
         mb: { xs: 3, md: 4 } 
       }}>
-        {/* Weekly Balance */}
+        {/* Monthly Budget */}
         <Card sx={{ 
           borderRadius: 3, 
           boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 12px rgba(102, 126, 234, 0.3)' 
+            ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
             : '0 2px 4px rgba(0,0,0,0.08)',
-          background: theme.palette.mode === 'dark'
-            ? 'linear-gradient(135deg, #4F63D2 0%, #5A3F8C 100%)'
-            : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
+          background: theme.palette.background.paper,
+          color: theme.palette.text.primary,
           transition: 'all 0.2s ease',
           overflow: 'hidden',
-          border: theme.palette.mode === 'dark' ? '1px solid rgba(102, 126, 234, 0.3)' : 'none',
+          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0,0,0,0.08)',
           '&:hover': {
             transform: { xs: 'none', md: 'translateY(-2px)' },
             boxShadow: theme.palette.mode === 'dark'
-              ? '0 6px 16px rgba(102, 126, 234, 0.4)'
+              ? '0 6px 16px rgba(0, 0, 0, 0.4)'
               : '0 4px 12px rgba(0,0,0,0.15)',
           },
         }}>
           <CardContent sx={{ 
             p: { xs: 1.75, sm: 2, md: 2.25 },
+            position: 'relative',
           }}>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                opacity: 0.95, 
-                mb: 0.75,
-                fontSize: { xs: '0.75rem', md: '0.8rem' },
-                fontWeight: 500,
-              }}
-            >
-              Balance Semanal
-            </Typography>
-            <Typography 
-              variant="h5" 
-              sx={{ 
-                fontWeight: 700, 
-                mb: 1.25,
-                fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
-                lineHeight: 1.1,
-              }}
-            >
-              ${(weeklyBalance / 1000).toFixed(0)}k
-            </Typography>
-            <Link 
-              href="#" 
-              sx={{ 
-                color: 'white', 
-                textDecoration: 'underline', 
-                fontSize: { xs: '0.7rem', md: '0.75rem' },
-                opacity: 0.9,
-                display: 'inline-block',
-                '&:hover': {
-                  opacity: 1,
-                },
-              }}
-            >
-              Ver lista completa
-            </Link>
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'flex-start',
+            }}>
+              <Box sx={{ flex: 1 }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: theme.palette.text.secondary,
+                    mb: 1,
+                    fontSize: { xs: '1rem', md: '1.125rem' },
+                    fontWeight: 500,
+                  }}
+                >
+                  Presupuesto {currentMonthAbbr}
+                </Typography>
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    fontWeight: 700, 
+                    fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
+                    lineHeight: 1.1,
+                    color: theme.palette.text.primary,
+                  }}
+                >
+                  ${(monthlyBudget / 1000).toFixed(0)}k
+                </Typography>
+              </Box>
+              <AttachMoney 
+                sx={{ 
+                  fontSize: { xs: 48, sm: 56, md: 64 },
+                  color: theme.palette.mode === 'dark' ? '#10B981' : '#059669',
+                  ml: 2,
+                  opacity: theme.palette.mode === 'dark' ? 0.8 : 1,
+                }} 
+              />
+            </Box>
+          </CardContent>
+        </Card>
+
+        {/* Weekly Balance */}
+        <Card sx={{ 
+          borderRadius: 3, 
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
+            : '0 2px 4px rgba(0,0,0,0.08)',
+          background: theme.palette.background.paper,
+          color: theme.palette.text.primary,
+          transition: 'all 0.2s ease',
+          overflow: 'hidden',
+          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0,0,0,0.08)',
+          '&:hover': {
+            transform: { xs: 'none', md: 'translateY(-2px)' },
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 6px 16px rgba(0, 0, 0, 0.4)'
+              : '0 4px 12px rgba(0,0,0,0.15)',
+          },
+        }}>
+          <CardContent sx={{ 
+            p: { xs: 1.75, sm: 2, md: 2.25 },
+            position: 'relative',
+          }}>
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'flex-start',
+            }}>
+              <Box sx={{ flex: 1 }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: theme.palette.text.secondary,
+                    mb: 1,
+                    fontSize: { xs: '1rem', md: '1.125rem' },
+                    fontWeight: 500,
+                  }}
+                >
+                  Balance Semanal
+                </Typography>
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    fontWeight: 700, 
+                    fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
+                    lineHeight: 1.1,
+                    color: theme.palette.text.primary,
+                  }}
+                >
+                  ${(weeklyBalance / 1000).toFixed(0)}k
+                </Typography>
+              </Box>
+              <AccountBalance 
+                sx={{ 
+                  fontSize: { xs: 48, sm: 56, md: 64 },
+                  color: theme.palette.mode === 'dark' ? '#8B9AFF' : '#667eea',
+                  ml: 2,
+                  opacity: theme.palette.mode === 'dark' ? 0.8 : 1,
+                }} 
+              />
+            </Box>
           </CardContent>
         </Card>
 
@@ -665,62 +807,62 @@ const Dashboard: React.FC = () => {
         <Card sx={{ 
           borderRadius: 3, 
           boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 12px rgba(240, 147, 251, 0.3)' 
+            ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
             : '0 2px 4px rgba(0,0,0,0.08)',
-          background: theme.palette.mode === 'dark'
-            ? 'linear-gradient(135deg, #C873DB 0%, #D64A5F 100%)'
-            : 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-          color: 'white',
+          background: theme.palette.background.paper,
+          color: theme.palette.text.primary,
           transition: 'all 0.2s ease',
           overflow: 'hidden',
-          border: theme.palette.mode === 'dark' ? '1px solid rgba(240, 147, 251, 0.3)' : 'none',
+          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0,0,0,0.08)',
           '&:hover': {
             transform: { xs: 'none', md: 'translateY(-2px)' },
             boxShadow: theme.palette.mode === 'dark'
-              ? '0 6px 16px rgba(240, 147, 251, 0.4)'
+              ? '0 6px 16px rgba(0, 0, 0, 0.4)'
               : '0 4px 12px rgba(0,0,0,0.15)',
           },
         }}>
           <CardContent sx={{ 
             p: { xs: 1.75, sm: 2, md: 2.25 },
+            position: 'relative',
           }}>
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                opacity: 0.95, 
-                mb: 0.75,
-                fontSize: { xs: '0.75rem', md: '0.8rem' },
-                fontWeight: 500,
-              }}
-            >
-              Órdenes en Línea
-            </Typography>
-            <Typography 
-              variant="h5" 
-              sx={{ 
-                fontWeight: 700, 
-                mb: 1.25,
-                fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
-                lineHeight: 1.1,
-              }}
-            >
-              {ordersInLine}
-            </Typography>
-            <Link 
-              href="#" 
-              sx={{ 
-                color: 'white', 
-                textDecoration: 'underline', 
-                fontSize: { xs: '0.7rem', md: '0.75rem' },
-                opacity: 0.9,
-                display: 'inline-block',
-                '&:hover': {
-                  opacity: 1,
-                },
-              }}
-            >
-              Ver lista completa
-            </Link>
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'flex-start',
+            }}>
+              <Box sx={{ flex: 1 }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: theme.palette.text.secondary,
+                    mb: 1,
+                    fontSize: { xs: '1rem', md: '1.125rem' },
+                    fontWeight: 500,
+                  }}
+                >
+                  Órdenes en Línea
+                </Typography>
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    fontWeight: 700, 
+                    fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
+                    lineHeight: 1.1,
+                    color: theme.palette.text.primary,
+                  }}
+                >
+                  {ordersInLine}
+                </Typography>
+              </Box>
+              <ShoppingCart 
+                sx={{ 
+                  fontSize: { xs: 48, sm: 56, md: 64 },
+                  color: theme.palette.mode === 'dark' ? '#F093FB' : '#f5576c',
+                  ml: 2,
+                  opacity: theme.palette.mode === 'dark' ? 0.8 : 1,
+                }} 
+              />
+            </Box>
           </CardContent>
         </Card>
 
@@ -728,36 +870,33 @@ const Dashboard: React.FC = () => {
         <Card sx={{ 
           borderRadius: 3, 
           boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 12px rgba(250, 112, 154, 0.3)' 
+            ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
             : '0 2px 4px rgba(0,0,0,0.08)',
-          background: theme.palette.mode === 'dark'
-            ? 'linear-gradient(135deg, #D85A7A 0%, #E6C840 100%)'
-            : 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
-          color: 'white',
+          background: theme.palette.background.paper,
+          color: theme.palette.text.primary,
           transition: 'all 0.2s ease',
           overflow: 'hidden',
           position: 'relative',
-          border: theme.palette.mode === 'dark' ? '1px solid rgba(250, 112, 154, 0.3)' : 'none',
+          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0,0,0,0.08)',
           '&:hover': {
             transform: { xs: 'none', md: 'translateY(-2px)' },
             boxShadow: theme.palette.mode === 'dark'
-              ? '0 6px 16px rgba(250, 112, 154, 0.4)'
+              ? '0 6px 16px rgba(0, 0, 0, 0.4)'
               : '0 4px 12px rgba(0,0,0,0.15)',
           },
         }}>
           <CardContent sx={{ 
             p: { xs: 1.75, sm: 2, md: 2.25 },
             position: 'relative',
-            zIndex: 1,
           }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <Box sx={{ flex: 1 }}>
                 <Typography 
                   variant="body2" 
                   sx={{ 
-                    opacity: 0.95, 
-                    mb: 0.75,
-                    fontSize: { xs: '0.75rem', md: '0.8rem' },
+                    color: theme.palette.text.secondary,
+                    mb: 1,
+                    fontSize: { xs: '1rem', md: '1.125rem' },
                     fontWeight: 500,
                   }}
                 >
@@ -767,48 +906,35 @@ const Dashboard: React.FC = () => {
                   variant="h5" 
                   sx={{ 
                     fontWeight: 700, 
-                    mb: 1.25,
-                    fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
+                    fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
                     lineHeight: 1.1,
+                    color: theme.palette.text.primary,
                   }}
                 >
                   {newClients}
                 </Typography>
-                <Link 
-                  href="#" 
-                  sx={{ 
-                    color: 'white', 
-                    textDecoration: 'underline', 
-                    fontSize: { xs: '0.7rem', md: '0.75rem' },
-                    opacity: 0.9,
-                    display: 'inline-block',
-                    '&:hover': {
-                      opacity: 1,
-                    },
-                  }}
-                >
-                  Ver lista completa
-                </Link>
               </Box>
-              <Box sx={{ 
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: 0.3,
-                ml: 2,
-              }}>
-                <People sx={{ fontSize: { xs: 48, sm: 56, md: 64 } }} />
-              </Box>
+              <People 
+                sx={{ 
+                  fontSize: { xs: 56, sm: 64, md: 72 },
+                  color: theme.palette.mode === 'dark' ? '#FA709A' : '#fee140',
+                  ml: 2,
+                  opacity: theme.palette.mode === 'dark' ? 0.8 : 1,
+                }} 
+              />
             </Box>
           </CardContent>
         </Card>
       </Box>
 
-      {/* Sección principal: Sales Chart y Calendar */}
+      {/* Sección principal: Sales Chart */}
       <Box sx={{ 
-        display: 'grid', 
-        gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, 
-        gap: { xs: 2, md: 3 }, 
+        display: 'grid',
+        gridTemplateColumns: { 
+          xs: '1fr', 
+          lg: (user?.role === 'admin' || user?.role === 'jefe_comercial') ? '2fr 1fr' : '1fr' 
+        },
+        gap: { xs: 2, md: 3 },
         mb: { xs: 2, md: 3 } 
       }}>
         {/* Sales Chart */}
@@ -876,7 +1002,8 @@ const Dashboard: React.FC = () => {
                 </FormControl>
                 <Button
                   size="small"
-                  startIcon={<Download sx={{ fontSize: { xs: 16, md: 18 } }} />}
+                  endIcon={<Download sx={{ fontSize: { xs: 16, md: 18 } }} />}
+                  onClick={handleDownloadSales}
                   sx={{ 
                     fontSize: { xs: '0.75rem', md: '0.875rem' }, 
                     textTransform: 'none',
@@ -913,7 +1040,8 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Calendar */}
+        {/* Total de Ventas por Asesor - Solo visible para admin y jefe_comercial */}
+        {(user?.role === 'admin' || user?.role === 'jefe_comercial') && (
         <Card sx={{ 
           borderRadius: { xs: 3, md: 6 }, 
           boxShadow: theme.palette.mode === 'dark' 
@@ -923,140 +1051,102 @@ const Dashboard: React.FC = () => {
           border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
         }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-            <Box sx={{ 
-              display: 'flex', 
-              flexDirection: { xs: 'column', sm: 'row' },
-              justifyContent: 'space-between', 
-              alignItems: { xs: 'flex-start', sm: 'center' },
-              mb: { xs: 2, md: 3 },
-              gap: { xs: 2, sm: 0 },
-            }}>
-              <Typography 
-                variant="h6" 
-                sx={{ 
-                  fontWeight: 600, 
-                  color: theme.palette.text.primary,
-                  fontSize: { xs: '1rem', md: '1.25rem' },
-                }}
-              >
-                Calendario
-              </Typography>
-              <Box sx={{ 
-                display: 'flex', 
-                gap: { xs: 1, md: 2 }, 
-                alignItems: 'center',
-                width: { xs: '100%', sm: 'auto' },
-                flexDirection: { xs: 'column', sm: 'row' },
-              }}>
-                <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 } }}>
-                  <Select
-                    value={calendarSelectedMonth || new Date().getMonth().toString()}
-                    onChange={(e) => {
-                      const monthValue = e.target.value;
-                      setCalendarSelectedMonth(monthValue);
-                      // Actualizar calendarDate con el mes seleccionado
-                      const newDate = new Date(calendarDate);
-                      newDate.setMonth(parseInt(monthValue));
-                      setCalendarDate(newDate);
-                    }}
-                    displayEmpty
-                    sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}
-                  >
-                    {monthNames.map((month) => (
-                      <MenuItem key={month.value} value={month.value}>
-                        {month.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <Button
-                  size="small"
-                  onClick={() => {
-                    // Usar el mes seleccionado en el calendario o el mes actual
-                    const monthToUse = calendarSelectedMonth !== null 
-                      ? parseInt(calendarSelectedMonth) 
-                      : calendarDate.getMonth();
-                    const yearToUse = calendarDate.getFullYear();
-                    const dateToUse = new Date(yearToUse, monthToUse, 1);
-                    setCalendarModalDate(dateToUse);
-                    setSelectedDate(new Date(yearToUse, monthToUse, new Date().getDate()));
-                    fetchAllTasksWithDates();
-                    setCalendarModalOpen(true);
-                  }}
-                  sx={{ 
-                    fontSize: { xs: '0.75rem', md: '0.875rem' }, 
-                    textTransform: 'none',
-                    width: { xs: '100%', sm: 'auto' },
-                  }}
-                >
-                  Ver
-                </Button>
-              </Box>
-            </Box>
-            <Box>
-              {/* Días de la semana */}
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, mb: 1 }}>
-                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day, index) => (
-                  <Typography
-                    key={index}
-                    variant="caption"
-                    sx={{ 
-                      textAlign: 'center', 
-                      fontWeight: 600, 
-                      color: theme.palette.text.secondary,
-                      fontSize: '0.75rem',
-                    }}
-                  >
-                    {day}
-                  </Typography>
-                ))}
-              </Box>
-              {/* Días del mes */}
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
-                {calendarDaysMain.map((day: number | null, index: number) => {
-                  if (!day) {
-                    return <Box key={index} />;
-                  }
-
-                  // Verificar si hay tareas para este día
-                  const calendarMonth = calendarDate.getMonth();
-                  const calendarYear = calendarDate.getFullYear();
-                  const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                  const dayTasks = allTasksWithDates.filter((task) => {
-                    if (!task.dueDate) return false;
-                    const taskDate = new Date(task.dueDate);
-                    const taskDateStr = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`;
-                    return taskDateStr === dateStr;
-                  });
-                  const hasTasks = dayTasks.length > 0;
-
-                  return (
-                    <Box
-                      key={index}
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                fontWeight: 600, 
+                color: theme.palette.text.primary,
+                fontSize: { xs: '1rem', md: '1.25rem' },
+                mb: { xs: 2, md: 3 },
+              }}
+            >
+              Total de Ventas por Asesor
+            </Typography>
+            {stats.deals.userPerformance && stats.deals.userPerformance.length > 0 ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {stats.deals.userPerformance
+                  .sort((a, b) => (b.wonDealsValue || 0) - (a.wonDealsValue || 0))
+                  .map((user, index) => (
+                    <Box 
+                      key={user.userId}
                       sx={{
-                        aspectRatio: '1',
                         display: 'flex',
+                        justifyContent: 'space-between',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: 1,
-                        bgcolor: hasTasks ? '#F97316' : 'transparent',
-                        color: hasTasks ? 'white' : theme.palette.text.primary,
-                        fontWeight: hasTasks ? 600 : 400,
-                        fontSize: '0.875rem',
-                        cursor: 'pointer',
-                        '&:hover': {
-                          bgcolor: hasTasks ? '#EA580C' : theme.palette.action.hover,
-                        },
+                        p: 1.5,
+                        borderRadius: 2,
+                        bgcolor: theme.palette.mode === 'dark' 
+                          ? 'rgba(255, 255, 255, 0.05)' 
+                          : 'rgba(0, 0, 0, 0.02)',
+                        border: `1px solid ${theme.palette.divider}`,
                       }}
                     >
-                      {day}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                        <Avatar
+                          sx={{
+                            width: 32,
+                            height: 32,
+                            bgcolor: '#8B5CF6',
+                            fontSize: '0.875rem',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {getInitials(user.firstName, user.lastName)}
+                        </Avatar>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontWeight: 600, 
+                              color: theme.palette.text.primary,
+                              fontSize: '0.875rem',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {user.firstName} {user.lastName}
+                          </Typography>
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              color: theme.palette.text.secondary,
+                              fontSize: '0.75rem',
+                            }}
+                          >
+                            {user.wonDeals || 0} {user.wonDeals === 1 ? 'venta' : 'ventas'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontWeight: 700, 
+                          color: theme.palette.text.primary,
+                          fontSize: '1rem',
+                          ml: 2,
+                        }}
+                      >
+                        ${(user.wonDealsValue || 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </Typography>
                     </Box>
-                  );
-                })}
+                  ))}
               </Box>
-            </Box>
+            ) : (
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: theme.palette.text.secondary,
+                  textAlign: 'center',
+                  py: 3,
+                }}
+              >
+                No hay datos de ventas por asesor disponibles
+              </Typography>
+            )}
           </CardContent>
         </Card>
+        )}
       </Box>
 
       {/* Sección inferior: Sales Distribution, Weekly Sales y Desempeño por Usuario */}
@@ -1314,135 +1404,135 @@ const Dashboard: React.FC = () => {
         {/* Calendario */}
         <Card sx={{ 
           borderRadius: { xs: 3, md: 6 }, 
-          boxShadow: { xs: 1, md: 2 }, 
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 4px 12px rgba(0,0,0,0.3)' 
+            : { xs: 1, md: 2 },
           mb: { xs: 3, md: 4 },
-          bgcolor: '#F3F4F6',
+          bgcolor: theme.palette.background.paper,
+          border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
         }}>
-          <CardContent sx={{ p: { xs: 1.5, md: 2 } }}>
-            {/* Header del calendario */}
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5 }}>
-              <IconButton size="small" onClick={handlePrevMonth} sx={{ width: 24, height: 24 }}>
-                <ChevronLeft sx={{ fontSize: 16 }} />
-              </IconButton>
-              <Typography variant="body2" sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: '0.875rem' }}>
-                {`${currentMonthName} ${calendarYear}`}
-              </Typography>
-              <IconButton size="small" onClick={handleNextMonth} sx={{ width: 24, height: 24 }}>
-                <ChevronRight sx={{ fontSize: 16 }} />
-              </IconButton>
+          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: { xs: 'column', sm: 'row' },
+              justifyContent: 'flex-end', 
+              alignItems: { xs: 'flex-start', sm: 'center' },
+              mb: { xs: 2, md: 3 },
+              gap: { xs: 2, sm: 0 },
+            }}>
+              <Box sx={{ 
+                display: 'flex', 
+                gap: { xs: 1, md: 2 }, 
+                alignItems: 'center',
+                width: { xs: '100%', sm: 'auto' },
+                flexDirection: { xs: 'column', sm: 'row' },
+              }}>
+                <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 } }}>
+                  <Select
+                    value={calendarSelectedMonth || new Date().getMonth().toString()}
+                    onChange={(e) => {
+                      const monthValue = e.target.value;
+                      setCalendarSelectedMonth(monthValue);
+                      // Actualizar calendarDate con el mes seleccionado
+                      const newDate = new Date(calendarDate);
+                      newDate.setMonth(parseInt(monthValue));
+                      setCalendarDate(newDate);
+                    }}
+                    displayEmpty
+                    sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}
+                  >
+                    {monthNames.map((month) => (
+                      <MenuItem key={month.value} value={month.value}>
+                        {month.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Button
+                  size="small"
+                  onClick={() => {
+                    // Usar el mes seleccionado en el calendario o el mes actual
+                    const monthToUse = calendarSelectedMonth !== null 
+                      ? parseInt(calendarSelectedMonth) 
+                      : calendarDate.getMonth();
+                    const yearToUse = calendarDate.getFullYear();
+                    const dateToUse = new Date(yearToUse, monthToUse, 1);
+                    setCalendarModalDate(dateToUse);
+                    setSelectedDate(new Date(yearToUse, monthToUse, new Date().getDate()));
+                    fetchAllTasksWithDates();
+                    setCalendarModalOpen(true);
+                  }}
+                  sx={{ 
+                    fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                    textTransform: 'none',
+                    width: { xs: '100%', sm: 'auto' },
+                  }}
+                >
+                  Ver
+                </Button>
+              </Box>
             </Box>
-
-            {/* Días de la semana - solo una semana */}
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 0.5 }}>
-              {calendarDaysRight.map((dateInfo, index) => {
-                const today = new Date();
-                const isToday = dateInfo.day === today.getDate() && dateInfo.isCurrentMonth && calendarMonth === today.getMonth() && calendarYear === today.getFullYear();
-                const isSelected = dateInfo.day === 25 && dateInfo.isCurrentMonth; // Fecha destacada como en la imagen
-                
-                return (
-                  <Box
+            <Box>
+              {/* Días de la semana */}
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, mb: 1 }}>
+                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day, index) => (
+                  <Typography
                     key={index}
-                    sx={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      position: 'relative',
-                      minHeight: 48,
+                    variant="caption"
+                    sx={{ 
+                      textAlign: 'center', 
+                      fontWeight: 600, 
+                      color: theme.palette.text.secondary,
+                      fontSize: '0.75rem',
                     }}
                   >
-                    {/* Óvalo oscuro de fondo que incluye día de semana y fecha */}
-                    {isSelected ? (
-                      <Box
-                        sx={{
-                          position: 'absolute',
-                          top: '50%',
-                          left: '50%',
-                          transform: 'translate(-50%, -50%)',
-                          width: 44,
-                          height: 48,
-                          borderRadius: '24px',
-                          bgcolor: '#374151',
-                          zIndex: 0,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 1.25,
-                        }}
-                      >
-                        {/* Día de la semana dentro del óvalo */}
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            fontSize: '0.65rem',
-                            fontWeight: 600,
-                            color: 'white',
-                            lineHeight: 1,
-                          }}
-                        >
-                          {dateInfo.dayOfWeek}
-                        </Typography>
-                        
-                        {/* Fecha con círculo teal dentro del óvalo */}
-                        <Box
-                          sx={{
-                            width: 24,
-                            height: 24,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            borderRadius: '50%',
-                            bgcolor: '#4FD1C7',
-                            color: 'white',
-                            fontWeight: 600,
-                            fontSize: '0.7rem',
-                          }}
-                        >
-                          {dateInfo.day}
-                        </Box>
-                      </Box>
-                    ) : (
-                      <>
-                        {/* Día de la semana normal */}
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            fontSize: '0.65rem',
-                            fontWeight: 400,
-                            color: theme.palette.text.secondary,
-                            mb: 1.5,
-                          }}
-                        >
-                          {dateInfo.dayOfWeek}
-                        </Typography>
-                        
-                        {/* Fecha normal */}
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            fontSize: '0.75rem',
-                            fontWeight: isToday ? 600 : 400,
-                            color: dateInfo.isCurrentMonth 
-                              ? (isToday 
-                                ? theme.palette.mode === 'dark' 
-                                  ? taxiMonterricoColors.orange 
-                                  : '#1F2937' 
-                                : theme.palette.text.secondary) 
-                              : theme.palette.text.disabled,
-                            cursor: 'pointer',
-                            '&:hover': {
-                              color: dateInfo.isCurrentMonth ? theme.palette.text.primary : theme.palette.text.secondary,
-                            },
-                          }}
-                        >
-                          {dateInfo.day}
-                        </Typography>
-                      </>
-                    )}
-                  </Box>
-                );
-              })}
+                    {day}
+                  </Typography>
+                ))}
+              </Box>
+              {/* Días del mes */}
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
+                {calendarDaysMain.map((day: number | null, index: number) => {
+                  if (!day) {
+                    return <Box key={index} />;
+                  }
+
+                  // Verificar si hay tareas para este día
+                  const calendarMonth = calendarDate.getMonth();
+                  const calendarYear = calendarDate.getFullYear();
+                  const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                  const dayTasks = allTasksWithDates.filter((task) => {
+                    if (!task.dueDate) return false;
+                    const taskDate = new Date(task.dueDate);
+                    const taskDateStr = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`;
+                    return taskDateStr === dateStr;
+                  });
+                  const hasTasks = dayTasks.length > 0;
+
+                  return (
+                    <Box
+                      key={index}
+                      sx={{
+                        aspectRatio: '1',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: 1,
+                        bgcolor: hasTasks ? '#F97316' : 'transparent',
+                        color: hasTasks ? 'white' : theme.palette.text.primary,
+                        fontWeight: hasTasks ? 600 : 400,
+                        fontSize: '0.875rem',
+                        cursor: 'pointer',
+                        '&:hover': {
+                          bgcolor: hasTasks ? '#EA580C' : theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      {day}
+                    </Box>
+                  );
+                })}
+              </Box>
             </Box>
           </CardContent>
         </Card>
@@ -1520,7 +1610,25 @@ const Dashboard: React.FC = () => {
         </Box>
       </Box>
       </Box>
-      <ProfileModal open={profileModalOpen} onClose={() => setProfileModalOpen(false)} />
+      <ProfileModal 
+        open={profileModalOpen} 
+        onClose={() => setProfileModalOpen(false)}
+        onSuccess={(message) => setSuccessMessage(message)}
+      />
+      <Snackbar
+        open={!!successMessage}
+        autoHideDuration={4000}
+        onClose={() => setSuccessMessage(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setSuccessMessage(null)} 
+          severity="success" 
+          sx={{ width: '100%' }}
+        >
+          {successMessage}
+        </Alert>
+      </Snackbar>
       
       {/* Modal del Calendario */}
       <Dialog
@@ -1535,6 +1643,12 @@ const Dashboard: React.FC = () => {
           sx: {
             borderRadius: 3,
             maxHeight: '90vh',
+          }
+        }}
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
           }
         }}
       >

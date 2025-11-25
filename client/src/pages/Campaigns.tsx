@@ -665,7 +665,18 @@ const Campaigns: React.FC = () => {
         </TableContainer>
       </Card>
 
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={open} 
+        onClose={handleClose} 
+        maxWidth="sm" 
+        fullWidth
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          }
+        }}
+      >
         <DialogTitle>
           {editingCampaign ? 'Editar Campaña' : 'Nueva Campaña'}
         </DialogTitle>
@@ -748,6 +759,12 @@ const Campaigns: React.FC = () => {
           sx: {
             borderRadius: 2,
             boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          }
+        }}
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
           }
         }}
       >

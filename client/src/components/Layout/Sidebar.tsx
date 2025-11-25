@@ -140,14 +140,14 @@ const Sidebar: React.FC = () => {
                   mb: 0.5,
                   transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&.Mui-selected': {
-                    backgroundColor: taxiMonterricoColors.green,
+                    backgroundColor: taxiMonterricoColors.orange,
                     color: 'white',
                     '&:hover': {
-                      backgroundColor: taxiMonterricoColors.greenDark,
+                      backgroundColor: taxiMonterricoColors.orangeDark,
                     },
                   },
                   '&:hover': {
-                    backgroundColor: isSelected ? taxiMonterricoColors.greenDark : theme.palette.action.hover,
+                    backgroundColor: isSelected ? taxiMonterricoColors.orangeDark : theme.palette.action.hover,
                   },
                   '&:not(.Mui-selected)': {
                     color: theme.palette.text.secondary,
@@ -210,14 +210,14 @@ const Sidebar: React.FC = () => {
                 mt: 1,
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&.Mui-selected': {
-                  backgroundColor: taxiMonterricoColors.green,
+                  backgroundColor: taxiMonterricoColors.orange,
                   color: 'white',
                   '&:hover': {
-                    backgroundColor: taxiMonterricoColors.greenDark,
+                    backgroundColor: taxiMonterricoColors.orangeDark,
                   },
                 },
                 '&:hover': {
-                  backgroundColor: location.pathname === '/users' ? taxiMonterricoColors.greenDark : theme.palette.action.hover,
+                  backgroundColor: location.pathname === '/users' ? taxiMonterricoColors.orangeDark : theme.palette.action.hover,
                 },
                 '&:not(.Mui-selected)': {
                   color: theme.palette.text.secondary,

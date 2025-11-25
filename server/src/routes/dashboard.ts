@@ -155,7 +155,8 @@ router.get('/stats', async (req: AuthRequest, res) => {
         u."lastName",
         u.email,
         COUNT(d.id)::integer as "totalDeals",
-        COUNT(CASE WHEN d.stage IN ('won', 'closed won', 'cierre_ganado') THEN 1 END)::integer as "wonDeals"
+        COUNT(CASE WHEN d.stage IN ('won', 'closed won', 'cierre_ganado') THEN 1 END)::integer as "wonDeals",
+        COALESCE(SUM(CASE WHEN d.stage IN ('won', 'closed won', 'cierre_ganado') THEN d.amount ELSE 0 END), 0)::numeric as "wonDealsValue"
       FROM users u
       INNER JOIN deals d ON u.id = d."ownerId"
       ${whereClause}
@@ -171,6 +172,7 @@ router.get('/stats', async (req: AuthRequest, res) => {
     const userPerformance = (userPerformanceQuery as any[]).map((item: any) => {
       const totalDeals = parseInt(item.totalDeals) || 0;
       const wonDeals = parseInt(item.wonDeals) || 0;
+      const wonDealsValue = parseFloat(item.wonDealsValue) || 0;
       const performance = totalDeals > 0 ? (wonDeals / totalDeals) * 100 : 0;
       
       return {
@@ -180,6 +182,7 @@ router.get('/stats', async (req: AuthRequest, res) => {
         email: item.email || '',
         totalDeals,
         wonDeals,
+        wonDealsValue,
         performance: Math.round(performance * 100) / 100, // Redondear a 2 decimales
       };
     });

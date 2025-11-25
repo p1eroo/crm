@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -12,36 +12,9 @@ import {
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo-taxi-monterrico.svg';
-import { keyframes } from '@mui/system';
-
-// Paleta de colores Taxi Monterrico (basada en el logo)
-const colors = {
-  green: '#2E7D32', // Verde vibrante del círculo y letra "m"
-  greenLight: '#4CAF50',
-  greenDark: '#1B5E20',
-  orange: '#FFA726', // Amarillo/Naranja dorado de la letra "t"
-  orangeLight: '#FFB74D',
-  orangeDark: '#FF9800',
-  white: '#FFFFFF',
-  gray: '#757575',
-  grayLight: '#E0E0E0',
-};
-
-// Animación de movimiento del fondo
-const gradientMove = keyframes`
-  0% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  100% {
-    background-position: 0% 50%;
-  }
-`;
 
 const Login: React.FC = () => {
-  const [usuario, setUsuario] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -55,10 +28,10 @@ const Login: React.FC = () => {
 
     try {
       // Log para debug
-      console.log('Intentando iniciar sesión con:', { usuario });
+      console.log('Intentando iniciar sesión con:', { username });
       console.log('API Monterrico: https://rest.monterrico.app/api/Licencias/Login');
       
-      await login(usuario, password);
+      await login(username, password);
       navigate('/');
     } catch (err: any) {
       console.error('Error en login:', err);
@@ -84,110 +57,62 @@ const Login: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#f5f5f5',
         padding: 2,
-        position: 'relative',
-        overflow: 'hidden',
-        '&::before': {
-          content: '""',
-          position: 'absolute',
-          top: '-50%',
-          left: '-50%',
-          width: '200%',
-          height: '200%',
-          background: `linear-gradient(45deg, ${colors.greenLight}08 0%, transparent 25%, ${colors.green}10 50%, transparent 75%, ${colors.greenLight}08 100%)`,
-          backgroundSize: '400% 400%',
-          animation: `${gradientMove} 15s ease infinite`,
-          pointerEvents: 'none',
-        },
-        '&::after': {
-          content: '""',
-          position: 'absolute',
-          top: '-50%',
-          right: '-50%',
-          width: '200%',
-          height: '200%',
-          background: `radial-gradient(circle at center, ${colors.greenLight}15 0%, ${colors.green}08 30%, transparent 70%)`,
-          backgroundSize: '200% 200%',
-          animation: `${gradientMove} 20s ease infinite reverse`,
-          pointerEvents: 'none',
-        },
+        backgroundColor: '#E8F5E9', // Verde claro pastel
       }}
     >
-      <Container component="main" maxWidth="xs" sx={{ position: 'relative', zIndex: 1 }}>
+      <Container component="main" maxWidth="xs" sx={{ position: 'relative' }}>
         <Paper
           elevation={0}
           sx={{
-            p: 4,
             width: '100%',
-            borderRadius: 4,
-            backgroundColor: colors.white,
-            border: `1px solid ${colors.grayLight}`,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+            maxWidth: 400,
+            borderRadius: 2,
+            backgroundColor: '#FFFFFF',
+            border: '1px solid #000000',
+            overflow: 'hidden',
           }}
         >
+          {/* Header con logo */}
           <Box
             sx={{
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
+              justifyContent: 'center',
+              gap: 1,
+              p: 2,
             }}
           >
-            {/* Logo dentro del recuadro */}
             <Box
               sx={{
-                mb: 3,
-                textAlign: 'center',
+                width: 96,
+                height: 96,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
               }}
             >
-              <Box
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto',
-                  mb: 2,
-                  width: 96,
-                  height: 96,
+              <img
+                src={logo}
+                alt="Taxi Monterrico Logo"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
                 }}
-              >
-                <img
-                  src={logo}
-                  alt="Taxi Monterrico Logo"
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain',
-                  }}
-                />
-              </Box>
-              <Typography
-                component="h1"
-                variant="h5"
-                sx={{
-                  fontFamily: 'Inter, sans-serif',
-                  fontWeight: 700,
-                  fontSize: '1.75rem',
-                  color: colors.green,
-                  mb: 0.5,
-                  letterSpacing: '0.1em',
-                  textTransform: 'uppercase',
-                }}
-              >
-                CRM
-              </Typography>
+              />
             </Box>
+          </Box>
+
+          {/* Formulario */}
+          <Box sx={{ p: 3 }}>
             {error && (
               <Alert
                 severity="error"
                 sx={{
-                  mb: 3,
-                  borderRadius: 2,
-                  backgroundColor: '#FFEBEE',
-                  color: '#C62828',
-                  '& .MuiAlert-icon': {
-                    color: '#C62828',
-                  },
+                  mb: 2,
+                  borderRadius: 1,
                 }}
               >
                 {error}
@@ -199,31 +124,35 @@ const Login: React.FC = () => {
                 margin="normal"
                 required
                 fullWidth
-                id="usuario"
-                label="Usuario"
-                name="usuario"
+                id="username"
+                label="Username"
+                name="username"
                 autoComplete="username"
                 autoFocus
-                value={usuario}
-                onChange={(e) => setUsuario(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 sx={{
                   mb: 2,
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
+                    borderRadius: 1,
+                    backgroundColor: '#FFFFFF',
                     '& fieldset': {
-                      borderColor: colors.grayLight,
+                      borderColor: '#000000',
                       borderWidth: '1px',
                     },
                     '&:hover fieldset': {
-                      borderColor: colors.green,
+                      borderColor: '#000000',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: colors.green,
+                      borderColor: '#000000',
                       borderWidth: '1px',
                     },
                   },
+                  '& .MuiInputLabel-root': {
+                    color: '#757575',
+                  },
                   '& .MuiInputLabel-root.Mui-focused': {
-                    color: colors.green,
+                    color: '#000000',
                   },
                 }}
               />
@@ -232,65 +161,107 @@ const Login: React.FC = () => {
                 required
                 fullWidth
                 name="password"
-                label="Contraseña"
+                label="Password"
                 type="password"
                 id="password"
                 autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 sx={{
-                  mb: 3,
+                  mb: 2,
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
+                    borderRadius: 1,
+                    backgroundColor: '#FFFFFF',
                     '& fieldset': {
-                      borderColor: colors.grayLight,
+                      borderColor: '#000000',
                       borderWidth: '1px',
                     },
                     '&:hover fieldset': {
-                      borderColor: colors.green,
+                      borderColor: '#000000',
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: colors.green,
+                      borderColor: '#000000',
                       borderWidth: '1px',
                     },
                   },
+                  '& .MuiInputLabel-root': {
+                    color: '#757575',
+                  },
                   '& .MuiInputLabel-root.Mui-focused': {
-                    color: colors.green,
+                    color: '#000000',
                   },
                 }}
               />
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                disabled={loading}
-                sx={{
-                  mt: 2,
-                  mb: 2,
-                  py: 1.25,
-                  borderRadius: 2,
-                  fontSize: '0.875rem',
-                  fontWeight: 500,
-                  textTransform: 'none',
-                  backgroundColor: colors.orange,
-                  '&:hover': {
-                    backgroundColor: colors.orangeDark,
-                  },
-                  '&:disabled': {
-                    backgroundColor: colors.grayLight,
-                    color: colors.gray,
-                  },
-                }}
-              >
-                {loading ? (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CircularProgress size={20} sx={{ color: '#fff' }} />
-                    <span>Iniciando sesión...</span>
-                  </Box>
-                ) : (
-                  'Iniciar Sesión'
-                )}
-              </Button>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                <Button
+                  type="submit"
+                  variant="outlined"
+                  disabled={loading}
+                  sx={{
+                    py: 1.25,
+                    px: 3,
+                    borderRadius: 1,
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    textTransform: 'none',
+                    backgroundColor: '#FFFFFF',
+                    color: '#000000',
+                    borderColor: '#000000',
+                    borderWidth: '1px',
+                    '&:hover': {
+                      backgroundColor: '#F5F5F5',
+                      borderColor: '#000000',
+                      borderWidth: '1px',
+                    },
+                    '&:disabled': {
+                      backgroundColor: '#F5F5F5',
+                      color: '#9E9E9E',
+                      borderColor: '#9E9E9E',
+                    },
+                  }}
+                >
+                  {loading ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={16} sx={{ color: '#9E9E9E' }} />
+                      <span>Loading...</span>
+                    </Box>
+                  ) : (
+                    'Login'
+                  )}
+                </Button>
+                <Typography
+                  component={Link}
+                  to="#"
+                  sx={{
+                    fontSize: '0.875rem',
+                    color: '#757575',
+                    textDecoration: 'none',
+                    '&:hover': {
+                      textDecoration: 'underline',
+                    },
+                  }}
+                >
+                  Forget password?
+                </Typography>
+              </Box>
+
+              <Box sx={{ textAlign: 'center', mb: 3 }}>
+                <Typography
+                  component={Link}
+                  to="#"
+                  sx={{
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
+                    color: '#000000',
+                    textDecoration: 'none',
+                    '&:hover': {
+                      textDecoration: 'underline',
+                    },
+                  }}
+                >
+                  Register new account
+                </Typography>
+              </Box>
             </Box>
           </Box>
         </Paper>

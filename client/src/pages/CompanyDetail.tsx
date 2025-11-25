@@ -6911,7 +6911,18 @@ const CompanyDetail: React.FC = () => {
       )}
 
       {/* Diálogo para agregar contacto */}
-      <Dialog open={addContactOpen} onClose={() => { setAddContactOpen(false); setContactDialogTab('create'); setSelectedExistingContacts([]); setExistingContactsSearch(''); }} maxWidth="md" fullWidth>
+      <Dialog 
+        open={addContactOpen} 
+        onClose={() => { setAddContactOpen(false); setContactDialogTab('create'); setSelectedExistingContacts([]); setExistingContactsSearch(''); }} 
+        maxWidth="md" 
+        fullWidth
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          }
+        }}
+      >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           {contactDialogTab === 'create' ? 'Crear nuevo contacto' : 'Agregar Contacto existente'}
           <IconButton onClick={() => { setAddContactOpen(false); setContactDialogTab('create'); setSelectedExistingContacts([]); setExistingContactsSearch(''); }} size="small">
@@ -7110,7 +7121,18 @@ const CompanyDetail: React.FC = () => {
       </Dialog>
 
       {/* Diálogo para agregar negocio */}
-      <Dialog open={addDealOpen} onClose={() => setAddDealOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={addDealOpen} 
+        onClose={() => setAddDealOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          }
+        }}
+      >
         <DialogTitle>Agregar Negocio</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
@@ -7185,7 +7207,18 @@ const CompanyDetail: React.FC = () => {
       </Dialog>
 
       {/* Diálogo para agregar ticket */}
-      <Dialog open={addTicketOpen} onClose={() => setAddTicketOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={addTicketOpen} 
+        onClose={() => setAddTicketOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          }
+        }}
+      >
         <DialogTitle>Crear Ticket</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
@@ -7242,7 +7275,18 @@ const CompanyDetail: React.FC = () => {
       </Dialog>
 
       {/* Diálogo para agregar suscripción */}
-      <Dialog open={addSubscriptionOpen} onClose={() => setAddSubscriptionOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={addSubscriptionOpen} 
+        onClose={() => setAddSubscriptionOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          }
+        }}
+      >
         <DialogTitle>Crear Suscripción</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
@@ -7337,7 +7381,18 @@ const CompanyDetail: React.FC = () => {
       </Dialog>
 
       {/* Diálogo para agregar pago */}
-      <Dialog open={addPaymentOpen} onClose={() => setAddPaymentOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={addPaymentOpen} 
+        onClose={() => setAddPaymentOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          }
+        }}
+      >
         <DialogTitle>Crear Pago</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>

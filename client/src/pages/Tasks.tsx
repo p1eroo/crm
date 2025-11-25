@@ -735,7 +735,18 @@ const Tasks: React.FC = () => {
         </TableContainer>
       </Card>
 
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={open} 
+        onClose={handleClose} 
+        maxWidth="sm" 
+        fullWidth
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          }
+        }}
+      >
         <DialogTitle>
           {editingTask ? 'Editar Tarea' : 'Nueva Tarea'}
         </DialogTitle>

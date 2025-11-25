@@ -1503,7 +1503,7 @@ const ContactDetail: React.FC = () => {
 
   return (
     <Box sx={{ 
-      bgcolor: theme.palette.background.default,
+      bgcolor: theme.palette.background.paper,
       minHeight: '100vh',
       pb: { xs: 2, sm: 4, md: 8 },
       px: { xs: 1, sm: 3, md: 8 },
@@ -1524,9 +1524,10 @@ const ContactDetail: React.FC = () => {
         {/* Parte 1: Columna Izquierda - Información del Contacto */}
         <Card sx={{ 
           borderRadius: { xs: 2, md: 6 },
-          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          boxShadow: 'none',
+          border: 'none',
           overflow: 'hidden',
-          bgcolor: 'white',
+          bgcolor: theme.palette.background.paper,
           display: 'flex',
           flexDirection: 'column',
           width: { xs: '100%', sm: '100%', md: '400px', lg: '450px', xl: '500px' },
@@ -1567,9 +1568,11 @@ const ContactDetail: React.FC = () => {
         }}>
           <Paper sx={{ 
             p: 3,
+            bgcolor: 'transparent',
+            boxShadow: 'none',
             transition: 'all 0.3s ease',
             '&:hover': {
-              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+              boxShadow: 'none',
             },
           }}>
             {/* Avatar y Nombre */}
@@ -1599,9 +1602,9 @@ const ContactDetail: React.FC = () => {
                     right: 0,
                     fontSize: 28,
                     color: '#10B981',
-                    bgcolor: 'white',
+                    bgcolor: theme.palette.background.paper,
                     borderRadius: '50%',
-                    border: '2px solid white',
+                    border: `2px solid ${theme.palette.background.paper}`,
                   }} 
                 />
               </Box>
@@ -1611,7 +1614,7 @@ const ContactDetail: React.FC = () => {
                 sx={{
                   fontWeight: 700,
                   fontSize: '1.1rem',
-                  color: '#1F2937',
+                  color: theme.palette.text.primary,
                   mb: 0.25,
                 }}
               >
@@ -1623,7 +1626,7 @@ const ContactDetail: React.FC = () => {
                   align="center"
                   sx={{
                     fontSize: '0.875rem',
-                    color: '#757575',
+                    color: theme.palette.text.secondary,
                     fontWeight: 400,
                   }}
                 >
@@ -1641,18 +1644,18 @@ const ContactDetail: React.FC = () => {
                     width: 52,
                     height: 52,
                     borderRadius: '50%',
-                    bgcolor: '#E8F5E9',
+                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
                     color: taxiMonterricoColors.green,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
                       transform: 'scale(1.05)',
                     },
                   }}
                 >
                   <Note sx={{ fontSize: 22 }} />
                 </IconButton>
-                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#1F2937', fontWeight: 500 }}>
+                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: theme.palette.text.primary, fontWeight: 500 }}>
                   Nota
                 </Typography>
               </Box>
@@ -1664,18 +1667,18 @@ const ContactDetail: React.FC = () => {
                     width: 52,
                     height: 52,
                     borderRadius: '50%',
-                    bgcolor: '#E8F5E9',
+                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
                     color: taxiMonterricoColors.green,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
                       transform: 'scale(1.05)',
                     },
                   }}
                 >
                   <Email sx={{ fontSize: 22 }} />
                 </IconButton>
-                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#1F2937', fontWeight: 500 }}>
+                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: theme.palette.text.primary, fontWeight: 500 }}>
                   Correo
                 </Typography>
               </Box>
@@ -1687,18 +1690,18 @@ const ContactDetail: React.FC = () => {
                     width: 52,
                     height: 52,
                     borderRadius: '50%',
-                    bgcolor: '#E8F5E9',
+                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
                     color: taxiMonterricoColors.green,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
                       transform: 'scale(1.05)',
                     },
                   }}
                 >
                   <Phone sx={{ fontSize: 22 }} />
                 </IconButton>
-                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#1F2937', fontWeight: 500 }}>
+                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: theme.palette.text.primary, fontWeight: 500 }}>
                   Llamada
                 </Typography>
               </Box>
@@ -1710,18 +1713,18 @@ const ContactDetail: React.FC = () => {
                     width: 52,
                     height: 52,
                     borderRadius: '50%',
-                    bgcolor: '#E8F5E9',
+                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
                     color: taxiMonterricoColors.green,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
                       transform: 'scale(1.05)',
                     },
                   }}
                 >
                   <Assignment sx={{ fontSize: 22 }} />
                 </IconButton>
-                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#1F2937', fontWeight: 500 }}>
+                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: theme.palette.text.primary, fontWeight: 500 }}>
                   Tarea
                 </Typography>
               </Box>
@@ -1733,18 +1736,18 @@ const ContactDetail: React.FC = () => {
                     width: 52,
                     height: 52,
                     borderRadius: '50%',
-                    bgcolor: '#E8F5E9',
+                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
                     color: taxiMonterricoColors.green,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
                       transform: 'scale(1.05)',
                     },
                   }}
                 >
                   <Event sx={{ fontSize: 22 }} />
                 </IconButton>
-                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#1F2937', fontWeight: 500 }}>
+                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: theme.palette.text.primary, fontWeight: 500 }}>
                   Reunión
                 </Typography>
               </Box>
@@ -1755,18 +1758,18 @@ const ContactDetail: React.FC = () => {
                     width: 52,
                     height: 52,
                     borderRadius: '50%',
-                    bgcolor: '#E8F5E9',
+                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
                     color: taxiMonterricoColors.green,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
                       transform: 'scale(1.05)',
                     },
                   }}
                 >
                   <MoreVert sx={{ fontSize: 22 }} />
                 </IconButton>
-                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: '#1F2937', fontWeight: 500 }}>
+                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: theme.palette.text.primary, fontWeight: 500 }}>
                   Más
                 </Typography>
               </Box>
@@ -1778,46 +1781,46 @@ const ContactDetail: React.FC = () => {
             <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
               <Box sx={{ 
                 flex: 1, 
-                border: '1px dashed #E0E0E0', 
+                border: `1px dashed ${theme.palette.divider}`, 
                 borderRadius: 2, 
                 p: 2, 
                 textAlign: 'center',
-                bgcolor: 'white',
+                bgcolor: 'transparent',
               }}>
-                <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#37474F', mb: 0.5 }}>
+                <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: theme.palette.text.primary, mb: 0.5 }}>
                   28.65K
                 </Typography>
-                <Typography sx={{ fontSize: '0.75rem', color: '#9E9E9E', fontWeight: 400 }}>
+                <Typography sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary, fontWeight: 400 }}>
                   Followers
                 </Typography>
               </Box>
               <Box sx={{ 
                 flex: 1, 
-                border: '1px dashed #E0E0E0', 
+                border: `1px dashed ${theme.palette.divider}`, 
                 borderRadius: 2, 
                 p: 2, 
                 textAlign: 'center',
-                bgcolor: 'white',
+                bgcolor: 'transparent',
               }}>
-                <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#37474F', mb: 0.5 }}>
+                <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: theme.palette.text.primary, mb: 0.5 }}>
                   38.85K
                 </Typography>
-                <Typography sx={{ fontSize: '0.75rem', color: '#9E9E9E', fontWeight: 400 }}>
+                <Typography sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary, fontWeight: 400 }}>
                   Following
                 </Typography>
               </Box>
               <Box sx={{ 
                 flex: 1, 
-                border: '1px dashed #E0E0E0', 
+                border: `1px dashed ${theme.palette.divider}`, 
                 borderRadius: 2, 
                 p: 2, 
                 textAlign: 'center',
-                bgcolor: 'white',
+                bgcolor: 'transparent',
               }}>
-                <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: '#37474F', mb: 0.5 }}>
+                <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: theme.palette.text.primary, mb: 0.5 }}>
                   43.67K
                 </Typography>
-                <Typography sx={{ fontSize: '0.75rem', color: '#9E9E9E', fontWeight: 400 }}>
+                <Typography sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary, fontWeight: 400 }}>
                   Engagement
                 </Typography>
               </Box>
@@ -1826,13 +1829,13 @@ const ContactDetail: React.FC = () => {
             {/* Location */}
             <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
-                <LocationOn sx={{ fontSize: 20, color: '#9E9E9E' }} />
+                <LocationOn sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
                 <Typography 
                   variant="body2" 
                   sx={{ 
                     fontSize: '0.875rem',
                     fontWeight: 400,
-                    color: '#757575',
+                    color: theme.palette.text.secondary,
                   }}
                 >
                   Location
@@ -1843,7 +1846,7 @@ const ContactDetail: React.FC = () => {
                 sx={{ 
                   fontSize: '0.875rem',
                   fontWeight: 400,
-                  color: (contact.city || contact.address) ? '#424242' : '#9CA3AF',
+                  color: (contact.city || contact.address) ? theme.palette.text.primary : theme.palette.text.disabled,
                   textAlign: 'right',
                 }}
               >
@@ -1854,13 +1857,13 @@ const ContactDetail: React.FC = () => {
             {/* Número de teléfono */}
             <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
-                <Phone sx={{ fontSize: 20, color: '#9E9E9E' }} />
+                <Phone sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
                 <Typography 
                   variant="body2" 
                   sx={{ 
                     fontSize: '0.875rem',
                     fontWeight: 400,
-                    color: '#757575',
+                    color: theme.palette.text.secondary,
                   }}
                 >
                   Phone
@@ -1905,7 +1908,7 @@ const ContactDetail: React.FC = () => {
                   sx={{ 
                     fontSize: '0.875rem',
                     fontWeight: 400,
-                    color: contact.phone ? '#424242' : '#9CA3AF',
+                    color: contact.phone ? theme.palette.text.primary : theme.palette.text.disabled,
                     cursor: 'pointer',
                     textAlign: 'right',
                     '&:hover': {
@@ -1923,13 +1926,13 @@ const ContactDetail: React.FC = () => {
             {/* Correo */}
             <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
-                <Email sx={{ fontSize: 20, color: '#9E9E9E' }} />
+                <Email sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
                 <Typography 
                   variant="body2" 
                   sx={{ 
                     fontSize: '0.875rem',
                     fontWeight: 400,
-                    color: '#757575',
+                    color: theme.palette.text.secondary,
                   }}
                 >
                   Email
@@ -1974,7 +1977,7 @@ const ContactDetail: React.FC = () => {
                   sx={{ 
                     fontSize: '0.875rem',
                     fontWeight: 400,
-                    color: contact.email ? '#424242' : '#9CA3AF',
+                    color: contact.email ? theme.palette.text.primary : theme.palette.text.disabled,
                     cursor: 'pointer',
                     textAlign: 'right',
                     '&:hover': {
@@ -1992,13 +1995,13 @@ const ContactDetail: React.FC = () => {
             {/* Nombre de la empresa */}
             <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
-                <Business sx={{ fontSize: 20, color: '#9E9E9E' }} />
+                <Business sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
                 <Typography 
                   variant="body2" 
                   sx={{ 
                     fontSize: '0.875rem',
                     fontWeight: 400,
-                    color: '#757575',
+                    color: theme.palette.text.secondary,
                   }}
                 >
                   Nombre de la empresa
@@ -2100,7 +2103,7 @@ const ContactDetail: React.FC = () => {
                     sx={{ 
                       fontSize: '0.875rem',
                       fontWeight: 400,
-                      color: companyValue || (contact.Companies && contact.Companies.length > 0) ? '#424242' : '#9CA3AF',
+                      color: companyValue || (contact.Companies && contact.Companies.length > 0) ? theme.palette.text.primary : theme.palette.text.disabled,
                       cursor: 'pointer',
                       textAlign: 'right',
                       '&:hover': {
@@ -2121,7 +2124,7 @@ const ContactDetail: React.FC = () => {
                       ? contact.Companies[0].name 
                       : (contact.Company?.name || '--'))}
                   </Typography>
-                  <KeyboardArrowDown sx={{ fontSize: 14, color: '#9E9E9E' }} />
+                  <KeyboardArrowDown sx={{ fontSize: 14, color: theme.palette.text.secondary }} />
                 </Box>
               )}
             </Box>
@@ -2129,13 +2132,13 @@ const ContactDetail: React.FC = () => {
             {/* Estado del lead */}
             <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
-                <Flag sx={{ fontSize: 20, color: '#9E9E9E' }} />
+                <Flag sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
                 <Typography 
                   variant="body2" 
                   sx={{ 
                     fontSize: '0.875rem',
                     fontWeight: 400,
-                    color: '#757575',
+                    color: theme.palette.text.secondary,
                   }}
                 >
                   Estado del lead
@@ -2148,7 +2151,7 @@ const ContactDetail: React.FC = () => {
                   sx={{
                     fontSize: '0.875rem',
                     fontWeight: 400,
-                    color: contact.leadStatus ? '#424242' : '#9CA3AF',
+                    color: contact.leadStatus ? theme.palette.text.primary : theme.palette.text.disabled,
                     cursor: 'pointer',
                     textAlign: 'right',
                     '&:hover': {
@@ -2198,14 +2201,14 @@ const ContactDetail: React.FC = () => {
             {/* Etapa del ciclo de vida */}
             <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
-                <TrendingUp sx={{ fontSize: 20, color: '#9E9E9E' }} />
+                <TrendingUp sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Typography 
                     variant="body2" 
                     sx={{ 
                       fontSize: '0.875rem',
                       fontWeight: 400,
-                      color: '#757575',
+                      color: theme.palette.text.secondary,
                     }}
                   >
                     Etapa del ciclo de vida
@@ -2219,7 +2222,7 @@ const ContactDetail: React.FC = () => {
                   sx={{
                     fontSize: '0.875rem',
                     fontWeight: 400,
-                    color: '#424242',
+                    color: theme.palette.text.primary,
                     cursor: 'pointer',
                     textAlign: 'right',
                     textDecoration: 'none',
@@ -2289,13 +2292,13 @@ const ContactDetail: React.FC = () => {
             {/* Rol de compra */}
             <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
-                <Person sx={{ fontSize: 20, color: '#9E9E9E' }} />
+                <Person sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
                 <Typography 
                   variant="body2" 
                   sx={{ 
                     fontSize: '0.875rem',
                     fontWeight: 400,
-                    color: '#757575',
+                    color: theme.palette.text.secondary,
                   }}
                 >
                   Rol de compra
@@ -2308,7 +2311,7 @@ const ContactDetail: React.FC = () => {
                   sx={{
                     fontSize: '0.875rem',
                     fontWeight: 400,
-                    color: '#9CA3AF',
+                    color: theme.palette.text.disabled,
                     cursor: 'pointer',
                     textAlign: 'right',
                     '&:hover': {
@@ -2395,14 +2398,14 @@ const ContactDetail: React.FC = () => {
                   }}
                   sx={{
                     fontSize: '0.875rem',
-                    color: contact.facebook ? '#1976d2' : '#9E9E9E',
+                    color: contact.facebook ? '#1976d2' : theme.palette.text.secondary,
                     textDecoration: 'none',
                     flex: 1,
                     cursor: 'pointer',
                     wordBreak: 'break-all',
                     '&:hover': {
                       textDecoration: 'underline',
-                      color: contact.facebook ? '#1565c0' : '#757575',
+                      color: contact.facebook ? '#1565c0' : theme.palette.text.secondary,
                     },
                   }}
                 >
@@ -2578,9 +2581,10 @@ const ContactDetail: React.FC = () => {
         {/* Parte 2: Columnas Central y Derecha */}
         <Card sx={{ 
           borderRadius: { xs: 2, md: 6 },
-          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          boxShadow: 'none',
+          border: 'none',
           overflow: 'hidden',
-          bgcolor: 'white',
+          bgcolor: theme.palette.background.paper,
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
@@ -2628,9 +2632,11 @@ const ContactDetail: React.FC = () => {
             overflow: 'hidden',
             height: '100%',
             minHeight: 0,
+            bgcolor: 'transparent',
+            boxShadow: 'none',
             transition: 'all 0.3s ease',
             '&:hover': {
-              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+              boxShadow: 'none',
             },
           }}>
             <Tabs 
@@ -2693,7 +2699,7 @@ const ContactDetail: React.FC = () => {
             }}>
               <TabPanel value={tabValue} index={0}>
                 {/* Aspectos destacados de los datos */}
-                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', bgcolor: theme.palette.background.paper }}>
                   <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Aspectos destacados de los datos
@@ -2740,7 +2746,7 @@ const ContactDetail: React.FC = () => {
                 </Card>
 
                 {/* Actividades recientes */}
-                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', bgcolor: theme.palette.background.paper }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Actividades recientes
@@ -2824,7 +2830,7 @@ const ContactDetail: React.FC = () => {
                       }}
                     >
                       {/* Campo de búsqueda */}
-                      <Box sx={{ p: 1.5, borderBottom: '1px solid #e0e0e0' }}>
+                      <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
                         <TextField
                           size="small"
                           placeholder="Buscar"
@@ -2840,7 +2846,7 @@ const ContactDetail: React.FC = () => {
                             '& .MuiOutlinedInput-root': {
                               backgroundColor: '#f5f5f5',
                               '& fieldset': {
-                                borderColor: '#e0e0e0',
+                                borderColor: theme.palette.divider,
                               },
                               '&:hover fieldset': {
                                 borderColor: '#bdbdbd',
@@ -2997,7 +3003,7 @@ const ContactDetail: React.FC = () => {
                       }}
                     >
                       {/* Campo de búsqueda */}
-                      <Box sx={{ p: 1.5, borderBottom: '1px solid #e0e0e0' }}>
+                      <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
                         <TextField
                           size="small"
                           placeholder="Buscar"
@@ -3131,7 +3137,7 @@ const ContactDetail: React.FC = () => {
                       }}
                     >
                       {/* Campo de búsqueda */}
-                      <Box sx={{ p: 1.5, borderBottom: '1px solid #e0e0e0' }}>
+                      <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
                         <TextField
                           size="small"
                           placeholder="Buscar"
@@ -3149,7 +3155,7 @@ const ContactDetail: React.FC = () => {
                             '& .MuiOutlinedInput-root': {
                               backgroundColor: '#f5f5f5',
                               '& fieldset': {
-                                borderColor: '#e0e0e0',
+                                borderColor: theme.palette.divider,
                               },
                               '&:hover fieldset': {
                                 borderColor: '#bdbdbd',
@@ -3567,7 +3573,7 @@ const ContactDetail: React.FC = () => {
                                       elevation={0}
                                       sx={{
                                         p: isExpanded ? 2 : 1.5,
-                                        border: '1px solid #e0e0e0',
+                                        border: `1px solid ${theme.palette.divider}`,
                                         borderRadius: 2,
                                         bgcolor: 'white',
                                         transition: 'all 0.3s ease',
@@ -3749,7 +3755,7 @@ const ContactDetail: React.FC = () => {
                                               </Box>
                                           
                                               {/* Footer de la nota */}
-                                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 1, borderTop: '1px solid #f0f0f0' }}>
+                                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 1, borderTop: `1px solid ${theme.palette.divider}` }}>
                                             <Link
                                               component="button"
                                               onClick={(e) => e.stopPropagation()}
@@ -3817,7 +3823,7 @@ const ContactDetail: React.FC = () => {
                                                     mb: 1,
                                                     width: '600px',
                                                     height: '400px',
-                                                    border: '1px solid #e0e0e0',
+                                                    border: `1px solid ${theme.palette.divider}`,
                                                     borderRadius: 1,
                                                     p: 2,
                                                     backgroundColor: '#fafafa',
@@ -3845,7 +3851,7 @@ const ContactDetail: React.FC = () => {
                                                   <Box sx={{ 
                                                     width: '200px', 
                                                     flexShrink: 0,
-                                                    borderRight: '1px solid #e0e0e0',
+                                                    borderRight: `1px solid ${theme.palette.divider}`,
                                                     pr: 2,
                                                     height: '100%',
                                                     overflowY: 'auto',
@@ -4404,7 +4410,7 @@ const ContactDetail: React.FC = () => {
                                       elevation={0}
                                       sx={{
                                         p: isExpanded ? 2 : 1.5,
-                                        border: '1px solid #e0e0e0',
+                                        border: `1px solid ${theme.palette.divider}`,
                                         borderRadius: 2,
                                         bgcolor: 'white',
                                         transition: 'all 0.3s ease',
@@ -4501,7 +4507,7 @@ const ContactDetail: React.FC = () => {
                 </Card>
 
                 {/* Empresas */}
-                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', bgcolor: theme.palette.background.paper }}>
                   <Box sx={{ mb: 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                       <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
@@ -4729,7 +4735,7 @@ const ContactDetail: React.FC = () => {
                 </Card>
 
                 {/* Negocios Section */}
-                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', bgcolor: theme.palette.background.paper }}>
                   <Box sx={{ mb: 2 }}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                       <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
@@ -4863,7 +4869,7 @@ const ContactDetail: React.FC = () => {
                 </Card>
 
                 {/* Tickets */}
-                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', bgcolor: theme.palette.background.paper }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Tickets
@@ -4888,10 +4894,10 @@ const ContactDetail: React.FC = () => {
                       No existen objetos asociados de este tipo o no tienes permiso para verlos.
                     </Typography>
                   ) : (
-                    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }}>
+                    <TableContainer component={Paper} elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, bgcolor: theme.palette.background.paper }}>
                       <Table size="small">
                         <TableHead>
-                          <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                          <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f5f5f5' }}>
                             <TableCell sx={{ fontWeight: 'bold' }}>Asunto</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Estado</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Prioridad</TableCell>
@@ -4943,7 +4949,7 @@ const ContactDetail: React.FC = () => {
                 </Card>
 
                 {/* Suscripciones */}
-                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', bgcolor: theme.palette.background.paper }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Suscripciones ({associatedSubscriptions.length})
@@ -4968,10 +4974,10 @@ const ContactDetail: React.FC = () => {
                       No existen objetos asociados de este tipo o no tienes permiso para verlos.
                     </Typography>
                   ) : (
-                    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }}>
+                    <TableContainer component={Paper} elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, bgcolor: theme.palette.background.paper }}>
                       <Table size="small">
                         <TableHead>
-                          <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                          <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f5f5f5' }}>
                             <TableCell sx={{ fontWeight: 'bold' }}>Nombre</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Estado</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Monto</TableCell>
@@ -5017,7 +5023,7 @@ const ContactDetail: React.FC = () => {
                 {/* Pagos */}
                 
                 {/* Pagos */}
-                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', bgcolor: theme.palette.background.paper }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Pagos ({associatedPayments.length})
@@ -5043,10 +5049,10 @@ const ContactDetail: React.FC = () => {
                       No existen objetos asociados de este tipo o no tienes permiso para verlos.
                     </Typography>
                   ) : (
-                    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }}>
+                    <TableContainer component={Paper} elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, bgcolor: theme.palette.background.paper }}>
                       <Table size="small">
                         <TableHead>
-                          <TableRow sx={{ bgcolor: '#f5f5f5' }}>
+                          <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f5f5f5' }}>
                             <TableCell sx={{ fontWeight: 'bold' }}>Monto</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Estado</TableCell>
                             <TableCell sx={{ fontWeight: 'bold' }}>Método</TableCell>
@@ -5180,7 +5186,7 @@ const ContactDetail: React.FC = () => {
                     display: 'flex', 
                     gap: { xs: 0.5, sm: 1 }, 
                     mb: 3, 
-                    borderBottom: '2px solid #E5E7EB',
+                    borderBottom: `2px solid ${theme.palette.divider}`,
                     overflowX: 'auto',
                     '&::-webkit-scrollbar': {
                       height: '4px',
@@ -5299,7 +5305,7 @@ const ContactDetail: React.FC = () => {
                                   elevation={0}
                                   sx={{
                                     mb: 1.5,
-                                    border: '1px solid #e0e0e0',
+                                    border: `1px solid ${theme.palette.divider}`,
                                     borderRadius: 1,
                                     p: 2,
                                     cursor: 'pointer',
@@ -5406,7 +5412,7 @@ const ContactDetail: React.FC = () => {
                                   elevation={0}
                                   sx={{
                                     mb: 1.5,
-                                    border: '1px solid #e0e0e0',
+                                    border: `1px solid ${theme.palette.divider}`,
                                     borderRadius: 1,
                                     p: 2,
                                     cursor: 'pointer',
@@ -5560,6 +5566,7 @@ const ContactDetail: React.FC = () => {
           top: 0,
           transition: 'width 0.2s ease',
           mt: { xs: 2, lg: 0 },
+          bgcolor: theme.palette.background.paper,
           // Ocultar scrollbar pero mantener scroll funcional
           '&::-webkit-scrollbar': {
             display: 'none',
@@ -5605,6 +5612,7 @@ const ContactDetail: React.FC = () => {
             opacity: summaryExpanded ? 1 : 0,
             visibility: summaryExpanded ? 'visible' : 'hidden',
             transition: 'opacity 0.2s ease, width 0.2s ease',
+            bgcolor: theme.palette.background.paper,
           }}>
             <Box 
               sx={{ 
@@ -6143,7 +6151,7 @@ const ContactDetail: React.FC = () => {
             flexGrow: 1, 
             display: 'flex', 
             flexDirection: 'column', 
-            border: '1px solid #e0e0e0', 
+            border: `1px solid ${theme.palette.divider}`, 
             borderRadius: 2,
             overflow: 'hidden',
             mb: 2.5,
@@ -6165,7 +6173,7 @@ const ContactDetail: React.FC = () => {
           {/* Sección "Asociado con X registros" - Siempre visible */}
           <Box sx={{ mb: 2.5 }}>
             <Box sx={{ 
-              border: '1px solid #e0e0e0', 
+              border: `1px solid ${theme.palette.divider}`, 
               borderRadius: 2, 
               p: 2, 
               backgroundColor: '#ffffff',
@@ -6920,7 +6928,7 @@ const ContactDetail: React.FC = () => {
           {/* Footer con botones */}
           <Box sx={{ 
             p: 2.5, 
-            borderTop: '1px solid #e0e0e0', 
+            borderTop: `1px solid ${theme.palette.divider}`, 
             backgroundColor: '#fafbfc', 
             display: 'flex', 
             justifyContent: 'flex-end', 
@@ -7075,7 +7083,7 @@ const ContactDetail: React.FC = () => {
               />
             </Box>
 
-            <Box sx={{ p: 2, borderTop: '1px solid #e0e0e0', backgroundColor: '#fafafa', display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+            <Box sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}`, backgroundColor: theme.palette.background.paper, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
               <Button onClick={() => setEmailOpen(false)} color="inherit" sx={{ textTransform: 'none' }}>
                 Cancelar
               </Button>
@@ -7217,7 +7225,7 @@ const ContactDetail: React.FC = () => {
               />
             </Box>
 
-            <Box sx={{ p: 2.5, borderTop: '1px solid #e0e0e0', backgroundColor: 'white', display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
+            <Box sx={{ p: 2.5, borderTop: `1px solid ${theme.palette.divider}`, backgroundColor: theme.palette.background.paper, display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
               <Button 
                 onClick={() => setCallOpen(false)} 
                 sx={{ 
@@ -7401,7 +7409,7 @@ const ContactDetail: React.FC = () => {
               </Box>
             </Box>
 
-            <Box sx={{ p: 2.5, borderTop: '1px solid #e0e0e0', backgroundColor: 'white', display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
+            <Box sx={{ p: 2.5, borderTop: `1px solid ${theme.palette.divider}`, backgroundColor: theme.palette.background.paper, display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
               <Button 
                 onClick={() => setTaskOpen(false)} 
                 sx={{ 
@@ -7581,7 +7589,7 @@ const ContactDetail: React.FC = () => {
               </Box>
             </Box>
 
-            <Box sx={{ p: 2.5, borderTop: '1px solid #e0e0e0', backgroundColor: 'white', display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
+            <Box sx={{ p: 2.5, borderTop: `1px solid ${theme.palette.divider}`, backgroundColor: theme.palette.background.paper, display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
               <Button 
                 onClick={() => setMeetingOpen(false)} 
                 sx={{ 
@@ -7660,6 +7668,12 @@ const ContactDetail: React.FC = () => {
         sx: {
           borderRadius: 2,
           boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+        }
+      }}
+      BackdropProps={{
+        sx: {
+          backdropFilter: 'blur(4px)',
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
         }
       }}
       >
@@ -8024,7 +8038,18 @@ const ContactDetail: React.FC = () => {
       </Dialog>
 
       {/* Diálogo para agregar negocio */}
-      <Dialog open={addDealOpen} onClose={() => setAddDealOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={addDealOpen} 
+        onClose={() => setAddDealOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          }
+        }}
+      >
         <DialogTitle>Agregar Negocio</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
@@ -8099,7 +8124,18 @@ const ContactDetail: React.FC = () => {
       </Dialog>
 
       {/* Diálogo para agregar ticket */}
-      <Dialog open={addTicketOpen} onClose={() => setAddTicketOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={addTicketOpen} 
+        onClose={() => setAddTicketOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          }
+        }}
+      >
         <DialogTitle>Crear Ticket</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
@@ -8156,7 +8192,18 @@ const ContactDetail: React.FC = () => {
       </Dialog>
 
       {/* Diálogo para agregar suscripción */}
-      <Dialog open={addSubscriptionOpen} onClose={() => setAddSubscriptionOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={addSubscriptionOpen} 
+        onClose={() => setAddSubscriptionOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          }
+        }}
+      >
         <DialogTitle>Crear Suscripción</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
@@ -8251,7 +8298,18 @@ const ContactDetail: React.FC = () => {
       </Dialog>
 
       {/* Diálogo para agregar pago */}
-      <Dialog open={addPaymentOpen} onClose={() => setAddPaymentOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog 
+        open={addPaymentOpen} 
+        onClose={() => setAddPaymentOpen(false)} 
+        maxWidth="sm" 
+        fullWidth
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          }
+        }}
+      >
         <DialogTitle>Crear Pago</DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
