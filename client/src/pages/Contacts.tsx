@@ -39,6 +39,10 @@ import {
   Tabs,
   Tab,
   useTheme,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormLabel,
 } from '@mui/material';
 import { 
   Add, 
@@ -154,6 +158,7 @@ const Contacts: React.FC = () => {
     state: '',
     country: '',
   });
+  const [idType, setIdType] = useState<'dni' | 'cee'>('dni');
   const [loadingDni, setLoadingDni] = useState(false);
   const [dniError, setDniError] = useState('');
   const [loadingCee, setLoadingCee] = useState(false);
@@ -331,6 +336,7 @@ const Contacts: React.FC = () => {
         state: '',
         country: '',
       });
+      setIdType('dni'); // Resetear a DNI por defecto
     }
     setDniError('');
     setCeeError('');
@@ -378,7 +384,7 @@ const Contacts: React.FC = () => {
           ...formData,
           firstName: nombres,
           lastName: `${apellidoPaterno} ${apellidoMaterno}`.trim(),
-          address: data.direccion_completa || data.direccion || '',
+          address: data.direccion || '',
           city: data.distrito || '',
           state: data.provincia || '',
           country: data.departamento || 'Perú',
@@ -401,8 +407,8 @@ const Contacts: React.FC = () => {
   };
 
   const handleSearchCee = async () => {
-    if (!formData.cee || formData.cee.length < 8) {
-      setCeeError('El CEE debe tener al menos 8 caracteres');
+    if (!formData.cee || formData.cee.length < 12) {
+      setCeeError('El CEE debe tener 12 caracteres');
       return;
     }
 
@@ -1462,166 +1468,311 @@ const Contacts: React.FC = () => {
           }
         }}
       >
-        <DialogTitle sx={{ 
-          pb: 1.5,
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          fontWeight: 600,
-          fontSize: '1.25rem',
-          color: theme.palette.text.primary,
-        }}>
-          {editingContact ? 'Editar Contacto' : 'Nuevo Contacto'}
-        </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
+        <DialogContent sx={{ pt: 5, pb: 2 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-            {/* Campos DNI y CEE con botones de búsqueda */}
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+            {/* Selección de tipo de identificación y campo de entrada */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', sm: 'row' } }}>
+                <RadioGroup
+                  row
+                  value={idType}
+                  onChange={(e) => {
+                    const newType = e.target.value as 'dni' | 'cee';
+                    setIdType(newType);
+                    // Limpiar campos al cambiar de tipo
+                    if (newType === 'dni') {
+                      setFormData({ ...formData, cee: '', dni: '' });
+                      setCeeError('');
+                    } else {
+                      setFormData({ ...formData, dni: '', cee: '' });
+                      setDniError('');
+                    }
+                  }}
+                  sx={{ gap: 2, flexShrink: 0 }}
+                >
+                  <FormControlLabel
+                    value="dni"
+                    control={
+                      <Radio 
+                        sx={{ 
+                          color: theme.palette.text.secondary,
+                          '&.Mui-checked': {
+                            color: taxiMonterricoColors.green,
+                          },
+                        }} 
+                      />
+                    }
+                  label="DNI"
+                  sx={{
+                    m: 0,
+                    px: 2,
+                    py: 0.75,
+                    height: '48px',
+                    border: `2px solid ${idType === 'dni' ? taxiMonterricoColors.green : theme.palette.divider}`,
+                    borderRadius: 2,
+                    bgcolor: idType === 'dni' 
+                      ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : `${taxiMonterricoColors.green}10`)
+                      : 'transparent',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    '&:hover': {
+                      borderColor: taxiMonterricoColors.green,
+                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}15` : `${taxiMonterricoColors.green}08`,
+                    },
+                    '& .MuiFormControlLabel-label': {
+                      color: theme.palette.text.primary,
+                      fontWeight: idType === 'dni' ? 500 : 400,
+                    },
+                  }}
+                />
+                <FormControlLabel
+                  value="cee"
+                  control={
+                    <Radio 
+                      sx={{ 
+                        color: theme.palette.text.secondary,
+                        '&.Mui-checked': {
+                          color: taxiMonterricoColors.green,
+                        },
+                      }} 
+                    />
+                  }
+                  label="CEE"
+                  sx={{
+                    m: 0,
+                    px: 2,
+                    py: 0.75,
+                    height: '48px',
+                    border: `2px solid ${idType === 'cee' ? taxiMonterricoColors.green : theme.palette.divider}`,
+                    borderRadius: 2,
+                    bgcolor: idType === 'cee' 
+                      ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : `${taxiMonterricoColors.green}10`)
+                      : 'transparent',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    alignItems: 'center',
+                    '&:hover': {
+                      borderColor: taxiMonterricoColors.green,
+                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}15` : `${taxiMonterricoColors.green}08`,
+                    },
+                    '& .MuiFormControlLabel-label': {
+                      color: theme.palette.text.primary,
+                      fontWeight: idType === 'cee' ? 500 : 400,
+                    },
+                  }}
+                  />
+                </RadioGroup>
+
+                {/* Campo de entrada según el tipo seleccionado */}
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  {idType === 'dni' ? (
+                    <TextField
+                      label="DNI"
+                      value={formData.dni}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, ''); // Solo números
+                        // Limitar a 8 dígitos
+                        const limitedValue = value.slice(0, 8);
+                        setFormData({ ...formData, dni: limitedValue, cee: '' });
+                        setDniError('');
+                        setCeeError('');
+                      }}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && formData.dni && formData.dni.length === 8 && !loadingDni) {
+                          handleSearchDni();
+                        }
+                      }}
+                      error={!!dniError}
+                      helperText={dniError}
+                      InputLabelProps={{ shrink: true }}
+                      inputProps={{ maxLength: 8 }}
+                      sx={{
+                        width: '100%',
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          minHeight: '48px', // Misma altura que los botones (py: 1.5 = 12px arriba + 12px abajo + contenido)
+                          height: '48px',
+                        },
+                        '& .MuiInputBase-input': {
+                          py: 1.5, // Mismo padding vertical que los botones
+                          height: '48px',
+                          display: 'flex',
+                          alignItems: 'center',
+                        },
+                      }}
+                      InputProps={{
+                        endAdornment: (
+                          <IconButton
+                            onClick={handleSearchDni}
+                            disabled={loadingDni || !formData.dni || formData.dni.length < 8}
+                            size="small"
+                            sx={{
+                              color: taxiMonterricoColors.green,
+                              '&:hover': {
+                                bgcolor: `${taxiMonterricoColors.green}15`,
+                              },
+                              '&.Mui-disabled': {
+                                color: theme.palette.text.disabled,
+                              },
+                            }}
+                          >
+                            {loadingDni ? (
+                              <CircularProgress size={20} />
+                            ) : (
+                              <Search />
+                            )}
+                          </IconButton>
+                        ),
+                      }}
+                    />
+                  ) : (
+                    <TextField
+                      label="CEE"
+                      value={formData.cee}
+                      onChange={(e) => {
+                        const value = e.target.value.toUpperCase(); // Convertir a mayúsculas
+                        // Limitar a 12 caracteres
+                        const limitedValue = value.slice(0, 12);
+                        setFormData({ ...formData, cee: limitedValue, dni: '' });
+                        setCeeError('');
+                        setDniError('');
+                      }}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && formData.cee && formData.cee.length === 12 && !loadingCee) {
+                          handleSearchCee();
+                        }
+                      }}
+                      error={!!ceeError}
+                      helperText={ceeError}
+                      InputLabelProps={{ shrink: true }}
+                      inputProps={{ maxLength: 12 }}
+                      sx={{
+                        width: '100%',
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          minHeight: '48px', // Misma altura que los botones (py: 1.5 = 12px arriba + 12px abajo + contenido)
+                          height: '48px',
+                        },
+                        '& .MuiInputBase-input': {
+                          py: 1.5, // Mismo padding vertical que los botones
+                          height: '48px',
+                          display: 'flex',
+                          alignItems: 'center',
+                        },
+                      }}
+                      InputProps={{
+                        endAdornment: (
+                          <IconButton
+                            onClick={handleSearchCee}
+                            disabled={loadingCee || !formData.cee || formData.cee.length < 12}
+                            size="small"
+                            sx={{
+                              color: taxiMonterricoColors.green,
+                              '&:hover': {
+                                bgcolor: `${taxiMonterricoColors.green}15`,
+                              },
+                              '&.Mui-disabled': {
+                                color: theme.palette.text.disabled,
+                              },
+                            }}
+                          >
+                            {loadingCee ? (
+                              <CircularProgress size={20} />
+                            ) : (
+                              <Search />
+                            )}
+                          </IconButton>
+                        ),
+                      }}
+                    />
+                  )}
+                </Box>
+              </Box>
+            </Box>
+            
+            {/* Nombre y Apellido en su propia fila */}
+            <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
-                label="DNI"
-                value={formData.dni}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, ''); // Solo números
-                  setFormData({ ...formData, dni: value, cee: '' }); // Limpiar CEE si se ingresa DNI
-                  setDniError('');
-                  setCeeError('');
-                }}
-                placeholder="Ingrese DNI (8 dígitos)"
-                error={!!dniError}
-                helperText={dniError}
+                label="Nombre"
+                value={formData.firstName}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 1.5,
                   }
-                }}
-                InputProps={{
-                  endAdornment: (
-                    <IconButton
-                      onClick={handleSearchDni}
-                      disabled={loadingDni || !formData.dni || formData.dni.length < 8}
-                      sx={{
-                        color: taxiMonterricoColors.green,
-                        '&:hover': {
-                          bgcolor: `${taxiMonterricoColors.green}15`,
-                        },
-                        '&.Mui-disabled': {
-                          color: theme.palette.text.disabled,
-                        },
-                      }}
-                    >
-                      {loadingDni ? (
-                        <CircularProgress size={20} />
-                      ) : (
-                        <Search />
-                      )}
-                    </IconButton>
-                  ),
                 }}
               />
-              <Typography sx={{ alignSelf: 'center', color: theme.palette.text.secondary, px: 1 }}>o</Typography>
               <TextField
-                label="CEE (Carnet de Extranjería)"
-                value={formData.cee}
-                onChange={(e) => {
-                  const value = e.target.value.toUpperCase(); // Convertir a mayúsculas
-                  setFormData({ ...formData, cee: value, dni: '' }); // Limpiar DNI si se ingresa CEE
-                  setCeeError('');
-                  setDniError('');
-                }}
-                placeholder="Ingrese CEE"
-                error={!!ceeError}
-                helperText={ceeError}
+                label="Apellido"
+                value={formData.lastName}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 1.5,
                   }
-                }}
-                InputProps={{
-                  endAdornment: (
-                    <IconButton
-                      onClick={handleSearchCee}
-                      disabled={loadingCee || !formData.cee || formData.cee.length < 8}
-                      sx={{
-                        color: taxiMonterricoColors.green,
-                        '&:hover': {
-                          bgcolor: `${taxiMonterricoColors.green}15`,
-                        },
-                        '&.Mui-disabled': {
-                          color: theme.palette.text.disabled,
-                        },
-                      }}
-                    >
-                      {loadingCee ? (
-                        <CircularProgress size={20} />
-                      ) : (
-                        <Search />
-                      )}
-                    </IconButton>
-                  ),
                 }}
               />
             </Box>
-            <TextField
-              label="Nombre"
-              value={formData.firstName}
-              onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-              required
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            />
-            <TextField
-              label="Apellido"
-              value={formData.lastName}
-              onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-              required
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            />
-            <TextField
-              label="Email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              required
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            />
-            <TextField
-              label="Teléfono"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            />
+            
+            {/* Email y Teléfono en su propia fila */}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              <TextField
+                label="Teléfono"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+            </Box>
+            
+            {/* Dirección en su propia fila */}
             <TextField
               label="Dirección"
               value={formData.address}
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
               multiline
               rows={2}
+              fullWidth
+              InputLabelProps={{ shrink: true }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 1.5,
                 }
               }}
             />
+            
+            {/* Distrito, Provincia y Departamento en su propia fila */}
             <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
                 label="Distrito"
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
                   '& .MuiOutlinedInput-root': {
@@ -1633,6 +1784,19 @@ const Contacts: React.FC = () => {
                 label="Provincia"
                 value={formData.state}
                 onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              <TextField
+                label="Departamento"
+                value={formData.country}
+                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
                   '& .MuiOutlinedInput-root': {
@@ -1641,46 +1805,44 @@ const Contacts: React.FC = () => {
                 }}
               />
             </Box>
-            <TextField
-              label="Departamento"
-              value={formData.country}
-              onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            />
-            <TextField
-              label="Cargo"
-              value={formData.jobTitle}
-              onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            />
-            <TextField
-              select
-              label="Etapa del Ciclo de Vida"
-              value={formData.lifecycleStage}
-              onChange={(e) => setFormData({ ...formData, lifecycleStage: e.target.value })}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            >
-              <MenuItem value="lead">Lead</MenuItem>
-              <MenuItem value="contacto">Contacto</MenuItem>
-              <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
-              <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-              <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
-              <MenuItem value="negociacion">Negociación</MenuItem>
-              <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
-              <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
-            </TextField>
+            
+            {/* Cargo y Etapa del Ciclo de Vida en su propia fila */}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Cargo"
+                value={formData.jobTitle}
+                onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              <TextField
+                select
+                label="Etapa del Ciclo de Vida"
+                value={formData.lifecycleStage}
+                onChange={(e) => setFormData({ ...formData, lifecycleStage: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              >
+                <MenuItem value="lead">Lead</MenuItem>
+                <MenuItem value="contacto">Contacto</MenuItem>
+                <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+                <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+                <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
+                <MenuItem value="negociacion">Negociación</MenuItem>
+                <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+                <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+              </TextField>
+            </Box>
           </Box>
         </DialogContent>
         <DialogActions sx={{ 

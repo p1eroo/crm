@@ -25,6 +25,7 @@ import {
   DialogContentText,
   DialogActions,
   Button,
+  useTheme,
 } from '@mui/material';
 import {
   Edit,
@@ -50,6 +51,7 @@ interface User {
 }
 
 const Users: React.FC = () => {
+  const theme = useTheme();
   const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -191,12 +193,18 @@ const Users: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: { xs: 2, sm: 3, md: 4 } }}>
+    <Box sx={{ 
+      bgcolor: theme.palette.background.default, 
+      minHeight: '100vh',
+      pb: { xs: 3, sm: 6, md: 8 },
+      px: { xs: 3, sm: 6, md: 8 },
+      pt: { xs: 4, sm: 6, md: 6 },
+    }}>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 600, color: '#1F2937', mb: 1 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 1 }}>
           Administración de Usuarios
         </Typography>
-        <Typography variant="body2" sx={{ color: '#6B7280' }}>
+        <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
           Gestiona los usuarios del sistema y asigna roles
         </Typography>
       </Box>
@@ -211,15 +219,15 @@ const Users: React.FC = () => {
         </Alert>
       )}
 
-      <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+      <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)', bgcolor: theme.palette.background.paper }}>
         <Table>
           <TableHead>
-            <TableRow sx={{ bgcolor: '#F9FAFB' }}>
-              <TableCell sx={{ fontWeight: 600, color: '#1F2937' }}>Usuario</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: '#1F2937' }}>Email</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: '#1F2937' }}>Rol</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: '#1F2937' }}>Estado</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: '#1F2937' }}>Acciones</TableCell>
+            <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#F9FAFB' }}>
+              <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary }}>Usuario</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary }}>Email</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary }}>Rol</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary }}>Estado</TableCell>
+              <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary }}>Acciones</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -227,7 +235,7 @@ const Users: React.FC = () => {
               <TableRow 
                 key={userItem.id}
                 sx={{ 
-                  '&:hover': { bgcolor: '#F9FAFB' },
+                  '&:hover': { bgcolor: theme.palette.mode === 'dark' ? theme.palette.action.hover : '#F9FAFB' },
                   '&:last-child td': { border: 0 }
                 }}
               >
@@ -245,17 +253,17 @@ const Users: React.FC = () => {
                       {!userItem.avatar && getInitials(userItem.firstName, userItem.lastName)}
                     </Avatar>
                     <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 500, color: '#1F2937' }}>
+                      <Typography variant="body2" sx={{ fontWeight: 500, color: theme.palette.text.primary }}>
                         {userItem.firstName} {userItem.lastName}
                       </Typography>
-                      <Typography variant="caption" sx={{ color: '#6B7280' }}>
+                      <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
                         @{userItem.usuario}
                       </Typography>
                     </Box>
                   </Box>
                 </TableCell>
                 <TableCell>
-                  <Typography variant="body2" sx={{ color: '#374151' }}>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
                     {userItem.email}
                   </Typography>
                 </TableCell>
@@ -269,17 +277,28 @@ const Users: React.FC = () => {
                         onChange={(e) => handleRoleChange(userItem.id, e.target.value)}
                         sx={{
                           height: 32,
+                          bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
+                          color: theme.palette.text.primary,
                           '& .MuiSelect-select': {
                             py: 0.5,
                             px: 1.5,
                             fontSize: '0.875rem',
                           },
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: theme.palette.divider,
+                          },
+                          '&:hover .MuiOutlinedInput-notchedOutline': {
+                            borderColor: theme.palette.text.secondary,
+                          },
+                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                            borderColor: theme.palette.primary.main,
+                          },
                         }}
                       >
-                        <MenuItem value="admin">Administrador</MenuItem>
-                        <MenuItem value="jefe_comercial">Jefe Comercial</MenuItem>
-                        <MenuItem value="manager">Manager</MenuItem>
-                        <MenuItem value="user">Usuario</MenuItem>
+                        <MenuItem value="admin" sx={{ color: theme.palette.text.primary }}>Administrador</MenuItem>
+                        <MenuItem value="jefe_comercial" sx={{ color: theme.palette.text.primary }}>Jefe Comercial</MenuItem>
+                        <MenuItem value="manager" sx={{ color: theme.palette.text.primary }}>Manager</MenuItem>
+                        <MenuItem value="user" sx={{ color: theme.palette.text.primary }}>Usuario</MenuItem>
                       </Select>
                     </FormControl>
                   )}
@@ -326,10 +345,10 @@ const Users: React.FC = () => {
                         sx={{
                           color: '#EF4444',
                           '&:hover': {
-                            bgcolor: '#ffebee',
+                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.2)' : '#ffebee',
                           },
                           '&.Mui-disabled': {
-                            color: '#BDBDBD',
+                            color: theme.palette.text.disabled,
                           },
                         }}
                       >
@@ -350,12 +369,25 @@ const Users: React.FC = () => {
         onClose={handleCancelDelete}
         aria-labelledby="delete-dialog-title"
         aria-describedby="delete-dialog-description"
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: theme.palette.mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.3)' : '0 8px 24px rgba(0,0,0,0.12)',
+            bgcolor: theme.palette.background.paper,
+          }
+        }}
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          },
+        }}
       >
-        <DialogTitle id="delete-dialog-title">
+        <DialogTitle id="delete-dialog-title" sx={{ color: theme.palette.text.primary }}>
           Confirmar eliminación
         </DialogTitle>
         <DialogContent>
-          <DialogContentText id="delete-dialog-description">
+          <DialogContentText id="delete-dialog-description" sx={{ color: theme.palette.text.primary }}>
             ¿Estás seguro de que deseas eliminar al usuario{' '}
             <strong>{userToDelete?.firstName} {userToDelete?.lastName}</strong> ({userToDelete?.email})?
             <br />
@@ -364,7 +396,7 @@ const Users: React.FC = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCancelDelete} color="inherit">
+          <Button onClick={handleCancelDelete} color="inherit" sx={{ color: theme.palette.text.secondary }}>
             Cancelar
           </Button>
           <Button 

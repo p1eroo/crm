@@ -178,8 +178,8 @@ const Tickets: React.FC = () => {
       {/* Cards de resumen */}
       <Card sx={{ 
         borderRadius: 6,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-        bgcolor: 'white',
+        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
+        bgcolor: theme.palette.background.paper,
         mb: 4,
       }}>
         <CardContent sx={{ p: 3 }}>
@@ -209,10 +209,10 @@ const Tickets: React.FC = () => {
                 <Support sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
                   Total Tickets
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
                   {totalTickets.toLocaleString()}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -224,7 +224,7 @@ const Tickets: React.FC = () => {
               </Box>
             </Box>
 
-            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
+            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' }, borderColor: theme.palette.divider }} />
 
             {/* Open Tickets */}
             <Box sx={{ 
@@ -251,10 +251,10 @@ const Tickets: React.FC = () => {
                 <Computer sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
                   Open Tickets
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
                   {openTickets.toLocaleString()}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -266,7 +266,7 @@ const Tickets: React.FC = () => {
               </Box>
             </Box>
 
-            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
+            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' }, borderColor: theme.palette.divider }} />
 
             {/* Resolved Tickets */}
             <Box sx={{ 
@@ -293,10 +293,10 @@ const Tickets: React.FC = () => {
                 <CheckCircle sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
                   Resolved Tickets
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
                   {resolvedTickets.toLocaleString()}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: -0.75 }}>
@@ -308,7 +308,7 @@ const Tickets: React.FC = () => {
                         sx={{
                           width: 36,
                           height: 36,
-                          border: '2px solid white',
+                          border: `2px solid ${theme.palette.background.paper}`,
                           ml: idx > 0 ? -0.75 : 0,
                           bgcolor: taxiMonterricoColors.green,
                           fontSize: '0.875rem',
@@ -330,14 +330,14 @@ const Tickets: React.FC = () => {
       {/* Sección de tabla */}
       <Card sx={{ 
         borderRadius: 6,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
         overflow: 'hidden',
-        bgcolor: 'white',
+        bgcolor: theme.palette.background.paper,
       }}>
         <Box sx={{ px: 3, pt: 3, pb: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
             <Box>
-              <Typography variant="h5" sx={{ fontWeight: 600, color: '#1a1a1a', mb: 0.25 }}>
+              <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.25 }}>
                 Tickets
               </Typography>
               <Typography
@@ -348,7 +348,7 @@ const Tickets: React.FC = () => {
                 }}
                 sx={{
                   fontSize: '0.875rem',
-                  color: '#1976d2',
+                  color: theme.palette.primary.main,
                   textDecoration: 'none',
                   cursor: 'pointer',
                   '&:hover': {
@@ -366,21 +366,21 @@ const Tickets: React.FC = () => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 InputProps={{
-                  startAdornment: <Search sx={{ mr: 1, color: '#9e9e9e', fontSize: 20 }} />,
+                  startAdornment: <Search sx={{ mr: 1, color: theme.palette.text.secondary, fontSize: 20 }} />,
                 }}
                 sx={{ 
                   minWidth: 200,
-                  bgcolor: 'white',
+                  bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
                   borderRadius: 1.5,
                   '& .MuiOutlinedInput-root': {
                     '& fieldset': {
-                      borderColor: '#e0e0e0',
+                      borderColor: theme.palette.divider,
                     },
                     '&:hover fieldset': {
-                      borderColor: '#bdbdbd',
+                      borderColor: theme.palette.text.secondary,
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: '#1976d2',
+                      borderColor: theme.palette.primary.main,
                     },
                   },
                 }}
@@ -392,15 +392,15 @@ const Tickets: React.FC = () => {
                   displayEmpty
                   sx={{
                     borderRadius: 1.5,
-                    bgcolor: 'white',
+                    bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
                     '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#e0e0e0',
+                      borderColor: theme.palette.divider,
                     },
                     '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#bdbdbd',
+                      borderColor: theme.palette.text.secondary,
                     },
                     '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#1976d2',
+                      borderColor: theme.palette.primary.main,
                     },
                   }}
                 >
@@ -443,11 +443,11 @@ const Tickets: React.FC = () => {
             alignItems: 'center',
             justifyContent: 'center',
             p: 4,
-            bgcolor: '#fafafa',
+            bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa',
           }}
         >
           <Box sx={{ textAlign: 'center', maxWidth: 600 }}>
-            <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2, color: '#1976d2' }}>
+            <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2, color: theme.palette.primary.main }}>
               Hazle seguimiento a los problemas con tus clientes
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
@@ -458,7 +458,7 @@ const Tickets: React.FC = () => {
               <Link
                 href="#"
                 sx={{
-                  color: '#1976d2',
+                  color: theme.palette.primary.main,
                   textDecoration: 'none',
                   '&:hover': { textDecoration: 'underline' },
                 }}
@@ -496,40 +496,40 @@ const Tickets: React.FC = () => {
               '&::-webkit-scrollbar': {
                 height: 8,
               },
-              '&::-webkit-scrollbar-track': {
-                backgroundColor: '#f1f1f1',
+            '&::-webkit-scrollbar-track': {
+              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f1f1f1',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.secondary : '#888',
+              borderRadius: 4,
+              '&:hover': {
+                backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.primary : '#555',
               },
-              '&::-webkit-scrollbar-thumb': {
-                backgroundColor: '#888',
-                borderRadius: 4,
-                '&:hover': {
-                  backgroundColor: '#555',
-                },
-              },
+            },
             }}
           >
             <Table sx={{ minWidth: { xs: 800, md: 'auto' } }}>
               <TableHead>
-                <TableRow sx={{ bgcolor: '#fafafa' }}>
-                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '25%' } }}>
+                <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa' }}>
+                  <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '25%' } }}>
                     Asunto
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '18%' } }}>
+                  <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '18%' } }}>
                     Contacto
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
+                  <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
                     Estado
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
+                  <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
                     Prioridad
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
+                  <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
                     Asignado a
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
+                  <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
                     Fecha de Creación
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
+                  <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
                     Acciones
                   </TableCell>
                 </TableRow>
@@ -540,7 +540,7 @@ const Tickets: React.FC = () => {
                     key={ticket.id} 
                     hover
                     sx={{ 
-                      '&:hover': { bgcolor: '#fafafa' },
+                      '&:hover': { bgcolor: theme.palette.mode === 'dark' ? theme.palette.action.hover : '#fafafa' },
                       cursor: 'pointer',
                       transition: 'background-color 0.2s',
                     }}
@@ -564,7 +564,7 @@ const Tickets: React.FC = () => {
                           variant="body2" 
                           sx={{ 
                             fontWeight: 500, 
-                            color: '#1a1a1a',
+                            color: theme.palette.text.primary,
                             fontSize: { xs: '0.75rem', md: '0.875rem' },
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -577,11 +577,11 @@ const Tickets: React.FC = () => {
                     </TableCell>
                     <TableCell sx={{ px: 1, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '18%' } }}>
                       {ticket.Contact ? (
-                        <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {ticket.Contact.firstName} {ticket.Contact.lastName}
                         </Typography>
                       ) : (
-                        <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                           --
                         </Typography>
                       )}
@@ -628,22 +628,22 @@ const Tickets: React.FC = () => {
                     </TableCell>
                     <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
                       {ticket.AssignedTo ? (
-                        <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {ticket.AssignedTo.firstName} {ticket.AssignedTo.lastName}
                         </Typography>
                       ) : (
-                        <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                           --
                         </Typography>
                       )}
                     </TableCell>
                     <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
                       {ticket.createdAt ? (
-                        <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                           {new Date(ticket.createdAt).toLocaleDateString('es-ES')}
                         </Typography>
                       ) : (
-                        <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
+                        <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                           --
                         </Typography>
                       )}
@@ -658,7 +658,7 @@ const Tickets: React.FC = () => {
                               handlePreview(ticket);
                             }}
                             sx={{
-                              color: '#757575',
+                              color: theme.palette.text.secondary,
                               padding: { xs: 0.5, md: 1 },
                               '&:hover': {
                                 color: taxiMonterricoColors.green,
@@ -677,11 +677,11 @@ const Tickets: React.FC = () => {
                               handleDelete(ticket.id);
                             }}
                             sx={{
-                              color: '#757575',
+                              color: theme.palette.text.secondary,
                               padding: { xs: 0.5, md: 1 },
                               '&:hover': {
                                 color: '#d32f2f',
-                                bgcolor: '#ffebee',
+                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.2)' : '#ffebee',
                               },
                             }}
                           >
@@ -706,16 +706,23 @@ const Tickets: React.FC = () => {
         PaperProps={{
           sx: {
             borderRadius: 2,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+            boxShadow: theme.palette.mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.3)' : '0 8px 24px rgba(0,0,0,0.12)',
+            bgcolor: theme.palette.background.paper,
           }
+        }}
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          },
         }}
       >
         <DialogTitle sx={{ 
           pb: 1.5,
-          borderBottom: '1px solid #e0e0e0',
+          borderBottom: `1px solid ${theme.palette.divider}`,
           fontWeight: 600,
           fontSize: '1.25rem',
-          color: '#1a1a1a',
+          color: theme.palette.text.primary,
           display: 'flex',
           alignItems: 'center',
           gap: 1.5,
@@ -724,17 +731,17 @@ const Tickets: React.FC = () => {
           Confirmar Eliminación
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
-          <Typography variant="body1" sx={{ color: '#1a1a1a', mb: 1 }}>
+          <Typography variant="body1" sx={{ color: theme.palette.text.primary, mb: 1 }}>
             ¿Estás seguro de que deseas eliminar este ticket?
           </Typography>
-          <Typography variant="body2" sx={{ color: '#757575' }}>
+          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
             Esta acción no se puede deshacer. El ticket será eliminado permanentemente del sistema.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ 
           px: 3, 
           py: 2,
-          borderTop: '1px solid #e0e0e0',
+          borderTop: `1px solid ${theme.palette.divider}`,
           gap: 1,
         }}>
           <Button 
@@ -742,10 +749,10 @@ const Tickets: React.FC = () => {
             disabled={deleting}
             sx={{
               textTransform: 'none',
-              color: '#757575',
+              color: theme.palette.text.secondary,
               fontWeight: 500,
               '&:hover': {
-                bgcolor: '#f5f5f5',
+                bgcolor: theme.palette.action.hover,
               }
             }}
           >

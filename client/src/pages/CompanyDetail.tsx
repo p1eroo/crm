@@ -96,7 +96,6 @@ import {
 import {
   Facebook,
   Twitter,
-  GitHub,
   LinkedIn,
   YouTube,
 } from '@mui/icons-material';
@@ -1242,9 +1241,9 @@ const CompanyDetail: React.FC = () => {
         {/* Parte 1: Columna Izquierda - Información de la Empresa */}
         <Card sx={{ 
           borderRadius: { xs: 2, md: 6 },
-          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          boxShadow: 'none',
           overflow: 'hidden',
-          bgcolor: 'white',
+          bgcolor: theme.palette.background.paper,
           display: 'flex',
           flexDirection: 'column',
           width: { xs: '100%', md: '500px' },
@@ -1282,9 +1281,11 @@ const CompanyDetail: React.FC = () => {
         }}>
           <Paper sx={{ 
             p: 3,
+            bgcolor: theme.palette.background.paper,
+            boxShadow: 'none',
             transition: 'all 0.3s ease',
             '&:hover': {
-              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+              boxShadow: 'none',
             },
           }}>
             {/* Avatar y Nombre */}
@@ -1313,9 +1314,9 @@ const CompanyDetail: React.FC = () => {
                     right: 0,
                     fontSize: { xs: 20, md: 28 },
                     color: '#10B981',
-                    bgcolor: 'white',
+                    bgcolor: theme.palette.background.paper,
                     borderRadius: '50%',
-                    border: '2px solid white',
+                    border: `2px solid ${theme.palette.background.paper}`,
                   }} 
                 />
               </Box>
@@ -1325,7 +1326,7 @@ const CompanyDetail: React.FC = () => {
                 sx={{
                   fontWeight: 700,
                   fontSize: { xs: '1rem', md: '1.1rem' },
-                  color: '#1F2937',
+                  color: theme.palette.text.primary,
                   mb: 0.25,
                   px: { xs: 1, md: 0 },
                 }}
@@ -1338,7 +1339,7 @@ const CompanyDetail: React.FC = () => {
                   align="center"
                   sx={{
                     fontSize: { xs: '0.75rem', md: '0.875rem' },
-                    color: '#757575',
+                    color: theme.palette.text.secondary,
                     fontWeight: 400,
                     px: { xs: 1, md: 0 },
                   }}
@@ -1357,18 +1358,18 @@ const CompanyDetail: React.FC = () => {
                     width: { xs: 44, md: 52 },
                     height: { xs: 44, md: 52 },
                     borderRadius: '50%',
-                    bgcolor: '#E8F5E9',
+                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
                     color: taxiMonterricoColors.green,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
                       transform: 'scale(1.05)',
                     },
                   }}
                 >
                   <Note sx={{ fontSize: { xs: 18, md: 22 } }} />
                 </IconButton>
-                <Typography variant="caption" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' }, color: '#1F2937', fontWeight: 500 }}>
+                <Typography variant="caption" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' }, color: theme.palette.text.primary, fontWeight: 500 }}>
                   Nota
                 </Typography>
               </Box>
@@ -1380,18 +1381,18 @@ const CompanyDetail: React.FC = () => {
                     width: { xs: 44, md: 52 },
                     height: { xs: 44, md: 52 },
                     borderRadius: '50%',
-                    bgcolor: '#E8F5E9',
+                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
                     color: taxiMonterricoColors.green,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
                       transform: 'scale(1.05)',
                     },
                   }}
                 >
                   <Email sx={{ fontSize: { xs: 18, md: 22 } }} />
                 </IconButton>
-                <Typography variant="caption" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' }, color: '#1F2937', fontWeight: 500 }}>
+                <Typography variant="caption" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' }, color: theme.palette.text.primary, fontWeight: 500 }}>
                   Correo
                 </Typography>
               </Box>
@@ -1403,18 +1404,18 @@ const CompanyDetail: React.FC = () => {
                     width: { xs: 44, md: 52 },
                     height: { xs: 44, md: 52 },
                     borderRadius: '50%',
-                    bgcolor: '#E8F5E9',
+                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
                     color: taxiMonterricoColors.green,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
                       transform: 'scale(1.05)',
                     },
                   }}
                 >
                   <Phone sx={{ fontSize: { xs: 18, md: 22 } }} />
                 </IconButton>
-                <Typography variant="caption" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' }, color: '#1F2937', fontWeight: 500 }}>
+                <Typography variant="caption" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' }, color: theme.palette.text.primary, fontWeight: 500 }}>
                   Llamada
                 </Typography>
               </Box>
@@ -1426,18 +1427,18 @@ const CompanyDetail: React.FC = () => {
                     width: { xs: 44, md: 52 },
                     height: { xs: 44, md: 52 },
                     borderRadius: '50%',
-                    bgcolor: '#E8F5E9',
+                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
                     color: taxiMonterricoColors.green,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
                       transform: 'scale(1.05)',
                     },
                   }}
                 >
                   <Assignment sx={{ fontSize: { xs: 18, md: 22 } }} />
                 </IconButton>
-                <Typography variant="caption" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' }, color: '#1F2937', fontWeight: 500 }}>
+                <Typography variant="caption" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' }, color: theme.palette.text.primary, fontWeight: 500 }}>
                   Tarea
                 </Typography>
               </Box>
@@ -1449,18 +1450,18 @@ const CompanyDetail: React.FC = () => {
                     width: { xs: 44, md: 52 },
                     height: { xs: 44, md: 52 },
                     borderRadius: '50%',
-                    bgcolor: '#E8F5E9',
+                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
                     color: taxiMonterricoColors.green,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
                       transform: 'scale(1.05)',
                     },
                   }}
                 >
                   <Event sx={{ fontSize: { xs: 18, md: 22 } }} />
                 </IconButton>
-                <Typography variant="caption" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' }, color: '#1F2937', fontWeight: 500 }}>
+                <Typography variant="caption" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' }, color: theme.palette.text.primary, fontWeight: 500 }}>
                   Reunión
                 </Typography>
               </Box>
@@ -1472,18 +1473,18 @@ const CompanyDetail: React.FC = () => {
                     width: { xs: 44, md: 52 },
                     height: { xs: 44, md: 52 },
                     borderRadius: '50%',
-                    bgcolor: '#E8F5E9',
+                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
                     color: taxiMonterricoColors.green,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
                       transform: 'scale(1.05)',
                     },
                   }}
                 >
                   <MoreVert sx={{ fontSize: { xs: 18, md: 22 } }} />
                 </IconButton>
-                <Typography variant="caption" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' }, color: '#1F2937', fontWeight: 500 }}>
+                <Typography variant="caption" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' }, color: theme.palette.text.primary, fontWeight: 500 }}>
                   Más
                 </Typography>
               </Box>
@@ -1559,63 +1560,72 @@ const CompanyDetail: React.FC = () => {
               <Box sx={{ 
                 flex: { xs: '1 1 calc(33.333% - 8px)', sm: 1 }, 
                 minWidth: { xs: 'calc(33.333% - 8px)', sm: 'auto' },
-                border: '1px dashed #E0E0E0', 
+                border: `1px dashed ${theme.palette.divider}`, 
                 borderRadius: { xs: 1, md: 2 }, 
                 p: { xs: 1.5, md: 2 }, 
                 textAlign: 'center',
-                bgcolor: 'white',
+                bgcolor: theme.palette.background.paper,
               }}>
-                <Typography sx={{ fontSize: { xs: '1.25rem', md: '1.5rem' }, fontWeight: 700, color: '#37474F', mb: 0.5 }}>
+                <Typography sx={{ fontSize: { xs: '1.25rem', md: '1.5rem' }, fontWeight: 700, color: theme.palette.text.primary, mb: 0.5 }}>
                   {associatedDeals.length}
                 </Typography>
-                <Typography sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' }, color: '#9E9E9E', fontWeight: 400 }}>
+                <Typography sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' }, color: theme.palette.text.secondary, fontWeight: 400 }}>
                   Negocios
                 </Typography>
               </Box>
               <Box sx={{ 
                 flex: { xs: '1 1 calc(33.333% - 8px)', sm: 1 }, 
                 minWidth: { xs: 'calc(33.333% - 8px)', sm: 'auto' },
-                border: '1px dashed #E0E0E0', 
+                border: `1px dashed ${theme.palette.divider}`, 
                 borderRadius: { xs: 1, md: 2 }, 
                 p: { xs: 1.5, md: 2 }, 
                 textAlign: 'center',
-                bgcolor: 'white',
+                bgcolor: theme.palette.background.paper,
               }}>
-                <Typography sx={{ fontSize: { xs: '1.25rem', md: '1.5rem' }, fontWeight: 700, color: '#37474F', mb: 0.5 }}>
+                <Typography sx={{ fontSize: { xs: '1.25rem', md: '1.5rem' }, fontWeight: 700, color: theme.palette.text.primary, mb: 0.5 }}>
                   {associatedContacts.length}
                 </Typography>
-                <Typography sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' }, color: '#9E9E9E', fontWeight: 400 }}>
+                <Typography sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' }, color: theme.palette.text.secondary, fontWeight: 400 }}>
                   Contactos
                 </Typography>
               </Box>
               <Box sx={{ 
                 flex: { xs: '1 1 calc(33.333% - 8px)', sm: 1 }, 
                 minWidth: { xs: 'calc(33.333% - 8px)', sm: 'auto' },
-                border: '1px dashed #E0E0E0', 
+                border: `1px dashed ${theme.palette.divider}`, 
                 borderRadius: { xs: 1, md: 2 }, 
                 p: { xs: 1.5, md: 2 }, 
                 textAlign: 'center',
-                bgcolor: 'white',
+                bgcolor: theme.palette.background.paper,
               }}>
-                <Typography sx={{ fontSize: { xs: '1.25rem', md: '1.5rem' }, fontWeight: 700, color: '#37474F', mb: 0.5 }}>
+                <Typography sx={{ fontSize: { xs: '1.25rem', md: '1.5rem' }, fontWeight: 700, color: theme.palette.text.primary, mb: 0.5 }}>
                   {activities.length}
                 </Typography>
-                <Typography sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' }, color: '#9E9E9E', fontWeight: 400 }}>
+                <Typography sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' }, color: theme.palette.text.secondary, fontWeight: 400 }}>
                   Actividades
                 </Typography>
               </Box>
             </Box>
 
+            {/* Información de la empresa */}
+            <Card sx={{ 
+              mb: { xs: 2, md: 3 }, 
+              p: 3, 
+              borderRadius: 2, 
+              boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
+              bgcolor: theme.palette.background.paper,
+              border: `1px solid ${theme.palette.divider}`,
+            }}>
             {/* Location */}
             <Box sx={{ mb: { xs: 1.5, md: 2 }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.5, sm: 0 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 }, flex: 1 }}>
-                <LocationOn sx={{ fontSize: { xs: 18, md: 20 }, color: '#9E9E9E' }} />
+                <LocationOn sx={{ fontSize: { xs: 18, md: 20 }, color: theme.palette.text.secondary }} />
                 <Typography 
                   variant="body2" 
                   sx={{ 
                     fontSize: { xs: '0.8rem', md: '0.875rem' },
                     fontWeight: 400,
-                    color: '#757575',
+                    color: theme.palette.text.secondary,
                   }}
                 >
                   Ubicación
@@ -1626,7 +1636,7 @@ const CompanyDetail: React.FC = () => {
                 sx={{ 
                   fontSize: { xs: '0.8rem', md: '0.875rem' },
                   fontWeight: 400,
-                  color: (company.city || company.address) ? '#424242' : '#9CA3AF',
+                  color: (company.city || company.address) ? theme.palette.text.primary : theme.palette.text.disabled,
                   textAlign: { xs: 'left', sm: 'right' },
                   wordBreak: 'break-word',
                 }}
@@ -1638,13 +1648,13 @@ const CompanyDetail: React.FC = () => {
             {/* Número de teléfono */}
             <Box sx={{ mb: { xs: 1.5, md: 2 }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.5, sm: 0 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 }, flex: 1 }}>
-                <Phone sx={{ fontSize: { xs: 18, md: 20 }, color: '#9E9E9E' }} />
+                <Phone sx={{ fontSize: { xs: 18, md: 20 }, color: theme.palette.text.secondary }} />
                 <Typography 
                   variant="body2" 
                   sx={{ 
                     fontSize: { xs: '0.8rem', md: '0.875rem' },
                     fontWeight: 400,
-                    color: '#757575',
+                    color: theme.palette.text.secondary,
                   }}
                 >
                   Teléfono
@@ -1689,7 +1699,7 @@ const CompanyDetail: React.FC = () => {
                   sx={{ 
                     fontSize: { xs: '0.8rem', md: '0.875rem' },
                     fontWeight: 400,
-                    color: company.phone ? '#424242' : '#9CA3AF',
+                    color: company.phone ? theme.palette.text.primary : theme.palette.text.disabled,
                     cursor: 'pointer',
                     textAlign: { xs: 'left', sm: 'right' },
                     wordBreak: 'break-word',
@@ -1708,13 +1718,13 @@ const CompanyDetail: React.FC = () => {
             {/* Correo/Dominio */}
             <Box sx={{ mb: { xs: 1.5, md: 2 }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.5, sm: 0 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 }, flex: 1 }}>
-                <Email sx={{ fontSize: { xs: 18, md: 20 }, color: '#9E9E9E' }} />
+                <Email sx={{ fontSize: { xs: 18, md: 20 }, color: theme.palette.text.secondary }} />
                 <Typography 
                   variant="body2" 
                   sx={{ 
                     fontSize: { xs: '0.8rem', md: '0.875rem' },
                     fontWeight: 400,
-                    color: '#757575',
+                    color: theme.palette.text.secondary,
                   }}
                 >
                   Dominio
@@ -1759,7 +1769,7 @@ const CompanyDetail: React.FC = () => {
                   sx={{ 
                     fontSize: { xs: '0.8rem', md: '0.875rem' },
                     fontWeight: 400,
-                    color: company.domain ? '#424242' : '#9CA3AF',
+                    color: company.domain ? theme.palette.text.primary : theme.palette.text.disabled,
                     cursor: 'pointer',
                     textAlign: { xs: 'left', sm: 'right' },
                     wordBreak: 'break-word',
@@ -1779,13 +1789,13 @@ const CompanyDetail: React.FC = () => {
             {company.industry && (
               <Box sx={{ mb: { xs: 1.5, md: 2 }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.5, sm: 0 } }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 }, flex: 1 }}>
-                  <Business sx={{ fontSize: { xs: 18, md: 20 }, color: '#9E9E9E' }} />
+                  <Business sx={{ fontSize: { xs: 18, md: 20 }, color: theme.palette.text.secondary }} />
                   <Typography 
                     variant="body2" 
                     sx={{ 
                       fontSize: { xs: '0.8rem', md: '0.875rem' },
                       fontWeight: 400,
-                      color: '#757575',
+                      color: theme.palette.text.secondary,
                     }}
                   >
                     Industria
@@ -1796,7 +1806,7 @@ const CompanyDetail: React.FC = () => {
                   sx={{ 
                     fontSize: { xs: '0.8rem', md: '0.875rem' },
                     fontWeight: 400,
-                    color: '#424242',
+                    color: theme.palette.text.primary,
                     textAlign: { xs: 'left', sm: 'right' },
                     wordBreak: 'break-word',
                   }}
@@ -1809,13 +1819,13 @@ const CompanyDetail: React.FC = () => {
             {/* Estado del lead */}
             <Box sx={{ mb: { xs: 1.5, md: 2 }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.5, sm: 0 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 }, flex: 1 }}>
-                <Flag sx={{ fontSize: { xs: 18, md: 20 }, color: '#9E9E9E' }} />
+                <Flag sx={{ fontSize: { xs: 18, md: 20 }, color: theme.palette.text.secondary }} />
                 <Typography 
                   variant="body2" 
                   sx={{ 
                     fontSize: { xs: '0.8rem', md: '0.875rem' },
                     fontWeight: 400,
-                    color: '#757575',
+                    color: theme.palette.text.secondary,
                   }}
                 >
                   Estado del lead
@@ -1828,7 +1838,7 @@ const CompanyDetail: React.FC = () => {
                   sx={{
                     fontSize: { xs: '0.8rem', md: '0.875rem' },
                     fontWeight: 400,
-                    color: company.leadStatus ? '#424242' : '#9CA3AF',
+                    color: company.leadStatus ? theme.palette.text.primary : theme.palette.text.disabled,
                     cursor: 'pointer',
                     textAlign: { xs: 'left', sm: 'right' },
                     wordBreak: 'break-word',
@@ -1840,7 +1850,7 @@ const CompanyDetail: React.FC = () => {
                 >
                   {company.leadStatus || '--'}
                 </Typography>
-                <KeyboardArrowDown sx={{ fontSize: { xs: 12, md: 14 }, color: '#9E9E9E' }} />
+                <KeyboardArrowDown sx={{ fontSize: { xs: 12, md: 14 }, color: theme.palette.text.secondary }} />
               </Box>
               <Menu
                 anchorEl={leadStatusMenuAnchor}
@@ -1880,13 +1890,13 @@ const CompanyDetail: React.FC = () => {
             {/* Etapa del ciclo de vida */}
             <Box sx={{ mb: { xs: 1.5, md: 2 }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.5, sm: 0 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 }, flex: 1 }}>
-                <TrendingUp sx={{ fontSize: { xs: 18, md: 20 }, color: '#9E9E9E' }} />
+                <TrendingUp sx={{ fontSize: { xs: 18, md: 20 }, color: theme.palette.text.secondary }} />
                 <Typography 
                   variant="body2" 
                   sx={{ 
                     fontSize: { xs: '0.8rem', md: '0.875rem' },
                     fontWeight: 400,
-                    color: '#757575',
+                    color: theme.palette.text.secondary,
                   }}
                 >
                   Etapa del ciclo de vida
@@ -1899,7 +1909,7 @@ const CompanyDetail: React.FC = () => {
                   sx={{
                     fontSize: { xs: '0.8rem', md: '0.875rem' },
                     fontWeight: 400,
-                    color: '#424242',
+                    color: theme.palette.text.primary,
                     cursor: 'pointer',
                     textAlign: { xs: 'left', sm: 'right' },
                     textDecoration: 'none',
@@ -1911,7 +1921,7 @@ const CompanyDetail: React.FC = () => {
                 >
                   {company.lifecycleStage}
                 </Typography>
-                <KeyboardArrowDown sx={{ fontSize: { xs: 12, md: 14 }, color: '#9E9E9E' }} />
+                <KeyboardArrowDown sx={{ fontSize: { xs: 12, md: 14 }, color: theme.palette.text.secondary }} />
               </Box>
             </Box>
             <Menu
@@ -1988,7 +1998,7 @@ const CompanyDetail: React.FC = () => {
                 >
                   --
                 </Typography>
-                <KeyboardArrowDown sx={{ fontSize: { xs: 12, md: 14 }, color: '#9E9E9E' }} />
+                <KeyboardArrowDown sx={{ fontSize: { xs: 12, md: 14 }, color: theme.palette.text.secondary }} />
               </Box>
               <Menu
                 anchorEl={buyingRoleMenuAnchor}
@@ -2017,28 +2027,36 @@ const CompanyDetail: React.FC = () => {
                 ))}
               </Menu>
             </Box>
+            </Card>
 
             <Divider sx={{ my: { xs: 1.5, md: 2 } }} />
 
             {/* Sección Social */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold', fontSize: { xs: '0.875rem', md: '1rem' } }}>
-                Social
-              </Typography>
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  // Aquí puedes agregar un menú de opciones si es necesario
-                }}
-                sx={{ p: 0.5 }}
-              >
-                <MoreVert sx={{ fontSize: { xs: 16, md: 18 }, color: 'text.secondary' }} />
-              </IconButton>
-            </Box>
-            <Divider sx={{ mb: { xs: 1, md: 1.5 } }} />
-            
-            {/* Lista de redes sociales */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1, md: 1.5 } }}>
+            <Card sx={{ 
+              mb: { xs: 2, md: 3 }, 
+              p: 3, 
+              borderRadius: 2, 
+              boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
+              bgcolor: theme.palette.background.paper,
+              border: `1px solid ${theme.palette.divider}`,
+            }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', fontSize: { xs: '0.875rem', md: '1rem' } }}>
+                  Social
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    // Aquí puedes agregar un menú de opciones si es necesario
+                  }}
+                  sx={{ p: 0.5 }}
+                >
+                  <MoreVert sx={{ fontSize: { xs: 16, md: 18 }, color: 'text.secondary' }} />
+                </IconButton>
+              </Box>
+              
+              {/* Lista de redes sociales */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1, md: 1.5 } }}>
               {/* Facebook */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
                 <Avatar sx={{ width: { xs: 32, md: 36 }, height: { xs: 32, md: 36 }, bgcolor: '#1877f2' }}>
@@ -2116,46 +2134,6 @@ const CompanyDetail: React.FC = () => {
                   }}
                 >
                   {company.twitter || 'Agregar Twitter'}
-                </Link>
-              </Box>
-
-              {/* GitHub */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
-                <Avatar sx={{ width: { xs: 32, md: 36 }, height: { xs: 32, md: 36 }, bgcolor: '#24292e' }}>
-                  <GitHub sx={{ fontSize: { xs: 18, md: 20 } }} />
-                </Avatar>
-                <Link
-                  href={company.github || '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e) => {
-                    if (!company.github || company.github === '#') {
-                      e.preventDefault();
-                      const currentUrl = company.github || '';
-                      const url = prompt('Ingresa la URL de GitHub:', currentUrl || 'https://www.github.com/');
-                      if (url !== null) {
-                        api.put(`/companies/${company.id}`, { github: url || null }).then(() => {
-                          setCompany({ ...company, github: url || undefined });
-                          fetchCompany();
-                        }).catch(err => console.error('Error al guardar:', err));
-                      }
-                    }
-                    // Si existe URL, dejar que el link funcione normalmente
-                  }}
-                  sx={{
-                    fontSize: { xs: '0.8rem', md: '0.875rem' },
-                    color: company.github ? '#1976d2' : '#9E9E9E',
-                    textDecoration: 'none',
-                    flex: 1,
-                    cursor: 'pointer',
-                    wordBreak: 'break-all',
-                    '&:hover': {
-                      textDecoration: 'underline',
-                      color: company.github ? '#1565c0' : '#757575',
-                    },
-                  }}
-                >
-                  {company.github || 'Agregar GitHub'}
                 </Link>
               </Box>
 
@@ -2239,6 +2217,7 @@ const CompanyDetail: React.FC = () => {
                 </Link>
               </Box>
             </Box>
+            </Card>
 
           </Paper>
         </Box>
@@ -2247,9 +2226,9 @@ const CompanyDetail: React.FC = () => {
         {/* Parte 2: Columnas Central y Derecha */}
         <Card sx={{ 
           borderRadius: { xs: 2, md: 6 },
-          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          boxShadow: 'none',
           overflow: 'hidden',
-          bgcolor: 'white',
+          bgcolor: theme.palette.background.paper,
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
@@ -2296,9 +2275,11 @@ const CompanyDetail: React.FC = () => {
             overflow: 'hidden',
             height: '100%',
             minHeight: 0,
+            bgcolor: theme.palette.background.paper,
+            boxShadow: 'none',
             transition: 'all 0.3s ease',
             '&:hover': {
-              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+              boxShadow: 'none',
             },
           }}>
             <Tabs 
@@ -2362,7 +2343,14 @@ const CompanyDetail: React.FC = () => {
             }}>
               <TabPanel value={tabValue} index={0}>
                 {/* Aspectos destacados de los datos */}
-                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                <Card sx={{ 
+                  mb: 3, 
+                  p: 3, 
+                  borderRadius: 2, 
+                  boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.divider}`,
+                }}>
                   <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Aspectos destacados de los datos
@@ -2409,7 +2397,14 @@ const CompanyDetail: React.FC = () => {
                 </Card>
 
                 {/* Actividades recientes */}
-                <Card sx={{ mb: 3, p: 3, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                <Card sx={{ 
+                  mb: 3, 
+                  p: 3, 
+                  borderRadius: 2, 
+                  boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.divider}`,
+                }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Actividades recientes
@@ -2493,7 +2488,7 @@ const CompanyDetail: React.FC = () => {
                       }}
                     >
                       {/* Campo de búsqueda */}
-                      <Box sx={{ p: 1.5, borderBottom: '1px solid #e0e0e0' }}>
+                      <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
                         <TextField
                           size="small"
                           placeholder="Buscar"
@@ -2507,12 +2502,12 @@ const CompanyDetail: React.FC = () => {
                           }}
                           sx={{
                             '& .MuiOutlinedInput-root': {
-                              backgroundColor: '#f5f5f5',
+                              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f5f5f5',
                               '& fieldset': {
-                                borderColor: '#e0e0e0',
+                                borderColor: theme.palette.divider,
                               },
                               '&:hover fieldset': {
-                                borderColor: '#bdbdbd',
+                                borderColor: theme.palette.text.secondary,
                               },
                               '&.Mui-focused fieldset': {
                                 borderColor: '#2E7D32',
@@ -2666,7 +2661,7 @@ const CompanyDetail: React.FC = () => {
                       }}
                     >
                       {/* Campo de búsqueda */}
-                      <Box sx={{ p: 1.5, borderBottom: '1px solid #e0e0e0' }}>
+                      <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
                         <TextField
                           size="small"
                           placeholder="Buscar"
@@ -2683,7 +2678,7 @@ const CompanyDetail: React.FC = () => {
                           }}
                           sx={{
                             '& .MuiOutlinedInput-root': {
-                              backgroundColor: 'white',
+                              backgroundColor: theme.palette.background.paper,
                               '& fieldset': {
                                 borderColor: '#4fc3f7',
                                 borderWidth: 1.5,
@@ -2800,7 +2795,7 @@ const CompanyDetail: React.FC = () => {
                       }}
                     >
                       {/* Campo de búsqueda */}
-                      <Box sx={{ p: 1.5, borderBottom: '1px solid #e0e0e0' }}>
+                      <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
                         <TextField
                           size="small"
                           placeholder="Buscar"
@@ -2816,12 +2811,12 @@ const CompanyDetail: React.FC = () => {
                           }}
                           sx={{
                             '& .MuiOutlinedInput-root': {
-                              backgroundColor: '#f5f5f5',
+                              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f5f5f5',
                               '& fieldset': {
-                                borderColor: '#e0e0e0',
+                                borderColor: theme.palette.divider,
                               },
                               '&:hover fieldset': {
-                                borderColor: '#bdbdbd',
+                                borderColor: theme.palette.text.secondary,
                               },
                               '&.Mui-focused fieldset': {
                                 borderColor: '#2E7D32',
@@ -3986,7 +3981,14 @@ const CompanyDetail: React.FC = () => {
                 </Card>
 
                 {/* Contactos */}
-                <Box sx={{ mb: 4 }}>
+                <Card sx={{ 
+                  mb: 4, 
+                  p: 3, 
+                  borderRadius: 2, 
+                  boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.divider}`,
+                }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Contactos
@@ -4126,10 +4128,17 @@ const CompanyDetail: React.FC = () => {
                       No existen objetos asociados de este tipo o no tienes permiso para verlos.
                     </Typography>
                   )}
-                </Box>
+                </Card>
 
                 {/* Negocios */}
-                <Box sx={{ mb: 4 }}>
+                <Card sx={{ 
+                  mb: 4, 
+                  p: 3, 
+                  borderRadius: 2, 
+                  boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.divider}`,
+                }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Negocios
@@ -4250,10 +4259,17 @@ const CompanyDetail: React.FC = () => {
                       No existen objetos asociados de este tipo o no tienes permiso para verlos.
                     </Typography>
                   )}
-                </Box>
+                </Card>
 
                 {/* Tickets */}
-                <Box sx={{ mb: 4 }}>
+                <Card sx={{ 
+                  mb: 4, 
+                  p: 3, 
+                  borderRadius: 2, 
+                  boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.divider}`,
+                }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Tickets
@@ -4330,10 +4346,17 @@ const CompanyDetail: React.FC = () => {
                       </Table>
                     </TableContainer>
                   )}
-                </Box>
+                </Card>
 
                 {/* Suscripciones */}
-                <Box sx={{ mb: 4 }}>
+                <Card sx={{ 
+                  mb: 4, 
+                  p: 3, 
+                  borderRadius: 2, 
+                  boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.divider}`,
+                }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Suscripciones ({associatedSubscriptions.length})
@@ -4402,10 +4425,17 @@ const CompanyDetail: React.FC = () => {
                       </Table>
                     </TableContainer>
                   )}
-                </Box>
+                </Card>
 
                 {/* Pagos */}
-                <Box sx={{ mb: 4 }}>
+                <Card sx={{ 
+                  mb: 4, 
+                  p: 3, 
+                  borderRadius: 2, 
+                  boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.divider}`,
+                }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Pagos ({associatedPayments.length})
@@ -4473,7 +4503,7 @@ const CompanyDetail: React.FC = () => {
                       </Table>
                     </TableContainer>
                   )}
-                </Box>
+                </Card>
               </TabPanel>
 
               <TabPanel value={tabValue} index={1}>
@@ -4503,12 +4533,12 @@ const CompanyDetail: React.FC = () => {
                         width: { xs: '100%', sm: '320px' },
                         '& .MuiOutlinedInput-root': {
                           borderRadius: 2,
-                          bgcolor: '#F9FAFB',
+                          bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#F9FAFB',
                           '&:hover': {
-                            bgcolor: '#F3F4F6',
+                            bgcolor: theme.palette.mode === 'dark' ? theme.palette.action.hover : '#F3F4F6',
                           },
                           '&.Mui-focused': {
-                            bgcolor: 'white',
+                            bgcolor: theme.palette.background.paper,
                           },
                         },
                       }}
@@ -4523,19 +4553,19 @@ const CompanyDetail: React.FC = () => {
                         onDelete={() => {}}
                         onClick={() => {}}
                         sx={{
-                          bgcolor: `${taxiMonterricoColors.greenLight}20`,
-                          color: taxiMonterricoColors.greenDark,
+                          bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : `${taxiMonterricoColors.greenLight}20`,
+                          color: theme.palette.mode === 'dark' ? taxiMonterricoColors.green : taxiMonterricoColors.greenDark,
                           fontWeight: 500,
                           cursor: 'pointer',
-                          border: `1px solid ${taxiMonterricoColors.greenLight}40`,
+                          border: `1px solid ${theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}40` : `${taxiMonterricoColors.greenLight}40`}`,
                           '&:hover': {
-                            bgcolor: `${taxiMonterricoColors.greenLight}30`,
+                            bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : `${taxiMonterricoColors.greenLight}30`,
                             borderColor: taxiMonterricoColors.green,
                           },
                           '& .MuiChip-deleteIcon': {
                             color: taxiMonterricoColors.green,
                             '&:hover': {
-                              color: taxiMonterricoColors.greenDark,
+                              color: theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : taxiMonterricoColors.greenDark,
                             },
                           },
                         }}
@@ -4547,19 +4577,19 @@ const CompanyDetail: React.FC = () => {
                         onDelete={() => {}}
                         onClick={() => {}}
                         sx={{
-                          bgcolor: `${taxiMonterricoColors.greenLight}20`,
-                          color: taxiMonterricoColors.greenDark,
+                          bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : `${taxiMonterricoColors.greenLight}20`,
+                          color: theme.palette.mode === 'dark' ? taxiMonterricoColors.green : taxiMonterricoColors.greenDark,
                           fontWeight: 500,
                           cursor: 'pointer',
-                          border: `1px solid ${taxiMonterricoColors.greenLight}40`,
+                          border: `1px solid ${theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}40` : `${taxiMonterricoColors.greenLight}40`}`,
                           '&:hover': {
-                            bgcolor: `${taxiMonterricoColors.greenLight}30`,
+                            bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : `${taxiMonterricoColors.greenLight}30`,
                             borderColor: taxiMonterricoColors.green,
                           },
                           '& .MuiChip-deleteIcon': {
                             color: taxiMonterricoColors.green,
                             '&:hover': {
-                              color: taxiMonterricoColors.greenDark,
+                              color: theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : taxiMonterricoColors.greenDark,
                             },
                           },
                         }}
@@ -4572,16 +4602,16 @@ const CompanyDetail: React.FC = () => {
                     display: 'flex', 
                     gap: { xs: 0.5, sm: 1 }, 
                     mb: 3, 
-                    borderBottom: '2px solid #E5E7EB',
+                    borderBottom: `2px solid ${theme.palette.divider}`,
                     overflowX: 'auto',
                     '&::-webkit-scrollbar': {
                       height: '4px',
                     },
                     '&::-webkit-scrollbar-track': {
-                      background: '#F3F4F6',
+                      background: theme.palette.mode === 'dark' ? theme.palette.background.default : '#F3F4F6',
                     },
                     '&::-webkit-scrollbar-thumb': {
-                      background: '#D1D5DB',
+                      background: theme.palette.mode === 'dark' ? theme.palette.text.secondary : '#D1D5DB',
                       borderRadius: '2px',
                     },
                   }}>
@@ -4598,7 +4628,9 @@ const CompanyDetail: React.FC = () => {
                         size="small"
                         onClick={() => setSelectedActivityType(tab.value)}
                         sx={{
-                          color: selectedActivityType === tab.value ? taxiMonterricoColors.greenDark : '#6B7280',
+                          color: selectedActivityType === tab.value 
+                            ? (theme.palette.mode === 'dark' ? taxiMonterricoColors.green : taxiMonterricoColors.greenDark)
+                            : theme.palette.text.secondary,
                           textTransform: 'none',
                           fontWeight: selectedActivityType === tab.value ? 600 : 500,
                           borderBottom: selectedActivityType === tab.value ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
@@ -4609,8 +4641,8 @@ const CompanyDetail: React.FC = () => {
                           position: 'relative',
                           transition: 'all 0.2s ease',
                           '&:hover': {
-                            color: taxiMonterricoColors.greenDark,
-                            bgcolor: selectedActivityType === tab.value ? 'transparent' : '#F9FAFB',
+                            color: theme.palette.mode === 'dark' ? taxiMonterricoColors.green : taxiMonterricoColors.greenDark,
+                            bgcolor: selectedActivityType === tab.value ? 'transparent' : (theme.palette.mode === 'dark' ? theme.palette.action.hover : '#F9FAFB'),
                           },
                           '&::after': {
                             content: '""',
@@ -4886,14 +4918,14 @@ const CompanyDetail: React.FC = () => {
                               <Assignment sx={{ fontSize: 40, color: '#9CA3AF' }} />
                             </Box>
                             <Typography variant="h6" sx={{ 
-                              color: '#1F2937', 
+                              color: theme.palette.text.primary, 
                               fontWeight: 600,
                               mb: 1,
                             }}>
                               No hay actividades registradas
                             </Typography>
                             <Typography variant="body2" sx={{ 
-                              color: '#6B7280',
+                              color: theme.palette.text.secondary,
                               maxWidth: 400,
                             }}>
                               No hay actividades registradas para esta empresa. Crea una nueva actividad para comenzar.
@@ -7484,5 +7516,3 @@ const CompanyDetail: React.FC = () => {
 };
 
 export default CompanyDetail;
-
-

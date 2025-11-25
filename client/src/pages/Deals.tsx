@@ -308,8 +308,8 @@ const Deals: React.FC = () => {
       {/* Cards de resumen - Diseño con todas las tarjetas en un contenedor */}
       <Card sx={{ 
         borderRadius: 6,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-        bgcolor: 'white',
+        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
+        bgcolor: theme.palette.background.paper,
         mb: 4,
       }}>
         <CardContent sx={{ p: 3 }}>
@@ -339,10 +339,10 @@ const Deals: React.FC = () => {
                 <AttachMoney sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
                   Total Negocios
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
                   {totalDeals.toLocaleString()}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -381,10 +381,10 @@ const Deals: React.FC = () => {
                 <TrendingUp sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
                   Negocios Ganados
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
                   {wonDeals.toLocaleString()}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -423,10 +423,10 @@ const Deals: React.FC = () => {
                 <Computer sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: '#757575', mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
                   Valor Total
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: '#1a1a1a', mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
                   {formatCurrency(totalValue)}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: -0.75 }}>
@@ -438,7 +438,7 @@ const Deals: React.FC = () => {
                         sx={{
                           width: 36,
                           height: 36,
-                          border: '2px solid white',
+                          border: `2px solid ${theme.palette.background.paper}`,
                           ml: idx > 0 ? -0.75 : 0,
                           bgcolor: taxiMonterricoColors.green,
                           fontSize: '0.875rem',
@@ -460,15 +460,15 @@ const Deals: React.FC = () => {
       {/* Sección de tabla */}
       <Card sx={{ 
         borderRadius: 6,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
         overflow: 'hidden',
-        bgcolor: 'white',
+        bgcolor: theme.palette.background.paper,
       }}>
         <Box sx={{ px: 3, pt: 3, pb: 2 }}>
           {/* Header de la tabla con título, búsqueda y ordenamiento */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
             <Box>
-              <Typography variant="h5" sx={{ fontWeight: 600, color: '#1a1a1a', mb: 0.25 }}>
+              <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.25 }}>
                 Todos los Negocios
               </Typography>
               <Typography
@@ -480,7 +480,7 @@ const Deals: React.FC = () => {
                 }}
                 sx={{
                   fontSize: '0.875rem',
-                  color: filterStage === 'won' ? '#1976d2' : '#1976d2',
+                  color: theme.palette.primary.main,
                   textDecoration: filterStage === 'won' ? 'underline' : 'none',
                   cursor: 'pointer',
                   fontWeight: filterStage === 'won' ? 600 : 400,
@@ -499,21 +499,21 @@ const Deals: React.FC = () => {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 InputProps={{
-                  startAdornment: <Search sx={{ mr: 1, color: '#9e9e9e', fontSize: 20 }} />,
+                  startAdornment: <Search sx={{ mr: 1, color: theme.palette.text.secondary, fontSize: 20 }} />,
                 }}
                 sx={{ 
                   minWidth: 200,
-                  bgcolor: 'white',
+                  bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
                   borderRadius: 1.5,
                   '& .MuiOutlinedInput-root': {
                     '& fieldset': {
-                      borderColor: '#e0e0e0',
+                      borderColor: theme.palette.divider,
                     },
                     '&:hover fieldset': {
-                      borderColor: '#bdbdbd',
+                      borderColor: theme.palette.text.secondary,
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: '#1976d2',
+                      borderColor: theme.palette.primary.main,
                     },
                   },
                 }}
@@ -525,15 +525,15 @@ const Deals: React.FC = () => {
                   displayEmpty
                   sx={{
                     borderRadius: 1.5,
-                    bgcolor: 'white',
+                    bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
                     '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#e0e0e0',
+                      borderColor: theme.palette.divider,
                     },
                     '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#bdbdbd',
+                      borderColor: theme.palette.text.secondary,
                     },
                     '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#1976d2',
+                      borderColor: theme.palette.primary.main,
                     },
                   }}
                 >
@@ -577,42 +577,42 @@ const Deals: React.FC = () => {
               height: 8,
             },
             '&::-webkit-scrollbar-track': {
-              backgroundColor: '#f1f1f1',
+              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f1f1f1',
             },
             '&::-webkit-scrollbar-thumb': {
-              backgroundColor: '#888',
+              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.secondary : '#888',
               borderRadius: 4,
               '&:hover': {
-                backgroundColor: '#555',
+                backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.primary : '#555',
               },
             },
           }}
         >
           <Table sx={{ minWidth: { xs: 800, md: 'auto' } }}>
             <TableHead>
-              <TableRow sx={{ bgcolor: '#fafafa' }}>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '25%' } }}>
+              <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa' }}>
+                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '25%' } }}>
                   Nombre del Negocio
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
+                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
                   Monto
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
+                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
                   Etapa
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
+                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
                   Probabilidad
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '18%' } }}>
+                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '18%' } }}>
                   Contacto
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
+                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
                   Empresa
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
+                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
                   Propietario
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: '#1a1a1a', fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
+                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
                   Acciones
                 </TableCell>
               </TableRow>
@@ -649,7 +649,7 @@ const Deals: React.FC = () => {
                   key={deal.id}
                   hover
                   sx={{ 
-                    '&:hover': { bgcolor: '#fafafa' },
+                    '&:hover': { bgcolor: theme.palette.mode === 'dark' ? theme.palette.action.hover : '#fafafa' },
                     cursor: 'pointer',
                     transition: 'background-color 0.2s',
                   }}
@@ -673,7 +673,7 @@ const Deals: React.FC = () => {
                         variant="body2" 
                         sx={{ 
                           fontWeight: 500, 
-                          color: '#1a1a1a',
+                          color: theme.palette.text.primary,
                           fontSize: { xs: '0.75rem', md: '0.875rem' },
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -688,7 +688,7 @@ const Deals: React.FC = () => {
                     <Typography 
                       variant="body2" 
                       sx={{ 
-                        color: '#1a1a1a',
+                        color: theme.palette.text.primary,
                         fontSize: { xs: '0.75rem', md: '0.875rem' },
                         fontWeight: 500,
                       }}
@@ -749,9 +749,9 @@ const Deals: React.FC = () => {
                           disabled={updatingStage[deal.id] || deal.stage === option.value}
                           sx={{
                             fontSize: '0.875rem',
-                            color: option.value === 'cierre_ganado' ? '#2E7D32' : option.value === 'cierre_perdido' ? '#C62828' : '#1a1a1a',
+                            color: option.value === 'cierre_ganado' ? '#2E7D32' : option.value === 'cierre_perdido' ? '#C62828' : theme.palette.text.primary,
                             '&:hover': {
-                              bgcolor: option.value === 'cierre_ganado' ? '#E8F5E9' : option.value === 'cierre_perdido' ? '#FFEBEE' : '#f5f5f5',
+                              bgcolor: option.value === 'cierre_ganado' ? '#E8F5E9' : option.value === 'cierre_perdido' ? '#FFEBEE' : theme.palette.action.hover,
                             },
                             '&.Mui-disabled': {
                               opacity: 0.5,
@@ -768,14 +768,14 @@ const Deals: React.FC = () => {
                       <Typography 
                         variant="body2" 
                         sx={{ 
-                          color: '#1a1a1a',
+                          color: theme.palette.text.primary,
                           fontSize: { xs: '0.75rem', md: '0.875rem' },
                         }}
                       >
                         {deal.probability}%
                       </Typography>
                     ) : (
-                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
+                      <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                         --
                       </Typography>
                     )}
@@ -785,7 +785,7 @@ const Deals: React.FC = () => {
                       <Typography 
                         variant="body2" 
                         sx={{ 
-                          color: '#1a1a1a',
+                          color: theme.palette.text.primary,
                           fontSize: { xs: '0.75rem', md: '0.875rem' },
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -795,7 +795,7 @@ const Deals: React.FC = () => {
                         {deal.Contact.firstName} {deal.Contact.lastName}
                       </Typography>
                     ) : (
-                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
+                      <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                         --
                       </Typography>
                     )}
@@ -805,7 +805,7 @@ const Deals: React.FC = () => {
                       <Typography 
                         variant="body2" 
                         sx={{ 
-                          color: '#1a1a1a',
+                          color: theme.palette.text.primary,
                           fontSize: { xs: '0.75rem', md: '0.875rem' },
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -815,7 +815,7 @@ const Deals: React.FC = () => {
                         {deal.Company.name}
                       </Typography>
                     ) : (
-                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
+                      <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                         --
                       </Typography>
                     )}
@@ -837,7 +837,7 @@ const Deals: React.FC = () => {
                         <Typography 
                           variant="body2" 
                           sx={{ 
-                            color: '#1a1a1a',
+                            color: theme.palette.text.primary,
                             fontSize: { xs: '0.75rem', md: '0.875rem' },
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -848,7 +848,7 @@ const Deals: React.FC = () => {
                         </Typography>
                       </Box>
                     ) : (
-                      <Typography variant="body2" sx={{ color: '#bdbdbd', fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
+                      <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                         --
                       </Typography>
                     )}
@@ -863,7 +863,7 @@ const Deals: React.FC = () => {
                             handlePreview(deal);
                           }}
                           sx={{
-                            color: '#757575',
+                            color: theme.palette.text.secondary,
                             padding: { xs: 0.5, md: 1 },
                             '&:hover': {
                               color: taxiMonterricoColors.green,
@@ -882,11 +882,11 @@ const Deals: React.FC = () => {
                             handleDelete(deal.id);
                           }}
                           sx={{
-                            color: '#757575',
+                            color: theme.palette.text.secondary,
                             padding: { xs: 0.5, md: 1 },
                             '&:hover': {
                               color: '#d32f2f',
-                              bgcolor: '#ffebee',
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.2)' : '#ffebee',
                             },
                           }}
                         >
@@ -983,10 +983,10 @@ const Deals: React.FC = () => {
       >
         <DialogTitle sx={{ 
           pb: 1.5,
-          borderBottom: '1px solid #e0e0e0',
+          borderBottom: `1px solid ${theme.palette.divider}`,
           fontWeight: 600,
           fontSize: '1.25rem',
-          color: '#1a1a1a',
+          color: theme.palette.text.primary,
           display: 'flex',
           alignItems: 'center',
           gap: 1.5,
@@ -995,17 +995,17 @@ const Deals: React.FC = () => {
           Confirmar Eliminación
         </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
-          <Typography variant="body1" sx={{ color: '#1a1a1a', mb: 1 }}>
+          <Typography variant="body1" sx={{ color: theme.palette.text.primary, mb: 1 }}>
             ¿Estás seguro de que deseas eliminar este negocio?
           </Typography>
-          <Typography variant="body2" sx={{ color: '#757575' }}>
+          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
             Esta acción no se puede deshacer. El negocio será eliminado permanentemente del sistema.
           </Typography>
         </DialogContent>
         <DialogActions sx={{ 
           px: 3, 
           py: 2,
-          borderTop: '1px solid #e0e0e0',
+          borderTop: `1px solid ${theme.palette.divider}`,
           gap: 1,
         }}>
           <Button 
@@ -1013,10 +1013,10 @@ const Deals: React.FC = () => {
             disabled={deleting}
             sx={{
               textTransform: 'none',
-              color: '#757575',
+              color: theme.palette.text.secondary,
               fontWeight: 500,
               '&:hover': {
-                bgcolor: '#f5f5f5',
+                bgcolor: theme.palette.action.hover,
               }
             }}
           >
