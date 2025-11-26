@@ -31,7 +31,7 @@ import {
   Menu,
   useTheme,
 } from '@mui/material';
-import { Add, Edit, Delete, Search, Business, Domain, TrendingUp, TrendingDown, Computer, Visibility, UploadFile, FileDownload } from '@mui/icons-material';
+import { Add, Edit, Delete, Search, Business, Domain, TrendingUp, TrendingDown, Computer, Visibility, UploadFile, FileDownload, Warning, CheckCircle } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import axios from 'axios';
@@ -75,6 +75,9 @@ const Companies: React.FC = () => {
   });
   const [loadingRuc, setLoadingRuc] = useState(false);
   const [rucError, setRucError] = useState('');
+  const [rucInfo, setRucInfo] = useState<any>(null);
+  const [rucDebts, setRucDebts] = useState<any>(null);
+  const [loadingDebts, setLoadingDebts] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -262,6 +265,8 @@ const Companies: React.FC = () => {
       });
     }
     setRucError('');
+    setRucInfo(null);
+    setRucDebts(null);
     setOpen(true);
   };
 
@@ -296,6 +301,9 @@ const Companies: React.FC = () => {
       if (response.data.success && response.data.data) {
         const data = response.data.data;
         
+        // Guardar toda la información para mostrarla en el panel lateral
+        setRucInfo(data);
+        
         // Actualizar el formulario con los datos obtenidos
         setFormData({
           ...formData,
@@ -308,9 +316,13 @@ const Companies: React.FC = () => {
         });
       } else {
         setRucError('No se encontró información para este RUC');
+        setRucInfo(null);
+        setRucDebts(null);
       }
     } catch (error: any) {
       console.error('Error al buscar RUC:', error);
+      setRucInfo(null);
+      setRucDebts(null);
       if (error.response?.status === 400) {
         setRucError('RUC no válido o no encontrado');
       } else if (error.response?.status === 401) {
@@ -323,9 +335,112 @@ const Companies: React.FC = () => {
     }
   };
 
+  const handleSearchDebts = async (ruc: string) => {
+    if (!ruc || ruc.length < 11) return;
+
+    setLoadingDebts(true);
+    setRucDebts(null);
+
+    try {
+      const factilizaToken = process.env.REACT_APP_FACTILIZA_TOKEN || '';
+      
+      if (!factilizaToken) {
+        setLoadingDebts(false);
+        return;
+      }
+
+      // Intentar con diferentes endpoints posibles de Factiliza
+      const endpoints = [
+        `https://api.factiliza.com/v1/ruc/deudas/${ruc}`,
+        `https://api.factiliza.com/v1/ruc/deuda/${ruc}`,
+        `https://api.factiliza.com/v1/sunat/deudas/${ruc}`,
+      ];
+
+      let debtsFound = false;
+
+      for (const endpoint of endpoints) {
+        try {
+          const debtsResponse = await axios.get(endpoint, {
+            headers: {
+              'Authorization': `Bearer ${factilizaToken}`,
+            },
+            timeout: 5000,
+          });
+
+          if (debtsResponse.data && (debtsResponse.data.success || debtsResponse.data.data)) {
+            const debtsData = debtsResponse.data.data || debtsResponse.data;
+            
+            // Normalizar los datos a un formato común
+            const normalizedDebts = {
+              tiene_deudas: debtsData.tiene_deudas !== undefined 
+                ? debtsData.tiene_deudas 
+                : (debtsData.deudas && debtsData.deudas.length > 0) 
+                  ? true 
+                  : false,
+              total_deuda: debtsData.total_deuda || debtsData.total || debtsData.monto_total || null,
+              deudas: debtsData.deudas || debtsData.deuda || debtsData.detalle || [],
+            };
+
+            setRucDebts(normalizedDebts);
+            debtsFound = true;
+            break;
+          }
+        } catch (endpointError: any) {
+          // Continuar con el siguiente endpoint si este falla
+          if (endpointError.response?.status !== 404 && endpointError.response?.status !== 400) {
+            console.log(`Error en endpoint ${endpoint}:`, endpointError.message);
+          }
+        }
+      }
+
+      // Si no se encontró información en Factiliza, intentar con ApiPeru
+      if (!debtsFound) {
+        try {
+          const apiPeruToken = process.env.REACT_APP_APIPERU_TOKEN || '';
+          if (apiPeruToken) {
+            const apiPeruResponse = await axios.get(
+              `https://apiperu.dev/api/sunat/deudas/${ruc}`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${apiPeruToken}`,
+                },
+                timeout: 5000,
+              }
+            );
+
+            if (apiPeruResponse.data && (apiPeruResponse.data.success || apiPeruResponse.data.data)) {
+              const debtsData = apiPeruResponse.data.data || apiPeruResponse.data;
+              
+              const normalizedDebts = {
+                tiene_deudas: debtsData.tiene_deudas !== undefined 
+                  ? debtsData.tiene_deudas 
+                  : (debtsData.deudas && debtsData.deudas.length > 0) 
+                    ? true 
+                    : false,
+                total_deuda: debtsData.total_deuda || debtsData.total || debtsData.monto_total || null,
+                deudas: debtsData.deudas || debtsData.deuda || debtsData.detalle || [],
+              };
+
+              setRucDebts(normalizedDebts);
+            }
+          }
+        } catch (apiPeruError) {
+          console.log('No se pudo obtener información de deudas desde ApiPeru');
+        }
+      }
+    } catch (error: any) {
+      console.error('Error al buscar deudas:', error);
+    } finally {
+      setLoadingDebts(false);
+    }
+  };
+
   const handleClose = () => {
     setOpen(false);
     setEditingCompany(null);
+    setRucInfo(null);
+    setRucDebts(null);
+    setRucError('');
   };
 
   const handleSubmit = async () => {

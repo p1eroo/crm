@@ -12,7 +12,8 @@ import {
   DialogActions, 
   TextField, 
   Checkbox, 
-  FormControlLabel 
+  FormControlLabel,
+  useTheme
 } from '@mui/material';
 import {
   FormatBold,
@@ -37,6 +38,7 @@ interface RichTextEditorProps {
 }
 
 const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeholder = 'Empieza a escribir...' }) => {
+  const theme = useTheme();
   const editorRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const [moreAnchorEl, setMoreAnchorEl] = useState<null | HTMLElement>(null);
@@ -235,7 +237,8 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
     const code = prompt('Ingresa el código:');
     if (code) {
       const pre = document.createElement('pre');
-      pre.style.backgroundColor = '#f5f5f5';
+      pre.style.backgroundColor = theme.palette.mode === 'dark' ? '#1e1e1e' : '#f5f5f5';
+      pre.style.color = theme.palette.text.primary;
       pre.style.padding = '10px';
       pre.style.borderRadius = '4px';
       pre.style.fontFamily = 'monospace';
@@ -261,9 +264,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
           display: 'flex',
           alignItems: 'center',
           p: 0.5,
-          borderBottom: '1px solid #e0e0e0',
+          borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0'}`,
           flexWrap: 'wrap',
-          backgroundColor: '#fafafa',
+          backgroundColor: theme.palette.mode === 'dark' ? '#1e1e1e' : '#fafafa',
           position: 'relative',
         }}
       >
@@ -271,9 +274,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
           size="small"
           sx={{ 
             p: 0.75,
-            backgroundColor: activeFormats.bold ? '#e0e0e0' : 'transparent',
+            color: theme.palette.text.secondary,
+            backgroundColor: activeFormats.bold 
+              ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0')
+              : 'transparent',
             '&:hover': {
-              backgroundColor: '#e0e0e0',
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+              color: theme.palette.text.primary,
             }
           }}
           onClick={() => execCommand('bold')}
@@ -285,9 +292,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
           size="small"
           sx={{ 
             p: 0.75,
-            backgroundColor: activeFormats.italic ? '#e0e0e0' : 'transparent',
+            color: theme.palette.text.secondary,
+            backgroundColor: activeFormats.italic 
+              ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0')
+              : 'transparent',
             '&:hover': {
-              backgroundColor: '#e0e0e0',
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+              color: theme.palette.text.primary,
             }
           }}
           onClick={() => execCommand('italic')}
@@ -299,9 +310,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
           size="small"
           sx={{ 
             p: 0.75,
-            backgroundColor: activeFormats.underline ? '#e0e0e0' : 'transparent',
+            color: theme.palette.text.secondary,
+            backgroundColor: activeFormats.underline 
+              ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0')
+              : 'transparent',
             '&:hover': {
-              backgroundColor: '#e0e0e0',
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+              color: theme.palette.text.primary,
             }
           }}
           onClick={() => execCommand('underline')}
@@ -313,9 +328,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
           size="small"
           sx={{ 
             p: 0.75,
-            backgroundColor: activeFormats.strikeThrough ? '#e0e0e0' : 'transparent',
+            color: theme.palette.text.secondary,
+            backgroundColor: activeFormats.strikeThrough 
+              ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0')
+              : 'transparent',
             '&:hover': {
-              backgroundColor: '#e0e0e0',
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+              color: theme.palette.text.primary,
             }
           }}
           onClick={() => execCommand('strikeThrough')}
@@ -329,10 +348,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
           onClick={(e) => setMoreAnchorEl(e.currentTarget)}
           sx={{
             textTransform: 'none',
-            color: 'text.primary',
+            color: theme.palette.text.primary,
             minWidth: 'auto',
             px: 1,
             fontSize: '0.75rem',
+            '&:hover': {
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.action.hover,
+            }
           }}
         >
           Más
@@ -341,20 +363,30 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
           anchorEl={moreAnchorEl}
           open={Boolean(moreAnchorEl)}
           onClose={() => setMoreAnchorEl(null)}
+          PaperProps={{
+            sx: {
+              backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : 'white',
+              border: theme.palette.mode === 'dark' ? '1px solid rgba(255,255,255,0.1)' : 'none',
+            }
+          }}
         >
           <MenuItem onClick={() => execCommand('justifyLeft')}>Alinear izquierda</MenuItem>
           <MenuItem onClick={() => execCommand('justifyCenter')}>Alinear centro</MenuItem>
           <MenuItem onClick={() => execCommand('justifyRight')}>Alinear derecha</MenuItem>
           <MenuItem onClick={() => execCommand('justifyFull')}>Justificar</MenuItem>
         </Menu>
-        <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: '20px' }} />
+        <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: '20px', borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : undefined }} />
         <IconButton
           size="small"
           sx={{ 
             p: 0.75,
-            backgroundColor: activeFormats.unorderedList ? '#e0e0e0' : 'transparent',
+            color: theme.palette.text.secondary,
+            backgroundColor: activeFormats.unorderedList 
+              ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0')
+              : 'transparent',
             '&:hover': {
-              backgroundColor: '#e0e0e0',
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+              color: theme.palette.text.primary,
             }
           }}
           onClick={() => execCommand('insertUnorderedList')}
@@ -366,9 +398,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
           size="small"
           sx={{ 
             p: 0.75,
-            backgroundColor: activeFormats.orderedList ? '#e0e0e0' : 'transparent',
+            color: theme.palette.text.secondary,
+            backgroundColor: activeFormats.orderedList 
+              ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0')
+              : 'transparent',
             '&:hover': {
-              backgroundColor: '#e0e0e0',
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+              color: theme.palette.text.primary,
             }
           }}
           onClick={() => execCommand('insertOrderedList')}
@@ -376,16 +412,20 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
         >
           <FormatListNumbered fontSize="small" />
         </IconButton>
-        <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: '20px' }} />
+        <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: '20px', borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : undefined }} />
         <IconButton
           ref={(el) => setLinkButtonRef(el)}
           size="small"
           sx={{ 
             p: 0.75,
-            backgroundColor: linkDialogOpen ? '#e0e0e0' : 'transparent',
+            color: theme.palette.text.secondary,
+            backgroundColor: linkDialogOpen 
+              ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0')
+              : 'transparent',
             position: 'relative',
             '&:hover': {
-              backgroundColor: '#e0e0e0',
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+              color: theme.palette.text.primary,
             }
           }}
           onClick={handleOpenLinkDialog}
@@ -395,7 +435,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
         </IconButton>
         <IconButton
           size="small"
-          sx={{ p: 0.75 }}
+          sx={{ 
+            p: 0.75,
+            color: theme.palette.text.secondary,
+            '&:hover': {
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.action.hover,
+              color: theme.palette.text.primary,
+            }
+          }}
           onClick={insertImage}
           title="Insertar imagen"
         >
@@ -403,7 +450,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
         </IconButton>
         <IconButton
           size="small"
-          sx={{ p: 0.75 }}
+          sx={{ 
+            p: 0.75,
+            color: theme.palette.text.secondary,
+            '&:hover': {
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.action.hover,
+              color: theme.palette.text.primary,
+            }
+          }}
           onClick={insertCodeBlock}
           title="Insertar código"
         >
@@ -411,7 +465,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
         </IconButton>
         <IconButton
           size="small"
-          sx={{ p: 0.75 }}
+          sx={{ 
+            p: 0.75,
+            color: theme.palette.text.secondary,
+            '&:hover': {
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.action.hover,
+              color: theme.palette.text.primary,
+            }
+          }}
           onClick={insertTable}
           title="Insertar tabla"
         >
@@ -419,14 +480,28 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
         </IconButton>
         <IconButton
           size="small"
-          sx={{ p: 0.75 }}
+          sx={{ 
+            p: 0.75,
+            color: theme.palette.text.secondary,
+            '&:hover': {
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.action.hover,
+              color: theme.palette.text.primary,
+            }
+          }}
           title="Adjuntar archivo"
         >
           <AttachFile fontSize="small" />
         </IconButton>
         <IconButton
           size="small"
-          sx={{ p: 0.75 }}
+          sx={{ 
+            p: 0.75,
+            color: theme.palette.text.secondary,
+            '&:hover': {
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.action.hover,
+              color: theme.palette.text.primary,
+            }
+          }}
           title="Agregar"
         >
           <Add fontSize="small" />
@@ -447,12 +522,33 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
           fontSize: '0.875rem',
           outline: 'none',
           overflowY: 'auto',
+          color: theme.palette.text.primary,
+          backgroundColor: 'transparent',
           '&:empty:before': {
             content: `"${placeholder}"`,
-            color: '#9e9e9e',
+            color: theme.palette.text.disabled,
           },
           '&:focus': {
             outline: 'none',
+          },
+          '&::-webkit-scrollbar': {
+            width: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            backgroundColor: 'transparent',
+            borderRadius: '4px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: theme.palette.mode === 'dark' 
+              ? 'rgba(255,255,255,0.2)' 
+              : 'rgba(0,0,0,0.2)',
+            borderRadius: '4px',
+            '&:hover': {
+              backgroundColor: theme.palette.mode === 'dark' 
+                ? 'rgba(255,255,255,0.3)' 
+                : 'rgba(0,0,0,0.3)',
+            },
+            transition: 'background-color 0.2s ease',
           },
         }}
       />
@@ -465,11 +561,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
             top: `${linkDialogPosition.top}px`,
             left: `${linkDialogPosition.left}px`,
             width: '320px',
-            backgroundColor: 'white',
+            backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : 'white',
             borderRadius: '8px',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 4px 16px rgba(0,0,0,0.5)' 
+              : '0 4px 16px rgba(0,0,0,0.2)',
             zIndex: 1000,
-            border: '1px solid #e0e0e0',
+            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0'}`,
             display: 'flex',
             flexDirection: 'column',
           }}
@@ -479,10 +577,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
           <Box
             sx={{
               p: 1.5,
-              borderBottom: '1px solid #e0e0e0',
+              borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0'}`,
               fontWeight: 'bold',
               fontSize: '0.875rem',
-              color: '#424242',
+              color: theme.palette.text.primary,
             }}
           >
             Crear enlace
@@ -498,6 +596,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
               size="small"
               variant="outlined"
               placeholder="Texto a mostrar"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: theme.palette.mode === 'dark' ? '#1e1e1e' : 'transparent',
+                  color: theme.palette.text.primary,
+                },
+              }}
             />
             <TextField
               label="URL"
@@ -509,6 +613,12 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
               placeholder="https://ejemplo.com"
               autoFocus
               required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: theme.palette.mode === 'dark' ? '#1e1e1e' : 'transparent',
+                  color: theme.palette.text.primary,
+                },
+              }}
             />
             <FormControlLabel
               control={
@@ -517,15 +627,15 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
                   onChange={(e) => setOpenInNewTab(e.target.checked)}
                   size="small"
                   sx={{
-                    color: '#1976d2',
+                    color: theme.palette.primary.main,
                     '&.Mui-checked': {
-                      color: '#1976d2',
+                      color: theme.palette.primary.main,
                     },
                   }}
                 />
               }
               label={
-                <Box component="span" sx={{ fontSize: '0.875rem' }}>
+                <Box component="span" sx={{ fontSize: '0.875rem', color: theme.palette.text.primary }}>
                   Abrir en una nueva pestaña
                 </Box>
               }
@@ -536,7 +646,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
           <Box
             sx={{
               p: 1.5,
-              borderTop: '1px solid #e0e0e0',
+              borderTop: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0'}`,
               display: 'flex',
               justifyContent: 'flex-end',
               gap: 1,
@@ -547,11 +657,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
               size="small"
               sx={{
                 textTransform: 'none',
-                color: '#757575',
-                border: '1px solid #e0e0e0',
+                color: theme.palette.text.secondary,
+                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0'}`,
                 '&:hover': {
-                  backgroundColor: '#f5f5f5',
-                  border: '1px solid #e0e0e0',
+                  backgroundColor: theme.palette.action.hover,
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : '#e0e0e0'}`,
                 },
               }}
             >
@@ -564,14 +674,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
               disabled={!linkUrl.trim()}
               sx={{
                 textTransform: 'none',
-                backgroundColor: linkUrl.trim() ? '#1976d2' : '#e0e0e0',
-                color: linkUrl.trim() ? 'white' : '#9e9e9e',
+                backgroundColor: linkUrl.trim() ? theme.palette.primary.main : theme.palette.action.disabledBackground,
+                color: linkUrl.trim() ? 'white' : theme.palette.action.disabled,
                 '&:hover': {
-                  backgroundColor: linkUrl.trim() ? '#1565c0' : '#e0e0e0',
+                  backgroundColor: linkUrl.trim() ? theme.palette.primary.dark : theme.palette.action.disabledBackground,
                 },
                 '&:disabled': {
-                  backgroundColor: '#e0e0e0',
-                  color: '#9e9e9e',
+                  backgroundColor: theme.palette.action.disabledBackground,
+                  color: theme.palette.action.disabled,
                 },
               }}
             >

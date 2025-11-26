@@ -29,6 +29,9 @@ import {
   FormControlLabel,
   InputAdornment,
   TableSortLabel,
+  RadioGroup,
+  Radio,
+  FormLabel,
   Table,
   TableBody,
   TableCell,
@@ -103,6 +106,7 @@ import api from '../config/api';
 import RichTextEditor from '../components/RichTextEditor';
 import { taxiMonterricoColors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
 
 interface CompanyDetail {
   id: number;
@@ -220,7 +224,25 @@ const CompanyDetail: React.FC = () => {
   const [addSubscriptionOpen, setAddSubscriptionOpen] = useState(false);
   const [addPaymentOpen, setAddPaymentOpen] = useState(false);
   const [createActivityMenuAnchor, setCreateActivityMenuAnchor] = useState<null | HTMLElement>(null);
-  const [contactFormData, setContactFormData] = useState({ firstName: '', lastName: '', email: '', phone: '', jobTitle: '', lifecycleStage: 'lead' });
+  const [contactFormData, setContactFormData] = useState({ 
+    firstName: '', 
+    lastName: '', 
+    email: '', 
+    phone: '', 
+    jobTitle: '', 
+    lifecycleStage: 'lead',
+    dni: '',
+    cee: '',
+    address: '',
+    city: '',
+    state: '',
+    country: '',
+  });
+  const [idType, setIdType] = useState<'dni' | 'cee'>('dni');
+  const [loadingDni, setLoadingDni] = useState(false);
+  const [dniError, setDniError] = useState('');
+  const [loadingCee, setLoadingCee] = useState(false);
+  const [ceeError, setCeeError] = useState('');
   const [contactDialogTab, setContactDialogTab] = useState<'create' | 'existing'>('create');
   const [existingContactsSearch, setExistingContactsSearch] = useState('');
   const [selectedExistingContacts, setSelectedExistingContacts] = useState<number[]>([]);
@@ -547,13 +569,14 @@ const CompanyDetail: React.FC = () => {
 
   const getStageColor = (stage: string) => {
     const colors: { [key: string]: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' } = {
-      'subscriber': 'default',
       'lead': 'info',
-      'marketing qualified lead': 'primary',
-      'sales qualified lead': 'primary',
-      'opportunity': 'warning',
-      'customer': 'success',
-      'evangelist': 'success',
+      'contacto': 'info',
+      'reunion_agendada': 'primary',
+      'reunion_efectiva': 'primary',
+      'propuesta_economica': 'warning',
+      'negociacion': 'warning',
+      'cierre_ganado': 'success',
+      'cierre_perdido': 'error',
     };
     return colors[stage] || 'default';
   };
@@ -744,6 +767,120 @@ const CompanyDetail: React.FC = () => {
   };
 
   // Funciones para la pestaña Descripción
+  const handleSearchDni = async () => {
+    if (!contactFormData.dni || contactFormData.dni.length < 8) {
+      setDniError('El DNI debe tener al menos 8 dígitos');
+      return;
+    }
+
+    setLoadingDni(true);
+    setDniError('');
+
+    try {
+      const factilizaToken = process.env.REACT_APP_FACTILIZA_TOKEN || '';
+      
+      if (!factilizaToken) {
+        setDniError('Token de API no configurado. Por favor, configure REACT_APP_FACTILIZA_TOKEN');
+        setLoadingDni(false);
+        return;
+      }
+
+      const response = await axios.get(
+        `https://api.factiliza.com/v1/dni/info/${contactFormData.dni}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${factilizaToken}`,
+          },
+        }
+      );
+
+      if (response.data.success && response.data.data) {
+        const data = response.data.data;
+        const nombres = data.nombres || '';
+        const apellidoPaterno = data.apellido_paterno || '';
+        const apellidoMaterno = data.apellido_materno || '';
+        
+        setContactFormData({
+          ...contactFormData,
+          firstName: nombres,
+          lastName: `${apellidoPaterno} ${apellidoMaterno}`.trim(),
+          address: data.direccion || '',
+          city: data.distrito || '',
+          state: data.provincia || '',
+          country: data.departamento || 'Perú',
+        });
+      } else {
+        setDniError('No se encontró información para este DNI');
+      }
+    } catch (error: any) {
+      console.error('Error al buscar DNI:', error);
+      if (error.response?.status === 400) {
+        setDniError('DNI no válido o no encontrado');
+      } else if (error.response?.status === 401) {
+        setDniError('Error de autenticación con la API');
+      } else {
+        setDniError('Error al consultar el DNI. Por favor, intente nuevamente');
+      }
+    } finally {
+      setLoadingDni(false);
+    }
+  };
+
+  const handleSearchCee = async () => {
+    if (!contactFormData.cee || contactFormData.cee.length < 12) {
+      setCeeError('El CEE debe tener 12 caracteres');
+      return;
+    }
+
+    setLoadingCee(true);
+    setCeeError('');
+
+    try {
+      const factilizaToken = process.env.REACT_APP_FACTILIZA_TOKEN || '';
+      
+      if (!factilizaToken) {
+        setCeeError('Token de API no configurado. Por favor, configure REACT_APP_FACTILIZA_TOKEN');
+        setLoadingCee(false);
+        return;
+      }
+
+      const response = await axios.get(
+        `https://api.factiliza.com/v1/cee/info/${contactFormData.cee}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${factilizaToken}`,
+          },
+        }
+      );
+
+      if (response.data.status === 200 && response.data.data) {
+        const data = response.data.data;
+        const nombres = data.nombres || '';
+        const apellidoPaterno = data.apellido_paterno || '';
+        const apellidoMaterno = data.apellido_materno || '';
+        
+        setContactFormData({
+          ...contactFormData,
+          firstName: nombres,
+          lastName: `${apellidoPaterno} ${apellidoMaterno}`.trim(),
+        });
+      } else {
+        setCeeError('No se encontró información para este CEE');
+      }
+    } catch (error: any) {
+      console.error('Error al buscar CEE:', error);
+      if (error.response?.status === 400) {
+        setCeeError('CEE no válido o no encontrado');
+      } else if (error.response?.status === 401) {
+        setCeeError('Error de autenticación con la API');
+      } else {
+        setCeeError('Error al consultar el CEE. Por favor, intente nuevamente');
+      }
+    } finally {
+      setLoadingCee(false);
+    }
+  };
+
   const handleAddContact = async () => {
     try {
       // Crear el contacto primero
@@ -766,7 +903,23 @@ const CompanyDetail: React.FC = () => {
       
       setSuccessMessage('Contacto agregado exitosamente');
       setAddContactOpen(false);
-      setContactFormData({ firstName: '', lastName: '', email: '', phone: '', jobTitle: '', lifecycleStage: 'lead' });
+      setContactFormData({ 
+        firstName: '', 
+        lastName: '', 
+        email: '', 
+        phone: '', 
+        jobTitle: '', 
+        lifecycleStage: 'lead',
+        dni: '',
+        cee: '',
+        address: '',
+        city: '',
+        state: '',
+        country: '',
+      });
+      setIdType('dni');
+      setDniError('');
+      setCeeError('');
       setContactDialogTab('create');
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error: any) {
@@ -812,10 +965,26 @@ const CompanyDetail: React.FC = () => {
   };
 
   const handleOpenAddContactDialog = () => {
+    setContactFormData({ 
+      firstName: '', 
+      lastName: '', 
+      email: '', 
+      phone: '', 
+      jobTitle: '', 
+      lifecycleStage: 'lead',
+      dni: '',
+      cee: '',
+      address: '',
+      city: '',
+      state: '',
+      country: '',
+    });
+    setIdType('dni');
+    setDniError('');
+    setCeeError('');
     setContactDialogTab('create');
     setSelectedExistingContacts([]);
     setExistingContactsSearch('');
-    setContactFormData({ firstName: '', lastName: '', email: '', phone: '', jobTitle: '', lifecycleStage: 'lead' });
     setAddContactOpen(true);
     // Cargar contactos disponibles cuando se abre el diálogo
     if (allContacts.length === 0) {
@@ -1295,7 +1464,7 @@ const CompanyDetail: React.FC = () => {
                   sx={{
                     width: { xs: 80, md: 120 },
                     height: { xs: 80, md: 120 },
-                    bgcolor: taxiMonterricoColors.green,
+                    bgcolor: taxiMonterricoColors.orange,
                     fontSize: { xs: '2rem', md: '3rem' },
                     transition: 'all 0.3s ease',
                     cursor: 'pointer',
@@ -1358,11 +1527,11 @@ const CompanyDetail: React.FC = () => {
                     width: { xs: 44, md: 52 },
                     height: { xs: 44, md: 52 },
                     borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
-                    color: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : '#E8F5E9',
+                    color: taxiMonterricoColors.orange,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}30` : '#C8E6C9',
                       transform: 'scale(1.05)',
                     },
                   }}
@@ -1381,11 +1550,11 @@ const CompanyDetail: React.FC = () => {
                     width: { xs: 44, md: 52 },
                     height: { xs: 44, md: 52 },
                     borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
-                    color: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : '#E8F5E9',
+                    color: taxiMonterricoColors.orange,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}30` : '#C8E6C9',
                       transform: 'scale(1.05)',
                     },
                   }}
@@ -1404,11 +1573,11 @@ const CompanyDetail: React.FC = () => {
                     width: { xs: 44, md: 52 },
                     height: { xs: 44, md: 52 },
                     borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
-                    color: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : '#E8F5E9',
+                    color: taxiMonterricoColors.orange,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}30` : '#C8E6C9',
                       transform: 'scale(1.05)',
                     },
                   }}
@@ -1427,11 +1596,11 @@ const CompanyDetail: React.FC = () => {
                     width: { xs: 44, md: 52 },
                     height: { xs: 44, md: 52 },
                     borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
-                    color: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : '#E8F5E9',
+                    color: taxiMonterricoColors.orange,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}30` : '#C8E6C9',
                       transform: 'scale(1.05)',
                     },
                   }}
@@ -1450,11 +1619,11 @@ const CompanyDetail: React.FC = () => {
                     width: { xs: 44, md: 52 },
                     height: { xs: 44, md: 52 },
                     borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
-                    color: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : '#E8F5E9',
+                    color: taxiMonterricoColors.orange,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}30` : '#C8E6C9',
                       transform: 'scale(1.05)',
                     },
                   }}
@@ -1473,11 +1642,11 @@ const CompanyDetail: React.FC = () => {
                     width: { xs: 44, md: 52 },
                     height: { xs: 44, md: 52 },
                     borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
-                    color: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : '#E8F5E9',
+                    color: taxiMonterricoColors.orange,
                     transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}30` : '#C8E6C9',
                       transform: 'scale(1.05)',
                     },
                   }}
@@ -2348,10 +2517,11 @@ const CompanyDetail: React.FC = () => {
                   p: 3, 
                   borderRadius: 2, 
                   boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
-                  bgcolor: theme.palette.background.paper,
+                  bgcolor: 'transparent',
                   border: `1px solid ${theme.palette.divider}`,
+                  transition: 'all 0.3s ease',
                 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center', mb: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
                       Aspectos destacados de los datos
                     </Typography>
@@ -2402,8 +2572,12 @@ const CompanyDetail: React.FC = () => {
                   p: 3, 
                   borderRadius: 2, 
                   boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
-                  bgcolor: theme.palette.background.paper,
+                  bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}15` : `${taxiMonterricoColors.orange}08`,
                   border: `1px solid ${theme.palette.divider}`,
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : `${taxiMonterricoColors.orange}12`,
+                  },
                 }}>
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
@@ -2483,7 +2657,10 @@ const CompanyDetail: React.FC = () => {
                           minWidth: 320,
                           maxWidth: 320,
                           borderRadius: 2,
-                          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                          boxShadow: theme.palette.mode === 'dark' 
+                            ? '0 4px 20px rgba(0,0,0,0.5)' 
+                            : '0 4px 20px rgba(0,0,0,0.15)',
+                          bgcolor: theme.palette.background.paper,
                         },
                       }}
                     >
@@ -2496,13 +2673,15 @@ const CompanyDetail: React.FC = () => {
                           InputProps={{
                             startAdornment: (
                               <InputAdornment position="start">
-                                <Search fontSize="small" sx={{ color: 'text.secondary' }} />
+                                <Search fontSize="small" sx={{ color: theme.palette.text.secondary }} />
                               </InputAdornment>
                             ),
                           }}
                           sx={{
                             '& .MuiOutlinedInput-root': {
-                              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f5f5f5',
+                              backgroundColor: theme.palette.mode === 'dark' 
+                                ? theme.palette.background.default 
+                                : '#f5f5f5',
                               '& fieldset': {
                                 borderColor: theme.palette.divider,
                               },
@@ -2510,8 +2689,15 @@ const CompanyDetail: React.FC = () => {
                                 borderColor: theme.palette.text.secondary,
                               },
                               '&.Mui-focused fieldset': {
-                                borderColor: '#2E7D32',
+                                borderColor: taxiMonterricoColors.orange,
                               },
+                            },
+                            '& .MuiInputBase-input': {
+                              color: theme.palette.text.primary,
+                            },
+                            '& .MuiInputBase-input::placeholder': {
+                              color: theme.palette.text.secondary,
+                              opacity: 1,
                             },
                           }}
                         />
@@ -2524,12 +2710,12 @@ const CompanyDetail: React.FC = () => {
                           py: 1.5,
                           px: 2,
                           '&:hover': {
-                            backgroundColor: '#f5f5f5',
+                            backgroundColor: theme.palette.action.hover,
                           },
                         }}
                       >
-                        <Edit sx={{ mr: 2, fontSize: 20, color: 'text.secondary' }} />
-                        <Typography variant="body2" sx={{ flexGrow: 1 }}>
+                        <Edit sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
+                        <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
                           Crear nota
                         </Typography>
                       </MenuItem>
@@ -2540,12 +2726,12 @@ const CompanyDetail: React.FC = () => {
                           py: 1.5,
                           px: 2,
                           '&:hover': {
-                            backgroundColor: '#f5f5f5',
+                            backgroundColor: theme.palette.action.hover,
                           },
                         }}
                       >
-                        <Email sx={{ mr: 2, fontSize: 20, color: 'text.secondary' }} />
-                        <Typography variant="body2" sx={{ flexGrow: 1 }}>
+                        <Email sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
+                        <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
                           Crear correo
                         </Typography>
                       </MenuItem>
@@ -2556,15 +2742,15 @@ const CompanyDetail: React.FC = () => {
                           py: 1.5,
                           px: 2,
                           '&:hover': {
-                            backgroundColor: '#f5f5f5',
+                            backgroundColor: theme.palette.action.hover,
                           },
                         }}
                       >
-                        <Phone sx={{ mr: 2, fontSize: 20, color: 'text.secondary' }} />
-                        <Typography variant="body2" sx={{ flexGrow: 1 }}>
+                        <Phone sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
+                        <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
                           Hacer llamada telefónica
                         </Typography>
-                        <KeyboardArrowRight sx={{ fontSize: 20, color: 'text.secondary' }} />
+                        <KeyboardArrowRight sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
                       </MenuItem>
                       
                       <MenuItem 
@@ -2573,12 +2759,12 @@ const CompanyDetail: React.FC = () => {
                           py: 1.5,
                           px: 2,
                           '&:hover': {
-                            backgroundColor: '#f5f5f5',
+                            backgroundColor: theme.palette.action.hover,
                           },
                         }}
                       >
-                        <Assignment sx={{ mr: 2, fontSize: 20, color: 'text.secondary' }} />
-                        <Typography variant="body2" sx={{ flexGrow: 1 }}>
+                        <Assignment sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
+                        <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
                           Crear tarea
                         </Typography>
                       </MenuItem>
@@ -2589,12 +2775,12 @@ const CompanyDetail: React.FC = () => {
                           py: 1.5,
                           px: 2,
                           '&:hover': {
-                            backgroundColor: '#f5f5f5',
+                            backgroundColor: theme.palette.action.hover,
                           },
                         }}
                       >
-                        <Event sx={{ mr: 2, fontSize: 20, color: 'text.secondary' }} />
-                        <Typography variant="body2" sx={{ flexGrow: 1 }}>
+                        <Event sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
+                        <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
                           Programar reunión
                         </Typography>
                       </MenuItem>
@@ -2604,15 +2790,15 @@ const CompanyDetail: React.FC = () => {
                           py: 1.5,
                           px: 2,
                           '&:hover': {
-                            backgroundColor: '#f5f5f5',
+                            backgroundColor: theme.palette.action.hover,
                           },
                         }}
                       >
-                        <LinkIcon sx={{ mr: 2, fontSize: 20, color: 'text.secondary' }} />
-                        <Typography variant="body2" sx={{ flexGrow: 1 }}>
+                        <LinkIcon sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
+                        <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
                           Inscribir en una secuencia
                         </Typography>
-                        <Lock sx={{ fontSize: 16, color: 'text.secondary', ml: 1 }} />
+                        <Lock sx={{ fontSize: 16, color: theme.palette.text.secondary, ml: 1 }} />
                       </MenuItem>
                     </Menu>
                   </Box>
@@ -4525,7 +4711,7 @@ const CompanyDetail: React.FC = () => {
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
-                            <Search sx={{ color: taxiMonterricoColors.green, fontSize: 20 }} />
+                            <Search sx={{ color: taxiMonterricoColors.orange, fontSize: 20 }} />
                           </InputAdornment>
                         ),
                       }}
@@ -4553,19 +4739,19 @@ const CompanyDetail: React.FC = () => {
                         onDelete={() => {}}
                         onClick={() => {}}
                         sx={{
-                          bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : `${taxiMonterricoColors.greenLight}20`,
-                          color: theme.palette.mode === 'dark' ? taxiMonterricoColors.green : taxiMonterricoColors.greenDark,
+                          bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : `${taxiMonterricoColors.orangeLight}20`,
+                          color: theme.palette.mode === 'dark' ? taxiMonterricoColors.orange : taxiMonterricoColors.orangeDark,
                           fontWeight: 500,
                           cursor: 'pointer',
-                          border: `1px solid ${theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}40` : `${taxiMonterricoColors.greenLight}40`}`,
+                          border: `1px solid ${theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}40` : `${taxiMonterricoColors.orangeLight}40`}`,
                           '&:hover': {
-                            bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : `${taxiMonterricoColors.greenLight}30`,
-                            borderColor: taxiMonterricoColors.green,
+                            bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}30` : `${taxiMonterricoColors.orangeLight}30`,
+                            borderColor: taxiMonterricoColors.orange,
                           },
                           '& .MuiChip-deleteIcon': {
-                            color: taxiMonterricoColors.green,
+                            color: taxiMonterricoColors.orange,
                             '&:hover': {
-                              color: theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : taxiMonterricoColors.greenDark,
+                              color: theme.palette.mode === 'dark' ? taxiMonterricoColors.orangeLight : taxiMonterricoColors.orangeDark,
                             },
                           },
                         }}
@@ -4577,19 +4763,19 @@ const CompanyDetail: React.FC = () => {
                         onDelete={() => {}}
                         onClick={() => {}}
                         sx={{
-                          bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : `${taxiMonterricoColors.greenLight}20`,
-                          color: theme.palette.mode === 'dark' ? taxiMonterricoColors.green : taxiMonterricoColors.greenDark,
+                          bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : `${taxiMonterricoColors.orangeLight}20`,
+                          color: theme.palette.mode === 'dark' ? taxiMonterricoColors.orange : taxiMonterricoColors.orangeDark,
                           fontWeight: 500,
                           cursor: 'pointer',
-                          border: `1px solid ${theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}40` : `${taxiMonterricoColors.greenLight}40`}`,
+                          border: `1px solid ${theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}40` : `${taxiMonterricoColors.orangeLight}40`}`,
                           '&:hover': {
-                            bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : `${taxiMonterricoColors.greenLight}30`,
-                            borderColor: taxiMonterricoColors.green,
+                            bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}30` : `${taxiMonterricoColors.orangeLight}30`,
+                            borderColor: taxiMonterricoColors.orange,
                           },
                           '& .MuiChip-deleteIcon': {
-                            color: taxiMonterricoColors.green,
+                            color: taxiMonterricoColors.orange,
                             '&:hover': {
-                              color: theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : taxiMonterricoColors.greenDark,
+                              color: theme.palette.mode === 'dark' ? taxiMonterricoColors.orangeLight : taxiMonterricoColors.orangeDark,
                             },
                           },
                         }}
@@ -4629,11 +4815,11 @@ const CompanyDetail: React.FC = () => {
                         onClick={() => setSelectedActivityType(tab.value)}
                         sx={{
                           color: selectedActivityType === tab.value 
-                            ? (theme.palette.mode === 'dark' ? taxiMonterricoColors.green : taxiMonterricoColors.greenDark)
+                            ? (theme.palette.mode === 'dark' ? taxiMonterricoColors.orange : taxiMonterricoColors.orangeDark)
                             : theme.palette.text.secondary,
                           textTransform: 'none',
                           fontWeight: selectedActivityType === tab.value ? 600 : 500,
-                          borderBottom: selectedActivityType === tab.value ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
+                          borderBottom: selectedActivityType === tab.value ? `3px solid ${taxiMonterricoColors.orange}` : '3px solid transparent',
                           borderRadius: 0,
                           minWidth: 'auto',
                           px: { xs: 1.5, sm: 2.5 },
@@ -4641,7 +4827,7 @@ const CompanyDetail: React.FC = () => {
                           position: 'relative',
                           transition: 'all 0.2s ease',
                           '&:hover': {
-                            color: theme.palette.mode === 'dark' ? taxiMonterricoColors.green : taxiMonterricoColors.greenDark,
+                            color: theme.palette.mode === 'dark' ? taxiMonterricoColors.orange : taxiMonterricoColors.orangeDark,
                             bgcolor: selectedActivityType === tab.value ? 'transparent' : (theme.palette.mode === 'dark' ? theme.palette.action.hover : '#F9FAFB'),
                           },
                           '&::after': {
@@ -4651,7 +4837,7 @@ const CompanyDetail: React.FC = () => {
                             left: 0,
                             right: 0,
                             height: selectedActivityType === tab.value ? '3px' : '0px',
-                            bgcolor: taxiMonterricoColors.green,
+                            bgcolor: taxiMonterricoColors.orange,
                             transition: 'height 0.2s ease',
                           },
                         }}
@@ -5073,39 +5259,6 @@ const CompanyDetail: React.FC = () => {
                 scrollbarWidth: 'none',
               }}
             >
-              {/* Resumen AI */}
-              <Box sx={{ mb: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                    Resumen de registros
-                  </Typography>
-                  <Chip label="+AI" size="small" sx={{ bgcolor: '#e3f2fd', color: '#1976d2' }} />
-                </Box>
-                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-                  Generado {new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
-                  <IconButton size="small" sx={{ ml: 1 }}>
-                    <Refresh fontSize="small" />
-                  </IconButton>
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  No hay actividades asociadas. Proporciona más información para obtener un resumen completo.
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
-                  <IconButton size="small">
-                    <ThumbUp fontSize="small" />
-                  </IconButton>
-                  <IconButton size="small">
-                    <ThumbDown fontSize="small" />
-                  </IconButton>
-                  <IconButton size="small">
-                    <Comment fontSize="small" />
-                  </IconButton>
-                </Box>
-                <Button size="small" variant="contained" sx={{ mt: 1, bgcolor: '#e91e63' }}>
-                  Hacer una pregunta
-                </Button>
-              </Box>
-
             {/* Contactos */}
             <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -5113,7 +5266,23 @@ const CompanyDetail: React.FC = () => {
                   Contactos ({associatedContacts.length})
                 </Typography>
                 <Box>
-                  <Button size="small" onClick={handleOpenAddContactDialog}>+Agregar</Button>
+                  <Button 
+                    size="small" 
+                    variant="outlined" 
+                    onClick={handleOpenAddContactDialog}
+                    sx={{ 
+                      fontSize: '1.2rem',
+                      fontWeight: 600,
+                      minWidth: '36px',
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      borderWidth: '0.5px',
+                      '&:hover': {
+                        borderWidth: '0.5px',
+                      }
+                    }}
+                  >+</Button>
                   <IconButton size="small">
                     <MoreVert fontSize="small" />
                   </IconButton>
@@ -5169,7 +5338,22 @@ const CompanyDetail: React.FC = () => {
                   Negocios ({associatedDeals.length})
                 </Typography>
                 <Box>
-                  <Button size="small">+Agregar</Button>
+                  <Button 
+                    size="small" 
+                    variant="outlined"
+                    sx={{ 
+                      fontSize: '1.2rem',
+                      fontWeight: 600,
+                      minWidth: '36px',
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      borderWidth: '0.5px',
+                      '&:hover': {
+                        borderWidth: '0.5px',
+                      }
+                    }}
+                  >+</Button>
                   <IconButton size="small">
                     <MoreVert fontSize="small" />
                   </IconButton>
@@ -5222,7 +5406,23 @@ const CompanyDetail: React.FC = () => {
                   Tickets ({associatedTickets.length})
                 </Typography>
                 <Box>
-                  <Button size="small" onClick={() => setAddTicketOpen(true)}>+Agregar</Button>
+                  <Button 
+                    size="small" 
+                    variant="outlined" 
+                    onClick={() => setAddTicketOpen(true)}
+                    sx={{ 
+                      fontSize: '1.2rem',
+                      fontWeight: 600,
+                      minWidth: '36px',
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      borderWidth: '0.5px',
+                      '&:hover': {
+                        borderWidth: '0.5px',
+                      }
+                    }}
+                  >+</Button>
                   <IconButton size="small">
                     <MoreVert fontSize="small" />
                   </IconButton>
@@ -5298,7 +5498,23 @@ const CompanyDetail: React.FC = () => {
                   Suscripciones ({associatedSubscriptions.length})
                 </Typography>
                 <Box>
-                  <Button size="small" onClick={() => setAddSubscriptionOpen(true)}>+Agregar</Button>
+                  <Button 
+                    size="small" 
+                    variant="outlined" 
+                    onClick={() => setAddSubscriptionOpen(true)}
+                    sx={{ 
+                      fontSize: '1.2rem',
+                      fontWeight: 600,
+                      minWidth: '36px',
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      borderWidth: '0.5px',
+                      '&:hover': {
+                        borderWidth: '0.5px',
+                      }
+                    }}
+                  >+</Button>
                   <IconButton size="small">
                     <MoreVert fontSize="small" />
                   </IconButton>
@@ -5360,7 +5576,23 @@ const CompanyDetail: React.FC = () => {
                   Pagos ({associatedPayments.length})
                 </Typography>
                 <Box>
-                  <Button size="small" onClick={() => setAddPaymentOpen(true)}>+Agregar</Button>
+                  <Button 
+                    size="small" 
+                    variant="outlined" 
+                    onClick={() => setAddPaymentOpen(true)}
+                    sx={{ 
+                      fontSize: '1.2rem',
+                      fontWeight: 600,
+                      minWidth: '36px',
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      borderWidth: '0.5px',
+                      '&:hover': {
+                        borderWidth: '0.5px',
+                      }
+                    }}
+                  >+</Button>
                   <IconButton size="small">
                     <MoreVert fontSize="small" />
                   </IconButton>
@@ -5440,24 +5672,30 @@ const CompanyDetail: React.FC = () => {
         <Box
           sx={{
             position: 'fixed',
-            top: 0,
-            right: 0,
-            width: { xs: '100vw', sm: '500px' },
-            maxWidth: { xs: '100vw', sm: '90vw' },
-            height: '100vh',
-            backgroundColor: 'white',
-            boxShadow: { xs: 'none', sm: '-4px 0 20px rgba(0,0,0,0.15)' },
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: { xs: '95vw', sm: '1100px' },
+            maxWidth: { xs: '95vw', sm: '95vw' },
+            height: '85vh',
+            backgroundColor: theme.palette.background.paper,
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)' 
+              : '0 20px 60px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05)',
             zIndex: 1300,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
-            animation: 'slideInRight 0.3s ease-out',
-            '@keyframes slideInRight': {
+            borderRadius: 4,
+            animation: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            '@keyframes fadeInScale': {
               '0%': {
-                transform: 'translateX(100%)',
+                opacity: 0,
+                transform: 'translate(-50%, -50%) scale(0.95)',
               },
               '100%': {
-                transform: 'translateX(0)',
+                opacity: 1,
+                transform: 'translate(-50%, -50%) scale(1)',
               },
             },
           }}
@@ -5466,37 +5704,47 @@ const CompanyDetail: React.FC = () => {
           {/* Encabezado personalizado */}
           <Box
             sx={{
-              p: 0,
-              m: 0,
-              background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
-              color: 'white',
+              px: 3,
+              py: 2,
+              backgroundColor: 'transparent',
+              color: theme.palette.text.primary,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              minHeight: '56px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', pl: 2.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <IconButton 
                 sx={{ 
-                  color: 'white', 
-                  mr: 1,
-                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
+                  color: theme.palette.text.secondary, 
+                  '&:hover': { 
+                    backgroundColor: theme.palette.action.hover,
+                    color: theme.palette.text.primary,
+                  },
+                  transition: 'all 0.2s ease',
                 }} 
                 size="small"
               >
                 <KeyboardArrowDown />
               </IconButton>
-              <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, fontSize: '1.1rem' }}>
+              <Typography variant="h6" sx={{ 
+                color: theme.palette.text.primary, 
+                fontWeight: 600, 
+                fontSize: '1.25rem',
+                letterSpacing: '-0.02em',
+              }}>
                 Nota
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', pr: 0.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
               <IconButton 
                 sx={{ 
-                  color: 'white',
-                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.1)' }
+                  color: theme.palette.text.secondary,
+                  '&:hover': { 
+                    backgroundColor: theme.palette.action.hover,
+                    color: theme.palette.text.primary,
+                  },
+                  transition: 'all 0.2s ease',
                 }} 
                 size="small"
               >
@@ -5504,9 +5752,12 @@ const CompanyDetail: React.FC = () => {
               </IconButton>
               <IconButton 
                 sx={{ 
-                  color: 'white', 
-                  mr: 0.5,
-                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.15)' }
+                  color: theme.palette.text.secondary,
+                  '&:hover': { 
+                    backgroundColor: theme.palette.error.main + '15',
+                    color: theme.palette.error.main,
+                  },
+                  transition: 'all 0.2s ease',
                 }} 
                 size="small" 
                 onClick={() => setNoteOpen(false)}
@@ -5516,68 +5767,56 @@ const CompanyDetail: React.FC = () => {
             </Box>
           </Box>
 
-          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2, overflow: 'hidden', overflowY: 'auto' }}>
-          {/* Campo "Para" */}
-          <Box sx={{ 
-            mb: 2.5, 
-            display: 'flex', 
-            alignItems: 'center', 
-            flexWrap: 'wrap',
-            gap: 1,
-            border: `1px solid ${taxiMonterricoColors.greenLight}40`, 
-            borderRadius: 2, 
-            p: 2,
-            backgroundColor: `${taxiMonterricoColors.greenLight}10`,
-            boxShadow: `0 1px 3px ${taxiMonterricoColors.green}20`,
-          }}>
-            <Typography variant="body2" sx={{ mr: 1, color: taxiMonterricoColors.green, fontWeight: 600, fontSize: '0.875rem' }}>
-              Para
-            </Typography>
-            <Chip
-              label={`${company?.name || 'Empresa'}`}
-              sx={{ 
-                mr: 0.5, 
-                backgroundColor: taxiMonterricoColors.green,
-                color: 'white',
-                height: '28px',
-                fontSize: '0.8125rem',
-                fontWeight: 500,
-                '& .MuiChip-label': {
-                  px: 1.5,
-                },
-              }}
-            />
-            <Typography variant="body2" sx={{ color: '#546e7a', fontSize: '0.8125rem' }}>
-              y 2 registros
-            </Typography>
+          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'row', p: 3, overflow: 'hidden', gap: 3 }}>
+          {/* Columna Izquierda: Editor */}
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            {/* Editor de texto enriquecido con barra de herramientas integrada */}
+            <Box sx={{ 
+              flexGrow: 1, 
+              display: 'flex', 
+              flexDirection: 'column', 
+              border: `1px solid ${theme.palette.divider}`, 
+              borderRadius: 3,
+              overflow: 'hidden',
+              minHeight: '300px',
+              backgroundColor: theme.palette.background.paper,
+              boxShadow: theme.palette.mode === 'dark' 
+                ? '0 2px 8px rgba(0,0,0,0.2)' 
+                : '0 2px 8px rgba(0,0,0,0.04)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:focus-within': {
+                boxShadow: `0 4px 16px ${taxiMonterricoColors.orange}25`,
+                borderColor: taxiMonterricoColors.orange,
+                transform: 'translateY(-1px)',
+              },
+            }}>
+              <RichTextEditor
+                value={noteData.description}
+                onChange={(value: string) => setNoteData({ ...noteData, description: value })}
+                placeholder="Empieza a escribir para dejar una nota..."
+              />
+            </Box>
           </Box>
 
-          {/* Editor de texto enriquecido con barra de herramientas integrada */}
-          <Box sx={{ 
-            flexGrow: 1, 
-            display: 'flex', 
-            flexDirection: 'column', 
-            border: '1px solid #e0e0e0', 
-            borderRadius: 2,
-            overflow: 'hidden',
-            mb: 2.5,
-            minHeight: '300px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-            transition: 'box-shadow 0.2s ease',
-            '&:focus-within': {
-              boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
-              borderColor: taxiMonterricoColors.green,
-            },
-          }}>
-            <RichTextEditor
-              value={noteData.description}
-              onChange={(value: string) => setNoteData({ ...noteData, description: value })}
-              placeholder="Empieza a escribir para dejar una nota..."
-            />
-          </Box>
-
-          {/* Sección "Asociado con X registros" - Siempre visible */}
-          <Box sx={{ mb: 2.5 }}>
+          {/* Columna Derecha: Sección de Asociaciones */}
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+            {/* Sección "Asociado con X registros" - Siempre visible */}
+            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+              <Box sx={{ 
+                flexGrow: 1,
+                border: `1px solid ${theme.palette.divider}`, 
+                borderRadius: 3, 
+                p: 2.5, 
+                backgroundColor: theme.palette.background.paper,
+                display: 'flex',
+                gap: 2.5,
+                alignItems: 'flex-start',
+                overflow: 'hidden',
+                boxShadow: theme.palette.mode === 'dark' 
+                  ? '0 2px 8px rgba(0,0,0,0.2)' 
+                  : '0 2px 8px rgba(0,0,0,0.04)',
+                transition: 'all 0.2s ease',
+              }}>
             <Box sx={{ 
               border: '1px solid #e0e0e0', 
               borderRadius: 2, 
@@ -5592,26 +5831,31 @@ const CompanyDetail: React.FC = () => {
             }}>
               {/* Lista de categorías en el lado izquierdo */}
               <Box sx={{ 
-                width: '200px', 
+                width: '220px', 
                 flexShrink: 0,
-                borderRight: '1px solid #e8eaf6',
-                pr: 2,
+                borderRight: `1px solid ${theme.palette.divider}`,
+                pr: 2.5,
                 maxHeight: '500px',
                 overflowY: 'auto',
                 overflowX: 'hidden',
                 '&::-webkit-scrollbar': {
-                  width: '6px',
+                  width: '8px',
                 },
                 '&::-webkit-scrollbar-track': {
-                  backgroundColor: '#f5f5f5',
-                  borderRadius: '3px',
+                  backgroundColor: 'transparent',
+                  borderRadius: '4px',
                 },
                 '&::-webkit-scrollbar-thumb': {
-                  backgroundColor: '#bdbdbd',
-                  borderRadius: '3px',
+                  backgroundColor: theme.palette.mode === 'dark' 
+                    ? 'rgba(255,255,255,0.2)' 
+                    : 'rgba(0,0,0,0.2)',
+                  borderRadius: '4px',
                   '&:hover': {
-                    backgroundColor: '#9e9e9e',
+                    backgroundColor: theme.palette.mode === 'dark' 
+                      ? 'rgba(255,255,255,0.3)' 
+                      : 'rgba(0,0,0,0.3)',
                   },
+                  transition: 'background-color 0.2s ease',
                 },
               }}>
                 {/* Lista de categorías siempre visible */}
@@ -5622,26 +5866,33 @@ const CompanyDetail: React.FC = () => {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      p: 1.5,
-                      borderRadius: 1,
+                      p: 1.75,
+                      borderRadius: 2,
                       cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Seleccionados' ? `${taxiMonterricoColors.greenLight}20` : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Seleccionados' ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
-                      transition: 'all 0.2s ease',
+                      backgroundColor: selectedAssociationCategory === 'Seleccionados' ? taxiMonterricoColors.orange : 'transparent',
+                      borderLeft: selectedAssociationCategory === 'Seleccionados' ? `4px solid ${taxiMonterricoColors.orangeDark}` : '4px solid transparent',
+                      color: selectedAssociationCategory === 'Seleccionados' ? 'white' : theme.palette.text.secondary,
+                      boxShadow: selectedAssociationCategory === 'Seleccionados' ? `0 2px 8px ${taxiMonterricoColors.orange}40` : 'none',
+                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&:hover': {
-                        backgroundColor: selectedAssociationCategory === 'Seleccionados' ? `${taxiMonterricoColors.greenLight}20` : `${taxiMonterricoColors.greenLight}10`,
-                        transform: 'translateX(2px)',
+                        backgroundColor: selectedAssociationCategory === 'Seleccionados' ? taxiMonterricoColors.orangeDark : theme.palette.action.hover,
+                        transform: selectedAssociationCategory === 'Seleccionados' ? 'scale(1.02)' : 'translateX(4px)',
+                        boxShadow: selectedAssociationCategory === 'Seleccionados' ? `0 4px 12px ${taxiMonterricoColors.orange}50` : 'none',
                       },
                     }}
                   >
                     <Typography variant="body2" sx={{ 
                       fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Seleccionados' ? taxiMonterricoColors.green : '#546e7a',
-                      fontWeight: selectedAssociationCategory === 'Seleccionados' ? 600 : 400,
+                      color: selectedAssociationCategory === 'Seleccionados' ? 'white' : '#546e7a',
+                      fontWeight: selectedAssociationCategory === 'Seleccionados' ? 700 : 400,
                     }}>
                       Seleccionados
                     </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: '#999' }}>
+                    <Typography variant="body2" sx={{ 
+                      fontSize: '0.875rem', 
+                      color: selectedAssociationCategory === 'Seleccionados' ? 'white' : '#999',
+                      fontWeight: selectedAssociationCategory === 'Seleccionados' ? 600 : 500,
+                    }}>
                       {totalAssociations}
                     </Typography>
                   </Box>
@@ -5655,23 +5906,30 @@ const CompanyDetail: React.FC = () => {
                       p: 1.5,
                       borderRadius: 1,
                       cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Alertas' ? `${taxiMonterricoColors.greenLight}20` : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Alertas' ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
-                      transition: 'all 0.2s ease',
+                      backgroundColor: selectedAssociationCategory === 'Alertas' ? taxiMonterricoColors.orange : 'transparent',
+                      borderLeft: selectedAssociationCategory === 'Alertas' ? `4px solid ${taxiMonterricoColors.orangeDark}` : '4px solid transparent',
+                      color: selectedAssociationCategory === 'Alertas' ? 'white' : theme.palette.text.secondary,
+                      boxShadow: selectedAssociationCategory === 'Alertas' ? `0 2px 8px ${taxiMonterricoColors.orange}40` : 'none',
+                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&:hover': {
-                        backgroundColor: selectedAssociationCategory === 'Alertas' ? `${taxiMonterricoColors.greenLight}20` : `${taxiMonterricoColors.greenLight}10`,
-                        transform: 'translateX(2px)',
+                        backgroundColor: selectedAssociationCategory === 'Alertas' ? taxiMonterricoColors.orangeDark : theme.palette.action.hover,
+                        transform: selectedAssociationCategory === 'Alertas' ? 'scale(1.02)' : 'translateX(4px)',
+                        boxShadow: selectedAssociationCategory === 'Alertas' ? `0 4px 12px ${taxiMonterricoColors.orange}50` : 'none',
                       },
                     }}
                   >
                     <Typography variant="body2" sx={{ 
                       fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Alertas' ? taxiMonterricoColors.green : '#546e7a',
+                      color: selectedAssociationCategory === 'Alertas' ? 'white' : '#546e7a',
                       fontWeight: selectedAssociationCategory === 'Alertas' ? 600 : 400,
                     }}>
                       Alertas del esp...
                     </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: '#999' }}>
+                    <Typography variant="body2" sx={{ 
+                      fontSize: '0.875rem', 
+                      color: selectedAssociationCategory === 'Alertas' ? 'white' : '#999',
+                      fontWeight: selectedAssociationCategory === 'Alertas' ? 600 : 500,
+                    }}>
                       0
                     </Typography>
                   </Box>
@@ -5685,23 +5943,30 @@ const CompanyDetail: React.FC = () => {
                       p: 1.5,
                       borderRadius: 1,
                       cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Carritos' ? `${taxiMonterricoColors.greenLight}20` : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Carritos' ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
-                      transition: 'all 0.2s ease',
+                      backgroundColor: selectedAssociationCategory === 'Carritos' ? taxiMonterricoColors.orange : 'transparent',
+                      borderLeft: selectedAssociationCategory === 'Carritos' ? `4px solid ${taxiMonterricoColors.orangeDark}` : '4px solid transparent',
+                      color: selectedAssociationCategory === 'Carritos' ? 'white' : theme.palette.text.secondary,
+                      boxShadow: selectedAssociationCategory === 'Carritos' ? `0 2px 8px ${taxiMonterricoColors.orange}40` : 'none',
+                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&:hover': {
-                        backgroundColor: selectedAssociationCategory === 'Carritos' ? `${taxiMonterricoColors.greenLight}20` : `${taxiMonterricoColors.greenLight}10`,
-                        transform: 'translateX(2px)',
+                        backgroundColor: selectedAssociationCategory === 'Carritos' ? taxiMonterricoColors.orangeDark : theme.palette.action.hover,
+                        transform: selectedAssociationCategory === 'Carritos' ? 'scale(1.02)' : 'translateX(4px)',
+                        boxShadow: selectedAssociationCategory === 'Carritos' ? `0 4px 12px ${taxiMonterricoColors.orange}50` : 'none',
                       },
                     }}
                   >
                     <Typography variant="body2" sx={{ 
                       fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Carritos' ? taxiMonterricoColors.green : '#546e7a',
+                      color: selectedAssociationCategory === 'Carritos' ? 'white' : '#546e7a',
                       fontWeight: selectedAssociationCategory === 'Carritos' ? 600 : 400,
                     }}>
                       Carritos
                     </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: '#999' }}>
+                    <Typography variant="body2" sx={{ 
+                      fontSize: '0.875rem', 
+                      color: selectedAssociationCategory === 'Carritos' ? 'white' : '#999',
+                      fontWeight: selectedAssociationCategory === 'Carritos' ? 600 : 500,
+                    }}>
                       0
                     </Typography>
                   </Box>
@@ -5715,23 +5980,30 @@ const CompanyDetail: React.FC = () => {
                       p: 1.5,
                       borderRadius: 1,
                       cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Clientes' ? `${taxiMonterricoColors.greenLight}20` : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Clientes' ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
-                      transition: 'all 0.2s ease',
+                      backgroundColor: selectedAssociationCategory === 'Clientes' ? taxiMonterricoColors.orange : 'transparent',
+                      borderLeft: selectedAssociationCategory === 'Clientes' ? `4px solid ${taxiMonterricoColors.orangeDark}` : '4px solid transparent',
+                      color: selectedAssociationCategory === 'Clientes' ? 'white' : theme.palette.text.secondary,
+                      boxShadow: selectedAssociationCategory === 'Clientes' ? `0 2px 8px ${taxiMonterricoColors.orange}40` : 'none',
+                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&:hover': {
-                        backgroundColor: selectedAssociationCategory === 'Clientes' ? `${taxiMonterricoColors.greenLight}20` : `${taxiMonterricoColors.greenLight}10`,
-                        transform: 'translateX(2px)',
+                        backgroundColor: selectedAssociationCategory === 'Clientes' ? taxiMonterricoColors.orangeDark : theme.palette.action.hover,
+                        transform: selectedAssociationCategory === 'Clientes' ? 'scale(1.02)' : 'translateX(4px)',
+                        boxShadow: selectedAssociationCategory === 'Clientes' ? `0 4px 12px ${taxiMonterricoColors.orange}50` : 'none',
                       },
                     }}
                   >
                     <Typography variant="body2" sx={{ 
                       fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Clientes' ? taxiMonterricoColors.green : '#546e7a',
+                      color: selectedAssociationCategory === 'Clientes' ? 'white' : '#546e7a',
                       fontWeight: selectedAssociationCategory === 'Clientes' ? 600 : 400,
                     }}>
                       Clientes de par...
                     </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: '#999' }}>
+                    <Typography variant="body2" sx={{ 
+                      fontSize: '0.875rem', 
+                      color: selectedAssociationCategory === 'Clientes' ? 'white' : '#999',
+                      fontWeight: selectedAssociationCategory === 'Clientes' ? 600 : 500,
+                    }}>
                       0
                     </Typography>
                   </Box>
@@ -5745,23 +6017,30 @@ const CompanyDetail: React.FC = () => {
                       p: 1.5,
                       borderRadius: 1,
                       cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Contactos' ? `${taxiMonterricoColors.greenLight}20` : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Contactos' ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
-                      transition: 'all 0.2s ease',
+                      backgroundColor: selectedAssociationCategory === 'Contactos' ? taxiMonterricoColors.orange : 'transparent',
+                      borderLeft: selectedAssociationCategory === 'Contactos' ? `4px solid ${taxiMonterricoColors.orangeDark}` : '4px solid transparent',
+                      color: selectedAssociationCategory === 'Contactos' ? 'white' : theme.palette.text.secondary,
+                      boxShadow: selectedAssociationCategory === 'Contactos' ? `0 2px 8px ${taxiMonterricoColors.orange}40` : 'none',
+                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&:hover': {
-                        backgroundColor: selectedAssociationCategory === 'Contactos' ? `${taxiMonterricoColors.greenLight}20` : `${taxiMonterricoColors.greenLight}10`,
-                        transform: 'translateX(2px)',
+                        backgroundColor: selectedAssociationCategory === 'Contactos' ? taxiMonterricoColors.orangeDark : theme.palette.action.hover,
+                        transform: selectedAssociationCategory === 'Contactos' ? 'scale(1.02)' : 'translateX(4px)',
+                        boxShadow: selectedAssociationCategory === 'Contactos' ? `0 4px 12px ${taxiMonterricoColors.orange}50` : 'none',
                       },
                     }}
                   >
                     <Typography variant="body2" sx={{ 
                       fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Contactos' ? taxiMonterricoColors.green : '#546e7a',
+                      color: selectedAssociationCategory === 'Contactos' ? 'white' : '#546e7a',
                       fontWeight: selectedAssociationCategory === 'Contactos' ? 600 : 400,
                     }}>
                       Contactos
                     </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: '#999' }}>
+                    <Typography variant="body2" sx={{ 
+                      fontSize: '0.875rem', 
+                      color: selectedAssociationCategory === 'Contactos' ? 'white' : '#999',
+                      fontWeight: selectedAssociationCategory === 'Contactos' ? 600 : 500,
+                    }}>
                       {contactsToCount.length}
                     </Typography>
                   </Box>
@@ -5775,23 +6054,30 @@ const CompanyDetail: React.FC = () => {
                       p: 1.5,
                       borderRadius: 1,
                       cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Leads' ? `${taxiMonterricoColors.greenLight}20` : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Leads' ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
-                      transition: 'all 0.2s ease',
+                      backgroundColor: selectedAssociationCategory === 'Leads' ? taxiMonterricoColors.orange : 'transparent',
+                      borderLeft: selectedAssociationCategory === 'Leads' ? `4px solid ${taxiMonterricoColors.orangeDark}` : '4px solid transparent',
+                      color: selectedAssociationCategory === 'Leads' ? 'white' : theme.palette.text.secondary,
+                      boxShadow: selectedAssociationCategory === 'Leads' ? `0 2px 8px ${taxiMonterricoColors.orange}40` : 'none',
+                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&:hover': {
-                        backgroundColor: selectedAssociationCategory === 'Leads' ? `${taxiMonterricoColors.greenLight}20` : `${taxiMonterricoColors.greenLight}10`,
-                        transform: 'translateX(2px)',
+                        backgroundColor: selectedAssociationCategory === 'Leads' ? taxiMonterricoColors.orangeDark : theme.palette.action.hover,
+                        transform: selectedAssociationCategory === 'Leads' ? 'scale(1.02)' : 'translateX(4px)',
+                        boxShadow: selectedAssociationCategory === 'Leads' ? `0 4px 12px ${taxiMonterricoColors.orange}50` : 'none',
                       },
                     }}
                   >
                     <Typography variant="body2" sx={{ 
                       fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Leads' ? taxiMonterricoColors.green : '#546e7a',
+                      color: selectedAssociationCategory === 'Leads' ? 'white' : '#546e7a',
                       fontWeight: selectedAssociationCategory === 'Leads' ? 600 : 400,
                     }}>
                       Leads
                     </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: '#999' }}>
+                    <Typography variant="body2" sx={{ 
+                      fontSize: '0.875rem', 
+                      color: selectedAssociationCategory === 'Leads' ? 'white' : '#999',
+                      fontWeight: selectedAssociationCategory === 'Leads' ? 600 : 500,
+                    }}>
                       {selectedLeads.length}
                     </Typography>
                   </Box>
@@ -5805,23 +6091,30 @@ const CompanyDetail: React.FC = () => {
                       p: 1.5,
                       borderRadius: 1,
                       cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Negocios' ? `${taxiMonterricoColors.greenLight}20` : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Negocios' ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
-                      transition: 'all 0.2s ease',
+                      backgroundColor: selectedAssociationCategory === 'Negocios' ? taxiMonterricoColors.orange : 'transparent',
+                      borderLeft: selectedAssociationCategory === 'Negocios' ? `4px solid ${taxiMonterricoColors.orangeDark}` : '4px solid transparent',
+                      color: selectedAssociationCategory === 'Negocios' ? 'white' : theme.palette.text.secondary,
+                      boxShadow: selectedAssociationCategory === 'Negocios' ? `0 2px 8px ${taxiMonterricoColors.orange}40` : 'none',
+                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&:hover': {
-                        backgroundColor: selectedAssociationCategory === 'Negocios' ? `${taxiMonterricoColors.greenLight}20` : `${taxiMonterricoColors.greenLight}10`,
-                        transform: 'translateX(2px)',
+                        backgroundColor: selectedAssociationCategory === 'Negocios' ? taxiMonterricoColors.orangeDark : theme.palette.action.hover,
+                        transform: selectedAssociationCategory === 'Negocios' ? 'scale(1.02)' : 'translateX(4px)',
+                        boxShadow: selectedAssociationCategory === 'Negocios' ? `0 4px 12px ${taxiMonterricoColors.orange}50` : 'none',
                       },
                     }}
                   >
                     <Typography variant="body2" sx={{ 
                       fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Negocios' ? taxiMonterricoColors.green : '#546e7a',
+                      color: selectedAssociationCategory === 'Negocios' ? 'white' : '#546e7a',
                       fontWeight: selectedAssociationCategory === 'Negocios' ? 600 : 400,
                     }}>
                       Negocios
                     </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: '#999' }}>
+                    <Typography variant="body2" sx={{ 
+                      fontSize: '0.875rem', 
+                      color: selectedAssociationCategory === 'Negocios' ? 'white' : '#999',
+                      fontWeight: selectedAssociationCategory === 'Negocios' ? 600 : 500,
+                    }}>
                       {(() => {
                         const selectedDealIds = selectedAssociations.filter((id: number) => id > 1000 && id < 2000).map(id => id - 1000);
                         const associatedDealIds = (associatedDeals || [])
@@ -5842,23 +6135,30 @@ const CompanyDetail: React.FC = () => {
                       p: 1.5,
                       borderRadius: 1,
                       cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Tickets' ? `${taxiMonterricoColors.greenLight}20` : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Tickets' ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
-                      transition: 'all 0.2s ease',
+                      backgroundColor: selectedAssociationCategory === 'Tickets' ? taxiMonterricoColors.orange : 'transparent',
+                      borderLeft: selectedAssociationCategory === 'Tickets' ? `4px solid ${taxiMonterricoColors.orangeDark}` : '4px solid transparent',
+                      color: selectedAssociationCategory === 'Tickets' ? 'white' : theme.palette.text.secondary,
+                      boxShadow: selectedAssociationCategory === 'Tickets' ? `0 2px 8px ${taxiMonterricoColors.orange}40` : 'none',
+                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&:hover': {
-                        backgroundColor: selectedAssociationCategory === 'Tickets' ? `${taxiMonterricoColors.greenLight}20` : `${taxiMonterricoColors.greenLight}10`,
-                        transform: 'translateX(2px)',
+                        backgroundColor: selectedAssociationCategory === 'Tickets' ? taxiMonterricoColors.orangeDark : theme.palette.action.hover,
+                        transform: selectedAssociationCategory === 'Tickets' ? 'scale(1.02)' : 'translateX(4px)',
+                        boxShadow: selectedAssociationCategory === 'Tickets' ? `0 4px 12px ${taxiMonterricoColors.orange}50` : 'none',
                       },
                     }}
                   >
                     <Typography variant="body2" sx={{ 
                       fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Tickets' ? taxiMonterricoColors.green : '#546e7a',
+                      color: selectedAssociationCategory === 'Tickets' ? 'white' : '#546e7a',
                       fontWeight: selectedAssociationCategory === 'Tickets' ? 600 : 400,
                     }}>
                       Tickets
                     </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: '#999' }}>
+                    <Typography variant="body2" sx={{ 
+                      fontSize: '0.875rem', 
+                      color: selectedAssociationCategory === 'Tickets' ? 'white' : '#999',
+                      fontWeight: selectedAssociationCategory === 'Tickets' ? 600 : 500,
+                    }}>
                       {(() => {
                         const selectedTicketIds = selectedAssociations.filter((id: number) => id > 2000).map(id => id - 2000);
                         const associatedTicketIds = (associatedTickets || [])
@@ -5875,7 +6175,7 @@ const CompanyDetail: React.FC = () => {
               {/* Área de búsqueda y resultados - Siempre visible */}
               <Box sx={{ flex: 1, pl: 2, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, flexShrink: 0 }}>
-                  <Typography variant="body2" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '0.875rem' }}>
+                  <Typography variant="body2" sx={{ color: taxiMonterricoColors.orange, fontWeight: 500, fontSize: '0.875rem' }}>
                     {selectedAssociationCategory} ({
                       selectedAssociationCategory === 'Contactos' ? (() => {
                         const associatedContactIds = (associatedContacts || [])
@@ -5903,7 +6203,7 @@ const CompanyDetail: React.FC = () => {
                       selectedAssociationCategory === 'Leads' ? selectedLeads.length : 0
                     })
                   </Typography>
-                  <KeyboardArrowDown sx={{ color: taxiMonterricoColors.green, fontSize: 18 }} />
+                  <KeyboardArrowDown sx={{ color: taxiMonterricoColors.orange, fontSize: 18 }} />
                 </Box>
                 <TextField
                   size="small"
@@ -5914,22 +6214,27 @@ const CompanyDetail: React.FC = () => {
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
-                        <Search sx={{ color: taxiMonterricoColors.green }} />
+                        <Search sx={{ color: taxiMonterricoColors.orange }} />
                       </InputAdornment>
                     ),
                   }}
                   sx={{
-                    mb: 1.5,
+                    mb: 2,
                     flexShrink: 0,
                     '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: theme.palette.background.paper,
+                      transition: 'all 0.2s ease',
                       '& fieldset': {
-                        borderColor: taxiMonterricoColors.green,
+                        borderColor: theme.palette.divider,
+                        borderWidth: '1.5px',
                       },
                       '&:hover fieldset': {
-                        borderColor: taxiMonterricoColors.green,
+                        borderColor: taxiMonterricoColors.orange,
                       },
                       '&.Mui-focused fieldset': {
-                        borderColor: taxiMonterricoColors.green,
+                        borderColor: taxiMonterricoColors.orange,
+                        borderWidth: '2px',
                       },
                     },
                   }}
@@ -5975,9 +6280,31 @@ const CompanyDetail: React.FC = () => {
                                   }
                                 }}
                                 sx={{
-                                  color: taxiMonterricoColors.green,
+                                  color: taxiMonterricoColors.orange,
+                                  borderRadius: '4px',
+                                  padding: '4px',
+                                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                  '&:hover': {
+                                    backgroundColor: `${taxiMonterricoColors.orange}10`,
+                                    transform: 'scale(1.1)',
+                                  },
                                   '&.Mui-checked': {
-                                    color: taxiMonterricoColors.green,
+                                    color: 'white',
+                                    backgroundColor: taxiMonterricoColors.orange,
+                                    '&:hover': {
+                                      backgroundColor: taxiMonterricoColors.orangeDark,
+                                      transform: 'scale(1.1)',
+                                    },
+                                  },
+                                  '& .MuiSvgIcon-root': {
+                                    fontSize: '1.5rem',
+                                    borderRadius: '4px',
+                                    border: `2px solid ${taxiMonterricoColors.orange}`,
+                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                  },
+                                  '&.Mui-checked .MuiSvgIcon-root': {
+                                    border: `2px solid ${taxiMonterricoColors.orange}`,
+                                    boxShadow: `0 2px 8px ${taxiMonterricoColors.orange}40`,
                                   },
                                 }}
                               />
@@ -6062,9 +6389,31 @@ const CompanyDetail: React.FC = () => {
                                   }
                                 }}
                                 sx={{
-                                  color: taxiMonterricoColors.green,
+                                  color: taxiMonterricoColors.orange,
+                                  borderRadius: '4px',
+                                  padding: '4px',
+                                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                  '&:hover': {
+                                    backgroundColor: `${taxiMonterricoColors.orange}10`,
+                                    transform: 'scale(1.1)',
+                                  },
                                   '&.Mui-checked': {
-                                    color: taxiMonterricoColors.green,
+                                    color: 'white',
+                                    backgroundColor: taxiMonterricoColors.orange,
+                                    '&:hover': {
+                                      backgroundColor: taxiMonterricoColors.orangeDark,
+                                      transform: 'scale(1.1)',
+                                    },
+                                  },
+                                  '& .MuiSvgIcon-root': {
+                                    fontSize: '1.5rem',
+                                    borderRadius: '4px',
+                                    border: `2px solid ${taxiMonterricoColors.orange}`,
+                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                  },
+                                  '&.Mui-checked .MuiSvgIcon-root': {
+                                    border: `2px solid ${taxiMonterricoColors.orange}`,
+                                    boxShadow: `0 2px 8px ${taxiMonterricoColors.orange}40`,
                                   },
                                 }}
                               />
@@ -6139,9 +6488,31 @@ const CompanyDetail: React.FC = () => {
                                   }
                                 }}
                                 sx={{
-                                  color: taxiMonterricoColors.green,
+                                  color: taxiMonterricoColors.orange,
+                                  borderRadius: '4px',
+                                  padding: '4px',
+                                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                  '&:hover': {
+                                    backgroundColor: `${taxiMonterricoColors.orange}10`,
+                                    transform: 'scale(1.1)',
+                                  },
                                   '&.Mui-checked': {
-                                    color: taxiMonterricoColors.green,
+                                    color: 'white',
+                                    backgroundColor: taxiMonterricoColors.orange,
+                                    '&:hover': {
+                                      backgroundColor: taxiMonterricoColors.orangeDark,
+                                      transform: 'scale(1.1)',
+                                    },
+                                  },
+                                  '& .MuiSvgIcon-root': {
+                                    fontSize: '1.5rem',
+                                    borderRadius: '4px',
+                                    border: `2px solid ${taxiMonterricoColors.orange}`,
+                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                  },
+                                  '&.Mui-checked .MuiSvgIcon-root': {
+                                    border: `2px solid ${taxiMonterricoColors.orange}`,
+                                    boxShadow: `0 2px 8px ${taxiMonterricoColors.orange}40`,
                                   },
                                 }}
                               />
@@ -6189,61 +6560,34 @@ const CompanyDetail: React.FC = () => {
               </Box>
             </Box>
           </Box>
+          </Box>
+          </Box>
 
-          {/* Opción de Tarea de Seguimiento */}
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={createFollowUpTask}
-                onChange={(e) => setCreateFollowUpTask(e.target.checked)}
-                name="createFollowUpTask"
-                color="primary"
-                sx={{ mr: 1 }}
-              />
-            }
-            label={
-              <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>
-                <Typography variant="body2" sx={{ mr: 0.5 }}>
-                  Crear una tarea de
-                </Typography>
-                <Typography variant="body2" color="primary" sx={{ mr: 0.5 }}>
-                  Por hacer
-                </Typography>
-                <ExpandMore color="primary" fontSize="small" sx={{ mr: 0.5 }} />
-                <Typography variant="body2" sx={{ mr: 0.5 }}>
-                  para hacer seguimiento en
-                </Typography>
-                <Typography variant="body2" color="primary" sx={{ mr: 0.5 }}>
-                  En 3 días laborables ({new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString('es-ES', { weekday: 'long' })})
-                </Typography>
-                <ExpandMore color="primary" fontSize="small" />
-              </Box>
-            }
-            sx={{ mb: 2 }}
-          />
           </Box>
 
           {/* Footer con botones */}
           <Box sx={{ 
-            p: 2.5, 
-            borderTop: '1px solid #e0e0e0', 
-            backgroundColor: '#fafbfc', 
+            px: 3,
+            py: 2.5, 
+            borderTop: `1px solid ${theme.palette.divider}`, 
+            backgroundColor: theme.palette.background.paper, 
             display: 'flex', 
             justifyContent: 'flex-end', 
-            gap: 1.5,
-            boxShadow: '0 -2px 8px rgba(0,0,0,0.05)',
+            gap: 2,
           }}>
             <Button 
               onClick={() => setNoteOpen(false)} 
               sx={{ 
                 textTransform: 'none',
-                px: 3,
-                py: 1,
-                color: '#546e7a',
+                px: 3.5,
+                py: 1.25,
+                color: theme.palette.text.secondary,
                 fontWeight: 500,
+                borderRadius: 2,
                 '&:hover': {
-                  backgroundColor: '#eceff1',
+                  backgroundColor: theme.palette.action.hover,
                 },
+                transition: 'all 0.2s ease',
               }}
             >
               Cancelar
@@ -6254,21 +6598,26 @@ const CompanyDetail: React.FC = () => {
               disabled={saving || !noteData.description.trim()}
               sx={{ 
                 textTransform: 'none',
-                px: 3,
-                py: 1,
-                backgroundColor: saving ? '#bdbdbd' : taxiMonterricoColors.green,
+                px: 4,
+                py: 1.25,
+                backgroundColor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.orange,
                 fontWeight: 600,
-                boxShadow: saving ? 'none' : `0 2px 8px ${taxiMonterricoColors.green}50`,
+                borderRadius: 2,
+                boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.orange}40`,
                 '&:hover': {
-                  backgroundColor: saving ? '#bdbdbd' : taxiMonterricoColors.greenDark,
-                  boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.green}60`,
+                  backgroundColor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.orangeDark,
+                  boxShadow: saving ? 'none' : `0 6px 16px ${taxiMonterricoColors.orange}50`,
+                  transform: 'translateY(-1px)',
+                },
+                '&:active': {
+                  transform: 'translateY(0)',
                 },
                 '&:disabled': {
-                  backgroundColor: '#e0e0e0',
-                  color: '#9e9e9e',
+                  backgroundColor: theme.palette.action.disabledBackground,
+                  color: theme.palette.action.disabled,
                   boxShadow: 'none',
                 },
-                transition: 'all 0.2s ease',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             >
               {saving ? 'Guardando...' : 'Crear nota'}
@@ -6440,7 +6789,7 @@ const CompanyDetail: React.FC = () => {
           >
             <Box
               sx={{
-                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+                background: `linear-gradient(135deg, ${taxiMonterricoColors.orange} 0%, ${taxiMonterricoColors.orangeDark} 100%)`,
                 color: 'white',
                 display: 'flex',
                 alignItems: 'center',
@@ -6481,7 +6830,7 @@ const CompanyDetail: React.FC = () => {
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 1.5,
                     '&.Mui-focused fieldset': {
-                      borderColor: taxiMonterricoColors.green,
+                      borderColor: taxiMonterricoColors.orange,
                     },
                   },
                 }}
@@ -6498,7 +6847,7 @@ const CompanyDetail: React.FC = () => {
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 1.5,
                     '&.Mui-focused fieldset': {
-                      borderColor: taxiMonterricoColors.green,
+                      borderColor: taxiMonterricoColors.orange,
                     },
                   },
                 }}
@@ -6516,7 +6865,7 @@ const CompanyDetail: React.FC = () => {
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 1.5,
                     '&.Mui-focused fieldset': {
-                      borderColor: taxiMonterricoColors.green,
+                      borderColor: taxiMonterricoColors.orange,
                     },
                   },
                 }}
@@ -6544,13 +6893,13 @@ const CompanyDetail: React.FC = () => {
                 disabled={saving || !callData.subject.trim()}
                 sx={{ 
                   textTransform: 'none',
-                  bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.green,
+                  bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.orange,
                   fontWeight: 500,
                   px: 3,
-                  boxShadow: saving ? 'none' : `0 2px 8px ${taxiMonterricoColors.green}30`,
+                  boxShadow: saving ? 'none' : `0 2px 8px ${taxiMonterricoColors.orange}30`,
                   '&:hover': {
-                    bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.greenDark,
-                    boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.green}40`,
+                    bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.orangeDark,
+                    boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.orange}40`,
                   },
                   '&.Mui-disabled': {
                     bgcolor: '#bdbdbd',
@@ -6601,7 +6950,7 @@ const CompanyDetail: React.FC = () => {
           >
             <Box
               sx={{
-                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+                background: `linear-gradient(135deg, ${taxiMonterricoColors.orange} 0%, ${taxiMonterricoColors.orangeDark} 100%)`,
                 color: 'white',
                 display: 'flex',
                 alignItems: 'center',
@@ -6642,7 +6991,7 @@ const CompanyDetail: React.FC = () => {
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 1.5,
                     '&.Mui-focused fieldset': {
-                      borderColor: taxiMonterricoColors.green,
+                      borderColor: taxiMonterricoColors.orange,
                     },
                   },
                 }}
@@ -6660,7 +7009,7 @@ const CompanyDetail: React.FC = () => {
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 1.5,
                     '&.Mui-focused fieldset': {
-                      borderColor: taxiMonterricoColors.green,
+                      borderColor: taxiMonterricoColors.orange,
                     },
                   },
                 }}
@@ -6677,7 +7026,7 @@ const CompanyDetail: React.FC = () => {
                     '& .MuiOutlinedInput-root': {
                       borderRadius: 1.5,
                       '&.Mui-focused fieldset': {
-                        borderColor: taxiMonterricoColors.green,
+                        borderColor: taxiMonterricoColors.orange,
                       },
                     },
                   }}
@@ -6699,7 +7048,7 @@ const CompanyDetail: React.FC = () => {
                     '& .MuiOutlinedInput-root': {
                       borderRadius: 1.5,
                       '&.Mui-focused fieldset': {
-                        borderColor: taxiMonterricoColors.green,
+                        borderColor: taxiMonterricoColors.orange,
                       },
                     },
                   }}
@@ -6728,13 +7077,13 @@ const CompanyDetail: React.FC = () => {
                 disabled={saving || !taskData.title.trim()}
                 sx={{ 
                   textTransform: 'none',
-                  bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.green,
+                  bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.orange,
                   fontWeight: 500,
                   px: 3,
-                  boxShadow: saving ? 'none' : `0 2px 8px ${taxiMonterricoColors.green}30`,
+                  boxShadow: saving ? 'none' : `0 2px 8px ${taxiMonterricoColors.orange}30`,
                   '&:hover': {
-                    bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.greenDark,
-                    boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.green}40`,
+                    bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.orangeDark,
+                    boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.orange}40`,
                   },
                   '&.Mui-disabled': {
                     bgcolor: '#bdbdbd',
@@ -6785,7 +7134,7 @@ const CompanyDetail: React.FC = () => {
           >
             <Box
               sx={{
-                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+                background: `linear-gradient(135deg, ${taxiMonterricoColors.orange} 0%, ${taxiMonterricoColors.orangeDark} 100%)`,
                 color: 'white',
                 display: 'flex',
                 alignItems: 'center',
@@ -6826,7 +7175,7 @@ const CompanyDetail: React.FC = () => {
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 1.5,
                     '&.Mui-focused fieldset': {
-                      borderColor: taxiMonterricoColors.green,
+                      borderColor: taxiMonterricoColors.orange,
                     },
                   },
                 }}
@@ -6844,7 +7193,7 @@ const CompanyDetail: React.FC = () => {
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 1.5,
                     '&.Mui-focused fieldset': {
-                      borderColor: taxiMonterricoColors.green,
+                      borderColor: taxiMonterricoColors.orange,
                     },
                   },
                 }}
@@ -6862,7 +7211,7 @@ const CompanyDetail: React.FC = () => {
                     '& .MuiOutlinedInput-root': {
                       borderRadius: 1.5,
                       '&.Mui-focused fieldset': {
-                        borderColor: taxiMonterricoColors.green,
+                        borderColor: taxiMonterricoColors.orange,
                       },
                     },
                   }}
@@ -6879,7 +7228,7 @@ const CompanyDetail: React.FC = () => {
                     '& .MuiOutlinedInput-root': {
                       borderRadius: 1.5,
                       '&.Mui-focused fieldset': {
-                        borderColor: taxiMonterricoColors.green,
+                        borderColor: taxiMonterricoColors.orange,
                       },
                     },
                   }}
@@ -6908,13 +7257,13 @@ const CompanyDetail: React.FC = () => {
                 disabled={saving || !meetingData.subject.trim()}
                 sx={{ 
                   textTransform: 'none',
-                  bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.green,
+                  bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.orange,
                   fontWeight: 500,
                   px: 3,
-                  boxShadow: saving ? 'none' : `0 2px 8px ${taxiMonterricoColors.green}30`,
+                  boxShadow: saving ? 'none' : `0 2px 8px ${taxiMonterricoColors.orange}30`,
                   '&:hover': {
-                    bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.greenDark,
-                    boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.green}40`,
+                    bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.orangeDark,
+                    boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.orange}40`,
                   },
                   '&.Mui-disabled': {
                     bgcolor: '#bdbdbd',
@@ -6945,7 +7294,29 @@ const CompanyDetail: React.FC = () => {
       {/* Diálogo para agregar contacto */}
       <Dialog 
         open={addContactOpen} 
-        onClose={() => { setAddContactOpen(false); setContactDialogTab('create'); setSelectedExistingContacts([]); setExistingContactsSearch(''); }} 
+        onClose={() => { 
+          setAddContactOpen(false); 
+          setContactDialogTab('create'); 
+          setSelectedExistingContacts([]); 
+          setExistingContactsSearch('');
+          setContactFormData({ 
+            firstName: '', 
+            lastName: '', 
+            email: '', 
+            phone: '', 
+            jobTitle: '', 
+            lifecycleStage: 'lead',
+            dni: '',
+            cee: '',
+            address: '',
+            city: '',
+            state: '',
+            country: '',
+          });
+          setIdType('dni');
+          setDniError('');
+          setCeeError('');
+        }} 
         maxWidth="md" 
         fullWidth
         BackdropProps={{
@@ -6957,7 +7328,29 @@ const CompanyDetail: React.FC = () => {
       >
         <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           {contactDialogTab === 'create' ? 'Crear nuevo contacto' : 'Agregar Contacto existente'}
-          <IconButton onClick={() => { setAddContactOpen(false); setContactDialogTab('create'); setSelectedExistingContacts([]); setExistingContactsSearch(''); }} size="small">
+          <IconButton onClick={() => { 
+            setAddContactOpen(false); 
+            setContactDialogTab('create'); 
+            setSelectedExistingContacts([]); 
+            setExistingContactsSearch('');
+            setContactFormData({ 
+              firstName: '', 
+              lastName: '', 
+              email: '', 
+              phone: '', 
+              jobTitle: '', 
+              lifecycleStage: 'lead',
+              dni: '',
+              cee: '',
+              address: '',
+              city: '',
+              state: '',
+              country: '',
+            });
+            setIdType('dni');
+            setDniError('');
+            setCeeError('');
+          }} size="small">
             <Close />
           </IconButton>
         </DialogTitle>
@@ -6971,56 +7364,378 @@ const CompanyDetail: React.FC = () => {
           </Box>
 
           {contactDialogTab === 'create' && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
+              {/* Selección de tipo de identificación y campo de entrada */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', sm: 'row' } }}>
+                  <RadioGroup
+                    row
+                    value={idType}
+                    onChange={(e) => {
+                      const newType = e.target.value as 'dni' | 'cee';
+                      setIdType(newType);
+                      if (newType === 'dni') {
+                        setContactFormData({ ...contactFormData, cee: '', dni: '' });
+                        setCeeError('');
+                      } else {
+                        setContactFormData({ ...contactFormData, dni: '', cee: '' });
+                        setDniError('');
+                      }
+                    }}
+                    sx={{ gap: 2, flexShrink: 0 }}
+                  >
+                    <FormControlLabel
+                      value="dni"
+                      control={
+                        <Radio 
+                          sx={{ 
+                            color: theme.palette.text.secondary,
+                            '&.Mui-checked': {
+                              color: taxiMonterricoColors.orange,
+                            },
+                          }} 
+                        />
+                      }
+                      label="DNI"
+                      sx={{
+                        m: 0,
+                        px: 2,
+                        py: 0.75,
+                        height: '48px',
+                        border: `2px solid ${idType === 'dni' ? taxiMonterricoColors.orange : theme.palette.divider}`,
+                        borderRadius: 2,
+                        bgcolor: idType === 'dni' 
+                          ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : `${taxiMonterricoColors.orange}10`)
+                          : 'transparent',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        '&:hover': {
+                          borderColor: taxiMonterricoColors.orange,
+                          bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}15` : `${taxiMonterricoColors.orange}08`,
+                        },
+                        '& .MuiFormControlLabel-label': {
+                          color: theme.palette.text.primary,
+                          fontWeight: idType === 'dni' ? 500 : 400,
+                        },
+                      }}
+                    />
+                    <FormControlLabel
+                      value="cee"
+                      control={
+                        <Radio 
+                          sx={{ 
+                            color: theme.palette.text.secondary,
+                            '&.Mui-checked': {
+                              color: taxiMonterricoColors.orange,
+                            },
+                          }} 
+                        />
+                      }
+                      label="CEE"
+                      sx={{
+                        m: 0,
+                        px: 2,
+                        py: 0.75,
+                        height: '48px',
+                        border: `2px solid ${idType === 'cee' ? taxiMonterricoColors.orange : theme.palette.divider}`,
+                        borderRadius: 2,
+                        bgcolor: idType === 'cee' 
+                          ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : `${taxiMonterricoColors.orange}10`)
+                          : 'transparent',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        '&:hover': {
+                          borderColor: taxiMonterricoColors.orange,
+                          bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}15` : `${taxiMonterricoColors.orange}08`,
+                        },
+                        '& .MuiFormControlLabel-label': {
+                          color: theme.palette.text.primary,
+                          fontWeight: idType === 'cee' ? 500 : 400,
+                        },
+                      }}
+                    />
+                  </RadioGroup>
+
+                  {/* Campo de entrada según el tipo seleccionado */}
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    {idType === 'dni' ? (
+                      <TextField
+                        label="DNI"
+                        value={contactFormData.dni}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          const limitedValue = value.slice(0, 8);
+                          setContactFormData({ ...contactFormData, dni: limitedValue, cee: '' });
+                          setDniError('');
+                          setCeeError('');
+                        }}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && contactFormData.dni && contactFormData.dni.length === 8 && !loadingDni) {
+                            handleSearchDni();
+                          }
+                        }}
+                        error={!!dniError}
+                        helperText={dniError}
+                        InputLabelProps={{ shrink: true }}
+                        inputProps={{ maxLength: 8 }}
+                        sx={{
+                          width: '100%',
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                            minHeight: '48px',
+                            height: '48px',
+                          },
+                          '& .MuiInputBase-input': {
+                            py: 1.5,
+                            height: '48px',
+                            display: 'flex',
+                            alignItems: 'center',
+                          },
+                        }}
+                        InputProps={{
+                          endAdornment: (
+                            <IconButton
+                              onClick={handleSearchDni}
+                              disabled={loadingDni || !contactFormData.dni || contactFormData.dni.length < 8}
+                              size="small"
+                              sx={{
+                                color: taxiMonterricoColors.orange,
+                                '&:hover': {
+                                  bgcolor: `${taxiMonterricoColors.orange}15`,
+                                },
+                                '&.Mui-disabled': {
+                                  color: theme.palette.text.disabled,
+                                },
+                              }}
+                            >
+                              {loadingDni ? (
+                                <CircularProgress size={20} />
+                              ) : (
+                                <Search />
+                              )}
+                            </IconButton>
+                          ),
+                        }}
+                      />
+                    ) : (
+                      <TextField
+                        label="CEE"
+                        value={contactFormData.cee}
+                        onChange={(e) => {
+                          // Convertir a mayúsculas respetando caracteres especiales del español
+                          const value = e.target.value.toLocaleUpperCase('es-ES');
+                          const limitedValue = value.slice(0, 12);
+                          setContactFormData({ ...contactFormData, cee: limitedValue, dni: '' });
+                          setCeeError('');
+                          setDniError('');
+                        }}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && contactFormData.cee && contactFormData.cee.length === 12 && !loadingCee) {
+                            handleSearchCee();
+                          }
+                        }}
+                        error={!!ceeError}
+                        helperText={ceeError}
+                        InputLabelProps={{ shrink: true }}
+                        inputProps={{ maxLength: 12 }}
+                        sx={{
+                          width: '100%',
+                          '& .MuiOutlinedInput-root': {
+                            borderRadius: 2,
+                            minHeight: '48px',
+                            height: '48px',
+                          },
+                          '& .MuiInputBase-input': {
+                            py: 1.5,
+                            height: '48px',
+                            display: 'flex',
+                            alignItems: 'center',
+                          },
+                        }}
+                        InputProps={{
+                          endAdornment: (
+                            <IconButton
+                              onClick={handleSearchCee}
+                              disabled={loadingCee || !contactFormData.cee || contactFormData.cee.length < 12}
+                              size="small"
+                              sx={{
+                                color: taxiMonterricoColors.orange,
+                                '&:hover': {
+                                  bgcolor: `${taxiMonterricoColors.orange}15`,
+                                },
+                                '&.Mui-disabled': {
+                                  color: theme.palette.text.disabled,
+                                },
+                              }}
+                            >
+                              {loadingCee ? (
+                                <CircularProgress size={20} />
+                              ) : (
+                                <Search />
+                              )}
+                            </IconButton>
+                          ),
+                        }}
+                      />
+                    )}
+                  </Box>
+                </Box>
+              </Box>
+              
+              {/* Nombre y Apellido en su propia fila */}
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  label="Nombre"
+                  value={contactFormData.firstName}
+                  onChange={(e) => setContactFormData({ ...contactFormData, firstName: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+                <TextField
+                  label="Apellido"
+                  value={contactFormData.lastName}
+                  onChange={(e) => setContactFormData({ ...contactFormData, lastName: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+              </Box>
+              
+              {/* Email y Teléfono en su propia fila */}
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  label="Email"
+                  type="email"
+                  value={contactFormData.email}
+                  onChange={(e) => setContactFormData({ ...contactFormData, email: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+                <TextField
+                  label="Teléfono"
+                  value={contactFormData.phone}
+                  onChange={(e) => setContactFormData({ ...contactFormData, phone: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+              </Box>
+              
+              {/* Dirección en su propia fila */}
               <TextField
-                label="Nombre"
-                value={contactFormData.firstName}
-                onChange={(e) => setContactFormData({ ...contactFormData, firstName: e.target.value })}
-                required
+                label="Dirección"
+                value={contactFormData.address}
+                onChange={(e) => setContactFormData({ ...contactFormData, address: e.target.value })}
+                multiline
+                rows={2}
                 fullWidth
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
               />
-              <TextField
-                label="Apellido"
-                value={contactFormData.lastName}
-                onChange={(e) => setContactFormData({ ...contactFormData, lastName: e.target.value })}
-                required
-                fullWidth
-              />
-              <TextField
-                label="Correo electrónico"
-                value={contactFormData.email}
-                onChange={(e) => setContactFormData({ ...contactFormData, email: e.target.value })}
-                required
-                fullWidth
-              />
-              <TextField
-                label="Teléfono"
-                value={contactFormData.phone}
-                onChange={(e) => setContactFormData({ ...contactFormData, phone: e.target.value })}
-                fullWidth
-              />
-              <TextField
-                label="Cargo"
-                value={contactFormData.jobTitle}
-                onChange={(e) => setContactFormData({ ...contactFormData, jobTitle: e.target.value })}
-                fullWidth
-              />
-              <TextField
-                select
-                label="Etapa del Ciclo de Vida"
-                value={contactFormData.lifecycleStage}
-                onChange={(e) => setContactFormData({ ...contactFormData, lifecycleStage: e.target.value })}
-                fullWidth
-              >
-                <MenuItem value="lead">Lead</MenuItem>
-                <MenuItem value="contacto">Contacto</MenuItem>
-                <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
-                <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-                <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
-                <MenuItem value="negociacion">Negociación</MenuItem>
-                <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
-                <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
-              </TextField>
+              
+              {/* Distrito, Provincia y Departamento en su propia fila */}
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  label="Distrito"
+                  value={contactFormData.city}
+                  onChange={(e) => setContactFormData({ ...contactFormData, city: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+                <TextField
+                  label="Provincia"
+                  value={contactFormData.state}
+                  onChange={(e) => setContactFormData({ ...contactFormData, state: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+                <TextField
+                  label="Departamento"
+                  value={contactFormData.country}
+                  onChange={(e) => setContactFormData({ ...contactFormData, country: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+              </Box>
+              
+              {/* Cargo y Etapa del Ciclo de Vida en su propia fila */}
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  label="Cargo"
+                  value={contactFormData.jobTitle}
+                  onChange={(e) => setContactFormData({ ...contactFormData, jobTitle: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+                <TextField
+                  select
+                  label="Etapa del Ciclo de Vida"
+                  value={contactFormData.lifecycleStage}
+                  onChange={(e) => setContactFormData({ ...contactFormData, lifecycleStage: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                >
+                  <MenuItem value="lead">Lead</MenuItem>
+                  <MenuItem value="contacto">Contacto</MenuItem>
+                  <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+                  <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+                  <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
+                  <MenuItem value="negociacion">Negociación</MenuItem>
+                  <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+                  <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+                </TextField>
+              </Box>
             </Box>
           )}
 
@@ -7137,7 +7852,29 @@ const CompanyDetail: React.FC = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => { setAddContactOpen(false); setContactDialogTab('create'); setSelectedExistingContacts([]); setExistingContactsSearch(''); }}>
+          <Button onClick={() => { 
+            setAddContactOpen(false); 
+            setContactDialogTab('create'); 
+            setSelectedExistingContacts([]); 
+            setExistingContactsSearch('');
+            setContactFormData({ 
+              firstName: '', 
+              lastName: '', 
+              email: '', 
+              phone: '', 
+              jobTitle: '', 
+              lifecycleStage: 'lead',
+              dni: '',
+              cee: '',
+              address: '',
+              city: '',
+              state: '',
+              country: '',
+            });
+            setIdType('dni');
+            setDniError('');
+            setCeeError('');
+          }}>
             Cancelar
           </Button>
           {contactDialogTab === 'create' ? (
@@ -7165,75 +7902,122 @@ const CompanyDetail: React.FC = () => {
           }
         }}
       >
-        <DialogTitle>Agregar Negocio</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+        <DialogContent sx={{ pt: 5, pb: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
             <TextField
               label="Nombre del Negocio"
               value={dealFormData.name}
               onChange={(e) => setDealFormData({ ...dealFormData, name: e.target.value })}
-              required
-              fullWidth
+              InputLabelProps={{ shrink: true }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
             />
             <TextField
               label="Valor"
               type="number"
               value={dealFormData.amount}
               onChange={(e) => setDealFormData({ ...dealFormData, amount: e.target.value })}
-              fullWidth
-            />
-            <TextField
-              select
-              label="Etapa"
-              value={dealFormData.stage}
-              onChange={(e) => setDealFormData({ ...dealFormData, stage: e.target.value })}
-              fullWidth
+              InputLabelProps={{ shrink: true }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 1.5,
                 }
               }}
-            >
-              <MenuItem value="lead">Lead</MenuItem>
-              <MenuItem value="contacto">Contacto</MenuItem>
-              <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
-              <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-              <MenuItem value="propuesta_economica">Propuesta económica</MenuItem>
-              <MenuItem value="negociacion">Negociación</MenuItem>
-              <MenuItem value="cierre_ganado">Cierre ganado</MenuItem>
-              <MenuItem value="cierre_perdido">Cierre perdido</MenuItem>
-            </TextField>
+            />
             <TextField
               label="Fecha de cierre"
               type="date"
               value={dealFormData.closeDate}
               onChange={(e) => setDealFormData({ ...dealFormData, closeDate: e.target.value })}
-              fullWidth
               InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              select
-              label="Prioridad"
-              value={dealFormData.priority}
-              onChange={(e) => setDealFormData({ ...dealFormData, priority: e.target.value })}
-              fullWidth
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 1.5,
                 }
               }}
-            >
-              <MenuItem value="low">Baja</MenuItem>
-              <MenuItem value="medium">Media</MenuItem>
-              <MenuItem value="high">Alta</MenuItem>
-              <MenuItem value="urgent">Urgente</MenuItem>
-            </TextField>
+            />
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                select
+                label="Etapa"
+                value={dealFormData.stage}
+                onChange={(e) => setDealFormData({ ...dealFormData, stage: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              >
+                <MenuItem value="lead">Lead</MenuItem>
+                <MenuItem value="contacto">Contacto</MenuItem>
+                <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+                <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+                <MenuItem value="propuesta_economica">Propuesta económica</MenuItem>
+                <MenuItem value="negociacion">Negociación</MenuItem>
+                <MenuItem value="cierre_ganado">Cierre ganado</MenuItem>
+                <MenuItem value="cierre_perdido">Cierre perdido</MenuItem>
+              </TextField>
+              <TextField
+                select
+                label="Prioridad"
+                value={dealFormData.priority}
+                onChange={(e) => setDealFormData({ ...dealFormData, priority: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              >
+                <MenuItem value="low">Baja</MenuItem>
+                <MenuItem value="medium">Media</MenuItem>
+                <MenuItem value="high">Alta</MenuItem>
+                <MenuItem value="urgent">Urgente</MenuItem>
+              </TextField>
+            </Box>
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddDealOpen(false)}>Cancelar</Button>
-          <Button onClick={handleAddDeal} variant="contained" disabled={!dealFormData.name.trim()}>
-            Agregar
+        <DialogActions sx={{ 
+          px: 3, 
+          py: 2,
+          borderTop: `1px solid ${theme.palette.divider}`,
+          gap: 1,
+        }}>
+          <Button 
+            onClick={() => setAddDealOpen(false)}
+            sx={{
+              textTransform: 'none',
+              color: theme.palette.text.secondary,
+              fontWeight: 500,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+              }
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleAddDeal} 
+            variant="contained" 
+            disabled={!dealFormData.name.trim()}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 500,
+              borderRadius: 1.5,
+              px: 2.5,
+              bgcolor: taxiMonterricoColors.orange,
+              '&:hover': {
+                bgcolor: taxiMonterricoColors.orangeDark,
+              }
+            }}
+          >
+            Crear
           </Button>
         </DialogActions>
       </Dialog>
