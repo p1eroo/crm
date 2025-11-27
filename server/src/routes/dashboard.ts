@@ -8,6 +8,7 @@ import { Task } from '../models/Task';
 import { Campaign } from '../models/Campaign';
 import { Payment } from '../models/Payment';
 import { User } from '../models/User';
+import { MonthlyBudget } from '../models/MonthlyBudget';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
@@ -16,6 +17,7 @@ router.use(authenticateToken);
 // Obtener estadísticas del dashboard
 router.get('/stats', async (req: AuthRequest, res) => {
   try {
+    console.log('📊 Obteniendo estadísticas del dashboard...');
     const { startDate, endDate } = req.query;
     const dateFilter: any = {};
     
@@ -421,7 +423,7 @@ router.get('/stats', async (req: AuthRequest, res) => {
       }
     }
 
-    res.json({
+    const responseData = {
       contacts: {
         total: totalContacts,
         byStage: contactsByStage,
@@ -469,8 +471,158 @@ router.get('/stats', async (req: AuthRequest, res) => {
         total: totalLeads,
         converted: convertedLeads,
       },
+    };
+
+    // Obtener presupuestos guardados para los meses en el rango
+    let formattedBudgets: any[] = [];
+    try {
+      // Verificar que el modelo MonthlyBudget esté disponible
+      if (MonthlyBudget) {
+        let budgets: any[] = [];
+        if (dateFilter.createdAt && dateFilter.createdAt[Op.gte] && dateFilter.createdAt[Op.lte]) {
+          const startDate = new Date(dateFilter.createdAt[Op.gte]);
+          const endDate = new Date(dateFilter.createdAt[Op.lte]);
+          const startYear = startDate.getFullYear();
+          const endYear = endDate.getFullYear();
+          const startMonth = startDate.getMonth();
+          const endMonth = endDate.getMonth();
+
+          budgets = await MonthlyBudget.findAll({
+            where: {
+              [Op.or]: [
+                {
+                  year: startYear,
+                  month: { [Op.gte]: startMonth },
+                },
+                {
+                  year: endYear,
+                  month: { [Op.lte]: endMonth },
+                },
+                {
+                  year: { [Op.gt]: startYear, [Op.lt]: endYear },
+                },
+              ],
+            },
+          });
+        } else {
+          // Sin filtro: obtener presupuestos de los últimos 12 meses
+          const currentYear = new Date().getFullYear();
+          budgets = await MonthlyBudget.findAll({
+            where: {
+              year: { [Op.gte]: currentYear - 1 },
+            },
+          });
+        }
+
+        // Formatear presupuestos para que coincidan con el formato de monthlyPayments
+        formattedBudgets = budgets.map((budget: any) => {
+          const monthNames = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+          const monthName = monthNames[budget.month] || 'ene';
+          return {
+            month: `${monthName} ${budget.year}`,
+            amount: Number(budget.amount) || 0,
+          };
+        });
+      }
+    } catch (budgetError: any) {
+      console.error('Error al obtener presupuestos (continuando sin ellos):', budgetError?.message || budgetError);
+      // Continuar sin presupuestos si hay un error
+      formattedBudgets = [];
+    }
+
+    // Agregar budgets a la respuesta
+    responseData.payments.budgets = formattedBudgets;
+
+    console.log('✅ Estadísticas enviadas correctamente');
+    res.json(responseData);
+  } catch (error: any) {
+    console.error('❌ Error en endpoint /stats:', error);
+    console.error('Stack:', error.stack);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Guardar presupuesto mensual
+router.post('/budget', async (req: AuthRequest, res) => {
+  try {
+    const { month, year, amount } = req.body;
+
+    if (month === undefined || year === undefined || amount === undefined) {
+      return res.status(400).json({ error: 'Mes, año y monto son requeridos' });
+    }
+
+    if (month < 0 || month > 11) {
+      return res.status(400).json({ error: 'Mes debe estar entre 0 y 11' });
+    }
+
+    // Buscar o crear el presupuesto
+    const [budget, created] = await MonthlyBudget.findOrCreate({
+      where: {
+        month: parseInt(month),
+        year: parseInt(year),
+      },
+      defaults: {
+        month: parseInt(month),
+        year: parseInt(year),
+        amount: parseFloat(amount),
+      },
+    });
+
+    // Si ya existe, actualizarlo
+    if (!created) {
+      budget.amount = parseFloat(amount);
+      await budget.save();
+    }
+
+    res.json({
+      success: true,
+      budget: {
+        id: budget.id,
+        month: budget.month,
+        year: budget.year,
+        amount: Number(budget.amount),
+      },
     });
   } catch (error: any) {
+    console.error('Error al guardar presupuesto:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Obtener presupuesto mensual
+router.get('/budget', async (req: AuthRequest, res) => {
+  try {
+    const { month, year } = req.query;
+
+    if (month === undefined || year === undefined) {
+      return res.status(400).json({ error: 'Mes y año son requeridos' });
+    }
+
+    const budget = await MonthlyBudget.findOne({
+      where: {
+        month: parseInt(month as string),
+        year: parseInt(year as string),
+      },
+    });
+
+    if (!budget) {
+      return res.json({
+        success: true,
+        budget: null,
+      });
+    }
+
+    res.json({
+      success: true,
+      budget: {
+        id: budget.id,
+        month: budget.month,
+        year: budget.year,
+        amount: Number(budget.amount),
+      },
+    });
+  } catch (error: any) {
+    console.error('Error al obtener presupuesto:', error);
     res.status(500).json({ error: error.message });
   }
 });

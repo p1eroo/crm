@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider as MUIThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SidebarProvider } from './context/SidebarContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
@@ -19,6 +20,7 @@ import Campaigns from './pages/Campaigns';
 import Automations from './pages/Automations';
 import Profile from './pages/Profile';
 import Users from './pages/Users';
+import Pipeline from './pages/Pipeline';
 
 import { taxiMonterricoColors } from './theme/colors';
 
@@ -211,6 +213,16 @@ const AppContent: React.FC = () => {
                 </PrivateRoute>
               }
             />
+            <Route
+              path="/pipeline"
+              element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <Pipeline />
+                  </MainLayout>
+                </PrivateRoute>
+              }
+            />
             {/* <Route
               path="/campaigns"
               element={
@@ -260,10 +272,21 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
+
+  // Siempre envolver con GoogleOAuthProvider, incluso si no hay client_id
+  // Esto evita errores cuando los componentes intentan usar useGoogleLogin
+  // Si no hay client_id, simplemente no funcionará la autenticación
+  if (!googleClientId) {
+    console.warn('REACT_APP_GOOGLE_CLIENT_ID no está configurado. La funcionalidad de email no estará disponible.');
+  }
+
   return (
-    <ThemeProvider>
-      <AppContent />
-    </ThemeProvider>
+    <GoogleOAuthProvider clientId={googleClientId || 'dummy-client-id'}>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
+    </GoogleOAuthProvider>
   );
 };
 

@@ -58,7 +58,7 @@ const Login: React.FC = () => {
         alignItems: 'center',
         justifyContent: 'center',
         padding: 2,
-        backgroundColor: '#E8F5E9', // Verde claro pastel
+        backgroundColor: '#E1E7DC',
       }}
     >
       <Container component="main" maxWidth="xs" sx={{ position: 'relative' }}>
@@ -69,7 +69,7 @@ const Login: React.FC = () => {
             maxWidth: 400,
             borderRadius: 2,
             backgroundColor: '#FFFFFF',
-            border: '1px solid #000000',
+            border: '2px solid #000000',
             overflow: 'hidden',
           }}
         >
@@ -103,10 +103,39 @@ const Login: React.FC = () => {
                 }}
               />
             </Box>
+            
+            {/* Rectángulo con texto */}
+            <Box
+              sx={{
+                width: 'calc(100% + 32px)',
+                marginLeft: -2,
+                marginRight: -2,
+                backgroundColor: '#587565',
+                borderTop: '2px solid #000000',
+                borderBottom: '2px solid #000000',
+                borderLeft: 'none',
+                borderRight: 'none',
+                borderRadius: 0,
+                p: 2,
+                textAlign: 'center',
+                mt: 2,
+              }}
+            >
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 700,
+                  color: '#FFFFFF',
+                  fontSize: '1.125rem',
+                }}
+              >
+                Bienvenido
+              </Typography>
+            </Box>
           </Box>
 
           {/* Formulario */}
-          <Box sx={{ p: 3 }}>
+          <Box sx={{ p: 3, pt: 0, pb: 1.5 }}>
             {error && (
               <Alert
                 severity="error"
@@ -132,20 +161,21 @@ const Login: React.FC = () => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 sx={{
-                  mb: 2,
+                  mb: 0.5,
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 1,
+                    borderRadius: 2,
                     backgroundColor: '#FFFFFF',
                     '& fieldset': {
                       borderColor: '#000000',
-                      borderWidth: '1px',
+                      borderWidth: '2px',
                     },
                     '&:hover fieldset': {
                       borderColor: '#000000',
+                      borderWidth: '2px',
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: '#000000',
-                      borderWidth: '1px',
+                      borderWidth: '2px',
                     },
                   },
                   '& .MuiInputLabel-root': {
@@ -170,18 +200,19 @@ const Login: React.FC = () => {
                 sx={{
                   mb: 2,
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 1,
+                    borderRadius: 2,
                     backgroundColor: '#FFFFFF',
                     '& fieldset': {
                       borderColor: '#000000',
-                      borderWidth: '1px',
+                      borderWidth: '2px',
                     },
                     '&:hover fieldset': {
                       borderColor: '#000000',
+                      borderWidth: '2px',
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: '#000000',
-                      borderWidth: '1px',
+                      borderWidth: '2px',
                     },
                   },
                   '& .MuiInputLabel-root': {
@@ -200,23 +231,24 @@ const Login: React.FC = () => {
                   sx={{
                     py: 1.25,
                     px: 3,
-                    borderRadius: 1,
+                    borderRadius: 2,
                     fontSize: '0.875rem',
                     fontWeight: 500,
                     textTransform: 'none',
                     backgroundColor: '#FFFFFF',
                     color: '#000000',
                     borderColor: '#000000',
-                    borderWidth: '1px',
+                    borderWidth: '2px',
                     '&:hover': {
                       backgroundColor: '#F5F5F5',
                       borderColor: '#000000',
-                      borderWidth: '1px',
+                      borderWidth: '2px',
                     },
                     '&:disabled': {
                       backgroundColor: '#F5F5F5',
                       color: '#9E9E9E',
                       borderColor: '#9E9E9E',
+                      borderWidth: '2px',
                     },
                   }}
                 >
@@ -230,12 +262,15 @@ const Login: React.FC = () => {
                   )}
                 </Button>
                 <Typography
-                  component={Link}
-                  to="#"
+                  component="a"
+                  href="https://wa.me/51958921766?text=Hola%20Jack,%20olvidé%20mi%20contraseña"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   sx={{
                     fontSize: '0.875rem',
                     color: '#757575',
                     textDecoration: 'none',
+                    cursor: 'pointer',
                     '&:hover': {
                       textDecoration: 'underline',
                     },
@@ -247,13 +282,16 @@ const Login: React.FC = () => {
 
               <Box sx={{ textAlign: 'center', mb: 3 }}>
                 <Typography
-                  component={Link}
-                  to="#"
+                  component="a"
+                  href="https://wa.me/51958921766?text=Hola%20Jack,%20quiero%20registrar%20una%20nueva%20cuenta"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   sx={{
                     fontSize: '0.875rem',
                     fontWeight: 600,
                     color: '#000000',
                     textDecoration: 'none',
+                    cursor: 'pointer',
                     '&:hover': {
                       textDecoration: 'underline',
                     },

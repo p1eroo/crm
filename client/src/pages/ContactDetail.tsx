@@ -101,8 +101,10 @@ import {
 } from '@mui/icons-material';
 import api from '../config/api';
 import RichTextEditor from '../components/RichTextEditor';
+import EmailComposer from '../components/EmailComposer';
 import { taxiMonterricoColors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
+import { useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 
 interface ContactDetailData {
@@ -419,6 +421,7 @@ const ContactDetail: React.FC = () => {
   const [meetingOpen, setMeetingOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [warningMessage, setWarningMessage] = useState('');
   
   // Estados para formularios
   const [noteData, setNoteData] = useState({ subject: '', description: '' });
@@ -427,6 +430,10 @@ const ContactDetail: React.FC = () => {
   const [taskData, setTaskData] = useState({ title: '', description: '', priority: 'medium', dueDate: '' });
   const [meetingData, setMeetingData] = useState({ subject: '', description: '', date: '', time: '' });
   const [createFollowUpTask, setCreateFollowUpTask] = useState(false);
+
+  // Estados para OAuth de Google
+  const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   useEffect(() => {
     fetchContact();
@@ -638,21 +645,98 @@ const ContactDetail: React.FC = () => {
     setNoteOpen(true);
   };
 
+  const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
+
+  // Configurar Google OAuth login
+  const googleLogin = useGoogleLogin({
+    onSuccess: (tokenResponse) => {
+      setGoogleAccessToken(tokenResponse.access_token);
+      setIsAuthenticating(false);
+      setEmailOpen(true);
+    },
+    onError: () => {
+      setIsAuthenticating(false);
+      setWarningMessage('Error al autenticar con Google. Por favor, intenta nuevamente.');
+      setTimeout(() => setWarningMessage(''), 3000);
+    },
+    scope: 'https://www.googleapis.com/auth/gmail.send',
+  });
+
   const handleOpenEmail = () => {
-    // Abrir Gmail con el correo del contacto prellenado en una nueva pestaña
-    const email = contact?.email || '';
-    const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email)}`;
-    // Abrir en nueva pestaña y forzar el foco
-    const newWindow = window.open(gmailUrl, '_blank');
-    // Intentar hacer focus después de un pequeño delay para evitar bloqueos del navegador
-    if (newWindow) {
-      setTimeout(() => {
-        try {
-          newWindow.focus();
-        } catch (e) {
-          // Si el navegador bloquea el focus, el comportamiento predeterminado debería funcionar
-        }
-      }, 100);
+    if (!contact?.email) {
+      setWarningMessage('El contacto no tiene un email registrado');
+      setTimeout(() => setWarningMessage(''), 3000);
+      return;
+    }
+
+    // Verificar si Google OAuth está configurado
+    if (!googleClientId || googleClientId === 'dummy-client-id') {
+      setWarningMessage('Google OAuth no está configurado. Por favor, configura REACT_APP_GOOGLE_CLIENT_ID en el archivo .env del directorio client. Consulta GOOGLE_OAUTH_SETUP.md para más información.');
+      setTimeout(() => setWarningMessage(''), 6000);
+      return;
+    }
+
+    // Si ya tiene token, abrir directamente el modal
+    if (googleAccessToken) {
+      setEmailOpen(true);
+      return;
+    }
+
+    // Si no tiene token, iniciar autenticación
+    setIsAuthenticating(true);
+    googleLogin();
+  };
+
+  const handleSendEmail = async (emailData: { to: string; subject: string; body: string }) => {
+    if (!googleAccessToken) {
+      throw new Error('No estás autenticado con Google');
+    }
+
+    try {
+      // Enviar email a través del backend
+      await api.post('/emails/send', {
+        accessToken: googleAccessToken,
+        to: emailData.to,
+        subject: emailData.subject,
+        body: emailData.body,
+      });
+
+      // Registrar como actividad
+      const companies = (contact?.Companies && Array.isArray(contact.Companies))
+        ? contact.Companies
+        : (contact?.Company ? [contact.Company] : []);
+
+      if (companies.length > 0) {
+        const activityPromises = companies.map((company: any) =>
+          api.post('/activities', {
+            type: 'email',
+            subject: emailData.subject,
+            description: emailData.body.replace(/<[^>]*>/g, ''), // Remover HTML para la descripción
+            contactId: id,
+            companyId: company.id,
+          })
+        );
+        await Promise.all(activityPromises);
+      } else {
+        await api.post('/activities', {
+          type: 'email',
+          subject: emailData.subject,
+          description: emailData.body.replace(/<[^>]*>/g, ''),
+          contactId: id,
+        });
+      }
+
+      // Actualizar actividades
+      fetchAssociatedRecords();
+    } catch (error: any) {
+      // Si el token expiró, solicitar nueva autenticación
+      if (error.response?.status === 401) {
+        setGoogleAccessToken(null);
+        setIsAuthenticating(true);
+        googleLogin();
+        throw new Error('Tu sesión expiró. Por favor, autentícate nuevamente.');
+      }
+      throw error;
     }
   };
 
@@ -3584,12 +3668,15 @@ const ContactDetail: React.FC = () => {
                                         p: isExpanded ? 2 : 1.5,
                                         border: `1px solid ${theme.palette.divider}`,
                                         borderRadius: 2,
-                                        bgcolor: 'white',
+                                        bgcolor: theme.palette.background.paper,
+                                        color: theme.palette.text.primary,
                                         transition: 'all 0.3s ease',
                                         cursor: 'pointer',
                                         '&:hover': {
                                           borderColor: '#2E7D32',
-                                          boxShadow: '0 2px 8px rgba(46, 125, 50, 0.08)',
+                                          boxShadow: theme.palette.mode === 'dark' 
+                                            ? '0 2px 8px rgba(46, 125, 50, 0.2)' 
+                                            : '0 2px 8px rgba(46, 125, 50, 0.08)',
                                         },
                                       }}
                                       onClick={() => toggleNoteExpand(activity.id)}
@@ -3835,8 +3922,10 @@ const ContactDetail: React.FC = () => {
                                                     border: `1px solid ${theme.palette.divider}`,
                                                     borderRadius: 1,
                                                     p: 2,
-                                                    backgroundColor: '#fafafa',
-                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                                    backgroundColor: theme.palette.background.paper,
+                                                    boxShadow: theme.palette.mode === 'dark' 
+                                                      ? '0 4px 12px rgba(0,0,0,0.5)' 
+                                                      : '0 4px 12px rgba(0,0,0,0.15)',
                                                     zIndex: 1000,
                                                     display: 'flex',
                                                     flexDirection: 'column',
@@ -3927,10 +4016,12 @@ const ContactDetail: React.FC = () => {
                                                             p: 1.5,
                                                             borderRadius: 1,
                                                             cursor: 'pointer',
-                                                            backgroundColor: isSelected ? '#E3F2FD' : 'transparent',
+                                                            backgroundColor: isSelected 
+                                                              ? (theme.palette.mode === 'dark' ? 'rgba(0, 188, 212, 0.2)' : '#E3F2FD') 
+                                                              : 'transparent',
                                                             borderLeft: isSelected ? '3px solid #00bcd4' : '3px solid transparent',
                                                             '&:hover': {
-                                                              backgroundColor: '#f5f5f5',
+                                                              backgroundColor: theme.palette.action.hover,
                                                             },
                                                           }}
                                                         >
@@ -4421,12 +4512,15 @@ const ContactDetail: React.FC = () => {
                                         p: isExpanded ? 2 : 1.5,
                                         border: `1px solid ${theme.palette.divider}`,
                                         borderRadius: 2,
-                                        bgcolor: 'white',
+                                        bgcolor: theme.palette.background.paper,
+                                        color: theme.palette.text.primary,
                                         transition: 'all 0.3s ease',
                                         cursor: 'pointer',
                                         '&:hover': {
                                           borderColor: '#2E7D32',
-                                          boxShadow: '0 2px 8px rgba(46, 125, 50, 0.08)',
+                                          boxShadow: theme.palette.mode === 'dark' 
+                                            ? '0 2px 8px rgba(46, 125, 50, 0.2)' 
+                                            : '0 2px 8px rgba(46, 125, 50, 0.08)',
                                         },
                                       }}
                                       onClick={() => toggleActivityExpand(activity.id)}
@@ -6222,6 +6316,17 @@ const ContactDetail: React.FC = () => {
         </Alert>
       )}
 
+      {/* Mensaje de advertencia */}
+      {warningMessage && (
+        <Alert 
+          severity="warning" 
+          onClose={() => setWarningMessage('')}
+          sx={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999 }}
+        >
+          {warningMessage}
+        </Alert>
+      )}
+
       {/* Ventana flotante de Nota */}
       {noteOpen && (
         <Box
@@ -7401,120 +7506,25 @@ const ContactDetail: React.FC = () => {
         />
       )}
 
-      {/* Ventana flotante de Email */}
-      {emailOpen && (
-        <>
-          <Box
-            sx={{
-              position: 'fixed',
-              top: 0,
-              right: 0,
-              width: '500px',
-              maxWidth: '90vw',
-              height: '100vh',
-              backgroundColor: 'white',
-              boxShadow: '-4px 0 20px rgba(0,0,0,0.15)',
-              zIndex: 1300,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              animation: 'slideInRight 0.3s ease-out',
-              '@keyframes slideInRight': {
-                '0%': {
-                  transform: 'translateX(100%)',
-                },
-                '100%': {
-                  transform: 'translateX(0)',
-                },
-              },
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Box
-              sx={{
-                p: 0,
-                m: 0,
-                backgroundColor: '#37474F',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                minHeight: '50px',
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', pl: 2 }}>
-                <Typography variant="h6" sx={{ color: 'white', fontWeight: 500 }}>Correo</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <IconButton sx={{ color: 'white', mr: 1 }} size="small" onClick={() => setEmailOpen(false)}>
-                  <Close fontSize="small" />
-                </IconButton>
-              </Box>
-            </Box>
-
-            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2, overflow: 'hidden', overflowY: 'auto' }}>
-              <TextField
-                label="Para"
-                value={emailData.to}
-                onChange={(e) => setEmailData({ ...emailData, to: e.target.value })}
-                fullWidth
-                disabled
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                label="Asunto"
-                value={emailData.subject}
-                onChange={(e) => setEmailData({ ...emailData, subject: e.target.value })}
-                required
-                fullWidth
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                label="Mensaje"
-                multiline
-                rows={10}
-                value={emailData.description}
-                onChange={(e) => setEmailData({ ...emailData, description: e.target.value })}
-                fullWidth
-                sx={{ mb: 2 }}
-              />
-            </Box>
-
-            <Box sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}`, backgroundColor: theme.palette.background.paper, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-              <Button onClick={() => setEmailOpen(false)} color="inherit" sx={{ textTransform: 'none' }}>
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleSaveEmail} 
-                variant="contained" 
-                disabled={saving || !emailData.subject.trim()}
-                sx={{ 
-                  textTransform: 'none',
-                  backgroundColor: saving ? '#bdbdbd' : '#757575',
-                  '&:hover': {
-                    backgroundColor: saving ? '#bdbdbd' : '#616161',
-                  },
-                }}
-              >
-                {saving ? 'Guardando...' : 'Guardar'}
-              </Button>
-            </Box>
-          </Box>
-          <Box
-            sx={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.1)',
-              zIndex: 1299,
-              animation: 'fadeIn 0.3s ease-out',
-            }}
-            onClick={() => setEmailOpen(false)}
-          />
-        </>
+      {/* Modal de Email con Gmail API */}
+      {isAuthenticating && (
+        <Dialog open={isAuthenticating} maxWidth="sm" fullWidth>
+          <DialogContent sx={{ textAlign: 'center', py: 4 }}>
+            <CircularProgress sx={{ mb: 2 }} />
+            <Typography variant="body1">
+              Autenticando con Google...
+            </Typography>
+          </DialogContent>
+        </Dialog>
       )}
+      
+      <EmailComposer
+        open={emailOpen && !isAuthenticating}
+        onClose={() => setEmailOpen(false)}
+        recipientEmail={contact?.email || ''}
+        recipientName={contact ? `${contact.firstName} ${contact.lastName}` : undefined}
+        onSend={handleSendEmail}
+      />
 
       {/* Ventana flotante de Llamada */}
       {callOpen && (

@@ -16,6 +16,7 @@ import activityRoutes from './routes/activities';
 import campaignRoutes from './routes/campaigns';
 import dashboardRoutes from './routes/dashboard';
 import automationRoutes from './routes/automations';
+import emailRoutes from './routes/emails';
 
 dotenv.config();
 
@@ -53,6 +54,7 @@ app.use('/api/activities', activityRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/automations', automationRoutes);
+app.use('/api/emails', emailRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -21,6 +21,7 @@ import {
   PieChart,
   Logout,
   AdminPanelSettings,
+  AccountTree,
 } from '@mui/icons-material';
 import { taxiMonterricoColors } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
@@ -32,6 +33,7 @@ const mainMenuItems = [
   { text: 'Contactos', icon: <People />, path: '/contacts' },
   { text: 'Empresas', icon: <Business />, path: '/companies' },
   { text: 'Negocios', icon: <AttachMoney />, path: '/deals' },
+  { text: 'Pipeline', icon: <AccountTree />, path: '/pipeline' },
   { text: 'Tareas', icon: <Assignment />, path: '/tasks' },
   { text: 'Tickets', icon: <Support />, path: '/tickets' },
   // { text: 'Campañas', icon: <Campaign />, path: '/campaigns' },

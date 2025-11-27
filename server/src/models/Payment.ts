@@ -61,7 +61,7 @@ Payment.init(
     },
     currency: {
       type: DataTypes.STRING,
-      defaultValue: 'USD',
+      defaultValue: 'PEN',
     },
     status: {
       type: DataTypes.ENUM('pending', 'completed', 'failed', 'refunded', 'cancelled'),

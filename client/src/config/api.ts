@@ -14,6 +14,19 @@ const getApiUrl = () => {
     return 'http://localhost:5000/api';
   }
   
+  // Si estamos accediendo desde un túnel (localtunnel, ngrok, etc.), usar el túnel del backend
+  // El backend debe estar expuesto en un túnel separado
+  if (hostname.includes('.loca.lt')) {
+    // Si el frontend está en crm-tm.loca.lt, el backend debería estar en crm-tm-api.loca.lt
+    const backendHostname = hostname.replace('crm-tm', 'crm-tm-api');
+    return `https://${backendHostname}/api`;
+  }
+  if (hostname.includes('.ngrok.io') || hostname.includes('.ngrok-free.app')) {
+    // Para ngrok, usar la misma URL pero con el puerto 5000 (si está configurado)
+    // O crear un segundo túnel para el backend
+    return 'http://localhost:5000/api';
+  }
+  
   // Si estamos accediendo desde la red (IP), usar la misma IP pero puerto 5000
   // Detectar si es una IP (IPv4)
   const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
@@ -47,15 +60,20 @@ api.interceptors.request.use(
   (config) => {
     // Recalcular la URL en cada petición para asegurar que sea correcta
     const currentHostname = window.location.hostname;
-    if (currentHostname !== 'localhost' && currentHostname !== '127.0.0.1') {
+    
+    // Si estamos accediendo desde un túnel localtunnel, usar el túnel del backend
+    if (currentHostname.includes('.loca.lt')) {
+      const backendHostname = currentHostname.replace('crm-tm', 'crm-tm-api');
+      config.baseURL = `https://${backendHostname}/api`;
+    } else if (currentHostname === 'localhost' || currentHostname === '127.0.0.1') {
+      config.baseURL = 'http://localhost:5000/api';
+    } else {
       const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
       if (ipRegex.test(currentHostname)) {
         config.baseURL = `http://${currentHostname}:5000/api`;
       } else {
         config.baseURL = `http://${currentHostname}:5000/api`;
       }
-    } else {
-      config.baseURL = 'http://localhost:5000/api';
     }
     
     // Agregar token de autenticación si existe

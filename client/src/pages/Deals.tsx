@@ -78,12 +78,12 @@ const Deals: React.FC = () => {
   const formatCurrency = (value: number): string => {
     if (value >= 1000000) {
       const millions = value / 1000000;
-      return millions % 1 === 0 ? `$${millions.toFixed(0)}M` : `$${millions.toFixed(1)}M`;
+      return millions % 1 === 0 ? `S/ ${millions.toFixed(0)}M` : `S/ ${millions.toFixed(1)}M`;
     } else if (value >= 1000) {
       const thousands = value / 1000;
-      return thousands % 1 === 0 ? `$${thousands.toFixed(0)}k` : `$${thousands.toFixed(1)}k`;
+      return thousands % 1 === 0 ? `S/ ${thousands.toFixed(0)}k` : `S/ ${thousands.toFixed(1)}k`;
     }
-    return `$${value.toFixed(0)}`;
+    return `S/ ${value.toFixed(0)}`;
   };
 
   // Filtrar deals según el filtro activo

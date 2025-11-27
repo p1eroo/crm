@@ -83,7 +83,7 @@ Subscription.init(
     },
     currency: {
       type: DataTypes.STRING,
-      defaultValue: 'USD',
+      defaultValue: 'PEN',
     },
     billingCycle: {
       type: DataTypes.ENUM('monthly', 'quarterly', 'yearly', 'one-time'),

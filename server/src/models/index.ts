@@ -12,6 +12,7 @@ export { Ticket } from './Ticket';
 export { Subscription } from './Subscription';
 export { Payment } from './Payment';
 export { ContactCompany } from './ContactCompany';
+export { MonthlyBudget } from './MonthlyBudget';
 
 // Import all models to ensure they are registered
 // Importar modelos base primero
@@ -30,6 +31,7 @@ import './Automation';
 import './Ticket';
 import './Subscription';
 import './Payment';
+import './MonthlyBudget';
 
 // Inicializar relaciones muchos-a-muchos después de que todos los modelos estén cargados
 import { Contact } from './Contact';

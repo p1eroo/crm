@@ -314,6 +314,9 @@ const Companies: React.FC = () => {
           state: data.provincia || '',
           country: data.departamento || 'Perú',
         });
+
+        // Consultar deudas automáticamente después de obtener la información del RUC
+        await handleSearchDebts(formData.ruc);
       } else {
         setRucError('No se encontró información para este RUC');
         setRucInfo(null);

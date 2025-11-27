@@ -20,6 +20,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogActions,
+  TextField,
   Chip,
   useTheme,
   Snackbar,
@@ -37,6 +39,7 @@ import {
   AccountBalance,
   ShoppingCart,
   AttachMoney,
+  Close,
 } from '@mui/icons-material';
 import {
   LineChart,
@@ -52,6 +55,7 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
+  ReferenceLine,
 } from 'recharts';
 import api from '../config/api';
 import { useAuth } from '../context/AuthContext';
@@ -97,6 +101,7 @@ interface DashboardStats {
   payments?: {
     revenue: number;
     monthly: Array<{ month: string; amount: number }>;
+    budgets?: Array<{ month: string; amount: number }>;
   };
   leads?: {
     total: number;
@@ -131,6 +136,12 @@ const Dashboard: React.FC = () => {
   const [allTasksWithDates, setAllTasksWithDates] = useState<Task[]>([]);
   const [calendarModalDate, setCalendarModalDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState<Date | null>(null); // Día seleccionado en el calendario principal
+  const [budgetModalOpen, setBudgetModalOpen] = useState(false);
+  const [budgetValue, setBudgetValue] = useState<string>('');
+  const [savingBudget, setSavingBudget] = useState(false);
+  const [dailyPayments, setDailyPayments] = useState<any[]>([]);
+  const [editingBudgetMonth, setEditingBudgetMonth] = useState<number | null>(null); // Mes que se está editando (null = mes actual)
 
   // Generar lista de años: año actual y 5 años anteriores
   const availableYears = Array.from({ length: 6 }, (_, i) => currentYear - i);
@@ -202,6 +213,93 @@ const Dashboard: React.FC = () => {
     fetchStats();
   }, [selectedYear, selectedMonth]);
 
+  // Obtener deals ganados diarios cuando se selecciona un mes
+  useEffect(() => {
+    const fetchDailyDeals = async () => {
+      if (selectedMonth !== null) {
+        try {
+          const year = parseInt(selectedYear);
+          const month = parseInt(selectedMonth);
+          const startDate = new Date(year, month, 1);
+          const endDate = new Date(year, month + 1, 0, 23, 59, 59);
+          
+          // Obtener todos los deals ganados (sin límite de paginación)
+          const response = await api.get('/deals', {
+            params: {
+              stage: 'cierre_ganado',
+              limit: 1000, // Obtener muchos deals para asegurar que no se pierdan datos
+            },
+          });
+          
+          // Filtrar deals ganados por fecha en el frontend
+          const allDeals = response.data.deals || response.data || [];
+          const filteredDeals = allDeals.filter((deal: any) => {
+            // Verificar que sea deal ganado (por si acaso)
+            const isWon = deal.stage === 'won' || deal.stage === 'closed won' || deal.stage === 'cierre_ganado';
+            if (!isWon) return false;
+            
+            if (!deal.closeDate && !deal.updatedAt) return false;
+            // Usar closeDate si existe, sino updatedAt
+            const dealDate = deal.closeDate ? new Date(deal.closeDate) : new Date(deal.updatedAt);
+            return dealDate >= startDate && dealDate <= endDate;
+          });
+          
+          // Agrupar deals por día
+          const dealsByDay: { [key: number]: number } = {};
+          const daysInMonth = endDate.getDate();
+          
+          // Inicializar todos los días con 0
+          for (let day = 1; day <= daysInMonth; day++) {
+            dealsByDay[day] = 0;
+          }
+
+          // Agrupar deals ganados por día
+          if (filteredDeals && filteredDeals.length > 0) {
+            filteredDeals.forEach((deal: any) => {
+              if (deal.amount) {
+                // Usar closeDate si existe, sino updatedAt
+                const dealDate = deal.closeDate ? new Date(deal.closeDate) : new Date(deal.updatedAt);
+                const day = dealDate.getDate();
+                if (day >= 1 && day <= daysInMonth) {
+                  dealsByDay[day] = (dealsByDay[day] || 0) + parseFloat(deal.amount || 0);
+                }
+              }
+            });
+          }
+
+          // Convertir a array para el gráfico con valores acumulativos
+          let cumulativeValue = 0;
+          const dailyData = Array.from({ length: daysInMonth }, (_, i) => {
+            const day = i + 1;
+            // Sumar el valor del día actual al acumulado
+            cumulativeValue += dealsByDay[day] || 0;
+            return {
+              day: day.toString(),
+              value: cumulativeValue,
+            };
+          });
+
+          setDailyPayments(dailyData);
+        } catch (error) {
+          console.error('Error fetching daily payments:', error);
+          // Si hay error, generar días vacíos
+          const year = parseInt(selectedYear);
+          const month = parseInt(selectedMonth);
+          const endDate = new Date(year, month + 1, 0);
+          const daysInMonth = endDate.getDate();
+          setDailyPayments(Array.from({ length: daysInMonth }, (_, i) => ({
+            day: (i + 1).toString(),
+            value: 0,
+          })));
+        }
+      } else {
+        setDailyPayments([]);
+      }
+    };
+
+    fetchDailyDeals();
+  }, [selectedYear, selectedMonth]);
+
   // Recargar tareas cuando cambia el mes en el modal del calendario
   useEffect(() => {
     if (calendarModalOpen) {
@@ -246,7 +344,7 @@ const Dashboard: React.FC = () => {
         deals: { total: 0, totalValue: 0, byStage: [], wonThisMonth: 0, wonValueThisMonth: 0 },
         tasks: { total: 0, byStatus: [] },
         campaigns: { total: 0, active: 0 },
-        payments: { revenue: 0, monthly: [] },
+        payments: { revenue: 0, monthly: [], budgets: [] },
         leads: { total: 0, converted: 0 },
       });
     } finally {
@@ -304,31 +402,52 @@ const Dashboard: React.FC = () => {
       return;
     }
     
-    // Obtener los datos de ventas
-    const salesData = stats.payments?.monthly || [];
-    
     // Preparar datos para Excel
-    let excelData: Array<{ Mes: string; Ventas: number }> = [];
+    let excelData: Array<{ [key: string]: string | number }> = [];
     
-    if (salesData.length > 0) {
-      // Si hay datos reales, usarlos
-      excelData = salesData.map(item => ({
-        Mes: item.month,
-        Ventas: item.amount,
-      }));
-    } else {
-      // Si no hay datos, generar estructura con meses del año seleccionado
+    // Si hay un mes seleccionado, mostrar datos diarios
+    if (selectedMonth !== null) {
       const year = parseInt(selectedYear);
-      if (selectedMonth !== null) {
-        // Solo un mes
-        const monthIndex = parseInt(selectedMonth);
-        const monthName = monthNames[monthIndex]?.label || '';
-        excelData = [{
-          Mes: `${monthName} ${year}`,
-          Ventas: 0,
-        }];
+      const month = parseInt(selectedMonth);
+      const monthName = monthNames[month]?.label || '';
+      
+      // Usar datos diarios si están disponibles
+      if (dailyPayments.length > 0) {
+        excelData = dailyPayments.map((item, index) => {
+          // Calcular el monto del día individual (diferencia entre acumulados)
+          const previousValue = index > 0 ? (dailyPayments[index - 1].value || 0) : 0;
+          const currentValue = item.value || 0;
+          const dailyAmount = currentValue - previousValue;
+          
+          return {
+            Día: `Día ${item.day}`,
+            Fecha: `${item.day}/${month + 1}/${year}`,
+            'Ventas del día': dailyAmount,
+            'Ventas acumuladas': currentValue,
+          };
+        });
       } else {
-        // Todos los meses del año
+        // Si no hay datos diarios, generar estructura con días del mes
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        excelData = Array.from({ length: daysInMonth }, (_, i) => ({
+          Día: `Día ${i + 1}`,
+          Fecha: `${i + 1}/${month + 1}/${year}`,
+          'Ventas del día': 0,
+          'Ventas acumuladas': 0,
+        }));
+      }
+    } else {
+      // Si no hay mes seleccionado, mostrar datos mensuales
+      const salesData = stats.payments?.monthly || [];
+      
+      if (salesData.length > 0) {
+        excelData = salesData.map(item => ({
+          Mes: item.month,
+          Ventas: item.amount,
+        }));
+      } else {
+        // Si no hay datos, generar estructura con meses del año seleccionado
+        const year = parseInt(selectedYear);
         excelData = monthNames.map(month => ({
           Mes: `${month.label} ${year}`,
           Ventas: 0,
@@ -341,13 +460,60 @@ const Dashboard: React.FC = () => {
     const ws = XLSX.utils.json_to_sheet(excelData);
     
     // Ajustar el ancho de las columnas
-    ws['!cols'] = [
-      { wch: 25 }, // Mes
-      { wch: 15 }, // Ventas
-    ];
+    if (selectedMonth !== null) {
+      ws['!cols'] = [
+        { wch: 10 }, // Día
+        { wch: 15 }, // Fecha
+        { wch: 18 }, // Ventas del día
+        { wch: 18 }, // Ventas acumuladas
+      ];
+    } else {
+      ws['!cols'] = [
+        { wch: 25 }, // Mes
+        { wch: 15 }, // Ventas
+      ];
+    }
     
-    // Agregar la hoja al libro
-    XLSX.utils.book_append_sheet(wb, ws, 'Ventas');
+    // Agregar la hoja de ventas al libro
+    XLSX.utils.book_append_sheet(wb, ws, selectedMonth !== null ? 'Ventas Diarias' : 'Ventas');
+    
+    // Si hay un mes seleccionado, agregar segunda hoja con ventas por usuario
+    if (selectedMonth !== null && stats.deals.userPerformance && stats.deals.userPerformance.length > 0) {
+      // Preparar datos de ventas por usuario
+      const userSalesData = stats.deals.userPerformance
+        .filter(user => (user.wonDealsValue || 0) > 0) // Solo usuarios con ventas
+        .sort((a, b) => (b.wonDealsValue || 0) - (a.wonDealsValue || 0)) // Ordenar por ventas descendente
+        .map(user => ({
+          Usuario: `${user.firstName} ${user.lastName}`,
+          Email: user.email || '',
+          'Deals ganados': user.wonDeals || 0,
+          'Total vendido': user.wonDealsValue || 0,
+        }));
+      
+      // Si no hay usuarios con ventas, agregar una fila indicando que no hay datos
+      if (userSalesData.length === 0) {
+        userSalesData.push({
+          Usuario: 'Sin datos',
+          Email: '',
+          'Deals ganados': 0,
+          'Total vendido': 0,
+        });
+      }
+      
+      // Crear hoja de ventas por usuario
+      const wsUsers = XLSX.utils.json_to_sheet(userSalesData);
+      
+      // Ajustar el ancho de las columnas
+      wsUsers['!cols'] = [
+        { wch: 25 }, // Usuario
+        { wch: 30 }, // Email
+        { wch: 15 }, // Deals ganados
+        { wch: 18 }, // Total vendido
+      ];
+      
+      // Agregar la hoja de usuarios al libro
+      XLSX.utils.book_append_sheet(wb, wsUsers, 'Ventas por Usuario');
+    }
     
     // Nombre del archivo con año y mes si aplica
     const monthFilter = selectedMonth !== null 
@@ -386,30 +552,41 @@ const Dashboard: React.FC = () => {
 
   // Preparar datos para gráficos
   const salesData = stats.payments?.monthly || [];
-  const salesChartData = salesData.length > 0 
-    ? salesData.map(item => ({
+  const salesChartData = (() => {
+    // Si hay un mes seleccionado, mostrar datos diarios
+    if (selectedMonth !== null && dailyPayments.length > 0) {
+      return dailyPayments;
+    }
+    
+    // Si hay datos mensuales, usarlos
+    if (salesData.length > 0) {
+      return salesData.map(item => ({
         month: item.month.split(' ')[0].substring(0, 3),
         value: item.amount,
-      }))
-    : (() => {
-        // Si hay un mes seleccionado, mostrar solo ese mes
-        if (selectedMonth !== null) {
-          const monthIndex = parseInt(selectedMonth);
-          const monthName = monthNames[monthIndex]?.label || '';
-          return [{
-            month: monthName.substring(0, 3),
-            value: 0,
-          }];
-        }
-        // Si no hay mes seleccionado, mostrar los 12 meses del año
-        return Array.from({ length: 12 }, (_, i) => {
-          const date = new Date(parseInt(selectedYear), i, 1);
-          return {
-            month: date.toLocaleString('es-ES', { month: 'short' }).substring(0, 3),
-            value: 0,
-          };
-        });
-      })();
+      }));
+    }
+    
+    // Si hay un mes seleccionado pero no hay datos diarios aún, mostrar días vacíos
+    if (selectedMonth !== null) {
+      const year = parseInt(selectedYear);
+      const month = parseInt(selectedMonth);
+      const endDate = new Date(year, month + 1, 0);
+      const daysInMonth = endDate.getDate();
+      return Array.from({ length: daysInMonth }, (_, i) => ({
+        day: (i + 1).toString(),
+        value: 0,
+      }));
+    }
+    
+    // Si no hay mes seleccionado, mostrar los 12 meses del año
+    return Array.from({ length: 12 }, (_, i) => {
+      const date = new Date(parseInt(selectedYear), i, 1);
+      return {
+        month: date.toLocaleString('es-ES', { month: 'short' }).substring(0, 3),
+        value: 0,
+      };
+    });
+  })();
 
   // Función para obtener el label de la etapa
   const getStageLabel = (stage: string) => {
@@ -523,11 +700,192 @@ const Dashboard: React.FC = () => {
   const currentMonth = new Date().getMonth();
   const currentMonthNameForBudget = monthNames[currentMonth]?.label || '';
   const currentMonthAbbr = currentMonthNameForBudget.substring(0, 3) + '.';
-  const currentMonthData = stats.payments?.monthly?.find(item => {
+  
+  // Buscar el presupuesto del mes actual
+  // Primero buscar en budgets (presupuestos guardados), luego en monthly como fallback
+  const currentMonthAbbrLower = currentMonthNameForBudget.substring(0, 3).toLowerCase();
+  const currentMonthNameLower = currentMonthNameForBudget.toLowerCase();
+  
+  let currentMonthData = stats.payments?.budgets?.find(item => {
     const monthStr = item.month.toLowerCase();
-    return monthStr.includes(currentMonthNameForBudget.toLowerCase());
+    return (monthStr.includes(currentMonthNameLower) || monthStr.includes(currentMonthAbbrLower)) &&
+           monthStr.includes(currentYear.toString());
   });
+  
+  // Si no se encuentra en budgets, buscar en monthly (fallback)
+  if (!currentMonthData) {
+    currentMonthData = stats.payments?.monthly?.find(item => {
+      const monthStr = item.month.toLowerCase();
+      return (monthStr.includes(currentMonthNameLower) || monthStr.includes(currentMonthAbbrLower)) &&
+             monthStr.includes(currentYear.toString());
+    });
+  }
+  
+  // Si no se encuentra con el año, buscar sin el año
+  if (!currentMonthData) {
+    currentMonthData = stats.payments?.budgets?.find(item => {
+      const monthStr = item.month.toLowerCase();
+      return monthStr.includes(currentMonthNameLower) || monthStr.includes(currentMonthAbbrLower);
+    });
+  }
+  
+  if (!currentMonthData) {
+    currentMonthData = stats.payments?.monthly?.find(item => {
+      const monthStr = item.month.toLowerCase();
+      return monthStr.includes(currentMonthNameLower) || monthStr.includes(currentMonthAbbrLower);
+    });
+  }
+  
   const monthlyBudget = currentMonthData?.amount || 0;
+
+  // Calcular presupuesto del mes seleccionado (para mostrar en el gráfico)
+  const selectedMonthBudget = selectedMonth !== null && (stats.payments?.budgets || stats.payments?.monthly)
+    ? (() => {
+        const monthIndex = parseInt(selectedMonth);
+        const monthName = monthNames[monthIndex]?.label || '';
+        const year = parseInt(selectedYear);
+        
+        // El backend formatea los meses como "nov 2025" (abreviado)
+        // Pero también puede estar guardado como "Noviembre" o "Noviembre 2025"
+        const monthAbbr = monthName.substring(0, 3).toLowerCase(); // "nov" para "Noviembre"
+        const monthNameLower = monthName.toLowerCase();
+        
+        // Buscar primero en budgets (presupuestos guardados)
+        let monthData = stats.payments?.budgets?.find(item => {
+          const monthStr = item.month.toLowerCase();
+          return (monthStr.includes(monthNameLower) || monthStr.includes(monthAbbr)) &&
+                 monthStr.includes(year.toString());
+        });
+        
+        // Si no se encuentra en budgets, buscar en monthly (fallback)
+        if (!monthData) {
+          monthData = stats.payments?.monthly?.find(item => {
+            const monthStr = item.month.toLowerCase();
+            return (monthStr.includes(monthNameLower) || monthStr.includes(monthAbbr)) &&
+                   monthStr.includes(year.toString());
+          });
+        }
+        
+        // Si no se encuentra con el año, buscar sin el año
+        if (!monthData) {
+          monthData = stats.payments?.budgets?.find(item => {
+            const monthStr = item.month.toLowerCase();
+            return monthStr.includes(monthNameLower) || monthStr.includes(monthAbbr);
+          });
+        }
+        
+        if (!monthData) {
+          monthData = stats.payments?.monthly?.find(item => {
+            const monthStr = item.month.toLowerCase();
+            return monthStr.includes(monthNameLower) || monthStr.includes(monthAbbr);
+          });
+        }
+        
+        const budget = monthData?.amount || 0;
+        
+        return budget;
+      })()
+    : 0;
+
+  // Handler para abrir modal de edición de presupuesto
+  const handleBudgetClick = (monthIndex: number | null = null) => {
+    // Solo permitir edición a admin y jefe_comercial
+    if (user?.role === 'admin' || user?.role === 'jefe_comercial') {
+      const monthToEdit = monthIndex !== null ? monthIndex : currentMonth;
+      setEditingBudgetMonth(monthIndex);
+      
+      // Obtener el presupuesto del mes a editar
+      const monthName = monthNames[monthToEdit]?.label || '';
+      const yearToEdit = monthIndex !== null ? parseInt(selectedYear) : new Date().getFullYear();
+      const monthAbbr = monthName.substring(0, 3).toLowerCase();
+      const monthNameLower = monthName.toLowerCase();
+      
+      // Buscar primero en budgets (presupuestos guardados)
+      let monthData = stats.payments?.budgets?.find(item => {
+        const monthStr = item.month.toLowerCase();
+        const matchesMonth = monthStr.includes(monthNameLower) || monthStr.includes(monthAbbr);
+        const matchesYear = monthStr.includes(yearToEdit.toString());
+        return matchesMonth && (matchesYear || !monthStr.match(/\d{4}/));
+      });
+      
+      // Si no se encuentra en budgets, buscar en monthly (fallback)
+      if (!monthData) {
+        monthData = stats.payments?.monthly?.find(item => {
+          const monthStr = item.month.toLowerCase();
+          const matchesMonth = monthStr.includes(monthNameLower) || monthStr.includes(monthAbbr);
+          const matchesYear = monthStr.includes(yearToEdit.toString());
+          return matchesMonth && (matchesYear || !monthStr.match(/\d{4}/));
+        });
+      }
+      
+      // Si no se encuentra con el año, buscar sin el año
+      if (!monthData) {
+        monthData = stats.payments?.budgets?.find(item => {
+          const monthStr = item.month.toLowerCase();
+          return monthStr.includes(monthNameLower) || monthStr.includes(monthAbbr);
+        });
+      }
+      
+      if (!monthData) {
+        monthData = stats.payments?.monthly?.find(item => {
+          const monthStr = item.month.toLowerCase();
+          return monthStr.includes(monthNameLower) || monthStr.includes(monthAbbr);
+        });
+      }
+      
+      const budgetToEdit = monthData?.amount || 0;
+      
+      setBudgetValue((budgetToEdit / 1000).toFixed(0));
+      setBudgetModalOpen(true);
+    }
+  };
+
+  // Wrapper para manejar el click en la tarjeta de presupuesto (mes actual)
+  const handleBudgetCardClick = () => {
+    handleBudgetClick(null);
+  };
+
+  // Verificar si el usuario puede editar el presupuesto
+  const canEditBudget = user?.role === 'admin' || user?.role === 'jefe_comercial';
+
+  // Handler para guardar presupuesto
+  const handleSaveBudget = async () => {
+    const budgetAmount = parseFloat(budgetValue) * 1000; // Convertir de k a cantidad real
+    if (isNaN(budgetAmount) || budgetAmount < 0) {
+      setSuccessMessage('Por favor ingresa un monto válido');
+      return;
+    }
+
+    setSavingBudget(true);
+    try {
+      // Determinar qué mes se está editando
+      const monthToEdit = editingBudgetMonth !== null ? editingBudgetMonth : currentMonth;
+      const yearToEdit = editingBudgetMonth !== null ? parseInt(selectedYear) : new Date().getFullYear();
+      
+      // Llamar al API para guardar el presupuesto
+      const response = await api.post('/dashboard/budget', {
+        month: monthToEdit,
+        year: yearToEdit,
+        amount: budgetAmount,
+      });
+
+      if (response.data.success) {
+        // Recargar las estadísticas para obtener los presupuestos actualizados
+        await fetchStats();
+        
+        setSuccessMessage('Presupuesto actualizado exitosamente');
+        setBudgetModalOpen(false);
+        setEditingBudgetMonth(null);
+      } else {
+        setSuccessMessage('Error al guardar el presupuesto');
+      }
+    } catch (error) {
+      console.error('Error al guardar presupuesto:', error);
+      setSuccessMessage('Error al guardar el presupuesto');
+    } finally {
+      setSavingBudget(false);
+    }
+  };
 
   // Generar calendario para el calendario principal (izquierda) - mes completo
   const calendarMonth = calendarDate.getMonth();
@@ -664,8 +1022,8 @@ const Dashboard: React.FC = () => {
       {/* Contenido principal en dos columnas */}
       <Box sx={{ 
         display: 'flex',
-        flexDirection: { xs: 'column', lg: 'row' },
-        gap: { xs: 4, sm: 5, md: 8 },
+        flexDirection: { xs: 'column', md: 'row' },
+        gap: { xs: 2, sm: 3, md: 4, lg: 8 },
       }}>
       {/* Columna Principal Izquierda */}
       <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -673,30 +1031,34 @@ const Dashboard: React.FC = () => {
       {/* Tarjetas KPI con gradientes - Diseño compacto y equilibrado */}
       <Box sx={{ 
         display: 'grid', 
-        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, 
-        gap: { xs: 1.5, sm: 2, md: 2 }, 
-        mb: { xs: 3, md: 4 } 
+        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }, 
+        gap: { xs: 1, sm: 1.5, md: 2 }, 
+        mb: { xs: 2, sm: 3, md: 4 } 
       }}>
         {/* Monthly Budget */}
-        <Card sx={{ 
-          borderRadius: 3, 
-          boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
-            : '0 2px 4px rgba(0,0,0,0.08)',
-          background: theme.palette.background.paper,
-          color: theme.palette.text.primary,
-          transition: 'all 0.2s ease',
-          overflow: 'hidden',
-          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0,0,0,0.08)',
-          '&:hover': {
-            transform: { xs: 'none', md: 'translateY(-2px)' },
-            boxShadow: theme.palette.mode === 'dark'
-              ? '0 6px 16px rgba(0, 0, 0, 0.4)'
-              : '0 4px 12px rgba(0,0,0,0.15)',
-          },
-        }}>
+        <Card 
+          onClick={canEditBudget ? handleBudgetCardClick : undefined}
+          sx={{ 
+            borderRadius: 3, 
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
+              : '0 2px 4px rgba(0,0,0,0.08)',
+            background: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+            transition: 'all 0.2s ease',
+            overflow: 'hidden',
+            border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0,0,0,0.08)',
+            cursor: canEditBudget ? 'pointer' : 'default',
+            '&:hover': canEditBudget ? {
+              transform: { xs: 'none', md: 'translateY(-2px)' },
+              boxShadow: theme.palette.mode === 'dark'
+                ? '0 6px 16px rgba(0, 0, 0, 0.4)'
+                : '0 4px 12px rgba(0,0,0,0.15)',
+            } : {},
+          }}
+        >
           <CardContent sx={{ 
-            p: { xs: 1.75, sm: 2, md: 2.25 },
+            p: { xs: 1.5, sm: 2, md: 2.25 },
             position: 'relative',
           }}>
             <Box sx={{ 
@@ -725,7 +1087,7 @@ const Dashboard: React.FC = () => {
                     color: theme.palette.text.primary,
                   }}
                 >
-                  ${(monthlyBudget / 1000).toFixed(0)}k
+                  S/ {(monthlyBudget / 1000).toFixed(0)}k
                 </Typography>
               </Box>
               <AttachMoney 
@@ -759,7 +1121,7 @@ const Dashboard: React.FC = () => {
           },
         }}>
           <CardContent sx={{ 
-            p: { xs: 1.75, sm: 2, md: 2.25 },
+            p: { xs: 1.5, sm: 2, md: 2.25 },
             position: 'relative',
           }}>
             <Box sx={{ 
@@ -788,7 +1150,7 @@ const Dashboard: React.FC = () => {
                     color: theme.palette.text.primary,
                   }}
                 >
-                  ${(weeklyBalance / 1000).toFixed(0)}k
+                  S/ {(weeklyBalance / 1000).toFixed(0)}k
                 </Typography>
               </Box>
               <AccountBalance 
@@ -822,7 +1184,7 @@ const Dashboard: React.FC = () => {
           },
         }}>
           <CardContent sx={{ 
-            p: { xs: 1.75, sm: 2, md: 2.25 },
+            p: { xs: 1.5, sm: 2, md: 2.25 },
             position: 'relative',
           }}>
             <Box sx={{ 
@@ -886,7 +1248,7 @@ const Dashboard: React.FC = () => {
           },
         }}>
           <CardContent sx={{ 
-            p: { xs: 1.75, sm: 2, md: 2.25 },
+            p: { xs: 1.5, sm: 2, md: 2.25 },
             position: 'relative',
           }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -932,10 +1294,11 @@ const Dashboard: React.FC = () => {
         display: 'grid',
         gridTemplateColumns: { 
           xs: '1fr', 
+          md: (user?.role === 'admin' || user?.role === 'jefe_comercial') ? '2fr 1fr' : '1fr',
           lg: (user?.role === 'admin' || user?.role === 'jefe_comercial') ? '2fr 1fr' : '1fr' 
         },
-        gap: { xs: 2, md: 3 },
-        mb: { xs: 2, md: 3 } 
+        gap: { xs: 1.5, sm: 2, md: 3 },
+        mb: { xs: 2, sm: 2.5, md: 3 } 
       }}>
         {/* Sales Chart */}
         <Card sx={{ 
@@ -1014,28 +1377,57 @@ const Dashboard: React.FC = () => {
                 </Button>
               </Box>
             </Box>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={salesChartData}>
+            <Box sx={{ width: '100%', height: { xs: 250, sm: 300 }, minHeight: { xs: 250, sm: 300 } }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart 
+                  data={salesChartData}
+                  margin={selectedMonth !== null ? { top: 5, right: 5, bottom: 0, left: 5 } : { top: 5, right: 5, bottom: 20, left: 5 }}
+                >
                 <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
-                <XAxis dataKey="month" stroke={theme.palette.text.secondary} />
-                <YAxis stroke={theme.palette.text.secondary} />
-                <Tooltip />
+                <XAxis 
+                  dataKey={selectedMonth !== null ? "day" : "month"} 
+                  stroke={theme.palette.text.secondary}
+                  tick={{ fontSize: 12 }}
+                  angle={selectedMonth !== null ? -45 : 0}
+                  textAnchor={selectedMonth !== null ? "end" : "middle"}
+                  height={selectedMonth !== null ? 50 : undefined}
+                  dy={selectedMonth !== null ? 5 : undefined}
+                />
+                <YAxis 
+                  stroke={theme.palette.text.secondary}
+                  tickFormatter={(value) => `S/ ${(value / 1000).toFixed(0)}k`}
+                  domain={selectedMonth !== null && selectedMonthBudget > 0 
+                    ? [0, selectedMonthBudget * 1.1] 
+                    : [0, 'dataMax']}
+                />
+                <Tooltip 
+                  formatter={(value: number) => [`S/ ${value.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Ventas']}
+                  labelFormatter={(label) => selectedMonth !== null ? `Día ${label}` : label}
+                />
+                {selectedMonth !== null && selectedMonthBudget > 0 && (
+                  <ReferenceLine 
+                    y={selectedMonthBudget} 
+                    stroke="#10B981" 
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    label={{ 
+                      value: `Presupuesto: S/ ${(selectedMonthBudget / 1000).toFixed(0)}k`, 
+                      position: "right",
+                      fill: "#10B981",
+                      fontSize: 12,
+                    }}
+                  />
+                )}
                 <Line 
                   type="monotone" 
                   dataKey="value" 
                   stroke="#8B5CF6" 
                   strokeWidth={3}
-                  dot={false}
+                  dot={selectedMonth !== null ? { r: 4, fill: '#8B5CF6' } : false}
+                  activeDot={{ r: 6 }}
                 />
               </LineChart>
             </ResponsiveContainer>
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Box sx={{ width: 20, height: 2, bgcolor: '#8B5CF6' }} />
-                <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                  → Ventas
-                </Typography>
-              </Box>
             </Box>
           </CardContent>
         </Card>
@@ -1063,7 +1455,7 @@ const Dashboard: React.FC = () => {
               Total de Ventas por Asesor
             </Typography>
             {stats.deals.userPerformance && stats.deals.userPerformance.length > 0 ? (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1.5, md: 2 } }}>
                 {stats.deals.userPerformance
                   .sort((a, b) => (b.wonDealsValue || 0) - (a.wonDealsValue || 0))
                   .map((user, index) => (
@@ -1071,24 +1463,33 @@ const Dashboard: React.FC = () => {
                       key={user.userId}
                       sx={{
                         display: 'flex',
+                        flexDirection: { xs: 'column', sm: 'row' },
                         justifyContent: 'space-between',
-                        alignItems: 'center',
-                        p: 1.5,
+                        alignItems: { xs: 'flex-start', sm: 'center' },
+                        p: { xs: 1.5, md: 2 },
                         borderRadius: 2,
                         bgcolor: theme.palette.mode === 'dark' 
                           ? 'rgba(255, 255, 255, 0.05)' 
                           : 'rgba(0, 0, 0, 0.02)',
                         border: `1px solid ${theme.palette.divider}`,
+                        transition: 'all 0.2s',
+                        gap: { xs: 1.5, sm: 0 },
+                        '&:hover': {
+                          bgcolor: theme.palette.mode === 'dark' 
+                            ? 'rgba(255, 255, 255, 0.08)' 
+                            : 'rgba(0, 0, 0, 0.04)',
+                        },
                       }}
                     >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, md: 2 }, flex: 1, minWidth: 0, width: { xs: '100%', sm: 'auto' } }}>
                         <Avatar
                           sx={{
-                            width: 32,
-                            height: 32,
+                            width: { xs: 44, md: 48 },
+                            height: { xs: 44, md: 48 },
                             bgcolor: '#8B5CF6',
-                            fontSize: '0.875rem',
+                            fontSize: { xs: '1rem', md: '1.125rem' },
                             fontWeight: 600,
+                            flexShrink: 0,
                           }}
                         >
                           {getInitials(user.firstName, user.lastName)}
@@ -1099,7 +1500,8 @@ const Dashboard: React.FC = () => {
                             sx={{ 
                               fontWeight: 600, 
                               color: theme.palette.text.primary,
-                              fontSize: '0.875rem',
+                              fontSize: { xs: '0.9375rem', md: '1rem' },
+                              mb: 0.5,
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
@@ -1111,7 +1513,7 @@ const Dashboard: React.FC = () => {
                             variant="caption" 
                             sx={{ 
                               color: theme.palette.text.secondary,
-                              fontSize: '0.75rem',
+                              fontSize: { xs: '0.8125rem', md: '0.8125rem' },
                             }}
                           >
                             {user.wonDeals || 0} {user.wonDeals === 1 ? 'venta' : 'ventas'}
@@ -1123,11 +1525,15 @@ const Dashboard: React.FC = () => {
                         sx={{ 
                           fontWeight: 700, 
                           color: theme.palette.text.primary,
-                          fontSize: '1rem',
-                          ml: 2,
+                          fontSize: { xs: '1.125rem', md: '1.125rem' },
+                          ml: { xs: 0, sm: 2 },
+                          mt: { xs: 0.5, sm: 0 },
+                          alignSelf: { xs: 'flex-end', sm: 'center' },
+                          flexShrink: 0,
+                          whiteSpace: 'nowrap',
                         }}
                       >
-                        ${(user.wonDealsValue || 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        S/ {(user.wonDealsValue || 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       </Typography>
                     </Box>
                   ))}
@@ -1351,9 +1757,9 @@ const Dashboard: React.FC = () => {
 
       {/* Columna Derecha - Perfil, Calendario y Tareas */}
       <Box sx={{ 
-        width: { xs: '100%', lg: 320 }, 
+        width: { xs: '100%', md: 320 }, 
         flexShrink: 0,
-        mt: { xs: 3, lg: 0 },
+        mt: { xs: 2, sm: 2.5, md: 0 },
       }}>
         {/* Perfil */}
         <Box sx={{ mb: { xs: 3, md: 4 }, position: 'relative' }}>
@@ -1491,7 +1897,7 @@ const Dashboard: React.FC = () => {
                 ))}
               </Box>
               {/* Días del mes */}
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: { xs: 0.5, sm: 1 } }}>
                 {calendarDaysMain.map((day: number | null, index: number) => {
                   if (!day) {
                     return <Box key={index} />;
@@ -1509,22 +1915,36 @@ const Dashboard: React.FC = () => {
                   });
                   const hasTasks = dayTasks.length > 0;
 
+                  const dayDate = new Date(calendarYear, calendarMonth, day);
+                  const isSelected = selectedCalendarDay && 
+                    dayDate.getDate() === selectedCalendarDay.getDate() &&
+                    dayDate.getMonth() === selectedCalendarDay.getMonth() &&
+                    dayDate.getFullYear() === selectedCalendarDay.getFullYear();
+
                   return (
                     <Box
                       key={index}
+                      onClick={() => {
+                        setSelectedCalendarDay(dayDate);
+                      }}
                       sx={{
                         aspectRatio: '1',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         borderRadius: 1,
-                        bgcolor: hasTasks ? '#F97316' : 'transparent',
-                        color: hasTasks ? 'white' : theme.palette.text.primary,
-                        fontWeight: hasTasks ? 600 : 400,
-                        fontSize: '0.875rem',
+                        bgcolor: isSelected 
+                          ? taxiMonterricoColors.orange 
+                          : (hasTasks ? '#F97316' : 'transparent'),
+                        color: isSelected || hasTasks ? 'white' : theme.palette.text.primary,
+                        fontWeight: isSelected || hasTasks ? 600 : 400,
+                        fontSize: { xs: '0.75rem', sm: '0.875rem' },
                         cursor: 'pointer',
+                        transition: 'all 0.2s',
                         '&:hover': {
-                          bgcolor: hasTasks ? '#EA580C' : theme.palette.action.hover,
+                          bgcolor: isSelected 
+                            ? taxiMonterricoColors.orangeDark 
+                            : (hasTasks ? '#EA580C' : theme.palette.action.hover),
                         },
                       }}
                     >
@@ -1537,77 +1957,152 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Línea divisoria */}
-        <Divider sx={{ my: 3, borderColor: theme.palette.divider, borderWidth: 1 }} />
+        {/* Card con tareas del día seleccionado */}
+        {selectedCalendarDay && (() => {
+          const selectedDayStr = `${selectedCalendarDay.getFullYear()}-${String(selectedCalendarDay.getMonth() + 1).padStart(2, '0')}-${String(selectedCalendarDay.getDate()).padStart(2, '0')}`;
+          const selectedDayTasks = allTasksWithDates.filter((task) => {
+            if (!task.dueDate) return false;
+            const taskDate = new Date(task.dueDate);
+            const taskDateStr = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`;
+            return taskDateStr === selectedDayStr;
+          });
 
-        {/* To Do List */}
-        <Box>
-          <Typography variant="body1" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 2, fontSize: '1.125rem' }}>
-            Lista de Tareas
-          </Typography>
-
-          {tasks.length > 0 ? (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-              {tasks.map((task) => {
-                const isCompleted = task.status === 'completed';
-                
-                return (
-                  <Box key={task.id}>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1 }}>
-                      <Checkbox
-                        checked={isCompleted}
-                        onChange={() => handleTaskToggle(task.id, task.status)}
+          return (
+            <Card sx={{ 
+              borderRadius: { xs: 3, md: 6 }, 
+              boxShadow: theme.palette.mode === 'dark' 
+                ? '0 4px 12px rgba(0,0,0,0.3)' 
+                : { xs: 1, md: 2 },
+              mb: { xs: 2, sm: 3, md: 4 },
+              bgcolor: theme.palette.background.paper,
+              border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
+            }}>
+              <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
+                {selectedDayTasks.length > 0 ? (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    {selectedDayTasks.map((task) => (
+                      <Card
+                        key={task.id}
                         sx={{
-                          color: theme.palette.text.secondary,
-                          '&.Mui-checked': {
-                            color: '#10B981',
-                          },
-                          p: 0.25,
-                          '& .MuiSvgIcon-root': {
-                            fontSize: 22,
+                          p: 2,
+                          borderRadius: 2,
+                          border: `1px solid ${theme.palette.mode === 'dark' ? taxiMonterricoColors.green : taxiMonterricoColors.green}`,
+                          bgcolor: theme.palette.mode === 'dark' 
+                            ? 'rgba(16, 185, 129, 0.15)' 
+                            : `${taxiMonterricoColors.greenLight}20`,
+                          transition: 'all 0.2s',
+                          '&:hover': {
+                            boxShadow: theme.palette.mode === 'dark' 
+                              ? '0 4px 12px rgba(0,0,0,0.4)' 
+                              : 2,
+                            transform: 'translateY(-2px)',
+                            bgcolor: theme.palette.mode === 'dark' 
+                              ? 'rgba(16, 185, 129, 0.25)' 
+                              : `${taxiMonterricoColors.greenLight}30`,
                           },
                         }}
-                      />
-                      <Box sx={{ flex: 1 }}>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontWeight: 500,
-                            color: isCompleted ? theme.palette.text.secondary : theme.palette.text.primary,
-                            textDecoration: isCompleted ? 'line-through' : 'none',
-                            fontSize: '0.9375rem',
-                            lineHeight: 1.4,
-                          }}
-                        >
-                          {task.title}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 0.25 }}>
-                          <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem' }}>
-                            {getTaskTypeLabel(task.type)}
-                          </Typography>
-                          {task.dueDate && (
-                            <>
-                              <Typography variant="caption" sx={{ color: '#9CA3AF', fontSize: '0.8125rem' }}>
-                                |
-                              </Typography>
-                              <Typography variant="caption" sx={{ color: '#F97316', fontSize: '0.8125rem' }}>
-                                {formatTime(task.dueDate)}
-                              </Typography>
-                            </>
-                          )}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography
+                              variant="body1"
+                              sx={{
+                                fontWeight: 600,
+                                color: theme.palette.mode === 'dark' 
+                                  ? taxiMonterricoColors.green 
+                                  : taxiMonterricoColors.greenDark,
+                                mb: 0.5,
+                                fontSize: '0.9375rem',
+                              }}
+                            >
+                              {task.title}
+                            </Typography>
+                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
+                              {task.type && (
+                                <Chip
+                                  label={getTaskTypeLabel(task.type)}
+                                  size="small"
+                                  sx={{
+                                    fontSize: '0.7rem',
+                                    height: 22,
+                                    bgcolor: theme.palette.mode === 'dark' 
+                                      ? 'rgba(255, 255, 255, 0.1)' 
+                                      : '#F3F4F6',
+                                    color: theme.palette.mode === 'dark' 
+                                      ? theme.palette.text.secondary 
+                                      : '#6B7280',
+                                  }}
+                                />
+                              )}
+                              {task.priority && (
+                                <Chip
+                                  label={task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Media' : 'Baja'}
+                                  size="small"
+                                  sx={{
+                                    fontSize: '0.7rem',
+                                    height: 22,
+                                    bgcolor: theme.palette.mode === 'dark' 
+                                      ? (task.priority === 'high' 
+                                        ? 'rgba(239, 68, 68, 0.2)' 
+                                        : task.priority === 'medium' 
+                                        ? 'rgba(251, 191, 36, 0.2)' 
+                                        : 'rgba(16, 185, 129, 0.2)')
+                                      : (task.priority === 'high' 
+                                        ? '#FEE2E2' 
+                                        : task.priority === 'medium' 
+                                        ? '#FEF3C7' 
+                                        : '#D1FAE5'),
+                                    color: theme.palette.mode === 'dark' 
+                                      ? (task.priority === 'high' 
+                                        ? '#FCA5A5' 
+                                        : task.priority === 'medium' 
+                                        ? '#FCD34D' 
+                                        : '#6EE7B7')
+                                      : (task.priority === 'high' 
+                                        ? '#991B1B' 
+                                        : task.priority === 'medium' 
+                                        ? '#92400E' 
+                                        : '#065F46'),
+                                  }}
+                                />
+                              )}
+                              {task.dueDate && (
+                                <Typography 
+                                  variant="caption" 
+                                  sx={{ 
+                                    color: theme.palette.text.secondary, 
+                                    fontSize: '0.75rem', 
+                                    alignSelf: 'center' 
+                                  }}
+                                >
+                                  {new Date(task.dueDate).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                                </Typography>
+                              )}
+                            </Box>
+                          </Box>
                         </Box>
-                      </Box>
-                    </Box>
+                      </Card>
+                    ))}
                   </Box>
-                );
-              })}
-            </Box>
-          ) : (
-            <Typography variant="caption" sx={{ color: '#9CA3AF', textAlign: 'center', py: 1.5, fontSize: '0.875rem' }}>
-              No hay tareas pendientes
-            </Typography>
-          )}
-        </Box>
+                ) : (
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    py: 4,
+                    textAlign: 'center',
+                  }}>
+                    <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                      No hay tareas programadas para este día
+                    </Typography>
+                  </Box>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })()}
+
       </Box>
       </Box>
       <ProfileModal 
@@ -1615,6 +2110,87 @@ const Dashboard: React.FC = () => {
         onClose={() => setProfileModalOpen(false)}
         onSuccess={(message) => setSuccessMessage(message)}
       />
+      
+      {/* Modal de edición de presupuesto */}
+      <Dialog
+        open={budgetModalOpen}
+        onClose={() => {
+          if (!savingBudget) {
+            setBudgetModalOpen(false);
+            setEditingBudgetMonth(null);
+          }
+        }}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            bgcolor: theme.palette.background.paper,
+          },
+        }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          pb: 1,
+        }}>
+          <Typography variant="h6" fontWeight={600}>
+            Editar Presupuesto {editingBudgetMonth !== null 
+              ? monthNames[editingBudgetMonth]?.label.substring(0, 3) + '.' 
+              : currentMonthAbbr}
+          </Typography>
+          <IconButton
+            onClick={() => setBudgetModalOpen(false)}
+            disabled={savingBudget}
+            size="small"
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Presupuesto (en miles)"
+            type="number"
+            fullWidth
+            variant="outlined"
+            value={budgetValue}
+            onChange={(e) => setBudgetValue(e.target.value)}
+            disabled={savingBudget}
+            InputProps={{
+              startAdornment: <Typography sx={{ mr: 1, color: theme.palette.text.secondary }}>S/</Typography>,
+              endAdornment: <Typography sx={{ ml: 1, color: theme.palette.text.secondary }}>k</Typography>,
+            }}
+            sx={{ mt: 2 }}
+          />
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+            El monto se guardará en miles. Ejemplo: 10 = S/ 10,000
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 1 }}>
+          <Button
+            onClick={() => setBudgetModalOpen(false)}
+            disabled={savingBudget}
+            sx={{ color: theme.palette.text.secondary }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSaveBudget}
+            variant="contained"
+            disabled={savingBudget || !budgetValue || parseFloat(budgetValue) < 0}
+            sx={{
+              bgcolor: taxiMonterricoColors.green,
+              '&:hover': { bgcolor: taxiMonterricoColors.greenDark },
+            }}
+          >
+            {savingBudget ? 'Guardando...' : 'Guardar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      
       <Snackbar
         open={!!successMessage}
         autoHideDuration={4000}
@@ -1880,13 +2456,19 @@ const Dashboard: React.FC = () => {
                               sx={{
                                 p: 2,
                                 borderRadius: 2,
-                                border: `1px solid ${taxiMonterricoColors.green}`,
-                                bgcolor: `${taxiMonterricoColors.greenLight}20`,
+                                border: `1px solid ${theme.palette.mode === 'dark' ? taxiMonterricoColors.green : taxiMonterricoColors.green}`,
+                                bgcolor: theme.palette.mode === 'dark' 
+                                  ? 'rgba(16, 185, 129, 0.15)' 
+                                  : `${taxiMonterricoColors.greenLight}20`,
                                 transition: 'all 0.2s',
                                 '&:hover': {
-                                  boxShadow: 2,
+                                  boxShadow: theme.palette.mode === 'dark' 
+                                    ? '0 4px 12px rgba(0,0,0,0.4)' 
+                                    : 2,
                                   transform: 'translateY(-2px)',
-                                  bgcolor: `${taxiMonterricoColors.greenLight}30`,
+                                  bgcolor: theme.palette.mode === 'dark' 
+                                    ? 'rgba(16, 185, 129, 0.25)' 
+                                    : `${taxiMonterricoColors.greenLight}30`,
                                 },
                               }}
                             >
@@ -1896,7 +2478,9 @@ const Dashboard: React.FC = () => {
                                     variant="body1"
                                     sx={{
                                       fontWeight: 600,
-                                      color: taxiMonterricoColors.greenDark,
+                                      color: theme.palette.mode === 'dark' 
+                                        ? taxiMonterricoColors.green 
+                                        : taxiMonterricoColors.greenDark,
                                       mb: 0.5,
                                       fontSize: '0.9375rem',
                                     }}
@@ -1911,8 +2495,12 @@ const Dashboard: React.FC = () => {
                                         sx={{
                                           fontSize: '0.7rem',
                                           height: 22,
-                                          bgcolor: '#F3F4F6',
-                                          color: '#6B7280',
+                                          bgcolor: theme.palette.mode === 'dark' 
+                                            ? 'rgba(255, 255, 255, 0.1)' 
+                                            : '#F3F4F6',
+                                          color: theme.palette.mode === 'dark' 
+                                            ? theme.palette.text.secondary 
+                                            : '#6B7280',
                                         }}
                                       />
                                     )}
@@ -1923,13 +2511,40 @@ const Dashboard: React.FC = () => {
                                         sx={{
                                           fontSize: '0.7rem',
                                           height: 22,
-                                          bgcolor: task.priority === 'high' ? '#FEE2E2' : task.priority === 'medium' ? '#FEF3C7' : '#D1FAE5',
-                                          color: task.priority === 'high' ? '#991B1B' : task.priority === 'medium' ? '#92400E' : '#065F46',
+                                          bgcolor: theme.palette.mode === 'dark' 
+                                            ? (task.priority === 'high' 
+                                              ? 'rgba(239, 68, 68, 0.2)' 
+                                              : task.priority === 'medium' 
+                                              ? 'rgba(251, 191, 36, 0.2)' 
+                                              : 'rgba(16, 185, 129, 0.2)')
+                                            : (task.priority === 'high' 
+                                              ? '#FEE2E2' 
+                                              : task.priority === 'medium' 
+                                              ? '#FEF3C7' 
+                                              : '#D1FAE5'),
+                                          color: theme.palette.mode === 'dark' 
+                                            ? (task.priority === 'high' 
+                                              ? '#FCA5A5' 
+                                              : task.priority === 'medium' 
+                                              ? '#FCD34D' 
+                                              : '#6EE7B7')
+                                            : (task.priority === 'high' 
+                                              ? '#991B1B' 
+                                              : task.priority === 'medium' 
+                                              ? '#92400E' 
+                                              : '#065F46'),
                                         }}
                                       />
                                     )}
                                     {task.dueDate && (
-                                      <Typography variant="caption" sx={{ color: '#6B7280', fontSize: '0.75rem', alignSelf: 'center' }}>
+                                      <Typography 
+                                        variant="caption" 
+                                        sx={{ 
+                                          color: theme.palette.text.secondary, 
+                                          fontSize: '0.75rem', 
+                                          alignSelf: 'center' 
+                                        }}
+                                      >
                                         {new Date(task.dueDate).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                                       </Typography>
                                     )}
@@ -1948,7 +2563,7 @@ const Dashboard: React.FC = () => {
                           py: 6,
                           textAlign: 'center',
                         }}>
-                          <Typography variant="body2" sx={{ color: '#9CA3AF', mb: 1 }}>
+                          <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 1 }}>
                             No hay tareas programadas para este día
                           </Typography>
                         </Box>
