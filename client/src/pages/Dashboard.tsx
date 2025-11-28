@@ -1031,7 +1031,7 @@ const Dashboard: React.FC = () => {
       {/* Tarjetas KPI con gradientes - Diseño compacto y equilibrado */}
       <Box sx={{ 
         display: 'grid', 
-        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }, 
+        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(2, 1fr)', lg: 'repeat(2, 1fr)', xl: 'repeat(4, 1fr)' }, 
         gap: { xs: 1, sm: 1.5, md: 2 }, 
         mb: { xs: 2, sm: 3, md: 4 } 
       }}>
@@ -1294,8 +1294,9 @@ const Dashboard: React.FC = () => {
         display: 'grid',
         gridTemplateColumns: { 
           xs: '1fr', 
-          md: (user?.role === 'admin' || user?.role === 'jefe_comercial') ? '2fr 1fr' : '1fr',
-          lg: (user?.role === 'admin' || user?.role === 'jefe_comercial') ? '2fr 1fr' : '1fr' 
+          md: '1fr',
+          lg: '1fr',
+          xl: (user?.role === 'admin' || user?.role === 'jefe_comercial') ? '2fr 1fr' : '1fr' 
         },
         gap: { xs: 1.5, sm: 2, md: 3 },
         mb: { xs: 2, sm: 2.5, md: 3 } 
@@ -1433,6 +1434,7 @@ const Dashboard: React.FC = () => {
         </Card>
 
         {/* Total de Ventas por Asesor - Solo visible para admin y jefe_comercial */}
+        {/* Visible solo en xl para estar al lado de Ventas */}
         {(user?.role === 'admin' || user?.role === 'jefe_comercial') && (
         <Card sx={{ 
           borderRadius: { xs: 3, md: 6 }, 
@@ -1441,6 +1443,7 @@ const Dashboard: React.FC = () => {
             : { xs: 1, md: 2 },
           bgcolor: theme.palette.background.paper,
           border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
+          display: { xs: 'none', xl: 'block' },
         }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
             <Typography 
@@ -1555,20 +1558,142 @@ const Dashboard: React.FC = () => {
         )}
       </Box>
 
-      {/* Sección inferior: Sales Distribution, Weekly Sales y Desempeño por Usuario */}
-      {/* Verificar si el usuario tiene permisos para ver KPIs comerciales */}
-      {(() => {
-        const canViewCommercialKPIs = user?.role === 'admin' || user?.role === 'jefe_comercial';
-        const gridCols = canViewCommercialKPIs 
-          ? { xs: '1fr', md: '1fr 1fr', lg: '1fr 1fr 1fr' } 
-          : { xs: '1fr', md: '1fr 1fr' };
-        
-        return (
-          <Box sx={{ 
-            display: 'grid', 
-            gridTemplateColumns: gridCols, 
-            gap: { xs: 2, md: 3 } 
-          }}>
+      {/* Sección: Total de Ventas por Asesor (lg) y Distribución de Ventas */}
+      <Box sx={{ 
+        display: 'grid',
+        gridTemplateColumns: { 
+          xs: '1fr', 
+          md: '1fr',
+          lg: '1fr 1fr',
+          xl: '1fr' 
+        },
+        gap: { xs: 1.5, sm: 2, md: 3 },
+        mb: { xs: 2, sm: 2.5, md: 3 } 
+      }}>
+        {/* Total de Ventas por Asesor - Solo visible para admin y jefe_comercial en lg */}
+        {/* Visible solo en lg para estar al lado de Distribución de Ventas */}
+        {(user?.role === 'admin' || user?.role === 'jefe_comercial') && (
+        <Card sx={{ 
+          borderRadius: { xs: 3, md: 6 }, 
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 4px 12px rgba(0,0,0,0.3)' 
+            : { xs: 1, md: 2 },
+          bgcolor: theme.palette.background.paper,
+          border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
+          display: { xs: 'block', lg: 'block', xl: 'none' },
+        }}>
+          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                fontWeight: 600, 
+                color: theme.palette.text.primary,
+                fontSize: { xs: '1rem', md: '1.25rem' },
+                mb: { xs: 2, md: 3 },
+              }}
+            >
+              Total de Ventas por Asesor
+            </Typography>
+            {stats.deals.userPerformance && stats.deals.userPerformance.length > 0 ? (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1.5, md: 2 } }}>
+                {stats.deals.userPerformance
+                  .sort((a, b) => (b.wonDealsValue || 0) - (a.wonDealsValue || 0))
+                  .map((user, index) => (
+                    <Box 
+                      key={user.userId}
+                      sx={{
+                        display: 'flex',
+                        flexDirection: { xs: 'column', sm: 'row' },
+                        justifyContent: 'space-between',
+                        alignItems: { xs: 'flex-start', sm: 'center' },
+                        p: { xs: 1.5, md: 2 },
+                        borderRadius: 2,
+                        bgcolor: theme.palette.mode === 'dark' 
+                          ? 'rgba(255, 255, 255, 0.05)' 
+                          : 'rgba(0, 0, 0, 0.02)',
+                        border: `1px solid ${theme.palette.divider}`,
+                        transition: 'all 0.2s',
+                        gap: { xs: 1.5, sm: 0 },
+                        '&:hover': {
+                          bgcolor: theme.palette.mode === 'dark' 
+                            ? 'rgba(255, 255, 255, 0.08)' 
+                            : 'rgba(0, 0, 0, 0.04)',
+                        },
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, md: 2 }, flex: 1, minWidth: 0, width: { xs: '100%', sm: 'auto' } }}>
+                        <Avatar
+                          sx={{
+                            width: { xs: 44, md: 48 },
+                            height: { xs: 44, md: 48 },
+                            bgcolor: '#8B5CF6',
+                            fontSize: { xs: '1rem', md: '1.125rem' },
+                            fontWeight: 600,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {getInitials(user.firstName, user.lastName)}
+                        </Avatar>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              fontWeight: 600, 
+                              color: theme.palette.text.primary,
+                              fontSize: { xs: '0.9375rem', md: '1rem' },
+                              mb: 0.5,
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {user.firstName} {user.lastName}
+                          </Typography>
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              color: theme.palette.text.secondary,
+                              fontSize: { xs: '0.8125rem', md: '0.8125rem' },
+                            }}
+                          >
+                            {user.wonDeals || 0} {user.wonDeals === 1 ? 'venta' : 'ventas'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontWeight: 700, 
+                          color: theme.palette.text.primary,
+                          fontSize: { xs: '1.125rem', md: '1.125rem' },
+                          ml: { xs: 0, sm: 2 },
+                          mt: { xs: 0.5, sm: 0 },
+                          alignSelf: { xs: 'flex-end', sm: 'center' },
+                          flexShrink: 0,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        S/ {(user.wonDealsValue || 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </Typography>
+                    </Box>
+                  ))}
+              </Box>
+            ) : (
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: theme.palette.text.secondary,
+                  textAlign: 'center',
+                  py: 3,
+                }}
+              >
+                No hay datos de ventas por asesor disponibles
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
+        )}
+
         {/* Sales Distribution */}
         <Card sx={{ 
           borderRadius: { xs: 3, md: 6 }, 
@@ -1620,7 +1745,22 @@ const Dashboard: React.FC = () => {
             </Box>
           </CardContent>
         </Card>
+      </Box>
 
+      {/* Sección inferior: Weekly Sales y Desempeño por Usuario */}
+      {/* Verificar si el usuario tiene permisos para ver KPIs comerciales */}
+      {(() => {
+        const canViewCommercialKPIs = user?.role === 'admin' || user?.role === 'jefe_comercial';
+        const gridCols = canViewCommercialKPIs 
+          ? { xs: '1fr', md: '1fr 1fr', lg: '1fr 1fr' } 
+          : { xs: '1fr', md: '1fr' };
+        
+        return (
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: gridCols, 
+            gap: { xs: 2, md: 3 } 
+          }}>
         {/* Weekly Sales */}
         <Card sx={{ 
           borderRadius: { xs: 3, md: 6 }, 
