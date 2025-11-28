@@ -13,6 +13,7 @@ export { Subscription } from './Subscription';
 export { Payment } from './Payment';
 export { ContactCompany } from './ContactCompany';
 export { MonthlyBudget } from './MonthlyBudget';
+export { UserGoogleToken } from './UserGoogleToken';
 
 // Import all models to ensure they are registered
 // Importar modelos base primero
@@ -32,6 +33,7 @@ import './Ticket';
 import './Subscription';
 import './Payment';
 import './MonthlyBudget';
+import './UserGoogleToken';
 
 // Inicializar relaciones muchos-a-muchos después de que todos los modelos estén cargados
 import { Contact } from './Contact';

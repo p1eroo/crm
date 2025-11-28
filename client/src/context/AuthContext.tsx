@@ -27,14 +27,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (token && storedUser) {
-      setUser(JSON.parse(storedUser));
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    }
-    setLoading(false);
+    const checkAuth = () => {
+      const token = localStorage.getItem('token');
+      const storedUser = localStorage.getItem('user');
+      
+      if (token && storedUser) {
+        try {
+          // Configurar token
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          
+          // Establecer usuario desde localStorage inmediatamente
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          setLoading(false);
+          
+          // NO verificar el token aquí para evitar problemas de timing
+          // El token se validará cuando se hagan las peticiones reales
+          // Si el token es inválido, las peticiones fallarán y el interceptor manejará el error
+        } catch (error: any) {
+          console.error('Error parseando usuario:', error);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          delete api.defaults.headers.common['Authorization'];
+          setUser(null);
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
   const login = async (username: string, password: string) => {
@@ -49,10 +72,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       const { token, user: userData } = response.data;
       
+      if (!token) {
+        throw new Error('No se recibió token del servidor');
+      }
+      
+      if (!userData) {
+        throw new Error('No se recibieron datos del usuario');
+      }
+      
+      console.log('✅ Login exitoso, guardando token y usuario');
       localStorage.setItem('token', token);
       localStorage.setItem('user', JSON.stringify(userData));
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setUser(userData);
+      
+      // Verificar que el token funcione haciendo una petición de prueba
+      try {
+        const testResponse = await api.get('/auth/me');
+        console.log('✅ Verificación de token exitosa:', testResponse.data);
+        // Actualizar usuario con datos del servidor
+        if (testResponse.data) {
+          setUser(testResponse.data);
+          localStorage.setItem('user', JSON.stringify(testResponse.data));
+        }
+      } catch (verifyError: any) {
+        console.error('⚠️ Error verificando token después del login:', verifyError);
+        // No lanzar error aquí, el login fue exitoso
+        // El token podría estar bien pero hay un problema de red o timing
+      }
     } catch (error: any) {
       console.error('AuthContext: Error en login:', error);
       

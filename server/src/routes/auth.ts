@@ -347,7 +347,16 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    res.json(user);
+    // Formatear respuesta para que sea consistente con el login
+    res.json({
+      id: user.id,
+      usuario: user.usuario,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      avatar: user.avatar,
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

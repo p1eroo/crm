@@ -80,9 +80,12 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('🔑 Token agregado a petición:', config.url);
+    } else {
+      console.warn('⚠️ No hay token disponible para petición:', config.url);
     }
     
-    console.log('📤 Petición a:', config.baseURL + (config.url || ''));
+    console.log('📤 Petición a:', config.baseURL + (config.url || ''), 'con token:', token ? 'Sí' : 'No');
     return config;
   },
   (error) => {
@@ -106,10 +109,45 @@ api.interceptors.response.use(
       responseData: error.response?.data,
     });
     
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+    // Solo manejar errores 401/403, ignorar 404 (normal si no hay datos)
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // No redirigir si estamos en la página de login o si la petición es al endpoint de login
+      const isLoginPage = window.location.pathname === '/login';
+      const isLoginRequest = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/login-monterrico');
+      const isAuthMeRequest = error.config?.url?.includes('/auth/me'); // No redirigir si falla /auth/me
+      const isCalendarTokenRequest = error.config?.url?.includes('/calendar/token'); // No redirigir si falla /calendar/token
+      
+      console.log('🔒 Error de autenticación:', {
+        status: error.response?.status,
+        url: error.config?.url,
+        isLoginPage,
+        isLoginRequest,
+        isAuthMeRequest,
+        isCalendarTokenRequest,
+        pathname: window.location.pathname,
+      });
+      
+      // Solo redirigir si NO es una petición de verificación y NO estamos en login
+      // Y solo si realmente no hay token (no redirigir si hay token pero falló la validación)
+      if (!isLoginPage && !isLoginRequest && !isAuthMeRequest && !isCalendarTokenRequest) {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.log('🔒 No hay token, redirigiendo a login');
+          localStorage.removeItem('user');
+          delete api.defaults.headers.common['Authorization'];
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+          }
+        } else {
+          // Hay token pero la petición falló con 401/403
+          // Esto podría indicar que el token expiró o es inválido
+          // Pero NO redirigir inmediatamente, solo loguear el error
+          console.warn('⚠️ Petición falló con 401/403 pero hay token. El token podría ser inválido o expirado.');
+          console.warn('⚠️ No redirigiendo automáticamente. El usuario puede seguir usando la app si otras peticiones funcionan.');
+        }
+      } else {
+        console.log('🔒 No redirigiendo porque es una petición de verificación');
+      }
     }
     return Promise.reject(error);
   }

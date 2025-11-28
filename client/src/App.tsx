@@ -112,13 +112,19 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
 });
 
 const PrivateRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
 
   if (loading) {
     return <div>Cargando...</div>;
   }
 
-  return isAuthenticated ? children : <Navigate to="/login" />;
+  // Verificar tanto isAuthenticated como que user no sea null
+  if (!isAuthenticated || !user) {
+    console.log('🔒 Usuario no autenticado, redirigiendo a login. isAuthenticated:', isAuthenticated, 'user:', user);
+    return <Navigate to="/login" replace />;
+  }
+
+  return children;
 };
 
 const AppContent: React.FC = () => {
@@ -135,6 +141,16 @@ const AppContent: React.FC = () => {
             <Route path="/login" element={<Login />} />
             <Route
               path="/"
+              element={
+                <PrivateRoute>
+                  <MainLayout>
+                    <Dashboard />
+                  </MainLayout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/dashboard"
               element={
                 <PrivateRoute>
                   <MainLayout>
