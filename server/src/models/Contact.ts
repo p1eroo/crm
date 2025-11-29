@@ -24,7 +24,7 @@ interface ContactAttributes {
   github?: string;
   linkedin?: string;
   youtube?: string;
-  lifecycleStage: 'subscriber' | 'lead' | 'marketing qualified lead' | 'sales qualified lead' | 'opportunity' | 'customer' | 'evangelist';
+  lifecycleStage: 'lead' | 'contacto' | 'reunion_agendada' | 'reunion_efectiva' | 'propuesta_economica' | 'negociacion' | 'licitacion' | 'licitacion_etapa_final' | 'cierre_ganado' | 'cierre_perdido' | 'firma_contrato' | 'activo' | 'cliente_perdido' | 'lead_inactivo';
   leadStatus?: string;
   tags?: string[];
   notes?: string;
@@ -161,7 +161,7 @@ Contact.init(
       allowNull: true,
     },
     lifecycleStage: {
-      type: DataTypes.ENUM('subscriber', 'lead', 'marketing qualified lead', 'sales qualified lead', 'opportunity', 'customer', 'evangelist'),
+      type: DataTypes.ENUM('lead', 'contacto', 'reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion', 'licitacion', 'licitacion_etapa_final', 'cierre_ganado', 'cierre_perdido', 'firma_contrato', 'activo', 'cliente_perdido', 'lead_inactivo'),
       defaultValue: 'lead',
     },
     leadStatus: {

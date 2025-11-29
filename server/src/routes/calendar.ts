@@ -35,6 +35,7 @@ router.get('/auth', authenticateToken, (req: AuthRequest, res) => {
       scope: [
         'https://www.googleapis.com/auth/calendar',
         'https://www.googleapis.com/auth/calendar.events',
+        'https://www.googleapis.com/auth/tasks',
       ],
       state: userId.toString(), // Pasar userId en el state para identificarlo después
     });
@@ -83,7 +84,7 @@ router.get('/callback', async (req, res) => {
       accessToken: tokens.access_token || '',
       refreshToken: tokens.refresh_token || null,
       tokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
-      scope: tokens.scope || 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events',
+      scope: tokens.scope || 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks',
     });
 
     // Redirigir al frontend con éxito
@@ -118,7 +119,7 @@ authRouter.post('/save-token', async (req: AuthRequest, res) => {
       accessToken,
       refreshToken: refreshToken || null,
       tokenExpiry: expiryDate ? new Date(expiryDate) : null,
-      scope: scope || 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events',
+      scope: scope || 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks',
     });
 
     res.json({ success: true, message: 'Token guardado correctamente' });

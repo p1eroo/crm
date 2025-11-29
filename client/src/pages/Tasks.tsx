@@ -662,12 +662,39 @@ const Tasks: React.FC = () => {
                   </TableCell>
                   <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
                     {task.dueDate ? (
-                      <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                        {new Date(task.dueDate).toLocaleDateString()}
-                      </Typography>
+                      <Box>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: theme.palette.text.primary, 
+                            fontSize: { xs: '0.75rem', md: '0.875rem' },
+                            fontWeight: 500,
+                          }}
+                        >
+                          {new Date(task.dueDate).toLocaleDateString('es-ES', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric'
+                          })}
+                        </Typography>
+                        {new Date(task.dueDate) < new Date() && task.status !== 'completed' && (
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              color: '#d32f2f',
+                              fontSize: '0.7rem',
+                              fontWeight: 500,
+                              display: 'block',
+                              mt: 0.25
+                            }}
+                          >
+                            Vencida
+                          </Typography>
+                        )}
+                      </Box>
                     ) : (
                       <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                        --
+                        Sin fecha
                       </Typography>
                     )}
                   </TableCell>

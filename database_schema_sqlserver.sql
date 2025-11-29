@@ -91,9 +91,9 @@ CREATE TABLE companies (
     updatedAt DATETIME2 NOT NULL DEFAULT GETDATE(),
     CONSTRAINT FK_companies_owner FOREIGN KEY (ownerId) REFERENCES users(id) ON DELETE SET NULL,
     CONSTRAINT CHK_companies_lifecycleStage CHECK (lifecycleStage IN (
-        'subscriber', 'lead', 'contacto', 'reunion_agendada', 'reunion_efectiva',
-        'propuesta_economica', 'negociacion', 'cierre_ganado', 'cierre_perdido',
-        'marketing qualified lead', 'sales qualified lead', 'opportunity', 'customer', 'evangelist'
+        'lead_inactivo', 'cliente_perdido', 'cierre_perdido', 'lead', 'contacto',
+        'reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion',
+        'licitacion', 'licitacion_etapa_final', 'cierre_ganado', 'firma_contrato', 'activo'
     ))
 );
 
@@ -130,9 +130,9 @@ CREATE TABLE contacts (
     CONSTRAINT FK_contacts_owner FOREIGN KEY (ownerId) REFERENCES users(id) ON DELETE SET NULL,
     CONSTRAINT CHK_contacts_email CHECK (email LIKE '%@%.%'),
     CONSTRAINT CHK_contacts_lifecycleStage CHECK (lifecycleStage IN (
-        'subscriber', 'lead', 'contacto', 'reunion_agendada', 'reunion_efectiva',
-        'propuesta_economica', 'negociacion', 'cierre_ganado', 'cierre_perdido',
-        'marketing qualified lead', 'sales qualified lead', 'opportunity', 'customer', 'evangelist'
+        'lead_inactivo', 'cliente_perdido', 'cierre_perdido', 'lead', 'contacto',
+        'reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion',
+        'licitacion', 'licitacion_etapa_final', 'cierre_ganado', 'firma_contrato', 'activo'
     ))
 );
 

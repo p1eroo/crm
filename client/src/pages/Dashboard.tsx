@@ -2407,7 +2407,11 @@ const Dashboard: React.FC = () => {
                   
                   const hasTasks = dayTasks.length > 0;
                   const hasEvents = dayEvents.length > 0;
-                  const hasItems = hasTasks || hasEvents;
+
+                  // Color fijo para tareas (independiente de la prioridad)
+                  const taskColor = hasTasks ? '#F97316' : null; // Naranja para tareas
+                  // Color fijo para eventos de Google Calendar
+                  const eventColor = hasEvents ? '#1976d2' : null; // Azul para eventos
 
                   const dayDate = new Date(calendarYear, calendarMonth, day);
                   const isSelected = selectedCalendarDay && 
@@ -2424,25 +2428,62 @@ const Dashboard: React.FC = () => {
                       sx={{
                         aspectRatio: '1',
                         display: 'flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
                         borderRadius: 1,
                         bgcolor: isSelected 
                           ? taxiMonterricoColors.orange 
-                          : (hasItems ? '#F97316' : 'transparent'),
-                        color: isSelected || hasItems ? 'white' : theme.palette.text.primary,
-                        fontWeight: isSelected || hasItems ? 600 : 400,
+                          : 'transparent',
+                        color: isSelected ? 'white' : theme.palette.text.primary,
+                        fontWeight: isSelected ? 600 : 400,
                         fontSize: { xs: '0.75rem', sm: '0.875rem' },
                         cursor: 'pointer',
                         transition: 'all 0.2s',
+                        position: 'relative',
                         '&:hover': {
                           bgcolor: isSelected 
                             ? taxiMonterricoColors.orangeDark 
-                            : (hasItems ? '#EA580C' : theme.palette.action.hover),
+                            : theme.palette.action.hover,
                         },
                       }}
                     >
                       {day}
+                      {/* Puntos de color debajo de la fecha */}
+                      {(taskColor || eventColor) && (
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            gap: 0.5,
+                            mt: 0.5,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {taskColor && (
+                            <Box
+                              sx={{
+                                width: { xs: 6, sm: 8 },
+                                height: { xs: 6, sm: 8 },
+                                borderRadius: '50%',
+                                bgcolor: taskColor,
+                                boxShadow: isSelected ? '0 0 0 1px white' : 'none',
+                              }}
+                            />
+                          )}
+                          {eventColor && (
+                            <Box
+                              sx={{
+                                width: { xs: 6, sm: 8 },
+                                height: { xs: 6, sm: 8 },
+                                borderRadius: '50%',
+                                bgcolor: eventColor,
+                                boxShadow: isSelected ? '0 0 0 1px white' : 'none',
+                              }}
+                            />
+                          )}
+                        </Box>
+                      )}
                     </Box>
                   );
                 })}
@@ -2894,7 +2935,11 @@ const Dashboard: React.FC = () => {
                       const dayEvents = getEventsForDay(day);
                       const hasTasks = dayTasks.length > 0;
                       const hasEvents = dayEvents.length > 0;
-                      const hasItems = hasTasks || hasEvents;
+                      
+                      // Color fijo para tareas (independiente de la prioridad)
+                      const taskColor = hasTasks ? '#F97316' : null; // Naranja para tareas
+                      // Color fijo para eventos de Google Calendar
+                      const eventColor = hasEvents ? '#1976d2' : null; // Azul para eventos
                       
                       const today = new Date();
                       const isToday = day === today.getDate() && 
@@ -2928,7 +2973,7 @@ const Dashboard: React.FC = () => {
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
-                            justifyContent: 'center',
+                            justifyContent: 'flex-start',
                             cursor: 'pointer',
                             transition: 'all 0.2s',
                             position: 'relative',
@@ -2956,21 +3001,43 @@ const Dashboard: React.FC = () => {
                                     : '#0284C7' 
                                   : theme.palette.text.primary),
                               fontSize: '0.875rem',
+                              mb: 0.5,
                             }}
                           >
                             {day}
                           </Typography>
-                          {hasItems && (
+                          {/* Puntos de color debajo de la fecha */}
+                          {(taskColor || eventColor) && (
                             <Box
                               sx={{
-                                position: 'absolute',
-                                bottom: 6,
-                                width: 6,
-                                height: 6,
-                                borderRadius: '50%',
-                                bgcolor: isSelected ? taxiMonterricoColors.orangeDark : (isToday ? '#0284C7' : '#EF4444'),
+                                display: 'flex',
+                                gap: 0.5,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                mt: 'auto',
                               }}
-                            />
+                            >
+                              {taskColor && (
+                                <Box
+                                  sx={{
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: '50%',
+                                    bgcolor: taskColor,
+                                  }}
+                                />
+                              )}
+                              {eventColor && (
+                                <Box
+                                  sx={{
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: '50%',
+                                    bgcolor: eventColor,
+                                  }}
+                                />
+                              )}
+                            </Box>
                           )}
                         </Box>
                       );

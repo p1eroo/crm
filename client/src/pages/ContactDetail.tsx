@@ -588,7 +588,37 @@ const ContactDetail: React.FC = () => {
       const activitiesResponse = await api.get('/activities', {
         params: { contactId: id },
       });
-      setActivities(activitiesResponse.data.activities || activitiesResponse.data || []);
+      const activitiesData = activitiesResponse.data.activities || activitiesResponse.data || [];
+
+      // Obtener tareas asociadas al contacto
+      const tasksResponse = await api.get('/tasks', {
+        params: { contactId: id },
+      });
+      const tasksData = tasksResponse.data.tasks || tasksResponse.data || [];
+
+      // Convertir tareas a formato de actividad para mostrarlas en la lista
+      const tasksAsActivities = tasksData.map((task: any) => ({
+        id: task.id,
+        type: task.type || 'task',
+        subject: task.title,
+        description: task.description,
+        dueDate: task.dueDate,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+        User: task.CreatedBy || task.AssignedTo,
+        isTask: true, // Flag para identificar que es una tarea
+        status: task.status,
+        priority: task.priority,
+      }));
+
+      // Combinar actividades y tareas, ordenadas por fecha de creación (más recientes primero)
+      const allActivities = [...activitiesData, ...tasksAsActivities].sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
+        const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
+        return dateB - dateA;
+      });
+
+      setActivities(allActivities);
 
       // Obtener tickets asociados
       const ticketsResponse = await api.get('/tickets', {
@@ -618,16 +648,42 @@ const ContactDetail: React.FC = () => {
 
   const getStageColor = (stage: string) => {
     const colors: { [key: string]: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' } = {
-      'lead': 'info',
-      'contacto': 'info',
-      'reunion_agendada': 'primary',
-      'reunion_efectiva': 'primary',
-      'propuesta_economica': 'warning',
-      'negociacion': 'warning',
-      'cierre_ganado': 'success',
-      'cierre_perdido': 'error',
+      'lead': 'error', // Rojo para 0%
+      'contacto': 'warning', // Naranja para 10%
+      'reunion_agendada': 'warning', // Naranja para 30%
+      'reunion_efectiva': 'warning', // Amarillo para 40%
+      'propuesta_economica': 'info', // Verde claro para 50%
+      'negociacion': 'success', // Verde para 70%
+      'licitacion': 'success', // Verde para 75%
+      'licitacion_etapa_final': 'success', // Verde oscuro para 85%
+      'cierre_ganado': 'success', // Verde oscuro para 90%
+      'cierre_perdido': 'error', // Rojo para -1%
+      'firma_contrato': 'success', // Verde oscuro para 95%
+      'activo': 'success', // Verde más oscuro para 100%
+      'cliente_perdido': 'error', // Rojo para -1%
+      'lead_inactivo': 'error', // Rojo para -5%
     };
     return colors[stage] || 'default';
+  };
+
+  const getStageLabel = (stage: string) => {
+    const labels: { [key: string]: string } = {
+      'lead': '0% Lead',
+      'contacto': '10% Contacto',
+      'reunion_agendada': '30% Reunión Agendada',
+      'reunion_efectiva': '40% Reunión Efectiva',
+      'propuesta_economica': '50% Propuesta Económica',
+      'negociacion': '70% Negociación',
+      'licitacion': '75% Licitación',
+      'licitacion_etapa_final': '85% Licitación Etapa Final',
+      'cierre_ganado': '90% Cierre Ganado',
+      'cierre_perdido': '-1% Cierre Perdido',
+      'firma_contrato': '95% Firma de Contrato',
+      'activo': '100% Activo',
+      'cliente_perdido': '-1% Cliente perdido',
+      'lead_inactivo': '-5% Lead Inactivo',
+    };
+    return labels[stage] || stage;
   };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
@@ -922,29 +978,32 @@ const ContactDetail: React.FC = () => {
         ? contact.Companies
         : (contact?.Company ? [contact.Company] : []);
 
-      // Crear una actividad para cada empresa asociada, o solo con contactId si no hay empresas
+      // Preparar datos de la tarea
+      const taskPayload = {
+        title: taskData.title,
+        description: taskData.description,
+        type: 'todo',
+        status: 'not started',
+        priority: taskData.priority || 'medium',
+        dueDate: taskData.dueDate || undefined,
+        contactId: id,
+      };
+
+      // Crear una tarea para cada empresa asociada, o solo con contactId si no hay empresas
       if (companies.length > 0) {
-        // Crear actividad para cada empresa asociada
-        const activityPromises = companies.map((company: any) =>
-          api.post('/activities', {
-            type: 'task',
-            subject: taskData.title,
-            description: taskData.description,
-            contactId: id,
+        // Crear tarea para cada empresa asociada
+        const taskPromises = companies.map((company: any) =>
+          api.post('/tasks', {
+            ...taskPayload,
             companyId: company.id,
           })
         );
-        await Promise.all(activityPromises);
+        await Promise.all(taskPromises);
       } else {
         // Si no hay empresas asociadas, crear solo con contactId
-        await api.post('/activities', {
-          type: 'task',
-          subject: taskData.title,
-          description: taskData.description,
-          contactId: id,
-        });
+        await api.post('/tasks', taskPayload);
       }
-      setSuccessMessage('Tarea creada exitosamente');
+      setSuccessMessage('Tarea creada exitosamente' + (taskData.dueDate ? ' y sincronizada con Google Calendar' : ''));
       setTaskOpen(false);
       setTaskData({ title: '', description: '', priority: 'medium', dueDate: '' });
       fetchAssociatedRecords(); // Actualizar actividades
@@ -977,9 +1036,10 @@ const ContactDetail: React.FC = () => {
         dueDate: dueDate,
         contactId: id,
       });
-      setSuccessMessage('Reunión creada exitosamente');
+      setSuccessMessage('Reunión creada exitosamente' + (dueDate ? ' y sincronizada con Google Calendar' : ''));
       setMeetingOpen(false);
       setMeetingData({ subject: '', description: '', date: '', time: '' });
+      fetchAssociatedRecords(); // Actualizar actividades
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       console.error('Error saving meeting:', error);
@@ -2332,7 +2392,7 @@ const ContactDetail: React.FC = () => {
                     },
                   }}
                 >
-                  {contact.lifecycleStage}
+                  {getStageLabel(contact.lifecycleStage)}
                 </Typography>
                 <KeyboardArrowDown sx={{ fontSize: 14, color: '#9E9E9E' }} />
               </Box>
@@ -2347,7 +2407,7 @@ const ContactDetail: React.FC = () => {
                   },
                 }}
               >
-                {['lead', 'contacto', 'reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion', 'cierre_ganado', 'cierre_perdido'].map((stage) => (
+                {['lead_inactivo', 'cliente_perdido', 'cierre_perdido', 'lead', 'contacto', 'reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion', 'licitacion', 'licitacion_etapa_final', 'cierre_ganado', 'firma_contrato', 'activo'].map((stage) => (
                   <MenuItem
                     key={stage}
                     onClick={async () => {
@@ -2365,14 +2425,7 @@ const ContactDetail: React.FC = () => {
                       backgroundColor: contact.lifecycleStage === stage ? '#e3f2fd' : 'transparent',
                     }}
                   >
-                    {stage === 'lead' ? 'Lead' : 
-                     stage === 'contacto' ? 'Contacto' :
-                     stage === 'reunion_agendada' ? 'Reunión Agendada' :
-                     stage === 'reunion_efectiva' ? 'Reunión Efectiva' :
-                     stage === 'propuesta_economica' ? 'Propuesta Económica' :
-                     stage === 'negociacion' ? 'Negociación' :
-                     stage === 'cierre_ganado' ? 'Cierre Ganado' :
-                     stage === 'cierre_perdido' ? 'Cierre Perdido' : stage}
+                    {getStageLabel(stage)}
                   </MenuItem>
                 ))}
               </Menu>
@@ -2801,7 +2854,7 @@ const ContactDetail: React.FC = () => {
                       </Typography>
                       <Box sx={{ mt: 0.5, display: 'flex', justifyContent: 'center' }}>
                         <Chip 
-                          label={contact.lifecycleStage} 
+                          label={getStageLabel(contact.lifecycleStage)} 
                           color={getStageColor(contact.lifecycleStage)} 
                           size="small"
                         />
@@ -5774,7 +5827,7 @@ const ContactDetail: React.FC = () => {
                       Etapa del ciclo de vida
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                      <Chip label={contact.lifecycleStage} color={getStageColor(contact.lifecycleStage)} />
+                      <Chip label={getStageLabel(contact.lifecycleStage)} color={getStageColor(contact.lifecycleStage)} />
                       {contact.Company && <Chip label={`Empresa: ${contact.Company.name}`} />}
                       {contact.jobTitle && <Chip label={contact.jobTitle} />}
                       {contact.city && <Chip label={contact.city} />}
@@ -8634,14 +8687,20 @@ const ContactDetail: React.FC = () => {
                   }
                 }}
               >
-                <MenuItem value="lead">Lead</MenuItem>
-                <MenuItem value="contacto">Contacto</MenuItem>
-                <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
-                <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-                <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
-                <MenuItem value="negociacion">Negociación</MenuItem>
-                <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
-                <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+                  <MenuItem value="lead_inactivo">-5% Lead Inactivo</MenuItem>
+                  <MenuItem value="cliente_perdido">-1% Cliente perdido</MenuItem>
+                  <MenuItem value="cierre_perdido">-1% Cierre Perdido</MenuItem>
+                  <MenuItem value="lead">0% Lead</MenuItem>
+                  <MenuItem value="contacto">10% Contacto</MenuItem>
+                  <MenuItem value="reunion_agendada">30% Reunión Agendada</MenuItem>
+                  <MenuItem value="reunion_efectiva">40% Reunión Efectiva</MenuItem>
+                  <MenuItem value="propuesta_economica">50% Propuesta Económica</MenuItem>
+                  <MenuItem value="negociacion">70% Negociación</MenuItem>
+                  <MenuItem value="licitacion">75% Licitación</MenuItem>
+                  <MenuItem value="licitacion_etapa_final">85% Licitación Etapa Final</MenuItem>
+                  <MenuItem value="cierre_ganado">90% Cierre Ganado</MenuItem>
+                  <MenuItem value="firma_contrato">95% Firma de Contrato</MenuItem>
+                  <MenuItem value="activo">100% Activo</MenuItem>
               </TextField>
             </Box>
           )}

@@ -18,11 +18,12 @@ interface TaskAttributes {
   contactId?: number;
   companyId?: number;
   dealId?: number;
+  googleCalendarEventId?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-interface TaskCreationAttributes extends Optional<TaskAttributes, 'id' | 'description' | 'dueDate' | 'contactId' | 'companyId' | 'dealId' | 'createdAt' | 'updatedAt'> {}
+interface TaskCreationAttributes extends Optional<TaskAttributes, 'id' | 'description' | 'dueDate' | 'contactId' | 'companyId' | 'dealId' | 'googleCalendarEventId' | 'createdAt' | 'updatedAt'> {}
 
 export class Task extends Model<TaskAttributes, TaskCreationAttributes> implements TaskAttributes {
   public id!: number;
@@ -37,6 +38,7 @@ export class Task extends Model<TaskAttributes, TaskCreationAttributes> implemen
   public contactId?: number;
   public companyId?: number;
   public dealId?: number;
+  public googleCalendarEventId?: string;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
@@ -117,6 +119,10 @@ Task.init(
         model: 'deals',
         key: 'id',
       },
+    },
+    googleCalendarEventId: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
   },
   {

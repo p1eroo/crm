@@ -20,7 +20,7 @@ interface CompanyAttributes {
   annualRevenue?: number;
   description?: string;
   ownerId?: number | null;
-  lifecycleStage: 'subscriber' | 'lead' | 'marketing qualified lead' | 'sales qualified lead' | 'opportunity' | 'customer' | 'evangelist';
+  lifecycleStage: 'lead' | 'contacto' | 'reunion_agendada' | 'reunion_efectiva' | 'propuesta_economica' | 'negociacion' | 'licitacion' | 'licitacion_etapa_final' | 'cierre_ganado' | 'cierre_perdido' | 'firma_contrato' | 'activo' | 'cliente_perdido' | 'lead_inactivo';
   tags?: string[];
   notes?: string;
   createdAt?: Date;
@@ -132,7 +132,7 @@ Company.init(
       },
     },
     lifecycleStage: {
-      type: DataTypes.ENUM('subscriber', 'lead', 'marketing qualified lead', 'sales qualified lead', 'opportunity', 'customer', 'evangelist'),
+      type: DataTypes.ENUM('lead', 'contacto', 'reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion', 'licitacion', 'licitacion_etapa_final', 'cierre_ganado', 'cierre_perdido', 'firma_contrato', 'activo', 'cliente_perdido', 'lead_inactivo'),
       defaultValue: 'lead',
     },
     tags: {

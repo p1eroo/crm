@@ -353,16 +353,26 @@ const Companies: React.FC = () => {
       }
 
       // Intentar con diferentes endpoints posibles de Factiliza
+      // Nota: Verifica la documentación oficial de Factiliza para el endpoint correcto
+      // Documentación: https://docs.factiliza.com
       const endpoints = [
+        `https://api.factiliza.com/v1/deudas/${ruc}`, // Endpoint según documentación
+        `https://api.factiliza.com/v1/ruc/${ruc}/deudas`, // Formato alternativo
+        `https://api.factiliza.com/v1/sunat/ruc/${ruc}/deudas`, // Formato con sunat
         `https://api.factiliza.com/v1/ruc/deudas/${ruc}`,
         `https://api.factiliza.com/v1/ruc/deuda/${ruc}`,
         `https://api.factiliza.com/v1/sunat/deudas/${ruc}`,
+        `https://api.factiliza.com/v1/consulta/deudas/${ruc}`, // Formato alternativo
       ];
 
       let debtsFound = false;
 
+      console.log('🔍 Consultando deudas en Factiliza para RUC:', ruc);
+      console.log('📋 Endpoints a probar:', endpoints);
+
       for (const endpoint of endpoints) {
         try {
+          console.log(`🔄 Probando endpoint: ${endpoint}`);
           const debtsResponse = await axios.get(endpoint, {
             headers: {
               'Authorization': `Bearer ${factilizaToken}`,
@@ -370,8 +380,12 @@ const Companies: React.FC = () => {
             timeout: 5000,
           });
 
+          console.log(`✅ Respuesta exitosa de ${endpoint}:`, debtsResponse.data);
+
           if (debtsResponse.data && (debtsResponse.data.success || debtsResponse.data.data)) {
             const debtsData = debtsResponse.data.data || debtsResponse.data;
+            
+            console.log('📊 Datos de deudas recibidos:', debtsData);
             
             // Normalizar los datos a un formato común
             const normalizedDebts = {
@@ -384,52 +398,55 @@ const Companies: React.FC = () => {
               deudas: debtsData.deudas || debtsData.deuda || debtsData.detalle || [],
             };
 
+            console.log('✅ Deudas normalizadas:', normalizedDebts);
             setRucDebts(normalizedDebts);
             debtsFound = true;
             break;
+          } else {
+            console.log(`⚠️ Respuesta sin datos válidos de ${endpoint}`);
           }
         } catch (endpointError: any) {
+          // Mostrar errores detallados
+          const errorStatus = endpointError.response?.status;
+          const errorData = endpointError.response?.data;
+          
+          console.error(`❌ Error en endpoint ${endpoint}:`, {
+            status: errorStatus,
+            statusText: endpointError.response?.statusText,
+            message: endpointError.message,
+            data: errorData,
+          });
+          
+          // Si es 401, el token puede ser inválido o el endpoint requiere autenticación diferente
+          if (errorStatus === 401) {
+            console.warn(`🔐 Error de autenticación (401) en ${endpoint}`);
+            console.warn('💡 Verifica que tu token sea válido y tenga permisos para consultar deudas');
+          }
+          
+          // Si es 403, el plan puede no incluir este servicio
+          if (errorStatus === 403) {
+            console.warn(`🚫 Acceso denegado (403) en ${endpoint}`);
+            console.warn('💡 Tu plan de Factiliza puede no incluir el servicio de consulta de deudas');
+            console.warn('💡 Contacta a soporte de Factiliza para verificar qué servicios incluye tu plan');
+          }
+          
+          // Si es 404, el endpoint no existe
+          if (errorStatus === 404) {
+            console.log(`📍 Endpoint no encontrado (404): ${endpoint}`);
+          }
+          
           // Continuar con el siguiente endpoint si este falla
-          if (endpointError.response?.status !== 404 && endpointError.response?.status !== 400) {
-            console.log(`Error en endpoint ${endpoint}:`, endpointError.message);
+          if (errorStatus !== 404 && errorStatus !== 400) {
+            console.log(`⚠️ Error no crítico en ${endpoint}, probando siguiente...`);
           }
         }
       }
 
-      // Si no se encontró información en Factiliza, intentar con ApiPeru
+      // Si no se encontró información en Factiliza
       if (!debtsFound) {
-        try {
-          const apiPeruToken = process.env.REACT_APP_APIPERU_TOKEN || '';
-          if (apiPeruToken) {
-            const apiPeruResponse = await axios.get(
-              `https://apiperu.dev/api/sunat/deudas/${ruc}`,
-              {
-                headers: {
-                  'Authorization': `Bearer ${apiPeruToken}`,
-                },
-                timeout: 5000,
-              }
-            );
-
-            if (apiPeruResponse.data && (apiPeruResponse.data.success || apiPeruResponse.data.data)) {
-              const debtsData = apiPeruResponse.data.data || apiPeruResponse.data;
-              
-              const normalizedDebts = {
-                tiene_deudas: debtsData.tiene_deudas !== undefined 
-                  ? debtsData.tiene_deudas 
-                  : (debtsData.deudas && debtsData.deudas.length > 0) 
-                    ? true 
-                    : false,
-                total_deuda: debtsData.total_deuda || debtsData.total || debtsData.monto_total || null,
-                deudas: debtsData.deudas || debtsData.deuda || debtsData.detalle || [],
-              };
-
-              setRucDebts(normalizedDebts);
-            }
-          }
-        } catch (apiPeruError) {
-          console.log('No se pudo obtener información de deudas desde ApiPeru');
-        }
+        console.log('⚠️ No se encontró información de deudas en Factiliza');
+      } else {
+        console.log('✅ Deudas obtenidas exitosamente de Factiliza');
       }
     } catch (error: any) {
       console.error('Error al buscar deudas:', error);
@@ -1300,15 +1317,73 @@ const Companies: React.FC = () => {
               onChange={(e) => setFormData({ ...formData, lifecycleStage: e.target.value })}
               InputLabelProps={{ shrink: true }}
             >
-              <MenuItem value="lead">Lead</MenuItem>
-              <MenuItem value="contacto">Contacto</MenuItem>
-              <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
-              <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-              <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
-              <MenuItem value="negociacion">Negociación</MenuItem>
-              <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
-              <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+              <MenuItem value="lead_inactivo">-5% Lead Inactivo</MenuItem>
+              <MenuItem value="cliente_perdido">-1% Cliente perdido</MenuItem>
+              <MenuItem value="cierre_perdido">-1% Cierre Perdido</MenuItem>
+              <MenuItem value="lead">0% Lead</MenuItem>
+              <MenuItem value="contacto">10% Contacto</MenuItem>
+              <MenuItem value="reunion_agendada">30% Reunión Agendada</MenuItem>
+              <MenuItem value="reunion_efectiva">40% Reunión Efectiva</MenuItem>
+              <MenuItem value="propuesta_economica">50% Propuesta Económica</MenuItem>
+              <MenuItem value="negociacion">70% Negociación</MenuItem>
+              <MenuItem value="licitacion">75% Licitación</MenuItem>
+              <MenuItem value="licitacion_etapa_final">85% Licitación Etapa Final</MenuItem>
+              <MenuItem value="cierre_ganado">90% Cierre Ganado</MenuItem>
+              <MenuItem value="firma_contrato">95% Firma de Contrato</MenuItem>
+              <MenuItem value="activo">100% Activo</MenuItem>
             </TextField>
+            
+            {/* Mensaje de deuda SUNAT */}
+            {rucDebts !== null && (
+              <Box sx={{ 
+                mt: 1.5, 
+                p: 1.5, 
+                borderRadius: 1,
+                bgcolor: rucDebts.tiene_deudas 
+                  ? (theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.15)' : 'rgba(244, 67, 54, 0.08)')
+                  : (theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.15)' : 'rgba(76, 175, 80, 0.08)'),
+                border: `1px solid ${rucDebts.tiene_deudas 
+                  ? (theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.3)' : 'rgba(244, 67, 54, 0.2)')
+                  : (theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.2)')}`,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1,
+              }}>
+                {loadingDebts ? (
+                  <>
+                    <CircularProgress size={16} />
+                    <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                      Consultando deudas...
+                    </Typography>
+                  </>
+                ) : (
+                  <>
+                    {rucDebts.tiene_deudas ? (
+                      <>
+                        <Warning sx={{ color: '#f44336', fontSize: 20 }} />
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#f44336', mb: 0.5 }}>
+                            La empresa presenta deuda en SUNAT
+                          </Typography>
+                          {rucDebts.total_deuda && (
+                            <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                              Total: S/ {rucDebts.total_deuda.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </Typography>
+                          )}
+                        </Box>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle sx={{ color: '#4caf50', fontSize: 20 }} />
+                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#4caf50' }}>
+                          La empresa no presenta deuda en SUNAT
+                        </Typography>
+                      </>
+                    )}
+                  </>
+                )}
+              </Box>
+            )}
           </Box>
         </DialogContent>
         <DialogActions>

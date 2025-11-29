@@ -34,20 +34,20 @@ DROP TYPE IF EXISTS billing_cycle_enum CASCADE;
 
 -- Crear tipos ENUM
 CREATE TYPE lifecycle_stage_enum AS ENUM (
-    'subscriber', 
-    'lead', 
+    'lead_inactivo',
+    'cliente_perdido',
+    'cierre_perdido',
+    'lead',
     'contacto',
     'reunion_agendada',
     'reunion_efectiva',
     'propuesta_economica',
     'negociacion',
+    'licitacion',
+    'licitacion_etapa_final',
     'cierre_ganado',
-    'cierre_perdido',
-    'marketing qualified lead', 
-    'sales qualified lead', 
-    'opportunity', 
-    'customer', 
-    'evangelist'
+    'firma_contrato',
+    'activo'
 );
 CREATE TYPE task_type_enum AS ENUM ('call', 'email', 'meeting', 'note', 'todo', 'other');
 CREATE TYPE task_status_enum AS ENUM ('not started', 'in progress', 'completed', 'cancelled');

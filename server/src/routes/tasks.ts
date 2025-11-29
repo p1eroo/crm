@@ -6,6 +6,7 @@ import { Contact } from '../models/Contact';
 import { Company } from '../models/Company';
 import { Deal } from '../models/Deal';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { createTaskEvent, updateTaskEvent, deleteTaskEvent, createMeetingEvent, deleteCalendarEvent } from '../services/googleCalendar';
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -13,7 +14,7 @@ router.use(authenticateToken);
 // Obtener todas las tareas
 router.get('/', async (req: AuthRequest, res) => {
   try {
-    const { page = 1, limit = 50, status, priority, assignedToId, type } = req.query;
+    const { page = 1, limit = 50, status, priority, assignedToId, type, contactId, companyId } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
     const where: any = {};
@@ -28,6 +29,12 @@ router.get('/', async (req: AuthRequest, res) => {
     }
     if (type) {
       where.type = type;
+    }
+    if (contactId) {
+      where.contactId = contactId;
+    }
+    if (companyId) {
+      where.companyId = companyId;
     }
 
     const tasks = await Task.findAndCountAll({
@@ -98,6 +105,31 @@ router.post('/', async (req: AuthRequest, res) => {
       ],
     });
 
+    // Intentar crear en Google Calendar si la tarea tiene fecha límite
+    if (newTask && newTask.dueDate) {
+      try {
+        let calendarId: string | null = null;
+        
+        // Si es una reunión, crear evento en Google Calendar
+        if (newTask.type === 'meeting') {
+          calendarId = await createMeetingEvent(newTask, newTask.AssignedTo);
+        } else {
+          // Para otros tipos, crear tarea en Google Tasks
+          calendarId = await createTaskEvent(newTask, newTask.AssignedTo);
+        }
+        
+        if (calendarId) {
+          // Actualizar la tarea con el ID del evento/tarea de Google Calendar
+          await newTask.update({ googleCalendarEventId: calendarId });
+          // Recargar para incluir el campo actualizado
+          await newTask.reload();
+        }
+      } catch (calendarError: any) {
+        // No fallar la creación de la tarea si hay error con Google Calendar
+        console.error('Error creando en Google Calendar:', calendarError.message);
+      }
+    }
+
     res.status(201).json(newTask);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -107,13 +139,26 @@ router.post('/', async (req: AuthRequest, res) => {
 // Actualizar tarea
 router.put('/:id', async (req, res) => {
   try {
-    const task = await Task.findByPk(req.params.id);
+    const task = await Task.findByPk(req.params.id, {
+      include: [
+        { model: User, as: 'AssignedTo', attributes: ['id', 'firstName', 'lastName', 'email'] },
+        { model: User, as: 'CreatedBy', attributes: ['id', 'firstName', 'lastName', 'email'] },
+        { model: Contact, as: 'Contact' },
+        { model: Company, as: 'Company' },
+        { model: Deal, as: 'Deal' },
+      ],
+    });
+    
     if (!task) {
       return res.status(404).json({ error: 'Tarea no encontrada' });
     }
 
+    const hadEventId = !!task.googleCalendarEventId;
+    const hadDueDate = !!task.dueDate;
+    const willHaveDueDate = !!req.body.dueDate;
+
     await task.update(req.body);
-    const updatedTask = await Task.findByPk(task.id, {
+    await task.reload({
       include: [
         { model: User, as: 'AssignedTo', attributes: ['id', 'firstName', 'lastName', 'email'] },
         { model: User, as: 'CreatedBy', attributes: ['id', 'firstName', 'lastName', 'email'] },
@@ -123,7 +168,51 @@ router.put('/:id', async (req, res) => {
       ],
     });
 
-    res.json(updatedTask);
+    // Actualizar o crear en Google Calendar
+    if (task.dueDate) {
+      try {
+        if (task.googleCalendarEventId) {
+          // Si es una reunión, actualizar evento (por ahora solo actualizamos tareas)
+          // Las reuniones como eventos necesitarían una función updateMeetingEvent
+          if (task.type !== 'meeting') {
+            await updateTaskEvent(task, task.googleCalendarEventId);
+          }
+        } else {
+          // Crear nuevo evento/tarea si no existía
+          let calendarId: string | null = null;
+          
+          if (task.type === 'meeting') {
+            calendarId = await createMeetingEvent(task, task.AssignedTo);
+          } else {
+            calendarId = await createTaskEvent(task, task.AssignedTo);
+          }
+          
+          if (calendarId) {
+            await task.update({ googleCalendarEventId: calendarId });
+            await task.reload();
+          }
+        }
+      } catch (calendarError: any) {
+        console.error('Error actualizando en Google Calendar:', calendarError.message);
+      }
+    } else if (hadDueDate && !willHaveDueDate && task.googleCalendarEventId) {
+      // Si se eliminó la fecha límite y había un evento/tarea, eliminarlo
+      try {
+        const userId = task.assignedToId || task.createdById;
+        // Si es una reunión, eliminar evento de Google Calendar, sino eliminar tarea de Google Tasks
+        if (task.type === 'meeting') {
+          await deleteCalendarEvent(userId, task.googleCalendarEventId);
+        } else {
+          await deleteTaskEvent(userId, task.googleCalendarEventId);
+        }
+        await task.update({ googleCalendarEventId: null });
+        await task.reload();
+      } catch (calendarError: any) {
+        console.error('Error eliminando de Google Calendar:', calendarError.message);
+      }
+    }
+
+    res.json(task);
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -135,6 +224,17 @@ router.delete('/:id', async (req, res) => {
     const task = await Task.findByPk(req.params.id);
     if (!task) {
       return res.status(404).json({ error: 'Tarea no encontrada' });
+    }
+
+    // Eliminar tarea de Google Tasks si existe
+    if (task.googleCalendarEventId) {
+      try {
+        const userId = task.assignedToId || task.createdById;
+        await deleteTaskEvent(userId, task.googleCalendarEventId);
+      } catch (calendarError: any) {
+        console.error('Error eliminando tarea de Google Tasks:', calendarError.message);
+        // Continuar con la eliminación de la tarea aunque falle la eliminación en Google Tasks
+      }
     }
 
     await task.destroy();

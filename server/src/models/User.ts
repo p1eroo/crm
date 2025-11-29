@@ -14,6 +14,8 @@ interface UserAttributes {
   phone?: string;
   language?: string;
   dateFormat?: string;
+  googleAccessToken?: string;
+  googleRefreshToken?: string;
   isActive: boolean;
   createdAt?: Date;
   updatedAt?: Date;
@@ -33,6 +35,8 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
   public phone?: string;
   public language?: string;
   public dateFormat?: string;
+  public googleAccessToken?: string;
+  public googleRefreshToken?: string;
   public isActive!: boolean;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -103,6 +107,14 @@ User.init(
       type: DataTypes.STRING,
       allowNull: true,
       defaultValue: 'es-ES',
+    },
+    googleAccessToken: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    googleRefreshToken: {
+      type: DataTypes.TEXT,
+      allowNull: true,
     },
     isActive: {
       type: DataTypes.BOOLEAN,

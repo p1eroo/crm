@@ -613,28 +613,40 @@ const Contacts: React.FC = () => {
 
   const getStageColor = (stage: string) => {
     const colors: { [key: string]: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' } = {
-      'lead': 'info',
-      'contacto': 'info',
-      'reunion_agendada': 'primary',
-      'reunion_efectiva': 'primary',
-      'propuesta_economica': 'warning',
-      'negociacion': 'warning',
-      'cierre_ganado': 'success',
-      'cierre_perdido': 'error',
+      'lead': 'error', // Rojo para 0%
+      'contacto': 'warning', // Naranja para 10%
+      'reunion_agendada': 'warning', // Naranja para 30%
+      'reunion_efectiva': 'warning', // Amarillo para 40%
+      'propuesta_economica': 'info', // Verde claro para 50%
+      'negociacion': 'success', // Verde para 70%
+      'licitacion': 'success', // Verde para 75%
+      'licitacion_etapa_final': 'success', // Verde oscuro para 85%
+      'cierre_ganado': 'success', // Verde oscuro para 90%
+      'cierre_perdido': 'error', // Rojo para -1%
+      'firma_contrato': 'success', // Verde oscuro para 95%
+      'activo': 'success', // Verde más oscuro para 100%
+      'cliente_perdido': 'error', // Rojo para -1%
+      'lead_inactivo': 'error', // Rojo para -5%
     };
     return colors[stage] || 'default';
   };
 
   const getStageLabel = (stage: string) => {
     const labels: { [key: string]: string } = {
-      'lead': 'Lead',
-      'contacto': 'Contacto',
-      'reunion_agendada': 'Reunión Agendada',
-      'reunion_efectiva': 'Reunión Efectiva',
-      'propuesta_economica': 'Propuesta Económica',
-      'negociacion': 'Negociación',
-      'cierre_ganado': 'Cierre Ganado',
-      'cierre_perdido': 'Cierre Perdido',
+      'lead': '0% Lead',
+      'contacto': '10% Contacto',
+      'reunion_agendada': '30% Reunión Agendada',
+      'reunion_efectiva': '40% Reunión Efectiva',
+      'propuesta_economica': '50% Propuesta Económica',
+      'negociacion': '70% Negociación',
+      'licitacion': '75% Licitación',
+      'licitacion_etapa_final': '85% Licitación Etapa Final',
+      'cierre_ganado': '90% Cierre Ganado',
+      'cierre_perdido': '-1% Cierre Perdido',
+      'firma_contrato': '95% Firma de Contrato',
+      'activo': '100% Activo',
+      'cliente_perdido': '-1% Cliente perdido',
+      'lead_inactivo': '-5% Lead Inactivo',
     };
     return labels[stage] || stage;
   };
@@ -649,20 +661,22 @@ const Contacts: React.FC = () => {
     return acc;
   }, {} as Record<string, Contact[]>);
 
-  // Orden de las etapas (incluyendo todas las posibles)
+  // Orden de las etapas según porcentaje
   const stageOrder = [
-    'lead', 
-    'contacto',
-    'marketing qualified lead', 
-    'sales qualified lead',
-    'reunion_efectiva',
-    'propuesta_economica',
-    'negociacion',
-    'opportunity', 
-    'cierre_ganado',
-    'customer', 
-    'evangelist', 
-    'subscriber'
+    'lead_inactivo', // -5%
+    'cliente_perdido', // -1%
+    'cierre_perdido', // -1%
+    'lead', // 0%
+    'contacto', // 10%
+    'reunion_agendada', // 30%
+    'reunion_efectiva', // 40%
+    'propuesta_economica', // 50%
+    'negociacion', // 70%
+    'licitacion', // 75%
+    'licitacion_etapa_final', // 85%
+    'cierre_ganado', // 90%
+    'firma_contrato', // 95%
+    'activo', // 100%
   ];
   
   // Obtener todas las etapas que tienen contactos, ordenadas según stageOrder
@@ -1880,14 +1894,20 @@ const Contacts: React.FC = () => {
                   }
                 }}
               >
-                <MenuItem value="lead">Lead</MenuItem>
-                <MenuItem value="contacto">Contacto</MenuItem>
-                <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
-                <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-                <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
-                <MenuItem value="negociacion">Negociación</MenuItem>
-                <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
-                <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+                <MenuItem value="lead_inactivo">-5% Lead Inactivo</MenuItem>
+                <MenuItem value="cliente_perdido">-1% Cliente perdido</MenuItem>
+                <MenuItem value="cierre_perdido">-1% Cierre Perdido</MenuItem>
+                <MenuItem value="lead">0% Lead</MenuItem>
+                <MenuItem value="contacto">10% Contacto</MenuItem>
+                <MenuItem value="reunion_agendada">30% Reunión Agendada</MenuItem>
+                <MenuItem value="reunion_efectiva">40% Reunión Efectiva</MenuItem>
+                <MenuItem value="propuesta_economica">50% Propuesta Económica</MenuItem>
+                <MenuItem value="negociacion">70% Negociación</MenuItem>
+                <MenuItem value="licitacion">75% Licitación</MenuItem>
+                <MenuItem value="licitacion_etapa_final">85% Licitación Etapa Final</MenuItem>
+                <MenuItem value="cierre_ganado">90% Cierre Ganado</MenuItem>
+                <MenuItem value="firma_contrato">95% Firma de Contrato</MenuItem>
+                <MenuItem value="activo">100% Activo</MenuItem>
               </TextField>
             </Box>
           </Box>
