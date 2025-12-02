@@ -334,7 +334,7 @@ const Dashboard: React.FC = () => {
             const startDate = new Date(year, month, 1);
             const endDate = new Date(year, month + 1, 0, 23, 59, 59);
 
-            const response = await api.get('/calendar/events', {
+            const response = await api.get('/google/events', {
               params: {
                 timeMin: startDate.toISOString(),
                 timeMax: endDate.toISOString(),
@@ -397,7 +397,7 @@ const Dashboard: React.FC = () => {
         year,
       });
 
-      const response = await api.get('/calendar/events', {
+      const response = await api.get('/google/events', {
         params: {
           timeMin: startDate.toISOString(),
           timeMax: endDate.toISOString(),
@@ -421,7 +421,7 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const checkGoogleCalendarConnection = async () => {
       try {
-        const response = await api.get('/calendar/token');
+        const response = await api.get('/google/token');
         const isConnected = response.data.hasToken && !response.data.isExpired;
         setGoogleCalendarConnected(isConnected);
         console.log('📅 Estado de Google Calendar:', isConnected ? 'Conectado' : 'No conectado');
@@ -471,7 +471,7 @@ const Dashboard: React.FC = () => {
     setConnectingCalendar(true);
     try {
       // Obtener URL de autorización del backend (usa el token de autenticación del usuario)
-      const response = await api.get('/calendar/auth');
+      const response = await api.get('/google/auth');
 
       if (response.data.authUrl) {
         // Redirigir al usuario a la URL de autorización de Google
@@ -492,7 +492,7 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     const checkGoogleCalendarConnection = async () => {
       try {
-        const response = await api.get('/calendar/token');
+        const response = await api.get('/google/token');
         const isConnected = response.data.hasToken && !response.data.isExpired;
         setGoogleCalendarConnected(isConnected);
         
@@ -533,14 +533,14 @@ const Dashboard: React.FC = () => {
   // Verificar si se completó la conexión (desde el callback)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const calendarConnected = urlParams.get('calendar_connected');
-    const calendarError = urlParams.get('calendar_error');
+    const googleConnected = urlParams.get('google_connected');
+    const googleError = urlParams.get('google_error');
 
-    if (calendarConnected === 'true') {
+    if (googleConnected === 'true') {
       // Verificar la conexión actualizada desde el servidor
       const verifyConnection = async () => {
         try {
-          const response = await api.get('/calendar/token');
+          const response = await api.get('/google/token');
           const isConnected = response.data.hasToken && !response.data.isExpired;
           setGoogleCalendarConnected(isConnected);
           setCalendarMessage('Google Calendar conectado correctamente');
@@ -564,9 +564,9 @@ const Dashboard: React.FC = () => {
       verifyConnection();
       // Limpiar URL
       window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (calendarError) {
-      let errorMessage = 'Error al conectar Google Calendar';
-      switch (calendarError) {
+    } else if (googleError) {
+      let errorMessage = 'Error al conectar con Google';
+      switch (googleError) {
         case 'no_code':
           errorMessage = 'No se recibió el código de autorización';
           break;
@@ -589,13 +589,13 @@ const Dashboard: React.FC = () => {
 
   const handleDisconnectGoogleCalendar = async () => {
     try {
-      await api.delete('/calendar/disconnect');
+      await api.delete('/google/disconnect');
       setGoogleCalendarConnected(false);
-      setCalendarMessage('Google Calendar desconectado correctamente');
+      setCalendarMessage('Google desconectado correctamente');
       setTimeout(() => setCalendarMessage(null), 3000);
     } catch (error: any) {
-      console.error('Error desconectando Google Calendar:', error);
-      setCalendarMessage('Error al desconectar Google Calendar');
+      console.error('Error desconectando Google:', error);
+      setCalendarMessage('Error al desconectar Google');
       setTimeout(() => setCalendarMessage(null), 3000);
     }
   };
@@ -2337,20 +2337,7 @@ const Dashboard: React.FC = () => {
               >
                 Ver
               </Button>
-              <Button
-                size="small"
-                onClick={googleCalendarConnected ? handleDisconnectGoogleCalendar : handleConnectGoogleCalendar}
-                disabled={connectingCalendar}
-                startIcon={googleCalendarConnected ? <CloudOff /> : <Cloud />}
-                sx={{ 
-                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
-                  textTransform: 'none',
-                  width: { xs: '100%', sm: 'auto' },
-                  color: googleCalendarConnected ? 'error.main' : 'primary.main',
-                }}
-              >
-                {connectingCalendar ? 'Conectando...' : googleCalendarConnected ? 'Desconectar Google' : 'Conectar Google'}
-              </Button>
+              {/* Botón de conexión individual removido - ahora se conecta desde Perfil > Correo */}
             </Box>
             {calendarMessage && (
               <Alert 

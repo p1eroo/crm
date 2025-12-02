@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider as MUIThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { Box, CircularProgress } from '@mui/material';
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SidebarProvider } from './context/SidebarContext';
@@ -111,178 +112,151 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
   },
 });
 
-const PrivateRoute: React.FC<{ children: React.ReactElement }> = ({ children }) => {
-  const { isAuthenticated, loading, user } = useAuth();
-
-  if (loading) {
-    return <div>Cargando...</div>;
-  }
-
-  // Verificar tanto isAuthenticated como que user no sea null
-  if (!isAuthenticated || !user) {
-    console.log('🔒 Usuario no autenticado, redirigiendo a login. isAuthenticated:', isAuthenticated, 'user:', user);
-    return <Navigate to="/login" replace />;
-  }
-
-  return children;
-};
 
 const AppContent: React.FC = () => {
   const { mode } = useTheme();
   const theme = React.useMemo(() => getTheme(mode), [mode]);
+  const { user, loading } = useAuth();
 
+  // Si está cargando, mostrar loading
+  if (loading) {
+    return (
+      <MUIThemeProvider theme={theme}>
+        <CssBaseline />
+        <Box sx={{ 
+          minHeight: '100vh', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          backgroundColor: '#E1E7DC',
+        }}>
+          <CircularProgress />
+        </Box>
+      </MUIThemeProvider>
+    );
+  }
+
+  // Si no hay usuario, mostrar Login (sin Router para evitar problemas de navegación)
+  if (!user) {
+    return (
+      <MUIThemeProvider theme={theme}>
+        <CssBaseline />
+        <Login />
+      </MUIThemeProvider>
+    );
+  }
+
+  // Si hay usuario, mostrar la aplicación con Router
   return (
     <MUIThemeProvider theme={theme}>
       <CssBaseline />
-      <AuthProvider>
-        <SidebarProvider>
-          <Router>
+      <SidebarProvider>
+        <Router>
           <Routes>
-            <Route path="/login" element={<Login />} />
             <Route
               path="/"
               element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <Dashboard />
-                  </MainLayout>
-                </PrivateRoute>
+                <MainLayout>
+                  <Dashboard />
+                </MainLayout>
               }
             />
             <Route
               path="/dashboard"
               element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <Dashboard />
-                  </MainLayout>
-                </PrivateRoute>
+                <MainLayout>
+                  <Dashboard />
+                </MainLayout>
               }
             />
             <Route
               path="/contacts"
               element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <Contacts />
-                  </MainLayout>
-                </PrivateRoute>
+                <MainLayout>
+                  <Contacts />
+                </MainLayout>
               }
             />
             <Route
               path="/contacts/:id"
               element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <ContactDetail />
-                  </MainLayout>
-                </PrivateRoute>
+                <MainLayout>
+                  <ContactDetail />
+                </MainLayout>
               }
             />
             <Route
               path="/companies"
               element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <Companies />
-                  </MainLayout>
-                </PrivateRoute>
+                <MainLayout>
+                  <Companies />
+                </MainLayout>
               }
             />
             <Route
               path="/companies/:id"
               element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <CompanyDetail />
-                  </MainLayout>
-                </PrivateRoute>
+                <MainLayout>
+                  <CompanyDetail />
+                </MainLayout>
               }
             />
             <Route
               path="/deals"
               element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <Deals />
-                  </MainLayout>
-                </PrivateRoute>
+                <MainLayout>
+                  <Deals />
+                </MainLayout>
               }
             />
             <Route
               path="/tasks"
               element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <Tasks />
-                  </MainLayout>
-                </PrivateRoute>
+                <MainLayout>
+                  <Tasks />
+                </MainLayout>
               }
             />
             <Route
               path="/tickets"
               element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <Tickets />
-                  </MainLayout>
-                </PrivateRoute>
+                <MainLayout>
+                  <Tickets />
+                </MainLayout>
               }
             />
             <Route
               path="/pipeline"
               element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <Pipeline />
-                  </MainLayout>
-                </PrivateRoute>
+                <MainLayout>
+                  <Pipeline />
+                </MainLayout>
               }
             />
-            {/* <Route
-              path="/campaigns"
-              element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <Campaigns />
-                  </MainLayout>
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/automations"
-              element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <Automations />
-                  </MainLayout>
-                </PrivateRoute>
-              }
-            /> */}
             <Route
               path="/profile"
               element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <Profile />
-                  </MainLayout>
-                </PrivateRoute>
+                <MainLayout>
+                  <Profile />
+                </MainLayout>
               }
             />
             <Route
               path="/users"
               element={
-                <PrivateRoute>
-                  <MainLayout>
-                    <Users />
-                  </MainLayout>
-                </PrivateRoute>
+                <MainLayout>
+                  <Users />
+                </MainLayout>
               }
             />
+            <Route path="*" element={
+              <MainLayout>
+                <Dashboard />
+              </MainLayout>
+            } />
           </Routes>
         </Router>
-        </SidebarProvider>
-      </AuthProvider>
+      </SidebarProvider>
     </MUIThemeProvider>
   );
 };
@@ -300,7 +274,9 @@ const App: React.FC = () => {
   return (
     <GoogleOAuthProvider clientId={googleClientId || 'dummy-client-id'}>
       <ThemeProvider>
-        <AppContent />
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
       </ThemeProvider>
     </GoogleOAuthProvider>
   );

@@ -12,7 +12,6 @@ import {
   IconButton,
   Alert,
   Divider,
-  Link,
   Table,
   TableBody,
   TableCell,
@@ -45,6 +44,7 @@ import {
   Person,
   CheckCircle,
   Close,
+  CloudOff,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import api from '../config/api';
@@ -109,6 +109,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose, onSuccess })
 
   // Correo
   const [emailConnected, setEmailConnected] = useState(false);
+  const [connectingEmail, setConnectingEmail] = useState(false);
 
   useEffect(() => {
     if (user && open) {
@@ -122,8 +123,26 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose, onSuccess })
         avatar: user.avatar || '',
       });
       fetchUserProfile();
+      checkGoogleConnection();
     }
   }, [user, open]);
+
+  // Verificar estado de conexión con Google (Gmail + Calendar + Tasks)
+  const checkGoogleConnection = async () => {
+    try {
+      const response = await api.get('/google/token');
+      const isConnected = response.data.hasToken && !response.data.isExpired;
+      setEmailConnected(isConnected);
+    } catch (error: any) {
+      // 404 es normal si el usuario no ha conectado Google aún
+      if (error.response?.status === 404) {
+        setEmailConnected(false);
+      } else {
+        console.error('Error verificando conexión de Google:', error);
+        setEmailConnected(false);
+      }
+    }
+  };
 
   const fetchUserProfile = async () => {
     try {
@@ -222,9 +241,48 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose, onSuccess })
     }
   };
 
-  const handleEmailConnect = () => {
-    setMessage({ type: 'success', text: 'Funcionalidad de conexión de correo en desarrollo' });
-    // Aquí se implementaría la lógica de conexión de correo
+  const handleEmailConnect = async () => {
+    if (!user?.id) {
+      setMessage({ type: 'error', text: 'Usuario no identificado' });
+      return;
+    }
+
+    setConnectingEmail(true);
+    try {
+      // Obtener URL de autorización del backend (conectará Gmail + Calendar + Tasks)
+      const response = await api.get('/google/auth');
+
+      if (response.data.authUrl) {
+        // Redirigir al usuario a la URL de autorización de Google
+        window.location.href = response.data.authUrl;
+      } else {
+        throw new Error('No se pudo obtener la URL de autorización');
+      }
+    } catch (error: any) {
+      console.error('Error iniciando conexión con Google:', error);
+      const errorMessage = error.response?.data?.message || 'Error al conectar con Google. Por favor, intenta nuevamente.';
+      setMessage({ type: 'error', text: errorMessage });
+      setConnectingEmail(false);
+    }
+  };
+
+  const handleEmailDisconnect = async () => {
+    if (!user?.id) {
+      setMessage({ type: 'error', text: 'Usuario no identificado' });
+      return;
+    }
+
+    try {
+      await api.delete('/google/disconnect');
+      setEmailConnected(false);
+      setMessage({ type: 'success', text: 'Correo desconectado correctamente' });
+      // Limpiar localStorage si es necesario
+      localStorage.removeItem('monterricoToken');
+    } catch (error: any) {
+      console.error('Error desconectando correo:', error);
+      const errorMessage = error.response?.data?.message || 'Error al desconectar el correo';
+      setMessage({ type: 'error', text: errorMessage });
+    }
   };
 
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -541,107 +599,61 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose, onSuccess })
                   Correo
                 </Typography>
                 <Typography variant="body2" sx={{ lineHeight: 1.7, color: theme.palette.text.secondary }}>
-                  Conecta tus cuentas personales de correo electrónico para registrar, hacer seguimiento, enviar y recibir correos. Para administrar los correos de cualquier equipo, ve a la{' '}
-                  <Link 
-                    href="#" 
-                    underline="hover"
-                    sx={{ 
-                      color: taxiMonterricoColors.green,
-                      fontWeight: 500,
-                      '&:hover': {
-                        color: taxiMonterricoColors.greenDark,
-                      }
-                    }}
-                  >
-                    configuración de bandeja de entrada
-                  </Link>
-                  .
+                  Conecta tus cuentas personales de correo electrónico para registrar, hacer seguimiento, enviar y recibir correos.
                 </Typography>
               </Box>
 
-              <Box 
-                sx={{ 
-                  bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#f8f9fa',
-                  borderRadius: 2,
-                  p: 3,
-                  mb: 3,
-                  border: `1px solid ${theme.palette.divider}`,
-                }}
-              >
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                    <CheckCircle 
-                      sx={{ 
-                        color: taxiMonterricoColors.green, 
-                        fontSize: 20, 
-                        mt: 0.25,
-                        flexShrink: 0,
-                      }} 
-                    />
-                    <Typography variant="body2" sx={{ color: theme.palette.text.primary, lineHeight: 1.6 }}>
-                      Enviar y programar correos desde el CRM
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                    <CheckCircle 
-                      sx={{ 
-                        color: taxiMonterricoColors.green, 
-                        fontSize: 20, 
-                        mt: 0.25,
-                        flexShrink: 0,
-                      }} 
-                    />
-                    <Typography variant="body2" sx={{ color: theme.palette.text.primary, lineHeight: 1.6 }}>
-                      Registrar respuestas a correos automáticamente
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                    <CheckCircle 
-                      sx={{ 
-                        color: taxiMonterricoColors.green, 
-                        fontSize: 20, 
-                        mt: 0.25,
-                        flexShrink: 0,
-                      }} 
-                    />
-                    <Typography variant="body2" sx={{ color: theme.palette.text.primary, lineHeight: 1.6 }}>
-                      Sugerir tareas de seguimiento y capturar detalles de contactos desde tu correo
-                    </Typography>
-                  </Box>
-                </Box>
-                <Box sx={{ mt: 2.5, pt: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
-                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic' }}>
-                    Requiere automatización de la bandeja de entrada
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Button
-                variant="contained"
-                onClick={handleEmailConnect}
-                disabled={emailConnected}
-                startIcon={emailConnected ? <CheckCircle /> : <Email />}
-                sx={{
-                  bgcolor: emailConnected ? taxiMonterricoColors.green : '#FF6B35',
-                  color: 'white',
-                  fontWeight: 600,
-                  textTransform: 'none',
-                  px: 3,
-                  py: 1.5,
-                  borderRadius: 2,
-                  boxShadow: emailConnected ? 'none' : '0 4px 12px rgba(255, 107, 53, 0.3)',
-                  '&:hover': {
-                    bgcolor: emailConnected ? taxiMonterricoColors.greenDark : '#E55A2B',
-                    boxShadow: emailConnected ? 'none' : '0 6px 16px rgba(255, 107, 53, 0.4)',
-                  },
-                  '&.Mui-disabled': {
-                    bgcolor: taxiMonterricoColors.green,
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                <Button
+                  variant="contained"
+                  onClick={handleEmailConnect}
+                  disabled={emailConnected || connectingEmail}
+                  startIcon={emailConnected ? <CheckCircle /> : <Email />}
+                  sx={{
+                    bgcolor: emailConnected ? taxiMonterricoColors.green : '#FF6B35',
                     color: 'white',
-                  },
-                }}
-              >
-                {emailConnected ? 'Correo conectado' : 'Conectar correo personal'}
-              </Button>
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    px: 3,
+                    py: 1.5,
+                    borderRadius: 2,
+                    boxShadow: emailConnected ? 'none' : '0 4px 12px rgba(255, 107, 53, 0.3)',
+                    '&:hover': {
+                      bgcolor: emailConnected ? taxiMonterricoColors.greenDark : '#E55A2B',
+                      boxShadow: emailConnected ? 'none' : '0 6px 16px rgba(255, 107, 53, 0.4)',
+                    },
+                    '&.Mui-disabled': {
+                      bgcolor: taxiMonterricoColors.green,
+                      color: 'white',
+                    },
+                  }}
+                >
+                  {connectingEmail ? 'Conectando...' : emailConnected ? 'Correo conectado' : 'Conectar correo personal'}
+                </Button>
+                
+                {emailConnected && (
+                  <Button
+                    variant="outlined"
+                    onClick={handleEmailDisconnect}
+                    startIcon={<CloudOff />}
+                    sx={{
+                      borderColor: '#d32f2f',
+                      color: '#d32f2f',
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      px: 3,
+                      py: 1.5,
+                      borderRadius: 2,
+                      '&:hover': {
+                        borderColor: '#c62828',
+                        bgcolor: '#ffebee',
+                      },
+                    }}
+                  >
+                    Desconectar
+                  </Button>
+                )}
+              </Box>
             </Box>
           </TabPanel>
 

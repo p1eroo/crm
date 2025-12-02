@@ -104,7 +104,6 @@ import RichTextEditor from '../components/RichTextEditor';
 import EmailComposer from '../components/EmailComposer';
 import { taxiMonterricoColors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
-import { useGoogleLogin } from '@react-oauth/google';
 import axios from 'axios';
 
 interface ContactDetailData {
@@ -203,7 +202,7 @@ const ContactDetail: React.FC = () => {
   const [activityFilterSearch, setActivityFilterSearch] = useState('');
   const [timeRangeMenuAnchor, setTimeRangeMenuAnchor] = useState<null | HTMLElement>(null);
   const [timeRangeSearch, setTimeRangeSearch] = useState('');
-  const [selectedTimeRange, setSelectedTimeRange] = useState<string>('Todo hasta ahora');
+  const [selectedTimeRange, setSelectedTimeRange] = useState<string>('Hoy');
   const [selectedActivityType, setSelectedActivityType] = useState<string>('all'); // 'all', 'note', 'email', 'call', 'task', 'meeting'
   
   // Estados para los filtros de actividad
@@ -431,9 +430,7 @@ const ContactDetail: React.FC = () => {
   const [meetingData, setMeetingData] = useState({ subject: '', description: '', date: '', time: '' });
   const [createFollowUpTask, setCreateFollowUpTask] = useState(false);
 
-  // Estados para OAuth de Google
-  const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(null);
-  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  // Ya no se necesitan estados de OAuth individual - se usa el token guardado desde Perfil
 
   useEffect(() => {
     fetchContact();
@@ -701,57 +698,43 @@ const ContactDetail: React.FC = () => {
     setNoteOpen(true);
   };
 
-  const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
+  // Ya no se usa login individual de Google - se usa el token guardado desde Perfil
 
-  // Configurar Google OAuth login
-  const googleLogin = useGoogleLogin({
-    onSuccess: (tokenResponse) => {
-      setGoogleAccessToken(tokenResponse.access_token);
-      setIsAuthenticating(false);
-      setEmailOpen(true);
-    },
-    onError: () => {
-      setIsAuthenticating(false);
-      setWarningMessage('Error al autenticar con Google. Por favor, intenta nuevamente.');
-      setTimeout(() => setWarningMessage(''), 3000);
-    },
-    scope: 'https://www.googleapis.com/auth/gmail.send',
-  });
-
-  const handleOpenEmail = () => {
+  const handleOpenEmail = async () => {
     if (!contact?.email) {
       setWarningMessage('El contacto no tiene un email registrado');
       setTimeout(() => setWarningMessage(''), 3000);
       return;
     }
 
-    // Verificar si Google OAuth está configurado
-    if (!googleClientId || googleClientId === 'dummy-client-id') {
-      setWarningMessage('Google OAuth no está configurado. Por favor, configura REACT_APP_GOOGLE_CLIENT_ID en el archivo .env del directorio client. Consulta GOOGLE_OAUTH_SETUP.md para más información.');
-      setTimeout(() => setWarningMessage(''), 6000);
-      return;
+    // Verificar si hay token guardado en el backend
+    try {
+      const response = await api.get('/google/token');
+      const hasToken = response.data.hasToken && !response.data.isExpired;
+      
+      if (hasToken) {
+        // Ya está conectado, abrir el modal directamente
+        setEmailOpen(true);
+        return;
+      }
+    } catch (error: any) {
+      // Si no hay token (404) o hay otro error, mostrar mensaje
+      if (error.response?.status === 404) {
+        setWarningMessage('Por favor, conecta tu correo desde Configuración > Perfil > Correo para poder enviar emails');
+        setTimeout(() => setWarningMessage(''), 5000);
+        return;
+      }
     }
 
-    // Si ya tiene token, abrir directamente el modal
-    if (googleAccessToken) {
-      setEmailOpen(true);
-      return;
-    }
-
-    // Si no tiene token, iniciar autenticación
-    setIsAuthenticating(true);
-    googleLogin();
+    // Si llegamos aquí, no hay token guardado
+    setWarningMessage('Por favor, conecta tu correo desde Configuración > Perfil > Correo para poder enviar emails');
+    setTimeout(() => setWarningMessage(''), 5000);
   };
 
   const handleSendEmail = async (emailData: { to: string; subject: string; body: string }) => {
-    if (!googleAccessToken) {
-      throw new Error('No estás autenticado con Google');
-    }
-
     try {
-      // Enviar email a través del backend
+      // Enviar email a través del backend (el backend obtendrá el token automáticamente)
       await api.post('/emails/send', {
-        accessToken: googleAccessToken,
         to: emailData.to,
         subject: emailData.subject,
         body: emailData.body,
@@ -785,12 +768,9 @@ const ContactDetail: React.FC = () => {
       // Actualizar actividades
       fetchAssociatedRecords();
     } catch (error: any) {
-      // Si el token expiró, solicitar nueva autenticación
+      // Si el token expiró o no hay token, mostrar mensaje
       if (error.response?.status === 401) {
-        setGoogleAccessToken(null);
-        setIsAuthenticating(true);
-        googleLogin();
-        throw new Error('Tu sesión expiró. Por favor, autentícate nuevamente.');
+        throw new Error('Por favor, conecta tu correo desde Configuración > Perfil > Correo');
       }
       throw error;
     }
@@ -1929,8 +1909,8 @@ const ContactDetail: React.FC = () => {
               </Box>
             </Box>
 
-            {/* Estadísticas */}
-            <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
+            {/* Estadísticas - Ocultado */}
+            {/* <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
               <Box sx={{ 
                 flex: 1, 
                 border: `1px dashed ${theme.palette.divider}`, 
@@ -1976,7 +1956,7 @@ const ContactDetail: React.FC = () => {
                   Engagement
                 </Typography>
               </Box>
-            </Box>
+            </Box> */}
 
             {/* Información del contacto */}
             <Card sx={{ 
@@ -5169,8 +5149,8 @@ const ContactDetail: React.FC = () => {
                   )}
                 </Card>
 
-                {/* Suscripciones */}
-                <Card sx={{ 
+                {/* Suscripciones - Ocultado */}
+                {/* <Card sx={{ 
                   mb: 3, 
                   p: 3, 
                   borderRadius: 2, 
@@ -5260,12 +5240,10 @@ const ContactDetail: React.FC = () => {
                       </Table>
                     </TableContainer>
                   )}
-                </Card>
+                </Card> */}
 
-                {/* Pagos */}
-                
-                {/* Pagos */}
-                <Card sx={{ 
+                {/* Pagos - Ocultado */}
+                {/* <Card sx={{ 
                   mb: 3, 
                   p: 3, 
                   borderRadius: 2, 
@@ -5350,7 +5328,7 @@ const ContactDetail: React.FC = () => {
                       </Table>
                     </TableContainer>
                   )}
-                </Card>
+                </Card> */}
               </TabPanel>
 
               <TabPanel value={tabValue} index={1}>
@@ -6193,8 +6171,8 @@ const ContactDetail: React.FC = () => {
               )}
             </Box>
 
-            {/* Suscripciones en Resumen */}
-            <Box sx={{ mb: 3 }}>
+            {/* Suscripciones en Resumen - Ocultado */}
+            {/* <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                   Suscripciones ({associatedSubscriptions.length})
@@ -6269,10 +6247,10 @@ const ContactDetail: React.FC = () => {
                   No hay suscripciones asociadas.
                 </Typography>
               )}
-            </Box>
+            </Box> */}
 
-            {/* Pagos en Resumen */}
-            <Box sx={{ mb: 3 }}>
+            {/* Pagos en Resumen - Ocultado */}
+            {/* <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                   Pagos ({associatedPayments.length})
@@ -6350,7 +6328,7 @@ const ContactDetail: React.FC = () => {
                   No hay pagos asociados.
                 </Typography>
               )}
-            </Box>
+            </Box> */}
             </Box>
           </Paper>
         </Box>
@@ -7560,19 +7538,8 @@ const ContactDetail: React.FC = () => {
       )}
 
       {/* Modal de Email con Gmail API */}
-      {isAuthenticating && (
-        <Dialog open={isAuthenticating} maxWidth="sm" fullWidth>
-          <DialogContent sx={{ textAlign: 'center', py: 4 }}>
-            <CircularProgress sx={{ mb: 2 }} />
-            <Typography variant="body1">
-              Autenticando con Google...
-            </Typography>
-          </DialogContent>
-        </Dialog>
-      )}
-      
       <EmailComposer
-        open={emailOpen && !isAuthenticating}
+        open={emailOpen}
         onClose={() => setEmailOpen(false)}
         recipientEmail={contact?.email || ''}
         recipientName={contact ? `${contact.firstName} ${contact.lastName}` : undefined}

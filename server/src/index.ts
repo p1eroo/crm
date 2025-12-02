@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import os from 'os';
 import { sequelize } from './config/database';
 import './models'; // Import models to register associations
 import authRoutes from './routes/auth';
@@ -17,19 +18,37 @@ import campaignRoutes from './routes/campaigns';
 import dashboardRoutes from './routes/dashboard';
 import automationRoutes from './routes/automations';
 import emailRoutes from './routes/emails';
-import calendarRoutes from './routes/calendar';
+import googleRoutes from './routes/calendar';
 
 dotenv.config();
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '5000', 10);
 
+// Función para obtener la IP local
+const getLocalIP = (): string => {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    const nets = interfaces[name];
+    if (nets) {
+      for (const net of nets) {
+        // Ignorar direcciones IPv6 y direcciones internas (no enlazadas)
+        if (net.family === 'IPv4' && !net.internal) {
+          return net.address;
+        }
+      }
+    }
+  }
+  return 'localhost';
+};
+
 // Middleware CORS - Permitir todas las conexiones desde la red
 app.use(cors({
-  origin: true, // Permitir cualquier origen
+  origin: true, // Permitir cualquier origen (localhost, IPs locales, etc.)
   credentials: true, // Permitir cookies y credenciales
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Authorization'],
 }));
 
 app.use(express.json());
@@ -56,7 +75,7 @@ app.use('/api/campaigns', campaignRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/automations', automationRoutes);
 app.use('/api/emails', emailRoutes);
-app.use('/api/calendar', calendarRoutes);
+app.use('/api/google', googleRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -70,9 +89,19 @@ sequelize.authenticate()
     return sequelize.sync({ alter: true });
   })
   .then(() => {
+    const localIP = getLocalIP();
     app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server is running on port ${PORT}`);
-      console.log(`Accessible from network at: http://0.0.0.0:${PORT}`);
+      console.log('\n========================================');
+      console.log(`✅ Servidor iniciado correctamente`);
+      console.log(`📍 Puerto: ${PORT}`);
+      console.log(`\n🌐 Acceso desde otros dispositivos en la red:`);
+      console.log(`   http://${localIP}:${PORT}/api`);
+      console.log(`\n💻 Acceso local:`);
+      console.log(`   http://localhost:${PORT}/api`);
+      console.log(`   http://127.0.0.1:${PORT}/api`);
+      console.log(`\n📱 Frontend debe acceder desde:`);
+      console.log(`   http://${localIP}:3000`);
+      console.log(`========================================\n`);
     });
   })
   .catch((error) => {

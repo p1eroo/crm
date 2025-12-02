@@ -1,6 +1,7 @@
 import express from 'express';
 import { google } from 'googleapis';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { UserGoogleToken } from '../models/UserGoogleToken';
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -9,18 +10,69 @@ router.use(authenticateToken);
 router.post('/send', async (req: AuthRequest, res) => {
   try {
     const { accessToken, to, subject, body } = req.body;
-
-    if (!accessToken) {
-      return res.status(400).json({ message: 'Token de acceso requerido' });
-    }
+    const userId = req.user?.id;
 
     if (!to || !subject || !body) {
       return res.status(400).json({ message: 'Destinatario, asunto y cuerpo son requeridos' });
     }
 
+    let tokenToUse = accessToken;
+
+    // Si no se proporciona accessToken, intentar obtenerlo de la base de datos
+    if (!tokenToUse && userId) {
+      const userToken = await UserGoogleToken.findOne({
+        where: { userId },
+      });
+
+      if (!userToken) {
+        return res.status(401).json({ message: 'No hay cuenta de Google conectada. Por favor, conecta tu correo desde Configuración > Perfil > Correo' });
+      }
+
+      // Verificar si el token expiró
+      const isExpired = userToken.tokenExpiry && new Date(userToken.tokenExpiry) < new Date();
+      
+      if (isExpired && userToken.refreshToken) {
+        // Refrescar el token
+        const clientId = process.env.GOOGLE_CLIENT_ID;
+        const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+        const redirectUri = process.env.GOOGLE_REDIRECT_URI;
+
+        if (!clientId || !clientSecret) {
+          return res.status(500).json({ message: 'Google OAuth no está configurado en el servidor' });
+        }
+
+        const oauth2Client = new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+        oauth2Client.setCredentials({
+          refresh_token: userToken.refreshToken,
+        });
+
+        try {
+          const { credentials } = await oauth2Client.refreshAccessToken();
+          tokenToUse = credentials.access_token || userToken.accessToken;
+          
+          // Actualizar token en la BD
+          await userToken.update({
+            accessToken: credentials.access_token || userToken.accessToken,
+            tokenExpiry: credentials.expiry_date ? new Date(credentials.expiry_date) : userToken.tokenExpiry,
+          });
+        } catch (refreshError) {
+          console.error('Error refrescando token:', refreshError);
+          return res.status(401).json({ message: 'Token expirado. Por favor, reconecta tu cuenta desde Configuración > Perfil > Correo' });
+        }
+      } else if (isExpired && !userToken.refreshToken) {
+        return res.status(401).json({ message: 'Token expirado. Por favor, reconecta tu cuenta desde Configuración > Perfil > Correo' });
+      } else {
+        tokenToUse = userToken.accessToken;
+      }
+    }
+
+    if (!tokenToUse) {
+      return res.status(400).json({ message: 'Token de acceso requerido' });
+    }
+
     // Crear cliente OAuth2 con el token del usuario
     const oauth2Client = new google.auth.OAuth2();
-    oauth2Client.setCredentials({ access_token: accessToken });
+    oauth2Client.setCredentials({ access_token: tokenToUse });
 
     // Crear cliente de Gmail
     const gmail = google.gmail({ version: 'v1', auth: oauth2Client });

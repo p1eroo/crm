@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -7,8 +7,8 @@ import {
   Button,
   Typography,
   Box,
-  Alert,
   CircularProgress,
+  Alert,
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo-taxi-monterrico.svg';
@@ -16,36 +16,42 @@ import logo from '../assets/logo-taxi-monterrico.svg';
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [localError, setLocalError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
-  const navigate = useNavigate();
+  const { login, error: authError, user } = useAuth();
+  const mountedRef = useRef(true);
+  
+  // Usar el error del contexto o el error local
+  const error = authError || localError;
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // Si el usuario ya está autenticado, no renderizar nada
+  // Esto evita que el componente intente actualizar el estado después del desmontaje
+  if (user) {
+    return null;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    if (!mountedRef.current) return;
+    
+    setLocalError('');
     setLoading(true);
 
-    try {
-      // Log para debug
-      console.log('Intentando iniciar sesión con:', { username });
-      console.log('API Monterrico: https://rest.monterrico.app/api/Licencias/Login');
-      
-      await login(username, password);
-      navigate('/');
-    } catch (err: any) {
-      console.error('Error en login:', err);
-      let errorMessage = 'Error al iniciar sesión';
-      
-      // Manejar errores de la API de Monterrico
-      if (err.message) {
-        errorMessage = err.message;
-      } else {
-        errorMessage = 'No se pudo conectar al servidor. Verifica la conexión de red.';
+    const success = await login(username, password);
+    
+    // Solo actualizar el estado si el componente todavía está montado
+    if (mountedRef.current) {
+      if (!success) {
+        // El error ya está manejado en AuthContext
+        setLocalError('Credenciales incorrectas o error de conexión');
       }
-      
-      setError(errorMessage);
-    } finally {
       setLoading(false);
     }
   };
@@ -139,6 +145,9 @@ const Login: React.FC = () => {
             {error && (
               <Alert
                 severity="error"
+                onClose={() => {
+                  setLocalError('');
+                }}
                 sx={{
                   mb: 2,
                   borderRadius: 1,
@@ -309,4 +318,3 @@ const Login: React.FC = () => {
 };
 
 export default Login;
-

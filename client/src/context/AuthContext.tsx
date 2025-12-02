@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import api from '../config/api';
 
 interface User {
   id: number;
@@ -14,10 +13,11 @@ interface User {
 interface AuthContextType {
   user: User | null;
   setUser: (user: User | null) => void;
-  login: (username: string, password: string) => Promise<void>;
+  login: (idacceso: string, contraseña: string) => Promise<boolean>;
   logout: () => void;
   isAuthenticated: boolean;
   loading: boolean;
+  error: string | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,105 +25,178 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const checkAuth = () => {
-      const token = localStorage.getItem('token');
-      const storedUser = localStorage.getItem('user');
-      
-      if (token && storedUser) {
-        try {
-          // Configurar token
-          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-          
-          // Establecer usuario desde localStorage inmediatamente
-          const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
-          setLoading(false);
-          
-          // NO verificar el token aquí para evitar problemas de timing
-          // El token se validará cuando se hagan las peticiones reales
-          // Si el token es inválido, las peticiones fallarán y el interceptor manejará el error
-        } catch (error: any) {
-          console.error('Error parseando usuario:', error);
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          delete api.defaults.headers.common['Authorization'];
-          setUser(null);
-          setLoading(false);
-        }
-      } else {
-        setLoading(false);
+    // Verificar si hay una sesión guardada
+    const savedUser = localStorage.getItem('user');
+    const savedToken = localStorage.getItem('token');
+    
+    if (savedUser && savedToken) {
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('Error parsing saved user:', error);
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        localStorage.removeItem('idusuario');
+        localStorage.removeItem('usuarioimagen');
+        localStorage.removeItem('key');
       }
-    };
-
-    checkAuth();
+    }
+    setLoading(false);
   }, []);
 
-  const login = async (username: string, password: string) => {
+  const login = async (idacceso: string, contraseña: string): Promise<boolean> => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      console.log('AuthContext: Intentando login con API de Monterrico');
-      
-      // Llamar al endpoint del backend que maneja la autenticación con Monterrico
-      const response = await api.post('/auth/login-monterrico', {
-        usuario: username,
-        password,
+      // Primero autenticar con Monterrico
+      const monterricoResponse = await fetch('https://rest.monterrico.app/api/Licencias/Login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          idacceso,
+          contraseña,
+          idempresas: 0,
+          ipregistro: "0.0.0.0"
+        }),
       });
 
-      const { token, user: userData } = response.data;
-      
-      if (!token) {
-        throw new Error('No se recibió token del servidor');
+      const monterricoData = await monterricoResponse.json();
+
+      if (monterricoData.estatus !== 200) {
+        const errorMessage = monterricoData.message || 'Credenciales incorrectas';
+        setError(errorMessage);
+        setLoading(false);
+        return false;
       }
-      
-      if (!userData) {
-        throw new Error('No se recibieron datos del usuario');
-      }
-      
-      console.log('✅ Login exitoso, guardando token y usuario');
-      localStorage.setItem('token', token);
-      localStorage.setItem('user', JSON.stringify(userData));
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      setUser(userData);
-      
-      // Verificar que el token funcione haciendo una petición de prueba
-      try {
-        const testResponse = await api.get('/auth/me');
-        console.log('✅ Verificación de token exitosa:', testResponse.data);
-        // Actualizar usuario con datos del servidor
-        if (testResponse.data) {
-          setUser(testResponse.data);
-          localStorage.setItem('user', JSON.stringify(testResponse.data));
+
+      // Si Monterrico fue exitoso, obtener JWT local del backend
+      // Detectar automáticamente la URL del backend basándose en el hostname actual
+      const getBackendUrl = () => {
+        if (process.env.REACT_APP_API_URL) {
+          return process.env.REACT_APP_API_URL;
         }
-      } catch (verifyError: any) {
-        console.error('⚠️ Error verificando token después del login:', verifyError);
-        // No lanzar error aquí, el login fue exitoso
-        // El token podría estar bien pero hay un problema de red o timing
-      }
-    } catch (error: any) {
-      console.error('AuthContext: Error en login:', error);
+        
+        const hostname = window.location.hostname;
+        
+        // Si estamos accediendo desde localhost, usar localhost
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+          return 'http://localhost:5000/api';
+        }
+        
+        // Si estamos accediendo desde la red (IP), usar la misma IP pero puerto 5000
+        const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+        if (ipRegex.test(hostname)) {
+          return `http://${hostname}:5000/api`;
+        }
+        
+        // Si es un dominio, usar el mismo dominio pero puerto 5000
+        return `http://${hostname}:5000/api`;
+      };
       
-      // Propagar el error completo para mejor manejo
-      if (error.response) {
-        throw new Error(error.response.data?.error || error.response.data?.message || `Error ${error.response.status}`);
-      } else if (error.request) {
-        throw new Error('No se pudo conectar al servidor. Verifica la conexión de red.');
-      } else {
-        throw new Error(error.message || 'Error al iniciar sesión');
+      const apiUrl = getBackendUrl();
+      console.log('🔗 URL del backend detectada:', apiUrl);
+      let backendData: any = {};
+      
+      try {
+        const backendResponse = await fetch(`${apiUrl}/auth/login-monterrico`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            usuario: idacceso,
+            password: contraseña,
+          }),
+        });
+
+        backendData = await backendResponse.json();
+
+        if (!backendResponse.ok || !backendData.token) {
+          console.error('Error obteniendo JWT local:', backendData);
+          // Continuar con el login aunque falle el backend, pero sin JWT local
+          // Esto permite usar la app aunque el backend esté caído
+        }
+      } catch (backendError) {
+        console.error('Error al conectar con backend:', backendError);
+        // Continuar sin backend
       }
+
+      // Guardar datos de Monterrico
+      localStorage.setItem('idusuario', monterricoData.idusuario.toString());
+      localStorage.setItem('usuarioimagen', monterricoData.usuarioimagen || '');
+      localStorage.setItem('monterricoToken', monterricoData.token || '');
+      localStorage.setItem('key', monterricoData.key || '');
+
+      // Guardar JWT local si se obtuvo correctamente
+      if (backendData.token) {
+        localStorage.setItem('token', backendData.token);
+      }
+
+      // Usar datos del backend si están disponibles, sino usar datos de Monterrico
+      const userData: User = backendData.user ? {
+        id: backendData.user.id,
+        usuario: backendData.user.usuario || idacceso,
+        email: backendData.user.email || idacceso,
+        firstName: backendData.user.firstName || idacceso.toUpperCase(),
+        lastName: backendData.user.lastName || '',
+        role: backendData.user.role || 'admin',
+        avatar: backendData.user.avatar || monterricoData.usuarioimagen
+      } : {
+        id: parseInt(monterricoData.idusuario.toString()),
+        usuario: idacceso,
+        email: idacceso,
+        firstName: idacceso.toUpperCase(),
+        lastName: '',
+        role: 'admin',
+        avatar: monterricoData.usuarioimagen
+      };
+      
+      // Usar setTimeout para asegurar que el estado se actualice en el siguiente tick
+      // Esto evita conflictos con el desmontaje del componente Login
+      setTimeout(() => {
+        setUser(userData);
+        localStorage.setItem('user', JSON.stringify(userData));
+        setLoading(false);
+      }, 0);
+      
+      return true;
+    } catch (error) {
+      console.error('Error en login:', error);
+      const errorMessage = 'Error de conexión. Verifica tu internet.';
+      setError(errorMessage);
+      setLoading(false);
+      return false;
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('monterricoData');
-    delete api.defaults.headers.common['Authorization'];
     setUser(null);
+    setError(null);
+    localStorage.removeItem('user');
+    localStorage.removeItem('idusuario');
+    localStorage.removeItem('usuarioimagen');
+    localStorage.removeItem('token');
+    localStorage.removeItem('key');
+    localStorage.removeItem('monterricoData');
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, logout, isAuthenticated: !!user, loading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      setUser, 
+      login, 
+      logout, 
+      isAuthenticated: !!user, 
+      loading,
+      error 
+    }}>
       {children}
     </AuthContext.Provider>
   );

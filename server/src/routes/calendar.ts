@@ -16,11 +16,22 @@ router.get('/auth', authenticateToken, (req: AuthRequest, res) => {
 
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${req.protocol}://${req.get('host')}/api/calendar/callback`;
+    
+    // El redirect_uri DEBE estar configurado explícitamente en .env y coincidir EXACTAMENTE con Google Cloud Console
+    if (!process.env.GOOGLE_REDIRECT_URI) {
+      return res.status(500).json({ 
+        message: 'GOOGLE_REDIRECT_URI no está configurado. Por favor, agrega GOOGLE_REDIRECT_URI=http://localhost:5000/api/google/callback en tu archivo .env' 
+      });
+    }
+    
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
 
     if (!clientId || !clientSecret) {
       return res.status(500).json({ message: 'Google OAuth no está configurado en el servidor. Configura GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET en las variables de entorno.' });
     }
+
+    console.log('🔗 Redirect URI configurado:', redirectUri);
+    console.log('🔗 Client ID:', clientId?.substring(0, 20) + '...');
 
     const oauth2Client = new google.auth.OAuth2(
       clientId,
@@ -29,6 +40,7 @@ router.get('/auth', authenticateToken, (req: AuthRequest, res) => {
     );
 
     // Generar URL de autorización con access_type=offline y prompt=consent para obtener refresh_token
+    // Incluye scopes para Gmail, Calendar y Tasks
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: 'offline',
       prompt: 'consent', // Fuerza mostrar la pantalla de consentimiento para obtener refresh_token
@@ -36,9 +48,15 @@ router.get('/auth', authenticateToken, (req: AuthRequest, res) => {
         'https://www.googleapis.com/auth/calendar',
         'https://www.googleapis.com/auth/calendar.events',
         'https://www.googleapis.com/auth/tasks',
+        'https://www.googleapis.com/auth/gmail.send',
+        'https://www.googleapis.com/auth/gmail.compose',
+        'https://www.googleapis.com/auth/gmail.readonly',
       ],
       state: userId.toString(), // Pasar userId en el state para identificarlo después
     });
+
+    console.log('🔗 URL de autorización generada (primeros 200 caracteres):', authUrl.substring(0, 200));
+    console.log('🔗 Redirect URI en la URL:', authUrl.includes('redirect_uri=') ? authUrl.split('redirect_uri=')[1]?.split('&')[0] : 'No encontrado');
 
     res.json({ authUrl });
   } catch (error: any) {
@@ -54,20 +72,28 @@ router.get('/callback', async (req, res) => {
     const userId = state ? parseInt(state as string) : null;
 
     if (!code) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard?calendar_error=no_code`);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard?google_error=no_code`);
     }
 
     if (!userId) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard?calendar_error=no_user`);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard?google_error=no_user`);
     }
 
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${req.protocol}://${req.get('host')}/api/calendar/callback`;
+    
+    // El redirect_uri DEBE estar configurado explícitamente en .env y coincidir EXACTAMENTE con Google Cloud Console
+    if (!process.env.GOOGLE_REDIRECT_URI) {
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard?google_error=redirect_uri_not_configured`);
+    }
+    
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
 
     if (!clientId || !clientSecret) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard?calendar_error=config`);
+      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard?google_error=config`);
     }
+
+    console.log('🔗 Redirect URI usado en callback:', redirectUri);
 
     const oauth2Client = new google.auth.OAuth2(
       clientId,
@@ -88,10 +114,10 @@ router.get('/callback', async (req, res) => {
     });
 
     // Redirigir al frontend con éxito
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard?calendar_connected=true`);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard?google_connected=true`);
   } catch (error: any) {
     console.error('Error en callback de OAuth:', error);
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard?calendar_error=callback_error`);
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard?google_error=callback_error`);
   }
 });
 
@@ -288,7 +314,11 @@ authRouter.get('/events', async (req: AuthRequest, res) => {
     // Crear cliente OAuth2
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${req.protocol}://${req.get('host')}/api/calendar/callback`;
+    // El redirect_uri DEBE estar configurado explícitamente en .env
+    if (!process.env.GOOGLE_REDIRECT_URI) {
+      throw new Error('GOOGLE_REDIRECT_URI no está configurado en .env');
+    }
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI;
     
     const oauth2Client = new google.auth.OAuth2(
       clientId,

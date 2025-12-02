@@ -388,7 +388,7 @@ const Contacts: React.FC = () => {
       const factilizaToken = process.env.REACT_APP_FACTILIZA_TOKEN || '';
       
       if (!factilizaToken) {
-        setDniError('Token de API no configurado. Por favor, configure REACT_APP_FACTILIZA_TOKEN');
+        setDniError('⚠️ La búsqueda automática de DNI no está disponible. Puedes ingresar los datos manualmente. Para habilitarla, configura REACT_APP_FACTILIZA_TOKEN en el archivo .env');
         setLoadingDni(false);
         return;
       }
@@ -2096,8 +2096,8 @@ const Contacts: React.FC = () => {
                   )}
                 </Box>
 
-                {/* Estadísticas */}
-                <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
+                {/* Estadísticas - Ocultado */}
+                {/* <Box sx={{ display: 'flex', gap: 1.5, mb: 3 }}>
                   <Box sx={{ 
                     flex: 1, 
                     border: `1px dashed ${theme.palette.divider}`, 
@@ -2143,7 +2143,7 @@ const Contacts: React.FC = () => {
                       Engagement
                     </Typography>
                   </Box>
-                </Box>
+                </Box> */}
 
               {/* Información de contacto - Mismo diseño que ContactDetail */}
               <Box sx={{ 

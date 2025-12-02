@@ -16,8 +16,20 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
+  // Logging mejorado para debug
+  console.log('🔐 Autenticación - Path:', req.path);
+  console.log('🔐 Autenticación - Origin:', req.headers.origin);
+  console.log('🔐 Autenticación - Host:', req.headers.host);
+  console.log('🔐 Autenticación - Authorization header presente:', !!authHeader);
+  console.log('🔐 Autenticación - Token presente:', !!token);
+
   if (!token) {
     console.error('❌ No token provided in request to:', req.path);
+    console.error('❌ Headers recibidos:', {
+      authorization: req.headers.authorization ? 'Presente' : 'Ausente',
+      origin: req.headers.origin,
+      host: req.headers.host,
+    });
     return res.status(401).json({ error: 'Token de acceso requerido' });
   }
 
@@ -25,6 +37,7 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
     if (err) {
       console.error('❌ Token verification failed:', err.message, 'for path:', req.path);
       console.error('❌ Token recibido:', token.substring(0, 20) + '...');
+      console.error('❌ Error completo:', err);
       return res.status(403).json({ error: 'Token inválido o expirado' });
     }
     

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -197,6 +197,75 @@ const Pipeline: React.FC = () => {
     } catch (error) {
       console.error('Error updating stage:', error);
     }
+  };
+
+  // Estados para drag and drop
+  const [draggedDeal, setDraggedDeal] = useState<Deal | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartTimeRef = useRef<number>(0);
+
+  // Estados para animaciones mejoradas
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+
+  // Handlers para drag and drop con animaciones mejoradas
+  const handleDragStart = (e: React.DragEvent, deal: Deal) => {
+    setDraggedDeal(deal);
+    setIsDragging(true);
+    dragStartTimeRef.current = Date.now();
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', deal.id.toString());
+    
+    // Crear una imagen personalizada para el drag (opcional, mejora la experiencia visual)
+    const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
+    dragImage.style.transform = 'rotate(3deg) scale(1.05)';
+    dragImage.style.opacity = '0.9';
+    dragImage.style.boxShadow = '0 12px 24px rgba(0,0,0,0.3)';
+    dragImage.style.position = 'absolute';
+    dragImage.style.top = '-1000px';
+    document.body.appendChild(dragImage);
+    e.dataTransfer.setDragImage(dragImage, e.clientX - e.currentTarget.getBoundingClientRect().left, e.clientY - e.currentTarget.getBoundingClientRect().top);
+    setTimeout(() => document.body.removeChild(dragImage), 0);
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    // Pequeño delay para evitar que el onClick se ejecute después del drag
+    setTimeout(() => {
+      setIsDragging(false);
+      setDraggedDeal(null);
+      setDragOverStage(null);
+    }, 100);
+  };
+
+  const handleDragOver = (e: React.DragEvent, stageId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverStage(stageId);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    // Solo limpiar si realmente salimos del área (no solo pasamos sobre un hijo)
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setDragOverStage(null);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent, stageId: string) => {
+    e.preventDefault();
+    setDragOverStage(null);
+
+    if (!draggedDeal) return;
+
+    // Solo actualizar si cambió de etapa
+    if (draggedDeal.stage !== stageId) {
+      await handleStageChange(draggedDeal.id, stageId);
+    }
+
+    setDraggedDeal(null);
+    setIsDragging(false);
   };
 
   const handleViewHistory = async (deal: Deal) => {
@@ -444,8 +513,11 @@ const Pipeline: React.FC = () => {
                 </Typography>
               </Paper>
 
-              {/* Deals List */}
+              {/* Deals List - Drop Zone */}
               <Box
+                onDragOver={(e) => handleDragOver(e, stage.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, stage.id)}
                 sx={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -453,8 +525,32 @@ const Pipeline: React.FC = () => {
                   flex: 1,
                   overflowY: 'auto',
                   overflowX: 'visible',
-                  minHeight: 0,
+                  minHeight: '100px', // Altura mínima para facilitar el drop
                   maxHeight: '100%',
+                  position: 'relative',
+                  borderRadius: 2,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  backgroundColor: dragOverStage === stage.id 
+                    ? (theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.08)' 
+                      : 'rgba(0, 0, 0, 0.03)')
+                    : 'transparent',
+                  border: dragOverStage === stage.id 
+                    ? `2px dashed ${stage.color}80` 
+                    : '2px dashed transparent',
+                  transform: dragOverStage === stage.id ? 'scale(1.01)' : 'scale(1)',
+                  '&::before': dragOverStage === stage.id ? {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    borderRadius: 2,
+                    background: `linear-gradient(135deg, ${stage.color}15 0%, transparent 100%)`,
+                    pointerEvents: 'none',
+                    zIndex: 0,
+                  } : {},
                   '&::-webkit-scrollbar': {
                     display: 'none',
                     width: 0,
@@ -478,29 +574,69 @@ const Pipeline: React.FC = () => {
                     </Typography>
                   </Paper>
                 ) : (
-                  stageDeals.map((deal) => (
+                  stageDeals.map((deal, index) => (
                     <Card
                       key={deal.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, deal)}
+                      onDragEnd={handleDragEnd}
                       sx={{
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
+                        cursor: isDragging && draggedDeal?.id === deal.id ? 'grabbing' : 'grab',
+                        transition: isDragging && draggedDeal?.id === deal.id 
+                          ? 'none' 
+                          : 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         position: 'relative',
                         width: '100%',
                         minHeight: 'fit-content',
                         overflow: 'visible',
+                        userSelect: 'none', // Prevenir selección de texto al arrastrar
+                        opacity: isDragging && draggedDeal?.id === deal.id ? 0.4 : 1,
+                        transform: isDragging && draggedDeal?.id === deal.id 
+                          ? 'rotate(3deg) scale(0.95)' 
+                          : 'rotate(0deg) scale(1)',
+                        zIndex: isDragging && draggedDeal?.id === deal.id ? 1000 : 1,
+                        animation: !isDragging || draggedDeal?.id !== deal.id 
+                          ? `slideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) ${index * 0.05}s both`
+                          : 'none',
+                        '@keyframes slideIn': {
+                          '0%': {
+                            opacity: 0,
+                            transform: 'translateY(-10px) scale(0.95)',
+                          },
+                          '100%': {
+                            opacity: 1,
+                            transform: 'translateY(0) scale(1)',
+                          },
+                        },
                         '&:hover': {
-                          transform: 'translateY(-2px)',
-                          boxShadow: theme.palette.mode === 'dark'
-                            ? '0 4px 12px rgba(0,0,0,0.4)'
-                            : '0 4px 12px rgba(0,0,0,0.15)',
+                          transform: isDragging && draggedDeal?.id === deal.id 
+                            ? 'rotate(3deg) scale(0.95)' 
+                            : 'translateY(-4px) scale(1.02)',
+                          boxShadow: isDragging && draggedDeal?.id === deal.id
+                            ? 'none'
+                            : theme.palette.mode === 'dark'
+                            ? '0 8px 16px rgba(0,0,0,0.5)'
+                            : '0 8px 16px rgba(0,0,0,0.2)',
                         },
                         borderLeft: `4px solid ${stage.color}`,
                         borderTop: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)'}`,
                         borderRight: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)'}`,
                         borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)'}`,
                         borderRadius: 2,
+                        boxShadow: isDragging && draggedDeal?.id === deal.id
+                          ? '0 12px 24px rgba(0,0,0,0.3)'
+                          : theme.palette.mode === 'dark'
+                          ? '0 2px 8px rgba(0,0,0,0.2)'
+                          : '0 2px 8px rgba(0,0,0,0.1)',
                       }}
-                      onClick={() => handleViewHistory(deal)}
+                      onClick={(e) => {
+                        // Solo abrir el historial si no se está arrastrando
+                        // Verificar si pasó suficiente tiempo desde el inicio del drag
+                        const timeSinceDragStart = Date.now() - dragStartTimeRef.current;
+                        if (!isDragging && timeSinceDragStart > 200) {
+                          handleViewHistory(deal);
+                        }
+                      }}
                     >
                       <CardContent sx={{ 
                         p: 2.5, 

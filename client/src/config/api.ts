@@ -115,7 +115,7 @@ api.interceptors.response.use(
       const isLoginPage = window.location.pathname === '/login';
       const isLoginRequest = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/login-monterrico');
       const isAuthMeRequest = error.config?.url?.includes('/auth/me'); // No redirigir si falla /auth/me
-      const isCalendarTokenRequest = error.config?.url?.includes('/calendar/token'); // No redirigir si falla /calendar/token
+      const isGoogleTokenRequest = error.config?.url?.includes('/google/token'); // No redirigir si falla /google/token
       
       console.log('🔒 Error de autenticación:', {
         status: error.response?.status,
@@ -123,13 +123,13 @@ api.interceptors.response.use(
         isLoginPage,
         isLoginRequest,
         isAuthMeRequest,
-        isCalendarTokenRequest,
+        isGoogleTokenRequest,
         pathname: window.location.pathname,
       });
       
       // Solo redirigir si NO es una petición de verificación y NO estamos en login
       // Y solo si realmente no hay token (no redirigir si hay token pero falló la validación)
-      if (!isLoginPage && !isLoginRequest && !isAuthMeRequest && !isCalendarTokenRequest) {
+      if (!isLoginPage && !isLoginRequest && !isAuthMeRequest && !isGoogleTokenRequest) {
         const token = localStorage.getItem('token');
         if (!token) {
           console.log('🔒 No hay token, redirigiendo a login');
