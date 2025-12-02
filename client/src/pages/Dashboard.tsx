@@ -856,8 +856,8 @@ const Dashboard: React.FC = () => {
       <Box sx={{ 
         backgroundColor: theme.palette.background.default, 
         minHeight: '100vh',
-        px: { xs: 3, sm: 6, md: 8 },
-        pt: { xs: 4, sm: 6, md: 6 },
+        px: { xs: 1.5, sm: 2, md: 2.5 },
+        pt: { xs: 2, sm: 3, md: 3 },
         pb: 4,
       }}>
         <Typography variant="h4" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 4 }}>
@@ -1267,8 +1267,8 @@ const Dashboard: React.FC = () => {
     <Box sx={{ 
       backgroundColor: theme.palette.background.default, 
       minHeight: '100vh',
-      px: { xs: 1.5, sm: 3, md: 6, lg: 8 },
-      pt: { xs: 2, sm: 3, md: 4, lg: 6 },
+      px: { xs: 1.5, sm: 2, md: 2.5, lg: 3 },
+      pt: { xs: 2, sm: 2.5, md: 3, lg: 3.5 },
       pb: { xs: 2, sm: 3, md: 4 },
     }}>
       {/* Header con Hello y Profile */}

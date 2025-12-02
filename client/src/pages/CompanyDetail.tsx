@@ -1452,8 +1452,8 @@ const CompanyDetail: React.FC = () => {
       bgcolor: theme.palette.background.default,
       minHeight: '100vh',
       pb: { xs: 2, sm: 4, md: 8 },
-      px: { xs: 1, sm: 3, md: 8 },
-      pt: { xs: 2, sm: 4, md: 6 },
+      px: { xs: 1.5, sm: 2, md: 2.5, lg: 3 },
+      pt: { xs: 2, sm: 2.5, md: 3 },
       display: 'flex', 
       flexDirection: 'column',
     }}>

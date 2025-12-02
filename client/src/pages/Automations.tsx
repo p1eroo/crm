@@ -19,6 +19,7 @@ import {
   MenuItem,
   Chip,
   CircularProgress,
+  useTheme,
 } from '@mui/material';
 import { Add, Edit, Delete } from '@mui/icons-material';
 import api from '../config/api';
@@ -31,6 +32,7 @@ interface Automation {
 }
 
 const Automations: React.FC = () => {
+  const theme = useTheme();
   const [automations, setAutomations] = useState<Automation[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -126,7 +128,13 @@ const Automations: React.FC = () => {
   }
 
   return (
-    <Box>
+    <Box sx={{ 
+      bgcolor: theme.palette.background.default, 
+      minHeight: '100vh',
+      pb: { xs: 3, sm: 6, md: 8 },
+      px: { xs: 1.5, sm: 2, md: 2.5, lg: 3 },
+      pt: { xs: 2, sm: 3 },
+    }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
         <Typography variant="h4">Automatizaciones</Typography>
         <Button variant="contained" startIcon={<Add />} onClick={() => handleOpen()}>

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { 
   Box, 
   IconButton, 
@@ -41,13 +41,13 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
   const theme = useTheme();
   const editorRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [moreAnchorEl, setMoreAnchorEl] = useState<null | HTMLElement>(null);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
-  const [linkButtonRef, setLinkButtonRef] = useState<HTMLButtonElement | null>(null);
-  const [linkDialogPosition, setLinkDialogPosition] = useState({ top: 0, left: 0 });
   const [linkText, setLinkText] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [openInNewTab, setOpenInNewTab] = useState(true);
+  const savedSelectionRef = useRef<Range | null>(null);
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
     italic: false,
@@ -58,23 +58,34 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
   });
 
   useEffect(() => {
-    if (editorRef.current && editorRef.current.innerHTML !== value) {
+    // Solo actualizar si el cambio NO viene del usuario escribiendo
+    if (editorRef.current && editorRef.current.innerHTML !== value && !isUpdatingRef.current && !isUserTypingRef.current) {
+      isUpdatingRef.current = true;
       editorRef.current.innerHTML = value || '';
+      // Usar requestAnimationFrame para asegurar que el DOM se actualice antes de permitir más cambios
+      requestAnimationFrame(() => {
+        isUpdatingRef.current = false;
+      });
     }
   }, [value]);
 
-  const updateActiveFormats = () => {
+  const updateActiveFormats = useCallback(() => {
     if (editorRef.current) {
-      setActiveFormats({
-        bold: document.queryCommandState('bold'),
-        italic: document.queryCommandState('italic'),
-        underline: document.queryCommandState('underline'),
-        strikeThrough: document.queryCommandState('strikeThrough'),
-        unorderedList: document.queryCommandState('insertUnorderedList'),
-        orderedList: document.queryCommandState('insertOrderedList'),
+      // Usar requestAnimationFrame para actualizaciones más suaves
+      requestAnimationFrame(() => {
+        if (editorRef.current) {
+          setActiveFormats({
+            bold: document.queryCommandState('bold'),
+            italic: document.queryCommandState('italic'),
+            underline: document.queryCommandState('underline'),
+            strikeThrough: document.queryCommandState('strikeThrough'),
+            unorderedList: document.queryCommandState('insertUnorderedList'),
+            orderedList: document.queryCommandState('insertOrderedList'),
+          });
+        }
       });
     }
-  };
+  }, []);
 
   useEffect(() => {
     const editor = editorRef.current;
@@ -85,38 +96,68 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
     };
 
     const handleMouseUp = () => {
-      setTimeout(updateActiveFormats, 0);
+      updateActiveFormats();
     };
 
-    const handleKeyUp = () => {
-      setTimeout(updateActiveFormats, 0);
+    const handleKeyUp = (e: KeyboardEvent) => {
+      // Solo actualizar formatos si no es una tecla de texto normal (evitar lag al escribir)
+      if (e.key && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Shift' || e.key === 'Control' || e.key === 'Meta')) {
+        updateActiveFormats();
+      }
     };
 
     document.addEventListener('selectionchange', handleSelectionChange);
     editor.addEventListener('mouseup', handleMouseUp);
-    editor.addEventListener('keyup', handleKeyUp);
+    editor.addEventListener('keyup', handleKeyUp as EventListener);
 
     return () => {
       document.removeEventListener('selectionchange', handleSelectionChange);
       editor.removeEventListener('mouseup', handleMouseUp);
-      editor.removeEventListener('keyup', handleKeyUp);
+      editor.removeEventListener('keyup', handleKeyUp as EventListener);
+      // Limpiar timeout al desmontar
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
     };
-  }, []);
+  }, [updateActiveFormats]);
 
-  const execCommand = (command: string, value: string | null = null) => {
+  const execCommand = useCallback((command: string, value: string | null = null) => {
     document.execCommand(command, false, value || undefined);
     if (editorRef.current) {
+      // Actualizar inmediatamente para comandos de formato (no necesita debounce)
       onChange(editorRef.current.innerHTML);
     }
     editorRef.current?.focus();
-    setTimeout(updateActiveFormats, 0);
-  };
+    updateActiveFormats();
+  }, [onChange, updateActiveFormats]);
 
-  const handleInput = () => {
-    if (editorRef.current) {
-      onChange(editorRef.current.innerHTML);
+  // Debounce para evitar actualizaciones excesivas
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isUpdatingRef = useRef(false);
+  const isUserTypingRef = useRef(false);
+
+  const handleInput = useCallback(() => {
+    if (editorRef.current && !isUpdatingRef.current) {
+      // Marcar que el usuario está escribiendo
+      isUserTypingRef.current = true;
+      
+      // Limpiar timeout anterior
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+      
+      // Actualizar después de un pequeño delay (solo para el callback, el editor se actualiza inmediatamente)
+      debounceTimeoutRef.current = setTimeout(() => {
+        if (editorRef.current) {
+          onChange(editorRef.current.innerHTML);
+          // Permitir actualizaciones externas después de que el usuario termine de escribir
+          setTimeout(() => {
+            isUserTypingRef.current = false;
+          }, 200);
+        }
+      }, 150); // 150ms de delay para que sea fluido pero no excesivo
     }
-  };
+  }, [onChange]);
 
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
@@ -126,24 +167,32 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
 
   const handleOpenLinkDialog = () => {
     const selection = window.getSelection();
-    if (selection && selection.toString().trim()) {
-      setLinkText(selection.toString());
+    // Guardar la selección actual antes de abrir el modal
+    if (selection && selection.rangeCount > 0) {
+      savedSelectionRef.current = selection.getRangeAt(0).cloneRange();
+      const selectedText = selection.toString().trim();
+      if (selectedText) {
+        setLinkText(selectedText);
+      } else {
+        setLinkText('');
+      }
     } else {
+      // Si no hay selección, guardar la posición del cursor
+      if (editorRef.current) {
+        const range = document.createRange();
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          savedSelectionRef.current = selection.getRangeAt(0).cloneRange();
+        } else {
+          // Colocar el cursor al final del contenido
+          range.selectNodeContents(editorRef.current);
+          range.collapse(false);
+          savedSelectionRef.current = range;
+        }
+      }
       setLinkText('');
     }
     setLinkUrl('');
-    
-    // Calcular posición de la ventana flotante
-    if (linkButtonRef && toolbarRef.current) {
-      const buttonRect = linkButtonRef.getBoundingClientRect();
-      const toolbarRect = toolbarRef.current.getBoundingClientRect();
-      
-      setLinkDialogPosition({
-        top: buttonRect.bottom - toolbarRect.top + 8,
-        left: buttonRect.left - toolbarRect.left,
-      });
-    }
-    
     setLinkDialogOpen(true);
   };
 
@@ -155,50 +204,198 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
   };
 
   const handleApplyLink = () => {
-    if (linkUrl.trim()) {
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        
-        // Si hay texto seleccionado, lo reemplazamos; si no, insertamos el texto del enlace
-        if (!selection.toString().trim() && linkText.trim()) {
-          range.insertNode(document.createTextNode(linkText));
-          // Seleccionar el texto recién insertado
-          range.setStartBefore(range.startContainer);
-          range.setEndAfter(range.endContainer);
+    if (!linkUrl.trim() || !editorRef.current) return;
+
+    // Restaurar el foco al editor
+    editorRef.current.focus();
+
+    // Restaurar la selección guardada o usar la selección actual
+    let range: Range | null = null;
+    const selection = window.getSelection();
+    
+    if (savedSelectionRef.current) {
+      // Restaurar la selección guardada
+      try {
+        if (selection) {
+          selection.removeAllRanges();
+          selection.addRange(savedSelectionRef.current);
+          range = selection.getRangeAt(0);
         }
+      } catch (e) {
+        console.error('Error restoring selection:', e);
+      }
+    }
+    
+    // Si no hay selección guardada, intentar usar la selección actual
+    if (!range && selection && selection.rangeCount > 0) {
+      range = selection.getRangeAt(0);
+    }
+    
+    // Si aún no hay rango, crear uno al final del contenido
+    if (!range && editorRef.current) {
+      range = document.createRange();
+      range.selectNodeContents(editorRef.current);
+      range.collapse(false);
+      if (selection) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    }
+
+    if (range) {
+      try {
+        // Si hay texto seleccionado, usarlo; si no, usar el texto del campo
+        const textToLink = linkText.trim() || linkUrl;
         
-        // Crear el enlace
+        // Crear el elemento de enlace
         const link = document.createElement('a');
-        link.href = linkUrl;
-        link.textContent = linkText || linkUrl;
+        link.href = linkUrl.trim();
+        link.textContent = textToLink;
         if (openInNewTab) {
           link.target = '_blank';
           link.rel = 'noopener noreferrer';
         }
         
-        try {
+        // Si hay contenido seleccionado, reemplazarlo
+        if (range.toString().trim()) {
           range.deleteContents();
-          range.insertNode(link);
-          onChange(editorRef.current?.innerHTML || '');
-        } catch (e) {
-          // Si falla, usar execCommand como fallback
-          execCommand('createLink', linkUrl);
         }
-      } else {
-        // Fallback si no hay selección
-        execCommand('createLink', linkUrl);
+        
+        // Insertar el enlace
+        range.insertNode(link);
+        
+        // Colocar el cursor después del enlace
+        range.setStartAfter(link);
+        range.collapse(true);
+        if (selection) {
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+        
+        // Actualizar el contenido
+        if (editorRef.current) {
+          onChange(editorRef.current.innerHTML);
+        }
+      } catch (e) {
+        console.error('Error inserting link:', e);
+        // Fallback usando execCommand
+        if (linkText.trim()) {
+          // Si hay texto, insertarlo primero
+          document.execCommand('insertText', false, linkText);
+        }
+        // Seleccionar el texto insertado o el texto seleccionado
+        const sel = window.getSelection();
+        if (sel && sel.rangeCount > 0) {
+          const r = sel.getRangeAt(0);
+          r.selectNodeContents(r.commonAncestorContainer);
+          sel.removeAllRanges();
+          sel.addRange(r);
+        }
+        document.execCommand('createLink', false, linkUrl.trim());
+        if (editorRef.current) {
+          onChange(editorRef.current.innerHTML);
+        }
+      }
+    } else {
+      // Fallback final usando execCommand
+      if (linkText.trim()) {
+        document.execCommand('insertText', false, linkText);
+      }
+      document.execCommand('createLink', false, linkUrl.trim());
+      if (editorRef.current) {
+        onChange(editorRef.current.innerHTML);
       }
     }
+    
     handleCloseLinkDialog();
   };
 
   const insertImage = () => {
-    const url = prompt('Ingresa la URL de la imagen:');
-    if (url) {
-      execCommand('insertImage', url);
+    // Abrir el selector de archivos
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
     }
     setMoreAnchorEl(null);
+  };
+
+  const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar que sea una imagen
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecciona un archivo de imagen válido.');
+      return;
+    }
+
+    // Leer el archivo y convertirlo a data URL
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl && editorRef.current) {
+        // Restaurar el foco al editor
+        editorRef.current.focus();
+        
+        // Obtener la selección actual o crear una nueva
+        const selection = window.getSelection();
+        let range: Range | null = null;
+        
+        if (selection && selection.rangeCount > 0) {
+          range = selection.getRangeAt(0);
+        } else if (editorRef.current) {
+          range = document.createRange();
+          range.selectNodeContents(editorRef.current);
+          range.collapse(false);
+          if (selection) {
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+        }
+
+        if (range) {
+          try {
+            // Crear el elemento de imagen
+            const img = document.createElement('img');
+            img.src = dataUrl;
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+            img.alt = file.name;
+            
+            // Insertar la imagen
+            range.insertNode(img);
+            
+            // Colocar el cursor después de la imagen
+            range.setStartAfter(img);
+            range.collapse(true);
+            if (selection) {
+              selection.removeAllRanges();
+              selection.addRange(range);
+            }
+            
+            // Actualizar el contenido
+            onChange(editorRef.current.innerHTML);
+          } catch (error) {
+            console.error('Error inserting image:', error);
+            // Fallback usando execCommand
+            execCommand('insertImage', dataUrl);
+          }
+        } else {
+          // Fallback usando execCommand
+          execCommand('insertImage', dataUrl);
+        }
+      }
+    };
+    
+    reader.onerror = () => {
+      alert('Error al leer el archivo de imagen.');
+    };
+    
+    reader.readAsDataURL(file);
+    
+    // Limpiar el input para permitir seleccionar el mismo archivo nuevamente
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const insertTable = () => {
@@ -414,7 +611,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
         </IconButton>
         <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: '20px', borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : undefined }} />
         <IconButton
-          ref={(el) => setLinkButtonRef(el)}
           size="small"
           sx={{ 
             p: 0.75,
@@ -422,7 +618,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
             backgroundColor: linkDialogOpen 
               ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0')
               : 'transparent',
-            position: 'relative',
             '&:hover': {
               backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
               color: theme.palette.text.primary,
@@ -553,158 +748,164 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
         }}
       />
 
-      {/* Ventana flotante para insertar enlace */}
+      {/* Popup flotante para insertar enlace (estilo Gmail) */}
       {linkDialogOpen && (
-        <Box
-          sx={{
-            position: 'absolute',
-            top: `${linkDialogPosition.top}px`,
-            left: `${linkDialogPosition.left}px`,
-            width: '320px',
-            backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : 'white',
-            borderRadius: '8px',
-            boxShadow: theme.palette.mode === 'dark' 
-              ? '0 4px 16px rgba(0,0,0,0.5)' 
-              : '0 4px 16px rgba(0,0,0,0.2)',
-            zIndex: 1000,
-            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0'}`,
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Título */}
+        <>
+          {/* Overlay para cerrar al hacer clic fuera */}
           <Box
             sx={{
-              p: 1.5,
-              borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0'}`,
-              fontWeight: 'bold',
-              fontSize: '0.875rem',
-              color: theme.palette.text.primary,
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              zIndex: 1300,
             }}
+            onClick={handleCloseLinkDialog}
+          />
+          {/* Popup flotante */}
+          <Box
+            sx={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 1301,
+              backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : 'white',
+              borderRadius: '8px',
+              boxShadow: theme.palette.mode === 'dark' 
+                ? '0 8px 24px rgba(0,0,0,0.6)' 
+                : '0 8px 24px rgba(0,0,0,0.2)',
+              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0'}`,
+              minWidth: '400px',
+              maxWidth: '500px',
+              p: 2,
+            }}
+            onClick={(e) => e.stopPropagation()}
           >
-            Crear enlace
-          </Box>
-
-          {/* Contenido */}
-          <Box sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-            <TextField
-              label="Texto del enlace"
-              value={linkText}
-              onChange={(e) => setLinkText(e.target.value)}
-              fullWidth
-              size="small"
-              variant="outlined"
-              placeholder="Texto a mostrar"
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: theme.palette.mode === 'dark' ? '#1e1e1e' : 'transparent',
-                  color: theme.palette.text.primary,
-                },
-              }}
-            />
-            <TextField
-              label="URL"
-              value={linkUrl}
-              onChange={(e) => setLinkUrl(e.target.value)}
-              fullWidth
-              size="small"
-              variant="outlined"
-              placeholder="https://ejemplo.com"
-              autoFocus
-              required
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  backgroundColor: theme.palette.mode === 'dark' ? '#1e1e1e' : 'transparent',
-                  color: theme.palette.text.primary,
-                },
-              }}
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={openInNewTab}
-                  onChange={(e) => setOpenInNewTab(e.target.checked)}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              {/* Campo de texto */}
+              <TextField
+                value={linkText}
+                onChange={(e) => setLinkText(e.target.value)}
+                placeholder="Texto"
+                fullWidth
+                variant="outlined"
+                size="small"
+                autoFocus
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    backgroundColor: theme.palette.mode === 'dark' ? '#1e1e1e' : '#f5f5f5',
+                    '& fieldset': {
+                      borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : '#e0e0e0',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.3)' : '#bdbdbd',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: theme.palette.primary.main,
+                      borderWidth: '2px',
+                    },
+                  },
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <Box sx={{ mr: 1, display: 'flex', alignItems: 'center', color: theme.palette.text.secondary }}>
+                      <FormatBold fontSize="small" />
+                    </Box>
+                  ),
+                }}
+              />
+              {/* Campo de URL */}
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+                <TextField
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="Escribe o pega un vínculo"
+                  fullWidth
+                  variant="outlined"
                   size="small"
                   sx={{
-                    color: theme.palette.primary.main,
-                    '&.Mui-checked': {
-                      color: theme.palette.primary.main,
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: theme.palette.mode === 'dark' ? '#1e1e1e' : '#f5f5f5',
+                      '& fieldset': {
+                        borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : '#e0e0e0',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.3)' : '#bdbdbd',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: theme.palette.primary.main,
+                        borderWidth: '2px',
+                      },
                     },
                   }}
+                  InputProps={{
+                    startAdornment: (
+                      <Box sx={{ mr: 1, display: 'flex', alignItems: 'center', color: theme.palette.text.secondary }}>
+                        <LinkIcon fontSize="small" />
+                      </Box>
+                    ),
+                  }}
                 />
-              }
-              label={
-                <Box component="span" sx={{ fontSize: '0.875rem', color: theme.palette.text.primary }}>
-                  Abrir en una nueva pestaña
-                </Box>
-              }
-            />
+                {/* Botón Aplicar */}
+                <Button
+                  onClick={handleApplyLink}
+                  variant="contained"
+                  disabled={!linkUrl.trim()}
+                  sx={{
+                    textTransform: 'none',
+                    minWidth: '80px',
+                    height: '40px',
+                    backgroundColor: linkUrl.trim() ? theme.palette.primary.main : theme.palette.action.disabledBackground,
+                    color: linkUrl.trim() ? 'white' : theme.palette.action.disabled,
+                    '&:hover': {
+                      backgroundColor: linkUrl.trim() ? theme.palette.primary.dark : theme.palette.action.disabledBackground,
+                    },
+                    '&:disabled': {
+                      backgroundColor: theme.palette.action.disabledBackground,
+                      color: theme.palette.action.disabled,
+                    },
+                  }}
+                >
+                  Aplicar
+                </Button>
+              </Box>
+              {/* Checkbox para abrir en nueva pestaña */}
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={openInNewTab}
+                    onChange={(e) => setOpenInNewTab(e.target.checked)}
+                    size="small"
+                    sx={{
+                      color: theme.palette.primary.main,
+                      '&.Mui-checked': {
+                        color: theme.palette.primary.main,
+                      },
+                    }}
+                  />
+                }
+                label={
+                  <Box component="span" sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary }}>
+                    Abrir en una nueva pestaña
+                  </Box>
+                }
+                sx={{ mt: -0.5 }}
+              />
+            </Box>
           </Box>
-
-          {/* Botones */}
-          <Box
-            sx={{
-              p: 1.5,
-              borderTop: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0'}`,
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: 1,
-            }}
-          >
-            <Button
-              onClick={handleCloseLinkDialog}
-              size="small"
-              sx={{
-                textTransform: 'none',
-                color: theme.palette.text.secondary,
-                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0'}`,
-                '&:hover': {
-                  backgroundColor: theme.palette.action.hover,
-                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : '#e0e0e0'}`,
-                },
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleApplyLink}
-              size="small"
-              variant="contained"
-              disabled={!linkUrl.trim()}
-              sx={{
-                textTransform: 'none',
-                backgroundColor: linkUrl.trim() ? theme.palette.primary.main : theme.palette.action.disabledBackground,
-                color: linkUrl.trim() ? 'white' : theme.palette.action.disabled,
-                '&:hover': {
-                  backgroundColor: linkUrl.trim() ? theme.palette.primary.dark : theme.palette.action.disabledBackground,
-                },
-                '&:disabled': {
-                  backgroundColor: theme.palette.action.disabledBackground,
-                  color: theme.palette.action.disabled,
-                },
-              }}
-            >
-              Aplicar
-            </Button>
-          </Box>
-        </Box>
+        </>
       )}
 
-      {/* Overlay para cerrar al hacer clic fuera */}
-      {linkDialogOpen && (
-        <Box
-          sx={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 999,
-          }}
-          onClick={handleCloseLinkDialog}
-        />
-      )}
+      {/* Input oculto para seleccionar archivos de imagen */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        style={{ display: 'none' }}
+        onChange={handleImageFileSelect}
+      />
     </Box>
   );
 };

@@ -798,60 +798,122 @@ const ContactDetail: React.FC = () => {
       return;
     }
     setSaving(true);
+    
+    // Variables para debugging
+    let contactsToCreateNote: number[] = [];
+    let finalContactIds: number[] = [];
+    let companiesToAssociate: number[] = [];
+    
     try {
-      // Obtener empresas asociadas al contacto
-      const companies = (contact?.Companies && Array.isArray(contact.Companies))
-        ? contact.Companies
-        : (contact?.Company ? [contact.Company] : []);
+      // Obtener contactos seleccionados (incluyendo el contacto actual si no está excluido)
+      contactsToCreateNote = selectedContacts.filter(contactId => !excludedContacts.includes(contactId));
+      
+      // Si no hay contactos seleccionados, usar el contacto actual
+      finalContactIds = contactsToCreateNote.length > 0 ? contactsToCreateNote : (contact?.id ? [contact.id] : []);
+      
+      if (finalContactIds.length === 0) {
+        setSuccessMessage('Error: No hay contactos seleccionados');
+        setTimeout(() => setSuccessMessage(''), 3000);
+        setSaving(false);
+        return;
+      }
 
-      // Crear una actividad para cada empresa asociada, o solo con contactId si no hay empresas
-      if (companies.length > 0) {
-        // Crear actividad para cada empresa asociada
-        const activityPromises = companies.map((company: any) =>
-          api.post('/activities', {
-            type: 'note',
-            subject: noteData.subject || `Nota para ${contact?.firstName} ${contact?.lastName}`,
-            description: noteData.description,
-            contactId: id,
-            companyId: company.id,
-          })
-        );
-        await Promise.all(activityPromises);
-      } else {
-        // Si no hay empresas asociadas, crear solo con contactId
-        await api.post('/activities', {
-          type: 'note',
-          subject: noteData.subject || `Nota para ${contact?.firstName} ${contact?.lastName}`,
-          description: noteData.description,
-          contactId: id,
-        });
+      // Obtener empresas seleccionadas
+      companiesToAssociate = selectedCompanies.filter(companyId => !excludedCompanies.includes(companyId));
+      
+      // Crear notas para cada contacto seleccionado
+      const activityPromises: Promise<any>[] = [];
+      
+      for (const contactId of finalContactIds) {
+        // Obtener información del contacto para el subject
+        let contactName = `Contacto ${contactId}`;
+        try {
+          const contactResponse = await api.get(`/contacts/${contactId}`);
+          const contactData = contactResponse.data;
+          contactName = `${contactData.firstName || ''} ${contactData.lastName || ''}`.trim() || contactName;
+        } catch (e) {
+          console.error(`Error fetching contact ${contactId}:`, e);
+        }
+
+        if (companiesToAssociate.length > 0) {
+          // Crear una nota para cada combinación de contacto y empresa
+          for (const companyId of companiesToAssociate) {
+            activityPromises.push(
+              api.post('/activities', {
+                type: 'note',
+                subject: noteData.subject || `Nota para ${contactName}`,
+                description: noteData.description,
+                contactId: contactId,
+                companyId: companyId,
+              })
+            );
+          }
+        } else {
+          // Crear nota solo con el contacto (sin empresa)
+          activityPromises.push(
+            api.post('/activities', {
+              type: 'note',
+              subject: noteData.subject || `Nota para ${contactName}`,
+              description: noteData.description,
+              contactId: contactId,
+            })
+          );
+        }
       }
       
-      // Crear tarea de seguimiento si está marcada
-      if (createFollowUpTask) {
+      // Ejecutar todas las creaciones en paralelo
+      await Promise.all(activityPromises);
+      
+      // Crear tarea de seguimiento si está marcada (solo para el primer contacto)
+      if (createFollowUpTask && finalContactIds.length > 0) {
         const followUpDate = new Date();
         followUpDate.setDate(followUpDate.getDate() + 3); // 3 días laborables
+        
+        // Obtener nombre del primer contacto
+        let firstContactName = `Contacto ${finalContactIds[0]}`;
+        try {
+          const contactResponse = await api.get(`/contacts/${finalContactIds[0]}`);
+          const contactData = contactResponse.data;
+          firstContactName = `${contactData.firstName || ''} ${contactData.lastName || ''}`.trim() || firstContactName;
+        } catch (e) {
+          console.error(`Error fetching contact ${finalContactIds[0]}:`, e);
+        }
+        
         await api.post('/tasks', {
-          title: `Seguimiento de nota: ${noteData.subject || `Nota para ${contact?.firstName} ${contact?.lastName}`}`,
+          title: `Seguimiento de nota: ${noteData.subject || `Nota para ${firstContactName}`}`,
           description: `Tarea de seguimiento generada automáticamente por la nota: ${noteData.description}`,
           type: 'todo',
           status: 'not started',
           priority: 'medium',
           dueDate: followUpDate.toISOString().split('T')[0],
-          contactId: id,
+          contactId: finalContactIds[0],
         });
       }
       
-      setSuccessMessage('Nota creada exitosamente' + (createFollowUpTask ? ' y tarea de seguimiento creada' : ''));
+      const noteCount = activityPromises.length;
+      setSuccessMessage(`Nota${noteCount > 1 ? 's' : ''} creada${noteCount > 1 ? 's' : ''} exitosamente${createFollowUpTask ? ' y tarea de seguimiento creada' : ''}`);
       setNoteOpen(false);
       setNoteData({ subject: '', description: '' });
       setCreateFollowUpTask(false);
+      setSelectedContacts([]);
+      setSelectedCompanies([]);
+      setExcludedContacts([]);
+      setExcludedCompanies([]);
       fetchAssociatedRecords(); // Actualizar actividades
       setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving note:', error);
-      setSuccessMessage('Error al crear la nota');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        selectedContacts,
+        finalContactIds: contactsToCreateNote.length > 0 ? contactsToCreateNote : (contact?.id ? [contact.id] : []),
+        companiesToAssociate,
+      });
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Error desconocido';
+      setSuccessMessage(`Error al crear la nota: ${errorMessage}`);
+      setTimeout(() => setSuccessMessage(''), 5000);
     } finally {
       setSaving(false);
     }
@@ -1637,15 +1699,16 @@ const ContactDetail: React.FC = () => {
   }
 
   return (
-    <Box sx={{ 
-      bgcolor: theme.palette.background.default,
-      minHeight: '100vh',
-      pb: { xs: 2, sm: 4, md: 8 },
-      px: { xs: 1, sm: 3, md: 8 },
-      pt: { xs: 2, sm: 4, md: 6 },
-      display: 'flex', 
-      flexDirection: 'column',
-    }}>
+      <Box sx={{ 
+        bgcolor: theme.palette.background.default,
+        height: '100vh',
+        pb: { xs: 0, sm: 0, md: 0 },
+        px: { xs: 1.5, sm: 2, md: 2.5, lg: 3 },
+        pt: { xs: 2, sm: 2.5, md: 3 },
+        display: 'flex', 
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}>
 
       {/* Contenido principal - Separado en 2 partes */}
       <Box sx={{ 
@@ -1655,6 +1718,9 @@ const ContactDetail: React.FC = () => {
         flex: 1,
         overflow: { xs: 'visible', md: 'hidden' },
         minHeight: { xs: 'auto', md: 0 },
+        height: { xs: 'auto', md: '100%' },
+        maxHeight: { xs: 'none', md: '100%' },
+        alignItems: { xs: 'stretch', md: 'stretch' },
       }}>
         {/* Parte 1: Columna Izquierda - Información del Contacto */}
         <Card sx={{ 
@@ -1667,17 +1733,22 @@ const ContactDetail: React.FC = () => {
           width: { xs: '100%', sm: '100%', md: '400px', lg: '450px', xl: '500px' },
           minWidth: { xs: '100%', sm: '280px', md: '350px' },
           maxWidth: { xs: '100%', md: '500px' },
-          flexShrink: 1,
-          flexGrow: 0,
-          height: { xs: 'auto', md: 'calc(100vh - 100px)' },
-          maxHeight: { xs: 'none', md: 'calc(100vh - 100px)' },
-          p: { xs: 1, sm: 1.5, md: 2 },
+          flexShrink: 0,
+          flexGrow: 1,
+          height: { xs: 'auto', md: 'calc(100% - 20px)' },
+          minHeight: { xs: 'auto', md: 0 },
+          mb: { xs: 0, md: 2 },
+          px: { xs: 1, sm: 1.5, md: 2 },
+          pt: { xs: 1, sm: 1.5, md: 2 },
+          pb: { xs: 0, sm: 0, md: 0.5 },
         }}>
         {/* Columna Izquierda - Información del Contacto */}
         <Box sx={{ 
           width: '100%', 
-          flexShrink: 0, 
-          height: '100%',
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: 0,
           maxHeight: '100%',
           overflowY: 'auto',
           overflowX: 'hidden',
@@ -1692,19 +1763,39 @@ const ContactDetail: React.FC = () => {
               transform: 'translateX(0)',
             },
           },
-          // Ocultar scrollbar pero mantener scroll funcional
+          // Estilos para la barra de desplazamiento
           '&::-webkit-scrollbar': {
-            display: 'none',
-            width: 0,
+            width: '10px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+            borderRadius: '5px',
+            margin: '8px 0',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+            borderRadius: '5px',
+            '&:hover': {
+              background: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+            },
           },
           // Para Firefox
-          scrollbarWidth: 'none',
+          scrollbarWidth: 'thin',
+          scrollbarColor: theme.palette.mode === 'dark' 
+            ? 'rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1)' 
+            : 'rgba(0, 0, 0, 0.3) rgba(0, 0, 0, 0.1)',
         }}>
           <Paper sx={{ 
-            p: 3,
+            px: 3,
+            pt: 3,
+            pb: { xs: 1, sm: 1.5, md: 1.5 },
             bgcolor: theme.palette.background.paper,
             boxShadow: 'none',
             transition: 'all 0.3s ease',
+            display: 'flex',
+            flexDirection: 'column',
+            flex: 1,
+            minHeight: 0,
             '&:hover': {
               boxShadow: 'none',
             },
@@ -1960,7 +2051,7 @@ const ContactDetail: React.FC = () => {
 
             {/* Información del contacto */}
             <Card sx={{ 
-              mb: { xs: 2, md: 3 }, 
+              mb: { xs: 1, md: 1.5 }, 
               p: 3, 
               borderRadius: 2, 
               boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
@@ -2489,8 +2580,11 @@ const ContactDetail: React.FC = () => {
 
             {/* Sección Social */}
             <Card sx={{ 
-              mb: { xs: 2, md: 3 }, 
-              p: 3, 
+              mb: 0, 
+              px: 2.5,
+              pt: 2.5,
+              pb: 0,
+              mt: { xs: 1, md: 1.5 }, 
               borderRadius: 2, 
               boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
               bgcolor: 'transparent',
@@ -2512,12 +2606,9 @@ const ContactDetail: React.FC = () => {
               </Box>
               
               {/* Lista de redes sociales */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1.5, flexWrap: 'wrap' }}>
               {/* Facebook */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Avatar sx={{ width: 36, height: 36, bgcolor: '#1877f2' }}>
-                  <Facebook sx={{ fontSize: 20 }} />
-                </Avatar>
+              <Tooltip title={contact.facebook || 'Agregar Facebook'} arrow>
                 <Link
                   href={contact.facebook || '#'}
                   target="_blank"
@@ -2534,30 +2625,17 @@ const ContactDetail: React.FC = () => {
                         }).catch(err => console.error('Error al guardar:', err));
                       }
                     }
-                    // Si existe URL, dejar que el link funcione normalmente
                   }}
-                  sx={{
-                    fontSize: '0.875rem',
-                    color: contact.facebook ? '#1976d2' : '#9E9E9E',
-                    textDecoration: 'none',
-                    flex: 1,
-                    cursor: 'pointer',
-                    wordBreak: 'break-all',
-                    '&:hover': {
-                      textDecoration: 'underline',
-                      color: contact.facebook ? '#1565c0' : '#757575',
-                    },
-                  }}
+                  sx={{ textDecoration: 'none' }}
                 >
-                  {contact.facebook || 'Agregar Facebook'}
+                  <Avatar sx={{ width: 36, height: 36, bgcolor: '#1877f2', cursor: 'pointer', '&:hover': { opacity: 0.8 } }}>
+                    <Facebook sx={{ fontSize: 20 }} />
+                  </Avatar>
                 </Link>
-              </Box>
+              </Tooltip>
 
               {/* Twitter */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Avatar sx={{ width: 36, height: 36, bgcolor: '#1da1f2' }}>
-                  <Twitter sx={{ fontSize: 20 }} />
-                </Avatar>
+              <Tooltip title={contact.twitter || 'Agregar Twitter'} arrow>
                 <Link
                   href={contact.twitter || '#'}
                   target="_blank"
@@ -2574,30 +2652,17 @@ const ContactDetail: React.FC = () => {
                         }).catch(err => console.error('Error al guardar:', err));
                       }
                     }
-                    // Si existe URL, dejar que el link funcione normalmente
                   }}
-                  sx={{
-                    fontSize: '0.875rem',
-                    color: contact.twitter ? '#1976d2' : '#9E9E9E',
-                    textDecoration: 'none',
-                    flex: 1,
-                    cursor: 'pointer',
-                    wordBreak: 'break-all',
-                    '&:hover': {
-                      textDecoration: 'underline',
-                      color: contact.twitter ? '#1565c0' : '#757575',
-                    },
-                  }}
+                  sx={{ textDecoration: 'none' }}
                 >
-                  {contact.twitter || 'Agregar Twitter'}
+                  <Avatar sx={{ width: 36, height: 36, bgcolor: '#1da1f2', cursor: 'pointer', '&:hover': { opacity: 0.8 } }}>
+                    <Twitter sx={{ fontSize: 20 }} />
+                  </Avatar>
                 </Link>
-              </Box>
+              </Tooltip>
 
               {/* LinkedIn */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Avatar sx={{ width: 36, height: 36, bgcolor: '#0077b5' }}>
-                  <LinkedIn sx={{ fontSize: 20 }} />
-                </Avatar>
+              <Tooltip title={contact.linkedin || 'Agregar LinkedIn'} arrow>
                 <Link
                   href={contact.linkedin || '#'}
                   target="_blank"
@@ -2614,30 +2679,17 @@ const ContactDetail: React.FC = () => {
                         }).catch(err => console.error('Error al guardar:', err));
                       }
                     }
-                    // Si existe URL, dejar que el link funcione normalmente
                   }}
-                  sx={{
-                    fontSize: '0.875rem',
-                    color: contact.linkedin ? '#1976d2' : '#9E9E9E',
-                    textDecoration: 'none',
-                    flex: 1,
-                    cursor: 'pointer',
-                    wordBreak: 'break-all',
-                    '&:hover': {
-                      textDecoration: 'underline',
-                      color: contact.linkedin ? '#1565c0' : '#757575',
-                    },
-                  }}
+                  sx={{ textDecoration: 'none' }}
                 >
-                  {contact.linkedin || 'Agregar LinkedIn'}
+                  <Avatar sx={{ width: 36, height: 36, bgcolor: '#0077b5', cursor: 'pointer', '&:hover': { opacity: 0.8 } }}>
+                    <LinkedIn sx={{ fontSize: 20 }} />
+                  </Avatar>
                 </Link>
-              </Box>
+              </Tooltip>
 
               {/* YouTube */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Avatar sx={{ width: 36, height: 36, bgcolor: '#ff0000' }}>
-                  <YouTube sx={{ fontSize: 20 }} />
-                </Avatar>
+              <Tooltip title={contact.youtube || 'Agregar YouTube'} arrow>
                 <Link
                   href={contact.youtube || '#'}
                   target="_blank"
@@ -2654,24 +2706,14 @@ const ContactDetail: React.FC = () => {
                         }).catch(err => console.error('Error al guardar:', err));
                       }
                     }
-                    // Si existe URL, dejar que el link funcione normalmente
                   }}
-                  sx={{
-                    fontSize: '0.875rem',
-                    color: contact.youtube ? '#1976d2' : '#9E9E9E',
-                    textDecoration: 'none',
-                    flex: 1,
-                    cursor: 'pointer',
-                    wordBreak: 'break-all',
-                    '&:hover': {
-                      textDecoration: 'underline',
-                      color: contact.youtube ? '#1565c0' : '#757575',
-                    },
-                  }}
+                  sx={{ textDecoration: 'none' }}
                 >
-                  {contact.youtube || 'Agregar YouTube'}
+                  <Avatar sx={{ width: 36, height: 36, bgcolor: '#ff0000', cursor: 'pointer', '&:hover': { opacity: 0.8 } }}>
+                    <YouTube sx={{ fontSize: 20 }} />
+                  </Avatar>
                 </Link>
-              </Box>
+              </Tooltip>
             </Box>
             </Card>
 
@@ -5930,7 +5972,7 @@ const ContactDetail: React.FC = () => {
               }}
             >
             {/* Empresas */}
-            <Box sx={{ mb: 3 }}>
+            <Box sx={{ mb: 1.5 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                   Empresas ({associatedCompanies.length})

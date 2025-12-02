@@ -197,8 +197,8 @@ const Users: React.FC = () => {
       bgcolor: theme.palette.background.default, 
       minHeight: '100vh',
       pb: { xs: 3, sm: 6, md: 8 },
-      px: { xs: 3, sm: 6, md: 8 },
-      pt: { xs: 4, sm: 6, md: 6 },
+      px: { xs: 1.5, sm: 2, md: 2.5, lg: 3 },
+      pt: { xs: 2, sm: 3, md: 3 },
     }}>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 1 }}>
