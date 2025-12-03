@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Container,
-  Paper,
   TextField,
   Button,
   Typography,
@@ -12,6 +11,7 @@ import {
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
 import logo from '../assets/logo-taxi-monterrico.svg';
+import loginImage from '../assets/img.login.png';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -58,27 +58,54 @@ const Login: React.FC = () => {
 
   return (
     <Box
+      className="form-body form-left"
       sx={{
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
-        padding: 2,
-        backgroundColor: '#E1E7DC',
+        justifyContent: 'flex-start',
+        padding: { xs: 1, md: 1 },
+        paddingLeft: { xs: 0, md: 0 },
+        paddingRight: { xs: 0, md: 0 },
+        backgroundColor: '#FFFFFF',
       }}
     >
-      <Container component="main" maxWidth="xs" sx={{ position: 'relative' }}>
-        <Paper
-          elevation={0}
+      <Box
+        className="iofrm-layout"
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: { xs: 'flex-start', md: 'center', lg: 'center' },
+          gap: 0,
+          flexDirection: { xs: 'column', md: 'row' },
+          width: '100%',
+          maxWidth: { md: '1400px', lg: '1600px', xl: '1800px' },
+          margin: '0 auto',
+          paddingLeft: { md: 0, lg: 0 },
+          paddingRight: { md: 0, lg: 0 },
+        }}
+      >
+        {/* Formulario de Login */}
+        <Box
+          className="form-holder"
           sx={{
-            width: '100%',
-            maxWidth: 400,
-            borderRadius: 2,
-            backgroundColor: '#FFFFFF',
-            border: '2px solid #000000',
-            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            marginLeft: { md: 20, lg: 25 },
+            maxWidth: '450px',
           }}
         >
+          <Box
+            className="form-content justify-content-end"
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              width: '100%',
+              maxWidth: 400,
+            }}
+          >
           {/* Header con logo */}
           <Box
             sx={{
@@ -109,35 +136,6 @@ const Login: React.FC = () => {
                 }}
               />
             </Box>
-            
-            {/* Rectángulo con texto */}
-            <Box
-              sx={{
-                width: 'calc(100% + 32px)',
-                marginLeft: -2,
-                marginRight: -2,
-                backgroundColor: '#587565',
-                borderTop: '2px solid #000000',
-                borderBottom: '2px solid #000000',
-                borderLeft: 'none',
-                borderRight: 'none',
-                borderRadius: 0,
-                p: 2,
-                textAlign: 'center',
-                mt: 2,
-              }}
-            >
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 700,
-                  color: '#FFFFFF',
-                  fontSize: '1.125rem',
-                }}
-              >
-                Bienvenido
-              </Typography>
-            </Box>
           </Box>
 
           {/* Formulario */}
@@ -158,84 +156,94 @@ const Login: React.FC = () => {
             )}
 
             <Box component="form" onSubmit={handleSubmit}>
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                id="username"
-                label="Username"
-                name="username"
-                autoComplete="username"
-                autoFocus
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                sx={{
-                  mb: 0.5,
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
-                    backgroundColor: '#FFFFFF',
-                    '& fieldset': {
-                      borderColor: '#000000',
-                      borderWidth: '2px',
+              <Box sx={{ mb: 0.5 }}>
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  id="username"
+                  placeholder="Usuario"
+                  name="username"
+                  autoComplete="username"
+                  autoFocus
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: username ? '#E8E8E8' : '#F7F7F7',
+                      padding: '6px 14px',
+                      '& input': {
+                        padding: '6px 0',
+                      },
+                      '& fieldset': {
+                        border: 'none',
+                      },
+                      '&:hover fieldset': {
+                        border: 'none',
+                      },
+                      '&.Mui-focused': {
+                        backgroundColor: '#E8E8E8',
+                        '& fieldset': {
+                          border: 'none',
+                        },
+                      },
                     },
-                    '&:hover fieldset': {
-                      borderColor: '#000000',
-                      borderWidth: '2px',
+                    '& .MuiInputLabel-root': {
+                      color: '#757575',
                     },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#000000',
-                      borderWidth: '2px',
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: '#000000',
                     },
-                  },
-                  '& .MuiInputLabel-root': {
-                    color: '#757575',
-                  },
-                  '& .MuiInputLabel-root.Mui-focused': {
-                    color: '#000000',
-                  },
-                }}
-              />
-              <TextField
-                margin="normal"
-                required
-                fullWidth
-                name="password"
-                label="Password"
-                type="password"
-                id="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                sx={{
-                  mb: 2,
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
-                    backgroundColor: '#FFFFFF',
-                    '& fieldset': {
-                      borderColor: '#000000',
-                      borderWidth: '2px',
+                  }}
+                />
+              </Box>
+              <Box sx={{ mb: 2 }}>
+                <TextField
+                  margin="normal"
+                  required
+                  fullWidth
+                  name="password"
+                  placeholder="Contraseña"
+                  type="password"
+                  id="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                      backgroundColor: password ? '#E8E8E8' : '#F7F7F7',
+                      padding: '6px 14px',
+                      '& input': {
+                        padding: '6px 0',
+                      },
+                      '& fieldset': {
+                        border: 'none',
+                      },
+                      '&:hover fieldset': {
+                        border: 'none',
+                      },
+                      '&.Mui-focused': {
+                        backgroundColor: '#E8E8E8',
+                        '& fieldset': {
+                          border: 'none',
+                        },
+                      },
                     },
-                    '&:hover fieldset': {
-                      borderColor: '#000000',
-                      borderWidth: '2px',
+                    '& .MuiInputLabel-root': {
+                      color: '#757575',
                     },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#000000',
-                      borderWidth: '2px',
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: '#000000',
                     },
-                  },
-                  '& .MuiInputLabel-root': {
-                    color: '#757575',
-                  },
-                  '& .MuiInputLabel-root.Mui-focused': {
-                    color: '#000000',
-                  },
-                }}
-              />
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                  }}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
                 <Button
                   type="submit"
-                  variant="outlined"
+                  variant="contained"
                   disabled={loading}
                   sx={{
                     py: 1.25,
@@ -244,32 +252,65 @@ const Login: React.FC = () => {
                     fontSize: '0.875rem',
                     fontWeight: 500,
                     textTransform: 'none',
-                    backgroundColor: '#FFFFFF',
-                    color: '#000000',
-                    borderColor: '#000000',
-                    borderWidth: '2px',
+                    backgroundColor: '#FFC107',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    boxShadow: 'none',
+                    flex: 1,
                     '&:hover': {
-                      backgroundColor: '#F5F5F5',
-                      borderColor: '#000000',
-                      borderWidth: '2px',
+                      backgroundColor: '#FFB300',
+                      border: 'none',
+                      boxShadow: 'none',
                     },
                     '&:disabled': {
-                      backgroundColor: '#F5F5F5',
-                      color: '#9E9E9E',
-                      borderColor: '#9E9E9E',
-                      borderWidth: '2px',
+                      backgroundColor: '#FFE082',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      boxShadow: 'none',
                     },
                   }}
                 >
                   {loading ? (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <CircularProgress size={16} sx={{ color: '#9E9E9E' }} />
+                      <CircularProgress size={16} sx={{ color: '#FFFFFF' }} />
                       <span>Loading...</span>
                     </Box>
                   ) : (
-                    'Login'
+                    'Ingresar'
                   )}
                 </Button>
+                <Button
+                  component="a"
+                  href="https://wa.me/51958921766?text=Hola%20Jack,%20quiero%20registrar%20una%20nueva%20cuenta"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  variant="outlined"
+                  sx={{
+                    py: 1.25,
+                    px: 3,
+                    borderRadius: 2,
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    textTransform: 'none',
+                    backgroundColor: '#FFFFFF',
+                    color: '#FFC107',
+                    borderColor: '#FFC107',
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    flex: 1,
+                    '&:hover': {
+                      backgroundColor: '#FFF9E6',
+                      borderColor: '#FFB300',
+                      borderWidth: '1px',
+                      borderStyle: 'solid',
+                    },
+                  }}
+                >
+                  Registrar
+                </Button>
+              </Box>
+
+              <Box sx={{ textAlign: 'center', mb: 3 }}>
                 <Typography
                   component="a"
                   href="https://wa.me/51958921766?text=Hola%20Jack,%20olvidé%20mi%20contraseña"
@@ -285,34 +326,41 @@ const Login: React.FC = () => {
                     },
                   }}
                 >
-                  Forget password?
-                </Typography>
-              </Box>
-
-              <Box sx={{ textAlign: 'center', mb: 3 }}>
-                <Typography
-                  component="a"
-                  href="https://wa.me/51958921766?text=Hola%20Jack,%20quiero%20registrar%20una%20nueva%20cuenta"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  sx={{
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    color: '#000000',
-                    textDecoration: 'none',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      textDecoration: 'underline',
-                    },
-                  }}
-                >
-                  Register new account
+                  Olvidaste tu contraseña?
                 </Typography>
               </Box>
             </Box>
           </Box>
-        </Paper>
-      </Container>
+          </Box>
+        </Box>
+
+        {/* Imagen a la derecha */}
+        <Box
+          className="img-holder text-start"
+          sx={{
+            display: { xs: 'none', md: 'flex' },
+            alignItems: 'center',
+            justifyContent: 'center',
+            flex: 1,
+            width: { md: '500px', lg: '600px' },
+            marginLeft: { md: 0, lg: 0 },
+          }}
+        >
+          <Box className="bg" sx={{ display: 'none' }} />
+          <Box className="info-holder">
+            <img
+              src={loginImage}
+              alt="Login illustration"
+              style={{
+                width: '100%',
+                height: 'auto',
+                maxHeight: '700px',
+                objectFit: 'contain',
+              }}
+            />
+          </Box>
+        </Box>
+      </Box>
     </Box>
   );
 };

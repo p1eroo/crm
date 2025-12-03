@@ -75,3 +75,5 @@ New-NetFirewallRule -DisplayName "CRM Frontend Port 3000" -Direction Inbound -Lo
 - En "Test users", agrega los emails que pueden usar la app
 - La app seguirá en modo de prueba hasta que la publiques
 
+
+

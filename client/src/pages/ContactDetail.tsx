@@ -1701,13 +1701,14 @@ const ContactDetail: React.FC = () => {
   return (
       <Box sx={{ 
         bgcolor: theme.palette.background.default,
-        height: '100vh',
+        height: { xs: 'auto', md: '100vh' },
+        minHeight: { xs: '100vh', md: '100vh' },
         pb: { xs: 0, sm: 0, md: 0 },
         px: { xs: 1.5, sm: 2, md: 2.5, lg: 3 },
         pt: { xs: 2, sm: 2.5, md: 3 },
         display: 'flex', 
         flexDirection: 'column',
-        overflow: 'hidden',
+        overflow: { xs: 'visible', md: 'hidden' },
       }}>
 
       {/* Contenido principal - Separado en 2 partes */}
@@ -1726,7 +1727,7 @@ const ContactDetail: React.FC = () => {
         <Card sx={{ 
           borderRadius: { xs: 2, md: 6 },
           boxShadow: 'none',
-          overflow: 'hidden',
+          overflow: { xs: 'visible', md: 'hidden' },
           bgcolor: theme.palette.background.paper,
           display: 'flex',
           flexDirection: 'column',
@@ -1740,7 +1741,7 @@ const ContactDetail: React.FC = () => {
           mb: { xs: 0, md: 2 },
           px: { xs: 1, sm: 1.5, md: 2 },
           pt: { xs: 1, sm: 1.5, md: 2 },
-          pb: { xs: 0, sm: 0, md: 0.5 },
+          pb: { xs: 0, sm: 0, md: 0.5 }
         }}>
         {/* Columna Izquierda - Información del Contacto */}
         <Box sx={{ 
@@ -1749,8 +1750,8 @@ const ContactDetail: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           minHeight: 0,
-          maxHeight: '100%',
-          overflowY: 'auto',
+          maxHeight: { xs: 'none', md: '100%' },
+          overflowY: { xs: 'visible', md: 'scroll' },
           overflowX: 'hidden',
           animation: 'slideInLeft 0.4s ease',
           '@keyframes slideInLeft': {
@@ -1763,32 +1764,35 @@ const ContactDetail: React.FC = () => {
               transform: 'translateX(0)',
             },
           },
-          // Estilos para la barra de desplazamiento
+          // Estilos para la barra de desplazamiento - siempre visible
           '&::-webkit-scrollbar': {
-            width: '10px',
+            width: '12px',
           },
           '&::-webkit-scrollbar-track': {
-            background: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-            borderRadius: '5px',
+            background: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)',
+            borderRadius: '6px',
             margin: '8px 0',
           },
           '&::-webkit-scrollbar-thumb': {
-            background: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-            borderRadius: '5px',
+            background: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.4)',
+            borderRadius: '6px',
+            border: '2px solid transparent',
+            backgroundClip: 'padding-box',
             '&:hover': {
-              background: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+              background: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)',
+              backgroundClip: 'padding-box',
             },
           },
           // Para Firefox
           scrollbarWidth: 'thin',
           scrollbarColor: theme.palette.mode === 'dark' 
-            ? 'rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1)' 
-            : 'rgba(0, 0, 0, 0.3) rgba(0, 0, 0, 0.1)',
+            ? 'rgba(255, 255, 255, 0.5) rgba(255, 255, 255, 0.2)' 
+            : 'rgba(0, 0, 0, 0.4) rgba(0, 0, 0, 0.15)',
         }}>
           <Paper sx={{ 
             px: 3,
             pt: 3,
-            pb: { xs: 1, sm: 1.5, md: 1.5 },
+            pb: { xs: 2, sm: 2.5, md: 2.5 },
             bgcolor: theme.palette.background.paper,
             boxShadow: 'none',
             transition: 'all 0.3s ease',
@@ -2475,6 +2479,13 @@ const ContactDetail: React.FC = () => {
                   sx: {
                     minWidth: 200,
                     mt: 0.5,
+                    bgcolor: theme.palette.background.paper,
+                    boxShadow: theme.palette.mode === 'dark' 
+                      ? '0 4px 12px rgba(0,0,0,0.5)' 
+                      : '0 4px 12px rgba(0,0,0,0.15)',
+                    border: theme.palette.mode === 'dark' 
+                      ? `1px solid ${theme.palette.divider}` 
+                      : 'none',
                   },
                 }}
               >
@@ -2493,7 +2504,19 @@ const ContactDetail: React.FC = () => {
                     }}
                     sx={{
                       fontSize: '0.875rem',
-                      backgroundColor: contact.lifecycleStage === stage ? '#e3f2fd' : 'transparent',
+                      color: theme.palette.text.primary,
+                      backgroundColor: contact.lifecycleStage === stage 
+                        ? (theme.palette.mode === 'dark' 
+                          ? 'rgba(144, 202, 249, 0.16)' 
+                          : '#e3f2fd')
+                        : 'transparent',
+                      '&:hover': {
+                        backgroundColor: contact.lifecycleStage === stage
+                          ? (theme.palette.mode === 'dark' 
+                            ? 'rgba(144, 202, 249, 0.24)' 
+                            : '#bbdefb')
+                          : theme.palette.action.hover,
+                      },
                     }}
                   >
                     {getStageLabel(stage)}
@@ -2583,14 +2606,14 @@ const ContactDetail: React.FC = () => {
               mb: 0, 
               px: 2.5,
               pt: 2.5,
-              pb: 0,
+              pb: 2.5,
               mt: { xs: 1, md: 1.5 }, 
               borderRadius: 2, 
               boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
               bgcolor: 'transparent',
               border: `1px solid ${theme.palette.divider}`,
             }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
                 <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                   Social
                 </Typography>
@@ -2606,7 +2629,7 @@ const ContactDetail: React.FC = () => {
               </Box>
               
               {/* Lista de redes sociales */}
-              <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1.5, flexWrap: 'wrap' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1.5, flexWrap: 'wrap', pb: 0 }}>
               {/* Facebook */}
               <Tooltip title={contact.facebook || 'Agregar Facebook'} arrow>
                 <Link
@@ -2725,15 +2748,15 @@ const ContactDetail: React.FC = () => {
         <Card sx={{ 
           borderRadius: { xs: 2, md: 6 },
           boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-          overflow: 'hidden',
+          overflow: { xs: 'visible', md: 'hidden' },
           bgcolor: theme.palette.background.paper,
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
           minWidth: { xs: '100%', sm: '300px', md: '400px' },
           width: { xs: '100%', md: 'auto' },
-          height: { xs: 'auto', md: 'calc(100vh - 100px)' },
-          maxHeight: { xs: 'none', md: 'calc(100vh - 100px)' },
+          height: { xs: 'auto', md: 'calc(100% - 20px)' },
+          maxHeight: { xs: 'none', md: 'calc(100% - 20px)' },
           p: { xs: 1, sm: 1.5, md: 2 },
         }}>
           <Box sx={{ 
@@ -2741,7 +2764,7 @@ const ContactDetail: React.FC = () => {
             flexDirection: { xs: 'column', lg: 'row' },
             gap: summaryExpanded ? { xs: 1, md: 2 } : 0,
             flex: 1, 
-            overflow: 'hidden',
+            overflow: { xs: 'visible', md: 'hidden' },
             minHeight: 0,
             position: 'relative',
             transition: 'gap 0.2s ease',
@@ -2842,6 +2865,8 @@ const ContactDetail: React.FC = () => {
                 <Card sx={{ 
                   mb: 3, 
                   p: 3, 
+                  pb: 6,
+                  minHeight: '300px',
                   borderRadius: 2, 
                   boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
                   bgcolor: 'transparent',
@@ -3164,9 +3189,44 @@ const ContactDetail: React.FC = () => {
                           minWidth: 240,
                           maxWidth: 240,
                           borderRadius: 2,
-                          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                          boxShadow: theme.palette.mode === 'dark' 
+                            ? '0 4px 20px rgba(0,0,0,0.5)' 
+                            : '0 4px 20px rgba(0,0,0,0.15)',
+                          bgcolor: theme.palette.background.paper,
+                          border: theme.palette.mode === 'dark' 
+                            ? `1px solid ${theme.palette.divider}` 
+                            : 'none',
                           maxHeight: 400,
                           overflow: 'auto',
+                          // Estilos de scrollbar adaptados al modo nocturno
+                          '&::-webkit-scrollbar': {
+                            width: '8px',
+                          },
+                          '&::-webkit-scrollbar-track': {
+                            background: theme.palette.mode === 'dark' 
+                              ? 'rgba(255, 255, 255, 0.05)' 
+                              : 'rgba(0, 0, 0, 0.05)',
+                            borderRadius: '4px',
+                          },
+                          '&::-webkit-scrollbar-thumb': {
+                            background: theme.palette.mode === 'dark' 
+                              ? 'rgba(255, 255, 255, 0.2)' 
+                              : 'rgba(0, 0, 0, 0.2)',
+                            borderRadius: '4px',
+                            border: theme.palette.mode === 'dark' 
+                              ? '1px solid rgba(255, 255, 255, 0.1)' 
+                              : '1px solid rgba(0, 0, 0, 0.1)',
+                            '&:hover': {
+                              background: theme.palette.mode === 'dark' 
+                                ? 'rgba(255, 255, 255, 0.3)' 
+                                : 'rgba(0, 0, 0, 0.3)',
+                            },
+                          },
+                          // Para Firefox
+                          scrollbarWidth: 'thin',
+                          scrollbarColor: theme.palette.mode === 'dark' 
+                            ? 'rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05)' 
+                            : 'rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05)',
                         },
                       }}
                     >
@@ -3188,17 +3248,30 @@ const ContactDetail: React.FC = () => {
                           }}
                           sx={{
                             '& .MuiOutlinedInput-root': {
-                              backgroundColor: 'white',
+                              backgroundColor: theme.palette.mode === 'dark' 
+                                ? theme.palette.background.default 
+                                : 'white',
                               '& fieldset': {
-                                borderColor: '#4fc3f7',
+                                borderColor: theme.palette.mode === 'dark' 
+                                  ? theme.palette.divider 
+                                  : '#4fc3f7',
                                 borderWidth: 1.5,
                               },
                               '&:hover fieldset': {
-                                borderColor: '#4fc3f7',
+                                borderColor: theme.palette.mode === 'dark' 
+                                  ? theme.palette.action.hover 
+                                  : '#4fc3f7',
                               },
                               '&.Mui-focused fieldset': {
                                 borderColor: '#4fc3f7',
                               },
+                            },
+                            '& .MuiInputBase-input': {
+                              color: theme.palette.text.primary,
+                            },
+                            '& .MuiInputBase-input::placeholder': {
+                              color: theme.palette.text.secondary,
+                              opacity: 1,
                             },
                           }}
                         />
@@ -3217,13 +3290,22 @@ const ContactDetail: React.FC = () => {
                             sx={{
                               py: 1.5,
                               px: 2,
-                              backgroundColor: isSelected ? '#e3f2fd' : 'transparent',
+                              color: theme.palette.text.primary,
+                              backgroundColor: isSelected 
+                                ? (theme.palette.mode === 'dark' 
+                                  ? 'rgba(144, 202, 249, 0.16)' 
+                                  : '#e3f2fd')
+                                : 'transparent',
                               '&:hover': {
-                                backgroundColor: '#e3f2fd',
+                                backgroundColor: isSelected
+                                  ? (theme.palette.mode === 'dark' 
+                                    ? 'rgba(144, 202, 249, 0.24)' 
+                                    : '#bbdefb')
+                                  : theme.palette.action.hover,
                               },
                             }}
                           >
-                            <Typography variant="body2" sx={{ color: 'text.primary' }}>
+                            <Typography variant="body2" sx={{ color: 'inherit' }}>
                               {option}
                             </Typography>
                           </MenuItem>
@@ -3231,7 +3313,7 @@ const ContactDetail: React.FC = () => {
                       })}
                       
                       {/* Separador */}
-                      <Divider sx={{ my: 0.5 }} />
+                      <Divider sx={{ my: 0.5, borderColor: theme.palette.divider }} />
                       
                       {/* Período personalizado */}
                       <MenuItem
@@ -3243,15 +3325,17 @@ const ContactDetail: React.FC = () => {
                         sx={{
                           py: 1.5,
                           px: 2,
+                          color: theme.palette.text.secondary,
                           '&:hover': {
-                            backgroundColor: '#e3f2fd',
+                            backgroundColor: theme.palette.action.hover,
+                            color: theme.palette.text.primary,
                           },
                         }}
                       >
-                        <Typography variant="body2" sx={{ color: 'text.secondary', flexGrow: 1 }}>
+                        <Typography variant="body2" sx={{ color: 'inherit', flexGrow: 1 }}>
                           Período personalizado
                         </Typography>
-                        <KeyboardArrowRight sx={{ fontSize: 18, color: 'text.secondary' }} />
+                        <KeyboardArrowRight sx={{ fontSize: 18, color: 'inherit' }} />
                       </MenuItem>
                     </Menu>
                     <Chip 
@@ -3288,8 +3372,15 @@ const ContactDetail: React.FC = () => {
                           minWidth: 280,
                           maxWidth: 280,
                           borderRadius: 2,
-                          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                          boxShadow: theme.palette.mode === 'dark' 
+                            ? '0 4px 20px rgba(0,0,0,0.5)' 
+                            : '0 4px 20px rgba(0,0,0,0.15)',
+                          bgcolor: theme.palette.background.paper,
+                          border: theme.palette.mode === 'dark' 
+                            ? `1px solid ${theme.palette.divider}` 
+                            : 'none',
                           maxHeight: 400,
+                          overflow: 'auto',
                           animation: 'slideDown 0.2s ease',
                           '@keyframes slideDown': {
                             '0%': {
@@ -3301,6 +3392,35 @@ const ContactDetail: React.FC = () => {
                               transform: 'translateY(0)',
                             },
                           },
+                          // Estilos de scrollbar adaptados al modo nocturno
+                          '&::-webkit-scrollbar': {
+                            width: '8px',
+                          },
+                          '&::-webkit-scrollbar-track': {
+                            background: theme.palette.mode === 'dark' 
+                              ? 'rgba(255, 255, 255, 0.05)' 
+                              : 'rgba(0, 0, 0, 0.05)',
+                            borderRadius: '4px',
+                          },
+                          '&::-webkit-scrollbar-thumb': {
+                            background: theme.palette.mode === 'dark' 
+                              ? 'rgba(255, 255, 255, 0.2)' 
+                              : 'rgba(0, 0, 0, 0.2)',
+                            borderRadius: '4px',
+                            border: theme.palette.mode === 'dark' 
+                              ? '1px solid rgba(255, 255, 255, 0.1)' 
+                              : '1px solid rgba(0, 0, 0, 0.1)',
+                            '&:hover': {
+                              background: theme.palette.mode === 'dark' 
+                                ? 'rgba(255, 255, 255, 0.3)' 
+                                : 'rgba(0, 0, 0, 0.3)',
+                            },
+                          },
+                          // Para Firefox
+                          scrollbarWidth: 'thin',
+                          scrollbarColor: theme.palette.mode === 'dark' 
+                            ? 'rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05)' 
+                            : 'rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05)',
                         },
                       }}
                     >
@@ -3321,16 +3441,27 @@ const ContactDetail: React.FC = () => {
                           }}
                           sx={{
                             '& .MuiOutlinedInput-root': {
-                              backgroundColor: '#f5f5f5',
+                              backgroundColor: theme.palette.mode === 'dark' 
+                                ? theme.palette.background.default 
+                                : '#f5f5f5',
                               '& fieldset': {
                                 borderColor: theme.palette.divider,
                               },
                               '&:hover fieldset': {
-                                borderColor: theme.palette.text.secondary,
+                                borderColor: theme.palette.mode === 'dark' 
+                                  ? theme.palette.action.hover 
+                                  : theme.palette.text.secondary,
                               },
                               '&.Mui-focused fieldset': {
                                 borderColor: '#2E7D32',
                               },
+                            },
+                            '& .MuiInputBase-input': {
+                              color: theme.palette.text.primary,
+                            },
+                            '& .MuiInputBase-input::placeholder': {
+                              color: theme.palette.text.secondary,
+                              opacity: 1,
                             },
                           }}
                         />
@@ -3381,7 +3512,7 @@ const ContactDetail: React.FC = () => {
                           px: 2,
                           pl: 6,
                           '&:hover': {
-                            backgroundColor: '#e3f2fd',
+                            backgroundColor: theme.palette.action.hover,
                           },
                         }}
                         onClick={(e) => {
@@ -3404,14 +3535,14 @@ const ContactDetail: React.FC = () => {
                         <Typography variant="body2">Correo postal</Typography>
                       </MenuItem>
                       
-                      <                      MenuItem
+                      <MenuItem
                         sx={{
                           py: 0.75,
                           px: 2,
                           pl: 6,
                           transition: 'all 0.15s ease',
                           '&:hover': {
-                            backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                            backgroundColor: theme.palette.action.hover,
                             transform: 'translateX(4px)',
                           },
                         }}
@@ -3435,14 +3566,14 @@ const ContactDetail: React.FC = () => {
                         <Typography variant="body2">Correos</Typography>
                       </MenuItem>
                       
-                      <                      MenuItem
+                      <MenuItem
                         sx={{
                           py: 0.75,
                           px: 2,
                           pl: 6,
                           transition: 'all 0.15s ease',
                           '&:hover': {
-                            backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                            backgroundColor: theme.palette.action.hover,
                             transform: 'translateX(4px)',
                           },
                         }}
@@ -3466,14 +3597,14 @@ const ContactDetail: React.FC = () => {
                         <Typography variant="body2">LinkedIn</Typography>
                       </MenuItem>
                       
-                      <                      MenuItem
+                      <MenuItem
                         sx={{
                           py: 0.75,
                           px: 2,
                           pl: 6,
                           transition: 'all 0.15s ease',
                           '&:hover': {
-                            backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                            backgroundColor: theme.palette.action.hover,
                             transform: 'translateX(4px)',
                           },
                         }}
@@ -3504,7 +3635,7 @@ const ContactDetail: React.FC = () => {
                           pl: 6,
                           transition: 'all 0.15s ease',
                           '&:hover': {
-                            backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                            backgroundColor: theme.palette.action.hover,
                             transform: 'translateX(4px)',
                           },
                         }}
@@ -3535,7 +3666,7 @@ const ContactDetail: React.FC = () => {
                           pl: 6,
                           transition: 'all 0.15s ease',
                           '&:hover': {
-                            backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                            backgroundColor: theme.palette.action.hover,
                             transform: 'translateX(4px)',
                           },
                         }}
@@ -3603,7 +3734,7 @@ const ContactDetail: React.FC = () => {
                           pl: 6,
                           transition: 'all 0.15s ease',
                           '&:hover': {
-                            backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                            backgroundColor: theme.palette.action.hover,
                             transform: 'translateX(4px)',
                           },
                         }}
@@ -3634,7 +3765,7 @@ const ContactDetail: React.FC = () => {
                           pl: 6,
                           transition: 'all 0.15s ease',
                           '&:hover': {
-                            backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                            backgroundColor: theme.palette.action.hover,
                             transform: 'translateX(4px)',
                           },
                         }}
@@ -3665,7 +3796,7 @@ const ContactDetail: React.FC = () => {
                           pl: 6,
                           transition: 'all 0.15s ease',
                           '&:hover': {
-                            backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                            backgroundColor: theme.palette.action.hover,
                             transform: 'translateX(4px)',
                           },
                         }}
@@ -5870,7 +6001,7 @@ const ContactDetail: React.FC = () => {
 
         {/* Columna Derecha - Registros Asociados */}
         <Box sx={{ 
-          display: { xs: summaryExpanded ? 'block' : 'none', lg: 'block' },
+          display: { xs: 'block', lg: 'block' },
           width: { xs: '100%', lg: summaryExpanded ? '320px' : '24px' },
           flexShrink: 0,
           height: { xs: 'auto', lg: '100%' },

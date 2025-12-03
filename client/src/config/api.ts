@@ -101,54 +101,48 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error('❌ Error en petición:', error.config?.baseURL + (error.config?.url || ''));
-    console.error('❌ Detalles del error:', {
-      message: error.message,
-      code: error.code,
-      response: error.response?.status,
-      responseData: error.response?.data,
-    });
+    const status = error.response?.status;
+    const url = error.config?.url || '';
     
     // Solo manejar errores 401/403, ignorar 404 (normal si no hay datos)
-    if (error.response?.status === 401 || error.response?.status === 403) {
+    if (status === 401 || status === 403) {
       // No redirigir si estamos en la página de login o si la petición es al endpoint de login
       const isLoginPage = window.location.pathname === '/login';
-      const isLoginRequest = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/login-monterrico');
-      const isAuthMeRequest = error.config?.url?.includes('/auth/me'); // No redirigir si falla /auth/me
-      const isGoogleTokenRequest = error.config?.url?.includes('/google/token'); // No redirigir si falla /google/token
-      
-      console.log('🔒 Error de autenticación:', {
-        status: error.response?.status,
-        url: error.config?.url,
-        isLoginPage,
-        isLoginRequest,
-        isAuthMeRequest,
-        isGoogleTokenRequest,
-        pathname: window.location.pathname,
-      });
+      const isLoginRequest = url.includes('/auth/login') || url.includes('/auth/login-monterrico');
+      const isAuthMeRequest = url.includes('/auth/me'); // No redirigir si falla /auth/me
+      const isGoogleTokenRequest = url.includes('/google/token'); // No redirigir si falla /google/token
       
       // Solo redirigir si NO es una petición de verificación y NO estamos en login
-      // Y solo si realmente no hay token (no redirigir si hay token pero falló la validación)
       if (!isLoginPage && !isLoginRequest && !isAuthMeRequest && !isGoogleTokenRequest) {
         const token = localStorage.getItem('token');
-        if (!token) {
-          console.log('🔒 No hay token, redirigiendo a login');
+        // Si no hay token O si hay token pero la petición falló con 401/403 (token inválido/expirado)
+        if (!token || (token && (status === 401 || status === 403))) {
+          console.log('🔒 Token inválido o expirado, redirigiendo a login');
           localStorage.removeItem('user');
+          localStorage.removeItem('token');
           delete api.defaults.headers.common['Authorization'];
           if (window.location.pathname !== '/login') {
             window.location.href = '/login';
           }
-        } else {
-          // Hay token pero la petición falló con 401/403
-          // Esto podría indicar que el token expiró o es inválido
-          // Pero NO redirigir inmediatamente, solo loguear el error
-          console.warn('⚠️ Petición falló con 401/403 pero hay token. El token podría ser inválido o expirado.');
-          console.warn('⚠️ No redirigiendo automáticamente. El usuario puede seguir usando la app si otras peticiones funcionan.');
+          // No rechazar el error para evitar que aparezca en la consola
+          return Promise.resolve({ data: null, status: 401 });
         }
-      } else {
-        console.log('🔒 No redirigiendo porque es una petición de verificación');
       }
+      // Para errores 401/403 en peticiones de verificación, no mostrar error en consola
+      return Promise.resolve({ data: null, status });
     }
+    
+    // Para otros errores, mostrar información en consola solo si no es 404
+    if (status !== 404) {
+      console.error('❌ Error en petición:', error.config?.baseURL + (error.config?.url || ''));
+      console.error('❌ Detalles del error:', {
+        message: error.message,
+        code: error.code,
+        response: status,
+        responseData: error.response?.data,
+      });
+    }
+    
     return Promise.reject(error);
   }
 );

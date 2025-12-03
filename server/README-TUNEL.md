@@ -73,3 +73,5 @@ Y cambiar el nombre del archivo según necesites.
 - Los **dispositivos en tu red** pueden seguir accediendo a `http://10.10.10.14:3000` para el frontend
 - El backend será accesible vía túnel para Google OAuth, pero también puedes mantener acceso local
 
+
+

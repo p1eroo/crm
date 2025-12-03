@@ -2161,6 +2161,13 @@ const CompanyDetail: React.FC = () => {
                 sx: {
                   minWidth: 200,
                   mt: 0.5,
+                  bgcolor: theme.palette.background.paper,
+                  boxShadow: theme.palette.mode === 'dark' 
+                    ? '0 4px 12px rgba(0,0,0,0.5)' 
+                    : '0 4px 12px rgba(0,0,0,0.15)',
+                  border: theme.palette.mode === 'dark' 
+                    ? `1px solid ${theme.palette.divider}` 
+                    : 'none',
                 },
               }}
             >
@@ -2179,7 +2186,19 @@ const CompanyDetail: React.FC = () => {
                   }}
                   sx={{
                     fontSize: '0.875rem',
-                    backgroundColor: company.lifecycleStage === stage ? '#e3f2fd' : 'transparent',
+                    color: theme.palette.text.primary,
+                    backgroundColor: company.lifecycleStage === stage 
+                      ? (theme.palette.mode === 'dark' 
+                        ? 'rgba(144, 202, 249, 0.16)' 
+                        : '#e3f2fd')
+                      : 'transparent',
+                    '&:hover': {
+                      backgroundColor: company.lifecycleStage === stage
+                        ? (theme.palette.mode === 'dark' 
+                          ? 'rgba(144, 202, 249, 0.24)' 
+                          : '#bbdefb')
+                        : theme.palette.action.hover,
+                    },
                   }}
                 >
                   {getStageLabel(stage)}
@@ -2893,9 +2912,44 @@ const CompanyDetail: React.FC = () => {
                           minWidth: 240,
                           maxWidth: 240,
                           borderRadius: 2,
-                          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                          boxShadow: theme.palette.mode === 'dark' 
+                            ? '0 4px 20px rgba(0,0,0,0.5)' 
+                            : '0 4px 20px rgba(0,0,0,0.15)',
+                          bgcolor: theme.palette.background.paper,
+                          border: theme.palette.mode === 'dark' 
+                            ? `1px solid ${theme.palette.divider}` 
+                            : 'none',
                           maxHeight: 400,
                           overflow: 'auto',
+                          // Estilos de scrollbar adaptados al modo nocturno
+                          '&::-webkit-scrollbar': {
+                            width: '8px',
+                          },
+                          '&::-webkit-scrollbar-track': {
+                            background: theme.palette.mode === 'dark' 
+                              ? 'rgba(255, 255, 255, 0.05)' 
+                              : 'rgba(0, 0, 0, 0.05)',
+                            borderRadius: '4px',
+                          },
+                          '&::-webkit-scrollbar-thumb': {
+                            background: theme.palette.mode === 'dark' 
+                              ? 'rgba(255, 255, 255, 0.2)' 
+                              : 'rgba(0, 0, 0, 0.2)',
+                            borderRadius: '4px',
+                            border: theme.palette.mode === 'dark' 
+                              ? '1px solid rgba(255, 255, 255, 0.1)' 
+                              : '1px solid rgba(0, 0, 0, 0.1)',
+                            '&:hover': {
+                              background: theme.palette.mode === 'dark' 
+                                ? 'rgba(255, 255, 255, 0.3)' 
+                                : 'rgba(0, 0, 0, 0.3)',
+                            },
+                          },
+                          // Para Firefox
+                          scrollbarWidth: 'thin',
+                          scrollbarColor: theme.palette.mode === 'dark' 
+                            ? 'rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05)' 
+                            : 'rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05)',
                         },
                       }}
                     >
@@ -2917,17 +2971,30 @@ const CompanyDetail: React.FC = () => {
                           }}
                           sx={{
                             '& .MuiOutlinedInput-root': {
-                              backgroundColor: theme.palette.background.paper,
+                              backgroundColor: theme.palette.mode === 'dark' 
+                                ? theme.palette.background.default 
+                                : 'white',
                               '& fieldset': {
-                                borderColor: '#4fc3f7',
+                                borderColor: theme.palette.mode === 'dark' 
+                                  ? theme.palette.divider 
+                                  : '#4fc3f7',
                                 borderWidth: 1.5,
                               },
                               '&:hover fieldset': {
-                                borderColor: '#4fc3f7',
+                                borderColor: theme.palette.mode === 'dark' 
+                                  ? theme.palette.action.hover 
+                                  : '#4fc3f7',
                               },
                               '&.Mui-focused fieldset': {
                                 borderColor: '#4fc3f7',
                               },
+                            },
+                            '& .MuiInputBase-input': {
+                              color: theme.palette.text.primary,
+                            },
+                            '& .MuiInputBase-input::placeholder': {
+                              color: theme.palette.text.secondary,
+                              opacity: 1,
                             },
                           }}
                         />
@@ -2946,13 +3013,22 @@ const CompanyDetail: React.FC = () => {
                             sx={{
                               py: 1.5,
                               px: 2,
-                              backgroundColor: isSelected ? '#e3f2fd' : 'transparent',
+                              color: theme.palette.text.primary,
+                              backgroundColor: isSelected 
+                                ? (theme.palette.mode === 'dark' 
+                                  ? 'rgba(144, 202, 249, 0.16)' 
+                                  : '#e3f2fd')
+                                : 'transparent',
                               '&:hover': {
-                                backgroundColor: '#e3f2fd',
+                                backgroundColor: isSelected
+                                  ? (theme.palette.mode === 'dark' 
+                                    ? 'rgba(144, 202, 249, 0.24)' 
+                                    : '#bbdefb')
+                                  : theme.palette.action.hover,
                               },
                             }}
                           >
-                            <Typography variant="body2" sx={{ color: 'text.primary' }}>
+                            <Typography variant="body2" sx={{ color: 'inherit' }}>
                               {option}
                             </Typography>
                           </MenuItem>
@@ -2960,7 +3036,7 @@ const CompanyDetail: React.FC = () => {
                       })}
                       
                       {/* Separador */}
-                      <Divider sx={{ my: 0.5 }} />
+                      <Divider sx={{ my: 0.5, borderColor: theme.palette.divider }} />
                       
                       {/* Período personalizado */}
                       <MenuItem
@@ -2972,15 +3048,17 @@ const CompanyDetail: React.FC = () => {
                         sx={{
                           py: 1.5,
                           px: 2,
+                          color: theme.palette.text.secondary,
                           '&:hover': {
-                            backgroundColor: '#e3f2fd',
+                            backgroundColor: theme.palette.action.hover,
+                            color: theme.palette.text.primary,
                           },
                         }}
                       >
-                        <Typography variant="body2" sx={{ color: 'text.secondary', flexGrow: 1 }}>
+                        <Typography variant="body2" sx={{ color: 'inherit', flexGrow: 1 }}>
                           Período personalizado
                         </Typography>
-                        <KeyboardArrowRight sx={{ fontSize: 18, color: 'text.secondary' }} />
+                        <KeyboardArrowRight sx={{ fontSize: 18, color: 'inherit' }} />
                       </MenuItem>
                     </Menu>
                     <Chip 
@@ -3017,8 +3095,15 @@ const CompanyDetail: React.FC = () => {
                           minWidth: 280,
                           maxWidth: 280,
                           borderRadius: 2,
-                          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                          boxShadow: theme.palette.mode === 'dark' 
+                            ? '0 4px 20px rgba(0,0,0,0.5)' 
+                            : '0 4px 20px rgba(0,0,0,0.15)',
+                          bgcolor: theme.palette.background.paper,
+                          border: theme.palette.mode === 'dark' 
+                            ? `1px solid ${theme.palette.divider}` 
+                            : 'none',
                           maxHeight: 400,
+                          overflow: 'auto',
                           animation: 'slideDown 0.2s ease',
                           '@keyframes slideDown': {
                             '0%': {
@@ -3030,6 +3115,35 @@ const CompanyDetail: React.FC = () => {
                               transform: 'translateY(0)',
                             },
                           },
+                          // Estilos de scrollbar adaptados al modo nocturno
+                          '&::-webkit-scrollbar': {
+                            width: '8px',
+                          },
+                          '&::-webkit-scrollbar-track': {
+                            background: theme.palette.mode === 'dark' 
+                              ? 'rgba(255, 255, 255, 0.05)' 
+                              : 'rgba(0, 0, 0, 0.05)',
+                            borderRadius: '4px',
+                          },
+                          '&::-webkit-scrollbar-thumb': {
+                            background: theme.palette.mode === 'dark' 
+                              ? 'rgba(255, 255, 255, 0.2)' 
+                              : 'rgba(0, 0, 0, 0.2)',
+                            borderRadius: '4px',
+                            border: theme.palette.mode === 'dark' 
+                              ? '1px solid rgba(255, 255, 255, 0.1)' 
+                              : '1px solid rgba(0, 0, 0, 0.1)',
+                            '&:hover': {
+                              background: theme.palette.mode === 'dark' 
+                                ? 'rgba(255, 255, 255, 0.3)' 
+                                : 'rgba(0, 0, 0, 0.3)',
+                            },
+                          },
+                          // Para Firefox
+                          scrollbarWidth: 'thin',
+                          scrollbarColor: theme.palette.mode === 'dark' 
+                            ? 'rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05)' 
+                            : 'rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05)',
                         },
                       }}
                     >
@@ -3050,16 +3164,27 @@ const CompanyDetail: React.FC = () => {
                           }}
                           sx={{
                             '& .MuiOutlinedInput-root': {
-                              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f5f5f5',
+                              backgroundColor: theme.palette.mode === 'dark' 
+                                ? theme.palette.background.default 
+                                : '#f5f5f5',
                               '& fieldset': {
                                 borderColor: theme.palette.divider,
                               },
                               '&:hover fieldset': {
-                                borderColor: theme.palette.text.secondary,
+                                borderColor: theme.palette.mode === 'dark' 
+                                  ? theme.palette.action.hover 
+                                  : theme.palette.text.secondary,
                               },
                               '&.Mui-focused fieldset': {
                                 borderColor: '#2E7D32',
                               },
+                            },
+                            '& .MuiInputBase-input': {
+                              color: theme.palette.text.primary,
+                            },
+                            '& .MuiInputBase-input::placeholder': {
+                              color: theme.palette.text.secondary,
+                              opacity: 1,
                             },
                           }}
                         />
@@ -3110,7 +3235,7 @@ const CompanyDetail: React.FC = () => {
                           px: 2,
                           pl: 6,
                           '&:hover': {
-                            backgroundColor: '#e3f2fd',
+                            backgroundColor: theme.palette.action.hover,
                           },
                         }}
                         onClick={(e) => {
@@ -3140,7 +3265,7 @@ const CompanyDetail: React.FC = () => {
                           pl: 6,
                           transition: 'all 0.15s ease',
                           '&:hover': {
-                            backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                            backgroundColor: theme.palette.action.hover,
                             transform: 'translateX(4px)',
                           },
                         }}
@@ -3171,7 +3296,7 @@ const CompanyDetail: React.FC = () => {
                           pl: 6,
                           transition: 'all 0.15s ease',
                           '&:hover': {
-                            backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                            backgroundColor: theme.palette.action.hover,
                             transform: 'translateX(4px)',
                           },
                         }}
@@ -3202,7 +3327,7 @@ const CompanyDetail: React.FC = () => {
                           pl: 6,
                           transition: 'all 0.15s ease',
                           '&:hover': {
-                            backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                            backgroundColor: theme.palette.action.hover,
                             transform: 'translateX(4px)',
                           },
                         }}
@@ -3233,7 +3358,7 @@ const CompanyDetail: React.FC = () => {
                           pl: 6,
                           transition: 'all 0.15s ease',
                           '&:hover': {
-                            backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                            backgroundColor: theme.palette.action.hover,
                             transform: 'translateX(4px)',
                           },
                         }}
@@ -3264,7 +3389,7 @@ const CompanyDetail: React.FC = () => {
                           pl: 6,
                           transition: 'all 0.15s ease',
                           '&:hover': {
-                            backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                            backgroundColor: theme.palette.action.hover,
                             transform: 'translateX(4px)',
                           },
                         }}
@@ -3332,7 +3457,7 @@ const CompanyDetail: React.FC = () => {
                           pl: 6,
                           transition: 'all 0.15s ease',
                           '&:hover': {
-                            backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                            backgroundColor: theme.palette.action.hover,
                             transform: 'translateX(4px)',
                           },
                         }}
@@ -3363,7 +3488,7 @@ const CompanyDetail: React.FC = () => {
                           pl: 6,
                           transition: 'all 0.15s ease',
                           '&:hover': {
-                            backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                            backgroundColor: theme.palette.action.hover,
                             transform: 'translateX(4px)',
                           },
                         }}
@@ -3394,7 +3519,7 @@ const CompanyDetail: React.FC = () => {
                           pl: 6,
                           transition: 'all 0.15s ease',
                           '&:hover': {
-                            backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                            backgroundColor: theme.palette.action.hover,
                             transform: 'translateX(4px)',
                           },
                         }}
