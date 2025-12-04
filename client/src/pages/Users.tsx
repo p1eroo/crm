@@ -383,9 +383,6 @@ const Users: React.FC = () => {
           },
         }}
       >
-        <DialogTitle id="delete-dialog-title" sx={{ color: theme.palette.text.primary }}>
-          Confirmar eliminación
-        </DialogTitle>
         <DialogContent>
           <DialogContentText id="delete-dialog-description" sx={{ color: theme.palette.text.primary }}>
             ¿Estás seguro de que deseas eliminar al usuario{' '}

@@ -768,19 +768,6 @@ const Campaigns: React.FC = () => {
           }
         }}
       >
-        <DialogTitle sx={{ 
-          pb: 1.5,
-          borderBottom: '1px solid #e0e0e0',
-          fontWeight: 600,
-          fontSize: '1.25rem',
-          color: '#1a1a1a',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1.5,
-        }}>
-          <Delete sx={{ color: '#d32f2f', fontSize: 28 }} />
-          Confirmar Eliminación
-        </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           <Typography variant="body1" sx={{ color: '#1a1a1a', mb: 1 }}>
             ¿Estás seguro de que deseas eliminar esta campaña?

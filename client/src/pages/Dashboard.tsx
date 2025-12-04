@@ -32,7 +32,6 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
-  Edit,
   AccountCircle,
   Search,
   People,
@@ -42,6 +41,8 @@ import {
   Close,
   Cloud,
   CloudOff,
+  Notifications,
+  CalendarToday,
 } from '@mui/icons-material';
 import {
   LineChart,
@@ -62,7 +63,6 @@ import {
 import api from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import ProfileModal from '../components/ProfileModal';
 import { taxiMonterricoColors } from '../theme/colors';
 import * as XLSX from 'xlsx';
 
@@ -131,7 +131,6 @@ const Dashboard: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState(currentYear.toString());
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null); // null = todos los meses (para Ventas)
   const [calendarSelectedMonth, setCalendarSelectedMonth] = useState<string | null>(new Date().getMonth().toString()); // Para Calendario (mes actual por defecto)
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [calendarModalOpen, setCalendarModalOpen] = useState(false);
@@ -1254,9 +1253,6 @@ const Dashboard: React.FC = () => {
     setCalendarDate(new Date(calendarYear, calendarMonth + 1, 1));
   };
 
-  const handleProfileClick = () => {
-    setProfileModalOpen(true);
-  };
 
 
   // Array de nombres de meses para el calendario
@@ -1296,43 +1292,41 @@ const Dashboard: React.FC = () => {
         {/* Spacer */}
         <Box sx={{ flex: 1, display: { xs: 'none', sm: 'block' } }} />
         
-        {/* Contenedor alineado respecto a la columna derecha (320px) */}
-        <Box sx={{ 
-          width: { xs: '100%', sm: 'auto', lg: 320 }, 
-          display: 'flex', 
-          justifyContent: { xs: 'flex-end', sm: 'space-between' },
-          alignItems: 'center',
-          gap: 2,
-        }}>
-          {/* Profile Text */}
-          <Typography 
-            variant="body1" 
-            sx={{ 
-              fontWeight: 600, 
-              color: theme.palette.text.primary, 
-              fontSize: { xs: '1rem', md: '1.25rem' },
-              cursor: 'pointer',
-              display: { xs: 'none', sm: 'block' },
-            }}
-          >
-            Perfil
-          </Typography>
-
-          {/* Edit Button */}
+        {/* Botones de Notificaciones y Calendario */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          {/* Botón de Notificaciones */}
           <IconButton 
             size="large"
-            onClick={handleProfileClick}
             sx={{ 
-              bgcolor: theme.palette.action.hover, 
-              borderRadius: 1.5, 
-              width: { xs: 40, md: 48 }, 
-              height: { xs: 40, md: 48 },
+              bgcolor: '#E8C52C', 
+              borderRadius: '50%', 
+              width: { xs: 36, md: 40 }, 
+              height: { xs: 36, md: 40 },
+              p: 0,
               '&:hover': {
-                bgcolor: theme.palette.action.selected,
+                bgcolor: '#D4B325',
               },
             }}
           >
-            <Edit sx={{ fontSize: { xs: 20, md: 24 }, color: theme.palette.text.primary }} />
+            <Notifications sx={{ fontSize: { xs: 18, md: 20 }, color: theme.palette.background.default }} />
+          </IconButton>
+          
+          {/* Botón de Calendario */}
+          <IconButton 
+            size="large"
+            onClick={() => setCalendarModalOpen(true)}
+            sx={{ 
+              bgcolor: '#E8C52C', 
+              borderRadius: '50%', 
+              width: { xs: 36, md: 40 }, 
+              height: { xs: 36, md: 40 },
+              p: 0,
+              '&:hover': {
+                bgcolor: '#D4B325',
+              },
+            }}
+          >
+            <CalendarToday sx={{ fontSize: { xs: 18, md: 20 }, color: theme.palette.background.default }} />
           </IconButton>
         </Box>
       </Box>
@@ -1614,7 +1608,7 @@ const Dashboard: React.FC = () => {
           xs: '1fr', 
           md: '1fr',
           lg: '1fr',
-          xl: (user?.role === 'admin' || user?.role === 'jefe_comercial') ? '2fr 1fr' : '1fr' 
+          xl: '1fr' 
         },
         gap: { xs: 1.5, sm: 2, md: 3 },
         mb: { xs: 2, sm: 2.5, md: 3 } 
@@ -1750,130 +1744,6 @@ const Dashboard: React.FC = () => {
             </Box>
           </CardContent>
         </Card>
-
-        {/* Total de Ventas por Asesor - Solo visible para admin y jefe_comercial */}
-        {/* Visible solo en xl para estar al lado de Ventas */}
-        {(user?.role === 'admin' || user?.role === 'jefe_comercial') && (
-        <Card sx={{ 
-          borderRadius: { xs: 3, md: 6 }, 
-          boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 12px rgba(0,0,0,0.3)' 
-            : { xs: 1, md: 2 },
-          bgcolor: theme.palette.background.paper,
-          border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
-          display: { xs: 'none', xl: 'block' },
-        }}>
-          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                fontWeight: 600, 
-                color: theme.palette.text.primary,
-                fontSize: { xs: '1rem', md: '1.25rem' },
-                mb: { xs: 2, md: 3 },
-              }}
-            >
-              Total de Ventas por Asesor
-            </Typography>
-            {stats.deals.userPerformance && stats.deals.userPerformance.length > 0 ? (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1.5, md: 2 } }}>
-                {stats.deals.userPerformance
-                  .sort((a, b) => (b.wonDealsValue || 0) - (a.wonDealsValue || 0))
-                  .map((user, index) => (
-                    <Box 
-                      key={user.userId}
-                      sx={{
-                        display: 'flex',
-                        flexDirection: { xs: 'column', sm: 'row' },
-                        justifyContent: 'space-between',
-                        alignItems: { xs: 'flex-start', sm: 'center' },
-                        p: { xs: 1.5, md: 2 },
-                        borderRadius: 2,
-                        bgcolor: theme.palette.mode === 'dark' 
-                          ? 'rgba(255, 255, 255, 0.05)' 
-                          : 'rgba(0, 0, 0, 0.02)',
-                        border: `1px solid ${theme.palette.divider}`,
-                        transition: 'all 0.2s',
-                        gap: { xs: 1.5, sm: 0 },
-                        '&:hover': {
-                          bgcolor: theme.palette.mode === 'dark' 
-                            ? 'rgba(255, 255, 255, 0.08)' 
-                            : 'rgba(0, 0, 0, 0.04)',
-                        },
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, md: 2 }, flex: 1, minWidth: 0, width: { xs: '100%', sm: 'auto' } }}>
-                        <Avatar
-                          sx={{
-                            width: { xs: 44, md: 48 },
-                            height: { xs: 44, md: 48 },
-                            bgcolor: '#8B5CF6',
-                            fontSize: { xs: '1rem', md: '1.125rem' },
-                            fontWeight: 600,
-                            flexShrink: 0,
-                          }}
-                        >
-                          {getInitials(user.firstName, user.lastName)}
-                        </Avatar>
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              fontWeight: 600, 
-                              color: theme.palette.text.primary,
-                              fontSize: { xs: '0.9375rem', md: '1rem' },
-                              mb: 0.5,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {user.firstName} {user.lastName}
-                          </Typography>
-                          <Typography 
-                            variant="caption" 
-                            sx={{ 
-                              color: theme.palette.text.secondary,
-                              fontSize: { xs: '0.8125rem', md: '0.8125rem' },
-                            }}
-                          >
-                            {user.wonDeals || 0} {user.wonDeals === 1 ? 'venta' : 'ventas'}
-                          </Typography>
-                        </Box>
-                      </Box>
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          fontWeight: 700, 
-                          color: theme.palette.text.primary,
-                          fontSize: { xs: '1.125rem', md: '1.125rem' },
-                          ml: { xs: 0, sm: 2 },
-                          mt: { xs: 0.5, sm: 0 },
-                          alignSelf: { xs: 'flex-end', sm: 'center' },
-                          flexShrink: 0,
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        S/ {(user.wonDealsValue || 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                      </Typography>
-                    </Box>
-                  ))}
-              </Box>
-            ) : (
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  color: theme.palette.text.secondary,
-                  textAlign: 'center',
-                  py: 3,
-                }}
-              >
-                No hay datos de ventas por asesor disponibles
-              </Typography>
-            )}
-          </CardContent>
-        </Card>
-        )}
       </Box>
 
       {/* Sección: Total de Ventas por Asesor (lg) y Distribución de Ventas */}
@@ -1883,7 +1753,7 @@ const Dashboard: React.FC = () => {
           xs: '1fr', 
           md: '1fr',
           lg: '1fr 1fr',
-          xl: '1fr' 
+          xl: '1fr 1fr' 
         },
         gap: { xs: 1.5, sm: 2, md: 3 },
         mb: { xs: 2, sm: 2.5, md: 3 } 
@@ -1898,7 +1768,7 @@ const Dashboard: React.FC = () => {
             : { xs: 1, md: 2 },
           bgcolor: theme.palette.background.paper,
           border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
-          display: { xs: 'block', lg: 'block', xl: 'none' },
+          display: { xs: 'block', lg: 'block', xl: 'block' },
         }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
             <Typography 
@@ -2070,7 +1940,7 @@ const Dashboard: React.FC = () => {
       {(() => {
         const canViewCommercialKPIs = user?.role === 'admin' || user?.role === 'jefe_comercial';
         const gridCols = canViewCommercialKPIs 
-          ? { xs: '1fr', md: '1fr 1fr', lg: '1fr 1fr' } 
+          ? { xs: '1fr', md: '1fr 1fr', lg: '1fr 1fr', xl: '1fr 1fr' } 
           : { xs: '1fr', md: '1fr' };
         
         return (
@@ -2213,466 +2083,7 @@ const Dashboard: React.FC = () => {
       })()}
       </Box>
 
-      {/* Columna Derecha - Perfil, Calendario y Tareas */}
-      <Box sx={{ 
-        width: { xs: '100%', md: 320 }, 
-        flexShrink: 0,
-        mt: { xs: 2, sm: 2.5, md: 0 },
-      }}>
-        {/* Perfil */}
-        <Box sx={{ mb: { xs: 3, md: 4 }, position: 'relative' }}>
-          {/* Avatar */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: { xs: 1.5, md: 2 } }}>
-            <Avatar
-              sx={{
-                width: { xs: 80, md: 100 },
-                height: { xs: 80, md: 100 },
-                bgcolor: user?.avatar ? 'transparent' : '#0088FE',
-                fontSize: { xs: '1.5rem', md: '2rem' },
-                fontWeight: 600,
-              }}
-              src={user?.avatar}
-            >
-              {!user?.avatar && getInitials(user?.firstName, user?.lastName)}
-            </Avatar>
-          </Box>
-
-          {/* Nombre y verificación */}
-          <Box sx={{ textAlign: 'center', mb: 0.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-              <Typography 
-                variant="body1" 
-                sx={{ 
-                  fontWeight: 700, 
-                  color: theme.palette.text.primary, 
-                  fontSize: { xs: '1rem', md: '1.25rem' },
-                }}
-              >
-                {user?.firstName} {user?.lastName}
-              </Typography>
-              <CheckCircle sx={{ fontSize: { xs: 18, md: 20 }, color: '#10B981' }} />
-            </Box>
-            <Typography 
-              variant="caption" 
-              sx={{ 
-                color: theme.palette.text.secondary, 
-                mt: 0.5, 
-                fontSize: { xs: '0.8rem', md: '0.875rem' },
-              }}
-            >
-              {user?.role || 'Usuario'}
-            </Typography>
-          </Box>
-        </Box>
-
-        {/* Calendario */}
-        <Card sx={{ 
-          borderRadius: { xs: 3, md: 6 }, 
-          boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 12px rgba(0,0,0,0.3)' 
-            : { xs: 1, md: 2 },
-          mb: { xs: 3, md: 4 },
-          bgcolor: theme.palette.background.paper,
-          border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
-        }}>
-          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-            {/* Primera fila: Selector de meses */}
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'center', 
-              alignItems: 'center',
-              mb: { xs: 2, md: 2 },
-            }}>
-              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 } }}>
-                <Select
-                  value={calendarSelectedMonth || new Date().getMonth().toString()}
-                  onChange={(e) => {
-                    const monthValue = e.target.value;
-                    setCalendarSelectedMonth(monthValue);
-                    // Actualizar calendarDate con el mes seleccionado
-                    const newDate = new Date(calendarDate);
-                    newDate.setMonth(parseInt(monthValue));
-                    setCalendarDate(newDate);
-                  }}
-                  displayEmpty
-                  sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}
-                >
-                  {monthNames.map((month) => (
-                    <MenuItem key={month.value} value={month.value}>
-                      {month.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-            
-            {/* Segunda fila: Botones Ver y Conectar Google */}
-            <Box sx={{ 
-              display: 'flex', 
-              flexDirection: { xs: 'column', sm: 'row' },
-              justifyContent: 'flex-end', 
-              alignItems: { xs: 'flex-start', sm: 'center' },
-              mb: { xs: 2, md: 3 },
-              gap: { xs: 1, sm: 1, md: 2 },
-            }}>
-              <Button
-                size="small"
-                onClick={() => {
-                  // Usar el mes seleccionado en el calendario o el mes actual
-                  const monthToUse = calendarSelectedMonth !== null 
-                    ? parseInt(calendarSelectedMonth) 
-                    : calendarDate.getMonth();
-                  const yearToUse = calendarDate.getFullYear();
-                  const dateToUse = new Date(yearToUse, monthToUse, 1);
-                  setCalendarModalDate(dateToUse);
-                  setSelectedDate(new Date(yearToUse, monthToUse, new Date().getDate()));
-                  fetchAllTasksWithDates();
-                  setCalendarModalOpen(true);
-                }}
-                sx={{ 
-                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
-                  textTransform: 'none',
-                  width: { xs: '100%', sm: 'auto' },
-                }}
-              >
-                Ver
-              </Button>
-              {/* Botón de conexión individual removido - ahora se conecta desde Perfil > Correo */}
-            </Box>
-            {calendarMessage && (
-              <Alert 
-                severity={calendarMessage.includes('Error') ? 'error' : 'success'} 
-                sx={{ mb: 2 }}
-                onClose={() => setCalendarMessage(null)}
-              >
-                {calendarMessage}
-              </Alert>
-            )}
-            <Box>
-              {/* Días de la semana */}
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, mb: 1 }}>
-                {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day, index) => (
-                  <Typography
-                    key={index}
-                    variant="caption"
-                    sx={{ 
-                      textAlign: 'center', 
-                      fontWeight: 600, 
-                      color: theme.palette.text.secondary,
-                      fontSize: '0.75rem',
-                    }}
-                  >
-                    {day}
-                  </Typography>
-                ))}
-              </Box>
-              {/* Días del mes */}
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: { xs: 0.5, sm: 1 } }}>
-                {calendarDaysMain.map((day: number | null, index: number) => {
-                  if (!day) {
-                    return <Box key={index} />;
-                  }
-
-                  // Verificar si hay tareas para este día
-                  const calendarMonth = calendarDate.getMonth();
-                  const calendarYear = calendarDate.getFullYear();
-                  const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                  const dayTasks = allTasksWithDates.filter((task) => {
-                    if (!task.dueDate) return false;
-                    const taskDate = new Date(task.dueDate);
-                    const taskDateStr = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`;
-                    return taskDateStr === dateStr;
-                  });
-                  
-                  // Verificar si hay eventos de Google Calendar para este día
-                  const dayEvents = googleCalendarEvents.filter((event) => {
-                    if (!event.start) return false;
-                    const eventDate = getEventDate(event);
-                    const eventDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
-                    return eventDateStr === dateStr;
-                  });
-                  
-                  const hasTasks = dayTasks.length > 0;
-                  const hasEvents = dayEvents.length > 0;
-
-                  // Color fijo para tareas (independiente de la prioridad)
-                  const taskColor = hasTasks ? '#F97316' : null; // Naranja para tareas
-                  // Color fijo para eventos de Google Calendar
-                  const eventColor = hasEvents ? '#1976d2' : null; // Azul para eventos
-
-                  const dayDate = new Date(calendarYear, calendarMonth, day);
-                  const isSelected = selectedCalendarDay && 
-                    dayDate.getDate() === selectedCalendarDay.getDate() &&
-                    dayDate.getMonth() === selectedCalendarDay.getMonth() &&
-                    dayDate.getFullYear() === selectedCalendarDay.getFullYear();
-
-                  return (
-                    <Box
-                      key={index}
-                      onClick={() => {
-                        setSelectedCalendarDay(dayDate);
-                      }}
-                      sx={{
-                        aspectRatio: '1',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: 1,
-                        bgcolor: isSelected 
-                          ? taxiMonterricoColors.orange 
-                          : 'transparent',
-                        color: isSelected ? 'white' : theme.palette.text.primary,
-                        fontWeight: isSelected ? 600 : 400,
-                        fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                        cursor: 'pointer',
-                        transition: 'all 0.2s',
-                        position: 'relative',
-                        '&:hover': {
-                          bgcolor: isSelected 
-                            ? taxiMonterricoColors.orangeDark 
-                            : theme.palette.action.hover,
-                        },
-                      }}
-                    >
-                      {day}
-                      {/* Puntos de color debajo de la fecha */}
-                      {(taskColor || eventColor) && (
-                        <Box
-                          sx={{
-                            display: 'flex',
-                            gap: 0.5,
-                            mt: 0.5,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                          }}
-                        >
-                          {taskColor && (
-                            <Box
-                              sx={{
-                                width: { xs: 6, sm: 8 },
-                                height: { xs: 6, sm: 8 },
-                                borderRadius: '50%',
-                                bgcolor: taskColor,
-                                boxShadow: isSelected ? '0 0 0 1px white' : 'none',
-                              }}
-                            />
-                          )}
-                          {eventColor && (
-                            <Box
-                              sx={{
-                                width: { xs: 6, sm: 8 },
-                                height: { xs: 6, sm: 8 },
-                                borderRadius: '50%',
-                                bgcolor: eventColor,
-                                boxShadow: isSelected ? '0 0 0 1px white' : 'none',
-                              }}
-                            />
-                          )}
-                        </Box>
-                      )}
-                    </Box>
-                  );
-                })}
-              </Box>
-            </Box>
-          </CardContent>
-        </Card>
-
-        {/* Card con tareas del día seleccionado */}
-        {selectedCalendarDay && (() => {
-          const selectedDayStr = `${selectedCalendarDay.getFullYear()}-${String(selectedCalendarDay.getMonth() + 1).padStart(2, '0')}-${String(selectedCalendarDay.getDate()).padStart(2, '0')}`;
-          const selectedDayTasks = allTasksWithDates.filter((task) => {
-            if (!task.dueDate) return false;
-            const taskDate = new Date(task.dueDate);
-            const taskDateStr = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`;
-            return taskDateStr === selectedDayStr;
-          });
-          
-          // Obtener eventos de Google Calendar para el día seleccionado
-          const selectedDayEvents = googleCalendarEvents.filter((event) => {
-            if (!event.start) return false;
-            const eventDate = getEventDate(event);
-            const eventDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
-            return eventDateStr === selectedDayStr;
-          });
-          
-          const allDayItems = [...selectedDayTasks, ...selectedDayEvents.map(event => ({
-            id: event.id,
-            title: event.summary || 'Sin título',
-            dueDate: event.start.dateTime || event.start.date,
-            isGoogleEvent: true,
-            description: event.description,
-            location: event.location,
-          }))];
-
-          return (
-            <Card sx={{ 
-              borderRadius: { xs: 3, md: 6 }, 
-              boxShadow: theme.palette.mode === 'dark' 
-                ? '0 4px 12px rgba(0,0,0,0.3)' 
-                : { xs: 1, md: 2 },
-              mb: { xs: 2, sm: 3, md: 4 },
-              bgcolor: theme.palette.background.paper,
-              border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
-            }}>
-              <CardContent sx={{ p: { xs: 1.5, sm: 2, md: 3 } }}>
-                {allDayItems.length > 0 ? (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                    {allDayItems.map((item: any) => (
-                      <Card
-                        key={item.id}
-                        sx={{
-                          p: 2,
-                          borderRadius: 2,
-                          border: `1px solid ${item.isGoogleEvent ? (theme.palette.mode === 'dark' ? '#4285F4' : '#1a73e8') : (theme.palette.mode === 'dark' ? taxiMonterricoColors.green : taxiMonterricoColors.green)}`,
-                          bgcolor: item.isGoogleEvent 
-                            ? (theme.palette.mode === 'dark' ? 'rgba(66, 133, 244, 0.15)' : 'rgba(26, 115, 232, 0.1)')
-                            : (theme.palette.mode === 'dark' 
-                              ? 'rgba(16, 185, 129, 0.15)' 
-                              : `${taxiMonterricoColors.greenLight}20`),
-                          transition: 'all 0.2s',
-                          '&:hover': {
-                            boxShadow: theme.palette.mode === 'dark' 
-                              ? '0 4px 12px rgba(0,0,0,0.4)' 
-                              : 2,
-                            transform: 'translateY(-2px)',
-                            bgcolor: item.isGoogleEvent
-                              ? (theme.palette.mode === 'dark' ? 'rgba(66, 133, 244, 0.25)' : 'rgba(26, 115, 232, 0.15)')
-                              : (theme.palette.mode === 'dark' 
-                                ? 'rgba(16, 185, 129, 0.25)' 
-                                : `${taxiMonterricoColors.greenLight}30`),
-                          },
-                        }}
-                      >
-                        <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                          <Box sx={{ flex: 1 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                              {item.isGoogleEvent && (
-                                <Cloud sx={{ fontSize: '1rem', color: '#4285F4' }} />
-                              )}
-                              <Typography
-                                variant="body1"
-                                sx={{
-                                  fontWeight: 600,
-                                  color: item.isGoogleEvent
-                                    ? (theme.palette.mode === 'dark' ? '#93C5FD' : '#1a73e8')
-                                    : (theme.palette.mode === 'dark' 
-                                      ? taxiMonterricoColors.green 
-                                      : taxiMonterricoColors.greenDark),
-                                  fontSize: '0.9375rem',
-                                }}
-                              >
-                                {item.title}
-                              </Typography>
-                            </Box>
-                            {item.isGoogleEvent && (
-                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 1 }}>
-                                {item.description && (
-                                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem' }}>
-                                    {item.description}
-                                  </Typography>
-                                )}
-                                {item.location && (
-                                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem' }}>
-                                    📍 {item.location}
-                                  </Typography>
-                                )}
-                              </Box>
-                            )}
-                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
-                              {!item.isGoogleEvent && item.type && (
-                                <Chip
-                                  label={getTaskTypeLabel(item.type)}
-                                  size="small"
-                                  sx={{
-                                    fontSize: '0.7rem',
-                                    height: 22,
-                                    bgcolor: theme.palette.mode === 'dark' 
-                                      ? 'rgba(255, 255, 255, 0.1)' 
-                                      : '#F3F4F6',
-                                    color: theme.palette.mode === 'dark' 
-                                      ? theme.palette.text.secondary 
-                                      : '#6B7280',
-                                  }}
-                                />
-                              )}
-                              {!item.isGoogleEvent && item.priority && (
-                                <Chip
-                                  label={item.priority === 'high' ? 'Alta' : item.priority === 'medium' ? 'Media' : 'Baja'}
-                                  size="small"
-                                  sx={{
-                                    fontSize: '0.7rem',
-                                    height: 22,
-                                    bgcolor: theme.palette.mode === 'dark' 
-                                      ? (item.priority === 'high' 
-                                        ? 'rgba(239, 68, 68, 0.2)' 
-                                        : item.priority === 'medium' 
-                                        ? 'rgba(251, 191, 36, 0.2)' 
-                                        : 'rgba(16, 185, 129, 0.2)')
-                                      : (item.priority === 'high' 
-                                        ? '#FEE2E2' 
-                                        : item.priority === 'medium' 
-                                        ? '#FEF3C7' 
-                                        : '#D1FAE5'),
-                                    color: theme.palette.mode === 'dark' 
-                                      ? (item.priority === 'high' 
-                                        ? '#FCA5A5' 
-                                        : item.priority === 'medium' 
-                                        ? '#FCD34D' 
-                                        : '#6EE7B7')
-                                      : (item.priority === 'high' 
-                                        ? '#991B1B' 
-                                        : item.priority === 'medium' 
-                                        ? '#92400E' 
-                                        : '#065F46'),
-                                  }}
-                                />
-                              )}
-                              {item.dueDate && (
-                                <Typography 
-                                  variant="caption" 
-                                  sx={{ 
-                                    color: theme.palette.text.secondary, 
-                                    fontSize: '0.75rem', 
-                                    alignSelf: 'center' 
-                                  }}
-                                >
-                                  {new Date(item.dueDate).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                                </Typography>
-                              )}
-                            </Box>
-                          </Box>
-                        </Box>
-                      </Card>
-                    ))}
-                  </Box>
-                ) : (
-                  <Box sx={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center', 
-                    justifyContent: 'center',
-                    py: 4,
-                    textAlign: 'center',
-                  }}>
-                    <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                      No hay tareas o eventos programados para este día
-                    </Typography>
-                  </Box>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })()}
-
       </Box>
-      </Box>
-      <ProfileModal 
-        open={profileModalOpen} 
-        onClose={() => setProfileModalOpen(false)}
-        onSuccess={(message) => setSuccessMessage(message)}
-      />
       
       {/* Modal de edición de presupuesto */}
       <Dialog

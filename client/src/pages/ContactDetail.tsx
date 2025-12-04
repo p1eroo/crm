@@ -105,6 +105,7 @@ import EmailComposer from '../components/EmailComposer';
 import { taxiMonterricoColors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+import contactLogo from '../assets/contact.png';
 
 interface ContactDetailData {
   id: number;
@@ -1811,7 +1812,7 @@ const ContactDetail: React.FC = () => {
                   sx={{
                     width: 120,
                     height: 120,
-                    bgcolor: contact.avatar ? 'transparent' : '#2E7D32',
+                    bgcolor: (contact.avatar || contactLogo) ? 'transparent' : '#2E7D32',
                     fontSize: '3rem',
                     transition: 'all 0.3s ease',
                     cursor: 'pointer',
@@ -1820,9 +1821,9 @@ const ContactDetail: React.FC = () => {
                       boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
                     },
                   }}
-                  src={contact.avatar}
+                  src={contact.avatar || contactLogo}
                 >
-                  {!contact.avatar && getInitials(contact.firstName, contact.lastName)}
+                  {!contact.avatar && !contactLogo && getInitials(contact.firstName, contact.lastName)}
                 </Avatar>
                 <CheckCircle 
                   sx={{ 
@@ -1873,11 +1874,12 @@ const ContactDetail: React.FC = () => {
                     width: 52,
                     height: 52,
                     borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
-                    color: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.green : taxiMonterricoColors.green,
+                    color: 'white',
                     transition: 'all 0.2s ease',
+                    boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.greenDark : taxiMonterricoColors.greenDark,
                       transform: 'scale(1.05)',
                     },
                   }}
@@ -1896,11 +1898,12 @@ const ContactDetail: React.FC = () => {
                     width: 52,
                     height: 52,
                     borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
-                    color: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.green : taxiMonterricoColors.green,
+                    color: 'white',
                     transition: 'all 0.2s ease',
+                    boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.greenDark : taxiMonterricoColors.greenDark,
                       transform: 'scale(1.05)',
                     },
                   }}
@@ -1919,11 +1922,12 @@ const ContactDetail: React.FC = () => {
                     width: 52,
                     height: 52,
                     borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
-                    color: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.green : taxiMonterricoColors.green,
+                    color: 'white',
                     transition: 'all 0.2s ease',
+                    boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.greenDark : taxiMonterricoColors.greenDark,
                       transform: 'scale(1.05)',
                     },
                   }}
@@ -1942,11 +1946,12 @@ const ContactDetail: React.FC = () => {
                     width: 52,
                     height: 52,
                     borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
-                    color: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.green : taxiMonterricoColors.green,
+                    color: 'white',
                     transition: 'all 0.2s ease',
+                    boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.greenDark : taxiMonterricoColors.greenDark,
                       transform: 'scale(1.05)',
                     },
                   }}
@@ -1965,11 +1970,12 @@ const ContactDetail: React.FC = () => {
                     width: 52,
                     height: 52,
                     borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
-                    color: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.green : taxiMonterricoColors.green,
+                    color: 'white',
                     transition: 'all 0.2s ease',
+                    boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.greenDark : taxiMonterricoColors.greenDark,
                       transform: 'scale(1.05)',
                     },
                   }}
@@ -1987,11 +1993,12 @@ const ContactDetail: React.FC = () => {
                     width: 52,
                     height: 52,
                     borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : '#E8F5E9',
-                    color: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.green : taxiMonterricoColors.green,
+                    color: 'white',
                     transition: 'all 0.2s ease',
+                    boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}30` : '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.greenDark : taxiMonterricoColors.greenDark,
                       transform: 'scale(1.05)',
                     },
                   }}

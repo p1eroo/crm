@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -89,6 +89,7 @@ import { taxiMonterricoColors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
+import contactLogo from '../assets/contact.png';
 
 interface Contact {
   id: number;
@@ -374,6 +375,16 @@ const Contacts: React.FC = () => {
     setOpen(true);
   };
 
+  // Función para capitalizar solo las iniciales de cada palabra
+  const capitalizeInitials = (text: string): string => {
+    if (!text) return '';
+    return text
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   const handleSearchDni = async () => {
     if (!formData.dni || formData.dni.length < 8) {
       setDniError('El DNI debe tener al menos 8 dígitos');
@@ -410,16 +421,24 @@ const Contacts: React.FC = () => {
         const apellidoPaterno = data.apellido_paterno || '';
         const apellidoMaterno = data.apellido_materno || '';
         
+        // Capitalizar solo las iniciales
+        const nombresCapitalizados = capitalizeInitials(nombres);
+        const apellidosCapitalizados = capitalizeInitials(`${apellidoPaterno} ${apellidoMaterno}`.trim());
+        const direccionCapitalizada = capitalizeInitials(data.direccion || '');
+        const distritoCapitalizado = capitalizeInitials(data.distrito || '');
+        const provinciaCapitalizada = capitalizeInitials(data.provincia || '');
+        const departamentoCapitalizado = capitalizeInitials(data.departamento || '');
+        
         // Actualizar el formulario con los datos obtenidos
-        setFormData({
-          ...formData,
-          firstName: nombres,
-          lastName: `${apellidoPaterno} ${apellidoMaterno}`.trim(),
-          address: data.direccion || '',
-          city: data.distrito || '',
-          state: data.provincia || '',
-          country: data.departamento || 'Perú',
-        });
+        setFormData(prev => ({
+          ...prev,
+          firstName: nombresCapitalizados,
+          lastName: apellidosCapitalizados,
+          address: direccionCapitalizada,
+          city: distritoCapitalizado,
+          state: provinciaCapitalizada,
+          country: departamentoCapitalizado || 'Perú',
+        }));
       } else {
         setDniError('No se encontró información para este DNI');
       }
@@ -473,12 +492,16 @@ const Contacts: React.FC = () => {
         const apellidoPaterno = data.apellido_paterno || '';
         const apellidoMaterno = data.apellido_materno || '';
         
+        // Capitalizar solo las iniciales
+        const nombresCapitalizados = capitalizeInitials(nombres);
+        const apellidosCapitalizados = capitalizeInitials(`${apellidoPaterno} ${apellidoMaterno}`.trim());
+        
         // Actualizar el formulario con los datos obtenidos
-        setFormData({
-          ...formData,
-          firstName: nombres,
-          lastName: `${apellidoPaterno} ${apellidoMaterno}`.trim(),
-        });
+        setFormData(prev => ({
+          ...prev,
+          firstName: nombresCapitalizados,
+          lastName: apellidosCapitalizados,
+        }));
       } else {
         setCeeError('No se encontró información para este CEE');
       }
@@ -1163,9 +1186,6 @@ const Contacts: React.FC = () => {
                 <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.875rem', md: '0.9375rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
                   Teléfono
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.875rem', md: '0.9375rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 150, md: 200 }, width: { xs: 'auto', md: '20%' } }}>
-                  Correo
-                </TableCell>
                 <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.875rem', md: '0.9375rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}>
                   País
                 </TableCell>
@@ -1190,33 +1210,50 @@ const Contacts: React.FC = () => {
                   onClick={() => navigate(`/contacts/${contact.id}`)}
                 >
                   <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '25%' } }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1, md: 1.5 } }}>
                       <Avatar
+                        src={contactLogo}
                         sx={{
                           width: { xs: 32, md: 40 },
                           height: { xs: 32, md: 40 },
-                          bgcolor: taxiMonterricoColors.green,
+                          bgcolor: contactLogo ? 'transparent' : taxiMonterricoColors.green,
                           fontSize: { xs: '0.75rem', md: '0.875rem' },
                           fontWeight: 600,
                           boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
                           flexShrink: 0,
                         }}
                       >
-                        {getInitials(contact.firstName, contact.lastName)}
+                        {!contactLogo && getInitials(contact.firstName, contact.lastName)}
                       </Avatar>
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          fontWeight: 500, 
-                          color: theme.palette.text.primary,
-                          fontSize: { xs: '0.875rem', md: '0.9375rem' },
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {contact.firstName} {contact.lastName}
-                      </Typography>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            fontWeight: 500, 
+                            color: theme.palette.text.primary,
+                            fontSize: { xs: '0.875rem', md: '0.9375rem' },
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            mb: 0.25,
+                          }}
+                        >
+                          {contact.firstName} {contact.lastName}
+                        </Typography>
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            color: theme.palette.text.secondary,
+                            fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            display: 'block',
+                          }}
+                        >
+                          {contact.email || '--'}
+                        </Typography>
+                      </Box>
                     </Box>
                   </TableCell>
                   <TableCell sx={{ px: 1, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '18%' } }}>
@@ -1250,21 +1287,6 @@ const Contacts: React.FC = () => {
                       }}
                     >
                       {contact.phone || contact.mobile || '--'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 150, md: 200 }, width: { xs: 'auto', md: '20%' } }}>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        color: theme.palette.text.primary,
-                        fontSize: { xs: '0.875rem', md: '0.9375rem' },
-                        fontWeight: 400,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {contact.email}
                     </Typography>
                   </TableCell>
                   <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}>
@@ -1541,10 +1563,10 @@ const Contacts: React.FC = () => {
                     setIdType(newType);
                     // Limpiar campos al cambiar de tipo
                     if (newType === 'dni') {
-                      setFormData({ ...formData, cee: '', dni: '' });
+                      setFormData(prev => ({ ...prev, cee: '', dni: '' }));
                       setCeeError('');
                     } else {
-                      setFormData({ ...formData, dni: '', cee: '' });
+                      setFormData(prev => ({ ...prev, dni: '', cee: '' }));
                       setDniError('');
                     }
                   }}
@@ -1636,7 +1658,7 @@ const Contacts: React.FC = () => {
                         const value = e.target.value.replace(/\D/g, ''); // Solo números
                         // Limitar a 8 dígitos
                         const limitedValue = value.slice(0, 8);
-                        setFormData({ ...formData, dni: limitedValue, cee: '' });
+                        setFormData(prev => ({ ...prev, dni: limitedValue, cee: '' }));
                         setDniError('');
                         setCeeError('');
                       }}
@@ -1697,7 +1719,7 @@ const Contacts: React.FC = () => {
                         const value = e.target.value.toLocaleUpperCase('es-ES');
                         // Limitar a 12 caracteres
                         const limitedValue = value.slice(0, 12);
-                        setFormData({ ...formData, cee: limitedValue, dni: '' });
+                        setFormData(prev => ({ ...prev, cee: limitedValue, dni: '' }));
                         setCeeError('');
                         setDniError('');
                       }}
@@ -1759,7 +1781,7 @@ const Contacts: React.FC = () => {
               <TextField
                 label="Nombre"
                 value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
@@ -1771,7 +1793,7 @@ const Contacts: React.FC = () => {
               <TextField
                 label="Apellido"
                 value={formData.lastName}
-                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
@@ -1788,7 +1810,7 @@ const Contacts: React.FC = () => {
                 label="Email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
@@ -1800,7 +1822,7 @@ const Contacts: React.FC = () => {
               <TextField
                 label="Teléfono"
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
@@ -1815,7 +1837,7 @@ const Contacts: React.FC = () => {
             <TextField
               label="Dirección"
               value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
               multiline
               rows={2}
               fullWidth
@@ -1832,7 +1854,7 @@ const Contacts: React.FC = () => {
               <TextField
                 label="Distrito"
                 value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
@@ -1844,7 +1866,7 @@ const Contacts: React.FC = () => {
               <TextField
                 label="Provincia"
                 value={formData.state}
-                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
@@ -1856,7 +1878,7 @@ const Contacts: React.FC = () => {
               <TextField
                 label="Departamento"
                 value={formData.country}
-                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                onChange={(e) => setFormData(prev => ({ ...prev, country: e.target.value }))}
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
@@ -1872,7 +1894,7 @@ const Contacts: React.FC = () => {
               <TextField
                 label="Cargo"
                 value={formData.jobTitle}
-                onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
+                onChange={(e) => setFormData(prev => ({ ...prev, jobTitle: e.target.value }))}
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
@@ -1885,7 +1907,7 @@ const Contacts: React.FC = () => {
                 select
                 label="Etapa del Ciclo de Vida"
                 value={formData.lifecycleStage}
-                onChange={(e) => setFormData({ ...formData, lifecycleStage: e.target.value })}
+                onChange={(e) => setFormData(prev => ({ ...prev, lifecycleStage: e.target.value }))}
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
@@ -2043,7 +2065,7 @@ const Contacts: React.FC = () => {
                       sx={{
                         width: 120,
                         height: 120,
-                        bgcolor: previewContact.avatar ? 'transparent' : taxiMonterricoColors.green,
+                        bgcolor: (previewContact.avatar || contactLogo) ? 'transparent' : taxiMonterricoColors.green,
                         fontSize: '3rem',
                         transition: 'all 0.3s ease',
                         cursor: 'pointer',
@@ -2052,9 +2074,9 @@ const Contacts: React.FC = () => {
                           boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
                         },
                       }}
-                      src={previewContact.avatar}
+                      src={previewContact.avatar || contactLogo}
                     >
-                      {!previewContact.avatar && getInitials(previewContact.firstName, previewContact.lastName)}
+                      {!previewContact.avatar && !contactLogo && getInitials(previewContact.firstName, previewContact.lastName)}
                     </Avatar>
                     <CheckCircle 
                       sx={{ 
@@ -2722,19 +2744,6 @@ const Contacts: React.FC = () => {
             }
           }}
         >
-          <DialogTitle sx={{ 
-            pb: 1.5,
-            borderBottom: `1px solid ${theme.palette.divider}`,
-            fontWeight: 600,
-            fontSize: '1.25rem',
-            color: theme.palette.text.primary,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 1.5,
-          }}>
-            <Delete sx={{ color: '#d32f2f', fontSize: 28 }} />
-            Confirmar Eliminación
-          </DialogTitle>
           <DialogContent sx={{ pt: 3 }}>
             <Typography variant="body1" sx={{ color: theme.palette.text.primary, mb: 1 }}>
               ¿Estás seguro de que deseas eliminar este contacto?

@@ -36,6 +36,7 @@ import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
+import empresaLogo from '../assets/empresa.png';
 
 interface Company {
   id: number;
@@ -929,17 +930,18 @@ const Companies: React.FC = () => {
                   <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '30%' } }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
                       <Avatar
+                        src={empresaLogo}
                         sx={{
                           width: { xs: 32, md: 40 },
                           height: { xs: 32, md: 40 },
-                          bgcolor: taxiMonterricoColors.green,
+                          bgcolor: empresaLogo ? 'transparent' : taxiMonterricoColors.green,
                           fontSize: { xs: '0.75rem', md: '0.875rem' },
                           fontWeight: 600,
                           boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
                           flexShrink: 0,
                         }}
                       >
-                        {getInitials(company.name)}
+                        {!empresaLogo && getInitials(company.name)}
                       </Avatar>
                       <Typography 
                         variant="body2" 
@@ -1407,20 +1409,7 @@ const Companies: React.FC = () => {
           }
         }}
       >
-        <DialogTitle sx={{ 
-          pb: 1.5,
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          fontWeight: 600,
-          fontSize: '1.25rem',
-          color: theme.palette.text.primary,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1.5,
-        }}>
-          <Delete sx={{ color: '#d32f2f', fontSize: 28 }} />
-          Confirmar Eliminación
-        </DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
+          <DialogContent sx={{ pt: 3 }}>
           <Typography variant="body1" sx={{ color: theme.palette.text.primary, mb: 1 }}>
             ¿Estás seguro de que deseas eliminar esta empresa?
           </Typography>

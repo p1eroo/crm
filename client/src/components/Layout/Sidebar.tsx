@@ -8,6 +8,11 @@ import {
   Tooltip,
   Box,
   useTheme,
+  Avatar,
+  Menu,
+  MenuItem,
+  Divider,
+  Typography,
 } from '@mui/material';
 import {
   Dashboard,
@@ -22,9 +27,12 @@ import {
   Logout,
   AdminPanelSettings,
   AccountTree,
+  Edit,
 } from '@mui/icons-material';
 import { taxiMonterricoColors } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
+import ProfileModal from '../ProfileModal';
+import logo from '../../assets/logo-taxi-monterrico.svg';
 
 const drawerWidth = 80;
 
@@ -45,8 +53,24 @@ const Sidebar: React.FC = () => {
   const location = useLocation();
   const { logout, user } = useAuth();
   const theme = useTheme();
+  const [profileAnchorEl, setProfileAnchorEl] = React.useState<null | HTMLElement>(null);
+  const [profileModalOpen, setProfileModalOpen] = React.useState(false);
+
+  const handleProfileClick = (event: React.MouseEvent<HTMLElement>) => {
+    setProfileAnchorEl(event.currentTarget);
+  };
+
+  const handleProfileMenuClose = () => {
+    setProfileAnchorEl(null);
+  };
+
+  const handleEditProfile = () => {
+    setProfileModalOpen(true);
+    handleProfileMenuClose();
+  };
 
   const handleLogout = () => {
+    handleProfileMenuClose();
     logout();
     navigate('/login');
   };
@@ -77,16 +101,31 @@ const Sidebar: React.FC = () => {
         display: 'flex', 
         justifyContent: 'center',
         alignItems: 'center',
-        width: 48,
-        height: 48,
-        borderRadius: 2,
-        bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
-        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
+        width: '100%',
+        px: 1.5,
       }}>
-        <PieChart sx={{ 
-          fontSize: 24, 
-          color: taxiMonterricoColors.green,
-        }} />
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'center',
+          alignItems: 'center',
+          width: 48,
+          height: 48,
+          borderRadius: '50%',
+          bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
+          border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#E0E0E0'}`,
+          boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
+          p: 0.5,
+        }}>
+          <img
+            src={logo}
+            alt="Taxi Monterrico Logo"
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain',
+            }}
+          />
+        </Box>
       </Box>
 
       {/* Lista de items del menú */}
@@ -96,6 +135,7 @@ const Sidebar: React.FC = () => {
         py: 0,
         display: 'flex',
         flexDirection: 'column',
+        alignItems: 'center',
         gap: 0.5,
       }}>
         {mainMenuItems.map((item) => {
@@ -136,7 +176,7 @@ const Sidebar: React.FC = () => {
                   minHeight: 48,
                   width: 48,
                   height: 48,
-                  borderRadius: 2,
+                  borderRadius: '50%',
                   justifyContent: 'center',
                   p: 0,
                   mb: 0.5,
@@ -153,6 +193,8 @@ const Sidebar: React.FC = () => {
                   },
                   '&:not(.Mui-selected)': {
                     color: theme.palette.text.secondary,
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F5F5F5',
+                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#E0E0E0'}`,
                   },
                 }}
               >
@@ -205,7 +247,7 @@ const Sidebar: React.FC = () => {
                 minHeight: 48,
                 width: 48,
                 height: 48,
-                borderRadius: 2,
+                borderRadius: '50%',
                 justifyContent: 'center',
                 p: 0,
                 mb: 0.5,
@@ -223,6 +265,8 @@ const Sidebar: React.FC = () => {
                 },
                 '&:not(.Mui-selected)': {
                   color: theme.palette.text.secondary,
+                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F5F5F5',
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#E0E0E0'}`,
                 },
               }}
             >
@@ -243,65 +287,102 @@ const Sidebar: React.FC = () => {
         )}
       </List>
       
-      {/* Separador y botón de cerrar sesión al final */}
+      {/* Separador */}
       <Box sx={{ flex: 1 }} />
-      <Box sx={{ width: '100%', px: 1.5 }}>
-        <Tooltip 
-          title="Cerrar sesión" 
-          placement="right"
-          arrow
-          componentsProps={{
-            tooltip: {
-              sx: {
-                bgcolor: '#424242',
-                fontSize: '0.75rem',
-                fontWeight: 500,
-                px: 1.5,
-                py: 0.75,
-                borderRadius: 1,
-                ml: 1,
-              },
-            },
-            arrow: {
-              sx: {
-                color: '#424242',
-              },
+      
+      {/* Perfil del usuario */}
+      <Box sx={{ width: '100%', px: 1.5, mb: 1.5, display: 'flex', justifyContent: 'center' }}>
+        <Avatar
+          src={user?.avatar}
+          onClick={handleProfileClick}
+          sx={{
+            width: 48,
+            height: 48,
+            bgcolor: user?.avatar ? 'transparent' : taxiMonterricoColors.green,
+            fontSize: '1rem',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              transform: 'scale(1.05)',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
             },
           }}
         >
-          <ListItemButton
-            onClick={handleLogout}
-            sx={{
-              minHeight: 48,
-              width: 48,
-              height: 48,
-              borderRadius: 2,
-              justifyContent: 'center',
-              p: 0,
-              mb: 0.5,
-              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              color: theme.palette.error.main,
-              '&:hover': {
-                backgroundColor: theme.palette.mode === 'dark' ? `${theme.palette.error.main}20` : `${theme.palette.error.main}10`,
-                color: theme.palette.error.dark,
-              },
-            }}
-          >
-            <ListItemIcon
-              sx={{
-                minWidth: 0,
-                justifyContent: 'center',
-                color: 'inherit',
-                '& svg': {
-                  fontSize: 22,
-                },
-              }}
-            >
-              <Logout />
-            </ListItemIcon>
-          </ListItemButton>
-        </Tooltip>
+          {!user?.avatar && `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase()}
+        </Avatar>
       </Box>
+      
+      {/* Menú del perfil */}
+      <Menu
+        anchorEl={profileAnchorEl}
+        open={Boolean(profileAnchorEl)}
+        onClose={handleProfileMenuClose}
+        anchorOrigin={{
+          vertical: 'top',
+          horizontal: 'right',
+        }}
+        transformOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: {
+            mt: -1,
+            ml: 1,
+            minWidth: 200,
+            borderRadius: 2,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            border: `1px solid ${theme.palette.divider}`,
+          },
+        }}
+      >
+        <MenuItem 
+          onClick={handleEditProfile}
+          sx={{
+            py: 1.5,
+            px: 2,
+            gap: 1.5,
+            '&:hover': {
+              bgcolor: theme.palette.action.hover,
+            },
+          }}
+        >
+          <Edit sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
+          <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <Typography variant="body2" sx={{ fontWeight: 500, color: theme.palette.text.primary }}>
+              Editar perfil
+            </Typography>
+            <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+              Actualizar información
+            </Typography>
+          </Box>
+        </MenuItem>
+        <Divider />
+        <MenuItem 
+          onClick={handleLogout}
+          sx={{
+            py: 1.5,
+            px: 2,
+            gap: 1.5,
+            color: theme.palette.error.main,
+            '&:hover': {
+              bgcolor: theme.palette.mode === 'dark' ? `${theme.palette.error.main}20` : `${theme.palette.error.main}10`,
+            },
+          }}
+        >
+          <Logout sx={{ fontSize: 20 }} />
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+            Cerrar sesión
+          </Typography>
+        </MenuItem>
+      </Menu>
+      
+      {/* Modal de perfil */}
+      <ProfileModal 
+        open={profileModalOpen} 
+        onClose={() => setProfileModalOpen(false)}
+      />
     </Drawer>
   );
 };

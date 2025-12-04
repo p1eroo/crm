@@ -717,19 +717,6 @@ const Tickets: React.FC = () => {
           },
         }}
       >
-        <DialogTitle sx={{ 
-          pb: 1.5,
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          fontWeight: 600,
-          fontSize: '1.25rem',
-          color: theme.palette.text.primary,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1.5,
-        }}>
-          <Delete sx={{ color: '#d32f2f', fontSize: 28 }} />
-          Confirmar Eliminación
-        </DialogTitle>
         <DialogContent sx={{ pt: 3 }}>
           <Typography variant="body1" sx={{ color: theme.palette.text.primary, mb: 1 }}>
             ¿Estás seguro de que deseas eliminar este ticket?

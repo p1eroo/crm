@@ -107,6 +107,7 @@ import RichTextEditor from '../components/RichTextEditor';
 import { taxiMonterricoColors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+import empresaLogo from '../assets/empresa.png';
 
 interface CompanyDetail {
   id: number;
@@ -827,6 +828,16 @@ const CompanyDetail: React.FC = () => {
   };
 
   // Funciones para la pestaña Descripción
+  // Función para capitalizar solo las iniciales de cada palabra
+  const capitalizeInitials = (text: string): string => {
+    if (!text) return '';
+    return text
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   const handleSearchDni = async () => {
     if (!contactFormData.dni || contactFormData.dni.length < 8) {
       setDniError('El DNI debe tener al menos 8 dígitos');
@@ -860,15 +871,23 @@ const CompanyDetail: React.FC = () => {
         const apellidoPaterno = data.apellido_paterno || '';
         const apellidoMaterno = data.apellido_materno || '';
         
-        setContactFormData({
-          ...contactFormData,
-          firstName: nombres,
-          lastName: `${apellidoPaterno} ${apellidoMaterno}`.trim(),
-          address: data.direccion || '',
-          city: data.distrito || '',
-          state: data.provincia || '',
-          country: data.departamento || 'Perú',
-        });
+        // Capitalizar solo las iniciales
+        const nombresCapitalizados = capitalizeInitials(nombres);
+        const apellidosCapitalizados = capitalizeInitials(`${apellidoPaterno} ${apellidoMaterno}`.trim());
+        const direccionCapitalizada = capitalizeInitials(data.direccion || '');
+        const distritoCapitalizado = capitalizeInitials(data.distrito || '');
+        const provinciaCapitalizada = capitalizeInitials(data.provincia || '');
+        const departamentoCapitalizado = capitalizeInitials(data.departamento || '');
+        
+        setContactFormData(prev => ({
+          ...prev,
+          firstName: nombresCapitalizados,
+          lastName: apellidosCapitalizados,
+          address: direccionCapitalizada,
+          city: distritoCapitalizado,
+          state: provinciaCapitalizada,
+          country: departamentoCapitalizado || 'Perú',
+        }));
       } else {
         setDniError('No se encontró información para este DNI');
       }
@@ -919,11 +938,15 @@ const CompanyDetail: React.FC = () => {
         const apellidoPaterno = data.apellido_paterno || '';
         const apellidoMaterno = data.apellido_materno || '';
         
-        setContactFormData({
-          ...contactFormData,
-          firstName: nombres,
-          lastName: `${apellidoPaterno} ${apellidoMaterno}`.trim(),
-        });
+        // Capitalizar solo las iniciales
+        const nombresCapitalizados = capitalizeInitials(nombres);
+        const apellidosCapitalizados = capitalizeInitials(`${apellidoPaterno} ${apellidoMaterno}`.trim());
+        
+        setContactFormData(prev => ({
+          ...prev,
+          firstName: nombresCapitalizados,
+          lastName: apellidosCapitalizados,
+        }));
       } else {
         setCeeError('No se encontró información para este CEE');
       }
@@ -1521,10 +1544,11 @@ const CompanyDetail: React.FC = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: { xs: 2, md: 3 } }}>
               <Box sx={{ position: 'relative', mb: { xs: 1, md: 2 } }}>
                 <Avatar
+                  src={empresaLogo}
                   sx={{
                     width: { xs: 80, md: 120 },
                     height: { xs: 80, md: 120 },
-                    bgcolor: taxiMonterricoColors.orange,
+                    bgcolor: empresaLogo ? 'transparent' : taxiMonterricoColors.orange,
                     fontSize: { xs: '2rem', md: '3rem' },
                     transition: 'all 0.3s ease',
                     cursor: 'pointer',
@@ -1534,7 +1558,7 @@ const CompanyDetail: React.FC = () => {
                     },
                   }}
                 >
-                  {getInitials(company.name)}
+                  {!empresaLogo && getInitials(company.name)}
                 </Avatar>
                 <CheckCircle 
                   sx={{ 
@@ -1587,11 +1611,12 @@ const CompanyDetail: React.FC = () => {
                     width: { xs: 44, md: 52 },
                     height: { xs: 44, md: 52 },
                     borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : '#E8F5E9',
-                    color: taxiMonterricoColors.orange,
+                    bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orange : taxiMonterricoColors.orange,
+                    color: 'white',
                     transition: 'all 0.2s ease',
+                    boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}30` : '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orangeDark : taxiMonterricoColors.orangeDark,
                       transform: 'scale(1.05)',
                     },
                   }}
@@ -1610,11 +1635,12 @@ const CompanyDetail: React.FC = () => {
                     width: { xs: 44, md: 52 },
                     height: { xs: 44, md: 52 },
                     borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : '#E8F5E9',
-                    color: taxiMonterricoColors.orange,
+                    bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orange : taxiMonterricoColors.orange,
+                    color: 'white',
                     transition: 'all 0.2s ease',
+                    boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}30` : '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orangeDark : taxiMonterricoColors.orangeDark,
                       transform: 'scale(1.05)',
                     },
                   }}
@@ -1633,11 +1659,12 @@ const CompanyDetail: React.FC = () => {
                     width: { xs: 44, md: 52 },
                     height: { xs: 44, md: 52 },
                     borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : '#E8F5E9',
-                    color: taxiMonterricoColors.orange,
+                    bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orange : taxiMonterricoColors.orange,
+                    color: 'white',
                     transition: 'all 0.2s ease',
+                    boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}30` : '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orangeDark : taxiMonterricoColors.orangeDark,
                       transform: 'scale(1.05)',
                     },
                   }}
@@ -1656,11 +1683,12 @@ const CompanyDetail: React.FC = () => {
                     width: { xs: 44, md: 52 },
                     height: { xs: 44, md: 52 },
                     borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : '#E8F5E9',
-                    color: taxiMonterricoColors.orange,
+                    bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orange : taxiMonterricoColors.orange,
+                    color: 'white',
                     transition: 'all 0.2s ease',
+                    boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}30` : '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orangeDark : taxiMonterricoColors.orangeDark,
                       transform: 'scale(1.05)',
                     },
                   }}
@@ -1679,11 +1707,12 @@ const CompanyDetail: React.FC = () => {
                     width: { xs: 44, md: 52 },
                     height: { xs: 44, md: 52 },
                     borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : '#E8F5E9',
-                    color: taxiMonterricoColors.orange,
+                    bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orange : taxiMonterricoColors.orange,
+                    color: 'white',
                     transition: 'all 0.2s ease',
+                    boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}30` : '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orangeDark : taxiMonterricoColors.orangeDark,
                       transform: 'scale(1.05)',
                     },
                   }}
@@ -1702,11 +1731,12 @@ const CompanyDetail: React.FC = () => {
                     width: { xs: 44, md: 52 },
                     height: { xs: 44, md: 52 },
                     borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : '#E8F5E9',
-                    color: taxiMonterricoColors.orange,
+                    bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orange : taxiMonterricoColors.orange,
+                    color: 'white',
                     transition: 'all 0.2s ease',
+                    boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}30` : '#C8E6C9',
+                      bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orangeDark : taxiMonterricoColors.orangeDark,
                       transform: 'scale(1.05)',
                     },
                   }}
