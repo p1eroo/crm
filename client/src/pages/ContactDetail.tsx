@@ -2532,18 +2532,6 @@ const ContactDetail: React.FC = () => {
               </Menu>
             </Box>
 
-            {/* Propietario del contacto */}
-            {contact.Owner && (
-              <Box sx={{ mb: 2.5 }}>
-                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', display: 'block', mb: 0.5 }}>
-                  Propietario del contacto
-                </Typography>
-                <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
-                  {contact.Owner.firstName} {contact.Owner.lastName}
-                </Typography>
-              </Box>
-            )}
-
             {/* Rol de compra */}
             <Box sx={{ mb: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flex: 1 }}>
@@ -2871,9 +2859,7 @@ const ContactDetail: React.FC = () => {
                 {/* Aspectos destacados de los datos */}
                 <Card sx={{ 
                   mb: 3, 
-                  p: 3, 
-                  pb: 6,
-                  minHeight: '300px',
+                  p: 2.5, 
                   borderRadius: 2, 
                   boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
                   bgcolor: 'transparent',
@@ -2885,7 +2871,7 @@ const ContactDetail: React.FC = () => {
                       Aspectos destacados de los datos
                     </Typography>
                   </Box>
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3 }}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2.5 }}>
                     <Box sx={{ textAlign: 'center' }}>
                       <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                         FECHA DE CREACIÓN
@@ -5909,9 +5895,20 @@ const ContactDetail: React.FC = () => {
                                           </Box>
                                         )}
                                         {!isExpanded && (
-                                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', pl: 0, fontStyle: 'italic' }}>
-                                            {activity.type === 'note' ? 'nuevo' : activity.type === 'email' ? 'correo' : activity.type === 'call' ? 'llamada' : activity.type === 'task' ? 'tarea' : activity.type === 'meeting' ? 'reunion' : 'actividad'}
-                                          </Typography>
+                                          <Box>
+                                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', pl: 0, fontStyle: 'italic' }}>
+                                              {activity.type === 'note' ? 'nuevo' : activity.type === 'email' ? 'correo' : activity.type === 'call' ? 'llamada' : activity.type === 'task' ? 'tarea' : activity.type === 'meeting' ? 'reunion' : 'actividad'}
+                                            </Typography>
+                                            {activity.dueDate && (activity.type === 'task' || activity.isTask) && (
+                                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem', mt: 0.5, display: 'block' }}>
+                                                Programada para: {new Date(activity.dueDate).toLocaleDateString('es-ES', {
+                                                  day: 'numeric',
+                                                  month: 'short',
+                                                  year: 'numeric',
+                                                })}
+                                              </Typography>
+                                            )}
+                                          </Box>
                                         )}
                                       </Box>
                                     </Box>

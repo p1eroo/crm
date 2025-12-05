@@ -5,9 +5,38 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE y Edge */
+}
+
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari y Opera */
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+/* Ocultar barras de desplazamiento pero mantener funcionalidad de scroll */
+* {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE y Edge */
+}
+
+*::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari y Opera */
+  width: 0 !important;
+  height: 0 !important;
+}
+
+html {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE y Edge */
+}
+
+html::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari y Opera */
+  width: 0 !important;
+  height: 0 !important;
 }

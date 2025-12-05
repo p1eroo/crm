@@ -82,6 +82,7 @@ import {
   Twitter,
   LinkedIn,
   YouTube,
+  Bolt,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../config/api';
@@ -114,6 +115,7 @@ interface Contact {
   twitter?: string;
   linkedin?: string;
   youtube?: string;
+  ownerId?: number | null;
   Company?: { 
     id: number;
     name: string;
@@ -175,16 +177,31 @@ const Contacts: React.FC = () => {
   const [loadingCee, setLoadingCee] = useState(false);
   const [ceeError, setCeeError] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [contactToDelete, setContactToDelete] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<{ [key: number]: HTMLElement | null }>({});
   const [updatingStatus, setUpdatingStatus] = useState<{ [key: number]: boolean }>({});
   const [importing, setImporting] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [ownerFilterAnchor, setOwnerFilterAnchor] = useState<null | HTMLElement>(null);
+  const [selectedOwnerFilter, setSelectedOwnerFilter] = useState<string | number | null>(null);
+  const [ownerSearch, setOwnerSearch] = useState('');
+  const [users, setUsers] = useState<any[]>([]);
 
   useEffect(() => {
     fetchContacts();
+    fetchUsers();
   }, [search]);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await api.get('/users');
+      setUsers(response.data || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
 
   const handleExportToExcel = () => {
     // Preparar los datos para exportar
@@ -336,6 +353,7 @@ const Contacts: React.FC = () => {
   };
 
   const handleOpen = (contact?: Contact) => {
+    setFormErrors({});
     if (contact) {
       setEditingContact(contact);
       setFormData({
@@ -524,13 +542,39 @@ const Contacts: React.FC = () => {
     setEditingContact(null);
   };
 
+  const validateForm = () => {
+    const errors: { [key: string]: string } = {};
+
+    if (!formData.firstName.trim()) {
+      errors.firstName = 'El nombre es requerido';
+    }
+
+    if (!formData.lastName.trim()) {
+      errors.lastName = 'El apellido es requerido';
+    }
+
+    if (!formData.email.trim()) {
+      errors.email = 'El email es requerido';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'El email no es válido';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
     try {
       if (editingContact) {
         await api.put(`/contacts/${editingContact.id}`, formData);
       } else {
         await api.post('/contacts', formData);
       }
+      setFormErrors({});
       handleClose();
       fetchContacts();
     } catch (error) {
@@ -782,6 +826,27 @@ const Contacts: React.FC = () => {
         }
       }
       
+      // Filtro por propietario
+      if (selectedOwnerFilter !== null) {
+        if (selectedOwnerFilter === 'me') {
+          if (contact.ownerId !== user?.id) {
+            return false;
+          }
+        } else if (selectedOwnerFilter === 'unassigned') {
+          if (contact.ownerId !== null && contact.ownerId !== undefined) {
+            return false;
+          }
+        } else if (selectedOwnerFilter === 'deactivated') {
+          // Todos los propietarios desactivados y eliminados
+          // Por ahora, no hay lógica para esto, se puede implementar después
+          return true;
+        } else {
+          if (contact.ownerId !== selectedOwnerFilter) {
+            return false;
+          }
+        }
+      }
+      
       // Filtro por búsqueda
       if (!search) return true;
       const searchLower = search.toLowerCase();
@@ -1010,29 +1075,201 @@ const Contacts: React.FC = () => {
         <Box sx={{ px: 3, pt: 3, pb: 2 }}>
           {/* Header de la tabla con título, búsqueda y ordenamiento */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-            <Box>
-              <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.25 }}>
-                Todos los Clientes
-              </Typography>
-              <Typography
-                component="a"
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setActiveTab(1);
-                }}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box>
+                <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.25 }}>
+                  Todos los Clientes
+                </Typography>
+                <Typography
+                  component="a"
+                  href="#"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setActiveTab(1);
+                  }}
+                  sx={{
+                    fontSize: '0.875rem',
+                    color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
+                    textDecoration: 'none',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      textDecoration: 'underline',
+                    },
+                  }}
+                >
+                  Miembros Activos
+                </Typography>
+              </Box>
+              <Button
+                variant="outlined"
+                onClick={(e) => setOwnerFilterAnchor(e.currentTarget)}
+                endIcon={<KeyboardArrowDown />}
                 sx={{
-                  fontSize: '0.875rem',
-                  color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
-                  textDecoration: 'none',
-                  cursor: 'pointer',
+                  textTransform: 'none',
+                  borderRadius: 1.5,
+                  borderColor: theme.palette.divider,
+                  color: theme.palette.text.primary,
                   '&:hover': {
-                    textDecoration: 'underline',
+                    borderColor: theme.palette.text.secondary,
+                    bgcolor: theme.palette.action.hover,
                   },
                 }}
               >
-                Miembros Activos
-              </Typography>
+                Propietario del contacto
+              </Button>
+              <Menu
+                anchorEl={ownerFilterAnchor}
+                open={Boolean(ownerFilterAnchor)}
+                onClose={() => {
+                  setOwnerFilterAnchor(null);
+                  setOwnerSearch('');
+                }}
+                PaperProps={{
+                  sx: {
+                    minWidth: 300,
+                    maxWidth: 400,
+                    mt: 1,
+                    borderRadius: 2,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  }
+                }}
+              >
+                <Box sx={{ p: 2, pb: 1 }}>
+                  <TextField
+                    size="small"
+                    placeholder="Buscar"
+                    value={ownerSearch}
+                    onChange={(e) => setOwnerSearch(e.target.value)}
+                    fullWidth
+                    InputProps={{
+                      startAdornment: <Search sx={{ mr: 1, color: theme.palette.text.secondary, fontSize: 20 }} />,
+                    }}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 1,
+                      },
+                    }}
+                  />
+                </Box>
+                <Divider />
+                <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
+                  <MenuItem
+                    onClick={() => {
+                      setSelectedOwnerFilter(selectedOwnerFilter === 'me' ? null : 'me');
+                    }}
+                    selected={selectedOwnerFilter === 'me'}
+                    sx={{
+                      py: 1.5,
+                      px: 2,
+                      '&.Mui-selected': {
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.16)' : 'rgba(25, 118, 210, 0.08)',
+                      },
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                      <MuiCheckbox
+                        checked={selectedOwnerFilter === 'me'}
+                        size="small"
+                      />
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+                        <Bolt sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                        <Box>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            Yo
+                          </Typography>
+                          <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.7rem' }}>
+                            Este valor se aplica dinámicamente al usuario actual
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => {
+                      setSelectedOwnerFilter(selectedOwnerFilter === 'deactivated' ? null : 'deactivated');
+                    }}
+                    selected={selectedOwnerFilter === 'deactivated'}
+                    sx={{
+                      py: 1.5,
+                      px: 2,
+                      '&.Mui-selected': {
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.16)' : 'rgba(25, 118, 210, 0.08)',
+                      },
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                      <MuiCheckbox
+                        checked={selectedOwnerFilter === 'deactivated'}
+                        size="small"
+                      />
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+                        <Bolt sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          Todos los propietarios desactivados y eliminados
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </MenuItem>
+                  {users
+                    .filter((u) => {
+                      if (!ownerSearch) return true;
+                      const searchLower = ownerSearch.toLowerCase();
+                      return (
+                        `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchLower) ||
+                        u.email?.toLowerCase().includes(searchLower)
+                      );
+                    })
+                    .map((userItem) => (
+                      <MenuItem
+                        key={userItem.id}
+                        onClick={() => {
+                          setSelectedOwnerFilter(selectedOwnerFilter === userItem.id ? null : userItem.id);
+                        }}
+                        selected={selectedOwnerFilter === userItem.id}
+                        sx={{
+                          py: 1.5,
+                          px: 2,
+                          '&.Mui-selected': {
+                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.16)' : 'rgba(25, 118, 210, 0.08)',
+                          },
+                        }}
+                      >
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                          <MuiCheckbox
+                            checked={selectedOwnerFilter === userItem.id}
+                            size="small"
+                          />
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {userItem.firstName} {userItem.lastName}
+                          </Typography>
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  <MenuItem
+                    onClick={() => {
+                      setSelectedOwnerFilter(selectedOwnerFilter === 'unassigned' ? null : 'unassigned');
+                    }}
+                    selected={selectedOwnerFilter === 'unassigned'}
+                    sx={{
+                      py: 1.5,
+                      px: 2,
+                      '&.Mui-selected': {
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.16)' : 'rgba(25, 118, 210, 0.08)',
+                      },
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                      <MuiCheckbox
+                        checked={selectedOwnerFilter === 'unassigned'}
+                        size="small"
+                      />
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        Sin asignar
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                </Box>
+              </Menu>
             </Box>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <TextField
@@ -1189,8 +1426,11 @@ const Contacts: React.FC = () => {
                 <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.875rem', md: '0.9375rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}>
                   País
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.875rem', md: '0.9375rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}>
-                  Estado
+                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.875rem', md: '0.9375rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
+                  Propietario del contacto
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.875rem', md: '0.9375rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
+                  Etapa del Ciclo de Vida
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.875rem', md: '0.9375rem' }, py: { xs: 1.5, md: 2 }, px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
                   Acciones
@@ -1301,89 +1541,38 @@ const Contacts: React.FC = () => {
                       {contact.country || '--'}
                     </Typography>
                   </TableCell>
-                  <TableCell 
-                    sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
+                    {contact.Owner ? (
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: theme.palette.text.primary,
+                          fontSize: { xs: '0.875rem', md: '0.9375rem' },
+                          fontWeight: 400,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {contact.Owner.firstName} {contact.Owner.lastName}
+                      </Typography>
+                    ) : (
+                      <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.875rem', md: '0.9375rem' }, fontWeight: 400 }}>
+                        --
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
                     <Chip
-                      label={contact.lifecycleStage === 'cierre_ganado' ? 'Activo' : 'Inactivo'}
+                      label={getStageLabel(contact.lifecycleStage || 'lead')}
                       size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        handleStatusMenuOpen(e, contact.id);
-                      }}
-                      disabled={updatingStatus[contact.id]}
+                      color={getStageColor(contact.lifecycleStage || 'lead')}
                       sx={{ 
                         fontWeight: 500,
                         fontSize: { xs: '0.7rem', md: '0.75rem' },
                         height: { xs: 20, md: 24 },
-                        bgcolor: contact.lifecycleStage === 'cierre_ganado'
-                          ? '#E8F5E9' 
-                          : '#FFEBEE',
-                        color: contact.lifecycleStage === 'cierre_ganado'
-                          ? '#2E7D32'
-                          : '#C62828',
-                        border: 'none',
-                        borderRadius: 1,
-                        cursor: 'pointer',
-                        '&:hover': {
-                          opacity: 0.8,
-                        },
                       }}
                     />
-                    <Menu
-                      anchorEl={statusMenuAnchor[contact.id]}
-                      open={Boolean(statusMenuAnchor[contact.id])}
-                      onClose={(e, reason) => {
-                        if (e && 'stopPropagation' in e) {
-                          (e as React.MouseEvent).stopPropagation();
-                        }
-                        handleStatusMenuClose(contact.id);
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      PaperProps={{
-                        sx: {
-                          minWidth: 150,
-                          mt: 0.5,
-                          borderRadius: 1.5,
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                        }
-                      }}
-                    >
-                      <MenuItem
-                        onClick={(e) => handleStatusChange(e, contact.id, true)}
-                        disabled={updatingStatus[contact.id] || contact.lifecycleStage === 'cierre_ganado'}
-                        sx={{
-                          fontSize: '0.875rem',
-                          color: '#2E7D32',
-                          '&:hover': {
-                            bgcolor: '#E8F5E9',
-                          },
-                          '&.Mui-disabled': {
-                            opacity: 0.5,
-                          }
-                        }}
-                      >
-                        Activo
-                      </MenuItem>
-                      <MenuItem
-                        onClick={(e) => handleStatusChange(e, contact.id, false)}
-                        disabled={updatingStatus[contact.id] || contact.lifecycleStage !== 'cierre_ganado'}
-                        sx={{
-                          fontSize: '0.875rem',
-                          color: '#C62828',
-                          '&:hover': {
-                            bgcolor: '#FFEBEE',
-                          },
-                          '&.Mui-disabled': {
-                            opacity: 0.5,
-                          }
-                        }}
-                      >
-                        Inactivo
-                      </MenuItem>
-                    </Menu>
                   </TableCell>
                   <TableCell sx={{ px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
                     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
@@ -1475,19 +1664,36 @@ const Contacts: React.FC = () => {
             {(() => {
               const totalPages = Math.ceil(filteredContacts.length / rowsPerPage);
               const pagesToShow: number[] = [];
+              const currentPageNum = page + 1; // Convertir de 0-indexed a 1-indexed
               
-              // Mostrar primera página
-              pagesToShow.push(1);
-              
-              // Mostrar páginas alrededor de la actual
-              for (let i = Math.max(2, page); i <= Math.min(page + 2, totalPages - 1); i++) {
-                if (!pagesToShow.includes(i)) pagesToShow.push(i);
+              // Si hay pocas páginas, mostrar todas
+              if (totalPages <= 5) {
+                for (let i = 1; i <= totalPages; i++) {
+                  pagesToShow.push(i);
+                }
+              } else {
+                // Siempre mostrar primera página
+                pagesToShow.push(1);
+                
+                // Calcular rango de páginas alrededor de la actual
+                const startPage = Math.max(2, currentPageNum - 1);
+                const endPage = Math.min(totalPages - 1, currentPageNum + 1);
+                
+                // Agregar páginas alrededor de la actual
+                for (let i = startPage; i <= endPage; i++) {
+                  if (!pagesToShow.includes(i)) {
+                    pagesToShow.push(i);
+                  }
+                }
+                
+                // Mostrar última página si no está incluida
+                if (!pagesToShow.includes(totalPages)) {
+                  pagesToShow.push(totalPages);
+                }
               }
               
-              // Mostrar última página si hay más de 5 páginas
-              if (totalPages > 5 && !pagesToShow.includes(totalPages)) {
-                pagesToShow.push(totalPages);
-              }
+              // Ordenar las páginas
+              pagesToShow.sort((a, b) => a - b);
               
               return pagesToShow.map((pageNum, idx) => {
                 const showEllipsis = idx > 0 && pageNum - pagesToShow[idx - 1] > 1;
@@ -1781,7 +1987,14 @@ const Contacts: React.FC = () => {
               <TextField
                 label="Nombre"
                 value={formData.firstName}
-                onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, firstName: e.target.value }));
+                  if (formErrors.firstName) {
+                    setFormErrors(prev => ({ ...prev, firstName: '' }));
+                  }
+                }}
+                error={!!formErrors.firstName}
+                helperText={formErrors.firstName}
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
@@ -1793,7 +2006,14 @@ const Contacts: React.FC = () => {
               <TextField
                 label="Apellido"
                 value={formData.lastName}
-                onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, lastName: e.target.value }));
+                  if (formErrors.lastName) {
+                    setFormErrors(prev => ({ ...prev, lastName: '' }));
+                  }
+                }}
+                error={!!formErrors.lastName}
+                helperText={formErrors.lastName}
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
@@ -1810,7 +2030,14 @@ const Contacts: React.FC = () => {
                 label="Email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, email: e.target.value }));
+                  if (formErrors.email) {
+                    setFormErrors(prev => ({ ...prev, email: '' }));
+                  }
+                }}
+                error={!!formErrors.email}
+                helperText={formErrors.email}
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,

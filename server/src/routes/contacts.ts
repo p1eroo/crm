@@ -78,8 +78,8 @@ router.post('/', async (req: AuthRequest, res) => {
   try {
     const contactData = {
       ...req.body,
-      // No asignar ownerId automáticamente para que todos los usuarios vean los mismos datos
-      ownerId: req.body.ownerId || null,
+      // Asignar automáticamente el usuario actual como propietario del contacto
+      ownerId: req.body.ownerId || req.userId || null,
     };
 
     const contact = await Contact.create(contactData);

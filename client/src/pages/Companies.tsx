@@ -898,9 +898,6 @@ const Companies: React.FC = () => {
                 <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '30%' } }}>
                   Nombre de Empresa
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '20%' } }}>
-                  Dominio
-                </TableCell>
                 <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
                   Industria
                 </TableCell>
@@ -928,7 +925,7 @@ const Companies: React.FC = () => {
                   onClick={() => navigate(`/companies/${company.id}`)}
                 >
                   <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '30%' } }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1, md: 1.5 } }}>
                       <Avatar
                         src={empresaLogo}
                         sx={{
@@ -943,40 +940,62 @@ const Companies: React.FC = () => {
                       >
                         {!empresaLogo && getInitials(company.name)}
                       </Avatar>
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          fontWeight: 500, 
-                          color: theme.palette.text.primary,
-                          fontSize: { xs: '0.75rem', md: '0.875rem' },
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {company.name}
-                      </Typography>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            fontWeight: 500, 
+                            color: theme.palette.text.primary,
+                            fontSize: { xs: '0.75rem', md: '0.875rem' },
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            mb: 0.25,
+                          }}
+                        >
+                          {company.name}
+                        </Typography>
+                        {company.domain && company.domain !== '--' ? (
+                          <Typography 
+                            component="a"
+                            href={company.domain.startsWith('http') ? company.domain : `https://${company.domain}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            variant="caption" 
+                            onClick={(e) => e.stopPropagation()}
+                            sx={{ 
+                              color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
+                              fontSize: { xs: '0.7rem', md: '0.75rem' },
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              display: 'block',
+                              textDecoration: 'none',
+                              cursor: 'pointer',
+                              '&:hover': {
+                                textDecoration: 'underline',
+                              },
+                            }}
+                          >
+                            {company.domain}
+                          </Typography>
+                        ) : (
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              color: theme.palette.text.secondary,
+                              fontSize: { xs: '0.7rem', md: '0.75rem' },
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              display: 'block',
+                            }}
+                          >
+                            --
+                          </Typography>
+                        )}
+                      </Box>
                     </Box>
-                  </TableCell>
-                  <TableCell sx={{ px: 1, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '20%' } }}>
-                    {company.domain ? (
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: theme.palette.text.primary,
-                          fontSize: { xs: '0.75rem', md: '0.875rem' },
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {company.domain}
-                      </Typography>
-                    ) : (
-                      <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                        --
-                      </Typography>
-                    )}
                   </TableCell>
                   <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
                     {company.industry ? (

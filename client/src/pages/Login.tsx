@@ -10,7 +10,7 @@ import {
   Alert,
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
-import logo from '../assets/logo-taxi-monterrico.svg';
+import logo from '../assets/TM.png';
 import loginImage from '../assets/img.login.png';
 
 const Login: React.FC = () => {
