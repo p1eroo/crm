@@ -1,8 +1,14 @@
 -- ============================================
--- Script SQL para crear todas las tablas del CRM
+-- Script SQL para crear la base de datos del CRM en PostgreSQL
 -- ============================================
 
+-- Crear la base de datos (ejecutar como superusuario)
+-- CREATE DATABASE crm_db;
+-- \c crm_db;
+
 -- Eliminar tablas si existen (en orden inverso de dependencias)
+DROP TABLE IF EXISTS monthly_budgets CASCADE;
+DROP TABLE IF EXISTS user_google_tokens CASCADE;
 DROP TABLE IF EXISTS payments CASCADE;
 DROP TABLE IF EXISTS subscriptions CASCADE;
 DROP TABLE IF EXISTS activities CASCADE;
@@ -15,6 +21,7 @@ DROP TABLE IF EXISTS automations CASCADE;
 DROP TABLE IF EXISTS contacts CASCADE;
 DROP TABLE IF EXISTS companies CASCADE;
 DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS roles CASCADE;
 
 -- Eliminar tipos ENUM si existen
 DROP TYPE IF EXISTS lifecycle_stage_enum CASCADE;
@@ -32,7 +39,9 @@ DROP TYPE IF EXISTS payment_method_enum CASCADE;
 DROP TYPE IF EXISTS subscription_status_enum CASCADE;
 DROP TYPE IF EXISTS billing_cycle_enum CASCADE;
 
+-- ============================================
 -- Crear tipos ENUM
+-- ============================================
 CREATE TYPE lifecycle_stage_enum AS ENUM (
     'lead_inactivo',
     'cliente_perdido',
@@ -49,6 +58,7 @@ CREATE TYPE lifecycle_stage_enum AS ENUM (
     'firma_contrato',
     'activo'
 );
+
 CREATE TYPE task_type_enum AS ENUM ('call', 'email', 'meeting', 'note', 'todo', 'other');
 CREATE TYPE task_status_enum AS ENUM ('not started', 'in progress', 'completed', 'cancelled');
 CREATE TYPE task_priority_enum AS ENUM ('low', 'medium', 'high', 'urgent');
@@ -102,9 +112,6 @@ CREATE TABLE users (
     CONSTRAINT fk_users_role FOREIGN KEY ("roleId") REFERENCES roles(id) ON DELETE RESTRICT,
     CONSTRAINT email_check CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
 );
-
--- Crear índice para mejorar el rendimiento
-CREATE INDEX idx_users_roleId ON users("roleId");
 
 -- ============================================
 -- Tabla: companies
@@ -224,6 +231,7 @@ CREATE TABLE tasks (
     "contactId" INTEGER,
     "companyId" INTEGER,
     "dealId" INTEGER,
+    "googleCalendarEventId" VARCHAR(255),
     "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_tasks_assigned FOREIGN KEY ("assignedToId") REFERENCES users(id) ON DELETE RESTRICT,
@@ -329,7 +337,7 @@ CREATE TABLE subscriptions (
     "endDate" TIMESTAMP WITH TIME ZONE,
     "renewalDate" TIMESTAMP WITH TIME ZONE,
     amount DECIMAL(15, 2) NOT NULL,
-    currency VARCHAR(255) DEFAULT 'USD',
+    currency VARCHAR(255) DEFAULT 'PEN',
     "billingCycle" billing_cycle_enum NOT NULL DEFAULT 'monthly',
     "contactId" INTEGER,
     "companyId" INTEGER,
@@ -347,7 +355,7 @@ CREATE TABLE subscriptions (
 CREATE TABLE payments (
     id SERIAL PRIMARY KEY,
     amount DECIMAL(15, 2) NOT NULL,
-    currency VARCHAR(255) DEFAULT 'USD',
+    currency VARCHAR(255) DEFAULT 'PEN',
     status payment_status_enum NOT NULL DEFAULT 'pending',
     "paymentDate" TIMESTAMP WITH TIME ZONE NOT NULL,
     "dueDate" TIMESTAMP WITH TIME ZONE,
@@ -367,10 +375,39 @@ CREATE TABLE payments (
 );
 
 -- ============================================
+-- Tabla: user_google_tokens
+-- ============================================
+CREATE TABLE user_google_tokens (
+    id SERIAL PRIMARY KEY,
+    "userId" INTEGER NOT NULL UNIQUE,
+    "accessToken" TEXT NOT NULL,
+    "refreshToken" TEXT,
+    "tokenExpiry" TIMESTAMP WITH TIME ZONE,
+    scope TEXT NOT NULL DEFAULT '',
+    "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_user_google_tokens_user FOREIGN KEY ("userId") REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- ============================================
+-- Tabla: monthly_budgets
+-- ============================================
+CREATE TABLE monthly_budgets (
+    id SERIAL PRIMARY KEY,
+    month INTEGER NOT NULL CHECK (month >= 0 AND month <= 11),
+    year INTEGER NOT NULL,
+    amount DECIMAL(15, 2) NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_month_year UNIQUE (month, year)
+);
+
+-- ============================================
 -- Índices para mejorar el rendimiento
 -- ============================================
 
 -- Índices para users
+CREATE INDEX idx_users_roleId ON users("roleId");
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_usuario ON users(usuario);
 
@@ -427,9 +464,16 @@ CREATE INDEX idx_payments_subscription_id ON payments("subscriptionId");
 CREATE INDEX idx_payments_status ON payments(status);
 CREATE INDEX idx_payments_payment_date ON payments("paymentDate");
 
+-- Índices para user_google_tokens
+CREATE INDEX idx_user_google_tokens_user_id ON user_google_tokens("userId");
+
+-- Índices para monthly_budgets
+CREATE INDEX idx_monthly_budgets_month_year ON monthly_budgets(month, year);
+
 -- ============================================
 -- Comentarios en las tablas
 -- ============================================
+COMMENT ON TABLE roles IS 'Tabla de roles del sistema';
 COMMENT ON TABLE users IS 'Tabla de usuarios del sistema';
 COMMENT ON TABLE companies IS 'Tabla de empresas/clientes';
 COMMENT ON TABLE contacts IS 'Tabla de contactos';
@@ -442,4 +486,5 @@ COMMENT ON TABLE automations IS 'Tabla de automatizaciones';
 COMMENT ON TABLE activities IS 'Tabla de actividades/registro de acciones';
 COMMENT ON TABLE subscriptions IS 'Tabla de suscripciones';
 COMMENT ON TABLE payments IS 'Tabla de pagos';
-
+COMMENT ON TABLE user_google_tokens IS 'Tabla de tokens de Google Calendar para usuarios';
+COMMENT ON TABLE monthly_budgets IS 'Tabla de presupuestos mensuales';

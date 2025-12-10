@@ -30,6 +30,7 @@ import {
   Edit,
   DarkMode,
   LightMode,
+  Assessment,
 } from '@mui/icons-material';
 import { taxiMonterricoColors } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
@@ -40,13 +41,14 @@ import logo from '../../assets/logo-taxi-monterrico.svg';
 const drawerWidth = 80;
 
 const mainMenuItems = [
-  { text: 'Dashboard', icon: <Dashboard />, path: '/' },
-  { text: 'Contactos', icon: <People />, path: '/contacts' },
-  { text: 'Empresas', icon: <Business />, path: '/companies' },
-  { text: 'Negocios', icon: <AttachMoney />, path: '/deals' },
-  { text: 'Pipeline', icon: <AccountTree />, path: '/pipeline' },
-  { text: 'Tareas', icon: <Assignment />, path: '/tasks' },
-  { text: 'Tickets', icon: <Support />, path: '/tickets' },
+  { text: 'Dashboard', icon: <Dashboard />, path: '/', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Contactos', icon: <People />, path: '/contacts', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Empresas', icon: <Business />, path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Negocios', icon: <AttachMoney />, path: '/deals', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Pipeline', icon: <AccountTree />, path: '/pipeline', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Tareas', icon: <Assignment />, path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Tickets', icon: <Support />, path: '/tickets', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Reportes', icon: <Assessment />, path: '/reports', roles: ['admin', 'jefe_comercial'] },
   // { text: 'Campañas', icon: <Campaign />, path: '/campaigns' },
   // { text: 'Automatizaciones', icon: <Timeline />, path: '/automations' },
 ];
@@ -142,13 +144,23 @@ const Sidebar: React.FC = () => {
         alignItems: 'center',
         gap: 0.5,
       }}>
-        {mainMenuItems.map((item) => {
-          // Para Dashboard, solo coincidir exactamente con '/'
-          // Para otros, coincidir si el pathname comienza con el path del item
-          const isSelected = item.path === '/' 
-            ? location.pathname === '/' 
-            : location.pathname === item.path || location.pathname.startsWith(item.path + '/');
-          return (
+        {mainMenuItems
+          .filter((item) => {
+            // Si el item tiene roles definidos, verificar que el usuario tenga uno de esos roles
+            if (item.roles) {
+              const userRole = user?.role;
+              return userRole && item.roles.includes(userRole);
+            }
+            // Si no tiene roles definidos, mostrar para todos (compatibilidad hacia atrás)
+            return true;
+          })
+          .map((item) => {
+            // Para Dashboard, solo coincidir exactamente con '/'
+            // Para otros, coincidir si el pathname comienza con el path del item
+            const isSelected = item.path === '/' 
+              ? location.pathname === '/' 
+              : location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+            return (
             <Tooltip 
               key={item.text}
               title={item.text} 

@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import os from 'os';
+import './config/env'; // Cargar configuración de entorno (debe ser lo primero)
 import { sequelize } from './config/database';
 import './models'; // Import models to register associations
 import { Role } from './models/Role';
@@ -20,8 +20,6 @@ import dashboardRoutes from './routes/dashboard';
 import automationRoutes from './routes/automations';
 import emailRoutes from './routes/emails';
 import googleRoutes from './routes/calendar';
-
-dotenv.config();
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '5000', 10);
@@ -83,6 +81,127 @@ app.use('/api/google', googleRoutes);
 app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'CRM API is running' });
 });
+
+// Función para manejar la migración de todos los ENUMs antes de sync
+async function ensureAllEnumsMigration() {
+  try {
+    console.log('🔧 Verificando y migrando ENUMs...');
+    
+    // Mapeo de tipos ENUM existentes en la base de datos
+    const enumMappings: { [key: string]: { table: string; column: string; enumType: string }[] } = {
+      'lifecycle_stage_enum': [
+        { table: 'companies', column: 'lifecycleStage', enumType: 'lifecycle_stage_enum' },
+        { table: 'contacts', column: 'lifecycleStage', enumType: 'lifecycle_stage_enum' }
+      ],
+      'task_type_enum': [
+        { table: 'tasks', column: 'type', enumType: 'task_type_enum' }
+      ],
+      'task_status_enum': [
+        { table: 'tasks', column: 'status', enumType: 'task_status_enum' }
+      ],
+      'task_priority_enum': [
+        { table: 'tasks', column: 'priority', enumType: 'task_priority_enum' }
+      ],
+      'ticket_status_enum': [
+        { table: 'tickets', column: 'status', enumType: 'ticket_status_enum' }
+      ],
+      'ticket_priority_enum': [
+        { table: 'tickets', column: 'priority', enumType: 'ticket_priority_enum' }
+      ],
+      'campaign_type_enum': [
+        { table: 'campaigns', column: 'type', enumType: 'campaign_type_enum' }
+      ],
+      'campaign_status_enum': [
+        { table: 'campaigns', column: 'status', enumType: 'campaign_status_enum' }
+      ],
+      'automation_status_enum': [
+        { table: 'automations', column: 'status', enumType: 'automation_status_enum' }
+      ],
+      'activity_type_enum': [
+        { table: 'activities', column: 'type', enumType: 'activity_type_enum' }
+      ],
+      'payment_status_enum': [
+        { table: 'payments', column: 'status', enumType: 'payment_status_enum' }
+      ],
+      'payment_method_enum': [
+        { table: 'payments', column: 'method', enumType: 'payment_method_enum' }
+      ],
+      'subscription_status_enum': [
+        { table: 'subscriptions', column: 'status', enumType: 'subscription_status_enum' }
+      ],
+      'billing_cycle_enum': [
+        { table: 'subscriptions', column: 'billingCycle', enumType: 'billing_cycle_enum' }
+      ]
+    };
+
+    // Migrar cada ENUM
+    for (const [enumType, mappings] of Object.entries(enumMappings)) {
+      for (const mapping of mappings) {
+        try {
+          const [results] = await sequelize.query(`
+            SELECT column_name, udt_name
+            FROM information_schema.columns 
+            WHERE table_name = '${mapping.table}' AND column_name = '${mapping.column}'
+          `) as [Array<{ column_name: string; udt_name: string }>, unknown];
+
+          if (results.length > 0) {
+            const currentType = results[0].udt_name;
+            
+            // Si la columna no está usando el tipo ENUM correcto, convertirla
+            if (currentType !== enumType && currentType.startsWith('enum_')) {
+              console.log(`🔧 Migrando ${mapping.table}.${mapping.column} de ${currentType} a ${enumType}...`);
+              
+              await sequelize.query(`
+                ALTER TABLE ${mapping.table} 
+                ALTER COLUMN "${mapping.column}" TYPE ${enumType} 
+                USING "${mapping.column}"::text::${enumType};
+              `);
+              
+              console.log(`✓ Migración de ${mapping.table}.${mapping.column} completada.`);
+            }
+          }
+        } catch (error: any) {
+          // Ignorar errores si la columna no existe o el tipo no existe
+          if (!error.message.includes('does not exist') && !error.message.includes('no existe')) {
+            console.warn(`⚠️  Advertencia al migrar ${mapping.table}.${mapping.column}:`, error.message);
+          }
+        }
+      }
+    }
+
+    // Eliminar cualquier ENUM que Sequelize pueda intentar crear (que empiecen con enum_ pero no sean los correctos)
+    await sequelize.query(`
+      DO $$ 
+      DECLARE
+        r RECORD;
+        validEnums TEXT[] := ARRAY[
+          'lifecycle_stage_enum', 'task_type_enum', 'task_status_enum', 'task_priority_enum',
+          'ticket_status_enum', 'ticket_priority_enum', 'campaign_type_enum', 'campaign_status_enum',
+          'automation_status_enum', 'activity_type_enum', 'payment_status_enum', 'payment_method_enum',
+          'subscription_status_enum', 'billing_cycle_enum'
+        ];
+      BEGIN
+        FOR r IN 
+          SELECT typname FROM pg_type 
+          WHERE typname LIKE 'enum_%'
+          AND NOT (typname = ANY(validEnums))
+        LOOP
+          -- Solo eliminar si no está siendo usado por ninguna columna
+          BEGIN
+            EXECUTE 'DROP TYPE IF EXISTS ' || quote_ident(r.typname) || ' CASCADE';
+          EXCEPTION WHEN OTHERS THEN
+            -- Ignorar errores al eliminar
+            NULL;
+          END;
+        END LOOP;
+      END $$;
+    `);
+
+    console.log('✓ Migración de ENUMs completada.');
+  } catch (error: any) {
+    console.error('Error durante la migración de ENUMs:', error.message);
+  }
+}
 
 // Función para manejar la migración de roleId antes de sync
 async function ensureRoleIdMigration() {
@@ -163,11 +282,39 @@ sequelize.authenticate()
   .then(async () => {
     console.log('Database connection established successfully.');
     
+    // Manejar migración de todos los ENUMs antes de sync
+    await ensureAllEnumsMigration();
+    
     // Manejar migración de roleId antes de sync
     await ensureRoleIdMigration();
     
-    // Ahora hacer sync (que puede agregar otras columnas pero roleId ya existe)
-    return sequelize.sync({ alter: true });
+    // Sincronizar tablas que tienen ENUMs sin alter para evitar conflictos
+    const { Company, Contact, Task, Ticket, Campaign, Automation, Activity, Payment, Subscription } = await import('./models');
+    
+    await Company.sync({ alter: false });
+    await Contact.sync({ alter: false });
+    await Task.sync({ alter: false });
+    await Ticket.sync({ alter: false });
+    await Campaign.sync({ alter: false });
+    await Automation.sync({ alter: false });
+    await Activity.sync({ alter: false });
+    await Payment.sync({ alter: false });
+    await Subscription.sync({ alter: false });
+    
+    // Sincronizar el resto de las tablas con alter
+    const { Deal, User, Role, MonthlyBudget, UserGoogleToken, ...rest } = await import('./models');
+    
+    const modelsToSync = [Deal, User, Role, MonthlyBudget, UserGoogleToken].filter(Boolean);
+    for (const Model of modelsToSync) {
+      if (Model && typeof (Model as any).sync === 'function') {
+        await (Model as any).sync({ alter: true });
+      }
+    }
+    
+    // Ejecutar migración de ENUMs nuevamente después del sync para asegurar que todo esté correcto
+    await ensureAllEnumsMigration();
+    
+    return Promise.resolve();
   })
   .then(() => {
     const localIP = getLocalIP();

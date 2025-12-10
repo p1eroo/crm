@@ -22,6 +22,8 @@ import Automations from './pages/Automations';
 import Profile from './pages/Profile';
 import Users from './pages/Users';
 import Pipeline from './pages/Pipeline';
+import Reports from './pages/Reports';
+import ReportDetail from './pages/ReportDetail';
 
 import { taxiMonterricoColors } from './theme/colors';
 
@@ -247,6 +249,38 @@ const AppContent: React.FC = () => {
                 <MainLayout>
                   <Users />
                 </MainLayout>
+              }
+            />
+            <Route
+              path="/reports"
+              element={
+                (() => {
+                  const userRole = user?.role;
+                  if (userRole === 'admin' || userRole === 'jefe_comercial') {
+                    return (
+                      <MainLayout>
+                        <Reports />
+                      </MainLayout>
+                    );
+                  }
+                  return <Navigate to="/" replace />;
+                })()
+              }
+            />
+            <Route
+              path="/reports/:id"
+              element={
+                (() => {
+                  const userRole = user?.role;
+                  if (userRole === 'admin' || userRole === 'jefe_comercial') {
+                    return (
+                      <MainLayout>
+                        <ReportDetail />
+                      </MainLayout>
+                    );
+                  }
+                  return <Navigate to="/" replace />;
+                })()
               }
             />
             <Route path="*" element={

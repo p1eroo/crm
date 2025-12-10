@@ -352,10 +352,10 @@ router.get('/stats', async (req: AuthRequest, res) => {
       }
     }
 
-    // Leads convertidos (contactos que pasaron de lead a customer)
+    // Leads convertidos (contactos que pasaron de lead a estados finales)
     const convertedLeads = await Contact.count({
       where: {
-        lifecycleStage: { [Op.in]: ['customer', 'evangelist', 'cierre_ganado'] }
+        lifecycleStage: { [Op.in]: ['activo', 'firma_contrato', 'cierre_ganado'] }
       }
     });
     const totalLeads = await Contact.count({

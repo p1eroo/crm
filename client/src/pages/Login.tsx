@@ -15,22 +15,60 @@ import logo from '../assets/tm_logo.png';
 import fondoImage from '../assets/tm_fondo.png';
 
 const Login: React.FC = () => {
-  const [username, setUsername] = useState('');
+  // Cargar usuario recordado al inicializar el estado
+  const getRememberedUsername = () => {
+    try {
+      return localStorage.getItem('rememberedUsername') || '';
+    } catch (e) {
+      console.error('Error leyendo localStorage:', e);
+      return '';
+    }
+  };
+
+  const [username, setUsername] = useState(() => getRememberedUsername());
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => {
+    const saved = getRememberedUsername();
+    return !!saved;
+  });
   const { login, error: authError, user } = useAuth();
   const mountedRef = useRef(true);
+  const usernameInputRef = useRef<HTMLInputElement>(null);
   
   // Usar el error del contexto o el error local
   const error = authError || localError;
 
   useEffect(() => {
     mountedRef.current = true;
+    // Cargar credenciales guardadas si existen (por si acaso no se cargaron en el estado inicial)
+    const savedUsername = getRememberedUsername();
+    console.log('🔍 [useEffect] Verificando usuario recordado:', savedUsername);
+    if (savedUsername && savedUsername !== username) {
+      setUsername(savedUsername);
+      setRememberMe(true);
+      console.log('✅ [useEffect] Usuario recordado cargado:', savedUsername);
+    }
     return () => {
       mountedRef.current = false;
     };
   }, []);
+
+  // Cargar usuario recordado cuando el usuario se desautentica (después del logout)
+  useEffect(() => {
+    if (!user) {
+      const savedUsername = getRememberedUsername();
+      console.log('🔍 [useEffect user] Usuario desautenticado, verificando usuario recordado:', savedUsername);
+      if (savedUsername && savedUsername !== username) {
+        setUsername(savedUsername);
+        setRememberMe(true);
+        console.log('✅ [useEffect user] Usuario recordado cargado después del logout:', savedUsername);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
 
   // Si el usuario ya está autenticado, no renderizar nada
   // Esto evita que el componente intente actualizar el estado después del desmontaje
@@ -44,6 +82,17 @@ const Login: React.FC = () => {
     
     setLocalError('');
     setLoading(true);
+
+    // Guardar el estado de "Recordarme" ANTES de hacer login
+    // para asegurarnos de que se guarde incluso si el componente se desmonta
+    if (rememberMe && username) {
+      localStorage.setItem('rememberedUsername', username);
+      console.log('✅ Usuario guardado para recordar (antes del login):', username);
+      console.log('🔍 Verificando guardado:', localStorage.getItem('rememberedUsername'));
+    } else {
+      localStorage.removeItem('rememberedUsername');
+      console.log('🗑️ Usuario eliminado de recordar');
+    }
 
     const success = await login(username, password);
     
@@ -146,13 +195,50 @@ const Login: React.FC = () => {
             <TextField
               required
               fullWidth
+              inputRef={usernameInputRef}
               id="username"
               placeholder="Nombre de usuario"
               name="username"
               autoComplete="username"
               autoFocus
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                // Deseleccionar el texto después de un pequeño delay para evitar la selección del autocompletado
+                setTimeout(() => {
+                  if (usernameInputRef.current) {
+                    const length = e.target.value.length;
+                    usernameInputRef.current.setSelectionRange(length, length);
+                  }
+                }, 0);
+              }}
+              onSelect={(e) => {
+                // Deseleccionar el texto cuando se selecciona desde el autocompletado
+                setTimeout(() => {
+                  if (usernameInputRef.current) {
+                    const length = usernameInputRef.current.value.length;
+                    usernameInputRef.current.setSelectionRange(length, length);
+                  }
+                }, 0);
+              }}
+              onBlur={(e) => {
+                // Deseleccionar el texto cuando el campo pierde el foco
+                setTimeout(() => {
+                  if (usernameInputRef.current) {
+                    const length = usernameInputRef.current.value.length;
+                    usernameInputRef.current.setSelectionRange(length, length);
+                  }
+                }, 0);
+              }}
+              onInput={(e) => {
+                // Deseleccionar el texto inmediatamente cuando hay un cambio de input
+                setTimeout(() => {
+                  if (usernameInputRef.current) {
+                    const length = (e.target as HTMLInputElement).value.length;
+                    usernameInputRef.current.setSelectionRange(length, length);
+                  }
+                }, 0);
+              }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   border: 'none',
@@ -173,6 +259,14 @@ const Login: React.FC = () => {
                   '&::placeholder': {
                     color: '#fff',
                     opacity: 1,
+                  },
+                  '&::selection': {
+                    backgroundColor: 'transparent',
+                    color: '#fff',
+                  },
+                  '&::-moz-selection': {
+                    backgroundColor: 'transparent',
+                    color: '#fff',
                   },
                 },
               }}
@@ -252,6 +346,8 @@ const Login: React.FC = () => {
             <FormControlLabel
               control={
                 <Checkbox
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
                   sx={{
                     color: '#fff',
                     '&.Mui-checked': {
