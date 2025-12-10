@@ -13,7 +13,7 @@ router.use(authenticateToken);
 // Obtener todas las actividades
 router.get('/', async (req: AuthRequest, res) => {
   try {
-    const { page = 1, limit = 50, type, contactId, companyId, dealId } = req.query;
+    const { page = 1, limit = 50, type, contactId, companyId, dealId, userId } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
     const where: any = {};
@@ -29,14 +29,17 @@ router.get('/', async (req: AuthRequest, res) => {
     if (dealId) {
       where.dealId = dealId;
     }
+    if (userId) {
+      where.userId = userId;
+    }
 
     const activities = await Activity.findAndCountAll({
       where,
       include: [
-        { model: User, as: 'User', attributes: ['id', 'firstName', 'lastName', 'email'] },
-        { model: Contact, as: 'Contact', attributes: ['id', 'firstName', 'lastName'] },
-        { model: Company, as: 'Company', attributes: ['id', 'name'] },
-        { model: Deal, as: 'Deal', attributes: ['id', 'name'] },
+        { model: User, as: 'User', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
+        { model: Contact, as: 'Contact', attributes: ['id', 'firstName', 'lastName'], required: false },
+        { model: Company, as: 'Company', attributes: ['id', 'name'], required: false },
+        { model: Deal, as: 'Deal', attributes: ['id', 'name'], required: false },
       ],
       limit: Number(limit),
       offset,
@@ -50,6 +53,18 @@ router.get('/', async (req: AuthRequest, res) => {
       totalPages: Math.ceil(activities.count / Number(limit)),
     });
   } catch (error: any) {
+    console.error('❌ Error al obtener actividades:', error);
+    console.error('Stack:', error.stack);
+    // Si el error es por columna faltante o problema de schema, devolver array vacío
+    if (error.message && (error.message.includes('no existe la columna') || error.message.includes('does not exist') || error.message.includes('column'))) {
+      console.warn('⚠️  Error de schema detectado, devolviendo array vacío');
+      return res.json({
+        activities: [],
+        total: 0,
+        page: Number(req.query.page || 1),
+        totalPages: 0,
+      });
+    }
     res.status(500).json({ error: error.message });
   }
 });

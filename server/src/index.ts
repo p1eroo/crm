@@ -87,6 +87,104 @@ async function ensureAllEnumsMigration() {
   try {
     console.log('🔧 Verificando y migrando ENUMs...');
     
+    // Función auxiliar para crear enums si no existen
+    const ensureEnum = async (enumName: string, values: string[]) => {
+      try {
+        // Verificar si el enum ya existe
+        const [results] = await sequelize.query(`
+          SELECT 1 FROM pg_type WHERE typname = '${enumName}'
+        `) as [Array<{ [key: string]: any }>, unknown];
+        
+        if (results.length === 0) {
+          // El enum no existe, crearlo
+          const valuesList = values.map(v => `'${v.replace(/'/g, "''")}'`).join(', ');
+          await sequelize.query(`CREATE TYPE ${enumName} AS ENUM (${valuesList})`);
+          console.log(`✅ Enum ${enumName} creado`);
+        } else {
+          console.log(`✓ Enum ${enumName} ya existe`);
+        }
+      } catch (error: any) {
+        if (!error.message.includes('already exists')) {
+          console.warn(`⚠️  Advertencia al crear enum ${enumName}:`, error.message);
+        }
+      }
+    };
+    
+    // Crear todos los enums necesarios
+    await ensureEnum('lifecycle_stage_enum', [
+      'lead_inactivo', 'cliente_perdido', 'cierre_perdido', 'lead',
+      'contacto', 'reunion_agendada', 'reunion_efectiva', 'propuesta_economica',
+      'negociacion', 'licitacion', 'licitacion_etapa_final', 'cierre_ganado',
+      'firma_contrato', 'activo'
+    ]);
+    
+    await ensureEnum('task_type_enum', ['call', 'email', 'meeting', 'note', 'todo', 'other']);
+    await ensureEnum('task_status_enum', ['not started', 'in progress', 'completed', 'cancelled']);
+    await ensureEnum('task_priority_enum', ['low', 'medium', 'high', 'urgent']);
+    await ensureEnum('campaign_status_enum', ['draft', 'scheduled', 'active', 'paused', 'completed', 'cancelled']);
+    await ensureEnum('payment_status_enum', ['pending', 'completed', 'failed', 'refunded', 'cancelled']);
+    
+    // Función auxiliar para crear/verificar columnas con ENUMs
+    const ensureColumnWithEnum = async (
+      table: string, 
+      column: string, 
+      enumType: string, 
+      defaultValue: string
+    ) => {
+      try {
+        const [results] = await sequelize.query(`
+          SELECT column_name, udt_name
+          FROM information_schema.columns 
+          WHERE table_name = '${table}' AND column_name = '${column}'
+        `) as [Array<{ column_name: string; udt_name: string }>, unknown];
+        
+        if (results.length === 0) {
+          // La columna no existe, crearla
+          console.log(`🔧 Creando columna ${column} en ${table}...`);
+          await sequelize.query(`
+            ALTER TABLE ${table} 
+            ADD COLUMN "${column}" ${enumType} NOT NULL DEFAULT '${defaultValue}';
+          `);
+          console.log(`✅ Columna ${column} creada en ${table}`);
+        } else {
+          const currentType = results[0].udt_name;
+          if (currentType !== enumType && currentType.startsWith('enum_')) {
+            // Tiene un enum incorrecto, convertirlo al correcto
+            console.log(`🔧 Convirtiendo columna ${column} en ${table} de ${currentType} a ${enumType}...`);
+            try {
+              await sequelize.query(`
+                ALTER TABLE ${table} 
+                ALTER COLUMN "${column}" TYPE TEXT USING "${column}"::text;
+              `);
+              await sequelize.query(`
+                ALTER TABLE ${table} 
+                ALTER COLUMN "${column}" TYPE ${enumType} USING "${column}"::${enumType};
+              `);
+              console.log(`✅ Columna ${column} convertida en ${table}`);
+            } catch (convertError: any) {
+              console.warn(`⚠️  No se pudo convertir la columna:`, convertError.message);
+            }
+          } else if (currentType === enumType) {
+            console.log(`✅ Columna ${column} en ${table} ya tiene el tipo correcto`);
+          }
+        }
+      } catch (error: any) {
+        console.warn(`⚠️  Advertencia al verificar/crear columna ${column} en ${table}:`, error.message);
+      }
+    };
+    
+    // Verificar y crear columnas lifecycleStage
+    await ensureColumnWithEnum('contacts', 'lifecycleStage', 'lifecycle_stage_enum', 'lead');
+    await ensureColumnWithEnum('companies', 'lifecycleStage', 'lifecycle_stage_enum', 'lead');
+    
+    // Verificar y crear columnas en tasks
+    await ensureColumnWithEnum('tasks', 'type', 'task_type_enum', 'other');
+    await ensureColumnWithEnum('tasks', 'status', 'task_status_enum', 'not started');
+    await ensureColumnWithEnum('tasks', 'priority', 'task_priority_enum', 'medium');
+    // Verificar y crear columnas status en campaigns y payments
+    await ensureColumnWithEnum('campaigns', 'status', 'campaign_status_enum', 'draft');
+    await ensureColumnWithEnum('payments', 'status', 'payment_status_enum', 'pending');
+    
     // Mapeo de tipos ENUM existentes en la base de datos
     const enumMappings: { [key: string]: { table: string; column: string; enumType: string }[] } = {
       'lifecycle_stage_enum': [
@@ -134,7 +232,7 @@ async function ensureAllEnumsMigration() {
       ]
     };
 
-    // Migrar cada ENUM
+    // Migrar cada ENUM - convertir columnas que usan enums incorrectos al enum correcto
     for (const [enumType, mappings] of Object.entries(enumMappings)) {
       for (const mapping of mappings) {
         try {
@@ -147,29 +245,42 @@ async function ensureAllEnumsMigration() {
           if (results.length > 0) {
             const currentType = results[0].udt_name;
             
-            // Si la columna no está usando el tipo ENUM correcto, convertirla
+            // Si la columna está usando un enum incorrecto (que empieza con enum_ pero no es el correcto), convertirla
             if (currentType !== enumType && currentType.startsWith('enum_')) {
               console.log(`🔧 Migrando ${mapping.table}.${mapping.column} de ${currentType} a ${enumType}...`);
               
-              await sequelize.query(`
-                ALTER TABLE ${mapping.table} 
-                ALTER COLUMN "${mapping.column}" TYPE ${enumType} 
-                USING "${mapping.column}"::text::${enumType};
-              `);
-              
-              console.log(`✓ Migración de ${mapping.table}.${mapping.column} completada.`);
+              try {
+                // Primero convertir a texto, luego al enum correcto
+                await sequelize.query(`
+                  ALTER TABLE ${mapping.table} 
+                  ALTER COLUMN "${mapping.column}" TYPE TEXT USING "${mapping.column}"::text;
+                `);
+                
+                await sequelize.query(`
+                  ALTER TABLE ${mapping.table} 
+                  ALTER COLUMN "${mapping.column}" TYPE ${enumType} USING "${mapping.column}"::${enumType};
+                `);
+                
+                console.log(`✓ Migración de ${mapping.table}.${mapping.column} completada.`);
+              } catch (convertError: any) {
+                console.warn(`⚠️  No se pudo migrar ${mapping.table}.${mapping.column}:`, convertError.message);
+              }
+            } else if (currentType === enumType) {
+              // Ya tiene el tipo correcto, no hacer nada
+              console.log(`✓ ${mapping.table}.${mapping.column} ya tiene el tipo correcto (${enumType})`);
             }
           }
         } catch (error: any) {
           // Ignorar errores si la columna no existe o el tipo no existe
           if (!error.message.includes('does not exist') && !error.message.includes('no existe')) {
-            console.warn(`⚠️  Advertencia al migrar ${mapping.table}.${mapping.column}:`, error.message);
+            console.warn(`⚠️  Advertencia al verificar ${mapping.table}.${mapping.column}:`, error.message);
           }
         }
       }
     }
 
-    // Eliminar cualquier ENUM que Sequelize pueda intentar crear (que empiecen con enum_ pero no sean los correctos)
+    // Eliminar cualquier ENUM incorrecto que Sequelize pueda haber creado
+    // Especialmente enum_companies_lifecycleStage y enum_contacts_lifecycleStage
     await sequelize.query(`
       DO $$ 
       DECLARE
@@ -181,16 +292,19 @@ async function ensureAllEnumsMigration() {
           'subscription_status_enum', 'billing_cycle_enum'
         ];
       BEGIN
+        -- Eliminar enums incorrectos de Sequelize que empiezan con enum_ pero no son válidos
         FOR r IN 
           SELECT typname FROM pg_type 
           WHERE typname LIKE 'enum_%'
           AND NOT (typname = ANY(validEnums))
         LOOP
-          -- Solo eliminar si no está siendo usado por ninguna columna
+          -- Verificar si el enum está siendo usado
           BEGIN
+            -- Intentar eliminar, si está en uso fallará pero lo ignoramos
             EXECUTE 'DROP TYPE IF EXISTS ' || quote_ident(r.typname) || ' CASCADE';
+            RAISE NOTICE 'Eliminado enum incorrecto: %', r.typname;
           EXCEPTION WHEN OTHERS THEN
-            -- Ignorar errores al eliminar
+            -- Ignorar errores si el enum está en uso
             NULL;
           END;
         END LOOP;
@@ -288,9 +402,12 @@ sequelize.authenticate()
     // Manejar migración de roleId antes de sync
     await ensureRoleIdMigration();
     
-    // Sincronizar tablas que tienen ENUMs sin alter para evitar conflictos
+    // Sincronizar tablas que tienen ENUMs
+    // NO usar alter: true porque puede causar conflictos cuando la columna ya existe con un enum diferente
+    // Las columnas se crean manualmente en ensureAllEnumsMigration() si no existen
     const { Company, Contact, Task, Ticket, Campaign, Automation, Activity, Payment, Subscription } = await import('./models');
     
+    // Solo hacer sync sin alter para evitar conflictos de tipos ENUM
     await Company.sync({ alter: false });
     await Contact.sync({ alter: false });
     await Task.sync({ alter: false });

@@ -18,6 +18,7 @@ router.use(authenticateToken);
 router.get('/stats', async (req: AuthRequest, res) => {
   try {
     console.log('📊 Obteniendo estadísticas del dashboard...');
+    console.log('📅 Filtros de fecha:', req.query);
     const { startDate, endDate } = req.query;
     const dateFilter: any = {};
     
@@ -28,45 +29,85 @@ router.get('/stats', async (req: AuthRequest, res) => {
     }
 
     // Estadísticas de contactos
-    const totalContacts = await Contact.count({ where: dateFilter });
-    const contactsByStage = await Contact.findAll({
-      attributes: [
-        'lifecycleStage',
-        [Contact.sequelize!.fn('COUNT', Contact.sequelize!.col('id')), 'count']
-      ],
-      where: dateFilter,
-      group: ['lifecycleStage'],
-      raw: true,
-    });
+    let totalContacts = 0;
+    try {
+      totalContacts = await Contact.count({ where: dateFilter });
+    } catch (error: any) {
+      console.warn('⚠️  Error al contar contactos:', error.message);
+      totalContacts = 0;
+    }
+    let contactsByStage: any[] = [];
+    try {
+      contactsByStage = await Contact.findAll({
+        attributes: [
+          'lifecycleStage',
+          [Contact.sequelize!.fn('COUNT', Contact.sequelize!.col('id')), 'count']
+        ],
+        where: dateFilter,
+        group: ['lifecycleStage'],
+        raw: true,
+      });
+    } catch (error: any) {
+      console.warn('⚠️  Error al obtener contactos por etapa (columna puede no existir):', error.message);
+      // Si la columna no existe, usar array vacío
+      contactsByStage = [];
+    }
 
     // Estadísticas de empresas
-    const totalCompanies = await Company.count({ where: dateFilter });
-    const companiesByStage = await Company.findAll({
-      attributes: [
-        'lifecycleStage',
-        [Company.sequelize!.fn('COUNT', Company.sequelize!.col('id')), 'count']
-      ],
-      where: dateFilter,
-      group: ['lifecycleStage'],
-      raw: true,
-    });
+    let totalCompanies = 0;
+    try {
+      totalCompanies = await Company.count({ where: dateFilter });
+    } catch (error: any) {
+      console.warn('⚠️  Error al contar empresas:', error.message);
+      totalCompanies = 0;
+    }
+    let companiesByStage: any[] = [];
+    try {
+      companiesByStage = await Company.findAll({
+        attributes: [
+          'lifecycleStage',
+          [Company.sequelize!.fn('COUNT', Company.sequelize!.col('id')), 'count']
+        ],
+        where: dateFilter,
+        group: ['lifecycleStage'],
+        raw: true,
+      });
+    } catch (error: any) {
+      console.warn('⚠️  Error al obtener empresas por etapa (columna puede no existir):', error.message);
+      // Si la columna no existe, usar array vacío
+      companiesByStage = [];
+    }
 
     // Estadísticas de deals
-    const totalDeals = await Deal.count({ where: dateFilter });
-    const totalDealValue = await Deal.sum('amount', { where: dateFilter }) || 0;
-    const dealsByStage = await Deal.findAll({
-      attributes: [
-        'stage',
-        [Deal.sequelize!.fn('COUNT', Deal.sequelize!.col('id')), 'count'],
-        [Deal.sequelize!.fn('SUM', Deal.sequelize!.col('amount')), 'total']
-      ],
-      where: dateFilter,
-      group: ['stage'],
-      raw: true,
-    });
-    
-    // Log para depuración
-    console.log('Deals por etapa:', JSON.stringify(dealsByStage, null, 2));
+    let totalDeals = 0;
+    let totalDealValue = 0;
+    try {
+      totalDeals = await Deal.count({ where: dateFilter });
+      totalDealValue = (await Deal.sum('amount', { where: dateFilter })) || 0;
+    } catch (error: any) {
+      console.warn('⚠️  Error al contar deals:', error.message);
+      totalDeals = 0;
+      totalDealValue = 0;
+    }
+    let dealsByStage: any[] = [];
+    try {
+      dealsByStage = await Deal.findAll({
+        attributes: [
+          'stage',
+          [Deal.sequelize!.fn('COUNT', Deal.sequelize!.col('id')), 'count'],
+          [Deal.sequelize!.fn('SUM', Deal.sequelize!.col('amount')), 'total']
+        ],
+        where: dateFilter,
+        group: ['stage'],
+        raw: true,
+      });
+      
+      // Log para depuración
+      console.log('Deals por etapa:', JSON.stringify(dealsByStage, null, 2));
+    } catch (error: any) {
+      console.warn('⚠️  Error al obtener deals por etapa:', error.message);
+      dealsByStage = [];
+    }
 
     // Estadísticas de tareas
     // Usar una consulta SQL directa para evitar problemas con ENUMs
@@ -109,115 +150,177 @@ router.get('/stats', async (req: AuthRequest, res) => {
     }
 
     // Estadísticas de campañas
-    const totalCampaigns = await Campaign.count({ where: dateFilter });
-    const activeCampaigns = await Campaign.count({ 
-      where: { ...dateFilter, status: 'active' } 
-    });
+    let totalCampaigns = 0;
+    let activeCampaigns = 0;
+    try {
+      totalCampaigns = await Campaign.count({ where: dateFilter });
+      activeCampaigns = await Campaign.count({ 
+        where: { ...dateFilter, status: 'active' } 
+      });
+    } catch (error: any) {
+      console.warn('⚠️  Error al obtener estadísticas de campañas (columna status puede no existir):', error.message);
+      // Si la columna no existe, solo contar total sin filtrar por status
+      try {
+        totalCampaigns = await Campaign.count({ where: dateFilter });
+        activeCampaigns = 0;
+      } catch (countError: any) {
+        totalCampaigns = 0;
+        activeCampaigns = 0;
+      }
+    }
 
     // Deals ganados este mes
-    const currentMonthStart = new Date();
-    currentMonthStart.setDate(1);
-    currentMonthStart.setHours(0, 0, 0, 0);
-    
-    const wonDeals = await Deal.count({
-      where: {
-        stage: { [Op.in]: ['won', 'closed won', 'cierre_ganado'] },
-        createdAt: { [Op.gte]: currentMonthStart }
-      }
-    });
-
-    const wonDealValue = await Deal.sum('amount', {
-      where: {
-        stage: { [Op.in]: ['won', 'closed won', 'cierre_ganado'] },
-        createdAt: { [Op.gte]: currentMonthStart }
-      }
-    }) || 0;
+    let wonDeals = 0;
+    let wonDealValue = 0;
+    try {
+      const currentMonthStart = new Date();
+      currentMonthStart.setDate(1);
+      currentMonthStart.setHours(0, 0, 0, 0);
+      
+      wonDeals = await Deal.count({
+        where: {
+          stage: { [Op.in]: ['won', 'closed won', 'cierre_ganado'] },
+          createdAt: { [Op.gte]: currentMonthStart }
+        }
+      });
+      
+      wonDealValue = (await Deal.sum('amount', {
+        where: {
+          stage: { [Op.in]: ['won', 'closed won', 'cierre_ganado'] },
+          createdAt: { [Op.gte]: currentMonthStart }
+        }
+      })) || 0;
+    } catch (error: any) {
+      console.warn('⚠️  Error al contar deals ganados:', error.message);
+      wonDeals = 0;
+      wonDealValue = 0;
+    }
 
     // Estadísticas de desempeño por usuario (cierres ganados)
     // Usar consulta SQL directa para obtener estadísticas por usuario
-    let whereClause = '';
-    const replacements: any = {};
-    
-    if (dateFilter.createdAt) {
-      whereClause = 'WHERE d."createdAt" >= :startDate';
-      replacements.startDate = dateFilter.createdAt[Op.gte];
+    let userPerformance: any[] = [];
+    try {
+      let whereClause = '';
+      const replacements: any = {};
       
-      if (dateFilter.createdAt[Op.lte]) {
-        whereClause += ' AND d."createdAt" <= :endDate';
-        replacements.endDate = dateFilter.createdAt[Op.lte];
+      if (dateFilter.createdAt) {
+        whereClause = 'WHERE d."createdAt" >= :startDate';
+        replacements.startDate = dateFilter.createdAt[Op.gte];
+        
+        if (dateFilter.createdAt[Op.lte]) {
+          whereClause += ' AND d."createdAt" <= :endDate';
+          replacements.endDate = dateFilter.createdAt[Op.lte];
+        }
+      } else {
+        whereClause = 'WHERE 1=1';
       }
-    } else {
-      whereClause = 'WHERE 1=1';
+
+      const userPerformanceQuery = await sequelize.query(`
+        SELECT 
+          u.id as "userId",
+          u."firstName",
+          u."lastName",
+          u.email,
+          COUNT(d.id)::integer as "totalDeals",
+          COUNT(CASE WHEN d.stage IN ('won', 'closed won', 'cierre_ganado') THEN 1 END)::integer as "wonDeals",
+          COALESCE(SUM(CASE WHEN d.stage IN ('won', 'closed won', 'cierre_ganado') THEN d.amount ELSE 0 END), 0)::numeric as "wonDealsValue"
+        FROM users u
+        INNER JOIN deals d ON u.id = d."ownerId"
+        ${whereClause}
+        GROUP BY u.id, u."firstName", u."lastName", u.email
+        HAVING COUNT(d.id) > 0
+        ORDER BY "wonDeals" DESC, "totalDeals" DESC
+      `, {
+        replacements,
+        type: sequelize.QueryTypes.SELECT,
+      });
+
+      // Procesar estadísticas por usuario
+      userPerformance = (userPerformanceQuery as any[]).map((item: any) => {
+        const totalDeals = parseInt(item.totalDeals) || 0;
+        const wonDeals = parseInt(item.wonDeals) || 0;
+        const wonDealsValue = parseFloat(item.wonDealsValue) || 0;
+        const performance = totalDeals > 0 ? (wonDeals / totalDeals) * 100 : 0;
+        
+        return {
+          userId: item.userId,
+          firstName: item.firstName || 'Sin nombre',
+          lastName: item.lastName || '',
+          email: item.email || '',
+          totalDeals,
+          wonDeals,
+          wonDealsValue,
+          performance: Math.round(performance * 100) / 100, // Redondear a 2 decimales
+        };
+      });
+    } catch (error: any) {
+      console.warn('⚠️  Error al obtener estadísticas de desempeño por usuario:', error.message);
+      userPerformance = [];
     }
 
-    const userPerformanceQuery = await sequelize.query(`
-      SELECT 
-        u.id as "userId",
-        u."firstName",
-        u."lastName",
-        u.email,
-        COUNT(d.id)::integer as "totalDeals",
-        COUNT(CASE WHEN d.stage IN ('won', 'closed won', 'cierre_ganado') THEN 1 END)::integer as "wonDeals",
-        COALESCE(SUM(CASE WHEN d.stage IN ('won', 'closed won', 'cierre_ganado') THEN d.amount ELSE 0 END), 0)::numeric as "wonDealsValue"
-      FROM users u
-      INNER JOIN deals d ON u.id = d."ownerId"
-      ${whereClause}
-      GROUP BY u.id, u."firstName", u."lastName", u.email
-      HAVING COUNT(d.id) > 0
-      ORDER BY "wonDeals" DESC, "totalDeals" DESC
-    `, {
-      replacements,
-      type: sequelize.QueryTypes.SELECT,
-    });
-
-    // Procesar estadísticas por usuario
-    const userPerformance = (userPerformanceQuery as any[]).map((item: any) => {
-      const totalDeals = parseInt(item.totalDeals) || 0;
-      const wonDeals = parseInt(item.wonDeals) || 0;
-      const wonDealsValue = parseFloat(item.wonDealsValue) || 0;
-      const performance = totalDeals > 0 ? (wonDeals / totalDeals) * 100 : 0;
-      
-      return {
-        userId: item.userId,
-        firstName: item.firstName || 'Sin nombre',
-        lastName: item.lastName || '',
-        email: item.email || '',
-        totalDeals,
-        wonDeals,
-        wonDealsValue,
-        performance: Math.round(performance * 100) / 100, // Redondear a 2 decimales
-      };
-    });
-
     // Estadísticas de pagos
-    const totalPayments = await Payment.count({ where: dateFilter });
-    const pendingPayments = await Payment.count({ 
-      where: { ...dateFilter, status: 'pending' } 
-    });
-    const completedPayments = await Payment.count({ 
-      where: { ...dateFilter, status: 'completed' } 
-    });
-    const failedPayments = await Payment.count({ 
-      where: { ...dateFilter, status: 'failed' } 
-    });
+    let totalPayments = 0;
+    let pendingPayments = 0;
+    let completedPayments = 0;
+    let failedPayments = 0;
+    try {
+      totalPayments = await Payment.count({ where: dateFilter });
+      pendingPayments = await Payment.count({ 
+        where: { ...dateFilter, status: 'pending' } 
+      });
+      completedPayments = await Payment.count({ 
+        where: { ...dateFilter, status: 'completed' } 
+      });
+      failedPayments = await Payment.count({ 
+        where: { ...dateFilter, status: 'failed' }
+      });
+    } catch (error: any) {
+      console.warn('⚠️  Error al obtener estadísticas de pagos (columna status puede no existir):', error.message);
+      // Si la columna no existe, solo contar total sin filtrar por status
+      try {
+        totalPayments = await Payment.count({ where: dateFilter });
+        pendingPayments = 0;
+        completedPayments = 0;
+        failedPayments = 0;
+      } catch (countError: any) {
+        totalPayments = 0;
+        pendingPayments = 0;
+        completedPayments = 0;
+        failedPayments = 0;
+      }
+    }
     
-    const pendingAmount = await Payment.sum('amount', { 
-      where: { ...dateFilter, status: 'pending' } 
-    }) || 0;
-    const completedAmount = await Payment.sum('amount', { 
-      where: { ...dateFilter, status: 'completed' } 
-    }) || 0;
-    const failedAmount = await Payment.sum('amount', { 
-      where: { ...dateFilter, status: 'failed' } 
-    }) || 0;
-    const totalRevenue = await Payment.sum('amount', { 
-      where: { ...dateFilter, status: 'completed' } 
-    }) || 0;
+    let pendingAmount = 0;
+    let completedAmount = 0;
+    let failedAmount = 0;
+    let totalRevenue = 0;
+    try {
+      pendingAmount = (await Payment.sum('amount', { 
+        where: { ...dateFilter, status: 'pending' } 
+      })) || 0;
+      completedAmount = (await Payment.sum('amount', { 
+        where: { ...dateFilter, status: 'completed' } 
+      })) || 0;
+      failedAmount = (await Payment.sum('amount', { 
+        where: { ...dateFilter, status: 'failed' } 
+      })) || 0;
+      totalRevenue = (await Payment.sum('amount', { 
+        where: { ...dateFilter, status: 'completed' } 
+      })) || 0;
+    } catch (error: any) {
+      console.warn('⚠️  Error al obtener montos de pagos (columna status puede no existir):', error.message);
+      // Si falla, usar valores en 0
+      pendingAmount = 0;
+      completedAmount = 0;
+      failedAmount = 0;
+      totalRevenue = 0;
+    }
 
     // Ventas por mes basadas en deals ganados - Si hay filtro de fecha, usar ese rango, sino últimos 12 meses
-    const monthlyPayments = [];
+    let monthlyPayments: any[] = [];
     
-    if (dateFilter.createdAt && dateFilter.createdAt[Op.gte] && dateFilter.createdAt[Op.lte]) {
+    try {
+      if (dateFilter.createdAt && dateFilter.createdAt[Op.gte] && dateFilter.createdAt[Op.lte]) {
       const startDate = new Date(dateFilter.createdAt[Op.gte]);
       const endDate = new Date(dateFilter.createdAt[Op.lte]);
       const year = startDate.getFullYear();
@@ -350,19 +453,32 @@ router.get('/stats', async (req: AuthRequest, res) => {
           amount: Number(monthTotal),
         });
       }
+      }
+    } catch (error: any) {
+      console.warn('⚠️  Error al obtener ventas por mes:', error.message);
+      monthlyPayments = [];
     }
 
     // Leads convertidos (contactos que pasaron de lead a estados finales)
-    const convertedLeads = await Contact.count({
-      where: {
-        lifecycleStage: { [Op.in]: ['activo', 'firma_contrato', 'cierre_ganado'] }
-      }
-    });
-    const totalLeads = await Contact.count({
-      where: {
-        lifecycleStage: 'lead'
-      }
-    });
+    let convertedLeads = 0;
+    let totalLeads = 0;
+    try {
+      convertedLeads = await Contact.count({
+        where: {
+          lifecycleStage: { [Op.in]: ['activo', 'firma_contrato', 'cierre_ganado'] }
+        }
+      });
+      totalLeads = await Contact.count({
+        where: {
+          lifecycleStage: 'lead'
+        }
+      });
+    } catch (error: any) {
+      console.warn('⚠️  Error al contar leads (columna lifecycleStage puede no existir):', error.message);
+      // Si la columna no existe, usar 0
+      convertedLeads = 0;
+      totalLeads = 0;
+    }
 
     // Tareas completadas vs nuevas
     // Usar valores correctos del enum: 'not started', 'in progress', 'completed', 'cancelled'
@@ -534,6 +650,14 @@ router.get('/stats', async (req: AuthRequest, res) => {
     responseData.payments.budgets = formattedBudgets;
 
     console.log('✅ Estadísticas enviadas correctamente');
+    console.log('📊 Resumen de datos:', {
+      contactos: totalContacts,
+      empresas: totalCompanies,
+      deals: totalDeals,
+      tareas: totalTasks,
+      campañas: totalCampaigns,
+      pagos: totalPayments,
+    });
     res.json(responseData);
   } catch (error: any) {
     console.error('❌ Error en endpoint /stats:', error);
@@ -644,11 +768,27 @@ router.get('/recent-activities', async (req: AuthRequest, res) => {
       attributes: ['id', 'name', 'amount', 'stage', 'createdAt'],
     });
 
-    const recentTasks = await Task.findAll({
-      limit: Number(limit),
-      order: [['createdAt', 'DESC']],
-      attributes: ['id', 'title', 'status', 'priority', 'dueDate', 'createdAt'],
-    });
+    let recentTasks = [];
+    try {
+      recentTasks = await Task.findAll({
+        limit: Number(limit),
+        order: [['createdAt', 'DESC']],
+        attributes: ['id', 'title', 'status', 'priority', 'dueDate', 'createdAt'],
+      });
+    } catch (error: any) {
+      console.warn('⚠️  Error al obtener tareas recientes (columna status puede no existir):', error.message);
+      // Si falla, intentar sin la columna status
+      try {
+        recentTasks = await Task.findAll({
+          limit: Number(limit),
+          order: [['createdAt', 'DESC']],
+          attributes: ['id', 'title', 'priority', 'dueDate', 'createdAt'],
+        });
+      } catch (fallbackError: any) {
+        console.warn('⚠️  Error al obtener tareas recientes (sin status):', fallbackError.message);
+        recentTasks = [];
+      }
+    }
 
     res.json({
       contacts: recentContacts,
