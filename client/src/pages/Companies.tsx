@@ -957,23 +957,35 @@ const Companies: React.FC = () => {
                         </Typography>
                         {company.domain && company.domain !== '--' ? (
                           <Typography 
-                            component="a"
-                            href={company.domain.startsWith('http') ? company.domain : `https://${company.domain}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
                             variant="caption" 
-                            onClick={(e) => e.stopPropagation()}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.cursor = 'pointer';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.cursor = 'default';
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (company.domain && company.domain !== '--') {
+                                const domainUrl = company.domain.startsWith('http') ? company.domain : `https://${company.domain}`;
+                                window.open(domainUrl, '_blank');
+                              }
+                            }}
                             sx={{ 
                               color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
                               fontSize: { xs: '0.7rem', md: '0.75rem' },
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
-                              display: 'block',
-                              textDecoration: 'none',
-                              cursor: 'pointer',
+                              display: 'inline-block',
+                              width: 'fit-content',
+                              maxWidth: '100%',
+                              cursor: 'default',
+                              transition: 'all 0.2s ease',
+                              userSelect: 'none',
                               '&:hover': {
                                 textDecoration: 'underline',
+                                cursor: 'pointer',
                               },
                             }}
                           >

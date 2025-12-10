@@ -1,17 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import {
-  Container,
   TextField,
   Button,
   Typography,
   Box,
   CircularProgress,
   Alert,
+  Checkbox,
+  FormControlLabel,
 } from '@mui/material';
+import { Person, Lock } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
-import logo from '../assets/TM.png';
-import loginImage from '../assets/img.login.png';
+import logo from '../assets/tm_logo.png';
+import fondoImage from '../assets/tm_fondo.png';
 
 const Login: React.FC = () => {
   const [username, setUsername] = useState('');
@@ -58,307 +59,299 @@ const Login: React.FC = () => {
 
   return (
     <Box
-      className="form-body form-left"
       sx={{
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'flex-start',
-        padding: { xs: 1, md: 1 },
-        paddingLeft: { xs: 0, md: 0 },
-        paddingRight: { xs: 0, md: 0 },
-        backgroundColor: '#FFFFFF',
+        justifyContent: 'center',
+        backgroundImage: `url(${fondoImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        padding: { xs: 2, sm: 3 },
       }}
     >
       <Box
-        className="iofrm-layout"
         sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: { xs: 'flex-start', md: 'center', lg: 'center' },
-          gap: 0,
-          flexDirection: { xs: 'column', md: 'row' },
-          width: '100%',
-          maxWidth: { md: '1400px', lg: '1600px', xl: '1800px' },
-          margin: '0 auto',
-          paddingLeft: { md: 0, lg: 0 },
-          paddingRight: { md: 0, lg: 0 },
+          backgroundColor: 'rgba(30, 20, 50, 0.7)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          width: '90%',
+          maxWidth: '450px',
+          padding: { xs: '24px 32px', sm: '30px 40px' },
+          borderRadius: '16px',
+          color: '#fff',
+          backdropFilter: 'blur(20px)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
         }}
       >
-        {/* Formulario de Login */}
-        <Box
-          className="form-holder"
+        {/* Título */}
+        <Typography
+          variant="h4"
+          component="h1"
           sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            marginLeft: { md: 20, lg: 25 },
-            maxWidth: '450px',
+            textAlign: 'center',
+            mb: 4,
+            fontWeight: 500,
+            color: '#fff',
           }}
         >
-          <Box
-            className="form-content justify-content-end"
+          Iniciar Sesión
+        </Typography>
+
+        {error && (
+          <Alert
+            severity="error"
+            onClose={() => {
+              setLocalError('');
+            }}
             sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              width: '100%',
-              maxWidth: 400,
+              mb: 2,
+              borderRadius: 1,
+              backgroundColor: 'rgba(211, 47, 47, 0.9)',
+              color: '#fff',
+              '& .MuiAlert-icon': {
+                color: '#fff',
+              },
             }}
           >
-          {/* Header con logo */}
+            {error}
+          </Alert>
+        )}
+
+        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {/* Campo Usuario */}
           <Box
             sx={{
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
               display: 'flex',
-              flexDirection: 'column',
               alignItems: 'center',
-              justifyContent: 'center',
-              gap: 1,
-              p: 2,
+              height: '60px',
+              borderRadius: '40px',
+              padding: '0 20px',
+              backdropFilter: 'blur(10px)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              },
+              '&:focus-within': {
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.1)',
+              },
             }}
           >
-            <Box
+            <Person sx={{ color: '#fff', mr: 1.5, fontSize: 24 }} />
+            <TextField
+              required
+              fullWidth
+              id="username"
+              placeholder="Nombre de usuario"
+              name="username"
+              autoComplete="username"
+              autoFocus
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               sx={{
-                width: 96,
-                height: 96,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <img
-                src={logo}
-                alt="Taxi Monterrico Logo"
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'contain',
-                }}
-              />
-            </Box>
-          </Box>
-
-          {/* Formulario */}
-          <Box sx={{ p: 3, pt: 0, pb: 1.5 }}>
-            {error && (
-              <Alert
-                severity="error"
-                onClose={() => {
-                  setLocalError('');
-                }}
-                sx={{
-                  mb: 2,
-                  borderRadius: 1,
-                }}
-              >
-                {error}
-              </Alert>
-            )}
-
-            <Box component="form" onSubmit={handleSubmit}>
-              <Box sx={{ mb: 0.5 }}>
-                <TextField
-                  margin="normal"
-                  required
-                  fullWidth
-                  id="username"
-                  placeholder="Usuario"
-                  name="username"
-                  autoComplete="username"
-                  autoFocus
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      backgroundColor: username ? '#E8E8E8' : '#F7F7F7',
-                      padding: '6px 14px',
-                      '& input': {
-                        padding: '6px 0',
-                      },
-                      '& fieldset': {
-                        border: 'none',
-                      },
-                      '&:hover fieldset': {
-                        border: 'none',
-                      },
-                      '&.Mui-focused': {
-                        backgroundColor: '#E8E8E8',
-                        '& fieldset': {
-                          border: 'none',
-                        },
-                      },
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: '#757575',
-                    },
-                    '& .MuiInputLabel-root.Mui-focused': {
-                      color: '#000000',
-                    },
-                  }}
-                />
-              </Box>
-              <Box sx={{ mb: 2 }}>
-                <TextField
-                  margin="normal"
-                  required
-                  fullWidth
-                  name="password"
-                  placeholder="Contraseña"
-                  type="password"
-                  id="password"
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      backgroundColor: password ? '#E8E8E8' : '#F7F7F7',
-                      padding: '6px 14px',
-                      '& input': {
-                        padding: '6px 0',
-                      },
-                      '& fieldset': {
-                        border: 'none',
-                      },
-                      '&:hover fieldset': {
-                        border: 'none',
-                      },
-                      '&.Mui-focused': {
-                        backgroundColor: '#E8E8E8',
-                        '& fieldset': {
-                          border: 'none',
-                        },
-                      },
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: '#757575',
-                    },
-                    '& .MuiInputLabel-root.Mui-focused': {
-                      color: '#000000',
-                    },
-                  }}
-                />
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={loading}
-                  sx={{
-                    py: 1.25,
-                    px: 3,
-                    borderRadius: 2,
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    textTransform: 'none',
-                    backgroundColor: '#FFC107',
-                    color: '#FFFFFF',
+                '& .MuiOutlinedInput-root': {
+                  border: 'none',
+                  '& fieldset': {
                     border: 'none',
-                    boxShadow: 'none',
-                    flex: 1,
-                    '&:hover': {
-                      backgroundColor: '#FFB300',
-                      border: 'none',
-                      boxShadow: 'none',
-                    },
-                    '&:disabled': {
-                      backgroundColor: '#FFE082',
-                      color: '#FFFFFF',
-                      border: 'none',
-                      boxShadow: 'none',
-                    },
-                  }}
-                >
-                  {loading ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <CircularProgress size={16} sx={{ color: '#FFFFFF' }} />
-                      <span>Loading...</span>
-                    </Box>
-                  ) : (
-                    'Ingresar'
-                  )}
-                </Button>
-                <Button
-                  component="a"
-                  href="https://wa.me/51958921766?text=Hola%20Jack,%20quiero%20registrar%20una%20nueva%20cuenta"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  variant="outlined"
-                  sx={{
-                    py: 1.25,
-                    px: 3,
-                    borderRadius: 2,
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                    textTransform: 'none',
-                    backgroundColor: '#FFFFFF',
-                    color: '#FFC107',
-                    borderColor: '#FFC107',
-                    borderWidth: '1px',
-                    borderStyle: 'solid',
-                    flex: 1,
-                    '&:hover': {
-                      backgroundColor: '#FFF9E6',
-                      borderColor: '#FFB300',
-                      borderWidth: '1px',
-                      borderStyle: 'solid',
-                    },
-                  }}
-                >
-                  Registrar
-                </Button>
-              </Box>
-
-              <Box sx={{ textAlign: 'center', mb: 3 }}>
-                <Typography
-                  component="a"
-                  href="https://wa.me/51958921766?text=Hola%20Jack,%20olvidé%20mi%20contraseña"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  sx={{
-                    fontSize: '0.875rem',
-                    color: '#757575',
-                    textDecoration: 'none',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      textDecoration: 'underline',
-                    },
-                  }}
-                >
-                  Olvidaste tu contraseña?
-                </Typography>
-              </Box>
-            </Box>
-          </Box>
-          </Box>
-        </Box>
-
-        {/* Imagen a la derecha */}
-        <Box
-          className="img-holder text-start"
-          sx={{
-            display: { xs: 'none', md: 'flex' },
-            alignItems: 'center',
-            justifyContent: 'center',
-            flex: 1,
-            width: { md: '500px', lg: '600px' },
-            marginLeft: { md: 0, lg: 0 },
-          }}
-        >
-          <Box className="bg" sx={{ display: 'none' }} />
-          <Box className="info-holder">
-            <img
-              src={loginImage}
-              alt="Login illustration"
-              style={{
-                width: '100%',
-                height: 'auto',
-                maxHeight: '700px',
-                objectFit: 'contain',
+                  },
+                  '&:hover fieldset': {
+                    border: 'none',
+                  },
+                  '&.Mui-focused fieldset': {
+                    border: 'none',
+                  },
+                },
+                '& input': {
+                  color: '#fff',
+                  fontSize: '16px',
+                  padding: '0',
+                  '&::placeholder': {
+                    color: '#fff',
+                    opacity: 1,
+                  },
+                },
               }}
             />
           </Box>
+
+          {/* Campo Contraseña */}
+          <Box
+            sx={{
+              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              height: '60px',
+              borderRadius: '40px',
+              padding: '0 20px',
+              backdropFilter: 'blur(10px)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              },
+              '&:focus-within': {
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.1)',
+              },
+            }}
+          >
+            <Lock sx={{ color: '#fff', mr: 1.5, fontSize: 24 }} />
+            <TextField
+              required
+              fullWidth
+              name="password"
+              placeholder="Contraseña"
+              type="password"
+              id="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  border: 'none',
+                  '& fieldset': {
+                    border: 'none',
+                  },
+                  '&:hover fieldset': {
+                    border: 'none',
+                  },
+                  '&.Mui-focused fieldset': {
+                    border: 'none',
+                  },
+                },
+                '& input': {
+                  color: '#fff',
+                  fontSize: '16px',
+                  padding: '0',
+                  '&::placeholder': {
+                    color: '#fff',
+                    opacity: 1,
+                  },
+                },
+              }}
+            />
+          </Box>
+
+          {/* Recordarme y Olvidé contraseña */}
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 2,
+              fontSize: '14.5px',
+            }}
+          >
+            <FormControlLabel
+              control={
+                <Checkbox
+                  sx={{
+                    color: '#fff',
+                    '&.Mui-checked': {
+                      color: '#fff',
+                    },
+                  }}
+                />
+              }
+              label="Recordarme"
+              sx={{
+                color: '#fff',
+                fontSize: '14.5px',
+                '& .MuiFormControlLabel-label': {
+                  fontSize: '14.5px',
+                },
+              }}
+            />
+            <Typography
+              component="a"
+              href="https://wa.me/51958921766?text=Hola%20Jack,%20olvidé%20mi%20contraseña"
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{
+                fontSize: '14.5px',
+                color: '#fff',
+                textDecoration: 'none',
+                cursor: 'pointer',
+                alignSelf: 'center',
+                '&:hover': {
+                  textDecoration: 'underline',
+                },
+              }}
+            >
+              ¿Olvidaste tu contraseña?
+            </Typography>
+          </Box>
+
+          {/* Botón Ingresar */}
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={loading}
+            sx={{
+              borderRadius: '30px',
+              border: 0,
+              outline: 0,
+              fontSize: '15px',
+              fontWeight: 500,
+              padding: '10px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              backgroundColor: loading ? 'rgba(255, 255, 255, 0.5)' : '#fff',
+              color: loading ? 'rgba(255, 255, 255, 0.7)' : '#000',
+              textTransform: 'none',
+              '&:hover': {
+                backgroundColor: loading ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.9)',
+              },
+              '&:disabled': {
+                backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                color: 'rgba(255, 255, 255, 0.7)',
+              },
+            }}
+          >
+            {loading ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <CircularProgress size={16} sx={{ color: '#fff' }} />
+                <span>Cargando...</span>
+              </Box>
+            ) : (
+              'Ingresar'
+            )}
+          </Button>
+
+          {/* Link de registro */}
+          <Typography
+            sx={{
+              textAlign: 'center',
+              fontSize: '14.5px',
+              color: '#fff',
+            }}
+          >
+            ¿Todavía no tienes una cuenta?{' '}
+            <Typography
+              component="a"
+              href="https://wa.me/51958921766?text=Hola%20Jack,%20quiero%20registrar%20una%20nueva%20cuenta"
+              target="_blank"
+              rel="noopener noreferrer"
+              sx={{
+                fontSize: '14.5px',
+                color: '#fff',
+                textDecoration: 'none',
+                cursor: 'pointer',
+                marginLeft: '8px',
+                '&:hover': {
+                  textDecoration: 'underline',
+                },
+              }}
+            >
+              Regístrate
+            </Typography>
+          </Typography>
         </Box>
       </Box>
     </Box>

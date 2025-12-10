@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import os from 'os';
 import { sequelize } from './config/database';
 import './models'; // Import models to register associations
+import { Role } from './models/Role';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
 import contactRoutes from './routes/contacts';
@@ -83,10 +84,89 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'CRM API is running' });
 });
 
+// Función para manejar la migración de roleId antes de sync
+async function ensureRoleIdMigration() {
+  try {
+    // Verificar si la columna roleId existe
+    const [results] = await sequelize.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'users' AND column_name = 'roleId'
+    `) as [Array<{ column_name: string }>, unknown];
+
+    const hasRoleId = results.length > 0;
+
+    if (!hasRoleId) {
+      console.log('🔧 Migrando columna roleId...');
+      
+      // 1. Sincronizar tabla de roles primero
+      await Role.sync({ alter: true });
+      
+      // 2. Asegurar que existan roles
+      const roleCount = await Role.count();
+      if (roleCount === 0) {
+        await Role.bulkCreate([
+          { name: 'admin', description: 'Administrador del sistema' },
+          { name: 'user', description: 'Usuario estándar' },
+          { name: 'manager', description: 'Gerente' },
+          { name: 'jefe_comercial', description: 'Jefe Comercial' },
+        ]);
+      }
+
+      // 3. Agregar columna roleId como nullable primero
+      await sequelize.query(`
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS "roleId" INTEGER;
+      `);
+
+      // 4. Asignar roleId por defecto a usuarios existentes
+      const defaultRole = await Role.findOne({ where: { name: 'user' } });
+      if (defaultRole) {
+        await sequelize.query(`
+          UPDATE users
+          SET "roleId" = ${defaultRole.id}
+          WHERE "roleId" IS NULL;
+        `);
+      }
+
+      // 5. Hacer roleId NOT NULL
+      await sequelize.query(`
+        ALTER TABLE users ALTER COLUMN "roleId" SET NOT NULL;
+      `);
+
+      // 6. Agregar foreign key constraint si no existe
+      try {
+        await sequelize.query(`
+          ALTER TABLE users
+          ADD CONSTRAINT fk_users_role FOREIGN KEY ("roleId") REFERENCES roles(id) ON DELETE RESTRICT;
+        `);
+      } catch (error: any) {
+        if (!error.message.includes('already exists')) {
+          throw error;
+        }
+      }
+
+      // 7. Crear índice si no existe
+      await sequelize.query(`
+        CREATE INDEX IF NOT EXISTS idx_users_roleId ON users("roleId");
+      `);
+
+      console.log('✓ Migración de roleId completada.');
+    }
+  } catch (error: any) {
+    console.error('Error durante la migración de roleId:', error.message);
+    throw error;
+  }
+}
+
 // Initialize database and start server
 sequelize.authenticate()
-  .then(() => {
+  .then(async () => {
     console.log('Database connection established successfully.');
+    
+    // Manejar migración de roleId antes de sync
+    await ensureRoleIdMigration();
+    
+    // Ahora hacer sync (que puede agregar otras columnas pero roleId ya existe)
     return sequelize.sync({ alter: true });
   })
   .then(() => {

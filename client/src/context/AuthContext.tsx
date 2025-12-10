@@ -36,6 +36,54 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         const parsedUser = JSON.parse(savedUser);
         setUser(parsedUser);
+        
+        // Verificar con el backend para obtener el rol actualizado
+        const getBackendUrl = () => {
+          if (process.env.REACT_APP_API_URL) {
+            return process.env.REACT_APP_API_URL;
+          }
+          const hostname = window.location.hostname;
+          if (hostname === 'localhost' || hostname === '127.0.0.1') {
+            return 'http://localhost:5000/api';
+          }
+          const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+          if (ipRegex.test(hostname)) {
+            return `http://${hostname}:5000/api`;
+          }
+          return `http://${hostname}:5000/api`;
+        };
+        
+        // Intentar obtener datos actualizados del backend
+        fetch(`${getBackendUrl()}/auth/me`, {
+          headers: {
+            'Authorization': `Bearer ${savedToken}`,
+          },
+        })
+          .then(response => {
+            if (response.ok) {
+              return response.json();
+            }
+            throw new Error('Failed to fetch user');
+          })
+          .then(userData => {
+            // Actualizar el usuario con los datos del backend (especialmente el rol)
+            const updatedUser = {
+              ...parsedUser,
+              ...userData,
+              role: userData.role || parsedUser.role || 'user',
+            };
+            console.log('👤 Usuario actualizado desde backend:', updatedUser);
+            console.log('🔑 Rol del usuario:', updatedUser.role);
+            setUser(updatedUser);
+            localStorage.setItem('user', JSON.stringify(updatedUser));
+          })
+          .catch(error => {
+            console.warn('No se pudo verificar el usuario con el backend:', error);
+            // Continuar con el usuario guardado si falla la verificación
+          })
+          .finally(() => {
+            setLoading(false);
+          });
       } catch (error) {
         console.error('Error parsing saved user:', error);
         localStorage.removeItem('user');
@@ -43,9 +91,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.removeItem('idusuario');
         localStorage.removeItem('usuarioimagen');
         localStorage.removeItem('key');
+        setLoading(false);
       }
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const login = async (idacceso: string, contraseña: string): Promise<boolean> => {
@@ -146,7 +196,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         email: backendData.user.email || idacceso,
         firstName: backendData.user.firstName || idacceso.toUpperCase(),
         lastName: backendData.user.lastName || '',
-        role: backendData.user.role || 'admin',
+        role: backendData.user.role || 'user', // Cambiar de 'admin' a 'user' por defecto
         avatar: backendData.user.avatar || monterricoData.usuarioimagen
       } : {
         id: parseInt(monterricoData.idusuario.toString()),
@@ -154,9 +204,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         email: idacceso,
         firstName: idacceso.toUpperCase(),
         lastName: '',
-        role: 'admin',
+        role: 'user', // Cambiar de 'admin' a 'user' por defecto
         avatar: monterricoData.usuarioimagen
       };
+      
+      console.log('👤 Datos del usuario después del login:', userData);
+      console.log('🔑 Rol asignado:', userData.role);
       
       // Usar setTimeout para asegurar que el estado se actualice en el siguiente tick
       // Esto evita conflictos con el desmontaje del componente Login

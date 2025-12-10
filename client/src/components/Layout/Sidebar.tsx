@@ -28,9 +28,12 @@ import {
   AdminPanelSettings,
   AccountTree,
   Edit,
+  DarkMode,
+  LightMode,
 } from '@mui/icons-material';
 import { taxiMonterricoColors } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme as useThemeContext } from '../../context/ThemeContext';
 import ProfileModal from '../ProfileModal';
 import logo from '../../assets/logo-taxi-monterrico.svg';
 
@@ -53,6 +56,7 @@ const Sidebar: React.FC = () => {
   const location = useLocation();
   const { logout, user } = useAuth();
   const theme = useTheme();
+  const { mode, toggleTheme } = useThemeContext();
   const [profileAnchorEl, setProfileAnchorEl] = React.useState<null | HTMLElement>(null);
   const [profileModalOpen, setProfileModalOpen] = React.useState(false);
 
@@ -216,7 +220,11 @@ const Sidebar: React.FC = () => {
         })}
         
         {/* Opción de Administrar Usuarios - Solo visible para admins */}
-        {user?.role === 'admin' && (
+        {(() => {
+          const userRole = user?.role;
+          console.log('🔍 Verificando rol para mostrar opción de administrar usuarios:', userRole);
+          return userRole === 'admin';
+        })() && (
           <Tooltip 
             title="Administrar Usuarios" 
             placement="right"
@@ -357,6 +365,27 @@ const Sidebar: React.FC = () => {
               Actualizar información
             </Typography>
           </Box>
+        </MenuItem>
+        <Divider />
+        <MenuItem 
+          onClick={toggleTheme}
+          sx={{
+            py: 1.5,
+            px: 2,
+            gap: 1.5,
+            '&:hover': {
+              bgcolor: theme.palette.action.hover,
+            },
+          }}
+        >
+          {mode === 'light' ? (
+            <DarkMode sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
+          ) : (
+            <LightMode sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
+          )}
+          <Typography variant="body2" sx={{ fontWeight: 500, color: theme.palette.text.primary }}>
+            {mode === 'light' ? 'Modo oscuro' : 'Modo claro'}
+          </Typography>
         </MenuItem>
         <Divider />
         <MenuItem 

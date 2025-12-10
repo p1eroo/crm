@@ -61,8 +61,11 @@ router.post(
       // Cargar la relación con Role para acceder a user.role
       await user.reload({ include: [{ model: Role, as: 'Role' }] });
 
+      // Obtener el nombre del rol directamente de la relación
+      const userRoleName = user.Role?.name || user.role || 'user';
+
       const token = jwt.sign(
-        { userId: user.id, usuario: user.usuario, email: user.email, role: user.role },
+        { userId: user.id, usuario: user.usuario, email: user.email, role: userRoleName },
         process.env.JWT_SECRET || 'secret',
         { expiresIn: '7d' }
       );
@@ -75,7 +78,7 @@ router.post(
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-          role: user.role,
+          role: userRoleName,
         },
       });
     } catch (error: any) {
@@ -256,9 +259,17 @@ router.post(
         }
       }
 
+      // Asegurar que el Role esté cargado antes de generar el token
+      if (!user.Role) {
+        await user.reload({ include: [{ model: Role, as: 'Role' }] });
+      }
+
+      // Obtener el nombre del rol directamente de la relación
+      const roleName = user.Role?.name || user.role || 'user';
+
       // Generar JWT válido para el backend local
       const token = jwt.sign(
-        { userId: user.id, usuario: user.usuario, email: user.email, role: user.role },
+        { userId: user.id, usuario: user.usuario, email: user.email, role: roleName },
         process.env.JWT_SECRET || 'secret',
         { expiresIn: '7d' }
       );
@@ -271,7 +282,7 @@ router.post(
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-          role: user.role,
+          role: roleName,
           avatar: user.avatar,
         },
       });
@@ -311,8 +322,16 @@ router.post(
         return res.status(401).json({ error: 'Credenciales inválidas' });
       }
 
+      // Asegurar que el Role esté cargado antes de generar el token
+      if (!user.Role) {
+        await user.reload({ include: [{ model: Role, as: 'Role' }] });
+      }
+
+      // Obtener el nombre del rol directamente de la relación
+      const roleName = user.Role?.name || user.role || 'user';
+
       const token = jwt.sign(
-        { userId: user.id, usuario: user.usuario, email: user.email, role: user.role },
+        { userId: user.id, usuario: user.usuario, email: user.email, role: roleName },
         process.env.JWT_SECRET || 'secret',
         { expiresIn: '7d' }
       );
@@ -325,7 +344,7 @@ router.post(
           email: user.email,
           firstName: user.firstName,
           lastName: user.lastName,
-          role: user.role,
+          role: roleName,
           avatar: user.avatar,
         },
       });
@@ -347,14 +366,20 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
+    // Asegurar que el Role esté cargado
+    if (!user.Role) {
+      await user.reload({ include: [{ model: Role, as: 'Role' }] });
+    }
+
     // Formatear respuesta para que sea consistente con el login
+    // Usar user.Role?.name directamente para asegurar que el rol esté presente
     res.json({
       id: user.id,
       usuario: user.usuario,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      role: user.role,
+      role: user.Role?.name || user.role || '',
       avatar: user.avatar,
     });
   } catch (error: any) {

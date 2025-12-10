@@ -1,7 +1,6 @@
 import React from 'react';
 import { Box, useTheme } from '@mui/material';
 import Sidebar from './Sidebar';
-import ThemeToggleButton from '../ThemeToggleButton';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -30,7 +29,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           {children}
         </Box>
       </Box>
-      <ThemeToggleButton />
     </Box>
   );
 };
