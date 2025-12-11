@@ -29,7 +29,7 @@ import {
   Menu,
   useTheme,
 } from '@mui/material';
-import { Add, Edit, Delete, Search, AttachMoney, TrendingUp, TrendingDown, Computer, Visibility } from '@mui/icons-material';
+import { Add, Edit, Delete, Search, AttachMoney, TrendingUp, TrendingDown, Computer, Visibility, ViewList, AccountTree, Person, CalendarToday, DragIndicator } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 
@@ -40,6 +40,8 @@ interface Deal {
   stage: string;
   closeDate?: string;
   probability?: number;
+  companyId?: number;
+  contactId?: number;
   Contact?: { firstName: string; lastName: string };
   Company?: { name: string };
   Owner?: { id: number; firstName: string; lastName: string; email?: string };
@@ -59,13 +61,41 @@ const Deals: React.FC = () => {
     stage: 'lead',
     closeDate: '',
     probability: '',
+    companyId: '',
+    contactId: '',
   });
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<any[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [dealToDelete, setDealToDelete] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [stageMenuAnchor, setStageMenuAnchor] = useState<{ [key: number]: HTMLElement | null }>({});
   const [updatingStage, setUpdatingStage] = useState<{ [key: number]: boolean }>({});
   const [filterStage, setFilterStage] = useState<string | null>(null); // Filtro de etapa activo
+  const [viewMode, setViewMode] = useState<'list' | 'funnel'>('list'); // Modo de vista: lista o funnel
+  
+  // Estados para drag and drop
+  const [draggedDeal, setDraggedDeal] = useState<Deal | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+  
+  // Etapas del pipeline
+  const stages = [
+    { id: 'lead_inactivo', label: 'Lead Inactivo', color: '#9E9E9E' },
+    { id: 'lead', label: 'Lead', color: '#2196F3' },
+    { id: 'contacto', label: 'Contacto', color: '#42A5F5' },
+    { id: 'reunion_agendada', label: 'Reunión Agendada', color: '#66BB6A' },
+    { id: 'reunion_efectiva', label: 'Reunión Efectiva', color: '#81C784' },
+    { id: 'propuesta_economica', label: 'Propuesta Económica', color: '#FFB74D' },
+    { id: 'negociacion', label: 'Negociación', color: '#FF9800' },
+    { id: 'licitacion', label: 'Licitación', color: '#F57C00' },
+    { id: 'licitacion_etapa_final', label: 'Licitación Etapa Final', color: '#E65100' },
+    { id: 'cierre_ganado', label: 'Cierre Ganado', color: '#4CAF50' },
+    { id: 'firma_contrato', label: 'Firma de Contrato', color: '#388E3C' },
+    { id: 'activo', label: 'Activo', color: '#2E7D32' },
+    { id: 'cliente_perdido', label: 'Cliente Perdido', color: '#F44336' },
+    { id: 'cierre_perdido', label: 'Cierre Perdido', color: '#D32F2F' },
+  ];
 
   // Función helper para convertir amount a número de forma segura
   const parseAmount = (amount: any): number => {
@@ -140,14 +170,20 @@ const Deals: React.FC = () => {
 
   // Opciones de etapa según las imágenes proporcionadas
   const stageOptions = [
+    { value: 'lead_inactivo', label: 'Lead Inactivo' },
+    { value: 'cliente_perdido', label: 'Cliente perdido' },
+    { value: 'cierre_perdido', label: 'Cierre Perdido' },
     { value: 'lead', label: 'Lead' },
     { value: 'contacto', label: 'Contacto' },
     { value: 'reunion_agendada', label: 'Reunión Agendada' },
     { value: 'reunion_efectiva', label: 'Reunión Efectiva' },
-    { value: 'propuesta_economica', label: 'Propuesta económica' },
+    { value: 'propuesta_economica', label: 'Propuesta Económica' },
     { value: 'negociacion', label: 'Negociación' },
-    { value: 'cierre_ganado', label: 'Cierre ganado' },
-    { value: 'cierre_perdido', label: 'Cierre perdido' },
+    { value: 'licitacion', label: 'Licitación' },
+    { value: 'licitacion_etapa_final', label: 'Licitación Etapa Final' },
+    { value: 'cierre_ganado', label: 'Cierre Ganado' },
+    { value: 'firma_contrato', label: 'Firma de Contrato' },
+    { value: 'activo', label: 'Activo' },
   ];
 
   // Función para obtener el label de la etapa
@@ -170,7 +206,27 @@ const Deals: React.FC = () => {
 
   useEffect(() => {
     fetchDeals();
+    fetchCompanies();
+    fetchContacts();
   }, [search]);
+
+  const fetchCompanies = async () => {
+    try {
+      const response = await api.get('/companies', { params: { limit: 1000 } });
+      setCompanies(response.data.companies || response.data || []);
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+    }
+  };
+
+  const fetchContacts = async () => {
+    try {
+      const response = await api.get('/contacts', { params: { limit: 1000 } });
+      setContacts(response.data.contacts || response.data || []);
+    } catch (error) {
+      console.error('Error fetching contacts:', error);
+    }
+  };
 
   const fetchDeals = async () => {
     try {
@@ -193,6 +249,8 @@ const Deals: React.FC = () => {
         stage: deal.stage,
         closeDate: deal.closeDate ? deal.closeDate.split('T')[0] : '',
         probability: deal.probability?.toString() || '',
+        companyId: deal.companyId?.toString() || '',
+        contactId: deal.contactId?.toString() || '',
       });
     } else {
       setEditingDeal(null);
@@ -202,6 +260,8 @@ const Deals: React.FC = () => {
         stage: 'lead',
         closeDate: '',
         probability: '',
+        companyId: '',
+        contactId: '',
       });
     }
     setOpen(true);
@@ -218,6 +278,8 @@ const Deals: React.FC = () => {
         ...formData,
         amount: parseFloat(formData.amount) || 0,
         probability: formData.probability ? parseInt(formData.probability) : undefined,
+        companyId: formData.companyId ? parseInt(formData.companyId) : null,
+        contactId: formData.contactId ? parseInt(formData.contactId) : null,
       };
       if (editingDeal) {
         await api.put(`/deals/${editingDeal.id}`, data);
@@ -287,6 +349,72 @@ const Deals: React.FC = () => {
     } finally {
       setUpdatingStage({ ...updatingStage, [dealId]: false });
     }
+  };
+
+  // Función para cambiar etapa sin evento (para drag and drop)
+  const handleStageChangeDirect = async (dealId: number, newStage: string) => {
+    setUpdatingStage({ ...updatingStage, [dealId]: true });
+    try {
+      await api.put(`/deals/${dealId}`, { stage: newStage });
+      setDeals(deals.map(deal => 
+        deal.id === dealId 
+          ? { ...deal, stage: newStage }
+          : deal
+      ));
+    } catch (error) {
+      console.error('Error updating stage:', error);
+      fetchDeals();
+    } finally {
+      setUpdatingStage({ ...updatingStage, [dealId]: false });
+    }
+  };
+
+  // Handlers para drag and drop
+  const handleDragStart = (e: React.DragEvent, deal: Deal) => {
+    setDraggedDeal(deal);
+    setIsDragging(true);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', deal.id.toString());
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setTimeout(() => {
+      setIsDragging(false);
+      setDraggedDeal(null);
+      setDragOverStage(null);
+    }, 100);
+  };
+
+  const handleDragOver = (e: React.DragEvent, stageId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverStage(stageId);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setDragOverStage(null);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent, stageId: string) => {
+    e.preventDefault();
+    setDragOverStage(null);
+
+    if (!draggedDeal) return;
+
+    if (draggedDeal.stage !== stageId) {
+      await handleStageChangeDirect(draggedDeal.id, stageId);
+    }
+
+    setTimeout(() => {
+      setDraggedDeal(null);
+      setIsDragging(false);
+    }, 150);
   };
 
   if (loading) {
@@ -471,26 +599,6 @@ const Deals: React.FC = () => {
               <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.25 }}>
                 Todos los Negocios
               </Typography>
-              <Typography
-                component="a"
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setFilterStage(filterStage === 'won' ? null : 'won');
-                }}
-                sx={{
-                  fontSize: '0.875rem',
-                  color: theme.palette.primary.main,
-                  textDecoration: filterStage === 'won' ? 'underline' : 'none',
-                  cursor: 'pointer',
-                  fontWeight: filterStage === 'won' ? 600 : 400,
-                  '&:hover': {
-                    textDecoration: 'underline',
-                  },
-                }}
-              >
-                Negocios Ganados
-              </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <TextField
@@ -543,6 +651,56 @@ const Deals: React.FC = () => {
                   <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
                 </Select>
               </FormControl>
+              <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mr: 1 }}>
+                <Tooltip title="Ver lista" arrow>
+                  <IconButton
+                    onClick={() => setViewMode('list')}
+                    sx={{
+                      bgcolor: viewMode === 'list' 
+                        ? theme.palette.primary.main 
+                        : theme.palette.mode === 'dark' 
+                        ? 'rgba(255, 255, 255, 0.05)' 
+                        : '#F5F5F5',
+                      color: viewMode === 'list' 
+                        ? 'white' 
+                        : theme.palette.text.secondary,
+                      border: `1px solid ${theme.palette.divider}`,
+                      borderRadius: 1,
+                      '&:hover': {
+                        bgcolor: viewMode === 'list' 
+                          ? theme.palette.primary.dark 
+                          : theme.palette.action.hover,
+                      },
+                    }}
+                  >
+                    <ViewList />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Ver funnel" arrow>
+                  <IconButton
+                    onClick={() => setViewMode('funnel')}
+                    sx={{
+                      bgcolor: viewMode === 'funnel' 
+                        ? theme.palette.primary.main 
+                        : theme.palette.mode === 'dark' 
+                        ? 'rgba(255, 255, 255, 0.05)' 
+                        : '#F5F5F5',
+                      color: viewMode === 'funnel' 
+                        ? 'white' 
+                        : theme.palette.text.secondary,
+                      border: `1px solid ${theme.palette.divider}`,
+                      borderRadius: 1,
+                      '&:hover': {
+                        bgcolor: viewMode === 'funnel' 
+                          ? theme.palette.primary.dark 
+                          : theme.palette.action.hover,
+                      },
+                    }}
+                  >
+                    <AccountTree />
+                  </IconButton>
+                </Tooltip>
+              </Box>
               <Button 
                 variant="contained" 
                 startIcon={<Add />} 
@@ -566,7 +724,8 @@ const Deals: React.FC = () => {
           </Box>
         </Box>
 
-        {/* Tabla de negocios con diseño mejorado */}
+        {/* Vista de Lista */}
+        {viewMode === 'list' && (
         <TableContainer 
           component={Paper}
           sx={{ 
@@ -900,6 +1059,198 @@ const Deals: React.FC = () => {
             </TableBody>
           </Table>
         </TableContainer>
+        )}
+
+        {/* Vista de Pipeline/Funnel */}
+        {viewMode === 'funnel' && (
+          <Box
+            sx={{
+              display: 'flex',
+              gap: 2,
+              overflowX: 'auto',
+              overflowY: 'hidden',
+              p: 2,
+              px: 3,
+              flex: 1,
+              minHeight: 0,
+              '&::-webkit-scrollbar': {
+                height: 8,
+              },
+              '&::-webkit-scrollbar-track': {
+                background: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                borderRadius: 4,
+              },
+              '&::-webkit-scrollbar-thumb': {
+                background: theme.palette.mode === 'dark' ? '#616161' : '#bdbdbd',
+                borderRadius: 4,
+                '&:hover': {
+                  background: theme.palette.mode === 'dark' ? '#757575' : '#9e9e9e',
+                },
+              },
+            }}
+          >
+            {stages.map((stage) => {
+              const stageDeals = filteredDeals.filter((deal) => deal.stage === stage.id);
+              const stageTotal = stageDeals.reduce((sum, deal) => sum + (parseAmount(deal.amount) || 0), 0);
+
+              return (
+                <Box
+                  key={stage.id}
+                  sx={{
+                    minWidth: 320,
+                    maxWidth: 320,
+                    width: 320,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%',
+                    minHeight: 0,
+                    overflow: 'hidden',
+                  }}
+                >
+                  {/* Stage Header */}
+                  <Paper
+                    sx={{
+                      p: 2,
+                      mb: 2,
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
+                      border: `2px solid ${stage.color}20`,
+                      borderRadius: 2,
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box
+                          sx={{
+                            width: 12,
+                            height: 12,
+                            borderRadius: '50%',
+                            bgcolor: stage.color,
+                          }}
+                        />
+                        <Typography variant="h6" fontWeight={600}>
+                          {stage.label}
+                        </Typography>
+                      </Box>
+                      <Chip
+                        label={stageDeals.length}
+                        size="small"
+                        sx={{
+                          bgcolor: stage.color,
+                          color: 'white',
+                          fontWeight: 600,
+                        }}
+                      />
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                      {formatCurrency(stageTotal)}
+                    </Typography>
+                  </Paper>
+
+                  {/* Deals List - Drop Zone */}
+                  <Box
+                    onDragOver={(e) => handleDragOver(e, stage.id)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, stage.id)}
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 1.5,
+                      flex: 1,
+                      overflowY: 'auto',
+                      minHeight: '100px',
+                      maxHeight: '100%',
+                      borderRadius: 2,
+                      transition: 'all 0.3s',
+                      backgroundColor: dragOverStage === stage.id 
+                        ? (theme.palette.mode === 'dark' 
+                          ? 'rgba(255, 255, 255, 0.1)' 
+                          : 'rgba(0, 0, 0, 0.04)')
+                        : 'transparent',
+                      border: dragOverStage === stage.id 
+                        ? `2px dashed ${stage.color}` 
+                        : '2px dashed transparent',
+                    }}
+                  >
+                    {stageDeals.length === 0 ? (
+                      <Paper
+                        sx={{
+                          p: 3,
+                          textAlign: 'center',
+                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : '#FAFAFA',
+                          border: `1px dashed ${theme.palette.divider}`,
+                          borderRadius: 2,
+                        }}
+                      >
+                        <Typography variant="body2" color="text.secondary">
+                          No hay negocios
+                        </Typography>
+                      </Paper>
+                    ) : (
+                      stageDeals.map((deal) => (
+                        <Card
+                          key={deal.id}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, deal)}
+                          onDragEnd={handleDragEnd}
+                          sx={{
+                            cursor: isDragging && draggedDeal?.id === deal.id ? 'grabbing' : 'grab',
+                            opacity: isDragging && draggedDeal?.id === deal.id ? 0.3 : 1,
+                            borderLeft: `4px solid ${stage.color}`,
+                            borderRadius: 2,
+                            boxShadow: theme.palette.mode === 'dark'
+                              ? '0 2px 8px rgba(0,0,0,0.2)'
+                              : '0 2px 8px rgba(0,0,0,0.1)',
+                            '&:hover': {
+                              transform: 'translateY(-2px)',
+                              boxShadow: theme.palette.mode === 'dark'
+                                ? '0 8px 16px rgba(0,0,0,0.5)'
+                                : '0 8px 16px rgba(0,0,0,0.2)',
+                            },
+                          }}
+                        >
+                          <CardContent sx={{ p: 2.5 }}>
+                            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1.5 }}>
+                              {deal.name}
+                            </Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
+                              <Typography variant="body2" fontWeight={600} color={taxiMonterricoColors.green}>
+                                {formatCurrency(parseAmount(deal.amount))}
+                              </Typography>
+                            </Box>
+                            {deal.Contact && (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                <Person sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
+                                <Typography variant="body2" color="text.secondary">
+                                  {deal.Contact.firstName} {deal.Contact.lastName}
+                                </Typography>
+                              </Box>
+                            )}
+                            {deal.Owner && (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                <Person sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
+                                <Typography variant="body2" color="text.secondary">
+                                  {deal.Owner.firstName} {deal.Owner.lastName}
+                                </Typography>
+                              </Box>
+                            )}
+                            {deal.closeDate && (
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <CalendarToday sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
+                                <Typography variant="body2" color="text.secondary">
+                                  {new Date(deal.closeDate).toLocaleDateString('es-ES')}
+                                </Typography>
+                              </Box>
+                            )}
+                          </CardContent>
+                        </Card>
+                      ))
+                    )}
+                  </Box>
+                </Box>
+              );
+            })}
+          </Box>
+        )}
       </Card>
 
       <Dialog 
@@ -958,6 +1309,38 @@ const Deals: React.FC = () => {
               onChange={(e) => setFormData({ ...formData, probability: e.target.value })}
               inputProps={{ min: 0, max: 100 }}
             />
+            <TextField
+              select
+              label="Empresa"
+              value={formData.companyId}
+              onChange={(e) => setFormData({ ...formData, companyId: e.target.value })}
+              fullWidth
+            >
+              <MenuItem value="">
+                <em>Ninguna</em>
+              </MenuItem>
+              {companies.map((company) => (
+                <MenuItem key={company.id} value={company.id.toString()}>
+                  {company.name}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Contacto"
+              value={formData.contactId}
+              onChange={(e) => setFormData({ ...formData, contactId: e.target.value })}
+              fullWidth
+            >
+              <MenuItem value="">
+                <em>Ninguno</em>
+              </MenuItem>
+              {contacts.map((contact) => (
+                <MenuItem key={contact.id} value={contact.id.toString()}>
+                  {contact.firstName} {contact.lastName}
+                </MenuItem>
+              ))}
+            </TextField>
           </Box>
         </DialogContent>
         <DialogActions>

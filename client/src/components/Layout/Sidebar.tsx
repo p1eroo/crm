@@ -31,6 +31,8 @@ import {
   DarkMode,
   LightMode,
   Assessment,
+  CalendarToday,
+  Settings,
 } from '@mui/icons-material';
 import { taxiMonterricoColors } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
@@ -38,7 +40,7 @@ import { useTheme as useThemeContext } from '../../context/ThemeContext';
 import ProfileModal from '../ProfileModal';
 import logo from '../../assets/logo-taxi-monterrico.svg';
 
-const drawerWidth = 80;
+const drawerWidth = 240;
 
 const mainMenuItems = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
@@ -48,6 +50,7 @@ const mainMenuItems = [
   { text: 'Pipeline', icon: <AccountTree />, path: '/pipeline', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Tareas', icon: <Assignment />, path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Tickets', icon: <Support />, path: '/tickets', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Calendario', icon: <CalendarToday />, path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Reportes', icon: <Assessment />, path: '/reports', roles: ['admin', 'jefe_comercial'] },
   // { text: 'Campañas', icon: <Campaign />, path: '/campaigns' },
   // { text: 'Automatizaciones', icon: <Timeline />, path: '/automations' },
@@ -96,7 +99,6 @@ const Sidebar: React.FC = () => {
           boxShadow: theme.palette.mode === 'dark' ? '2px 0 8px rgba(0,0,0,0.3)' : 'none',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
           py: 2,
         },
       }}
@@ -105,10 +107,10 @@ const Sidebar: React.FC = () => {
       <Box sx={{ 
         mb: 3, 
         display: 'flex', 
-        justifyContent: 'center',
+        justifyContent: 'flex-start',
         alignItems: 'center',
         width: '100%',
-        px: 1.5,
+        px: 2,
       }}>
         <Box sx={{ 
           display: 'flex', 
@@ -137,11 +139,10 @@ const Sidebar: React.FC = () => {
       {/* Lista de items del menú */}
       <List sx={{ 
         width: '100%', 
-        px: 1.5, 
+        px: 2, 
         py: 0,
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
         gap: 0.5,
       }}>
         {mainMenuItems
@@ -161,73 +162,58 @@ const Sidebar: React.FC = () => {
               ? location.pathname === '/' 
               : location.pathname === item.path || location.pathname.startsWith(item.path + '/');
             return (
-            <Tooltip 
+            <ListItemButton
               key={item.text}
-              title={item.text} 
-              placement="right"
-              arrow
-              componentsProps={{
-                tooltip: {
-                  sx: {
-                    bgcolor: theme.palette.mode === 'dark' ? '#424242' : '#424242',
-                    fontSize: '0.75rem',
-                    fontWeight: 500,
-                    px: 1.5,
-                    py: 0.75,
-                    borderRadius: 1,
-                    ml: 1,
+              selected={isSelected}
+              onClick={() => navigate(item.path)}
+              sx={{
+                minHeight: 48,
+                borderRadius: 2,
+                justifyContent: 'flex-start',
+                px: 1.5,
+                py: 1,
+                mb: 0.5,
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&.Mui-selected': {
+                  backgroundColor: '#c4d4d4',
+                  color: theme.palette.text.primary,
+                  '&:hover': {
+                    backgroundColor: '#c4d4d4',
                   },
                 },
-                arrow: {
-                  sx: {
-                    color: theme.palette.mode === 'dark' ? '#424242' : '#424242',
-                  },
+                '&:hover': {
+                  backgroundColor: isSelected ? '#c4d4d4' : theme.palette.action.hover,
+                },
+                '&:not(.Mui-selected)': {
+                  color: theme.palette.text.secondary,
+                  backgroundColor: 'transparent',
                 },
               }}
             >
-              <ListItemButton
-                selected={isSelected}
-                onClick={() => navigate(item.path)}
+              <ListItemIcon
                 sx={{
-                  minHeight: 48,
-                  width: 48,
-                  height: 48,
-                  borderRadius: '50%',
+                  minWidth: 40,
                   justifyContent: 'center',
-                  p: 0,
-                  mb: 0.5,
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&.Mui-selected': {
-                    backgroundColor: taxiMonterricoColors.orange,
-                    color: 'white',
-                    '&:hover': {
-                      backgroundColor: taxiMonterricoColors.orangeDark,
-                    },
-                  },
-                  '&:hover': {
-                    backgroundColor: isSelected ? taxiMonterricoColors.orangeDark : theme.palette.action.hover,
-                  },
-                  '&:not(.Mui-selected)': {
-                    color: theme.palette.text.secondary,
-                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F5F5F5',
-                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#E0E0E0'}`,
+                  color: 'inherit',
+                  '& svg': {
+                    fontSize: 22,
                   },
                 }}
               >
-                <ListItemIcon
-                  sx={{
-                    minWidth: 0,
-                    justifyContent: 'center',
-                    color: 'inherit',
-                    '& svg': {
-                      fontSize: 22,
-                    },
-                  }}
-                >
-                  {item.icon}
-                </ListItemIcon>
-              </ListItemButton>
-            </Tooltip>
+                {item.icon}
+              </ListItemIcon>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontSize: '0.875rem',
+                  fontWeight: isSelected ? 600 : 400,
+                  color: 'inherit',
+                  ml: 1,
+                }}
+              >
+                {item.text}
+              </Typography>
+            </ListItemButton>
           );
         })}
         
@@ -237,100 +223,149 @@ const Sidebar: React.FC = () => {
           console.log('🔍 Verificando rol para mostrar opción de administrar usuarios:', userRole);
           return userRole === 'admin';
         })() && (
-          <Tooltip 
-            title="Administrar Usuarios" 
-            placement="right"
-            arrow
-            componentsProps={{
-              tooltip: {
-                sx: {
-                  bgcolor: '#424242',
-                  fontSize: '0.75rem',
-                  fontWeight: 500,
-                  px: 1.5,
-                  py: 0.75,
-                  borderRadius: 1,
-                  ml: 1,
+          <ListItemButton
+            selected={location.pathname === '/users'}
+            onClick={() => navigate('/users')}
+            sx={{
+              minHeight: 48,
+              borderRadius: 2,
+              justifyContent: 'flex-start',
+              px: 1.5,
+              py: 1,
+              mb: 0.5,
+              mt: 1,
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&.Mui-selected': {
+                backgroundColor: '#c4d4d4',
+                color: theme.palette.text.primary,
+                '&:hover': {
+                  backgroundColor: '#c4d4d4',
                 },
               },
-              arrow: {
-                sx: {
-                  color: '#424242',
-                },
+              '&:hover': {
+                backgroundColor: location.pathname === '/users' ? '#c4d4d4' : theme.palette.action.hover,
+              },
+              '&:not(.Mui-selected)': {
+                color: theme.palette.text.secondary,
+                backgroundColor: 'transparent',
               },
             }}
           >
-            <ListItemButton
-              selected={location.pathname === '/users'}
-              onClick={() => navigate('/users')}
+            <ListItemIcon
               sx={{
-                minHeight: 48,
-                width: 48,
-                height: 48,
-                borderRadius: '50%',
+                minWidth: 40,
                 justifyContent: 'center',
-                p: 0,
-                mb: 0.5,
-                mt: 1,
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&.Mui-selected': {
-                  backgroundColor: taxiMonterricoColors.orange,
-                  color: 'white',
-                  '&:hover': {
-                    backgroundColor: taxiMonterricoColors.orangeDark,
-                  },
-                },
-                '&:hover': {
-                  backgroundColor: location.pathname === '/users' ? taxiMonterricoColors.orangeDark : theme.palette.action.hover,
-                },
-                '&:not(.Mui-selected)': {
-                  color: theme.palette.text.secondary,
-                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F5F5F5',
-                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#E0E0E0'}`,
+                color: 'inherit',
+                '& svg': {
+                  fontSize: 22,
                 },
               }}
             >
-              <ListItemIcon
-                sx={{
-                  minWidth: 0,
-                  justifyContent: 'center',
-                  color: 'inherit',
-                  '& svg': {
-                    fontSize: 22,
-                  },
-                }}
-              >
-                <AdminPanelSettings />
-              </ListItemIcon>
-            </ListItemButton>
-          </Tooltip>
+              <AdminPanelSettings />
+            </ListItemIcon>
+            <Typography
+              variant="body2"
+              sx={{
+                fontSize: '0.875rem',
+                fontWeight: location.pathname === '/users' ? 600 : 400,
+                color: 'inherit',
+                ml: 1,
+              }}
+            >
+              Administrar Usuarios
+            </Typography>
+          </ListItemButton>
         )}
       </List>
       
       {/* Separador */}
       <Box sx={{ flex: 1 }} />
       
-      {/* Perfil del usuario */}
-      <Box sx={{ width: '100%', px: 1.5, mb: 1.5, display: 'flex', justifyContent: 'center' }}>
-        <Avatar
-          src={user?.avatar}
-          onClick={handleProfileClick}
+      {/* Configuración */}
+      <Box sx={{ width: '100%', px: 2, mb: 1 }}>
+        <ListItemButton
+          onClick={() => {
+            // Aquí puedes agregar la navegación o acción para configuración
+            console.log('Configuración');
+          }}
           sx={{
-            width: 48,
-            height: 48,
-            bgcolor: user?.avatar ? 'transparent' : taxiMonterricoColors.green,
-            fontSize: '1rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
+            minHeight: 48,
+            borderRadius: 2,
+            justifyContent: 'flex-start',
+            px: 1.5,
+            py: 1,
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
             '&:hover': {
-              transform: 'scale(1.05)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+              backgroundColor: theme.palette.action.hover,
             },
           }}
         >
-          {!user?.avatar && `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase()}
-        </Avatar>
+          <ListItemIcon
+            sx={{
+              minWidth: 40,
+              justifyContent: 'center',
+              color: theme.palette.text.secondary,
+              '& svg': {
+                fontSize: 22,
+              },
+            }}
+          >
+            <Settings />
+          </ListItemIcon>
+          <Typography
+            variant="body2"
+            sx={{
+              fontSize: '0.875rem',
+              fontWeight: 400,
+              color: theme.palette.text.primary,
+              ml: 1,
+            }}
+          >
+            Configuración
+          </Typography>
+        </ListItemButton>
+      </Box>
+      
+      {/* Perfil del usuario */}
+      <Box sx={{ width: '100%', px: 2, mb: 1.5 }}>
+        <ListItemButton
+          onClick={handleProfileClick}
+          sx={{
+            minHeight: 48,
+            borderRadius: 2,
+            justifyContent: 'flex-start',
+            px: 1.5,
+            py: 1,
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+            '&:hover': {
+              backgroundColor: theme.palette.action.hover,
+            },
+          }}
+        >
+          <Avatar
+            src={user?.avatar}
+            sx={{
+              width: 32,
+              height: 32,
+              bgcolor: user?.avatar ? 'transparent' : taxiMonterricoColors.green,
+              fontSize: '0.875rem',
+              fontWeight: 600,
+            }}
+          >
+            {!user?.avatar && `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase()}
+          </Avatar>
+          <Typography
+            variant="body2"
+            sx={{
+              fontSize: '0.875rem',
+              fontWeight: 400,
+              color: theme.palette.text.primary,
+              ml: 1.5,
+            }}
+          >
+            Perfil
+          </Typography>
+        </ListItemButton>
       </Box>
       
       {/* Menú del perfil */}

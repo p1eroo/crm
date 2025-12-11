@@ -29,10 +29,10 @@ export class Payment extends Model<PaymentAttributes, PaymentCreationAttributes>
   public id!: number;
   public amount!: number;
   public currency?: string;
-  public status!: string;
+  public status!: 'pending' | 'completed' | 'failed' | 'refunded' | 'cancelled';
   public paymentDate!: Date;
   public dueDate?: Date;
-  public paymentMethod!: string;
+  public paymentMethod!: 'credit_card' | 'debit_card' | 'bank_transfer' | 'cash' | 'check' | 'other';
   public reference?: string;
   public description?: string;
   public contactId?: number;

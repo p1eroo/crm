@@ -24,6 +24,7 @@ import Users from './pages/Users';
 import Pipeline from './pages/Pipeline';
 import Reports from './pages/Reports';
 import ReportDetail from './pages/ReportDetail';
+import Calendar from './pages/Calendar';
 
 import { taxiMonterricoColors } from './theme/colors';
 
@@ -69,7 +70,7 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
   },
   typography: {
     fontFamily: [
-      'Inter',
+      'General Sans',
       '-apple-system',
       'BlinkMacSystemFont',
       '"Segoe UI"',
@@ -224,6 +225,14 @@ const AppContent: React.FC = () => {
               element={
                 <MainLayout>
                   <Tickets />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/calendar"
+              element={
+                <MainLayout>
+                  <Calendar />
                 </MainLayout>
               }
             />

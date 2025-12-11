@@ -74,3 +74,6 @@ WHERE table_name IN ('contacts', 'companies')
     AND column_name = 'lifecycleStage'
 ORDER BY table_name;
 
+
+
+

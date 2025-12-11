@@ -10,6 +10,12 @@ import {
   Chip,
   Paper,
   Divider,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from '@mui/material';
 import {
   Email,
@@ -60,11 +66,14 @@ const ReportDetail: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [dealsByStage, setDealsByStage] = useState<any[]>([]);
   const [monthlyActivity, setMonthlyActivity] = useState<any[]>([]);
+  const [stageStats, setStageStats] = useState<any>(null);
+  const [loadingStageStats, setLoadingStageStats] = useState(false);
 
   useEffect(() => {
     if (id) {
       fetchUserData();
       fetchUserStats();
+      fetchStageStats();
     }
   }, [id]);
 
@@ -164,6 +173,19 @@ const ReportDetail: React.FC = () => {
       style: 'currency',
       currency: 'PEN',
     }).format(amount);
+  };
+
+  const fetchStageStats = async () => {
+    if (!id) return;
+    try {
+      setLoadingStageStats(true);
+      const response = await api.get(`/reports/user/${id}/stage-stats`);
+      setStageStats(response.data);
+    } catch (error: any) {
+      console.error('Error fetching stage stats:', error);
+    } finally {
+      setLoadingStageStats(false);
+    }
   };
 
   if (loading) {
@@ -450,6 +472,100 @@ const ReportDetail: React.FC = () => {
           </CardContent>
         </Card>
       </Box>
+
+      {/* Tablas de Estadísticas por Etapa */}
+      {stageStats && (
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h5" sx={{ mb: 3, fontWeight: 600 }}>
+            Estadísticas por Etapa
+          </Typography>
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: { xs: '1fr', lg: 'repeat(2, 1fr)' },
+            gap: 3
+          }}>
+            {/* Tabla Izquierda: Conteo de Contactos */}
+            <Card>
+              <CardContent>
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                  Número de Contactos por Etapa
+                </Typography>
+                <TableContainer component={Paper} elevation={0} sx={{ border: `1px solid ${theme.palette.divider}` }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f5f5f5' }}>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Etapa</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>%</TableCell>
+                        {stageStats.weeks?.map((week: number) => (
+                          <TableCell key={week} align="right" sx={{ fontWeight: 'bold' }}>
+                            {week}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {stageStats.data?.map((row: any) => (
+                        <TableRow key={row.stage} hover>
+                          <TableCell>{row.label}</TableCell>
+                          <TableCell>{row.percentage}%</TableCell>
+                          {row.counts?.map((count: number, idx: number) => (
+                            <TableCell key={idx} align="right">
+                              {count}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
+
+            {/* Tabla Derecha: Valores Monetarios */}
+            <Card>
+              <CardContent>
+                <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                  Valor Monetario por Etapa
+                </Typography>
+                <TableContainer component={Paper} elevation={0} sx={{ border: `1px solid ${theme.palette.divider}` }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f5f5f5' }}>
+                        <TableCell sx={{ fontWeight: 'bold' }}>Etapa</TableCell>
+                        <TableCell sx={{ fontWeight: 'bold' }}>%</TableCell>
+                        {stageStats.weeks?.map((week: number) => (
+                          <TableCell key={week} align="right" sx={{ fontWeight: 'bold' }}>
+                            {week}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {stageStats.data?.map((row: any) => (
+                        <TableRow key={row.stage} hover>
+                          <TableCell>{row.label}</TableCell>
+                          <TableCell>{row.percentage}%</TableCell>
+                          {row.values?.map((value: number, idx: number) => (
+                            <TableCell key={idx} align="right">
+                              {value > 0 ? formatCurrency(value) : 'S/ -'}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </CardContent>
+            </Card>
+          </Box>
+        </Box>
+      )}
+
+      {loadingStageStats && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+          <CircularProgress />
+        </Box>
+      )}
     </Box>
   );
 };

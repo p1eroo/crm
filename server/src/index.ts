@@ -20,6 +20,7 @@ import dashboardRoutes from './routes/dashboard';
 import automationRoutes from './routes/automations';
 import emailRoutes from './routes/emails';
 import googleRoutes from './routes/calendar';
+import reportRoutes from './routes/reports';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '5000', 10);
@@ -76,6 +77,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/automations', automationRoutes);
 app.use('/api/emails', emailRoutes);
 app.use('/api/google', googleRoutes);
+app.use('/api/reports', reportRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -123,6 +125,7 @@ async function ensureAllEnumsMigration() {
     await ensureEnum('task_priority_enum', ['low', 'medium', 'high', 'urgent']);
     await ensureEnum('campaign_status_enum', ['draft', 'scheduled', 'active', 'paused', 'completed', 'cancelled']);
     await ensureEnum('payment_status_enum', ['pending', 'completed', 'failed', 'refunded', 'cancelled']);
+    await ensureEnum('activity_type_enum', ['call', 'email', 'meeting', 'note', 'task', 'deal', 'contact', 'company']);
     
     // Función auxiliar para crear/verificar columnas con ENUMs
     const ensureColumnWithEnum = async (
@@ -184,6 +187,9 @@ async function ensureAllEnumsMigration() {
     // Verificar y crear columnas status en campaigns y payments
     await ensureColumnWithEnum('campaigns', 'status', 'campaign_status_enum', 'draft');
     await ensureColumnWithEnum('payments', 'status', 'payment_status_enum', 'pending');
+    
+    // Verificar y crear columna type en activities
+    await ensureColumnWithEnum('activities', 'type', 'activity_type_enum', 'note');
     
     // Mapeo de tipos ENUM existentes en la base de datos
     const enumMappings: { [key: string]: { table: string; column: string; enumType: string }[] } = {

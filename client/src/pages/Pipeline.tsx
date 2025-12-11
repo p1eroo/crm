@@ -68,12 +68,20 @@ interface Activity {
 }
 
 const stages = [
-  { id: 'lead', label: 'Lead', color: '#9E9E9E' },
-  { id: 'qualification', label: 'Calificación', color: '#2196F3' },
-  { id: 'proposal', label: 'Propuesta', color: '#FF9800' },
-  { id: 'negotiation', label: 'Negociación', color: '#9C27B0' },
+  { id: 'lead_inactivo', label: 'Lead Inactivo', color: '#9E9E9E' },
+  { id: 'lead', label: 'Lead', color: '#2196F3' },
+  { id: 'contacto', label: 'Contacto', color: '#42A5F5' },
+  { id: 'reunion_agendada', label: 'Reunión Agendada', color: '#66BB6A' },
+  { id: 'reunion_efectiva', label: 'Reunión Efectiva', color: '#81C784' },
+  { id: 'propuesta_economica', label: 'Propuesta Económica', color: '#FFB74D' },
+  { id: 'negociacion', label: 'Negociación', color: '#FF9800' },
+  { id: 'licitacion', label: 'Licitación', color: '#F57C00' },
+  { id: 'licitacion_etapa_final', label: 'Licitación Etapa Final', color: '#E65100' },
   { id: 'cierre_ganado', label: 'Cierre Ganado', color: '#4CAF50' },
-  { id: 'cierre_perdido', label: 'Cierre Perdido', color: '#F44336' },
+  { id: 'firma_contrato', label: 'Firma de Contrato', color: '#388E3C' },
+  { id: 'activo', label: 'Activo', color: '#2E7D32' },
+  { id: 'cliente_perdido', label: 'Cliente Perdido', color: '#F44336' },
+  { id: 'cierre_perdido', label: 'Cierre Perdido', color: '#D32F2F' },
 ];
 
 const Pipeline: React.FC = () => {

@@ -89,6 +89,18 @@ router.post('/', async (req: AuthRequest, res) => {
 
     res.status(201).json(newActivity);
   } catch (error: any) {
+    console.error('❌ Error al crear actividad:', error);
+    console.error('Stack:', error.stack);
+    
+    // Si el error es por columna faltante, dar un mensaje más claro
+    if (error.message && (error.message.includes('no existe la columna') || error.message.includes('does not exist') || error.message.includes('column'))) {
+      console.error('⚠️  Error de schema detectado. Ejecuta: npm run create-activity-columns');
+      return res.status(500).json({ 
+        error: 'Error de configuración de base de datos. Por favor, contacta al administrador.',
+        details: error.message 
+      });
+    }
+    
     res.status(500).json({ error: error.message });
   }
 });

@@ -30,8 +30,6 @@ import {
 import {
   Download,
   CheckCircle,
-  ChevronLeft,
-  ChevronRight,
   AccountCircle,
   Search,
   People,
@@ -39,14 +37,14 @@ import {
   ShoppingCart,
   AttachMoney,
   Close,
-  Cloud,
-  CloudOff,
   Notifications,
-  CalendarToday,
+  Note,
 } from '@mui/icons-material';
 import {
   LineChart,
   Line,
+  AreaChart,
+  Area,
   BarChart,
   Bar,
   PieChart,
@@ -132,24 +130,12 @@ const Dashboard: React.FC = () => {
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null); // null = todos los meses (para Ventas)
   const [calendarSelectedMonth, setCalendarSelectedMonth] = useState<string | null>(new Date().getMonth().toString()); // Para Calendario (mes actual por defecto)
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [calendarDate, setCalendarDate] = useState(new Date());
-  const [calendarModalOpen, setCalendarModalOpen] = useState(false);
-  const [allTasksWithDates, setAllTasksWithDates] = useState<Task[]>([]);
-  const [calendarModalDate, setCalendarModalDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedCalendarDay, setSelectedCalendarDay] = useState<Date | null>(null); // Día seleccionado en el calendario principal
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
   const [budgetValue, setBudgetValue] = useState<string>('');
   const [savingBudget, setSavingBudget] = useState(false);
   const [dailyPayments, setDailyPayments] = useState<any[]>([]);
   const [editingBudgetMonth, setEditingBudgetMonth] = useState<number | null>(null); // Mes que se está editando (null = mes actual)
   
-  // Estados para Google Calendar
-  const [googleCalendarConnected, setGoogleCalendarConnected] = useState(false);
-  const [connectingCalendar, setConnectingCalendar] = useState(false);
-  const [calendarMessage, setCalendarMessage] = useState<string | null>(null);
-  const [googleCalendarEvents, setGoogleCalendarEvents] = useState<any[]>([]);
-  const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
 
   // Generar lista de años: año actual y 5 años anteriores
   const availableYears = Array.from({ length: 6 }, (_, i) => currentYear - i);
@@ -173,60 +159,8 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     fetchStats();
     fetchTasks();
-    fetchAllTasksWithDates();
   }, []);
 
-  const fetchAllTasksWithDates = async () => {
-    try {
-      console.log('📅 Iniciando fetchAllTasksWithDates...');
-      const token = localStorage.getItem('token');
-      console.log('📅 Token disponible:', token ? 'Sí' : 'No');
-      
-      // Obtener tareas desde /tasks
-      const tasksResponse = await api.get('/tasks?limit=1000');
-      const tasksFromTasks = (tasksResponse.data.tasks || tasksResponse.data || []).map((task: Task) => ({
-        ...task,
-        isActivity: false,
-      }));
-
-      // Obtener actividades de tipo 'task' desde /activities
-      try {
-        const activitiesResponse = await api.get('/activities', {
-          params: { type: 'task' },
-        });
-        const tasksFromActivities = (activitiesResponse.data.activities || activitiesResponse.data || []).map((activity: any) => ({
-          id: activity.id,
-          title: activity.subject || activity.description || 'Sin título',
-          type: activity.type,
-          status: 'not started',
-          priority: 'medium',
-          dueDate: activity.dueDate,
-          isActivity: true,
-        }));
-
-        // Combinar ambas listas
-        const allTasks = [...tasksFromTasks, ...tasksFromActivities];
-        // Filtrar solo tareas que tienen dueDate
-        const tasksWithDates = allTasks.filter((task: Task) => task.dueDate);
-        setAllTasksWithDates(tasksWithDates);
-      } catch (activitiesError) {
-        // Si falla obtener actividades, usar solo tareas
-        const tasksWithDates = tasksFromTasks.filter((task: Task) => task.dueDate);
-        setAllTasksWithDates(tasksWithDates);
-      }
-    } catch (error: any) {
-      console.error('❌ Error fetching tasks with dates:', error);
-      console.error('❌ Error status:', error.response?.status);
-      
-      // Si es un error de autenticación, no hacer nada (el interceptor manejará la redirección)
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        console.error('❌ Error de autenticación en fetchAllTasksWithDates');
-        throw error; // Re-lanzar para que el interceptor lo maneje
-      }
-      
-      setAllTasksWithDates([]);
-    }
-  };
 
   // Recargar estadísticas cuando cambia el año o mes seleccionado
   useEffect(() => {
@@ -320,284 +254,7 @@ const Dashboard: React.FC = () => {
     fetchDailyDeals();
   }, [selectedYear, selectedMonth]);
 
-  // Recargar tareas cuando cambia el mes en el modal del calendario
-  useEffect(() => {
-    if (calendarModalOpen) {
-      fetchAllTasksWithDates();
-      // También obtener eventos de Google Calendar para el mes del modal
-      if (googleCalendarConnected) {
-        const fetchModalEvents = async () => {
-          try {
-            const year = calendarModalDate.getFullYear();
-            const month = calendarModalDate.getMonth();
-            const startDate = new Date(year, month, 1);
-            const endDate = new Date(year, month + 1, 0, 23, 59, 59);
 
-            const response = await api.get('/google/events', {
-              params: {
-                timeMin: startDate.toISOString(),
-                timeMax: endDate.toISOString(),
-              },
-            });
-
-            console.log('📅 Eventos del modal recibidos:', response.data.events?.length || 0);
-            setGoogleCalendarEvents(response.data.events || []);
-          } catch (error: any) {
-            console.error('Error obteniendo eventos para el modal:', error);
-          }
-        };
-        fetchModalEvents();
-      }
-    }
-  }, [calendarModalDate, calendarModalOpen, googleCalendarConnected]);
-
-  // Función helper para extraer la fecha correcta de un evento de Google Calendar
-  // Maneja correctamente las zonas horarias para evitar que los eventos aparezcan en el día incorrecto
-  const getEventDate = (event: any): Date => {
-    if (event.start.dateTime) {
-      // Evento con hora específica - extraer solo la fecha sin considerar la hora
-      // Esto evita problemas de zona horaria que pueden cambiar el día
-      const dateTime = new Date(event.start.dateTime);
-      // Usar UTC para obtener el año, mes y día correctos
-      const year = dateTime.getUTCFullYear();
-      const month = dateTime.getUTCMonth();
-      const day = dateTime.getUTCDate();
-      // Crear fecha en hora local con la fecha correcta (medianoche local)
-      return new Date(year, month, day);
-    } else if (event.start.date) {
-      // Evento de todo el día - parsear la fecha sin hora (formato YYYY-MM-DD)
-      const dateStr = event.start.date;
-      const [year, month, day] = dateStr.split('-').map(Number);
-      // Crear fecha en hora local (medianoche local) para evitar problemas de zona horaria
-      return new Date(year, month - 1, day);
-    }
-    return new Date();
-  };
-
-  // Función para obtener eventos de Google Calendar
-  const fetchGoogleCalendarEvents = async () => {
-    if (!googleCalendarConnected) {
-      console.log('📅 Google Calendar no conectado, no se obtendrán eventos');
-      setGoogleCalendarEvents([]);
-      return;
-    }
-
-    try {
-      console.log('📅 Obteniendo eventos de Google Calendar...');
-      const year = calendarDate.getFullYear();
-      const month = calendarDate.getMonth();
-      const startDate = new Date(year, month, 1);
-      const endDate = new Date(year, month + 1, 0, 23, 59, 59);
-
-      console.log('📅 Rango de fechas:', {
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
-        month: month + 1,
-        year,
-      });
-
-      const response = await api.get('/google/events', {
-        params: {
-          timeMin: startDate.toISOString(),
-          timeMax: endDate.toISOString(),
-        },
-      });
-
-      console.log('✅ Eventos recibidos de Google Calendar:', response.data.events?.length || 0);
-      console.log('📅 Eventos:', response.data.events);
-      setGoogleCalendarEvents(response.data.events || []);
-    } catch (error: any) {
-      console.error('❌ Error obteniendo eventos de Google Calendar:', error);
-      console.error('❌ Detalles del error:', {
-        status: error.response?.status,
-        message: error.response?.data?.message || error.message,
-      });
-      setGoogleCalendarEvents([]);
-    }
-  };
-
-  // Verificar estado de conexión con Google Calendar al cargar
-  useEffect(() => {
-    const checkGoogleCalendarConnection = async () => {
-      try {
-        const response = await api.get('/google/token');
-        const isConnected = response.data.hasToken && !response.data.isExpired;
-        setGoogleCalendarConnected(isConnected);
-        console.log('📅 Estado de Google Calendar:', isConnected ? 'Conectado' : 'No conectado');
-        
-        // Si está conectado, obtener eventos
-        if (isConnected) {
-          await fetchGoogleCalendarEvents();
-        }
-      } catch (error: any) {
-        // 404 es normal si el usuario no ha conectado Google Calendar aún
-        // No es un error crítico, solo significa que no está conectado
-        if (error.response?.status === 404) {
-          console.log('📅 Google Calendar no conectado (esto es normal)');
-          setGoogleCalendarConnected(false);
-          setGoogleCalendarEvents([]);
-        } else if (error.response?.status === 401 || error.response?.status === 403) {
-          // Si es un error de autenticación, no hacer nada (el interceptor lo manejará)
-          console.warn('⚠️ Error de autenticación al verificar Google Calendar');
-          // No establecer estado, dejar que el interceptor maneje la redirección
-          return;
-        } else {
-          console.error('Error verificando conexión de Google Calendar:', error);
-          setGoogleCalendarConnected(false);
-          setGoogleCalendarEvents([]);
-        }
-      }
-    };
-
-    checkGoogleCalendarConnection();
-  }, []);
-
-  // Obtener eventos cuando cambia el mes del calendario
-  useEffect(() => {
-    if (googleCalendarConnected) {
-      fetchGoogleCalendarEvents();
-    }
-  }, [calendarDate, googleCalendarConnected]);
-
-  // Conectar Google Calendar usando el flujo completo que obtiene refresh_token
-  const handleConnectGoogleCalendar = async () => {
-    if (!user?.id) {
-      setCalendarMessage('Usuario no identificado');
-      setTimeout(() => setCalendarMessage(null), 3000);
-      return;
-    }
-
-    setConnectingCalendar(true);
-    try {
-      // Obtener URL de autorización del backend (usa el token de autenticación del usuario)
-      const response = await api.get('/google/auth');
-
-      if (response.data.authUrl) {
-        // Redirigir al usuario a la URL de autorización de Google
-        window.location.href = response.data.authUrl;
-      } else {
-        throw new Error('No se pudo obtener la URL de autorización');
-      }
-    } catch (error: any) {
-      console.error('Error iniciando conexión con Google Calendar:', error);
-      const errorMessage = error.response?.data?.message || 'Error al conectar Google Calendar. Por favor, intenta nuevamente.';
-      setCalendarMessage(errorMessage);
-      setTimeout(() => setCalendarMessage(null), 5000);
-      setConnectingCalendar(false);
-    }
-  };
-
-  // Verificar estado de conexión con Google Calendar al cargar
-  useEffect(() => {
-    const checkGoogleCalendarConnection = async () => {
-      try {
-        const response = await api.get('/google/token');
-        const isConnected = response.data.hasToken && !response.data.isExpired;
-        setGoogleCalendarConnected(isConnected);
-        
-        // Si está conectado, obtener eventos
-        if (isConnected) {
-          await fetchGoogleCalendarEvents();
-        }
-      } catch (error: any) {
-        // 404 es normal si el usuario no ha conectado Google Calendar aún
-        // No es un error crítico, solo significa que no está conectado
-        if (error.response?.status === 404) {
-          console.log('📅 Google Calendar no conectado (esto es normal)');
-          setGoogleCalendarConnected(false);
-          setGoogleCalendarEvents([]);
-        } else if (error.response?.status === 401 || error.response?.status === 403) {
-          // Si es un error de autenticación, no hacer nada (el interceptor lo manejará)
-          console.warn('⚠️ Error de autenticación al verificar Google Calendar');
-          // No establecer estado, dejar que el interceptor maneje la redirección
-          return;
-        } else {
-          console.error('Error verificando conexión de Google Calendar:', error);
-          setGoogleCalendarConnected(false);
-          setGoogleCalendarEvents([]);
-        }
-      }
-    };
-
-    checkGoogleCalendarConnection();
-  }, []);
-
-  // Obtener eventos cuando cambia el mes del calendario
-  useEffect(() => {
-    if (googleCalendarConnected) {
-      fetchGoogleCalendarEvents();
-    }
-  }, [calendarDate, googleCalendarConnected]);
-
-  // Verificar si se completó la conexión (desde el callback)
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const googleConnected = urlParams.get('google_connected');
-    const googleError = urlParams.get('google_error');
-
-    if (googleConnected === 'true') {
-      // Verificar la conexión actualizada desde el servidor
-      const verifyConnection = async () => {
-        try {
-          const response = await api.get('/google/token');
-          const isConnected = response.data.hasToken && !response.data.isExpired;
-          setGoogleCalendarConnected(isConnected);
-          setCalendarMessage('Google Calendar conectado correctamente');
-          setTimeout(() => setCalendarMessage(null), 3000);
-          
-          // Obtener eventos después de conectar
-          if (isConnected) {
-            await fetchGoogleCalendarEvents();
-          }
-        } catch (error: any) {
-          console.error('Error verificando conexión después del callback:', error);
-          // Aún así, establecer como conectado ya que el callback fue exitoso
-          setGoogleCalendarConnected(true);
-          setCalendarMessage('Google Calendar conectado correctamente');
-          setTimeout(() => setCalendarMessage(null), 3000);
-          // Intentar obtener eventos
-          await fetchGoogleCalendarEvents();
-        }
-      };
-      
-      verifyConnection();
-      // Limpiar URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } else if (googleError) {
-      let errorMessage = 'Error al conectar con Google';
-      switch (googleError) {
-        case 'no_code':
-          errorMessage = 'No se recibió el código de autorización';
-          break;
-        case 'no_user':
-          errorMessage = 'Usuario no identificado';
-          break;
-        case 'config':
-          errorMessage = 'Error en la configuración del servidor';
-          break;
-        case 'callback_error':
-          errorMessage = 'Error procesando la autorización';
-          break;
-      }
-      setCalendarMessage(errorMessage);
-      setTimeout(() => setCalendarMessage(null), 3000);
-      // Limpiar URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, []);
-
-  const handleDisconnectGoogleCalendar = async () => {
-    try {
-      await api.delete('/google/disconnect');
-      setGoogleCalendarConnected(false);
-      setCalendarMessage('Google desconectado correctamente');
-      setTimeout(() => setCalendarMessage(null), 3000);
-    } catch (error: any) {
-      console.error('Error desconectando Google:', error);
-      setCalendarMessage('Error al desconectar Google');
-      setTimeout(() => setCalendarMessage(null), 3000);
-    }
-  };
 
   const fetchStats = async () => {
     try {
@@ -1204,60 +861,6 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Generar calendario para el calendario principal (izquierda) - mes completo
-  const calendarMonth = calendarDate.getMonth();
-  const calendarYear = calendarDate.getFullYear();
-  const firstDay = new Date(calendarYear, calendarMonth, 1);
-  const lastDay = new Date(calendarYear, calendarMonth + 1, 0);
-  const daysInMonth = lastDay.getDate();
-  // Ajustar para que lunes sea 0 (getDay() devuelve 0=domingo, 1=lunes, etc.)
-  const startingDayOfWeek = (firstDay.getDay() + 6) % 7; // Convierte domingo=0 a lunes=0
-
-  const calendarDaysMain = [];
-  // Días vacíos al inicio
-  for (let i = 0; i < startingDayOfWeek; i++) {
-    calendarDaysMain.push(null);
-  }
-  // Días del mes
-  for (let i = 1; i <= daysInMonth; i++) {
-    calendarDaysMain.push(i);
-  }
-
-  // Generar calendario para el calendario derecho - solo una semana
-  const today = new Date();
-  const currentDay = today.getDate();
-  
-  // Obtener el primer día de la semana actual (lunes = 0)
-  const firstDayOfWeekRight = new Date(calendarYear, calendarMonth, currentDay);
-  const dayOfWeek = (firstDayOfWeekRight.getDay() + 6) % 7; // Convierte domingo=0 a lunes=0
-  firstDayOfWeekRight.setDate(currentDay - dayOfWeek);
-  
-  // Generar los 7 días de la semana
-  const calendarDaysRight = [];
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(firstDayOfWeekRight);
-    date.setDate(firstDayOfWeekRight.getDate() + i);
-    const dayOfWeekIndex = (date.getDay() + 6) % 7; // Convierte domingo=0 a lunes=0
-    calendarDaysRight.push({
-      day: date.getDate(),
-      dayOfWeek: ['L', 'M', 'M', 'J', 'V', 'S', 'D'][dayOfWeekIndex],
-      isCurrentMonth: date.getMonth() === calendarMonth,
-    });
-  }
-
-  const handlePrevMonth = () => {
-    setCalendarDate(new Date(calendarYear, calendarMonth - 1, 1));
-  };
-
-  const handleNextMonth = () => {
-    setCalendarDate(new Date(calendarYear, calendarMonth + 1, 1));
-  };
-
-
-
-  // Array de nombres de meses para el calendario
-  const monthNamesArray = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-  const currentMonthName = monthNamesArray[calendarMonth];
 
   return (
     <Box sx={{ 
@@ -1292,41 +895,23 @@ const Dashboard: React.FC = () => {
         {/* Spacer */}
         <Box sx={{ flex: 1, display: { xs: 'none', sm: 'block' } }} />
         
-        {/* Botones de Notificaciones y Calendario */}
+        {/* Botón de Notificaciones */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          {/* Botón de Notificaciones */}
           <IconButton 
             size="large"
             sx={{ 
-              bgcolor: '#E8C52C', 
+              bgcolor: 'transparent', 
               borderRadius: '50%', 
               width: { xs: 36, md: 40 }, 
               height: { xs: 36, md: 40 },
               p: 0,
+              border: '1px solid #E5E7EB',
               '&:hover': {
-                bgcolor: '#D4B325',
+                bgcolor: 'transparent',
               },
             }}
           >
-            <Notifications sx={{ fontSize: { xs: 18, md: 20 }, color: theme.palette.background.default }} />
-          </IconButton>
-          
-          {/* Botón de Calendario */}
-          <IconButton 
-            size="large"
-            onClick={() => setCalendarModalOpen(true)}
-            sx={{ 
-              bgcolor: '#E8C52C', 
-              borderRadius: '50%', 
-              width: { xs: 36, md: 40 }, 
-              height: { xs: 36, md: 40 },
-              p: 0,
-              '&:hover': {
-                bgcolor: '#D4B325',
-              },
-            }}
-          >
-            <CalendarToday sx={{ fontSize: { xs: 18, md: 20 }, color: theme.palette.background.default }} />
+            <Notifications sx={{ fontSize: { xs: 18, md: 20 }, color: '#6B7280' }} />
           </IconButton>
         </Box>
       </Box>
@@ -1692,10 +1277,16 @@ const Dashboard: React.FC = () => {
             </Box>
             <Box sx={{ width: '100%', height: { xs: 250, sm: 300 }, minHeight: { xs: 250, sm: 300 } }}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart 
+                <AreaChart 
                   data={salesChartData}
                   margin={selectedMonth !== null ? { top: 5, right: 5, bottom: 0, left: 5 } : { top: 5, right: 5, bottom: 20, left: 5 }}
                 >
+                <defs>
+                  <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
                 <XAxis 
                   dataKey={selectedMonth !== null ? "day" : "month"} 
@@ -1716,6 +1307,11 @@ const Dashboard: React.FC = () => {
                 <Tooltip 
                   formatter={(value: number) => [`S/ ${value.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Ventas']}
                   labelFormatter={(label) => selectedMonth !== null ? `Día ${label}` : label}
+                  contentStyle={{
+                    backgroundColor: theme.palette.background.paper,
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: '8px',
+                  }}
                 />
                 {selectedMonth !== null && selectedMonthBudget > 0 && (
                   <ReferenceLine 
@@ -1731,15 +1327,16 @@ const Dashboard: React.FC = () => {
                     }}
                   />
                 )}
-                <Line 
+                <Area 
                   type="monotone" 
                   dataKey="value" 
-                  stroke="#8B5CF6" 
+                  stroke="#10B981" 
                   strokeWidth={3}
-                  dot={selectedMonth !== null ? { r: 4, fill: '#8B5CF6' } : false}
-                  activeDot={{ r: 6 }}
+                  fill="url(#colorSales)"
+                  dot={false}
+                  activeDot={{ r: 6, fill: '#10B981' }}
                 />
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
             </Box>
           </CardContent>
@@ -2180,470 +1777,6 @@ const Dashboard: React.FC = () => {
         </Alert>
       </Snackbar>
       
-      {/* Modal del Calendario */}
-      <Dialog
-        open={calendarModalOpen}
-        onClose={() => {
-          setCalendarModalOpen(false);
-          setSelectedDate(null);
-        }}
-        maxWidth="lg"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 3,
-            maxHeight: '90vh',
-          }
-        }}
-        BackdropProps={{
-          sx: {
-            backdropFilter: 'blur(4px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          }
-        }}
-      >
-        <DialogTitle sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          pb: 2,
-        }}>
-          <Typography variant="h6" sx={{ fontWeight: 600, color: '#1F2937' }}>
-            Calendario
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            <IconButton size="small" onClick={() => {
-              const newDate = new Date(calendarModalDate);
-              newDate.setMonth(newDate.getMonth() - 1);
-              setCalendarModalDate(newDate);
-              setSelectedDate(null);
-            }}>
-              <ChevronLeft />
-            </IconButton>
-            <Typography variant="body1" sx={{ minWidth: 150, textAlign: 'center', fontWeight: 500 }}>
-              {calendarModalDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' })}
-            </Typography>
-            <IconButton size="small" onClick={() => {
-              const newDate = new Date(calendarModalDate);
-              newDate.setMonth(newDate.getMonth() + 1);
-              setCalendarModalDate(newDate);
-              setSelectedDate(null);
-            }}>
-              <ChevronRight />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent sx={{ p: 3, display: 'flex', gap: 3, overflow: 'hidden' }}>
-          {(() => {
-            const modalMonth = calendarModalDate.getMonth();
-            const modalYear = calendarModalDate.getFullYear();
-            const firstDay = new Date(modalYear, modalMonth, 1);
-            const lastDay = new Date(modalYear, modalMonth + 1, 0);
-            const daysInMonth = lastDay.getDate();
-            const startingDayOfWeek = (firstDay.getDay() + 6) % 7;
-
-            const modalCalendarDays = [];
-            for (let i = 0; i < startingDayOfWeek; i++) {
-              modalCalendarDays.push(null);
-            }
-            for (let i = 1; i <= daysInMonth; i++) {
-              modalCalendarDays.push(i);
-            }
-
-            // Función para obtener tareas de un día específico
-            const getTasksForDay = (day: number) => {
-              const dateStr = `${modalYear}-${String(modalMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-              return allTasksWithDates.filter((task) => {
-                if (!task.dueDate) return false;
-                const taskDate = new Date(task.dueDate);
-                const taskDateStr = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`;
-                return taskDateStr === dateStr;
-              });
-            };
-
-            // Función para obtener eventos de Google Calendar de un día específico
-            const getEventsForDay = (day: number) => {
-              const dateStr = `${modalYear}-${String(modalMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-              return googleCalendarEvents.filter((event) => {
-                if (!event.start) return false;
-                const eventDate = getEventDate(event);
-                const eventDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
-                return eventDateStr === dateStr;
-              });
-            };
-
-            // Obtener tareas y eventos del día seleccionado
-            const selectedDayTasks = selectedDate ? (() => {
-              const selectedDay = selectedDate.getDate();
-              const selectedMonth = selectedDate.getMonth();
-              const selectedYear = selectedDate.getFullYear();
-              if (selectedMonth === modalMonth && selectedYear === modalYear) {
-                const tasks = getTasksForDay(selectedDay);
-                const events = getEventsForDay(selectedDay);
-                // Combinar tareas y eventos
-                return [
-                  ...tasks,
-                  ...events.map(event => {
-                    const eventDate = getEventDate(event);
-                    return {
-                      id: event.id,
-                      title: event.summary || 'Sin título',
-                      dueDate: event.start.dateTime || event.start.date,
-                      eventDate: eventDate, // Guardar la fecha parseada correctamente
-                      isGoogleEvent: true,
-                      description: event.description,
-                      location: event.location,
-                    };
-                  })
-                ];
-              }
-              return [];
-            })() : [];
-
-            return (
-              <Box sx={{ display: 'flex', gap: 3, width: '100%' }}>
-                {/* Columna izquierda: Calendario */}
-                <Box sx={{ flex: 1 }}>
-                  {/* Días de la semana */}
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, mb: 1 }}>
-                    {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((day, index) => (
-                      <Typography
-                        key={index}
-                        variant="caption"
-                        sx={{ 
-                          textAlign: 'center', 
-                          fontWeight: 600, 
-                          color: theme.palette.text.secondary,
-                          fontSize: '0.875rem',
-                          py: 1,
-                        }}
-                      >
-                        {day}
-                      </Typography>
-                    ))}
-                  </Box>
-                  {/* Días del mes */}
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
-                    {modalCalendarDays.map((day: number | null, index: number) => {
-                      if (!day) {
-                        return <Box key={index} />;
-                      }
-
-                      const dayTasks = getTasksForDay(day);
-                      const dayEvents = getEventsForDay(day);
-                      const hasTasks = dayTasks.length > 0;
-                      const hasEvents = dayEvents.length > 0;
-                      
-                      // Color fijo para tareas (independiente de la prioridad)
-                      const taskColor = hasTasks ? '#F97316' : null; // Naranja para tareas
-                      // Color fijo para eventos de Google Calendar
-                      const eventColor = hasEvents ? '#1976d2' : null; // Azul para eventos
-                      
-                      const today = new Date();
-                      const isToday = day === today.getDate() && 
-                                     modalMonth === today.getMonth() && 
-                                     modalYear === today.getFullYear();
-                      
-                      const isSelected = selectedDate && 
-                                        day === selectedDate.getDate() && 
-                                        modalMonth === selectedDate.getMonth() && 
-                                        modalYear === selectedDate.getFullYear();
-
-                      return (
-                        <Box
-                          key={index}
-                          onClick={() => {
-                            const clickedDate = new Date(modalYear, modalMonth, day);
-                            setSelectedDate(clickedDate);
-                          }}
-                          sx={{
-                            minHeight: 80,
-                            border: isSelected ? `2px solid ${taxiMonterricoColors.orange}` : `1px solid ${theme.palette.divider}`,
-                            borderRadius: 1,
-                            p: 1,
-                            bgcolor: isSelected 
-                              ? `${taxiMonterricoColors.orangeLight}30` 
-                              : (isToday 
-                                ? theme.palette.mode === 'dark' 
-                                  ? `${taxiMonterricoColors.orange}20` 
-                                  : '#F0F9FF' 
-                                : theme.palette.background.paper),
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'flex-start',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            position: 'relative',
-                            '&:hover': {
-                              bgcolor: isSelected 
-                                ? `${taxiMonterricoColors.orangeLight}50` 
-                                : (isToday 
-                                  ? theme.palette.mode === 'dark' 
-                                    ? `${taxiMonterricoColors.orange}30` 
-                                    : '#E0F2FE' 
-                                  : theme.palette.action.hover),
-                              borderColor: isSelected ? taxiMonterricoColors.orangeDark : theme.palette.divider,
-                            },
-                          }}
-                        >
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              fontWeight: isSelected || isToday ? 700 : 500,
-                              color: isSelected 
-                                ? taxiMonterricoColors.orangeDark 
-                                : (isToday 
-                                  ? theme.palette.mode === 'dark' 
-                                    ? taxiMonterricoColors.orange 
-                                    : '#0284C7' 
-                                  : theme.palette.text.primary),
-                              fontSize: '0.875rem',
-                              mb: 0.5,
-                            }}
-                          >
-                            {day}
-                          </Typography>
-                          {/* Puntos de color debajo de la fecha */}
-                          {(taskColor || eventColor) && (
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                gap: 0.5,
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                mt: 'auto',
-                              }}
-                            >
-                              {taskColor && (
-                                <Box
-                                  sx={{
-                                    width: 8,
-                                    height: 8,
-                                    borderRadius: '50%',
-                                    bgcolor: taskColor,
-                                  }}
-                                />
-                              )}
-                              {eventColor && (
-                                <Box
-                                  sx={{
-                                    width: 8,
-                                    height: 8,
-                                    borderRadius: '50%',
-                                    bgcolor: eventColor,
-                                  }}
-                                />
-                              )}
-                            </Box>
-                          )}
-                        </Box>
-                      );
-                    })}
-                  </Box>
-                </Box>
-
-                {/* Columna derecha: Listado de tareas del día seleccionado */}
-                <Box sx={{ 
-                  width: 320, 
-                  borderLeft: '1px solid #E5E7EB',
-                  pl: 3,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  maxHeight: '60vh',
-                  overflow: 'hidden',
-                  pt: 0.5,
-                  pb: 0.5,
-                }}>
-                  {selectedDate ? (
-                    <>
-                      {selectedDayTasks.length > 0 ? (
-                        <Box sx={{ 
-                          display: 'flex', 
-                          flexDirection: 'column', 
-                          gap: 1.5,
-                          overflowY: 'auto',
-                          pr: 1,
-                          pt: 0.5,
-                          pb: 0.5,
-                          '&::-webkit-scrollbar': {
-                            width: '6px',
-                          },
-                          '&::-webkit-scrollbar-track': {
-                            background: '#F3F4F6',
-                            borderRadius: '3px',
-                          },
-                          '&::-webkit-scrollbar-thumb': {
-                            background: '#D1D5DB',
-                            borderRadius: '3px',
-                            '&:hover': {
-                              background: '#9CA3AF',
-                            },
-                          },
-                        }}>
-                          {selectedDayTasks.map((item: any) => (
-                            <Card
-                              key={item.id}
-                              sx={{
-                                p: 2,
-                                borderRadius: 2,
-                                border: `1px solid ${item.isGoogleEvent ? (theme.palette.mode === 'dark' ? '#4285F4' : '#1a73e8') : (theme.palette.mode === 'dark' ? taxiMonterricoColors.green : taxiMonterricoColors.green)}`,
-                                bgcolor: item.isGoogleEvent 
-                                  ? (theme.palette.mode === 'dark' ? 'rgba(66, 133, 244, 0.15)' : 'rgba(26, 115, 232, 0.1)')
-                                  : (theme.palette.mode === 'dark' 
-                                    ? 'rgba(16, 185, 129, 0.15)' 
-                                    : `${taxiMonterricoColors.greenLight}20`),
-                                transition: 'all 0.2s',
-                                '&:hover': {
-                                  boxShadow: theme.palette.mode === 'dark' 
-                                    ? '0 4px 12px rgba(0,0,0,0.4)' 
-                                    : 2,
-                                  transform: 'translateY(-2px)',
-                                  bgcolor: item.isGoogleEvent
-                                    ? (theme.palette.mode === 'dark' ? 'rgba(66, 133, 244, 0.25)' : 'rgba(26, 115, 232, 0.15)')
-                                    : (theme.palette.mode === 'dark' 
-                                      ? 'rgba(16, 185, 129, 0.25)' 
-                                      : `${taxiMonterricoColors.greenLight}30`),
-                                },
-                              }}
-                            >
-                              <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
-                                <Box sx={{ flex: 1 }}>
-                                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                    {item.isGoogleEvent && (
-                                      <Cloud sx={{ fontSize: '1rem', color: '#4285F4' }} />
-                                    )}
-                                    <Typography
-                                      variant="body1"
-                                      sx={{
-                                        fontWeight: 600,
-                                        color: item.isGoogleEvent
-                                          ? (theme.palette.mode === 'dark' ? '#93C5FD' : '#1a73e8')
-                                          : (theme.palette.mode === 'dark' 
-                                            ? taxiMonterricoColors.green 
-                                            : taxiMonterricoColors.greenDark),
-                                        fontSize: '0.9375rem',
-                                      }}
-                                    >
-                                      {item.title}
-                                    </Typography>
-                                  </Box>
-                                  {item.isGoogleEvent && (
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mt: 1 }}>
-                                      {item.description && (
-                                        <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem' }}>
-                                          {item.description}
-                                        </Typography>
-                                      )}
-                                      {item.location && (
-                                        <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem' }}>
-                                          📍 {item.location}
-                                        </Typography>
-                                      )}
-                                    </Box>
-                                  )}
-                                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mt: 1 }}>
-                                    {!item.isGoogleEvent && item.type && (
-                                      <Chip
-                                        label={getTaskTypeLabel(item.type)}
-                                        size="small"
-                                        sx={{
-                                          fontSize: '0.7rem',
-                                          height: 22,
-                                          bgcolor: theme.palette.mode === 'dark' 
-                                            ? 'rgba(255, 255, 255, 0.1)' 
-                                            : '#F3F4F6',
-                                          color: theme.palette.mode === 'dark' 
-                                            ? theme.palette.text.secondary 
-                                            : '#6B7280',
-                                        }}
-                                      />
-                                    )}
-                                    {!item.isGoogleEvent && item.priority && (
-                                      <Chip
-                                        label={item.priority === 'high' ? 'Alta' : item.priority === 'medium' ? 'Media' : 'Baja'}
-                                        size="small"
-                                        sx={{
-                                          fontSize: '0.7rem',
-                                          height: 22,
-                                          bgcolor: theme.palette.mode === 'dark' 
-                                            ? (item.priority === 'high' 
-                                              ? 'rgba(239, 68, 68, 0.2)' 
-                                              : item.priority === 'medium' 
-                                              ? 'rgba(251, 191, 36, 0.2)' 
-                                              : 'rgba(16, 185, 129, 0.2)')
-                                            : (item.priority === 'high' 
-                                              ? '#FEE2E2' 
-                                              : item.priority === 'medium' 
-                                              ? '#FEF3C7' 
-                                              : '#D1FAE5'),
-                                          color: theme.palette.mode === 'dark' 
-                                            ? (item.priority === 'high' 
-                                              ? '#FCA5A5' 
-                                              : item.priority === 'medium' 
-                                              ? '#FCD34D' 
-                                              : '#6EE7B7')
-                                            : (item.priority === 'high' 
-                                              ? '#991B1B' 
-                                              : item.priority === 'medium' 
-                                              ? '#92400E' 
-                                              : '#065F46'),
-                                        }}
-                                      />
-                                    )}
-                                    {item.dueDate && (
-                                      <Typography 
-                                        variant="caption" 
-                                        sx={{ 
-                                          color: theme.palette.text.secondary, 
-                                          fontSize: '0.75rem', 
-                                          alignSelf: 'center' 
-                                        }}
-                                      >
-                                        {new Date(item.dueDate).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-                                      </Typography>
-                                    )}
-                                  </Box>
-                                </Box>
-                              </Box>
-                            </Card>
-                          ))}
-                        </Box>
-                      ) : (
-                        <Box sx={{ 
-                          display: 'flex', 
-                          flexDirection: 'column', 
-                          alignItems: 'center', 
-                          justifyContent: 'center',
-                          py: 6,
-                          textAlign: 'center',
-                        }}>
-                          <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 1 }}>
-                            No hay tareas o eventos programados para este día
-                          </Typography>
-                        </Box>
-                      )}
-                    </>
-                  ) : (
-                    <Box sx={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      alignItems: 'center', 
-                      justifyContent: 'center',
-                      py: 6,
-                      textAlign: 'center',
-                    }}>
-                      <Typography variant="body2" sx={{ color: '#9CA3AF' }}>
-                        Selecciona una fecha para ver las tareas
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-              </Box>
-            );
-          })()}
-        </DialogContent>
-      </Dialog>
     </Box>
   );
 };

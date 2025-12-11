@@ -21,7 +21,8 @@
         "fix-enums": "ts-node src/scripts/fixEnumConflict.ts",
         "create-task-columns": "ts-node src/scripts/createTaskColumns.ts",
         "check-task-columns": "ts-node src/scripts/checkTaskColumns.ts",
-        "create-ticket-columns": "ts-node src/scripts/createTicketColumns.ts"
+        "create-ticket-columns": "ts-node src/scripts/createTicketColumns.ts",
+        "create-activity-columns": "ts-node src/scripts/createActivityColumns.ts"
   },
   "dependencies": {
     "axios": "^1.13.2",

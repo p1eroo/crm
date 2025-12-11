@@ -122,15 +122,16 @@ const Login: React.FC = () => {
     >
       <Box
         sx={{
-          backgroundColor: 'rgba(30, 20, 50, 0.7)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          backgroundColor: 'rgba(245, 245, 245, 0.85)',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
           width: '90%',
           maxWidth: '450px',
           padding: { xs: '24px 32px', sm: '30px 40px' },
           borderRadius: '16px',
           color: '#fff',
-          backdropFilter: 'blur(20px)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+          backdropFilter: 'blur(20px) saturate(180%)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6)',
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%)',
         }}
       >
         {/* Título */}

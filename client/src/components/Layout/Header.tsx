@@ -107,17 +107,18 @@ const Header: React.FC = () => {
         <IconButton 
           size="medium"
           sx={{ 
-            bgcolor: '#F3F4F6', 
+            bgcolor: 'transparent', 
             borderRadius: 1.5, 
             width: 40, 
             height: 40,
+            border: '1px solid #E5E7EB',
             '&:hover': {
-              bgcolor: '#E5E7EB',
+              bgcolor: 'transparent',
             },
           }}
         >
           <Badge badgeContent={3} color="error">
-            <Notifications sx={{ fontSize: 20, color: '#1F2937' }} />
+            <Notifications sx={{ fontSize: 20, color: '#6B7280' }} />
           </Badge>
         </IconButton>
 

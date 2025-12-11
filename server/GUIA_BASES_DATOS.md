@@ -287,3 +287,6 @@ DB_NAME=mi_base_temporal
 ```
 Este archivo sobrescribirá `.env.development` y no se subirá a git.
 
+
+
+
