@@ -77,8 +77,8 @@ router.post('/', async (req: AuthRequest, res) => {
   try {
     const companyData = {
       ...req.body,
-      // No asignar ownerId automáticamente para que todos los usuarios vean los mismos datos
-      ownerId: req.body.ownerId || null,
+      // Asignar automáticamente el usuario actual como propietario del registro
+      ownerId: req.body.ownerId || req.userId || null,
     };
 
     const company = await Company.create(companyData);

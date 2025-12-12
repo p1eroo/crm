@@ -3,12 +3,6 @@ import {
   Box,
   Typography,
   Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   IconButton,
   TextField,
   Dialog,
@@ -25,13 +19,18 @@ import {
   FormControl,
   Select,
   Tooltip,
-  Paper,
   Menu,
   useTheme,
+  Collapse,
+  Drawer,
+  Paper,
 } from '@mui/material';
-import { Add, Edit, Delete, Search, AttachMoney, TrendingUp, TrendingDown, Computer, Visibility, ViewList, AccountTree, Person, CalendarToday, DragIndicator } from '@mui/icons-material';
+import { Add, Edit, Delete, Search, AttachMoney, TrendingUp, TrendingDown, Computer, Visibility, ViewList, AccountTree, Person, CalendarToday, DragIndicator, Close, FileDownload, UploadFile, FilterList, ExpandMore, Remove, Bolt, Business } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 
 interface Deal {
   id: number;
@@ -40,6 +39,7 @@ interface Deal {
   stage: string;
   closeDate?: string;
   probability?: number;
+  priority?: 'baja' | 'media' | 'alta';
   companyId?: number;
   contactId?: number;
   Contact?: { firstName: string; lastName: string };
@@ -48,6 +48,8 @@ interface Deal {
 }
 
 const Deals: React.FC = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const theme = useTheme();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,12 +62,13 @@ const Deals: React.FC = () => {
     amount: '',
     stage: 'lead',
     closeDate: '',
-    probability: '',
+    priority: 'baja' as 'baja' | 'media' | 'alta',
     companyId: '',
     contactId: '',
   });
   const [companies, setCompanies] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [dealToDelete, setDealToDelete] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -73,6 +76,15 @@ const Deals: React.FC = () => {
   const [updatingStage, setUpdatingStage] = useState<{ [key: number]: boolean }>({});
   const [filterStage, setFilterStage] = useState<string | null>(null); // Filtro de etapa activo
   const [viewMode, setViewMode] = useState<'list' | 'funnel'>('list'); // Modo de vista: lista o funnel
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [selectedStages, setSelectedStages] = useState<string[]>([]);
+  const [selectedOwnerFilters, setSelectedOwnerFilters] = useState<(string | number)[]>([]);
+  const [stagesExpanded, setStagesExpanded] = useState(true);
+  const [ownerFilterExpanded, setOwnerFilterExpanded] = useState(true);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   
   // Estados para drag and drop
   const [draggedDeal, setDraggedDeal] = useState<Deal | null>(null);
@@ -116,15 +128,70 @@ const Deals: React.FC = () => {
     return `S/ ${value.toFixed(0)}`;
   };
 
-  // Filtrar deals según el filtro activo
-  const filteredDeals = filterStage 
-    ? deals.filter(d => {
-        if (filterStage === 'won') {
-          return d.stage === 'cierre_ganado' || d.stage === 'closed won' || d.stage === 'won';
+  // Filtrar deals según los filtros activos
+  const filteredDeals = deals
+    .filter((deal) => {
+      // Filtro por etapas
+      if (selectedStages.length > 0) {
+        if (!selectedStages.includes(deal.stage)) {
+          return false;
         }
-        return d.stage === filterStage;
-      })
-    : deals;
+      }
+
+      // Filtro por propietarios
+      if (selectedOwnerFilters.length > 0) {
+        let matches = false;
+        for (const filter of selectedOwnerFilters) {
+          if (filter === 'me') {
+            if (deal.Owner?.id === user?.id) {
+              matches = true;
+              break;
+            }
+          } else if (filter === 'unassigned') {
+            if (!deal.Owner || deal.Owner.id === null || deal.Owner.id === undefined) {
+              matches = true;
+              break;
+            }
+          } else {
+            if (deal.Owner?.id === filter) {
+              matches = true;
+              break;
+            }
+          }
+        }
+        if (!matches) return false;
+      }
+
+      // Filtro por búsqueda
+      if (!search) return true;
+      const searchLower = search.toLowerCase();
+      return (
+        deal.name.toLowerCase().includes(searchLower) ||
+        deal.Contact?.firstName?.toLowerCase().includes(searchLower) ||
+        deal.Contact?.lastName?.toLowerCase().includes(searchLower) ||
+        deal.Company?.name?.toLowerCase().includes(searchLower)
+      );
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.closeDate || 0).getTime() - new Date(a.closeDate || 0).getTime();
+        case 'oldest':
+          return new Date(a.closeDate || 0).getTime() - new Date(b.closeDate || 0).getTime();
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'nameDesc':
+          return b.name.localeCompare(a.name);
+        default:
+          return 0;
+      }
+    });
+
+  // Paginación
+  const paginatedDeals = filteredDeals.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
 
   // Calcular estadísticas basadas en deals filtrados
   const totalDeals = filteredDeals.length;
@@ -208,7 +275,17 @@ const Deals: React.FC = () => {
     fetchDeals();
     fetchCompanies();
     fetchContacts();
-  }, [search]);
+    fetchUsers();
+  }, []); // Solo cargar datos una vez al montar el componente
+
+  const fetchUsers = async () => {
+    try {
+      const response = await api.get('/users');
+      setUsers(response.data || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+    }
+  };
 
   const fetchCompanies = async () => {
     try {
@@ -229,14 +306,93 @@ const Deals: React.FC = () => {
   };
 
   const fetchDeals = async () => {
+    setLoading(true);
     try {
-      const params = search ? { search } : {};
-      const response = await api.get('/deals', { params });
-      setDeals(response.data.deals || response.data);
+      // Cargar todos los deals sin filtros del servidor (el filtrado se hace en el cliente)
+      const response = await api.get('/deals', { params: { limit: 10000 } });
+      setDeals(response.data.deals || response.data || []);
     } catch (error) {
       console.error('Error fetching deals:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportToExcel = () => {
+    const exportData = filteredDeals.map((deal) => ({
+      'Nombre': deal.name || '--',
+      'Monto': deal.amount ? `S/ ${deal.amount.toLocaleString()}` : '--',
+      'Etapa': getStageLabel(deal.stage) || '--',
+      'Probabilidad': deal.probability ? `${deal.probability}%` : '--',
+      'Contacto': deal.Contact ? `${deal.Contact.firstName} ${deal.Contact.lastName}` : '--',
+      'Empresa': deal.Company?.name || '--',
+      'Propietario': deal.Owner ? `${deal.Owner.firstName} ${deal.Owner.lastName}` : '--',
+      'Fecha de Cierre': deal.closeDate ? new Date(deal.closeDate).toLocaleDateString('es-ES') : '--',
+    }));
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+
+    const colWidths = [
+      { wch: 30 }, // Nombre
+      { wch: 15 }, // Monto
+      { wch: 20 }, // Etapa
+      { wch: 12 }, // Probabilidad
+      { wch: 25 }, // Contacto
+      { wch: 25 }, // Empresa
+      { wch: 20 }, // Propietario
+      { wch: 18 }, // Fecha de Cierre
+    ];
+    ws['!cols'] = colWidths;
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Negocios');
+
+    const fecha = new Date().toISOString().split('T')[0];
+    const fileName = `Negocios_${fecha}.xlsx`;
+
+    XLSX.writeFile(wb, fileName);
+  };
+
+  const handleImportFromExcel = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+      for (const row of jsonData as any[]) {
+        const dealData: any = {
+          name: row['Nombre'] || '',
+          amount: parseFloat(String(row['Monto'] || '0').replace(/[^0-9.-]/g, '')) || 0,
+          stage: row['Etapa'] || 'lead',
+          probability: row['Probabilidad'] ? parseInt(String(row['Probabilidad']).replace('%', '')) : null,
+          closeDate: row['Fecha de Cierre'] ? new Date(row['Fecha de Cierre']).toISOString() : null,
+        };
+
+        if (dealData.name) {
+          await api.post('/deals', dealData);
+        }
+      }
+
+      fetchDeals();
+      alert('Negocios importados correctamente');
+    } catch (error) {
+      console.error('Error importing deals:', error);
+      alert('Error al importar negocios. Por favor, verifica el formato del archivo.');
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -248,7 +404,7 @@ const Deals: React.FC = () => {
         amount: deal.amount.toString(),
         stage: deal.stage,
         closeDate: deal.closeDate ? deal.closeDate.split('T')[0] : '',
-        probability: deal.probability?.toString() || '',
+        priority: deal.priority || 'baja',
         companyId: deal.companyId?.toString() || '',
         contactId: deal.contactId?.toString() || '',
       });
@@ -259,7 +415,7 @@ const Deals: React.FC = () => {
         amount: '',
         stage: 'lead',
         closeDate: '',
-        probability: '',
+        priority: 'baja' as 'baja' | 'media' | 'alta',
         companyId: '',
         contactId: '',
       });
@@ -277,7 +433,7 @@ const Deals: React.FC = () => {
       const data = {
         ...formData,
         amount: parseFloat(formData.amount) || 0,
-        probability: formData.probability ? parseInt(formData.probability) : undefined,
+        priority: formData.priority,
         companyId: formData.companyId ? parseInt(formData.companyId) : null,
         contactId: formData.contactId ? parseInt(formData.contactId) : null,
       };
@@ -430,210 +586,32 @@ const Deals: React.FC = () => {
       bgcolor: theme.palette.background.default, 
       minHeight: '100vh',
       pb: { xs: 3, sm: 6, md: 8 },
-      px: { xs: 1.5, sm: 2, md: 2.5, lg: 3 },
-      pt: { xs: 2, sm: 3, md: 3 },
-    }}>
-      {/* Cards de resumen - Diseño con todas las tarjetas en un contenedor */}
-      <Card sx={{ 
-        borderRadius: 6,
-        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
-        bgcolor: theme.palette.background.paper,
-        mb: 4,
-      }}>
-        <CardContent sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'stretch', flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
-            {/* Total Deals */}
-            <Box sx={{ 
-              flex: { xs: '1 1 100%', sm: 1 },
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 4,
-              px: 1,
-              py: 1,
-              borderRadius: 1.5,
-              bgcolor: 'transparent',
-            }}>
-              <Box sx={{ 
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 120,
-                height: 120,
-                borderRadius: '50%',
-                bgcolor: `${taxiMonterricoColors.green}15`,
-                flexShrink: 0,
-              }}>
-                <AttachMoney sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
-                  Total Negocios
-                </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
-                  {totalDeals.toLocaleString()}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <TrendingUp sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
-                  <Typography variant="caption" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '1rem' }}>
-                    8% este mes
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-
-            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
-
-            {/* Won Deals */}
-            <Box sx={{ 
-              flex: { xs: '1 1 100%', sm: 1 },
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 4,
-              px: 1,
-              py: 1,
-              borderRadius: 1.5,
-              bgcolor: 'transparent',
-            }}>
-              <Box sx={{ 
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 120,
-                height: 120,
-                borderRadius: '50%',
-                bgcolor: `${taxiMonterricoColors.green}15`,
-                flexShrink: 0,
-              }}>
-                <TrendingUp sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
-                  Negocios Ganados
-                </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
-                  {wonDeals.toLocaleString()}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <TrendingUp sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
-                  <Typography variant="caption" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '1rem' }}>
-                    3% este mes
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-
-            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
-
-            {/* Total Value */}
-            <Box sx={{ 
-              flex: { xs: '1 1 100%', sm: 1 },
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 4,
-              px: 1,
-              py: 1,
-              borderRadius: 1.5,
-              bgcolor: 'transparent',
-            }}>
-              <Box sx={{ 
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 120,
-                height: 120,
-                borderRadius: '50%',
-                bgcolor: `${taxiMonterricoColors.green}15`,
-                flexShrink: 0,
-              }}>
-                <Computer sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
-                  Valor Total
-                </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
-                  {formatCurrency(totalValue)}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: -0.75 }}>
-                  {Array.from({ length: Math.min(5, filteredDeals.length) }).map((_, idx) => {
-                    const deal = filteredDeals[idx];
-                    return (
-                      <Avatar
-                        key={idx}
-                        sx={{
-                          width: 36,
-                          height: 36,
-                          border: `2px solid ${theme.palette.background.paper}`,
-                          ml: idx > 0 ? -0.75 : 0,
-                          bgcolor: taxiMonterricoColors.green,
-                          fontSize: '0.875rem',
-                          fontWeight: 600,
-                          zIndex: 5 - idx,
-                        }}
-                      >
-                        {deal ? getInitials(deal.name) : String.fromCharCode(65 + idx)}
-                      </Avatar>
-                    );
-                  })}
-                </Box>
-              </Box>
-            </Box>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* Sección de tabla */}
-      <Card sx={{ 
-        borderRadius: 6,
-        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
+      px: { xs: 0, sm: 0, md: 0.25, lg: 0.5 },
+      pt: { xs: 0.25, sm: 0.5, md: 1 },
+      width: '100%',
+      maxWidth: '100%',
         overflow: 'hidden',
-        bgcolor: theme.palette.background.paper,
       }}>
-        <Box sx={{ px: 3, pt: 3, pb: 2 }}>
-          {/* Header de la tabla con título, búsqueda y ordenamiento */}
+      {/* Header principal - fuera del contenedor */}
+      <Box sx={{ pt: 0, pb: 2, mb: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box>
-              <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.25 }}>
+              <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.25, fontSize: { xs: '1.25rem', md: '1.375rem' } }}>
                 Todos los Negocios
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <TextField
-                size="small"
-                placeholder="Buscar"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                InputProps={{
-                  startAdornment: <Search sx={{ mr: 1, color: theme.palette.text.secondary, fontSize: 20 }} />,
-                }}
-                sx={{ 
-                  minWidth: 200,
-                  bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
-                  borderRadius: 1.5,
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': {
-                      borderColor: theme.palette.divider,
-                    },
-                    '&:hover fieldset': {
-                      borderColor: theme.palette.text.secondary,
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: theme.palette.primary.main,
-                    },
-                  },
-                }}
-              />
-              <FormControl size="small" sx={{ minWidth: 150 }}>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+            <FormControl size="small" sx={{ minWidth: 130 }}>
                 <Select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   displayEmpty
                   sx={{
                     borderRadius: 1.5,
-                    bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
+                  bgcolor: theme.palette.background.paper,
+                  fontSize: '0.8125rem',
                     '& .MuiOutlinedInput-notchedOutline': {
                       borderColor: theme.palette.divider,
                     },
@@ -641,7 +619,7 @@ const Deals: React.FC = () => {
                       borderColor: theme.palette.text.secondary,
                     },
                     '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme.palette.primary.main,
+                    borderColor: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
                     },
                   }}
                 >
@@ -651,170 +629,216 @@ const Deals: React.FC = () => {
                   <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
                 </Select>
               </FormControl>
-              <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mr: 1 }}>
-                <Tooltip title="Ver lista" arrow>
-                  <IconButton
-                    onClick={() => setViewMode('list')}
-                    sx={{
-                      bgcolor: viewMode === 'list' 
-                        ? theme.palette.primary.main 
-                        : theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.05)' 
-                        : '#F5F5F5',
-                      color: viewMode === 'list' 
-                        ? 'white' 
-                        : theme.palette.text.secondary,
-                      border: `1px solid ${theme.palette.divider}`,
-                      borderRadius: 1,
-                      '&:hover': {
-                        bgcolor: viewMode === 'list' 
-                          ? theme.palette.primary.dark 
-                          : theme.palette.action.hover,
-                      },
-                    }}
-                  >
-                    <ViewList />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Ver funnel" arrow>
-                  <IconButton
-                    onClick={() => setViewMode('funnel')}
-                    sx={{
-                      bgcolor: viewMode === 'funnel' 
-                        ? theme.palette.primary.main 
-                        : theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.05)' 
-                        : '#F5F5F5',
-                      color: viewMode === 'funnel' 
-                        ? 'white' 
-                        : theme.palette.text.secondary,
-                      border: `1px solid ${theme.palette.divider}`,
-                      borderRadius: 1,
-                      '&:hover': {
-                        bgcolor: viewMode === 'funnel' 
-                          ? theme.palette.primary.dark 
-                          : theme.palette.action.hover,
-                      },
-                    }}
-                  >
-                    <AccountTree />
-                  </IconButton>
-                </Tooltip>
-              </Box>
+            <Tooltip title={importing ? 'Importando...' : 'Importar'}>
+              <IconButton
+                size="small"
+                onClick={handleImportFromExcel}
+                disabled={importing}
+                sx={{
+                  border: `1px solid ${taxiMonterricoColors.green}`,
+                  color: taxiMonterricoColors.green,
+                  '&:hover': {
+                    borderColor: taxiMonterricoColors.greenDark,
+                    bgcolor: `${taxiMonterricoColors.green}10`,
+                  },
+                  '&:disabled': {
+                    borderColor: theme.palette.divider,
+                    color: theme.palette.text.disabled,
+                  },
+                  borderRadius: 1.5,
+                  p: 0.875,
+                }}
+              >
+                <UploadFile sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
+            <Tooltip title="Exportar">
+              <IconButton
+                size="small"
+                onClick={handleExportToExcel}
+                sx={{
+                  border: `1px solid ${taxiMonterricoColors.green}`,
+                  color: taxiMonterricoColors.green,
+                  '&:hover': {
+                    borderColor: taxiMonterricoColors.greenDark,
+                    bgcolor: `${taxiMonterricoColors.green}10`,
+                  },
+                  borderRadius: 1.5,
+                  p: 0.875,
+                }}
+              >
+                <FileDownload sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Filtros">
               <Button 
-                variant="contained" 
-                startIcon={<Add />} 
+                variant="outlined"
+                size="small"
+                startIcon={<FilterList sx={{ fontSize: 16 }} />}
+                onClick={() => setFilterDrawerOpen(!filterDrawerOpen)}
+                sx={{
+                  borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+                  color: theme.palette.text.primary,
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                  '&:hover': {
+                    borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                  },
+                  fontSize: '0.8125rem',
+                  textTransform: 'none',
+                  borderRadius: 1.5,
+                  px: 1.5,
+                  py: 0.75,
+                }}
+              >
+                Filter
+              </Button>
+            </Tooltip>
+            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mr: 1 }}>
+              <Tooltip title="Ver lista" arrow>
+                <IconButton
+                  onClick={() => setViewMode('list')}
+                  sx={{
+                    bgcolor: viewMode === 'list' 
+                      ? theme.palette.primary.main 
+                      : theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.05)' 
+                      : '#F5F5F5',
+                    color: viewMode === 'list' 
+                      ? 'white' 
+                      : theme.palette.text.secondary,
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: 1,
+                    '&:hover': {
+                      bgcolor: viewMode === 'list' 
+                        ? theme.palette.primary.dark 
+                        : theme.palette.action.hover,
+                    },
+                  }}
+                >
+                  <ViewList />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Ver funnel" arrow>
+                <IconButton
+                  onClick={() => setViewMode('funnel')}
+                  sx={{
+                    bgcolor: viewMode === 'funnel' 
+                      ? theme.palette.primary.main 
+                      : theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.05)' 
+                      : '#F5F5F5',
+                    color: viewMode === 'funnel' 
+                      ? 'white' 
+                      : theme.palette.text.secondary,
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: 1,
+                    '&:hover': {
+                      bgcolor: viewMode === 'funnel' 
+                        ? theme.palette.primary.dark 
+                        : theme.palette.action.hover,
+                    },
+                  }}
+                >
+                  <AccountTree />
+                </IconButton>
+              </Tooltip>
+            </Box>
+            <Tooltip title="Nuevo Negocio">
+              <IconButton
                 onClick={() => handleOpen()}
                 sx={{
                   bgcolor: taxiMonterricoColors.green,
+                  color: 'white',
                   '&:hover': {
-                    bgcolor: taxiMonterricoColors.green,
-                    opacity: 0.9,
+                    bgcolor: taxiMonterricoColors.greenDark,
                   },
-                  textTransform: 'none',
-                  fontWeight: 500,
-                  borderRadius: 1.5,
-                  px: 2.5,
-                  py: 1,
+                  borderRadius: '50%',
+                  width: 40,
+                  height: 40,
+                  boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
                 }}
               >
-                Nuevo Negocio
-              </Button>
+                <Add />
+              </IconButton>
+            </Tooltip>
             </Box>
           </Box>
         </Box>
 
-        {/* Vista de Lista */}
-        {viewMode === 'list' && (
-        <TableContainer 
-          component={Paper}
+      {/* Contenedor principal con layout flex para tabla y panel de filtros */}
+      {viewMode === 'list' && (
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', md: 'row' } }}>
+        {/* Contenido principal (tabla completa con header y filas) */}
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          {/* Header de la tabla */}
+          <Box
+            component="div"
           sx={{ 
-            overflowX: 'auto',
-            overflowY: 'hidden',
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+              borderRadius: '8px 8px 0 0',
+              overflow: 'hidden',
+              display: 'grid',
+              gridTemplateColumns: { xs: 'repeat(6, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 1fr 0.7fr' },
+              columnGap: { xs: 1, md: 1.5 },
+              minWidth: { xs: 800, md: 'auto' },
             maxWidth: '100%',
-            '&::-webkit-scrollbar': {
-              height: 8,
-            },
-            '&::-webkit-scrollbar-track': {
-              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f1f1f1',
-            },
-            '&::-webkit-scrollbar-thumb': {
-              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.secondary : '#888',
-              borderRadius: 4,
-              '&:hover': {
-                backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.primary : '#555',
-              },
-            },
-          }}
-        >
-          <Table sx={{ minWidth: { xs: 800, md: 'auto' } }}>
-            <TableHead>
-              <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa' }}>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '25%' } }}>
+              width: '100%',
+              px: { xs: 1, md: 1.5 },
+              py: { xs: 1.5, md: 2 },
+              mb: 2,
+              boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
+            }}
+          >
+            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
                   Nombre del Negocio
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
+            </Box>
+            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
                   Monto
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
+            </Box>
+            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
                   Etapa
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
-                  Probabilidad
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '18%' } }}>
+            </Box>
+            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
                   Contacto
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
+            </Box>
+            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
                   Empresa
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
-                  Propietario
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
+            </Box>
+            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
                   Acciones
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {(() => {
-                // Aplicar ordenamiento a los deals filtrados
-                let sortedDeals = [...filteredDeals];
-                switch (sortBy) {
-                  case 'newest':
-                    sortedDeals.sort((a, b) => {
-                      const dateA = a.closeDate ? new Date(a.closeDate).getTime() : 0;
-                      const dateB = b.closeDate ? new Date(b.closeDate).getTime() : 0;
-                      return dateB - dateA;
-                    });
-                    break;
-                  case 'oldest':
-                    sortedDeals.sort((a, b) => {
-                      const dateA = a.closeDate ? new Date(a.closeDate).getTime() : 0;
-                      const dateB = b.closeDate ? new Date(b.closeDate).getTime() : 0;
-                      return dateA - dateB;
-                    });
-                    break;
-                  case 'name':
-                    sortedDeals.sort((a, b) => a.name.localeCompare(b.name));
-                    break;
-                  case 'nameDesc':
-                    sortedDeals.sort((a, b) => b.name.localeCompare(a.name));
-                    break;
-                }
-                return sortedDeals;
-              })().map((deal) => (
-                <TableRow 
+            </Box>
+          </Box>
+
+          {/* Filas de negocios */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {paginatedDeals.map((deal) => (
+              <Box
                   key={deal.id}
-                  hover
+                component="div"
                   sx={{ 
-                    '&:hover': { bgcolor: theme.palette.mode === 'dark' ? theme.palette.action.hover : '#fafafa' },
-                    cursor: 'pointer',
-                    transition: 'background-color 0.2s',
-                  }}
-                >
-                  <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '25%' } }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+                  transition: 'all 0.2s ease',
+                  display: 'grid',
+                  gridTemplateColumns: { xs: 'repeat(6, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 1fr 0.7fr' },
+                  columnGap: { xs: 1, md: 1.5 },
+                  minWidth: { xs: 800, md: 'auto' },
+                  maxWidth: '100%',
+                  width: '100%',
+                  borderRadius: 0,
+                  border: 'none',
+                  boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
+                  px: { xs: 1, md: 1.5 },
+                  py: { xs: 0.5, md: 0.75 },
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 1)' : '#ffffff',
+                    boxShadow: theme.palette.mode === 'dark' ? '0 2px 6px rgba(0,0,0,0.3)' : '0 2px 6px rgba(0,0,0,0.1)',
+                  },
+                }}
+              >
+                <Box sx={{ py: { xs: 0.5, md: 0.75 }, px: { xs: 0.75, md: 1 }, display: 'flex', alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1, md: 1.5 }, width: '100%' }}>
                       <Avatar
                         sx={{
                           width: { xs: 32, md: 40 },
@@ -828,37 +852,81 @@ const Deals: React.FC = () => {
                       >
                         {getInitials(deal.name, undefined)}
                       </Avatar>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography 
                         variant="body2" 
+                        onClick={() => navigate(`/deals/${deal.id}`)}
                         sx={{ 
                           fontWeight: 500, 
                           color: theme.palette.text.primary,
-                          fontSize: { xs: '0.75rem', md: '0.875rem' },
+                          fontSize: { xs: '0.6875rem', md: '0.75rem' },
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
+                          mb: 0.25,
+                          maxWidth: { xs: '150px', md: '200px' },
+                          cursor: 'pointer',
+                          '&:hover': {
+                            color: '#20B2AA',
+                            textDecoration: 'underline',
+                          },
                         }}
+                        title={deal.name}
                       >
                         {deal.name}
                       </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        {deal.priority && (
+                          <>
+                            <Box
+                              sx={{
+                                width: 6,
+                                height: 6,
+                                borderRadius: '50%',
+                                bgcolor: deal.priority === 'baja' ? '#20B2AA' : deal.priority === 'media' ? '#F59E0B' : '#EF4444',
+                                flexShrink: 0,
+                              }}
+                            />
+                            <Typography 
+                              variant="caption" 
+                              sx={{ 
+                                color: theme.palette.text.secondary,
+                                fontSize: { xs: '0.5625rem', md: '0.625rem' },
+                                textTransform: 'capitalize',
+                              }}
+                            >
+                              {deal.priority}
+                            </Typography>
+                          </>
+                        )}
+                        {!deal.priority && (
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              color: theme.palette.text.secondary,
+                              fontSize: { xs: '0.5625rem', md: '0.625rem' },
+                            }}
+                          >
+                            --
+                          </Typography>
+                        )}
+                      </Box>
                     </Box>
-                  </TableCell>
-                  <TableCell sx={{ px: 1, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
+                  </Box>
+                </Box>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                     <Typography 
                       variant="body2" 
                       sx={{ 
                         color: theme.palette.text.primary,
-                        fontSize: { xs: '0.75rem', md: '0.875rem' },
+                      fontSize: { xs: '0.625rem', md: '0.6875rem' },
                         fontWeight: 500,
                       }}
                     >
-                      ${deal.amount.toLocaleString()}
+                    S/ {deal.amount.toLocaleString()}
                     </Typography>
-                  </TableCell>
-                  <TableCell 
-                    sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                </Box>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }} onClick={(e) => e.stopPropagation()}>
                     <Chip
                       label={getStageLabel(deal.stage)}
                       size="small"
@@ -870,13 +938,11 @@ const Deals: React.FC = () => {
                       disabled={updatingStage[deal.id]}
                       sx={{ 
                         fontWeight: 500,
-                        fontSize: { xs: '0.7rem', md: '0.75rem' },
-                        height: { xs: 20, md: 24 },
+                      fontSize: { xs: '0.5625rem', md: '0.625rem' },
+                      height: { xs: 16, md: 18 },
+                      cursor: 'pointer',
                         bgcolor: getStageColor(deal.stage).bg,
                         color: getStageColor(deal.stage).color,
-                        border: 'none',
-                        borderRadius: 1,
-                        cursor: 'pointer',
                         '&:hover': {
                           opacity: 0.8,
                         },
@@ -885,7 +951,7 @@ const Deals: React.FC = () => {
                     <Menu
                       anchorEl={stageMenuAnchor[deal.id]}
                       open={Boolean(stageMenuAnchor[deal.id])}
-                      onClose={(e: React.MouseEvent | {} | undefined) => {
+                    onClose={(e, reason) => {
                         if (e && 'stopPropagation' in e) {
                           (e as React.MouseEvent).stopPropagation();
                         }
@@ -894,10 +960,12 @@ const Deals: React.FC = () => {
                       onClick={(e) => e.stopPropagation()}
                       PaperProps={{
                         sx: {
-                          minWidth: 200,
+                        minWidth: 220,
+                        maxHeight: 400,
                           mt: 0.5,
                           borderRadius: 1.5,
                           boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        overflow: 'auto',
                         }
                       }}
                     >
@@ -906,113 +974,70 @@ const Deals: React.FC = () => {
                           key={option.value}
                           onClick={(e) => handleStageChange(e, deal.id, option.value)}
                           disabled={updatingStage[deal.id] || deal.stage === option.value}
+                        selected={deal.stage === option.value}
                           sx={{
                             fontSize: '0.875rem',
-                            color: option.value === 'cierre_ganado' ? '#2E7D32' : option.value === 'cierre_perdido' ? '#C62828' : theme.palette.text.primary,
+                          color: theme.palette.text.primary,
                             '&:hover': {
-                              bgcolor: option.value === 'cierre_ganado' ? '#E8F5E9' : option.value === 'cierre_perdido' ? '#FFEBEE' : theme.palette.action.hover,
-                            },
-                            '&.Mui-disabled': {
-                              opacity: 0.5,
-                            }
+                            bgcolor: theme.palette.action.hover,
+                          },
+                          '&.Mui-selected': {
+                            bgcolor: theme.palette.action.selected,
+                            color: theme.palette.primary.main,
+                            fontWeight: 600,
+                          },
                           }}
                         >
                           {option.label}
                         </MenuItem>
                       ))}
                     </Menu>
-                  </TableCell>
-                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
-                    {deal.probability ? (
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: theme.palette.text.primary,
-                          fontSize: { xs: '0.75rem', md: '0.875rem' },
-                        }}
-                      >
-                        {deal.probability}%
-                      </Typography>
-                    ) : (
-                      <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                        --
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '18%' } }}>
+                </Box>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                     {deal.Contact ? (
                       <Typography 
                         variant="body2" 
                         sx={{ 
                           color: theme.palette.text.primary,
-                          fontSize: { xs: '0.75rem', md: '0.875rem' },
+                        fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                        fontWeight: 400,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
+                        maxWidth: '100%',
                         }}
                       >
                         {deal.Contact.firstName} {deal.Contact.lastName}
                       </Typography>
                     ) : (
-                      <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
+                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.625rem', md: '0.6875rem' }, fontWeight: 400 }}>
                         --
                       </Typography>
                     )}
-                  </TableCell>
-                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
+                </Box>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                     {deal.Company?.name ? (
                       <Typography 
                         variant="body2" 
                         sx={{ 
                           color: theme.palette.text.primary,
-                          fontSize: { xs: '0.75rem', md: '0.875rem' },
+                        fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                        fontWeight: 400,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
+                        maxWidth: '100%',
                         }}
                       >
                         {deal.Company.name}
                       </Typography>
                     ) : (
-                      <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
+                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.625rem', md: '0.6875rem' }, fontWeight: 400 }}>
                         --
                       </Typography>
                     )}
-                  </TableCell>
-                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
-                    {deal.Owner ? (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Avatar
-                          sx={{
-                            width: { xs: 28, md: 32 },
-                            height: { xs: 28, md: 32 },
-                            bgcolor: taxiMonterricoColors.green,
-                            fontSize: { xs: '0.7rem', md: '0.75rem' },
-                            fontWeight: 600,
-                          }}
-                        >
-                          {getInitials(deal.Owner.firstName, deal.Owner.lastName)}
-                        </Avatar>
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            color: theme.palette.text.primary,
-                            fontSize: { xs: '0.75rem', md: '0.875rem' },
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {deal.Owner.firstName} {deal.Owner.lastName}
-                        </Typography>
                       </Box>
-                    ) : (
-                      <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                        --
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell sx={{ px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
                       <Tooltip title="Vista previa">
                         <IconButton
@@ -1045,7 +1070,7 @@ const Deals: React.FC = () => {
                             padding: { xs: 0.5, md: 1 },
                             '&:hover': {
                               color: '#d32f2f',
-                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.2)' : '#ffebee',
+                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.1)' : '#ffebee',
                             },
                           }}
                         >
@@ -1053,138 +1078,575 @@ const Deals: React.FC = () => {
                         </IconButton>
                       </Tooltip>
                     </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                </Box>
+              </Box>
+            ))}
+            {paginatedDeals.length === 0 && (
+              <Box sx={{ 
+                textAlign: 'center',
+                py: 8,
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+                borderRadius: 0,
+                border: 'none',
+                boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
+              }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                  <AttachMoney sx={{ fontSize: 48, color: theme.palette.text.disabled }} />
+                  <Typography variant="body1" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
+                    No hay negocios para mostrar
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+          </Box>
+
+          {/* Paginación */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            px: 2, 
+            py: 2,
+            mt: 2,
+          }}>
+            <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.875rem' }}>
+              Mostrando {page * rowsPerPage + 1} a {Math.min((page + 1) * rowsPerPage, filteredDeals.length)} de {filteredDeals.length.toLocaleString()} registros
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Button
+                onClick={() => setPage(Math.max(0, page - 1))}
+                disabled={page === 0}
+                size="small"
+                sx={{ textTransform: 'none' }}
+              >
+                Anterior
+              </Button>
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                Página {page + 1} de {Math.ceil(filteredDeals.length / rowsPerPage) || 1}
+              </Typography>
+              <Button
+                onClick={() => setPage(Math.min(Math.ceil(filteredDeals.length / rowsPerPage) - 1, page + 1))}
+                disabled={page >= Math.ceil(filteredDeals.length / rowsPerPage) - 1}
+                size="small"
+                sx={{ textTransform: 'none' }}
+              >
+                Siguiente
+              </Button>
+            </Box>
+          </Box>
+        </Box>
+
+        {/* Panel de Filtros Lateral */}
+        {filterDrawerOpen && (
+          <Box
+            sx={{
+              width: { xs: '100%', md: 400 },
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+              borderLeft: { xs: 'none', md: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}` },
+              borderTop: { xs: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`, md: 'none' },
+              borderRadius: 2,
+              height: 'fit-content',
+              maxHeight: { xs: 'none', md: 'calc(100vh - 120px)' },
+              position: { xs: 'relative', md: 'sticky' },
+              top: { xs: 0, md: 0 },
+              mt: { xs: 2, md: 2.5 },
+              alignSelf: 'flex-start',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: theme.palette.mode === 'dark'
+                ? '0 4px 12px rgba(0, 0, 0, 0.3)'
+                : '0 4px 12px rgba(0, 0, 0, 0.1)',
+            }}
+          >
+            {/* Header del Panel */}
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                py: 1,
+                px: 2,
+                borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+              }}
+            >
+              <Typography
+                sx={{
+                  fontWeight: 600,
+                  fontSize: '0.875rem',
+                  color: theme.palette.text.primary,
+                }}
+              >
+                Filtros
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 0.5 }}>
+                <Button
+                  onClick={() => {
+                    setSelectedStages([]);
+                    setSelectedOwnerFilters([]);
+                  }}
+                  sx={{
+                    color: '#d32f2f',
+                    textTransform: 'none',
+                    fontSize: '0.75rem',
+                    fontWeight: 500,
+                    minWidth: 'auto',
+                    px: 0.75,
+                    py: 0.25,
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.1)' : 'rgba(211, 47, 47, 0.05)',
+                    },
+                  }}
+                >
+                  Limpiar
+                </Button>
+                <IconButton
+                  size="small"
+                  onClick={() => setFilterDrawerOpen(false)}
+                  sx={{
+                    color: theme.palette.text.secondary,
+                    padding: '2px',
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                    },
+                  }}
+                >
+                  <Close sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Box>
+            </Box>
+
+            {/* Contenido del Panel */}
+            <Box sx={{ overflowY: 'auto', flex: 1 }}>
+              {/* Sección Etapas */}
+              <Box>
+                <Box
+                  onClick={() => setStagesExpanded(!stagesExpanded)}
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    py: 0.5,
+                    px: 2,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                    },
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontWeight: 500,
+                      fontSize: '0.9375rem',
+                      color: theme.palette.text.primary,
+                    }}
+                  >
+                    Etapas
+                  </Typography>
+                  {stagesExpanded ? (
+                    <ExpandMore sx={{ fontSize: 18, color: theme.palette.text.secondary, transform: 'rotate(180deg)' }} />
+                  ) : (
+                    <ExpandMore sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                  )}
+                </Box>
+                <Collapse in={stagesExpanded}>
+                  <Box sx={{ px: 2, pb: 2, pt: 1 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 1, alignItems: 'flex-start' }}>
+                      {stageOptions.map((option) => {
+                        const stageColor = getStageColor(option.value);
+                        const isSelected = selectedStages.includes(option.value);
+
+                        return (
+                          <Chip
+                            key={option.value}
+                            label={option.label}
+                            size="small"
+                            color={isSelected ? (stageColor.bg === '#E8F5E9' ? 'success' : stageColor.bg === '#FFEBEE' ? 'error' : 'warning') : undefined}
+                            variant={isSelected ? 'filled' : 'outlined'}
+                            onClick={() => {
+                              setSelectedStages((prev) =>
+                                prev.includes(option.value) ? prev.filter((s) => s !== option.value) : [...prev, option.value]
+                              );
+                            }}
+                            sx={{
+                              fontWeight: 500,
+                              fontSize: '0.75rem',
+                              height: '24px',
+                              cursor: 'pointer',
+                              width: 'fit-content',
+                              minWidth: 'auto',
+                              py: 0.25,
+                              px: 1,
+                              opacity: isSelected ? 1 : 0.8,
+                              '&:hover': {
+                                opacity: 1,
+                                transform: 'scale(1.02)',
+                              },
+                              transition: 'all 0.2s ease',
+                            }}
+                          />
+                        );
+                      })}
+                    </Box>
+                  </Box>
+                </Collapse>
+                <Divider sx={{ borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }} />
+              </Box>
+
+              {/* Sección Propietario del Registro */}
+              <Box>
+                <Box
+                  onClick={() => setOwnerFilterExpanded(!ownerFilterExpanded)}
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    py: 0.5,
+                    px: 2,
+                    cursor: 'pointer',
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                    },
+                  }}
+                >
+                  <Typography
+                    sx={{
+                      fontWeight: 500,
+                      fontSize: '0.9375rem',
+                      color: theme.palette.text.primary,
+                    }}
+                  >
+                    Propietario del Registro
+                  </Typography>
+                  {ownerFilterExpanded ? (
+                    <Remove sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                  ) : (
+                    <Add sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                  )}
+                </Box>
+                <Collapse in={ownerFilterExpanded}>
+                  <Box sx={{ px: 2, pb: 2, pt: 1 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 1, alignItems: 'flex-start' }}>
+                      {/* Opción "Yo" */}
+                      <Chip
+                        icon={<Bolt sx={{ fontSize: 14, color: 'inherit' }} />}
+                        label="Yo"
+                        size="small"
+                        onClick={() => {
+                          setSelectedOwnerFilters((prev) =>
+                            prev.includes('me') ? prev.filter((o) => o !== 'me') : [...prev, 'me']
+                          );
+                        }}
+                        sx={{
+                          fontWeight: 500,
+                          fontSize: '0.75rem',
+                          height: '24px',
+                          cursor: 'pointer',
+                          width: 'fit-content',
+                          minWidth: 'auto',
+                          py: 0.25,
+                          px: 1,
+                          opacity: selectedOwnerFilters.includes('me') ? 1 : 0.8,
+                          variant: selectedOwnerFilters.includes('me') ? 'filled' : 'outlined',
+                          color: selectedOwnerFilters.includes('me') ? 'primary' : undefined,
+                          '&:hover': {
+                            opacity: 1,
+                            transform: 'scale(1.02)',
+                          },
+                          transition: 'all 0.2s ease',
+                        }}
+                      />
+
+                      {/* Opción "Sin asignar" */}
+                      <Chip
+                        label="Sin asignar"
+                        size="small"
+                        onClick={() => {
+                          setSelectedOwnerFilters((prev) =>
+                            prev.includes('unassigned') ? prev.filter((o) => o !== 'unassigned') : [...prev, 'unassigned']
+                          );
+                        }}
+                        sx={{
+                          fontWeight: 500,
+                          fontSize: '0.75rem',
+                          height: '24px',
+                          cursor: 'pointer',
+                          width: 'fit-content',
+                          minWidth: 'auto',
+                          py: 0.25,
+                          px: 1,
+                          opacity: selectedOwnerFilters.includes('unassigned') ? 1 : 0.8,
+                          variant: selectedOwnerFilters.includes('unassigned') ? 'filled' : 'outlined',
+                          color: selectedOwnerFilters.includes('unassigned') ? 'primary' : undefined,
+                          '&:hover': {
+                            opacity: 1,
+                            transform: 'scale(1.02)',
+                          },
+                          transition: 'all 0.2s ease',
+                        }}
+                      />
+
+                      {/* Lista de usuarios */}
+                      {users.map((userItem) => {
+                        const isSelected = selectedOwnerFilters.includes(userItem.id);
+                        return (
+                          <Chip
+                            key={userItem.id}
+                            avatar={
+                              <Avatar
+                                src={userItem.avatar}
+                                sx={{
+                                  width: 20,
+                                  height: 20,
+                                  fontSize: '0.625rem',
+                                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+                                }}
+                              >
+                                {userItem.firstName?.[0]?.toUpperCase() || userItem.email?.[0]?.toUpperCase() || 'U'}
+                              </Avatar>
+                            }
+                            label={`${userItem.firstName} ${userItem.lastName}`}
+                            size="small"
+                            onClick={() => {
+                              setSelectedOwnerFilters((prev) =>
+                                prev.includes(userItem.id) ? prev.filter((o) => o !== userItem.id) : [...prev, userItem.id]
+                              );
+                            }}
+                            sx={{
+                              fontWeight: 500,
+                              fontSize: '0.75rem',
+                              height: '24px',
+                              cursor: 'pointer',
+                              width: 'fit-content',
+                              minWidth: 'auto',
+                              py: 0.25,
+                              px: 1,
+                              opacity: isSelected ? 1 : 0.8,
+                              variant: isSelected ? 'filled' : 'outlined',
+                              color: isSelected ? 'primary' : undefined,
+                              '&:hover': {
+                                opacity: 1,
+                                transform: 'scale(1.02)',
+                              },
+                              transition: 'all 0.2s ease',
+                            }}
+                          />
+                        );
+                      })}
+                    </Box>
+                  </Box>
+                </Collapse>
+                <Divider sx={{ borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }} />
+              </Box>
+            </Box>
+          </Box>
         )}
+      </Box>
+      )}
 
         {/* Vista de Pipeline/Funnel */}
         {viewMode === 'funnel' && (
           <Box
             sx={{
-              display: 'flex',
-              gap: 2,
-              overflowX: 'auto',
-              overflowY: 'hidden',
-              p: 2,
-              px: 3,
-              flex: 1,
-              minHeight: 0,
-              '&::-webkit-scrollbar': {
-                height: 8,
-              },
-              '&::-webkit-scrollbar-track': {
-                background: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-                borderRadius: 4,
-              },
-              '&::-webkit-scrollbar-thumb': {
-                background: theme.palette.mode === 'dark' ? '#616161' : '#bdbdbd',
-                borderRadius: 4,
-                '&:hover': {
-                  background: theme.palette.mode === 'dark' ? '#757575' : '#9e9e9e',
-                },
-              },
+              width: '100%',
+              maxWidth: '100%',
+              overflow: 'hidden',
+              position: 'relative',
+              height: 'calc(100vh - 200px)',
+              maxHeight: 'calc(100vh - 200px)',
             }}
           >
+            <Box
+              className="pipeline-scroll-container"
+              sx={{
+                display: 'flex',
+                gap: 1.5,
+                overflowX: 'scroll',
+                overflowY: 'hidden',
+                pb: 3,
+                width: '100%',
+                height: '100%',
+                position: 'relative',
+                scrollbarWidth: 'thin',
+                scrollbarColor: `${theme.palette.mode === 'dark' ? '#757575' : '#9e9e9e'} ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'}`,
+                WebkitOverflowScrolling: 'touch',
+                // Estilos para la barra de desplazamiento horizontal - siempre visible
+                '&::-webkit-scrollbar': {
+                  height: 16,
+                  display: 'block !important',
+                  WebkitAppearance: 'none',
+                  appearance: 'none',
+                },
+                '&::-webkit-scrollbar-track': {
+                  background: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                  borderRadius: 8,
+                  marginTop: 1,
+                  marginBottom: 1,
+                  border: `1px solid ${theme.palette.divider}`,
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  background: theme.palette.mode === 'dark' ? '#9e9e9e' : '#757575',
+                  borderRadius: 8,
+                  border: `2px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+                  minHeight: 24,
+                  '&:hover': {
+                    background: theme.palette.mode === 'dark' ? '#bdbdbd' : '#9e9e9e',
+                  },
+                },
+                '&::-webkit-scrollbar-corner': {
+                  background: 'transparent',
+                },
+                // Forzar visibilidad en Firefox
+                scrollbarGutter: 'stable',
+              }}
+            >
             {stages.map((stage) => {
               const stageDeals = filteredDeals.filter((deal) => deal.stage === stage.id);
               const stageTotal = stageDeals.reduce((sum, deal) => sum + (parseAmount(deal.amount) || 0), 0);
+              const dealsCount = stageDeals.length;
 
               return (
                 <Box
                   key={stage.id}
                   sx={{
-                    minWidth: 320,
-                    maxWidth: 320,
-                    width: 320,
+                    minWidth: 300,
+                    maxWidth: 300,
+                    width: 300,
                     display: 'flex',
                     flexDirection: 'column',
-                    height: '100%',
-                    minHeight: 0,
+                    height: 'calc(100vh - 200px)',
+                    maxHeight: 'calc(100vh - 200px)',
                     overflow: 'hidden',
                   }}
                 >
                   {/* Stage Header */}
-                  <Paper
+                  <Box
                     sx={{
-                      p: 2,
-                      mb: 2,
                       bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
-                      border: `2px solid ${stage.color}20`,
-                      borderRadius: 2,
+                      borderRadius: '8px 8px 0 0',
+                      p: 1.5,
+                      mb: 0,
+                      flexShrink: 0,
                     }}
                   >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Box
                           sx={{
-                            width: 12,
-                            height: 12,
+                            width: 8,
+                            height: 8,
                             borderRadius: '50%',
                             bgcolor: stage.color,
+                            flexShrink: 0,
                           }}
                         />
-                        <Typography variant="h6" fontWeight={600}>
+                        <Typography 
+                          variant="body2" 
+                          fontWeight={600}
+                          sx={{ 
+                            color: theme.palette.text.primary,
+                            fontSize: '0.875rem',
+                          }}
+                        >
                           {stage.label}
                         </Typography>
                       </Box>
                       <Chip
-                        label={stageDeals.length}
+                        label={dealsCount}
                         size="small"
                         sx={{
                           bgcolor: stage.color,
                           color: 'white',
                           fontWeight: 600,
+                          fontSize: '0.75rem',
+                          height: 20,
+                          minWidth: 24,
+                          '& .MuiChip-label': {
+                            px: 0.75,
+                          },
                         }}
                       />
                     </Box>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                      {formatCurrency(stageTotal)}
-                    </Typography>
-                  </Paper>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.5 }}>
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          color: theme.palette.text.secondary,
+                          fontSize: '0.75rem',
+                        }}
+                      >
+                        {dealsCount} {dealsCount === 1 ? 'Negocio' : 'Negocios'}
+                      </Typography>
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          color: theme.palette.text.secondary,
+                          fontSize: '0.75rem',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {formatCurrency(stageTotal)}
+                      </Typography>
+                    </Box>
+                  </Box>
 
                   {/* Deals List - Drop Zone */}
                   <Box
                     onDragOver={(e) => handleDragOver(e, stage.id)}
                     onDragLeave={handleDragLeave}
                     onDrop={(e) => handleDrop(e, stage.id)}
+                    className="pipeline-column-scroll"
                     sx={{
                       display: 'flex',
                       flexDirection: 'column',
                       gap: 1.5,
-                      flex: 1,
+                      flex: '1 1 auto',
                       overflowY: 'auto',
-                      minHeight: '100px',
-                      maxHeight: '100%',
-                      borderRadius: 2,
+                      overflowX: 'hidden',
+                      minHeight: 0,
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : '#FAFAFA',
+                      borderRadius: '0 0 8px 8px',
+                      p: 1.5,
+                      pt: 1.5,
                       transition: 'all 0.3s',
                       backgroundColor: dragOverStage === stage.id 
                         ? (theme.palette.mode === 'dark' 
                           ? 'rgba(255, 255, 255, 0.1)' 
                           : 'rgba(0, 0, 0, 0.04)')
-                        : 'transparent',
+                        : (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : '#FAFAFA'),
                       border: dragOverStage === stage.id 
                         ? `2px dashed ${stage.color}` 
                         : '2px dashed transparent',
+                      scrollbarWidth: 'none',
+                      msOverflowStyle: 'none',
+                      '&::-webkit-scrollbar': {
+                        display: 'none',
+                        width: 0,
+                        height: 0,
+                      },
                     }}
                   >
                     {stageDeals.length === 0 ? (
-                      <Paper
+                      <Box
                         sx={{
-                          p: 3,
+                          p: 2,
                           textAlign: 'center',
-                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : '#FAFAFA',
+                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : '#FFFFFF',
                           border: `1px dashed ${theme.palette.divider}`,
-                          borderRadius: 2,
+                          borderRadius: 1.5,
+                          mt: 0.5,
                         }}
                       >
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: theme.palette.text.secondary,
+                            fontSize: '0.8125rem',
+                          }}
+                        >
                           No hay negocios
                         </Typography>
-                      </Paper>
+                      </Box>
                     ) : (
                       stageDeals.map((deal) => (
                         <Card
@@ -1193,65 +1655,156 @@ const Deals: React.FC = () => {
                           onDragStart={(e) => handleDragStart(e, deal)}
                           onDragEnd={handleDragEnd}
                           sx={{
-                            cursor: isDragging && draggedDeal?.id === deal.id ? 'grabbing' : 'grab',
+                            cursor: isDragging && draggedDeal?.id === deal.id ? 'grabbing' : 'default',
                             opacity: isDragging && draggedDeal?.id === deal.id ? 0.3 : 1,
-                            borderLeft: `4px solid ${stage.color}`,
-                            borderRadius: 2,
+                            bgcolor: theme.palette.background.paper,
+                            borderRadius: 1.5,
                             boxShadow: theme.palette.mode === 'dark'
-                              ? '0 2px 8px rgba(0,0,0,0.2)'
-                              : '0 2px 8px rgba(0,0,0,0.1)',
+                              ? '0 1px 3px rgba(0,0,0,0.2)'
+                              : '0 1px 3px rgba(0,0,0,0.08)',
+                            transition: 'all 0.2s ease',
+                            flexShrink: 0,
                             '&:hover': {
                               transform: 'translateY(-2px)',
                               boxShadow: theme.palette.mode === 'dark'
-                                ? '0 8px 16px rgba(0,0,0,0.5)'
-                                : '0 8px 16px rgba(0,0,0,0.2)',
+                                ? '0 4px 12px rgba(0,0,0,0.3)'
+                                : '0 4px 12px rgba(0,0,0,0.15)',
                             },
                           }}
                         >
-                          <CardContent sx={{ p: 2.5 }}>
-                            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 1.5 }}>
+                          <CardContent sx={{ p: 2, '&:last-child': { pb: 2 }, flexShrink: 0 }}>
+                            {/* Título del Deal */}
+                            <Typography 
+                              variant="subtitle2" 
+                              fontWeight={600} 
+                              onClick={() => navigate(`/deals/${deal.id}`)}
+                              sx={{ 
+                                mb: 0.75,
+                                color: theme.palette.text.primary,
+                                fontSize: '0.8125rem',
+                                lineHeight: 1.4,
+                                cursor: 'pointer',
+                                '&:hover': {
+                                  color: '#20B2AA',
+                                  textDecoration: 'underline',
+                                },
+                              }}
+                            >
                               {deal.name}
                             </Typography>
-                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
-                              <Typography variant="body2" fontWeight={600} color={taxiMonterricoColors.green}>
+
+                                  {/* Monto, Fecha y Propietario */}
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, mb: 1.5 }}>
+                              <Typography 
+                                variant="body2" 
+                                fontWeight={600}
+                                sx={{ 
+                                  color: theme.palette.text.primary,
+                                  fontSize: '0.75rem',
+                                }}
+                              >
                                 {formatCurrency(parseAmount(deal.amount))}
                               </Typography>
+                              {deal.closeDate && (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <CalendarToday sx={{ fontSize: 12, color: theme.palette.text.secondary }} />
+                                  <Typography 
+                                    variant="caption" 
+                                    sx={{ 
+                                      color: theme.palette.text.secondary,
+                                      fontSize: '0.6875rem',
+                                    }}
+                                  >
+                                    {new Date(deal.closeDate).toLocaleDateString('es-ES', {
+                                      day: 'numeric',
+                                      month: 'short',
+                                      year: 'numeric',
+                                    })}
+                                  </Typography>
+                                </Box>
+                              )}
+                              {deal.Owner && (
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  <Avatar
+                                    sx={{
+                                      width: 18,
+                                      height: 18,
+                                      bgcolor: taxiMonterricoColors.green,
+                                      fontSize: '0.5625rem',
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    {getInitials(deal.Owner.firstName, deal.Owner.lastName)}
+                                  </Avatar>
+                                  <Typography 
+                                    variant="caption" 
+                                    sx={{ 
+                                      color: theme.palette.text.secondary,
+                                      fontSize: '0.6875rem',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap',
+                                    }}
+                                  >
+                                    {deal.Owner.firstName} {deal.Owner.lastName}
+                                  </Typography>
+                                </Box>
+                              )}
                             </Box>
-                            {deal.Contact && (
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                <Person sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
-                                <Typography variant="body2" color="text.secondary">
-                                  {deal.Contact.firstName} {deal.Contact.lastName}
-                                </Typography>
-                              </Box>
-                            )}
-                            {deal.Owner && (
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                <Person sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
-                                <Typography variant="body2" color="text.secondary">
-                                  {deal.Owner.firstName} {deal.Owner.lastName}
-                                </Typography>
-                              </Box>
-                            )}
-                            {deal.closeDate && (
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <CalendarToday sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
-                                <Typography variant="body2" color="text.secondary">
-                                  {new Date(deal.closeDate).toLocaleDateString('es-ES')}
-                                </Typography>
-                              </Box>
-                            )}
+
+                            {/* Separador */}
+                            <Divider sx={{ my: 1, borderColor: theme.palette.divider }} />
+
+                            {/* Contactos y Empresas relacionados */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                              {deal.Contact && (
+                                <Tooltip title={`${deal.Contact.firstName} ${deal.Contact.lastName}`} arrow>
+                                  <Avatar
+                                    sx={{
+                                      width: 24,
+                                      height: 24,
+                                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
+                                      fontSize: '0.625rem',
+                                      fontWeight: 600,
+                                      border: `1px solid ${theme.palette.divider}`,
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    {getInitials(deal.Contact.firstName, deal.Contact.lastName)}
+                                  </Avatar>
+                                </Tooltip>
+                              )}
+                              {deal.Company && (
+                                <Tooltip title={deal.Company.name} arrow>
+                                  <Box
+                                    sx={{
+                                      width: 24,
+                                      height: 24,
+                                      borderRadius: '50%',
+                                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      border: `1px solid ${theme.palette.divider}`,
+                                      cursor: 'pointer',
+                                    }}
+                                  >
+                                    <Business sx={{ fontSize: 14, color: theme.palette.text.secondary }} />
+                                  </Box>
+                                </Tooltip>
+                              )}
+                            </Box>
                           </CardContent>
-                        </Card>
+      </Card>
                       ))
                     )}
                   </Box>
                 </Box>
               );
             })}
+            </Box>
           </Box>
         )}
-      </Card>
 
       <Dialog 
         open={open} 
@@ -1303,12 +1856,30 @@ const Deals: React.FC = () => {
               InputLabelProps={{ shrink: true }}
             />
             <TextField
-              label="Probabilidad (%)"
-              type="number"
-              value={formData.probability}
-              onChange={(e) => setFormData({ ...formData, probability: e.target.value })}
-              inputProps={{ min: 0, max: 100 }}
-            />
+              select
+              label="Prioridad"
+              value={formData.priority}
+              onChange={(e) => setFormData({ ...formData, priority: e.target.value as 'baja' | 'media' | 'alta' })}
+            >
+              <MenuItem value="baja">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#20B2AA' }} />
+                  Baja
+                </Box>
+              </MenuItem>
+              <MenuItem value="media">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#F59E0B' }} />
+                  Media
+                </Box>
+              </MenuItem>
+              <MenuItem value="alta">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#EF4444' }} />
+                  Alta
+                </Box>
+              </MenuItem>
+            </TextField>
             <TextField
               select
               label="Empresa"

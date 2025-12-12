@@ -11,6 +11,7 @@ interface DealAttributes {
   stage: string;
   closeDate?: Date;
   probability?: number;
+  priority?: 'baja' | 'media' | 'alta';
   ownerId: number;
   contactId?: number;
   companyId?: number;
@@ -21,7 +22,7 @@ interface DealAttributes {
   updatedAt?: Date;
 }
 
-interface DealCreationAttributes extends Optional<DealAttributes, 'id' | 'closeDate' | 'probability' | 'contactId' | 'companyId' | 'description' | 'tags' | 'createdAt' | 'updatedAt'> {}
+interface DealCreationAttributes extends Optional<DealAttributes, 'id' | 'closeDate' | 'probability' | 'priority' | 'contactId' | 'companyId' | 'description' | 'tags' | 'createdAt' | 'updatedAt'> {}
 
 export class Deal extends Model<DealAttributes, DealCreationAttributes> implements DealAttributes {
   public id!: number;
@@ -30,6 +31,7 @@ export class Deal extends Model<DealAttributes, DealCreationAttributes> implemen
   public stage!: string;
   public closeDate?: Date;
   public probability?: number;
+  public priority?: 'baja' | 'media' | 'alta';
   public ownerId!: number;
   public contactId?: number;
   public companyId?: number;
@@ -75,6 +77,10 @@ Deal.init(
         min: 0,
         max: 100,
       },
+    },
+    priority: {
+      type: DataTypes.ENUM('baja', 'media', 'alta'),
+      allowNull: true,
     },
     ownerId: {
       type: DataTypes.INTEGER,

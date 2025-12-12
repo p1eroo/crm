@@ -953,8 +953,8 @@ const Contacts: React.FC = () => {
       bgcolor: theme.palette.background.default, 
       minHeight: '100vh',
       pb: { xs: 3, sm: 6, md: 8 },
-      px: { xs: 1.5, sm: 2, md: 2.5, lg: 3 },
-      pt: { xs: 2, sm: 3, md: 3 },
+      px: { xs: 0, sm: 0, md: 0.25, lg: 0.5 },
+      pt: { xs: 0.25, sm: 0.5, md: 1 },
     }}>
       {/* Header principal - fuera del contenedor */}
       <Box sx={{ pt: 0, pb: 2, mb: 2 }}>
@@ -962,7 +962,7 @@ const Contacts: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box>
               <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.25, fontSize: { xs: '1.25rem', md: '1.375rem' } }}>
-                Todos los Clientes
+                Todos los Contactos
               </Typography>
             </Box>
           </Box>

@@ -30,10 +30,13 @@ import {
   Paper,
   Menu,
   useTheme,
+  Drawer,
+  Collapse,
 } from '@mui/material';
-import { Add, Edit, Delete, Search, Business, Domain, TrendingUp, TrendingDown, Computer, Visibility, UploadFile, FileDownload, Warning, CheckCircle } from '@mui/icons-material';
+import { Add, Edit, Delete, Search, Business, Domain, TrendingUp, TrendingDown, Computer, Visibility, UploadFile, FileDownload, Warning, CheckCircle, FilterList, Close, ExpandMore, Remove, Bolt } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
+import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import empresaLogo from '../assets/empresa.png';
@@ -50,11 +53,14 @@ interface Company {
   state?: string;
   country?: string;
   lifecycleStage: string;
+  createdAt?: string;
+  ownerId?: number;
   Owner?: { firstName: string; lastName: string };
 }
 
 const Companies: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const theme = useTheme();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
@@ -86,6 +92,14 @@ const Companies: React.FC = () => {
   const [updatingStatus, setUpdatingStatus] = useState<{ [key: number]: boolean }>({});
   const [importing, setImporting] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [selectedStages, setSelectedStages] = useState<string[]>([]);
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
+  const [selectedOwnerFilters, setSelectedOwnerFilters] = useState<(string | number)[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [stagesExpanded, setStagesExpanded] = useState(true);
+  const [ownerFilterExpanded, setOwnerFilterExpanded] = useState(true);
+  const [countryFilterExpanded, setCountryFilterExpanded] = useState(true);
 
   // Calcular estadísticas
   const totalCompanies = companies.length;
@@ -108,6 +122,7 @@ const Companies: React.FC = () => {
 
   useEffect(() => {
     fetchCompanies();
+    fetchUsers();
   }, [search]);
 
   const fetchCompanies = async () => {
@@ -119,6 +134,15 @@ const Companies: React.FC = () => {
       console.error('Error fetching companies:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const response = await api.get('/users');
+      setUsers(response.data || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
     }
   };
 
@@ -515,13 +539,11 @@ const Companies: React.FC = () => {
     setStatusMenuAnchor({ ...statusMenuAnchor, [companyId]: null });
   };
 
-  const handleStatusChange = async (event: React.MouseEvent<HTMLElement>, companyId: number, isActive: boolean) => {
+  const handleStatusChange = async (event: React.MouseEvent<HTMLElement>, companyId: number, newStage: string) => {
     event.stopPropagation();
     event.preventDefault();
     setUpdatingStatus({ ...updatingStatus, [companyId]: true });
     try {
-      // Si queremos activar, establecer a 'cierre_ganado', si queremos desactivar, establecer a 'lead'
-      const newStage = isActive ? 'cierre_ganado' : 'lead';
       await api.put(`/companies/${companyId}`, { lifecycleStage: newStage });
       // Actualizar la empresa en la lista
       setCompanies(companies.map(company => 
@@ -532,7 +554,7 @@ const Companies: React.FC = () => {
       handleStatusMenuClose(companyId);
     } catch (error) {
       console.error('Error updating company status:', error);
-      alert('Error al actualizar el estado. Por favor, intenta nuevamente.');
+      alert('Error al actualizar la etapa. Por favor, intenta nuevamente.');
     } finally {
       setUpdatingStatus({ ...updatingStatus, [companyId]: false });
     }
@@ -540,16 +562,148 @@ const Companies: React.FC = () => {
 
   const getStageColor = (stage: string) => {
     const colors: { [key: string]: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' } = {
-      'subscriber': 'default',
-      'lead': 'info',
-      'marketing qualified lead': 'primary',
-      'sales qualified lead': 'primary',
-      'opportunity': 'warning',
-      'customer': 'success',
-      'evangelist': 'success',
+      'lead': 'error', // Rojo para 0%
+      'contacto': 'warning', // Naranja para 10%
+      'reunion_agendada': 'warning', // Naranja para 30%
+      'reunion_efectiva': 'warning', // Amarillo para 40%
+      'propuesta_economica': 'info', // Verde claro para 50%
+      'negociacion': 'success', // Verde para 70%
+      'licitacion': 'success', // Verde para 75%
+      'licitacion_etapa_final': 'success', // Verde oscuro para 85%
+      'cierre_ganado': 'success', // Verde oscuro para 90%
+      'cierre_perdido': 'error', // Rojo para -1%
+      'firma_contrato': 'success', // Verde oscuro para 95%
+      'activo': 'success', // Verde más oscuro para 100%
+      'cliente_perdido': 'error', // Rojo para -1%
+      'lead_inactivo': 'error', // Rojo para -5%
     };
     return colors[stage] || 'default';
   };
+
+  const getStageLabel = (stage: string) => {
+    const labels: { [key: string]: string } = {
+      'lead': '0% Lead',
+      'contacto': '10% Contacto',
+      'reunion_agendada': '30% Reunión Agendada',
+      'reunion_efectiva': '40% Reunión Efectiva',
+      'propuesta_economica': '50% Propuesta Económica',
+      'negociacion': '70% Negociación',
+      'licitacion': '75% Licitación',
+      'licitacion_etapa_final': '85% Licitación Etapa Final',
+      'cierre_ganado': '90% Cierre Ganado',
+      'cierre_perdido': '-1% Cierre Perdido',
+      'firma_contrato': '95% Firma de Contrato',
+      'activo': '100% Activo',
+      'cliente_perdido': '-1% Cliente perdido',
+      'lead_inactivo': '-5% Lead Inactivo',
+    };
+    return labels[stage] || stage;
+  };
+
+  const getStageLabelWithoutPercentage = (stage: string) => {
+    return getStageLabel(stage).replace(/\s*\d+%/, '').trim();
+  };
+
+  const stageOptions = [
+    { value: 'lead_inactivo', label: '-5% Lead Inactivo' },
+    { value: 'cliente_perdido', label: '-1% Cliente perdido' },
+    { value: 'cierre_perdido', label: '-1% Cierre Perdido' },
+    { value: 'lead', label: '0% Lead' },
+    { value: 'contacto', label: '10% Contacto' },
+    { value: 'reunion_agendada', label: '30% Reunión Agendada' },
+    { value: 'reunion_efectiva', label: '40% Reunión Efectiva' },
+    { value: 'propuesta_economica', label: '50% Propuesta Económica' },
+    { value: 'negociacion', label: '70% Negociación' },
+    { value: 'licitacion', label: '75% Licitación' },
+    { value: 'licitacion_etapa_final', label: '85% Licitación Etapa Final' },
+    { value: 'cierre_ganado', label: '90% Cierre Ganado' },
+    { value: 'firma_contrato', label: '95% Firma de Contrato' },
+    { value: 'activo', label: '100% Activo' },
+  ];
+
+  // Orden de las etapas según porcentaje
+  const stageOrder = [
+    'lead_inactivo', // -5%
+    'cliente_perdido', // -1%
+    'cierre_perdido', // -1%
+    'lead', // 0%
+    'contacto', // 10%
+    'reunion_agendada', // 30%
+    'reunion_efectiva', // 40%
+    'propuesta_economica', // 50%
+    'negociacion', // 70%
+    'licitacion', // 75%
+    'licitacion_etapa_final', // 85%
+    'cierre_ganado', // 90%
+    'firma_contrato', // 95%
+    'activo', // 100%
+  ];
+
+  // Filtrar y ordenar empresas
+  const filteredCompanies = companies
+    .filter((company) => {
+      // Filtro por etapas
+      if (selectedStages.length > 0) {
+        if (!selectedStages.includes(company.lifecycleStage || 'lead')) {
+          return false;
+        }
+      }
+      
+      // Filtro por países
+      if (selectedCountries.length > 0) {
+        if (!company.country || !selectedCountries.includes(company.country)) {
+          return false;
+        }
+      }
+      
+      // Filtro por propietarios
+      if (selectedOwnerFilters.length > 0) {
+        let matches = false;
+        for (const filter of selectedOwnerFilters) {
+          if (filter === 'me') {
+            if (company.ownerId === user?.id) {
+              matches = true;
+              break;
+            }
+          } else if (filter === 'unassigned') {
+            if (!company.ownerId) {
+              matches = true;
+              break;
+            }
+          } else {
+            if (company.ownerId === filter) {
+              matches = true;
+              break;
+            }
+          }
+        }
+        if (!matches) return false;
+      }
+      
+      // Filtro por búsqueda
+      if (!search) return true;
+      const searchLower = search.toLowerCase();
+      return (
+        company.name.toLowerCase().includes(searchLower) ||
+        company.industry?.toLowerCase().includes(searchLower) ||
+        company.phone?.toLowerCase().includes(searchLower) ||
+        company.domain?.toLowerCase().includes(searchLower)
+      );
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        case 'oldest':
+          return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'nameDesc':
+          return b.name.localeCompare(a.name);
+        default:
+          return 0;
+      }
+    });
 
   if (loading) {
     return (
@@ -564,221 +718,21 @@ const Companies: React.FC = () => {
       bgcolor: theme.palette.background.default, 
       minHeight: '100vh',
       pb: { xs: 3, sm: 6, md: 8 },
-      px: { xs: 1.5, sm: 2, md: 2.5, lg: 3 },
-      pt: { xs: 2, sm: 3, md: 3 },
+      px: { xs: 0, sm: 0, md: 0.25, lg: 0.5 },
+      pt: { xs: 0.25, sm: 0.5, md: 1 },
     }}>
-      {/* Cards de resumen - Diseño con todas las tarjetas en un contenedor */}
-      <Card sx={{ 
-        borderRadius: 6,
-        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
-        bgcolor: theme.palette.background.paper,
-        mb: 4,
-      }}>
-        <CardContent sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'stretch', flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
-            {/* Total Companies */}
-            <Box sx={{ 
-              flex: { xs: '1 1 100%', sm: 1 },
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 4,
-              px: 1,
-              py: 1,
-              borderRadius: 1.5,
-              bgcolor: 'transparent',
-            }}>
-              <Box sx={{ 
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 120,
-                height: 120,
-                borderRadius: '50%',
-                bgcolor: `${taxiMonterricoColors.green}15`,
-                flexShrink: 0,
-              }}>
-                <Business sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
-                  Total Empresas
-                </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
-                  {totalCompanies.toLocaleString()}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <TrendingUp sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
-                  <Typography variant="caption" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '1rem' }}>
-                    12% este mes
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-
-            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
-
-            {/* Active Companies */}
-            <Box sx={{ 
-              flex: { xs: '1 1 100%', sm: 1 },
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 4,
-              px: 1,
-              py: 1,
-              borderRadius: 1.5,
-              bgcolor: 'transparent',
-            }}>
-              <Box sx={{ 
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 120,
-                height: 120,
-                borderRadius: '50%',
-                bgcolor: `${taxiMonterricoColors.green}15`,
-                flexShrink: 0,
-              }}>
-                <Domain sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
-                  Empresas Activas
-                </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
-                  {activeCompanies.toLocaleString()}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <TrendingUp sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
-                  <Typography variant="caption" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '1rem' }}>
-                    5% este mes
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-
-            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
-
-            {/* New This Month */}
-            <Box sx={{ 
-              flex: { xs: '1 1 100%', sm: 1 },
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 4,
-              px: 1,
-              py: 1,
-              borderRadius: 1.5,
-              bgcolor: 'transparent',
-            }}>
-              <Box sx={{ 
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 120,
-                height: 120,
-                borderRadius: '50%',
-                bgcolor: `${taxiMonterricoColors.green}15`,
-                flexShrink: 0,
-              }}>
-                <Computer sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
-                  Nuevas Este Mes
-                </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
-                  {Math.min(totalCompanies, 15)}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: -0.75 }}>
-                  {Array.from({ length: Math.min(5, totalCompanies) }).map((_, idx) => {
-                    const company = companies[idx];
-                    return (
-                      <Avatar
-                        key={idx}
-                        sx={{
-                          width: 36,
-                          height: 36,
-                          border: `2px solid ${theme.palette.background.paper}`,
-                          ml: idx > 0 ? -0.75 : 0,
-                          bgcolor: taxiMonterricoColors.green,
-                          fontSize: '0.875rem',
-                          fontWeight: 600,
-                          zIndex: 5 - idx,
-                        }}
-                      >
-                        {company ? company.name.substring(0, 2).toUpperCase() : String.fromCharCode(65 + idx)}
-                      </Avatar>
-                    );
-                  })}
-                </Box>
-              </Box>
-            </Box>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* Sección de tabla */}
-      <Card sx={{ 
-        borderRadius: 6,
-        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
-        overflow: 'hidden',
-        bgcolor: theme.palette.background.paper,
-      }}>
-        <Box sx={{ px: 3, pt: 3, pb: 2 }}>
-          {/* Header de la tabla con título, búsqueda y ordenamiento */}
+      {/* Header principal - fuera del contenedor */}
+      <Box sx={{ pt: 0, pb: 2, mb: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box>
-              <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.25 }}>
+              <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.25, fontSize: { xs: '1.25rem', md: '1.375rem' } }}>
                 Todas las Empresas
               </Typography>
-              <Typography
-                component="a"
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                }}
-                sx={{
-                  fontSize: '0.875rem',
-                  color: theme.palette.primary.main,
-                  textDecoration: 'none',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    textDecoration: 'underline',
-                  },
-                }}
-              >
-                Empresas Activas
-              </Typography>
             </Box>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <TextField
-                size="small"
-                placeholder="Buscar"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                InputProps={{
-                  startAdornment: <Search sx={{ mr: 1, color: theme.palette.text.secondary, fontSize: 20 }} />,
-                }}
-                sx={{ 
-                  minWidth: 200,
-                  bgcolor: theme.palette.background.paper,
-                  borderRadius: 1.5,
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': {
-                      borderColor: theme.palette.divider,
-                    },
-                    '&:hover fieldset': {
-                      borderColor: theme.palette.text.secondary,
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: theme.palette.primary.main,
-                    },
-                  },
-                }}
-              />
-              <FormControl size="small" sx={{ minWidth: 150 }}>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+            <FormControl size="small" sx={{ minWidth: 130 }}>
                 <Select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
@@ -786,6 +740,7 @@ const Companies: React.FC = () => {
                   sx={{
                     borderRadius: 1.5,
                     bgcolor: theme.palette.background.paper,
+                  fontSize: '0.8125rem',
                     '& .MuiOutlinedInput-notchedOutline': {
                       borderColor: theme.palette.divider,
                     },
@@ -793,7 +748,7 @@ const Companies: React.FC = () => {
                       borderColor: theme.palette.text.secondary,
                     },
                     '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme.palette.primary.main,
+                    borderColor: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
                     },
                   }}
                 >
@@ -805,6 +760,7 @@ const Companies: React.FC = () => {
               </FormControl>
               <Tooltip title={importing ? 'Importando...' : 'Importar'}>
                 <IconButton
+                size="small"
                   onClick={handleImportFromExcel}
                   disabled={importing}
                   sx={{
@@ -819,21 +775,16 @@ const Companies: React.FC = () => {
                       color: theme.palette.text.disabled,
                     },
                     borderRadius: 1.5,
-                    p: 1.25,
+                  p: 0.875,
                   }}
                 >
-                  <UploadFile />
+                <UploadFile sx={{ fontSize: 18 }} />
                 </IconButton>
               </Tooltip>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept=".xlsx,.xls"
-                style={{ display: 'none' }}
-              />
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
               <Tooltip title="Exportar">
                 <IconButton
+                size="small"
                   onClick={handleExportToExcel}
                   sx={{
                     border: `1px solid ${taxiMonterricoColors.green}`,
@@ -843,11 +794,35 @@ const Companies: React.FC = () => {
                       bgcolor: `${taxiMonterricoColors.green}10`,
                     },
                     borderRadius: 1.5,
-                    p: 1.25,
+                  p: 0.875,
                   }}
                 >
-                  <FileDownload />
+                <FileDownload sx={{ fontSize: 18 }} />
                 </IconButton>
+              </Tooltip>
+            <Tooltip title="Filtros">
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<FilterList sx={{ fontSize: 16 }} />}
+                onClick={() => setFilterDrawerOpen(!filterDrawerOpen)}
+                sx={{
+                  borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+                  color: theme.palette.text.primary,
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                  '&:hover': {
+                    borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                  },
+                  fontSize: '0.8125rem',
+                  textTransform: 'none',
+                  borderRadius: 1.5,
+                  px: 1.5,
+                  py: 0.75,
+                }}
+              >
+                Filter
+              </Button>
               </Tooltip>
               <Tooltip title="Nueva Empresa">
                 <IconButton
@@ -858,8 +833,9 @@ const Companies: React.FC = () => {
                     '&:hover': {
                       bgcolor: taxiMonterricoColors.greenDark,
                     },
-                    borderRadius: 1.5,
-                    p: 1.25,
+                  borderRadius: '50%',
+                  width: 40,
+                  height: 40,
                     boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
                   }}
                 >
@@ -870,62 +846,77 @@ const Companies: React.FC = () => {
           </Box>
         </Box>
 
-        {/* Tabla de empresas con diseño mejorado */}
-        <TableContainer 
-          component={Paper}
+      {/* Contenedor principal con layout flex para tabla y panel de filtros */}
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', md: 'row' } }}>
+        {/* Contenido principal (tabla completa con header y filas) */}
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          {/* Header de la tabla */}
+          <Box
+            component="div"
           sx={{ 
-            overflowX: 'auto',
-            overflowY: 'hidden',
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+              borderRadius: '8px 8px 0 0',
+              overflow: 'hidden',
+              display: 'grid',
+              gridTemplateColumns: { xs: 'repeat(5, minmax(0, 1fr))', md: '1.5fr 1fr 0.9fr 1.2fr 0.7fr' },
+              columnGap: { xs: 1, md: 1.5 },
+              minWidth: { xs: 800, md: 'auto' },
             maxWidth: '100%',
-            '&::-webkit-scrollbar': {
-              height: 8,
-            },
-            '&::-webkit-scrollbar-track': {
-              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f1f1f1',
-            },
-            '&::-webkit-scrollbar-thumb': {
-              backgroundColor: theme.palette.mode === 'dark' ? '#666' : '#888',
-              borderRadius: 4,
-              '&:hover': {
-                backgroundColor: theme.palette.mode === 'dark' ? '#777' : '#555',
-              },
-            },
-          }}
-        >
-          <Table sx={{ minWidth: { xs: 800, md: 'auto' } }}>
-            <TableHead>
-              <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa' }}>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '30%' } }}>
+              width: '100%',
+              px: { xs: 1, md: 1.5 },
+              py: { xs: 1.5, md: 2 },
+              mb: 2,
+              boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
+            }}
+          >
+            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
                   Nombre de Empresa
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
+            </Box>
+            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
                   Industria
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
+            </Box>
+            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
                   Teléfono
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}>
+            </Box>
+            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
                   Etapa
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
+            </Box>
+            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
                   Acciones
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {companies.map((company) => (
-                <TableRow 
+            </Box>
+          </Box>
+
+          {/* Filas de empresas */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {filteredCompanies.map((company) => (
+            <Box
                   key={company.id}
-                  hover
+              component="div"
+              onClick={() => navigate(`/companies/${company.id}`)}
                   sx={{ 
-                    '&:hover': { bgcolor: theme.palette.mode === 'dark' ? theme.palette.action.hover : '#fafafa' },
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
                     cursor: 'pointer',
-                    transition: 'background-color 0.2s',
-                  }}
-                  onClick={() => navigate(`/companies/${company.id}`)}
-                >
-                  <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '30%' } }}>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1, md: 1.5 } }}>
+                transition: 'all 0.2s ease',
+                display: 'grid',
+                gridTemplateColumns: { xs: 'repeat(5, minmax(0, 1fr))', md: '1.5fr 1fr 0.9fr 1.2fr 0.7fr' },
+                columnGap: { xs: 1, md: 1.5 },
+                minWidth: { xs: 800, md: 'auto' },
+                maxWidth: '100%',
+                width: '100%',
+                borderRadius: 0,
+                border: 'none',
+                boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
+                px: { xs: 1, md: 1.5 },
+                py: { xs: 1, md: 1.25 },
+                '&:hover': {
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 1)' : '#ffffff',
+                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 6px rgba(0,0,0,0.3)' : '0 2px 6px rgba(0,0,0,0.1)',
+                  transform: 'translateY(-1px)',
+                },
+              }}
+            >
+                <Box sx={{ py: { xs: 1, md: 1.25 }, px: { xs: 0.75, md: 1 }, display: 'flex', alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1, md: 1.5 }, width: '100%' }}>
                       <Avatar
                         src={empresaLogo}
                         sx={{
@@ -941,29 +932,25 @@ const Companies: React.FC = () => {
                         {!empresaLogo && getInitials(company.name)}
                       </Avatar>
                       <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            fontWeight: 500, 
-                            color: theme.palette.text.primary,
-                            fontSize: { xs: '0.75rem', md: '0.875rem' },
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            mb: 0.25,
-                          }}
-                        >
-                          {company.name}
-                        </Typography>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontWeight: 500, 
+                          color: theme.palette.text.primary,
+                          fontSize: { xs: '0.6875rem', md: '0.75rem' },
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          mb: 0.25,
+                          maxWidth: { xs: '150px', md: '200px' },
+                        }}
+                        title={company.name}
+                      >
+                        {company.name}
+                      </Typography>
                         {company.domain && company.domain !== '--' ? (
                           <Typography 
                             variant="caption" 
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.cursor = 'pointer';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.cursor = 'default';
-                            }}
                             onClick={(e) => {
                               e.stopPropagation();
                               if (company.domain && company.domain !== '--') {
@@ -973,19 +960,14 @@ const Companies: React.FC = () => {
                             }}
                             sx={{ 
                               color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
-                              fontSize: { xs: '0.7rem', md: '0.75rem' },
+                            fontSize: { xs: '0.5625rem', md: '0.625rem' },
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
-                              display: 'inline-block',
-                              width: 'fit-content',
-                              maxWidth: '100%',
-                              cursor: 'default',
-                              transition: 'all 0.2s ease',
-                              userSelect: 'none',
+                            display: 'block',
+                            cursor: 'pointer',
                               '&:hover': {
                                 textDecoration: 'underline',
-                                cursor: 'pointer',
                               },
                             }}
                           >
@@ -996,7 +978,7 @@ const Companies: React.FC = () => {
                             variant="caption" 
                             sx={{ 
                               color: theme.palette.text.secondary,
-                              fontSize: { xs: '0.7rem', md: '0.75rem' },
+                            fontSize: { xs: '0.5625rem', md: '0.625rem' },
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
@@ -1008,50 +990,44 @@ const Companies: React.FC = () => {
                         )}
                       </Box>
                     </Box>
-                  </TableCell>
-                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
+                </Box>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                     {company.industry ? (
                       <Typography 
                         variant="body2" 
                         sx={{ 
                           color: theme.palette.text.primary,
-                          fontSize: { xs: '0.75rem', md: '0.875rem' },
+                        fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                        fontWeight: 400,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
+                        maxWidth: '100%',
                         }}
                       >
                         {company.industry}
                       </Typography>
                     ) : (
-                      <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
+                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.625rem', md: '0.6875rem' }, fontWeight: 400 }}>
                         --
                       </Typography>
                     )}
-                  </TableCell>
-                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
-                    {company.phone ? (
+                </Box>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                       <Typography 
                         variant="body2" 
                         sx={{ 
                           color: theme.palette.text.primary,
-                          fontSize: { xs: '0.75rem', md: '0.875rem' },
+                      fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                      fontWeight: 400,
                         }}
                       >
-                        {company.phone}
+                    {company.phone || '--'}
                       </Typography>
-                    ) : (
-                      <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                        --
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell 
-                    sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                </Box>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }} onClick={(e) => e.stopPropagation()}>
                     <Chip
-                      label={company.lifecycleStage === 'cierre_ganado' ? 'Activo' : 'Inactivo'}
+                    label={getStageLabel(company.lifecycleStage || 'lead')}
                       size="small"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1059,18 +1035,11 @@ const Companies: React.FC = () => {
                         handleStatusMenuOpen(e, company.id);
                       }}
                       disabled={updatingStatus[company.id]}
+                    color={getStageColor(company.lifecycleStage || 'lead')}
                       sx={{ 
                         fontWeight: 500,
-                        fontSize: { xs: '0.7rem', md: '0.75rem' },
-                        height: { xs: 20, md: 24 },
-                        bgcolor: company.lifecycleStage === 'cierre_ganado'
-                          ? '#E8F5E9' 
-                          : '#FFEBEE',
-                        color: company.lifecycleStage === 'cierre_ganado'
-                          ? '#2E7D32'
-                          : '#C62828',
-                        border: 'none',
-                        borderRadius: 1,
+                      fontSize: { xs: '0.5625rem', md: '0.625rem' },
+                      height: { xs: 16, md: 18 },
                         cursor: 'pointer',
                         '&:hover': {
                           opacity: 0.8,
@@ -1089,48 +1058,43 @@ const Companies: React.FC = () => {
                       onClick={(e) => e.stopPropagation()}
                       PaperProps={{
                         sx: {
-                          minWidth: 150,
+                        minWidth: 220,
+                        maxHeight: 400,
                           mt: 0.5,
                           borderRadius: 1.5,
                           boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        overflow: 'auto',
                         }
                       }}
                     >
+                    {stageOptions.map((option) => (
                       <MenuItem
-                        onClick={(e) => handleStatusChange(e, company.id, true)}
-                        disabled={updatingStatus[company.id] || company.lifecycleStage === 'cierre_ganado'}
+                        key={option.value}
+                        onClick={(e) => handleStatusChange(e, company.id, option.value)}
+                        disabled={updatingStatus[company.id] || company.lifecycleStage === option.value}
+                        selected={company.lifecycleStage === option.value}
                         sx={{
                           fontSize: '0.875rem',
-                          color: '#2E7D32',
                           '&:hover': {
-                            bgcolor: '#E8F5E9',
+                            bgcolor: theme.palette.action.hover,
+                          },
+                          '&.Mui-selected': {
+                            bgcolor: theme.palette.action.selected,
+                          '&:hover': {
+                              bgcolor: theme.palette.action.selected,
+                            },
                           },
                           '&.Mui-disabled': {
                             opacity: 0.5,
                           }
                         }}
                       >
-                        Activo
+                        {option.label}
                       </MenuItem>
-                      <MenuItem
-                        onClick={(e) => handleStatusChange(e, company.id, false)}
-                        disabled={updatingStatus[company.id] || company.lifecycleStage !== 'cierre_ganado'}
-                        sx={{
-                          fontSize: '0.875rem',
-                          color: '#C62828',
-                          '&:hover': {
-                            bgcolor: '#FFEBEE',
-                          },
-                          '&.Mui-disabled': {
-                            opacity: 0.5,
-                          }
-                        }}
-                      >
-                        Inactivo
-                      </MenuItem>
+                    ))}
                     </Menu>
-                  </TableCell>
-                  <TableCell sx={{ px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
+                </Box>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
                       <Tooltip title="Vista previa">
                         <IconButton
@@ -1171,13 +1135,460 @@ const Companies: React.FC = () => {
                         </IconButton>
                       </Tooltip>
                     </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Card>
+                </Box>
+            </Box>
+          ))}
+          </Box>
+        </Box>
+
+        {/* Panel de Filtros Lateral */}
+        {filterDrawerOpen && (
+        <Box
+          sx={{
+            width: { xs: '100%', md: 400 },
+            bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+            borderLeft: { xs: 'none', md: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}` },
+            borderTop: { xs: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`, md: 'none' },
+            borderRadius: 2,
+            height: 'fit-content',
+            maxHeight: { xs: 'none', md: 'calc(100vh - 120px)' },
+            position: { xs: 'relative', md: 'sticky' },
+            top: { xs: 0, md: 0 },
+            mt: { xs: 2, md: 2.5 },
+            alignSelf: 'flex-start',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
+              : '0 4px 12px rgba(0, 0, 0, 0.1)',
+          }}
+        >
+          {/* Header del Panel */}
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              py: 1,
+              px: 2,
+              borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+            }}
+          >
+            <Typography
+              sx={{
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                color: theme.palette.text.primary,
+              }}
+            >
+              Filter
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 0.5 }}>
+              <Button
+                onClick={() => {
+                  setSelectedStages([]);
+                  setSelectedOwnerFilters([]);
+                  setSelectedCountries([]);
+                }}
+                sx={{
+                  color: '#d32f2f',
+                  textTransform: 'none',
+                  fontSize: '0.75rem',
+                  fontWeight: 500,
+                  minWidth: 'auto',
+                  px: 0.75,
+                  py: 0.25,
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.1)' : 'rgba(211, 47, 47, 0.05)',
+                  },
+                }}
+              >
+                Clear
+              </Button>
+              <IconButton
+                size="small"
+                onClick={() => setFilterDrawerOpen(false)}
+                sx={{
+                  color: theme.palette.text.secondary,
+                  padding: '2px',
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                  },
+                }}
+              >
+                <Close sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Box>
+          </Box>
+
+          {/* Contenido del Panel */}
+          <Box sx={{ overflowY: 'auto', flex: 1 }}>
+            {/* Sección Etapas */}
+            <Box>
+              <Box
+                onClick={() => setStagesExpanded(!stagesExpanded)}
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  py: 0.5,
+                  px: 2,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                  },
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontWeight: 500,
+                    fontSize: '0.9375rem',
+                    color: theme.palette.text.primary,
+                  }}
+                >
+                  Etapas
+                </Typography>
+                {stagesExpanded ? (
+                  <ExpandMore sx={{ fontSize: 18, color: theme.palette.text.secondary, transform: 'rotate(180deg)' }} />
+                ) : (
+                  <ExpandMore sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                )}
+              </Box>
+              <Collapse in={stagesExpanded}>
+                <Box sx={{ px: 2, pb: 2, pt: 1 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 1, alignItems: 'flex-start' }}>
+                    {stageOrder.map((stage) => {
+                      const stageColor = getStageColor(stage);
+                      const isSelected = selectedStages.includes(stage);
+                      
+                      return (
+                        <Chip
+                          key={stage}
+                          label={getStageLabelWithoutPercentage(stage)}
+                          size="small"
+                          color={isSelected ? stageColor : undefined}
+                          variant={isSelected ? 'filled' : 'outlined'}
+                          onClick={() => {
+                            setSelectedStages((prev) =>
+                              prev.includes(stage) ? prev.filter((s) => s !== stage) : [...prev, stage]
+                            );
+                          }}
+                          sx={{
+                            fontWeight: 500,
+                            fontSize: '0.75rem',
+                            height: '24px',
+                            cursor: 'pointer',
+                            width: 'fit-content',
+                            minWidth: 'auto',
+                            py: 0.25,
+                            px: 1,
+                            opacity: isSelected ? 1 : 0.8,
+                            '&:hover': {
+                              opacity: 1,
+                              transform: 'scale(1.02)',
+                            },
+                            transition: 'all 0.2s ease',
+                            '& .MuiChip-label': {
+                              padding: '0 4px',
+                            },
+                            ...(!isSelected && {
+                              borderColor: stageColor === 'error' 
+                                ? theme.palette.error.main 
+                                : stageColor === 'warning'
+                                ? theme.palette.warning.main
+                                : stageColor === 'info'
+                                ? theme.palette.info.main
+                                : stageColor === 'success'
+                                ? theme.palette.success.main
+                                : theme.palette.divider,
+                              color: theme.palette.text.primary,
+                              bgcolor: theme.palette.mode === 'dark'
+                                ? 'rgba(255, 255, 255, 0.08)'
+                                : 'rgba(0, 0, 0, 0.04)',
+                              '& .MuiChip-label': {
+                                color: theme.palette.text.primary,
+                                padding: '0 4px',
+                              },
+                            }),
+                          }}
+                        />
+                      );
+                    })}
+                  </Box>
+                </Box>
+              </Collapse>
+              <Divider sx={{ borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }} />
+            </Box>
+
+            {/* Sección Propietario de la Empresa */}
+            <Box>
+              <Box
+                onClick={() => setOwnerFilterExpanded(!ownerFilterExpanded)}
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  py: 0.5,
+                  px: 2,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                  },
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontWeight: 500,
+                    fontSize: '0.9375rem',
+                    color: theme.palette.text.primary,
+                  }}
+                >
+                  Propietario del Registro
+                </Typography>
+                {ownerFilterExpanded ? (
+                  <Remove sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                ) : (
+                  <Add sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                )}
+              </Box>
+              <Collapse in={ownerFilterExpanded}>
+                <Box sx={{ px: 2, pb: 2, pt: 1 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 1, alignItems: 'flex-start' }}>
+                    {/* Opción "Yo" */}
+                    <Chip
+                      icon={<Bolt sx={{ fontSize: 14, color: 'inherit' }} />}
+                      label="Yo"
+                      size="small"
+                      onClick={() => {
+                        setSelectedOwnerFilters((prev) =>
+                          prev.includes('me') ? prev.filter((o) => o !== 'me') : [...prev, 'me']
+                        );
+                      }}
+                      sx={{
+                        fontWeight: 500,
+                        fontSize: '0.75rem',
+                        height: '24px',
+                        cursor: 'pointer',
+                        width: 'fit-content',
+                        minWidth: 'auto',
+                        py: 0.25,
+                        px: 1,
+                        opacity: selectedOwnerFilters.includes('me') ? 1 : 0.8,
+                        variant: selectedOwnerFilters.includes('me') ? 'filled' : 'outlined',
+                        color: selectedOwnerFilters.includes('me') ? 'primary' : undefined,
+                        '&:hover': {
+                          opacity: 1,
+                          transform: 'scale(1.02)',
+                        },
+                        transition: 'all 0.2s ease',
+                        '& .MuiChip-label': {
+                          padding: '0 4px',
+                        },
+                        ...(!selectedOwnerFilters.includes('me') && {
+                          borderColor: theme.palette.divider,
+                          color: theme.palette.text.primary,
+                          bgcolor: theme.palette.mode === 'dark'
+                            ? 'rgba(255, 255, 255, 0.08)'
+                            : 'rgba(0, 0, 0, 0.04)',
+                          '& .MuiChip-label': {
+                            color: theme.palette.text.primary,
+                            padding: '0 4px',
+                          },
+                        }),
+                      }}
+                    />
+
+                    {/* Opción "Sin asignar" */}
+                    <Chip
+                      label="Sin asignar"
+                      size="small"
+                      onClick={() => {
+                        setSelectedOwnerFilters((prev) =>
+                          prev.includes('unassigned') ? prev.filter((o) => o !== 'unassigned') : [...prev, 'unassigned']
+                        );
+                      }}
+                      sx={{
+                        fontWeight: 500,
+                        fontSize: '0.75rem',
+                        height: '24px',
+                        cursor: 'pointer',
+                        width: 'fit-content',
+                        minWidth: 'auto',
+                        py: 0.25,
+                        px: 1,
+                        opacity: selectedOwnerFilters.includes('unassigned') ? 1 : 0.8,
+                        variant: selectedOwnerFilters.includes('unassigned') ? 'filled' : 'outlined',
+                        color: selectedOwnerFilters.includes('unassigned') ? 'primary' : undefined,
+                        '&:hover': {
+                          opacity: 1,
+                          transform: 'scale(1.02)',
+                        },
+                        transition: 'all 0.2s ease',
+                        '& .MuiChip-label': {
+                          padding: '0 4px',
+                        },
+                        ...(!selectedOwnerFilters.includes('unassigned') && {
+                          borderColor: theme.palette.divider,
+                          color: theme.palette.text.primary,
+                          bgcolor: theme.palette.mode === 'dark'
+                            ? 'rgba(255, 255, 255, 0.08)'
+                            : 'rgba(0, 0, 0, 0.04)',
+                          '& .MuiChip-label': {
+                            color: theme.palette.text.primary,
+                            padding: '0 4px',
+                          },
+                        }),
+                      }}
+                    />
+
+                    {/* Lista de usuarios */}
+                    {users.map((userItem) => {
+                      const isSelected = selectedOwnerFilters.includes(userItem.id);
+                      return (
+                        <Chip
+                          key={userItem.id}
+                          avatar={
+                            <Avatar
+                              sx={{
+                                width: 20,
+                                height: 20,
+                                fontSize: '0.625rem',
+                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+                              }}
+                            >
+                              {userItem.firstName?.[0]?.toUpperCase() || userItem.email?.[0]?.toUpperCase() || 'U'}
+                            </Avatar>
+                          }
+                          label={`${userItem.firstName} ${userItem.lastName}`}
+                          size="small"
+                          onClick={() => {
+                            setSelectedOwnerFilters((prev) =>
+                              prev.includes(userItem.id) ? prev.filter((o) => o !== userItem.id) : [...prev, userItem.id]
+                            );
+                          }}
+                          sx={{
+                            fontWeight: 500,
+                            fontSize: '0.75rem',
+                            height: '24px',
+                            cursor: 'pointer',
+                            width: 'fit-content',
+                            minWidth: 'auto',
+                            py: 0.25,
+                            px: 1,
+                            opacity: isSelected ? 1 : 0.8,
+                            variant: isSelected ? 'filled' : 'outlined',
+                            color: isSelected ? 'primary' : undefined,
+                            '&:hover': {
+                              opacity: 1,
+                              transform: 'scale(1.02)',
+                            },
+                            transition: 'all 0.2s ease',
+                            '& .MuiChip-label': {
+                              padding: '0 4px',
+                            },
+                            ...(!isSelected && {
+                              borderColor: theme.palette.divider,
+                              color: theme.palette.text.primary,
+                              bgcolor: theme.palette.mode === 'dark'
+                                ? 'rgba(255, 255, 255, 0.08)'
+                                : 'rgba(0, 0, 0, 0.04)',
+                              '& .MuiChip-label': {
+                                color: theme.palette.text.primary,
+                                padding: '0 4px',
+                              },
+                            }),
+                          }}
+                        />
+                      );
+                    })}
+                  </Box>
+                </Box>
+              </Collapse>
+              <Divider sx={{ borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }} />
+            </Box>
+
+            {/* Sección País */}
+            <Box>
+              <Box
+                onClick={() => setCountryFilterExpanded(!countryFilterExpanded)}
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  py: 0.5,
+                  px: 2,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                  },
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontWeight: 500,
+                    fontSize: '0.9375rem',
+                    color: theme.palette.text.primary,
+                  }}
+                >
+                  País
+                </Typography>
+                {countryFilterExpanded ? (
+                  <Remove sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                ) : (
+                  <Add sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                )}
+              </Box>
+              <Collapse in={countryFilterExpanded}>
+                <Box sx={{ px: 2, pb: 2, pt: 1 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 1, alignItems: 'flex-start' }}>
+                    {Array.from(new Set(companies.map(c => c.country).filter((c): c is string => typeof c === 'string' && c.length > 0))).sort().map((country: string) => (
+                      <Chip
+                        key={country}
+                        label={country}
+                        size="small"
+                        onClick={() => {
+                          setSelectedCountries((prev: string[]) =>
+                            prev.includes(country) ? prev.filter((c: string) => c !== country) : [...prev, country]
+                          );
+                        }}
+                        sx={{
+                          fontWeight: 500,
+                          fontSize: '0.8125rem',
+                          height: '28px',
+                          cursor: 'pointer',
+                          width: 'fit-content',
+                          minWidth: 'auto',
+                          opacity: selectedCountries.includes(country) ? 1 : 0.8,
+                          variant: selectedCountries.includes(country) ? 'filled' : 'outlined',
+                          color: selectedCountries.includes(country) ? 'primary' : undefined,
+                          '&:hover': {
+                            opacity: 1,
+                            transform: 'scale(1.02)',
+                          },
+                          transition: 'all 0.2s ease',
+                          ...(!selectedCountries.includes(country) && {
+                            borderColor: theme.palette.divider,
+                            color: theme.palette.text.primary,
+                            bgcolor: theme.palette.mode === 'dark'
+                              ? 'rgba(255, 255, 255, 0.08)'
+                              : 'rgba(0, 0, 0, 0.04)',
+                            '& .MuiChip-label': {
+                              color: theme.palette.text.primary,
+                            },
+                          }),
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              </Collapse>
+              <Divider sx={{ borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }} />
+            </Box>
+          </Box>
+        </Box>
+      )}
+      </Box>
 
       <Dialog 
         open={open} 

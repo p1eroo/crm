@@ -265,8 +265,8 @@ const Calendar: React.FC = () => {
     <Box sx={{ 
       backgroundColor: theme.palette.background.default, 
       minHeight: '100vh',
-      px: { xs: 1.5, sm: 2, md: 2.5, lg: 3 },
-      pt: { xs: 2, sm: 2.5, md: 3, lg: 3.5 },
+      px: { xs: 0, sm: 0, md: 0.25, lg: 0.5 },
+      pt: { xs: 0.25, sm: 0.5, md: 1 },
       pb: { xs: 2, sm: 3, md: 4 },
     }}>
       <Box sx={{ 
@@ -699,4 +699,5 @@ const Calendar: React.FC = () => {
 };
 
 export default Calendar;
+
 

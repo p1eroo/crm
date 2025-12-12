@@ -40,14 +40,13 @@ import { useTheme as useThemeContext } from '../../context/ThemeContext';
 import ProfileModal from '../ProfileModal';
 import logo from '../../assets/tm_logo.png';
 
-const drawerWidth = 200;
+const drawerWidth = 220;
 
 const mainMenuItems = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Contactos', icon: <People />, path: '/contacts', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Empresas', icon: <Business />, path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Negocios', icon: <AttachMoney />, path: '/deals', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Pipeline', icon: <AccountTree />, path: '/pipeline', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Tareas', icon: <Assignment />, path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Tickets', icon: <Support />, path: '/tickets', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Calendario', icon: <CalendarToday />, path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
@@ -95,8 +94,8 @@ const Sidebar: React.FC = () => {
           boxSizing: 'border-box',
           overflowX: 'hidden',
           bgcolor: theme.palette.background.paper,
-          borderRight: `1px solid ${theme.palette.divider}`,
-          boxShadow: theme.palette.mode === 'dark' ? '2px 0 8px rgba(0,0,0,0.3)' : 'none',
+          borderRight: 'none',
+          boxShadow: 'none',
           display: 'flex',
           flexDirection: 'column',
           py: 2,
@@ -106,7 +105,7 @@ const Sidebar: React.FC = () => {
       {/* Logo/Icono superior */}
       <Box sx={{ 
         mb: -4,
-        mt: -4,
+        mt: -6,
         display: 'flex', 
         justifyContent: 'flex-start',
         alignItems: 'center',
@@ -118,8 +117,8 @@ const Sidebar: React.FC = () => {
           src={logo}
           alt="Taxi Monterrico Logo"
           style={{
-            width: 120,
-            height: 120,
+            width: 130,
+            height: 130,
             objectFit: 'contain',
           }}
         />

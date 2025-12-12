@@ -442,7 +442,7 @@ const Pipeline: React.FC = () => {
   }
 
   return (
-    <Box sx={{ px: { xs: 1.5, sm: 2, md: 2.5, lg: 3 }, pt: { xs: 2, sm: 2.5, md: 3 }, pb: 3, height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ px: { xs: 0, sm: 0, md: 0.25, lg: 0.5 }, pt: { xs: 0.25, sm: 0.5, md: 1 }, pb: 3, height: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Pipeline Board Container */}
       <Card
         sx={{

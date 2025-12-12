@@ -21,6 +21,7 @@ import automationRoutes from './routes/automations';
 import emailRoutes from './routes/emails';
 import googleRoutes from './routes/calendar';
 import reportRoutes from './routes/reports';
+import searchRoutes from './routes/search';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '5000', 10);
@@ -78,6 +79,7 @@ app.use('/api/automations', automationRoutes);
 app.use('/api/emails', emailRoutes);
 app.use('/api/google', googleRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/search', searchRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -126,6 +128,7 @@ async function ensureAllEnumsMigration() {
     await ensureEnum('campaign_status_enum', ['draft', 'scheduled', 'active', 'paused', 'completed', 'cancelled']);
     await ensureEnum('payment_status_enum', ['pending', 'completed', 'failed', 'refunded', 'cancelled']);
     await ensureEnum('activity_type_enum', ['call', 'email', 'meeting', 'note', 'task', 'deal', 'contact', 'company']);
+    await ensureEnum('deal_priority_enum', ['baja', 'media', 'alta']);
     
     // Función auxiliar para crear/verificar columnas con ENUMs
     const ensureColumnWithEnum = async (
@@ -190,6 +193,49 @@ async function ensureAllEnumsMigration() {
     
     // Verificar y crear columna type en activities
     await ensureColumnWithEnum('activities', 'type', 'activity_type_enum', 'note');
+    
+    // Crear columna priority en deals si no existe (sin valor por defecto, nullable)
+    try {
+      const [results] = await sequelize.query(`
+        SELECT column_name, udt_name
+        FROM information_schema.columns 
+        WHERE table_name = 'deals' AND column_name = 'priority'
+      `) as [Array<{ column_name: string; udt_name: string }>, unknown];
+      
+      if (results.length === 0) {
+        console.log('🔧 Creando columna priority en deals...');
+        await sequelize.query(`
+          ALTER TABLE deals 
+          ADD COLUMN "priority" deal_priority_enum;
+        `);
+        console.log('✅ Columna priority creada en deals');
+      } else {
+        const currentType = results[0].udt_name;
+        // Si la columna existe pero tiene un tipo ENUM incorrecto (enum_deals_priority), convertirla
+        if (currentType === 'enum_deals_priority' || currentType.startsWith('enum_')) {
+          console.log(`🔧 Convirtiendo columna priority en deals de ${currentType} a deal_priority_enum...`);
+          try {
+            // Convertir a TEXT primero
+            await sequelize.query(`
+              ALTER TABLE deals 
+              ALTER COLUMN "priority" TYPE TEXT USING "priority"::text;
+            `);
+            // Luego convertir al ENUM correcto
+            await sequelize.query(`
+              ALTER TABLE deals 
+              ALTER COLUMN "priority" TYPE deal_priority_enum USING "priority"::deal_priority_enum;
+            `);
+            console.log('✅ Columna priority convertida en deals');
+          } catch (convertError: any) {
+            console.warn(`⚠️  No se pudo convertir la columna priority:`, convertError.message);
+          }
+        } else if (currentType === 'deal_priority_enum') {
+          console.log('✓ Columna priority ya tiene el tipo correcto en deals');
+        }
+      }
+    } catch (error: any) {
+      console.warn('⚠️  Error al crear/verificar columna priority en deals:', error.message);
+    }
     
     // Mapeo de tipos ENUM existentes en la base de datos
     const enumMappings: { [key: string]: { table: string; column: string; enumType: string }[] } = {
@@ -424,10 +470,16 @@ sequelize.authenticate()
     await Payment.sync({ alter: false });
     await Subscription.sync({ alter: false });
     
-    // Sincronizar el resto de las tablas con alter
+    // Sincronizar el resto de las tablas con alter (excepto Deal que tiene columnas ENUM manuales)
     const { Deal, User, Role, MonthlyBudget, UserGoogleToken, ...rest } = await import('./models');
     
-    const modelsToSync = [Deal, User, Role, MonthlyBudget, UserGoogleToken].filter(Boolean);
+    // Sincronizar Deal sin alter para evitar conflictos con ENUMs
+    if (Deal && typeof (Deal as any).sync === 'function') {
+      await (Deal as any).sync({ alter: false });
+    }
+    
+    // Sincronizar el resto de modelos con alter
+    const modelsToSync = [User, Role, MonthlyBudget, UserGoogleToken].filter(Boolean);
     for (const Model of modelsToSync) {
       if (Model && typeof (Model as any).sync === 'function') {
         await (Model as any).sync({ alter: true });

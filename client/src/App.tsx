@@ -15,6 +15,7 @@ import ContactDetail from './pages/ContactDetail';
 import Companies from './pages/Companies';
 import CompanyDetail from './pages/CompanyDetail';
 import Deals from './pages/Deals';
+import DealDetail from './pages/DealDetail';
 import Tasks from './pages/Tasks';
 import Tickets from './pages/Tickets';
 import Campaigns from './pages/Campaigns';
@@ -209,6 +210,14 @@ const AppContent: React.FC = () => {
               element={
                 <MainLayout>
                   <Deals />
+                </MainLayout>
+              }
+            />
+            <Route
+              path="/deals/:id"
+              element={
+                <MainLayout>
+                  <DealDetail />
                 </MainLayout>
               }
             />

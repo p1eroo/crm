@@ -512,8 +512,8 @@ const Dashboard: React.FC = () => {
       <Box sx={{ 
         backgroundColor: '#c4d4d4', 
         minHeight: '100vh',
-        px: { xs: 1.5, sm: 2, md: 2.5 },
-        pt: { xs: 2, sm: 3, md: 3 },
+        px: { xs: 0, sm: 0, md: 0.25 },
+        pt: { xs: 0.25, sm: 0.5, md: 1 },
         pb: 4,
       }}>
         <Typography variant="h4" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 4 }}>
@@ -863,64 +863,13 @@ const Dashboard: React.FC = () => {
 
 
   return (
-    <Box sx={{ 
-      backgroundColor: '#c4d4d4', 
-      minHeight: '100vh',
-      px: { xs: 1.5, sm: 2, md: 2.5, lg: 3 },
-      pt: { xs: 2, sm: 2.5, md: 3, lg: 3.5 },
-      pb: { xs: 2, sm: 3, md: 4 },
-    }}>
-      {/* Header con Hello y Profile */}
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: { xs: 'column', sm: 'row' },
-        alignItems: { xs: 'flex-start', sm: 'center' },
-        justifyContent: 'space-between',
-        mb: { xs: 2, sm: 2.5, md: 3 },
-        gap: { xs: 2, sm: 0 },
-      }}>
-        {/* Saludo */}
-        <Typography 
-          variant="h4" 
-          sx={{ 
-            fontWeight: 600, 
-            color: theme.palette.text.primary, 
-            fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
-            mr: { xs: 0, sm: 3 },
-          }}
-        >
-          Hola, {user?.firstName || 'Usuario'}
-        </Typography>
-        
-        {/* Spacer */}
-        <Box sx={{ flex: 1, display: { xs: 'none', sm: 'block' } }} />
-        
-        {/* Botón de Notificaciones */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <IconButton 
-            size="large"
-            sx={{ 
-              bgcolor: 'transparent', 
-              borderRadius: '50%', 
-              width: { xs: 36, md: 40 }, 
-              height: { xs: 36, md: 40 },
-              p: 0,
-              border: '1px solid #E5E7EB',
-              '&:hover': {
-                bgcolor: 'transparent',
-              },
-            }}
-          >
-            <Notifications sx={{ fontSize: { xs: 18, md: 20 }, color: '#6B7280' }} />
-          </IconButton>
-        </Box>
-      </Box>
-
+    <>
       {/* Contenido principal en dos columnas */}
       <Box sx={{ 
         display: 'flex',
         flexDirection: { xs: 'column', md: 'row' },
         gap: { xs: 2, sm: 3, md: 4, lg: 8 },
+        pb: { xs: 2, sm: 3, md: 4 },
       }}>
       {/* Columna Principal Izquierda */}
       <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -1776,8 +1725,7 @@ const Dashboard: React.FC = () => {
           {successMessage}
         </Alert>
       </Snackbar>
-      
-    </Box>
+    </>
   );
 };
 

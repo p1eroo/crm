@@ -40,3 +40,35 @@ html::-webkit-scrollbar {
   width: 0 !important;
   height: 0 !important;
 }
+
+/* Excepción para el contenedor del pipeline - mostrar barra de desplazamiento horizontal */
+.pipeline-scroll-container {
+  scrollbar-width: thin !important; /* Firefox */
+  -ms-overflow-style: scrollbar !important; /* IE y Edge */
+}
+
+.pipeline-scroll-container::-webkit-scrollbar {
+  display: block !important; /* Chrome, Safari y Opera */
+  height: 16px !important;
+  width: auto !important;
+}
+
+.pipeline-scroll-container::-webkit-scrollbar-track {
+  display: block !important;
+}
+
+.pipeline-scroll-container::-webkit-scrollbar-thumb {
+  display: block !important;
+}
+
+/* Excepción para las columnas del pipeline - ocultar barra de desplazamiento vertical pero mantener funcionalidad */
+.pipeline-column-scroll {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE y Edge */
+}
+
+.pipeline-column-scroll::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari y Opera */
+  width: 0 !important;
+  height: 0 !important;
+}
