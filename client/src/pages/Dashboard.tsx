@@ -510,7 +510,7 @@ const Dashboard: React.FC = () => {
   if (!stats) {
     return (
       <Box sx={{ 
-        backgroundColor: theme.palette.background.default, 
+        backgroundColor: '#c4d4d4', 
         minHeight: '100vh',
         px: { xs: 1.5, sm: 2, md: 2.5 },
         pt: { xs: 2, sm: 3, md: 3 },
@@ -864,7 +864,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <Box sx={{ 
-      backgroundColor: theme.palette.background.default, 
+      backgroundColor: '#c4d4d4', 
       minHeight: '100vh',
       px: { xs: 1.5, sm: 2, md: 2.5, lg: 3 },
       pt: { xs: 2, sm: 2.5, md: 3, lg: 3.5 },

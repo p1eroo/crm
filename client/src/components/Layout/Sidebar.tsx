@@ -38,9 +38,9 @@ import { taxiMonterricoColors } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme as useThemeContext } from '../../context/ThemeContext';
 import ProfileModal from '../ProfileModal';
-import logo from '../../assets/logo-taxi-monterrico.svg';
+import logo from '../../assets/tm_logo.png';
 
-const drawerWidth = 240;
+const drawerWidth = 200;
 
 const mainMenuItems = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
@@ -105,45 +105,35 @@ const Sidebar: React.FC = () => {
     >
       {/* Logo/Icono superior */}
       <Box sx={{ 
-        mb: 3, 
+        mb: -4,
+        mt: -4,
         display: 'flex', 
         justifyContent: 'flex-start',
         alignItems: 'center',
         width: '100%',
-        px: 2,
+        pl: 2.5,
+        pr: 1,
       }}>
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'center',
-          alignItems: 'center',
-          width: 48,
-          height: 48,
-          borderRadius: '50%',
-          bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
-          border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#E0E0E0'}`,
-          boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
-          p: 0.5,
-        }}>
-          <img
-            src={logo}
-            alt="Taxi Monterrico Logo"
-            style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'contain',
-            }}
-          />
-        </Box>
+        <img
+          src={logo}
+          alt="Taxi Monterrico Logo"
+          style={{
+            width: 120,
+            height: 120,
+            objectFit: 'contain',
+          }}
+        />
       </Box>
 
       {/* Lista de items del menú */}
       <List sx={{ 
         width: '100%', 
-        px: 2, 
-        py: 0,
+        px: 1, 
+        pt: -10,
+        pb: 0,
         display: 'flex',
         flexDirection: 'column',
-        gap: 0.5,
+        gap: 1,
       }}>
         {mainMenuItems
           .filter((item) => {
@@ -167,13 +157,13 @@ const Sidebar: React.FC = () => {
               selected={isSelected}
               onClick={() => navigate(item.path)}
               sx={{
-                minHeight: 48,
-                borderRadius: 2,
-                justifyContent: 'flex-start',
-                px: 1.5,
-                py: 1,
-                mb: 0.5,
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              minHeight: 40,
+              borderRadius: 2,
+              justifyContent: 'flex-start',
+              px: 1,
+              py: 0.75,
+              mb: 0,
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&.Mui-selected': {
                   backgroundColor: '#c4d4d4',
                   color: theme.palette.text.primary,
@@ -192,11 +182,11 @@ const Sidebar: React.FC = () => {
             >
               <ListItemIcon
                 sx={{
-                  minWidth: 40,
+                  minWidth: 36,
                   justifyContent: 'center',
                   color: 'inherit',
                   '& svg': {
-                    fontSize: 22,
+                    fontSize: 20,
                   },
                 }}
               >
@@ -205,7 +195,7 @@ const Sidebar: React.FC = () => {
               <Typography
                 variant="body2"
                 sx={{
-                  fontSize: '0.875rem',
+                  fontSize: '0.8125rem',
                   fontWeight: isSelected ? 600 : 400,
                   color: 'inherit',
                   ml: 1,
@@ -227,13 +217,13 @@ const Sidebar: React.FC = () => {
             selected={location.pathname === '/users'}
             onClick={() => navigate('/users')}
             sx={{
-              minHeight: 48,
+              minHeight: 40,
               borderRadius: 2,
               justifyContent: 'flex-start',
-              px: 1.5,
-              py: 1,
-              mb: 0.5,
-              mt: 1,
+              px: 1,
+              py: 0.75,
+              mb: 0,
+              mt: 0,
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               '&.Mui-selected': {
                 backgroundColor: '#c4d4d4',
@@ -253,11 +243,11 @@ const Sidebar: React.FC = () => {
           >
             <ListItemIcon
               sx={{
-                minWidth: 40,
+                minWidth: 36,
                 justifyContent: 'center',
                 color: 'inherit',
                 '& svg': {
-                  fontSize: 22,
+                  fontSize: 20,
                 },
               }}
             >
@@ -266,13 +256,13 @@ const Sidebar: React.FC = () => {
             <Typography
               variant="body2"
               sx={{
-                fontSize: '0.875rem',
+                fontSize: '0.8125rem',
                 fontWeight: location.pathname === '/users' ? 600 : 400,
                 color: 'inherit',
                 ml: 1,
               }}
             >
-              Administrar Usuarios
+              Usuarios
             </Typography>
           </ListItemButton>
         )}
@@ -282,18 +272,18 @@ const Sidebar: React.FC = () => {
       <Box sx={{ flex: 1 }} />
       
       {/* Configuración */}
-      <Box sx={{ width: '100%', px: 2, mb: 1 }}>
+      <Box sx={{ width: '100%', px: 1, mb: 1 }}>
         <ListItemButton
           onClick={() => {
             // Aquí puedes agregar la navegación o acción para configuración
             console.log('Configuración');
           }}
           sx={{
-            minHeight: 48,
+            minHeight: 40,
             borderRadius: 2,
             justifyContent: 'flex-start',
-            px: 1.5,
-            py: 1,
+            px: 1,
+            py: 0.75,
             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
             '&:hover': {
               backgroundColor: theme.palette.action.hover,
@@ -302,11 +292,11 @@ const Sidebar: React.FC = () => {
         >
           <ListItemIcon
             sx={{
-              minWidth: 40,
+              minWidth: 36,
               justifyContent: 'center',
               color: theme.palette.text.secondary,
               '& svg': {
-                fontSize: 22,
+                fontSize: 20,
               },
             }}
           >
@@ -315,7 +305,7 @@ const Sidebar: React.FC = () => {
           <Typography
             variant="body2"
             sx={{
-              fontSize: '0.875rem',
+              fontSize: '0.8125rem',
               fontWeight: 400,
               color: theme.palette.text.primary,
               ml: 1,
@@ -327,40 +317,48 @@ const Sidebar: React.FC = () => {
       </Box>
       
       {/* Perfil del usuario */}
-      <Box sx={{ width: '100%', px: 2, mb: 1.5 }}>
+      <Box sx={{ width: '100%', px: 1, mb: 1.5 }}>
         <ListItemButton
           onClick={handleProfileClick}
           sx={{
-            minHeight: 48,
+            minHeight: 40,
             borderRadius: 2,
             justifyContent: 'flex-start',
-            px: 1.5,
-            py: 1,
+            px: 1,
+            py: 0.75,
             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
             '&:hover': {
               backgroundColor: theme.palette.action.hover,
             },
           }}
         >
-          <Avatar
-            src={user?.avatar}
+          <ListItemIcon
             sx={{
-              width: 32,
-              height: 32,
-              bgcolor: user?.avatar ? 'transparent' : taxiMonterricoColors.green,
-              fontSize: '0.875rem',
-              fontWeight: 600,
+              minWidth: 36,
+              justifyContent: 'center',
+              color: 'inherit',
             }}
           >
-            {!user?.avatar && `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase()}
-          </Avatar>
+            <Avatar
+              src={user?.avatar}
+              sx={{
+                width: 28,
+                height: 28,
+                bgcolor: user?.avatar ? 'transparent' : taxiMonterricoColors.green,
+                fontSize: '0.75rem',
+                fontWeight: 600,
+              }}
+            >
+              {!user?.avatar && `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase()}
+            </Avatar>
+          </ListItemIcon>
           <Typography
             variant="body2"
             sx={{
-              fontSize: '0.875rem',
+              fontSize: '0.8125rem',
               fontWeight: 400,
               color: theme.palette.text.primary,
-              ml: 1.5,
+              ml: 1,
             }}
           >
             Perfil

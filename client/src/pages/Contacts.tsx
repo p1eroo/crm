@@ -83,6 +83,7 @@ import {
   LinkedIn,
   YouTube,
   Bolt,
+  Remove,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../config/api';
@@ -184,10 +185,15 @@ const Contacts: React.FC = () => {
   const [updatingStatus, setUpdatingStatus] = useState<{ [key: number]: boolean }>({});
   const [importing, setImporting] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [ownerFilterAnchor, setOwnerFilterAnchor] = useState<null | HTMLElement>(null);
   const [selectedOwnerFilter, setSelectedOwnerFilter] = useState<string | number | null>(null);
-  const [ownerSearch, setOwnerSearch] = useState('');
   const [users, setUsers] = useState<any[]>([]);
+  const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
+  const [selectedStages, setSelectedStages] = useState<string[]>([]);
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
+  const [selectedOwnerFilters, setSelectedOwnerFilters] = useState<(string | number)[]>([]);
+  const [stagesExpanded, setStagesExpanded] = useState(true);
+  const [ownerFilterExpanded, setOwnerFilterExpanded] = useState(true);
+  const [countryFilterExpanded, setCountryFilterExpanded] = useState(true);
 
   useEffect(() => {
     fetchContacts();
@@ -815,6 +821,10 @@ const Contacts: React.FC = () => {
     });
   };
 
+  const getStageLabelWithoutPercentage = (stage: string) => {
+    return getStageLabel(stage).replace(/\s*\d+%/, '').trim();
+  };
+
   // Filtrar y ordenar contactos
   const filteredContacts = contacts
     .filter((contact) => {
@@ -826,7 +836,45 @@ const Contacts: React.FC = () => {
         }
       }
       
-      // Filtro por propietario
+      // Filtro por etapas
+      if (selectedStages.length > 0) {
+        if (!selectedStages.includes(contact.lifecycleStage || 'lead')) {
+          return false;
+        }
+      }
+      
+      // Filtro por países
+      if (selectedCountries.length > 0) {
+        if (!contact.country || !selectedCountries.includes(contact.country)) {
+          return false;
+        }
+      }
+      
+      // Filtro por propietarios (del panel de filtros)
+      if (selectedOwnerFilters.length > 0) {
+        let matches = false;
+        for (const filter of selectedOwnerFilters) {
+          if (filter === 'me') {
+            if (contact.ownerId === user?.id) {
+              matches = true;
+              break;
+            }
+          } else if (filter === 'unassigned') {
+            if (contact.ownerId === null || contact.ownerId === undefined) {
+              matches = true;
+              break;
+            }
+          } else {
+            if (contact.ownerId === filter) {
+              matches = true;
+              break;
+            }
+          }
+        }
+        if (!matches) return false;
+      }
+      
+      // Filtro por propietario (legacy, mantener por compatibilidad)
       if (selectedOwnerFilter !== null) {
         if (selectedOwnerFilter === 'me') {
           if (contact.ownerId !== user?.id) {
@@ -908,835 +956,926 @@ const Contacts: React.FC = () => {
       px: { xs: 1.5, sm: 2, md: 2.5, lg: 3 },
       pt: { xs: 2, sm: 3, md: 3 },
     }}>
-      {/* Cards de resumen - Diseño igual al de Companies */}
-      <Card sx={{ 
-        borderRadius: 6,
-        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
-        bgcolor: theme.palette.background.paper,
-        mb: 4,
-      }}>
-        <CardContent sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'stretch', flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
-            {/* Total Customers */}
-            <Box sx={{ 
-              flex: { xs: '1 1 100%', sm: 1 },
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 4,
-              px: 1,
-              py: 1,
-              borderRadius: 1.5,
-              bgcolor: 'transparent',
-            }}>
-              <Box sx={{ 
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 120,
-                height: 120,
-                borderRadius: '50%',
-                bgcolor: `${taxiMonterricoColors.green}15`,
-                flexShrink: 0,
-              }}>
-                <People sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
-                  Total de Clientes
-                </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
-                  {totalContacts.toLocaleString()}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <TrendingUp sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
-                  <Typography variant="caption" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '1rem' }}>
-                    16% este mes
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-
-            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
-
-            {/* Members */}
-            <Box sx={{ 
-              flex: { xs: '1 1 100%', sm: 1 },
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 4,
-              px: 1,
-              py: 1,
-              borderRadius: 1.5,
-              bgcolor: 'transparent',
-            }}>
-              <Box sx={{ 
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 120,
-                height: 120,
-                borderRadius: '50%',
-                bgcolor: `${taxiMonterricoColors.green}15`,
-                flexShrink: 0,
-              }}>
-                <Person sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
-                  Miembros
-                </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
-                  {activeContacts.toLocaleString()}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <TrendingDown sx={{ fontSize: 20, color: '#F44336' }} />
-                  <Typography variant="caption" sx={{ color: '#F44336', fontWeight: 500, fontSize: '1rem' }}>
-                    1% este mes
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-
-            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
-
-            {/* Active Now */}
-            <Box sx={{ 
-              flex: { xs: '1 1 100%', sm: 1 },
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 4,
-              px: 1,
-              py: 1,
-              borderRadius: 1.5,
-              bgcolor: 'transparent',
-            }}>
-              <Box sx={{ 
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 120,
-                height: 120,
-                borderRadius: '50%',
-                bgcolor: `${taxiMonterricoColors.green}15`,
-                flexShrink: 0,
-              }}>
-                <Computer sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
-                  Activos Ahora
-                </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
-                  {Math.min(activeContacts, 189)}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: -0.75 }}>
-                  {Array.from({ length: Math.min(5, Math.min(activeContacts, contacts.length)) }).map((_, idx) => {
-                    // Usar avatares de contactos reales si están disponibles
-                    const contact = contacts[idx];
-                    return (
-                      <Avatar
-                        key={idx}
-                        src={contact?.avatar}
-                        sx={{
-                          width: 36,
-                          height: 36,
-                          border: `2px solid ${theme.palette.background.paper}`,
-                          ml: idx > 0 ? -0.75 : 0,
-                          bgcolor: contact?.avatar ? 'transparent' : taxiMonterricoColors.green,
-                          fontSize: '0.875rem',
-                          fontWeight: 600,
-                          zIndex: 5 - idx,
-                        }}
-                      >
-                        {!contact?.avatar && contact ? 
-                          `${contact.firstName?.[0] || ''}${contact.lastName?.[0] || ''}`.toUpperCase() :
-                          String.fromCharCode(65 + idx)
-                        }
-                      </Avatar>
-                    );
-                  })}
-                </Box>
-              </Box>
+      {/* Header principal - fuera del contenedor */}
+      <Box sx={{ pt: 0, pb: 2, mb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box>
+              <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.25, fontSize: { xs: '1.25rem', md: '1.375rem' } }}>
+                Todos los Clientes
+              </Typography>
             </Box>
           </Box>
-        </CardContent>
-      </Card>
-
-      {/* Sección de tabla */}
-      <Card sx={{ 
-        borderRadius: 6,
-        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
-        overflow: 'hidden',
-        bgcolor: theme.palette.background.paper,
-      }}>
-        <Box sx={{ px: 3, pt: 3, pb: 2 }}>
-          {/* Header de la tabla con título, búsqueda y ordenamiento */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Box>
-                <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.25 }}>
-                  Todos los Clientes
-                </Typography>
-                <Typography
-                  component="a"
-                  href="#"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    setActiveTab(1);
-                  }}
-                  sx={{
-                    fontSize: '0.875rem',
-                    color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
-                    textDecoration: 'none',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      textDecoration: 'underline',
-                    },
-                  }}
-                >
-                  Miembros Activos
-                </Typography>
-              </Box>
-              <Button
-                variant="outlined"
-                onClick={(e) => setOwnerFilterAnchor(e.currentTarget)}
-                endIcon={<KeyboardArrowDown />}
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+            <FormControl size="small" sx={{ minWidth: 130 }}>
+              <Select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                displayEmpty
                 sx={{
-                  textTransform: 'none',
                   borderRadius: 1.5,
-                  borderColor: theme.palette.divider,
-                  color: theme.palette.text.primary,
-                  '&:hover': {
+                  bgcolor: theme.palette.background.paper,
+                  fontSize: '0.8125rem',
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: theme.palette.divider,
+                  },
+                  '&:hover .MuiOutlinedInput-notchedOutline': {
                     borderColor: theme.palette.text.secondary,
-                    bgcolor: theme.palette.action.hover,
+                  },
+                  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderColor: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
                   },
                 }}
               >
-                Propietario del contacto
-              </Button>
-              <Menu
-                anchorEl={ownerFilterAnchor}
-                open={Boolean(ownerFilterAnchor)}
-                onClose={() => {
-                  setOwnerFilterAnchor(null);
-                  setOwnerSearch('');
-                }}
-                PaperProps={{
-                  sx: {
-                    minWidth: 300,
-                    maxWidth: 400,
-                    mt: 1,
-                    borderRadius: 2,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                  }
+                <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
+                <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
+                <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
+                <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
+              </Select>
+            </FormControl>
+            <Tooltip title={importing ? 'Importando...' : 'Importar'}>
+              <IconButton
+                size="small"
+                onClick={handleImportFromExcel}
+                disabled={importing}
+                sx={{
+                  border: `1px solid ${taxiMonterricoColors.green}`,
+                  color: taxiMonterricoColors.green,
+                  '&:hover': {
+                    borderColor: taxiMonterricoColors.greenDark,
+                    bgcolor: `${taxiMonterricoColors.green}10`,
+                  },
+                  '&:disabled': {
+                    borderColor: theme.palette.divider,
+                    color: theme.palette.text.disabled,
+                  },
+                  borderRadius: 1.5,
+                  p: 0.875,
                 }}
               >
-                <Box sx={{ p: 2, pb: 1 }}>
-                  <TextField
-                    size="small"
-                    placeholder="Buscar"
-                    value={ownerSearch}
-                    onChange={(e) => setOwnerSearch(e.target.value)}
-                    fullWidth
-                    InputProps={{
-                      startAdornment: <Search sx={{ mr: 1, color: theme.palette.text.secondary, fontSize: 20 }} />,
+                <UploadFile sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
+            <Tooltip title="Exportar">
+              <IconButton
+                size="small"
+                onClick={handleExportToExcel}
+                sx={{
+                  border: `1px solid ${taxiMonterricoColors.green}`,
+                  color: taxiMonterricoColors.green,
+                  '&:hover': {
+                    borderColor: taxiMonterricoColors.greenDark,
+                    bgcolor: `${taxiMonterricoColors.green}10`,
+                  },
+                  borderRadius: 1.5,
+                  p: 0.875,
+                }}
+              >
+                <FileDownload sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Filtros">
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<FilterList sx={{ fontSize: 16 }} />}
+                onClick={() => setFilterDrawerOpen(!filterDrawerOpen)}
+                sx={{
+                  borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+                  color: theme.palette.text.primary,
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                  '&:hover': {
+                    borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+                  },
+                  borderRadius: 1.5,
+                  px: 1.5,
+                  py: 0.5,
+                  minWidth: 'auto',
+                  height: '32px',
+                  textTransform: 'none',
+                  fontSize: '0.8125rem',
+                  fontWeight: 500,
+                }}
+              >
+                Filter
+              </Button>
+            </Tooltip>
+            <Tooltip title="Nuevo Contacto">
+              <IconButton
+                size="small"
+                onClick={() => handleOpen()}
+                sx={{
+                  bgcolor: taxiMonterricoColors.green,
+                  color: 'white',
+                  '&:hover': {
+                    bgcolor: taxiMonterricoColors.greenDark,
+                  },
+                  borderRadius: 1.5,
+                  p: 0.875,
+                  boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
+                }}
+              >
+                <Add sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Contenedor principal con layout flex para tabla y panel de filtros */}
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', md: 'row' } }}>
+        {/* Contenido principal (tabla completa con header y filas) */}
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          {/* Header de la tabla */}
+          <Box
+            component="div"
+            sx={{
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+              borderRadius: '8px 8px 0 0',
+              overflow: 'hidden',
+              display: 'grid',
+              gridTemplateColumns: { xs: 'repeat(6, minmax(0, 1fr))', md: '1.5fr 1fr 0.9fr 0.7fr 1.2fr 0.7fr' },
+              columnGap: { xs: 1, md: 1.5 },
+              minWidth: { xs: 800, md: 'auto' },
+              maxWidth: '100%',
+              width: '100%',
+              px: { xs: 1, md: 1.5 },
+              py: { xs: 1.5, md: 2 },
+              mb: 2,
+              boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
+            }}
+          >
+            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+              Nombre del Cliente
+            </Box>
+            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+              Empresa
+            </Box>
+            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+              Teléfono
+            </Box>
+            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+              País
+            </Box>
+            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+              Etapa
+            </Box>
+            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+              Acciones
+            </Box>
+          </Box>
+
+          {/* Filas de contactos */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {paginatedContacts.map((contact) => (
+            <Box
+              key={contact.id}
+              component="div"
+              onClick={() => navigate(`/contacts/${contact.id}`)}
+              sx={{
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                display: 'grid',
+                gridTemplateColumns: { xs: 'repeat(6, minmax(0, 1fr))', md: '1.5fr 1fr 0.9fr 0.7fr 1.2fr 0.7fr' },
+                columnGap: { xs: 1, md: 1.5 },
+                minWidth: { xs: 800, md: 'auto' },
+                maxWidth: '100%',
+                width: '100%',
+                borderRadius: 0,
+                border: 'none',
+                boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
+                px: { xs: 1, md: 1.5 },
+                py: { xs: 1, md: 1.25 },
+                '&:hover': {
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 1)' : '#ffffff',
+                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 6px rgba(0,0,0,0.3)' : '0 2px 6px rgba(0,0,0,0.1)',
+                  transform: 'translateY(-1px)',
+                },
+              }}
+            >
+                <Box sx={{ py: { xs: 1, md: 1.25 }, px: { xs: 0.75, md: 1 }, display: 'flex', alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1, md: 1.5 }, width: '100%' }}>
+                    <Avatar
+                      src={contactLogo}
+                      sx={{
+                        width: { xs: 32, md: 40 },
+                        height: { xs: 32, md: 40 },
+                        bgcolor: contactLogo ? 'transparent' : taxiMonterricoColors.green,
+                        fontSize: { xs: '0.75rem', md: '0.875rem' },
+                        fontWeight: 600,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {!contactLogo && getInitials(contact.firstName, contact.lastName)}
+                    </Avatar>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          fontWeight: 500, 
+                          color: theme.palette.text.primary,
+                          fontSize: { xs: '0.6875rem', md: '0.75rem' },
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          mb: 0.25,
+                        }}
+                      >
+                        {contact.firstName?.split(' ')[0] || contact.firstName} {contact.lastName?.split(' ')[0] || contact.lastName}
+                      </Typography>
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          color: theme.palette.text.secondary,
+                          fontSize: { xs: '0.5625rem', md: '0.625rem' },
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          display: 'block',
+                        }}
+                      >
+                        {contact.jobTitle || '--'}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                  {contact.Company?.name ? (
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: theme.palette.text.primary,
+                        fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                        fontWeight: 400,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: '100%',
+                      }}
+                    >
+                      {contact.Company.name}
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.625rem', md: '0.6875rem' }, fontWeight: 400 }}>
+                      --
+                    </Typography>
+                  )}
+                </Box>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: theme.palette.text.primary,
+                      fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                      fontWeight: 400,
                     }}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 1,
-                      },
+                  >
+                    {contact.phone || contact.mobile || '--'}
+                  </Typography>
+                </Box>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: theme.palette.text.primary,
+                      fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                      fontWeight: 400,
+                    }}
+                  >
+                    {contact.country || '--'}
+                  </Typography>
+                </Box>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                  <Chip
+                    label={getStageLabel(contact.lifecycleStage || 'lead')}
+                    size="small"
+                    color={getStageColor(contact.lifecycleStage || 'lead')}
+                    sx={{ 
+                      fontWeight: 500,
+                      fontSize: { xs: '0.5625rem', md: '0.625rem' },
+                      height: { xs: 16, md: 18 },
                     }}
                   />
                 </Box>
-                <Divider />
-                <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
-                  <MenuItem
-                    onClick={() => {
-                      setSelectedOwnerFilter(selectedOwnerFilter === 'me' ? null : 'me');
-                    }}
-                    selected={selectedOwnerFilter === 'me'}
-                    sx={{
-                      py: 1.5,
-                      px: 2,
-                      '&.Mui-selected': {
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.16)' : 'rgba(25, 118, 210, 0.08)',
-                      },
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                      <MuiCheckbox
-                        checked={selectedOwnerFilter === 'me'}
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                  <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                    <Tooltip title="Vista previa">
+                      <IconButton
                         size="small"
-                      />
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                        <Bolt sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                        <Box>
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                            Yo
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.7rem' }}>
-                            Este valor se aplica dinámicamente al usuario actual
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Box>
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      setSelectedOwnerFilter(selectedOwnerFilter === 'deactivated' ? null : 'deactivated');
-                    }}
-                    selected={selectedOwnerFilter === 'deactivated'}
-                    sx={{
-                      py: 1.5,
-                      px: 2,
-                      '&.Mui-selected': {
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.16)' : 'rgba(25, 118, 210, 0.08)',
-                      },
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                      <MuiCheckbox
-                        checked={selectedOwnerFilter === 'deactivated'}
-                        size="small"
-                      />
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
-                        <Bolt sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                          Todos los propietarios desactivados y eliminados
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </MenuItem>
-                  {users
-                    .filter((u) => {
-                      if (!ownerSearch) return true;
-                      const searchLower = ownerSearch.toLowerCase();
-                      return (
-                        `${u.firstName} ${u.lastName}`.toLowerCase().includes(searchLower) ||
-                        u.email?.toLowerCase().includes(searchLower)
-                      );
-                    })
-                    .map((userItem) => (
-                      <MenuItem
-                        key={userItem.id}
-                        onClick={() => {
-                          setSelectedOwnerFilter(selectedOwnerFilter === userItem.id ? null : userItem.id);
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePreview(contact);
                         }}
-                        selected={selectedOwnerFilter === userItem.id}
                         sx={{
-                          py: 1.5,
-                          px: 2,
-                          '&.Mui-selected': {
-                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.16)' : 'rgba(25, 118, 210, 0.08)',
+                          color: theme.palette.text.secondary,
+                          padding: { xs: 0.5, md: 1 },
+                          '&:hover': {
+                            color: taxiMonterricoColors.green,
+                            bgcolor: `${taxiMonterricoColors.green}15`,
                           },
                         }}
                       >
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                          <MuiCheckbox
-                            checked={selectedOwnerFilter === userItem.id}
-                            size="small"
-                          />
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                            {userItem.firstName} {userItem.lastName}
-                          </Typography>
-                        </Box>
-                      </MenuItem>
-                    ))}
-                  <MenuItem
-                    onClick={() => {
-                      setSelectedOwnerFilter(selectedOwnerFilter === 'unassigned' ? null : 'unassigned');
-                    }}
-                    selected={selectedOwnerFilter === 'unassigned'}
-                    sx={{
-                      py: 1.5,
-                      px: 2,
-                      '&.Mui-selected': {
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.16)' : 'rgba(25, 118, 210, 0.08)',
-                      },
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
-                      <MuiCheckbox
-                        checked={selectedOwnerFilter === 'unassigned'}
+                        <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Eliminar">
+                      <IconButton
                         size="small"
-                      />
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                        Sin asignar
-                      </Typography>
-                    </Box>
-                  </MenuItem>
-                </Box>
-              </Menu>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <TextField
-                size="small"
-                placeholder="Buscar"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                InputProps={{
-                  startAdornment: <Search sx={{ mr: 1, color: theme.palette.text.secondary, fontSize: 20 }} />,
-                }}
-                sx={{ 
-                  minWidth: 200,
-                  bgcolor: theme.palette.background.paper,
-                  borderRadius: 1.5,
-                  '& .MuiOutlinedInput-root': {
-                    '& fieldset': {
-                      borderColor: theme.palette.divider,
-                    },
-                    '&:hover fieldset': {
-                      borderColor: theme.palette.text.secondary,
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
-                    },
-                  },
-                }}
-              />
-              <FormControl size="small" sx={{ minWidth: 150 }}>
-                <Select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  displayEmpty
-                  sx={{
-                    borderRadius: 1.5,
-                    bgcolor: theme.palette.background.paper,
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme.palette.divider,
-                    },
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme.palette.text.secondary,
-                    },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
-                    },
-                  }}
-                >
-                  <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
-                  <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
-                  <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
-                  <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
-                </Select>
-              </FormControl>
-              <Tooltip title={importing ? 'Importando...' : 'Importar'}>
-                <IconButton
-                  onClick={handleImportFromExcel}
-                  disabled={importing}
-                  sx={{
-                    border: `1px solid ${taxiMonterricoColors.green}`,
-                    color: taxiMonterricoColors.green,
-                    '&:hover': {
-                      borderColor: taxiMonterricoColors.greenDark,
-                      bgcolor: `${taxiMonterricoColors.green}10`,
-                    },
-                    '&:disabled': {
-                      borderColor: theme.palette.divider,
-                      color: theme.palette.text.disabled,
-                    },
-                    borderRadius: 1.5,
-                    p: 1.25,
-                  }}
-                >
-                  <UploadFile />
-                </IconButton>
-              </Tooltip>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept=".xlsx,.xls"
-                style={{ display: 'none' }}
-              />
-              <Tooltip title="Exportar">
-                <IconButton
-                  onClick={handleExportToExcel}
-                  sx={{
-                    border: `1px solid ${taxiMonterricoColors.green}`,
-                    color: taxiMonterricoColors.green,
-                    '&:hover': {
-                      borderColor: taxiMonterricoColors.greenDark,
-                      bgcolor: `${taxiMonterricoColors.green}10`,
-                    },
-                    borderRadius: 1.5,
-                    p: 1.25,
-                  }}
-                >
-                  <FileDownload />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Nuevo Contacto">
-                <IconButton
-                  onClick={() => handleOpen()}
-                  sx={{
-                    bgcolor: taxiMonterricoColors.green,
-                    color: 'white',
-                    '&:hover': {
-                      bgcolor: taxiMonterricoColors.greenDark,
-                    },
-                    borderRadius: 1.5,
-                    p: 1.25,
-                    boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
-                  }}
-                >
-                  <Add />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </Box>
-        </Box>
-
-        {/* Tabla de contactos con diseño mejorado */}
-        <TableContainer 
-          component={Paper}
-          sx={{ 
-            overflowX: 'auto',
-            overflowY: 'hidden',
-            maxWidth: '100%',
-            '&::-webkit-scrollbar': {
-              height: 8,
-            },
-            '&::-webkit-scrollbar-track': {
-              backgroundColor: '#f1f1f1',
-            },
-            '&::-webkit-scrollbar-thumb': {
-              backgroundColor: '#888',
-              borderRadius: 4,
-              '&:hover': {
-                backgroundColor: '#555',
-              },
-            },
-          }}
-        >
-          <Table sx={{ minWidth: { xs: 800, md: 'auto' } }}>
-            <TableHead>
-              <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa' }}>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.875rem', md: '0.9375rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '25%' } }}>
-                  Nombre del Cliente
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.875rem', md: '0.9375rem' }, py: { xs: 1.5, md: 2 }, px: 1, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '18%' } }}>
-                  Empresa
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.875rem', md: '0.9375rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
-                  Teléfono
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.875rem', md: '0.9375rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}>
-                  País
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.875rem', md: '0.9375rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
-                  Propietario del contacto
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.875rem', md: '0.9375rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
-                  Etapa del Ciclo de Vida
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.875rem', md: '0.9375rem' }, py: { xs: 1.5, md: 2 }, px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
-                  Acciones
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {paginatedContacts.map((contact) => (
-                <TableRow 
-                  key={contact.id}
-                  hover
-                  sx={{ 
-                    '&:hover': { bgcolor: theme.palette.mode === 'dark' ? theme.palette.action.hover : '#fafafa' },
-                    cursor: 'pointer',
-                    transition: 'background-color 0.2s',
-                  }}
-                  onClick={() => navigate(`/contacts/${contact.id}`)}
-                >
-                  <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '25%' } }}>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1, md: 1.5 } }}>
-                      <Avatar
-                        src={contactLogo}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(contact.id);
+                        }}
                         sx={{
-                          width: { xs: 32, md: 40 },
-                          height: { xs: 32, md: 40 },
-                          bgcolor: contactLogo ? 'transparent' : taxiMonterricoColors.green,
-                          fontSize: { xs: '0.75rem', md: '0.875rem' },
-                          fontWeight: 600,
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-                          flexShrink: 0,
+                          color: theme.palette.text.secondary,
+                          padding: { xs: 0.5, md: 1 },
+                          '&:hover': {
+                            color: '#d32f2f',
+                            bgcolor: '#ffebee',
+                          },
                         }}
                       >
-                        {!contactLogo && getInitials(contact.firstName, contact.lastName)}
-                      </Avatar>
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            fontWeight: 500, 
-                            color: theme.palette.text.primary,
-                            fontSize: { xs: '0.875rem', md: '0.9375rem' },
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            mb: 0.25,
-                          }}
-                        >
-                          {contact.firstName} {contact.lastName}
-                        </Typography>
-                        <Typography 
-                          variant="caption" 
-                          sx={{ 
-                            color: theme.palette.text.secondary,
-                            fontSize: { xs: '0.75rem', md: '0.8125rem' },
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            display: 'block',
-                          }}
-                        >
-                          {contact.email || '--'}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell sx={{ px: 1, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '18%' } }}>
-                    {contact.Company?.name ? (
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: theme.palette.text.primary,
-                          fontSize: { xs: '0.875rem', md: '0.9375rem' },
-                          fontWeight: 400,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {contact.Company.name}
-                      </Typography>
-                    ) : (
-                      <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.875rem', md: '0.9375rem' }, fontWeight: 400 }}>
-                        --
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        color: theme.palette.text.primary,
-                        fontSize: { xs: '0.875rem', md: '0.9375rem' },
-                        fontWeight: 400,
-                      }}
-                    >
-                      {contact.phone || contact.mobile || '--'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '10%' } }}>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        color: theme.palette.text.primary,
-                        fontSize: { xs: '0.875rem', md: '0.9375rem' },
-                        fontWeight: 400,
-                      }}
-                    >
-                      {contact.country || '--'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
-                    {contact.Owner ? (
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: theme.palette.text.primary,
-                          fontSize: { xs: '0.875rem', md: '0.9375rem' },
-                          fontWeight: 400,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {contact.Owner.firstName} {contact.Owner.lastName}
-                      </Typography>
-                    ) : (
-                      <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.875rem', md: '0.9375rem' }, fontWeight: 400 }}>
-                        --
-                      </Typography>
-                    )}
-                  </TableCell>
-                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
-                    <Chip
-                      label={getStageLabel(contact.lifecycleStage || 'lead')}
-                      size="small"
-                      color={getStageColor(contact.lifecycleStage || 'lead')}
-                      sx={{ 
-                        fontWeight: 500,
-                        fontSize: { xs: '0.7rem', md: '0.75rem' },
-                        height: { xs: 20, md: 24 },
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
-                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                      <Tooltip title="Vista previa">
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handlePreview(contact);
-                          }}
-                          sx={{
-                            color: theme.palette.text.secondary,
-                            padding: { xs: 0.5, md: 1 },
-                            '&:hover': {
-                              color: taxiMonterricoColors.green,
-                              bgcolor: `${taxiMonterricoColors.green}15`,
-                            },
-                          }}
-                        >
-                          <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Eliminar">
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(contact.id);
-                          }}
-                          sx={{
-                            color: theme.palette.text.secondary,
-                            padding: { xs: 0.5, md: 1 },
-                            '&:hover': {
-                              color: '#d32f2f',
-                              bgcolor: '#ffebee',
-                            },
-                          }}
-                        >
-                          <Delete sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {paginatedContacts.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                      <Person sx={{ fontSize: 48, color: theme.palette.text.disabled }} />
-                      <Typography variant="body1" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
-                        No hay contactos para mostrar
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                        Crea tu primer contacto para comenzar
-                      </Typography>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                        <Delete sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </Box>
+              </Box>
+            ))}
+          {paginatedContacts.length === 0 && (
+            <Box sx={{ 
+              textAlign: 'center',
+              py: 8,
+              bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+              borderRadius: 0,
+              border: 'none',
+              boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
+            }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                <Person sx={{ fontSize: 48, color: theme.palette.text.disabled }} />
+                <Typography variant="body1" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
+                  No hay contactos para mostrar
+                </Typography>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                  Crea tu primer contacto para comenzar
+                </Typography>
+              </Box>
+            </Box>
+          )}
+          </Box>
 
-        {/* Paginación mejorada */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          px: 3, 
-          py: 2,
-          borderTop: '1px solid #e0e0e0',
-        }}>
-          <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.875rem' }}>
-            Mostrando {page * rowsPerPage + 1} a {Math.min((page + 1) * rowsPerPage, filteredContacts.length)} de {filteredContacts.length.toLocaleString()} registros
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-            <IconButton
-              onClick={() => handleChangePage(null, page - 1)}
-              disabled={page === 0}
-              sx={{
-                color: theme.palette.text.secondary,
-                '&:hover': { bgcolor: theme.palette.action.hover },
-                '&.Mui-disabled': { color: theme.palette.text.disabled },
-              }}
-            >
-              <ArrowBack sx={{ fontSize: 20 }} />
-            </IconButton>
-            {(() => {
-              const totalPages = Math.ceil(filteredContacts.length / rowsPerPage);
-              const pagesToShow: number[] = [];
-              const currentPageNum = page + 1; // Convertir de 0-indexed a 1-indexed
-              
-              // Si hay pocas páginas, mostrar todas
-              if (totalPages <= 5) {
-                for (let i = 1; i <= totalPages; i++) {
-                  pagesToShow.push(i);
-                }
-              } else {
-                // Siempre mostrar primera página
-                pagesToShow.push(1);
+          {/* Paginación mejorada */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            px: 2, 
+            py: 2,
+            mt: 2,
+          }}>
+            <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.875rem' }}>
+              Mostrando {page * rowsPerPage + 1} a {Math.min((page + 1) * rowsPerPage, filteredContacts.length)} de {filteredContacts.length.toLocaleString()} registros
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <IconButton
+                onClick={() => handleChangePage(null, page - 1)}
+                disabled={page === 0}
+                sx={{
+                  color: theme.palette.text.secondary,
+                  '&:hover': { bgcolor: theme.palette.action.hover },
+                  '&.Mui-disabled': { color: theme.palette.text.disabled },
+                }}
+              >
+                <ArrowBack sx={{ fontSize: 20 }} />
+              </IconButton>
+              {(() => {
+                const totalPages = Math.ceil(filteredContacts.length / rowsPerPage);
+                const pagesToShow: number[] = [];
+                const currentPageNum = page + 1; // Convertir de 0-indexed a 1-indexed
                 
-                // Calcular rango de páginas alrededor de la actual
-                const startPage = Math.max(2, currentPageNum - 1);
-                const endPage = Math.min(totalPages - 1, currentPageNum + 1);
-                
-                // Agregar páginas alrededor de la actual
-                for (let i = startPage; i <= endPage; i++) {
-                  if (!pagesToShow.includes(i)) {
+                // Si hay pocas páginas, mostrar todas
+                if (totalPages <= 5) {
+                  for (let i = 1; i <= totalPages; i++) {
                     pagesToShow.push(i);
+                  }
+                } else {
+                  // Siempre mostrar primera página
+                  pagesToShow.push(1);
+                  
+                  // Calcular rango de páginas alrededor de la actual
+                  const startPage = Math.max(2, currentPageNum - 1);
+                  const endPage = Math.min(totalPages - 1, currentPageNum + 1);
+                  
+                  // Agregar páginas alrededor de la actual
+                  for (let i = startPage; i <= endPage; i++) {
+                    if (!pagesToShow.includes(i)) {
+                      pagesToShow.push(i);
+                    }
+                  }
+                  
+                  // Mostrar última página si no está incluida
+                  if (!pagesToShow.includes(totalPages)) {
+                    pagesToShow.push(totalPages);
                   }
                 }
                 
-                // Mostrar última página si no está incluida
-                if (!pagesToShow.includes(totalPages)) {
-                  pagesToShow.push(totalPages);
-                }
-              }
-              
-              // Ordenar las páginas
-              pagesToShow.sort((a, b) => a - b);
-              
-              return pagesToShow.map((pageNum, idx) => {
-                const showEllipsis = idx > 0 && pageNum - pagesToShow[idx - 1] > 1;
-                return (
-                  <React.Fragment key={pageNum}>
-                    {showEllipsis && (
-                      <Typography sx={{ color: theme.palette.text.secondary, px: 0.5 }}>...</Typography>
-                    )}
-                    <IconButton
-                      onClick={() => handleChangePage(null, pageNum - 1)}
-                      sx={{
-                        minWidth: 32,
-                        height: 32,
-                        fontSize: '0.875rem',
-                        color: page === pageNum - 1 ? 'white' : theme.palette.text.secondary,
-                        bgcolor: page === pageNum - 1 ? taxiMonterricoColors.green : 'transparent',
-                        fontWeight: page === pageNum - 1 ? 600 : 400,
-                        borderRadius: 1,
-                        '&:hover': {
-                          bgcolor: page === pageNum - 1 ? taxiMonterricoColors.greenDark : (theme.palette.mode === 'dark' ? theme.palette.background.default : '#f5f5f5'),
-                        },
-                      }}
-                    >
-                      {pageNum}
-                    </IconButton>
-                  </React.Fragment>
-                );
-              });
-            })()}
-            <IconButton
-              onClick={() => handleChangePage(null, page + 1)}
-              disabled={page >= Math.ceil(filteredContacts.length / rowsPerPage) - 1}
-              sx={{
-                color: theme.palette.text.secondary,
-                '&:hover': { bgcolor: theme.palette.action.hover },
-                '&.Mui-disabled': { color: theme.palette.text.disabled },
-              }}
-            >
-              <ArrowForward sx={{ fontSize: 20 }} />
-            </IconButton>
+                // Ordenar las páginas
+                pagesToShow.sort((a, b) => a - b);
+                
+                return pagesToShow.map((pageNum, idx) => {
+                  const showEllipsis = idx > 0 && pageNum - pagesToShow[idx - 1] > 1;
+                  return (
+                    <React.Fragment key={pageNum}>
+                      {showEllipsis && (
+                        <Typography sx={{ color: theme.palette.text.secondary, px: 0.5 }}>...</Typography>
+                      )}
+                      <IconButton
+                        onClick={() => handleChangePage(null, pageNum - 1)}
+                        sx={{
+                          minWidth: 32,
+                          height: 32,
+                          fontSize: '0.875rem',
+                          color: page === pageNum - 1 ? 'white' : theme.palette.text.secondary,
+                          bgcolor: page === pageNum - 1 ? taxiMonterricoColors.green : 'transparent',
+                          fontWeight: page === pageNum - 1 ? 600 : 400,
+                          borderRadius: 1,
+                          '&:hover': {
+                            bgcolor: page === pageNum - 1 ? taxiMonterricoColors.greenDark : (theme.palette.mode === 'dark' ? theme.palette.background.default : '#f5f5f5'),
+                          },
+                        }}
+                      >
+                        {pageNum}
+                      </IconButton>
+                    </React.Fragment>
+                  );
+                });
+              })()}
+              <IconButton
+                onClick={() => handleChangePage(null, page + 1)}
+                disabled={page >= Math.ceil(filteredContacts.length / rowsPerPage) - 1}
+                sx={{
+                  color: theme.palette.text.secondary,
+                  '&:hover': { bgcolor: theme.palette.action.hover },
+                  '&.Mui-disabled': { color: theme.palette.text.disabled },
+                }}
+              >
+                <ArrowForward sx={{ fontSize: 20 }} />
+              </IconButton>
+            </Box>
           </Box>
         </Box>
-      </Card>
+
+        {/* Panel de Filtros Lateral */}
+        {filterDrawerOpen && (
+        <Box
+          sx={{
+            width: { xs: '100%', md: 400 },
+            bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+            borderLeft: { xs: 'none', md: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}` },
+            borderTop: { xs: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`, md: 'none' },
+            borderRadius: 2,
+            height: 'fit-content',
+            maxHeight: { xs: 'none', md: 'calc(100vh - 120px)' },
+            position: { xs: 'relative', md: 'sticky' },
+            top: { xs: 0, md: 0 },
+            mt: { xs: 2, md: 2.5 },
+            alignSelf: 'flex-start',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
+              : '0 4px 12px rgba(0, 0, 0, 0.1)',
+          }}
+        >
+          {/* Header del Panel */}
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              py: 1,
+              px: 2,
+              borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
+            }}
+          >
+            <Typography
+              sx={{
+                fontWeight: 600,
+                fontSize: '0.875rem',
+                color: theme.palette.text.primary,
+              }}
+            >
+              Filter
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 0.5 }}>
+              <Button
+                onClick={() => {
+                  setSelectedStages([]);
+                  setSelectedOwnerFilters([]);
+                  setSelectedCountries([]);
+                }}
+                sx={{
+                  color: '#d32f2f',
+                  textTransform: 'none',
+                  fontSize: '0.75rem',
+                  fontWeight: 500,
+                  minWidth: 'auto',
+                  px: 0.75,
+                  py: 0.25,
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.1)' : 'rgba(211, 47, 47, 0.05)',
+                  },
+                }}
+              >
+                Clear
+              </Button>
+              <IconButton
+                size="small"
+                onClick={() => setFilterDrawerOpen(false)}
+                sx={{
+                  color: theme.palette.text.secondary,
+                  padding: '2px',
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+                  },
+                }}
+              >
+                <Close sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Box>
+          </Box>
+
+          {/* Contenido del Panel */}
+          <Box sx={{ overflowY: 'auto', flex: 1 }}>
+            {/* Sección Etapas */}
+            <Box>
+              <Box
+                onClick={() => setStagesExpanded(!stagesExpanded)}
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  py: 0.5,
+                  px: 2,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                  },
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontWeight: 500,
+                    fontSize: '0.9375rem',
+                    color: theme.palette.text.primary,
+                  }}
+                >
+                  Etapas
+                </Typography>
+                {stagesExpanded ? (
+                  <ExpandMore sx={{ fontSize: 18, color: theme.palette.text.secondary, transform: 'rotate(180deg)' }} />
+                ) : (
+                  <ExpandMore sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                )}
+              </Box>
+              <Collapse in={stagesExpanded}>
+                <Box sx={{ px: 2, pb: 2, pt: 1 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 1, alignItems: 'flex-start' }}>
+                    {stageOrder.map((stage) => {
+                      const stageColor = getStageColor(stage);
+                      const isSelected = selectedStages.includes(stage);
+                      
+                      return (
+                        <Chip
+                          key={stage}
+                          label={getStageLabelWithoutPercentage(stage)}
+                          size="small"
+                          color={isSelected ? stageColor : undefined}
+                          variant={isSelected ? 'filled' : 'outlined'}
+                          onClick={() => {
+                            setSelectedStages((prev) =>
+                              prev.includes(stage) ? prev.filter((s) => s !== stage) : [...prev, stage]
+                            );
+                          }}
+                          sx={{
+                            fontWeight: 500,
+                            fontSize: '0.75rem',
+                            height: '24px',
+                            cursor: 'pointer',
+                            width: 'fit-content',
+                            minWidth: 'auto',
+                            py: 0.25,
+                            px: 1,
+                            opacity: isSelected ? 1 : 0.8,
+                            '&:hover': {
+                              opacity: 1,
+                              transform: 'scale(1.02)',
+                            },
+                            transition: 'all 0.2s ease',
+                            '& .MuiChip-label': {
+                              padding: '0 4px',
+                            },
+                            ...(!isSelected && {
+                              borderColor: stageColor === 'error' 
+                                ? theme.palette.error.main 
+                                : stageColor === 'warning'
+                                ? theme.palette.warning.main
+                                : stageColor === 'info'
+                                ? theme.palette.info.main
+                                : stageColor === 'success'
+                                ? theme.palette.success.main
+                                : theme.palette.divider,
+                              color: theme.palette.text.primary,
+                              bgcolor: theme.palette.mode === 'dark'
+                                ? 'rgba(255, 255, 255, 0.08)'
+                                : 'rgba(0, 0, 0, 0.04)',
+                              '& .MuiChip-label': {
+                                color: theme.palette.text.primary,
+                                padding: '0 4px',
+                              },
+                            }),
+                          }}
+                        />
+                      );
+                    })}
+                  </Box>
+                </Box>
+              </Collapse>
+              <Divider sx={{ borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }} />
+            </Box>
+
+            {/* Sección Propietario del Contacto */}
+            <Box>
+              <Box
+                onClick={() => setOwnerFilterExpanded(!ownerFilterExpanded)}
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  py: 0.5,
+                  px: 2,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                  },
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontWeight: 500,
+                    fontSize: '0.9375rem',
+                    color: theme.palette.text.primary,
+                  }}
+                >
+                  Propietario del Contacto
+                </Typography>
+                {ownerFilterExpanded ? (
+                  <Remove sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                ) : (
+                  <Add sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                )}
+              </Box>
+              <Collapse in={ownerFilterExpanded}>
+                <Box sx={{ px: 2, pb: 2, pt: 1 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 1, alignItems: 'flex-start' }}>
+                    {/* Opción "Yo" */}
+                    <Chip
+                      icon={<Bolt sx={{ fontSize: 14, color: 'inherit' }} />}
+                      label="Yo"
+                      size="small"
+                      onClick={() => {
+                        setSelectedOwnerFilters((prev) =>
+                          prev.includes('me') ? prev.filter((o) => o !== 'me') : [...prev, 'me']
+                        );
+                      }}
+                      sx={{
+                        fontWeight: 500,
+                        fontSize: '0.75rem',
+                        height: '24px',
+                        cursor: 'pointer',
+                        width: 'fit-content',
+                        minWidth: 'auto',
+                        py: 0.25,
+                        px: 1,
+                        opacity: selectedOwnerFilters.includes('me') ? 1 : 0.8,
+                        variant: selectedOwnerFilters.includes('me') ? 'filled' : 'outlined',
+                        color: selectedOwnerFilters.includes('me') ? 'primary' : undefined,
+                        '&:hover': {
+                          opacity: 1,
+                          transform: 'scale(1.02)',
+                        },
+                        transition: 'all 0.2s ease',
+                        '& .MuiChip-label': {
+                          padding: '0 4px',
+                        },
+                        ...(!selectedOwnerFilters.includes('me') && {
+                          borderColor: theme.palette.divider,
+                          color: theme.palette.text.primary,
+                          bgcolor: theme.palette.mode === 'dark'
+                            ? 'rgba(255, 255, 255, 0.08)'
+                            : 'rgba(0, 0, 0, 0.04)',
+                          '& .MuiChip-label': {
+                            color: theme.palette.text.primary,
+                            padding: '0 4px',
+                          },
+                        }),
+                      }}
+                    />
+
+                    {/* Opción "Sin asignar" */}
+                    <Chip
+                      label="Sin asignar"
+                      size="small"
+                      onClick={() => {
+                        setSelectedOwnerFilters((prev) =>
+                          prev.includes('unassigned') ? prev.filter((o) => o !== 'unassigned') : [...prev, 'unassigned']
+                        );
+                      }}
+                      sx={{
+                        fontWeight: 500,
+                        fontSize: '0.75rem',
+                        height: '24px',
+                        cursor: 'pointer',
+                        width: 'fit-content',
+                        minWidth: 'auto',
+                        py: 0.25,
+                        px: 1,
+                        opacity: selectedOwnerFilters.includes('unassigned') ? 1 : 0.8,
+                        variant: selectedOwnerFilters.includes('unassigned') ? 'filled' : 'outlined',
+                        color: selectedOwnerFilters.includes('unassigned') ? 'primary' : undefined,
+                        '&:hover': {
+                          opacity: 1,
+                          transform: 'scale(1.02)',
+                        },
+                        transition: 'all 0.2s ease',
+                        '& .MuiChip-label': {
+                          padding: '0 4px',
+                        },
+                        ...(!selectedOwnerFilters.includes('unassigned') && {
+                          borderColor: theme.palette.divider,
+                          color: theme.palette.text.primary,
+                          bgcolor: theme.palette.mode === 'dark'
+                            ? 'rgba(255, 255, 255, 0.08)'
+                            : 'rgba(0, 0, 0, 0.04)',
+                          '& .MuiChip-label': {
+                            color: theme.palette.text.primary,
+                            padding: '0 4px',
+                          },
+                        }),
+                      }}
+                    />
+
+                    {/* Lista de usuarios */}
+                    {users.map((userItem) => {
+                      const isSelected = selectedOwnerFilters.includes(userItem.id);
+                      return (
+                        <Chip
+                          key={userItem.id}
+                          avatar={
+                            <Avatar
+                              sx={{
+                                width: 20,
+                                height: 20,
+                                fontSize: '0.625rem',
+                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+                              }}
+                            >
+                              {userItem.firstName?.[0]?.toUpperCase() || userItem.email?.[0]?.toUpperCase() || 'U'}
+                            </Avatar>
+                          }
+                          label={`${userItem.firstName} ${userItem.lastName}`}
+                          size="small"
+                          onClick={() => {
+                            setSelectedOwnerFilters((prev) =>
+                              prev.includes(userItem.id) ? prev.filter((o) => o !== userItem.id) : [...prev, userItem.id]
+                            );
+                          }}
+                          sx={{
+                            fontWeight: 500,
+                            fontSize: '0.75rem',
+                            height: '24px',
+                            cursor: 'pointer',
+                            width: 'fit-content',
+                            minWidth: 'auto',
+                            py: 0.25,
+                            px: 1,
+                            opacity: isSelected ? 1 : 0.8,
+                            variant: isSelected ? 'filled' : 'outlined',
+                            color: isSelected ? 'primary' : undefined,
+                            '&:hover': {
+                              opacity: 1,
+                              transform: 'scale(1.02)',
+                            },
+                            transition: 'all 0.2s ease',
+                            '& .MuiChip-label': {
+                              padding: '0 4px',
+                            },
+                            ...(!isSelected && {
+                              borderColor: theme.palette.divider,
+                              color: theme.palette.text.primary,
+                              bgcolor: theme.palette.mode === 'dark'
+                                ? 'rgba(255, 255, 255, 0.08)'
+                                : 'rgba(0, 0, 0, 0.04)',
+                              '& .MuiChip-label': {
+                                color: theme.palette.text.primary,
+                                padding: '0 4px',
+                              },
+                            }),
+                          }}
+                        />
+                      );
+                    })}
+                  </Box>
+                </Box>
+              </Collapse>
+              <Divider sx={{ borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }} />
+            </Box>
+
+            {/* Sección País */}
+            <Box>
+              <Box
+                onClick={() => setCountryFilterExpanded(!countryFilterExpanded)}
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  py: 0.5,
+                  px: 2,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                  },
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontWeight: 500,
+                    fontSize: '0.9375rem',
+                    color: theme.palette.text.primary,
+                  }}
+                >
+                  País
+                </Typography>
+                {countryFilterExpanded ? (
+                  <Remove sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                ) : (
+                  <Add sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                )}
+              </Box>
+              <Collapse in={countryFilterExpanded}>
+                <Box sx={{ px: 2, pb: 2, pt: 1 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 1, alignItems: 'flex-start' }}>
+                    {Array.from(new Set(contacts.map(c => c.country).filter((c): c is string => typeof c === 'string' && c.length > 0))).sort().map((country: string) => (
+                      <Chip
+                        key={country}
+                        label={country}
+                        size="small"
+                        onClick={() => {
+                          setSelectedCountries((prev: string[]) =>
+                            prev.includes(country) ? prev.filter((c: string) => c !== country) : [...prev, country]
+                          );
+                        }}
+                        sx={{
+                          fontWeight: 500,
+                          fontSize: '0.8125rem',
+                          height: '28px',
+                          cursor: 'pointer',
+                          width: 'fit-content',
+                          minWidth: 'auto',
+                          opacity: selectedCountries.includes(country) ? 1 : 0.8,
+                          variant: selectedCountries.includes(country) ? 'filled' : 'outlined',
+                          color: selectedCountries.includes(country) ? 'primary' : undefined,
+                          '&:hover': {
+                            opacity: 1,
+                            transform: 'scale(1.02)',
+                          },
+                          transition: 'all 0.2s ease',
+                          ...(!selectedCountries.includes(country) && {
+                            borderColor: theme.palette.divider,
+                            color: theme.palette.text.primary,
+                            bgcolor: theme.palette.mode === 'dark'
+                              ? 'rgba(255, 255, 255, 0.08)'
+                              : 'rgba(0, 0, 0, 0.04)',
+                            '& .MuiChip-label': {
+                              color: theme.palette.text.primary,
+                            },
+                          }),
+                        }}
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              </Collapse>
+              <Divider sx={{ borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }} />
+            </Box>
+          </Box>
+        </Box>
+      )}
+      </Box>
 
       <Dialog 
         open={open} 
@@ -2162,7 +2301,7 @@ const Contacts: React.FC = () => {
           </Box>
         </DialogContent>
         <DialogActions sx={{ 
-          px: 3, 
+          px: 2, 
           py: 2,
           borderTop: `1px solid ${theme.palette.divider}`,
           gap: 1,
@@ -2980,7 +3119,7 @@ const Contacts: React.FC = () => {
             </Typography>
           </DialogContent>
           <DialogActions sx={{ 
-            px: 3, 
+            px: 2, 
             py: 2,
             borderTop: `1px solid ${theme.palette.divider}`,
             gap: 1,

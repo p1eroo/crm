@@ -17,12 +17,12 @@
     "init-roles": "ts-node src/scripts/initRoles.ts",
     "update-roles": "ts-node src/scripts/updateRoles.ts",
     "check-user-role": "ts-node src/scripts/checkUserRole.ts",
-        "assign-admin": "ts-node src/scripts/assignAdminRole.ts",
-        "fix-enums": "ts-node src/scripts/fixEnumConflict.ts",
-        "create-task-columns": "ts-node src/scripts/createTaskColumns.ts",
-        "check-task-columns": "ts-node src/scripts/checkTaskColumns.ts",
-        "create-ticket-columns": "ts-node src/scripts/createTicketColumns.ts",
-        "create-activity-columns": "ts-node src/scripts/createActivityColumns.ts"
+    "assign-admin": "ts-node src/scripts/assignAdminRole.ts",
+    "fix-enums": "ts-node src/scripts/fixEnumConflict.ts",
+    "create-task-columns": "ts-node src/scripts/createTaskColumns.ts",
+    "check-task-columns": "ts-node src/scripts/checkTaskColumns.ts",
+    "create-ticket-columns": "ts-node src/scripts/createTicketColumns.ts",
+    "create-activity-columns": "ts-node src/scripts/createActivityColumns.ts"
   },
   "dependencies": {
     "axios": "^1.13.2",
