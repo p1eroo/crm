@@ -13,6 +13,7 @@ import {
   MenuItem,
   Divider,
   Typography,
+  IconButton,
 } from '@mui/material';
 import {
   Dashboard,
@@ -33,10 +34,12 @@ import {
   Assessment,
   CalendarToday,
   Settings,
+  ChevronLeft,
 } from '@mui/icons-material';
 import { taxiMonterricoColors } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme as useThemeContext } from '../../context/ThemeContext';
+import { useSidebar } from '../../context/SidebarContext';
 import ProfileModal from '../ProfileModal';
 import logo from '../../assets/tm_logo.png';
 
@@ -61,6 +64,7 @@ const Sidebar: React.FC = () => {
   const { logout, user } = useAuth();
   const theme = useTheme();
   const { mode, toggleTheme } = useThemeContext();
+  const { open, toggleSidebar } = useSidebar();
   const [profileAnchorEl, setProfileAnchorEl] = React.useState<null | HTMLElement>(null);
   const [profileModalOpen, setProfileModalOpen] = React.useState(false);
 
@@ -82,6 +86,10 @@ const Sidebar: React.FC = () => {
     logout();
     navigate('/login');
   };
+
+  if (!open) {
+    return null;
+  }
 
   return (
     <Drawer
@@ -107,7 +115,7 @@ const Sidebar: React.FC = () => {
         mb: -4,
         mt: -6,
         display: 'flex', 
-        justifyContent: 'flex-start',
+        justifyContent: 'space-between',
         alignItems: 'center',
         width: '100%',
         pl: 2.5,
@@ -122,6 +130,18 @@ const Sidebar: React.FC = () => {
             objectFit: 'contain',
           }}
         />
+        <IconButton
+          onClick={toggleSidebar}
+          size="small"
+          sx={{
+            color: theme.palette.text.secondary,
+            '&:hover': {
+              bgcolor: theme.palette.action.hover,
+            },
+          }}
+        >
+          <ChevronLeft />
+        </IconButton>
       </Box>
 
       {/* Lista de items del menú */}
