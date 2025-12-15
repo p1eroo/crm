@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -22,6 +22,10 @@ import {
   MenuItem,
   Tabs,
   Tab,
+  FormControl,
+  InputLabel,
+  Select,
+  Popover,
 } from '@mui/material';
 import {
   Note,
@@ -34,6 +38,10 @@ import {
   TrendingUp,
   Assignment,
   MoreVert,
+  Close,
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
 } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
@@ -80,7 +88,12 @@ const DealDetail: React.FC = () => {
   const [activities, setActivities] = useState<any[]>([]);
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteData, setNoteData] = useState({ subject: '', description: '' });
+  const [taskOpen, setTaskOpen] = useState(false);
+  const [taskData, setTaskData] = useState({ title: '', description: '', priority: 'medium', dueDate: '' });
   const [saving, setSaving] = useState(false);
+  const [datePickerAnchorEl, setDatePickerAnchorEl] = useState<HTMLElement | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [successMessage, setSuccessMessage] = useState('');
   const [priorityAnchorEl, setPriorityAnchorEl] = useState<null | HTMLElement>(null);
   const [updatingPriority, setUpdatingPriority] = useState(false);
@@ -279,6 +292,126 @@ const DealDetail: React.FC = () => {
     }
   };
 
+  const handleOpenTask = () => {
+    setTaskData({ title: '', description: '', priority: 'medium', dueDate: '' });
+    setSelectedDate(null);
+    setCurrentMonth(new Date());
+    setTaskOpen(true);
+  };
+
+  const handleOpenDatePicker = (event: React.MouseEvent<HTMLElement>) => {
+    if (taskData.dueDate) {
+      const date = new Date(taskData.dueDate);
+      setSelectedDate(date);
+      setCurrentMonth(date);
+    } else {
+      setSelectedDate(null);
+      setCurrentMonth(new Date());
+    }
+    setDatePickerAnchorEl(event.currentTarget);
+  };
+
+  const handleDateSelect = (date: Date) => {
+    setSelectedDate(date);
+    const formattedDate = date.toISOString().split('T')[0];
+    setTaskData({ ...taskData, dueDate: formattedDate });
+    setDatePickerAnchorEl(null);
+  };
+
+  const handleClearDate = () => {
+    setSelectedDate(null);
+    setTaskData({ ...taskData, dueDate: '' });
+    setDatePickerAnchorEl(null);
+  };
+
+  const handleToday = () => {
+    const today = new Date();
+    setSelectedDate(today);
+    const formattedDate = today.toISOString().split('T')[0];
+    setTaskData({ ...taskData, dueDate: formattedDate });
+    setDatePickerAnchorEl(null);
+  };
+
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
+    
+    const days: Array<{ day: number; isCurrentMonth: boolean }> = [];
+    
+    // Días del mes anterior
+    // Si el mes empieza en domingo (0), no hay días del mes anterior
+    // Si empieza en lunes (1), hay 1 día del mes anterior, etc.
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      const dayNumber = prevMonthLastDay - startingDayOfWeek + i + 1;
+      days.push({ day: dayNumber, isCurrentMonth: false });
+    }
+    
+    // Días del mes actual
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({ day: i, isCurrentMonth: true });
+    }
+    
+    // Completar hasta 42 días (6 semanas) con días del siguiente mes
+    const remainingDays = 42 - days.length;
+    for (let i = 1; i <= remainingDays; i++) {
+      days.push({ day: i, isCurrentMonth: false });
+    }
+    
+    return days;
+  };
+
+  const formatDateDisplay = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+  };
+
+  const monthNames = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+
+  const weekDays = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'];
+
+  const handleSaveTask = async () => {
+    if (!taskData.title.trim()) {
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.post('/tasks', {
+        title: taskData.title,
+        description: taskData.description,
+        type: 'todo',
+        status: 'not started',
+        priority: taskData.priority || 'medium',
+        dueDate: taskData.dueDate || undefined,
+        dealId: id,
+      });
+      setSuccessMessage('Tarea creada exitosamente' + (taskData.dueDate ? ' y sincronizada con Google Calendar' : ''));
+      setTaskOpen(false);
+      setTaskData({ title: '', description: '', priority: 'medium', dueDate: '' });
+      fetchActivities();
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error) {
+      console.error('Error saving task:', error);
+      setSuccessMessage('Error al crear la tarea');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -446,6 +579,24 @@ const DealDetail: React.FC = () => {
                 <Phone sx={{ color: '#20B2AA', fontSize: 20 }} />
                 <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 400 }}>
                   Llamar
+                </Typography>
+              </Box>
+              
+              <Box 
+                onClick={handleOpenTask}
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    opacity: 0.8,
+                  },
+                }}
+              >
+                <Assignment sx={{ color: '#20B2AA', fontSize: 20 }} />
+                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 400 }}>
+                  Tarea
                 </Typography>
               </Box>
             </Box>
@@ -810,9 +961,507 @@ const DealDetail: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Dialog para crear tarea */}
+      <Dialog 
+        open={taskOpen} 
+        onClose={() => setTaskOpen(false)} 
+        maxWidth="md" 
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            maxHeight: '90vh',
+          },
+        }}
+      >
+        <Box
+          sx={{
+            backgroundColor: 'transparent',
+            color: theme.palette.text.primary,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            minHeight: 72,
+            px: 4,
+            pt: 3,
+            pb: 2,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                backgroundColor: `${taxiMonterricoColors.green}15`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <CheckCircle sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+            </Box>
+            <Typography variant="h5" sx={{ color: theme.palette.text.primary, fontWeight: 700, fontSize: '1.25rem', letterSpacing: '-0.02em' }}>
+              Tarea
+            </Typography>
+          </Box>
+          <IconButton 
+            sx={{ 
+              color: theme.palette.text.secondary,
+              transition: 'all 0.2s ease',
+              '&:hover': { 
+                backgroundColor: theme.palette.action.hover,
+                color: theme.palette.text.primary,
+                transform: 'rotate(90deg)',
+              }
+            }} 
+            size="medium" 
+            onClick={() => setTaskOpen(false)}
+          >
+            <Close />
+          </IconButton>
+        </Box>
+
+        <DialogContent sx={{ px: 4, pb: 2 }}>
+          <TextField
+            label="Título"
+            value={taskData.title}
+            onChange={(e) => setTaskData({ ...taskData, title: e.target.value })}
+            required
+            fullWidth
+            sx={{ 
+              mb: 3,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                '& fieldset': {
+                  borderWidth: '2px',
+                  borderColor: theme.palette.divider,
+                },
+                '&:hover fieldset': {
+                  borderColor: taxiMonterricoColors.green,
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: taxiMonterricoColors.green,
+                  borderWidth: '2px',
+                },
+              },
+              '& .MuiInputLabel-root': {
+                fontWeight: 500,
+                '&.Mui-focused': {
+                  color: taxiMonterricoColors.green,
+                },
+              },
+            }}
+          />
+          <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+            <TextField
+              select
+              label="Prioridad"
+              value={taskData.priority}
+              onChange={(e) => setTaskData({ ...taskData, priority: e.target.value })}
+              fullWidth
+              SelectProps={{
+                MenuProps: {
+                  PaperProps: {
+                    sx: {
+                      borderRadius: 2,
+                      mt: 1,
+                    },
+                  },
+                },
+              }}
+              sx={{ 
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '& fieldset': {
+                    borderWidth: '2px',
+                    borderColor: theme.palette.divider,
+                  },
+                  '&:hover fieldset': {
+                    borderColor: taxiMonterricoColors.green,
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: taxiMonterricoColors.green,
+                    borderWidth: '2px',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  fontWeight: 500,
+                  '&.Mui-focused': {
+                    color: taxiMonterricoColors.green,
+                  },
+                },
+              }}
+            >
+              <MenuItem value="low">Baja</MenuItem>
+              <MenuItem value="medium">Media</MenuItem>
+              <MenuItem value="high">Alta</MenuItem>
+              <MenuItem value="urgent">Urgente</MenuItem>
+            </TextField>
+            <TextField
+              label="Fecha límite"
+              value={formatDateDisplay(taskData.dueDate)}
+              onClick={handleOpenDatePicker}
+              fullWidth
+              InputLabelProps={{
+                shrink: true,
+              }}
+              InputProps={{
+                readOnly: true,
+                endAdornment: (
+                  <IconButton
+                    size="small"
+                    onClick={handleOpenDatePicker}
+                    sx={{ 
+                      color: theme.palette.text.secondary,
+                      mr: 0.5,
+                      '&:hover': {
+                        backgroundColor: 'transparent',
+                        color: taxiMonterricoColors.green,
+                      }
+                    }}
+                  >
+                    <CalendarToday sx={{ fontSize: 20 }} />
+                  </IconButton>
+                ),
+              }}
+              sx={{ 
+                cursor: 'pointer',
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '& fieldset': {
+                    borderWidth: '2px',
+                    borderColor: theme.palette.divider,
+                  },
+                  '&:hover fieldset': {
+                    borderColor: taxiMonterricoColors.green,
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: taxiMonterricoColors.green,
+                    borderWidth: '2px',
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  fontWeight: 500,
+                  '&.Mui-focused': {
+                    color: taxiMonterricoColors.green,
+                  },
+                },
+                '& .MuiInputBase-input': {
+                  cursor: 'pointer',
+                },
+              }}
+            />
+          </Box>
+          <TextField
+            label="Descripción"
+            multiline
+            rows={5}
+            value={taskData.description}
+            onChange={(e) => setTaskData({ ...taskData, description: e.target.value })}
+            fullWidth
+            sx={{ 
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                '& fieldset': {
+                  borderWidth: '2px',
+                  borderColor: theme.palette.divider,
+                },
+                '&:hover fieldset': {
+                  borderColor: taxiMonterricoColors.green,
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: taxiMonterricoColors.green,
+                  borderWidth: '2px',
+                },
+              },
+              '& .MuiInputLabel-root': {
+                fontWeight: 500,
+                '&.Mui-focused': {
+                  color: taxiMonterricoColors.green,
+                },
+              },
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={{ px: 4, pb: 3, pt: 2, gap: 1 }}>
+          <Button 
+            onClick={() => setTaskOpen(false)}
+            sx={{
+              textTransform: 'none',
+              color: theme.palette.text.secondary,
+              fontWeight: 500,
+              px: 3,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+              }
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSaveTask} 
+            variant="contained" 
+            disabled={saving || !taskData.title.trim()}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 500,
+              px: 3,
+              bgcolor: taskData.title.trim() ? taxiMonterricoColors.green : theme.palette.action.disabledBackground,
+              color: 'white',
+              '&:hover': {
+                bgcolor: taskData.title.trim() ? taxiMonterricoColors.green : theme.palette.action.disabledBackground,
+                opacity: 0.9,
+              },
+              '&:disabled': {
+                bgcolor: theme.palette.action.disabledBackground,
+                color: theme.palette.action.disabled,
+              }
+            }}
+          >
+            {saving ? 'Guardando...' : 'Guardar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Date Picker Popover - Se despliega debajo del campo */}
+      <Popover
+        open={Boolean(datePickerAnchorEl)}
+        anchorEl={datePickerAnchorEl}
+        onClose={() => setDatePickerAnchorEl(null)}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            overflow: 'hidden',
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 8px 32px rgba(0,0,0,0.4)' 
+              : '0 8px 32px rgba(0,0,0,0.12)',
+            mt: 0.5,
+          },
+        }}
+      >
+        <Box sx={{ p: 3, bgcolor: theme.palette.background.paper }}>
+          {/* Header con mes y año - Mejorado */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            mb: 3,
+            pb: 2,
+            borderBottom: `1px solid ${theme.palette.divider}`,
+          }}>
+            <IconButton
+              size="small"
+              onClick={() => {
+                const newDate = new Date(currentMonth);
+                newDate.setMonth(newDate.getMonth() - 1);
+                setCurrentMonth(newDate);
+              }}
+              sx={{
+                color: theme.palette.text.secondary,
+                border: `1px solid ${theme.palette.divider}`,
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                  borderColor: taxiMonterricoColors.green,
+                  color: taxiMonterricoColors.green,
+                },
+              }}
+            >
+              <ChevronLeft />
+            </IconButton>
+            <Typography variant="h6" sx={{ 
+              fontWeight: 600, 
+              fontSize: '1.15rem',
+              color: theme.palette.text.primary,
+              letterSpacing: '-0.01em',
+            }}>
+              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+            </Typography>
+            <IconButton
+              size="small"
+              onClick={() => {
+                const newDate = new Date(currentMonth);
+                newDate.setMonth(newDate.getMonth() + 1);
+                setCurrentMonth(newDate);
+              }}
+              sx={{
+                color: theme.palette.text.secondary,
+                border: `1px solid ${theme.palette.divider}`,
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                  borderColor: taxiMonterricoColors.green,
+                  color: taxiMonterricoColors.green,
+                },
+              }}
+            >
+              <ChevronRight />
+            </IconButton>
+          </Box>
+
+          {/* Días de la semana - Mejorado */}
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(7, 1fr)', 
+            gap: 0.5, 
+            mb: 2,
+          }}>
+            {weekDays.map((day) => (
+              <Typography
+                key={day}
+                variant="caption"
+                sx={{
+                  textAlign: 'center',
+                  fontWeight: 600,
+                  color: theme.palette.text.secondary,
+                  fontSize: '0.75rem',
+                  py: 1,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                {day}
+              </Typography>
+            ))}
+          </Box>
+
+          {/* Calendario - Diseño Mejorado */}
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(7, 1fr)', 
+            gap: 0.75,
+            mb: 2,
+          }}>
+            {getDaysInMonth(currentMonth).map((item, index) => {
+              const date = new Date(
+                currentMonth.getFullYear(),
+                currentMonth.getMonth(),
+                item.day
+              );
+              
+              if (!item.isCurrentMonth) {
+                if (index < 7) {
+                  date.setMonth(currentMonth.getMonth() - 1);
+                } else {
+                  date.setMonth(currentMonth.getMonth() + 1);
+                }
+              }
+
+              const isSelected = selectedDate && 
+                item.isCurrentMonth &&
+                date.toDateString() === selectedDate.toDateString();
+              const isToday = item.isCurrentMonth &&
+                date.toDateString() === new Date().toDateString();
+
+              return (
+                <Box
+                  key={`${item.isCurrentMonth ? 'current' : 'other'}-${item.day}-${index}`}
+                  onClick={() => {
+                    if (item.isCurrentMonth) {
+                      handleDateSelect(date);
+                    }
+                  }}
+                  sx={{
+                    aspectRatio: '1',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 2,
+                    cursor: item.isCurrentMonth ? 'pointer' : 'default',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    bgcolor: isSelected
+                      ? taxiMonterricoColors.green
+                      : isToday
+                      ? `${taxiMonterricoColors.green}20`
+                      : 'transparent',
+                    color: isSelected
+                      ? 'white'
+                      : isToday
+                      ? taxiMonterricoColors.green
+                      : item.isCurrentMonth
+                      ? theme.palette.text.primary
+                      : theme.palette.text.disabled,
+                    fontWeight: isSelected ? 700 : isToday ? 600 : 400,
+                    fontSize: '0.875rem',
+                    position: 'relative',
+                    minHeight: '32px',
+                    minWidth: '32px',
+                    '&:hover': {
+                      bgcolor: item.isCurrentMonth
+                        ? (isSelected
+                            ? taxiMonterricoColors.green
+                            : `${taxiMonterricoColors.green}15`)
+                        : 'transparent',
+                      transform: item.isCurrentMonth && !isSelected ? 'scale(1.05)' : 'none',
+                    },
+                    opacity: item.isCurrentMonth ? 1 : 0.35,
+                  }}
+                >
+                  {item.day}
+                </Box>
+              );
+            })}
+          </Box>
+
+          {/* Botones de acción - Mejorado */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            mt: 2, 
+            pt: 2, 
+            borderTop: `1px solid ${theme.palette.divider}`,
+            gap: 1,
+          }}>
+            <Button
+              onClick={handleClearDate}
+              sx={{
+                textTransform: 'none',
+                color: theme.palette.text.secondary,
+                fontWeight: 500,
+                px: 2,
+                py: 0.75,
+                borderRadius: 2,
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                  color: theme.palette.text.primary,
+                },
+              }}
+            >
+              Borrar
+            </Button>
+            <Button
+              onClick={handleToday}
+              sx={{
+                textTransform: 'none',
+                color: taxiMonterricoColors.green,
+                fontWeight: 600,
+                px: 2,
+                py: 0.75,
+                borderRadius: 2,
+                '&:hover': {
+                  bgcolor: `${taxiMonterricoColors.green}15`,
+                },
+              }}
+            >
+              Hoy
+            </Button>
+          </Box>
+        </Box>
+      </Popover>
     </Box>
   );
 };
 
 export default DealDetail;
-
