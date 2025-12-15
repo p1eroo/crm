@@ -135,7 +135,6 @@ const Dashboard: React.FC = () => {
   const [savingBudget, setSavingBudget] = useState(false);
   const [dailyPayments, setDailyPayments] = useState<any[]>([]);
   const [editingBudgetMonth, setEditingBudgetMonth] = useState<number | null>(null); // Mes que se está editando (null = mes actual)
-  
 
   // Generar lista de años: año actual y 5 años anteriores
   const availableYears = Array.from({ length: 6 }, (_, i) => currentYear - i);
@@ -160,7 +159,6 @@ const Dashboard: React.FC = () => {
     fetchStats();
     fetchTasks();
   }, []);
-
 
   // Recargar estadísticas cuando cambia el año o mes seleccionado
   useEffect(() => {
@@ -860,7 +858,6 @@ const Dashboard: React.FC = () => {
       setSavingBudget(false);
     }
   };
-
 
   return (
     <>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -26,6 +26,12 @@ import {
   InputLabel,
   Select,
   Popover,
+  Checkbox,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  InputBase,
 } from '@mui/material';
 import {
   Note,
@@ -37,11 +43,32 @@ import {
   CalendarToday,
   TrendingUp,
   Assignment,
+  Search,
   MoreVert,
   Close,
   CheckCircle,
   ChevronLeft,
   ChevronRight,
+  FormatBold,
+  FormatItalic,
+  FormatUnderlined,
+  FormatStrikethrough,
+  FormatListBulleted,
+  FormatListNumbered,
+  Link as LinkIcon,
+  Image,
+  Code,
+  TableChart,
+  AttachFile,
+  Add,
+  ExpandMore,
+  PersonAdd,
+  FormatAlignLeft,
+  FormatAlignCenter,
+  FormatAlignRight,
+  FormatAlignJustify,
+  Cancel,
+  Check,
 } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
@@ -57,6 +84,7 @@ interface DealDetail {
   probability?: number;
   priority?: 'baja' | 'media' | 'alta';
   description?: string;
+  createdAt?: string;
   Contact?: {
     id: number;
     firstName: string;
@@ -91,6 +119,18 @@ const DealDetail: React.FC = () => {
   const [taskOpen, setTaskOpen] = useState(false);
   const [taskData, setTaskData] = useState({ title: '', description: '', priority: 'medium', dueDate: '' });
   const [saving, setSaving] = useState(false);
+  const descriptionEditorRef = useRef<HTMLDivElement>(null);
+  const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeFormats, setActiveFormats] = useState({
+    bold: false,
+    italic: false,
+    underline: false,
+    strikeThrough: false,
+    unorderedList: false,
+    orderedList: false,
+  });
   const [datePickerAnchorEl, setDatePickerAnchorEl] = useState<HTMLElement | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -98,6 +138,18 @@ const DealDetail: React.FC = () => {
   const [priorityAnchorEl, setPriorityAnchorEl] = useState<null | HTMLElement>(null);
   const [updatingPriority, setUpdatingPriority] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
+  const [associateOpen, setAssociateOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('empresas');
+  const [associateSearch, setAssociateSearch] = useState('');
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<any[]>([]);
+  const [deals, setDeals] = useState<any[]>([]);
+  const [selectedAssociations, setSelectedAssociations] = useState<{ [key: string]: number[] }>({
+    companies: [],
+    contacts: [],
+    deals: [],
+  });
+  const [loadingAssociations, setLoadingAssociations] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -105,6 +157,56 @@ const DealDetail: React.FC = () => {
       fetchActivities();
     }
   }, [id]);
+
+  useEffect(() => {
+    if (descriptionEditorRef.current && taskOpen) {
+      if (taskData.description !== descriptionEditorRef.current.innerHTML) {
+        descriptionEditorRef.current.innerHTML = taskData.description || '';
+      }
+    }
+  }, [taskData.description, taskOpen]);
+
+  const updateActiveFormats = useCallback(() => {
+    if (descriptionEditorRef.current) {
+      setActiveFormats({
+        bold: document.queryCommandState('bold'),
+        italic: document.queryCommandState('italic'),
+        underline: document.queryCommandState('underline'),
+        strikeThrough: document.queryCommandState('strikeThrough'),
+        unorderedList: document.queryCommandState('insertUnorderedList'),
+        orderedList: document.queryCommandState('insertOrderedList'),
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    const editor = descriptionEditorRef.current;
+    if (!editor || !taskOpen) return;
+
+    const handleSelectionChange = () => {
+      updateActiveFormats();
+    };
+
+    const handleMouseUp = () => {
+      updateActiveFormats();
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Shift' || e.key === 'Control' || e.key === 'Meta')) {
+        updateActiveFormats();
+      }
+    };
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+    editor.addEventListener('mouseup', handleMouseUp);
+    editor.addEventListener('keyup', handleKeyUp as EventListener);
+
+    return () => {
+      document.removeEventListener('selectionchange', handleSelectionChange);
+      editor.removeEventListener('mouseup', handleMouseUp);
+      editor.removeEventListener('keyup', handleKeyUp as EventListener);
+    };
+  }, [updateActiveFormats, taskOpen]);
 
   const fetchDeal = async () => {
     try {
@@ -114,6 +216,48 @@ const DealDetail: React.FC = () => {
       console.error('Error fetching deal:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAssociations = async (searchTerm?: string) => {
+    setLoadingAssociations(true);
+    try {
+      // Si hay búsqueda, cargar todos los resultados
+      if (searchTerm && searchTerm.trim().length > 0) {
+        const [companiesRes, contactsRes, dealsRes] = await Promise.all([
+          api.get('/companies', { params: { limit: 1000, search: searchTerm } }),
+          api.get('/contacts', { params: { limit: 1000, search: searchTerm } }),
+          api.get('/deals', { params: { limit: 1000, search: searchTerm } }),
+        ]);
+        setCompanies(companiesRes.data.companies || companiesRes.data || []);
+        setContacts(contactsRes.data.contacts || contactsRes.data || []);
+        setDeals(dealsRes.data.deals || dealsRes.data || []);
+      } else {
+        // Si no hay búsqueda, solo cargar los vinculados al deal actual
+        const associatedItems: { companies: any[]; contacts: any[]; deals: any[] } = {
+          companies: [],
+          contacts: [],
+          deals: [],
+        };
+
+        // Cargar empresa vinculada si existe
+        if (deal?.Company) {
+          associatedItems.companies.push(deal.Company);
+        }
+
+        // Cargar contacto vinculado si existe
+        if (deal?.Contact) {
+          associatedItems.contacts.push(deal.Contact);
+        }
+
+        setCompanies(associatedItems.companies);
+        setContacts(associatedItems.contacts);
+        setDeals(associatedItems.deals);
+      }
+    } catch (error) {
+      console.error('Error fetching associations:', error);
+    } finally {
+      setLoadingAssociations(false);
     }
   };
 
@@ -783,6 +927,90 @@ const DealDetail: React.FC = () => {
             <Tab label="Actividades" />
           </Tabs>
 
+          {/* Cards de Fecha de Creación, Etapa del Negocio y Última Actividad */}
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <Card
+              sx={{
+                flex: 1,
+                p: 2,
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
+                border: `1px solid ${theme.palette.divider}`,
+                borderRadius: 1.5,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+              }}
+            >
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: theme.palette.text.primary }}>
+                Fecha de creación
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {deal.createdAt
+                  ? `${new Date(deal.createdAt).toLocaleDateString('es-ES', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })} ${new Date(deal.createdAt).toLocaleTimeString('es-ES', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}`
+                  : 'No disponible'}
+              </Typography>
+            </Card>
+
+            <Card
+              sx={{
+                flex: 1,
+                p: 2,
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
+                border: `1px solid ${theme.palette.divider}`,
+                borderRadius: 1.5,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+              }}
+            >
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: theme.palette.text.primary }}>
+                Etapa del negocio
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {deal.stage ? getStageLabel(deal.stage) : 'No disponible'}
+              </Typography>
+            </Card>
+
+            <Card
+              sx={{
+                flex: 1,
+                p: 2,
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
+                border: `1px solid ${theme.palette.divider}`,
+                borderRadius: 1.5,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+              }}
+            >
+              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: theme.palette.text.primary }}>
+                Última actividad
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {activities.length > 0 && activities[0].createdAt
+                  ? `${new Date(activities[0].createdAt).toLocaleDateString('es-ES', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: 'numeric',
+                    })} ${new Date(activities[0].createdAt).toLocaleTimeString('es-ES', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}`
+                  : 'No hay actividades'}
+              </Typography>
+            </Card>
+          </Box>
+
           <Card sx={{ 
             borderRadius: 2,
             boxShadow: 'none',
@@ -796,6 +1024,7 @@ const DealDetail: React.FC = () => {
             {/* Vista de Descripción */}
             {activeTab === 0 && (
               <Box sx={{ flex: 1, overflowY: 'auto' }}>
+
                 {deal.description ? (
                   <Typography variant="body2" sx={{ color: theme.palette.text.primary, whiteSpace: 'pre-wrap' }}>
                     {deal.description}
@@ -966,12 +1195,14 @@ const DealDetail: React.FC = () => {
       <Dialog 
         open={taskOpen} 
         onClose={() => setTaskOpen(false)} 
-        maxWidth="md" 
-        fullWidth
+        maxWidth={false}
+        fullWidth={false}
         PaperProps={{
           sx: {
             borderRadius: 2,
             maxHeight: '90vh',
+            width: '560px',
+            maxWidth: '90vw',
           },
         }}
       >
@@ -982,30 +1213,15 @@ const DealDetail: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            minHeight: 72,
-            px: 4,
-            pt: 3,
-            pb: 2,
+            minHeight: 48,
+            px: 2,
+            pt: 1.5,
+            pb: 0.5,
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: '50%',
-                backgroundColor: `${taxiMonterricoColors.green}15`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <CheckCircle sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
-            </Box>
-            <Typography variant="h5" sx={{ color: theme.palette.text.primary, fontWeight: 700, fontSize: '1.25rem', letterSpacing: '-0.02em' }}>
-              Tarea
-            </Typography>
-          </Box>
+          <Typography variant="h5" sx={{ color: theme.palette.text.primary, fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.02em' }}>
+            Tarea
+          </Typography>
           <IconButton 
             sx={{ 
               color: theme.palette.text.secondary,
@@ -1023,46 +1239,100 @@ const DealDetail: React.FC = () => {
           </IconButton>
         </Box>
 
-        <DialogContent sx={{ px: 4, pb: 2 }}>
+        <DialogContent sx={{ px: 2, pb: 1, pt: 0.5 }}>
           <TextField
             label="Título"
             value={taskData.title}
             onChange={(e) => setTaskData({ ...taskData, title: e.target.value })}
-            required
             fullWidth
+            InputLabelProps={{
+              shrink: !!taskData.title,
+            }}
             sx={{ 
-              mb: 3,
+              mb: 1.5,
               '& .MuiOutlinedInput-root': {
-                borderRadius: 2,
+                borderRadius: 0.5,
                 transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                fontSize: '0.75rem',
                 '& fieldset': {
-                  borderWidth: '2px',
-                  borderColor: theme.palette.divider,
+                  borderWidth: 0,
+                  border: 'none',
+                  top: 0,
                 },
                 '&:hover fieldset': {
-                  borderColor: taxiMonterricoColors.green,
+                  border: 'none',
                 },
                 '&.Mui-focused fieldset': {
-                  borderColor: taxiMonterricoColors.green,
-                  borderWidth: '2px',
+                  borderWidth: '2px !important',
+                  borderColor: `${taxiMonterricoColors.orange} !important`,
+                  borderStyle: 'solid !important',
+                  top: 0,
+                },
+              },
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderWidth: '0px !important',
+                '& legend': {
+                  width: 0,
+                  display: 'none',
+                },
+              },
+              '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                borderWidth: '2px !important',
+                borderColor: `${taxiMonterricoColors.green} !important`,
+                borderStyle: 'solid !important',
+                '& legend': {
+                  width: 0,
+                  display: 'none',
                 },
               },
               '& .MuiInputLabel-root': {
                 fontWeight: 500,
+                position: 'absolute',
+                left: 12,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                pointerEvents: 'none',
+                zIndex: 0,
+                backgroundColor: 'transparent',
+                padding: 0,
+                margin: 0,
+                fontSize: '0.75rem',
                 '&.Mui-focused': {
-                  color: taxiMonterricoColors.green,
+                  color: taxiMonterricoColors.orange,
+                  transform: 'translateY(-50%)',
+                  backgroundColor: 'transparent',
                 },
+                '&.MuiInputLabel-shrink': {
+                  display: 'none',
+                },
+              },
+              '& .MuiInputBase-input': {
+                position: 'relative',
+                zIndex: 1,
+                fontSize: '0.75rem',
+                py: 1,
               },
             }}
           />
-          <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-            <TextField
-              select
-              label="Prioridad"
-              value={taskData.priority}
-              onChange={(e) => setTaskData({ ...taskData, priority: e.target.value })}
-              fullWidth
-              SelectProps={{
+          <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+            <Box sx={{ flex: 1 }}>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  mb: 0.75, 
+                  color: theme.palette.text.secondary,
+                  fontWeight: 500,
+                  fontSize: '0.75rem',
+                }}
+              >
+                Prioridad
+              </Typography>
+              <TextField
+                select
+                value={taskData.priority}
+                onChange={(e) => setTaskData({ ...taskData, priority: e.target.value })}
+                fullWidth
+                SelectProps={{
                 MenuProps: {
                   PaperProps: {
                     sx: {
@@ -1074,42 +1344,57 @@ const DealDetail: React.FC = () => {
               }}
               sx={{ 
                 '& .MuiOutlinedInput-root': {
-                  borderRadius: 2,
+                  borderRadius: 0.5,
                   transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  fontSize: '0.75rem',
                   '& fieldset': {
                     borderWidth: '2px',
                     borderColor: theme.palette.divider,
                   },
                   '&:hover fieldset': {
-                    borderColor: taxiMonterricoColors.green,
+                    borderColor: taxiMonterricoColors.orange,
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: taxiMonterricoColors.green,
+                    borderColor: taxiMonterricoColors.orange,
                     borderWidth: '2px',
                   },
                 },
+                '& .MuiInputBase-input': {
+                  fontSize: '0.75rem',
+                  py: 1,
+                },
                 '& .MuiInputLabel-root': {
                   fontWeight: 500,
+                  fontSize: '0.75rem',
                   '&.Mui-focused': {
-                    color: taxiMonterricoColors.green,
+                    color: taxiMonterricoColors.orange,
                   },
                 },
               }}
             >
-              <MenuItem value="low">Baja</MenuItem>
-              <MenuItem value="medium">Media</MenuItem>
-              <MenuItem value="high">Alta</MenuItem>
-              <MenuItem value="urgent">Urgente</MenuItem>
+              <MenuItem value="low" sx={{ fontSize: '0.75rem', py: 0.75 }}>Baja</MenuItem>
+              <MenuItem value="medium" sx={{ fontSize: '0.75rem', py: 0.75 }}>Media</MenuItem>
+              <MenuItem value="high" sx={{ fontSize: '0.75rem', py: 0.75 }}>Alta</MenuItem>
+              <MenuItem value="urgent" sx={{ fontSize: '0.75rem', py: 0.75 }}>Urgente</MenuItem>
             </TextField>
-            <TextField
-              label="Fecha límite"
-              value={formatDateDisplay(taskData.dueDate)}
-              onClick={handleOpenDatePicker}
-              fullWidth
-              InputLabelProps={{
-                shrink: true,
-              }}
-              InputProps={{
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  mb: 0.75, 
+                  color: theme.palette.text.secondary,
+                  fontWeight: 500,
+                  fontSize: '0.75rem',
+                }}
+              >
+                Fecha límite
+              </Typography>
+              <TextField
+                value={formatDateDisplay(taskData.dueDate)}
+                onClick={handleOpenDatePicker}
+                fullWidth
+                InputProps={{
                 readOnly: true,
                 endAdornment: (
                   <IconButton
@@ -1120,83 +1405,560 @@ const DealDetail: React.FC = () => {
                       mr: 0.5,
                       '&:hover': {
                         backgroundColor: 'transparent',
-                        color: taxiMonterricoColors.green,
+                        color: taxiMonterricoColors.orange,
                       }
                     }}
                   >
-                    <CalendarToday sx={{ fontSize: 20 }} />
+                    <CalendarToday sx={{ fontSize: 18 }} />
                   </IconButton>
                 ),
               }}
               sx={{ 
                 cursor: 'pointer',
                 '& .MuiOutlinedInput-root': {
-                  borderRadius: 2,
+                  borderRadius: 0.5,
                   transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  fontSize: '0.75rem',
                   '& fieldset': {
                     borderWidth: '2px',
                     borderColor: theme.palette.divider,
                   },
                   '&:hover fieldset': {
-                    borderColor: taxiMonterricoColors.green,
+                    borderColor: taxiMonterricoColors.orange,
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: taxiMonterricoColors.green,
+                    borderColor: taxiMonterricoColors.orange,
                     borderWidth: '2px',
                   },
                 },
+                '& .MuiInputBase-input': {
+                  fontSize: '0.75rem',
+                  py: 1,
+                  cursor: 'pointer',
+                },
                 '& .MuiInputLabel-root': {
                   fontWeight: 500,
+                  fontSize: '0.75rem',
                   '&.Mui-focused': {
-                    color: taxiMonterricoColors.green,
+                    color: taxiMonterricoColors.orange,
                   },
-                },
-                '& .MuiInputBase-input': {
-                  cursor: 'pointer',
                 },
               }}
             />
+            </Box>
           </Box>
-          <TextField
-            label="Descripción"
-            multiline
-            rows={5}
-            value={taskData.description}
-            onChange={(e) => setTaskData({ ...taskData, description: e.target.value })}
-            fullWidth
-            sx={{ 
-              '& .MuiOutlinedInput-root': {
-                borderRadius: 2,
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                '& fieldset': {
-                  borderWidth: '2px',
-                  borderColor: theme.palette.divider,
+          <Divider sx={{ my: 1.5 }} />
+          <Box sx={{ position: 'relative' }}>
+            <Box
+              ref={descriptionEditorRef}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={(e) => {
+                const html = (e.target as HTMLElement).innerHTML;
+                if (html !== taskData.description) {
+                  setTaskData({ ...taskData, description: html });
+                }
+              }}
+              sx={{
+                minHeight: '150px',
+                maxHeight: '250px',
+                overflowY: 'auto',
+                pt: 0,
+                pb: 1.5,
+                px: 1,
+                borderRadius: 0.5,
+                border: 'none',
+                outline: 'none',
+                fontSize: '0.75rem',
+                lineHeight: 1.5,
+                color: theme.palette.text.primary,
+                '&:empty:before': {
+                  content: '"Descripción"',
+                  color: theme.palette.text.disabled,
                 },
-                '&:hover fieldset': {
-                  borderColor: taxiMonterricoColors.green,
+                '&::-webkit-scrollbar': {
+                  width: '6px',
                 },
-                '&.Mui-focused fieldset': {
-                  borderColor: taxiMonterricoColors.green,
-                  borderWidth: '2px',
+                '&::-webkit-scrollbar-track': {
+                  backgroundColor: 'transparent',
                 },
-              },
-              '& .MuiInputLabel-root': {
-                fontWeight: 500,
-                '&.Mui-focused': {
-                  color: taxiMonterricoColors.green,
+                '&::-webkit-scrollbar-thumb': {
+                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                  borderRadius: '3px',
                 },
-              },
+              }}
+            />
+            <Box
+              sx={{
+                position: 'absolute',
+                bottom: 0.5,
+                left: 4,
+                right: 4,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 0.5,
+                backgroundColor: 'transparent',
+                borderRadius: 1,
+                p: 0.5,
+                border: 'none',
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'nowrap' }}>
+                <IconButton
+                  size="small"
+                  sx={{ 
+                    p: 0.25, 
+                    minWidth: 28, 
+                    height: 28,
+                    backgroundColor: activeFormats.bold ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                    '&:hover': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                    }
+                  }}
+                  onClick={() => {
+                    document.execCommand('bold');
+                    updateActiveFormats();
+                  }}
+                  title="Negrita"
+                >
+                  <FormatBold sx={{ fontSize: 16 }} />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  sx={{ 
+                    p: 0.25, 
+                    minWidth: 28, 
+                    height: 28,
+                    backgroundColor: activeFormats.italic ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                    '&:hover': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                    }
+                  }}
+                  onClick={() => {
+                    document.execCommand('italic');
+                    updateActiveFormats();
+                  }}
+                  title="Cursiva"
+                >
+                  <FormatItalic sx={{ fontSize: 16 }} />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  sx={{ 
+                    p: 0.25, 
+                    minWidth: 28, 
+                    height: 28,
+                    backgroundColor: activeFormats.underline ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                    '&:hover': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                    }
+                  }}
+                  onClick={() => {
+                    document.execCommand('underline');
+                    updateActiveFormats();
+                  }}
+                  title="Subrayado"
+                >
+                  <FormatUnderlined sx={{ fontSize: 16 }} />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  sx={{ 
+                    p: 0.25, 
+                    minWidth: 28, 
+                    height: 28,
+                    backgroundColor: activeFormats.strikeThrough ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                    '&:hover': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                    }
+                  }}
+                  onClick={() => {
+                    document.execCommand('strikeThrough');
+                    updateActiveFormats();
+                  }}
+                  title="Tachado"
+                >
+                  <FormatStrikethrough sx={{ fontSize: 16 }} />
+                </IconButton>
+              <IconButton
+                size="small"
+                sx={{ p: 0.25, minWidth: 28, height: 28 }}
+                onClick={(e) => setMoreMenuAnchorEl(e.currentTarget)}
+                title="Más opciones"
+              >
+                <MoreVert sx={{ fontSize: 16 }} />
+              </IconButton>
+              <Menu
+                anchorEl={moreMenuAnchorEl}
+                open={Boolean(moreMenuAnchorEl)}
+                onClose={() => setMoreMenuAnchorEl(null)}
+              >
+                <MenuItem 
+                  onClick={() => { document.execCommand('justifyLeft'); setMoreMenuAnchorEl(null); }}
+                  sx={{ py: 0.75, px: 1, minWidth: 'auto', justifyContent: 'center' }}
+                  title="Alinear izquierda"
+                >
+                  <FormatAlignLeft sx={{ fontSize: 16 }} />
+                </MenuItem>
+                <MenuItem 
+                  onClick={() => { document.execCommand('justifyCenter'); setMoreMenuAnchorEl(null); }}
+                  sx={{ py: 0.75, px: 1, minWidth: 'auto', justifyContent: 'center' }}
+                  title="Alinear centro"
+                >
+                  <FormatAlignCenter sx={{ fontSize: 16 }} />
+                </MenuItem>
+                <MenuItem 
+                  onClick={() => { document.execCommand('justifyRight'); setMoreMenuAnchorEl(null); }}
+                  sx={{ py: 0.75, px: 1, minWidth: 'auto', justifyContent: 'center' }}
+                  title="Alinear derecha"
+                >
+                  <FormatAlignRight sx={{ fontSize: 16 }} />
+                </MenuItem>
+                <MenuItem 
+                  onClick={() => { document.execCommand('justifyFull'); setMoreMenuAnchorEl(null); }}
+                  sx={{ py: 0.75, px: 1, minWidth: 'auto', justifyContent: 'center' }}
+                  title="Justificar"
+                >
+                  <FormatAlignJustify sx={{ fontSize: 16 }} />
+                </MenuItem>
+              </Menu>
+              <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: '20px' }} />
+              <IconButton
+                size="small"
+                sx={{ 
+                  p: 0.25, 
+                  minWidth: 28, 
+                  height: 28,
+                  backgroundColor: activeFormats.unorderedList ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                  '&:hover': {
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                  }
+                }}
+                onClick={() => {
+                  document.execCommand('insertUnorderedList');
+                  updateActiveFormats();
+                }}
+                title="Lista con viñetas"
+              >
+                <FormatListBulleted sx={{ fontSize: 16 }} />
+              </IconButton>
+              <IconButton
+                size="small"
+                sx={{ 
+                  p: 0.25, 
+                  minWidth: 28, 
+                  height: 28,
+                  backgroundColor: activeFormats.orderedList ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                  '&:hover': {
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                  }
+                }}
+                onClick={() => {
+                  document.execCommand('insertOrderedList');
+                  updateActiveFormats();
+                }}
+                title="Lista numerada"
+              >
+                <FormatListNumbered sx={{ fontSize: 16 }} />
+              </IconButton>
+              <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: '20px' }} />
+              <IconButton
+                size="small"
+                sx={{ p: 0.25, minWidth: 28, height: 28 }}
+                onClick={() => {
+                  const url = prompt('URL:');
+                  if (url) {
+                    document.execCommand('createLink', false, url);
+                  }
+                }}
+                title="Insertar enlace"
+              >
+                <LinkIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+              <IconButton
+                size="small"
+                sx={{ p: 0.25, minWidth: 28, height: 28 }}
+                onClick={() => imageInputRef.current?.click()}
+                title="Insertar imagen"
+              >
+                <Image sx={{ fontSize: 16 }} />
+              </IconButton>
+              <IconButton
+                size="small"
+                sx={{ p: 0.25, minWidth: 28, height: 28 }}
+                onClick={() => {
+                  const code = prompt('Ingresa el código:');
+                  if (code && descriptionEditorRef.current) {
+                    const selection = window.getSelection();
+                    let range: Range | null = null;
+                    
+                    if (selection && selection.rangeCount > 0) {
+                      range = selection.getRangeAt(0);
+                    } else {
+                      range = document.createRange();
+                      range.selectNodeContents(descriptionEditorRef.current);
+                      range.collapse(false);
+                    }
+                    
+                    if (range) {
+                      const pre = document.createElement('pre');
+                      pre.style.backgroundColor = theme.palette.mode === 'dark' ? '#1e1e1e' : '#f5f5f5';
+                      pre.style.color = theme.palette.text.primary;
+                      pre.style.padding = '8px';
+                      pre.style.borderRadius = '4px';
+                      pre.style.fontFamily = 'monospace';
+                      pre.style.fontSize = '0.75rem';
+                      pre.textContent = code;
+                      
+                      range.deleteContents();
+                      range.insertNode(pre);
+                      range.setStartAfter(pre);
+                      range.collapse(true);
+                      if (selection) {
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                      }
+                      setTaskData({ ...taskData, description: descriptionEditorRef.current.innerHTML });
+                    }
+                  }
+                }}
+                title="Insertar código"
+              >
+                <Code sx={{ fontSize: 16 }} />
+              </IconButton>
+              <IconButton
+                size="small"
+                sx={{ p: 0.25, minWidth: 28, height: 28 }}
+                onClick={() => {
+                  const rows = prompt('Número de filas:', '3');
+                  const cols = prompt('Número de columnas:', '3');
+                  if (rows && cols && descriptionEditorRef.current) {
+                    const table = document.createElement('table');
+                    table.style.borderCollapse = 'collapse';
+                    table.style.width = '100%';
+                    table.style.border = '1px solid #ccc';
+                    table.style.margin = '8px 0';
+                    
+                    for (let i = 0; i < parseInt(rows); i++) {
+                      const tr = document.createElement('tr');
+                      for (let j = 0; j < parseInt(cols); j++) {
+                        const td = document.createElement('td');
+                        td.style.border = '1px solid #ccc';
+                        td.style.padding = '8px';
+                        td.innerHTML = '&nbsp;';
+                        tr.appendChild(td);
+                      }
+                      table.appendChild(tr);
+                    }
+                    
+                    const selection = window.getSelection();
+                    if (selection && selection.rangeCount > 0) {
+                      const range = selection.getRangeAt(0);
+                      range.deleteContents();
+                      range.insertNode(table);
+                      range.setStartAfter(table);
+                      range.collapse(true);
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                      setTaskData({ ...taskData, description: descriptionEditorRef.current.innerHTML });
+                    }
+                  }
+                }}
+                title="Insertar tabla"
+              >
+                <TableChart sx={{ fontSize: 16 }} />
+              </IconButton>
+              <IconButton
+                size="small"
+                sx={{ p: 0.25, minWidth: 28, height: 28 }}
+                onClick={() => fileInputRef.current?.click()}
+                title="Adjuntar archivo"
+              >
+                <AttachFile sx={{ fontSize: 16 }} />
+              </IconButton>
+              </Box>
+              <IconButton
+                onClick={() => {
+                  setAssociateOpen(true);
+                  setAssociateSearch('');
+                  // Inicializar selecciones con los valores actuales del deal
+                  setSelectedAssociations({
+                    companies: deal?.Company ? [deal.Company.id] : [],
+                    contacts: deal?.Contact ? [deal.Contact.id] : [],
+                    deals: [],
+                  });
+                  fetchAssociations();
+                }}
+                size="small"
+                sx={{
+                  p: 0.25,
+                  minWidth: 28,
+                  height: 28,
+                  color: theme.palette.text.secondary,
+                  '&:hover': {
+                    bgcolor: theme.palette.action.hover,
+                  }
+                }}
+                title="Asociado"
+              >
+                <PersonAdd sx={{ fontSize: 16 }} />
+              </IconButton>
+            </Box>
+          </Box>
+          {/* Input oculto para seleccionar archivos de imagen */}
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file || !descriptionEditorRef.current) return;
+
+              if (!file.type.startsWith('image/')) {
+                alert('Por favor, selecciona un archivo de imagen válido.');
+                return;
+              }
+
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                const dataUrl = event.target?.result as string;
+                if (dataUrl) {
+                  descriptionEditorRef.current?.focus();
+                  
+                  const selection = window.getSelection();
+                  let range: Range | null = null;
+                  
+                  if (selection && selection.rangeCount > 0) {
+                    range = selection.getRangeAt(0);
+                  } else if (descriptionEditorRef.current) {
+                    range = document.createRange();
+                    range.selectNodeContents(descriptionEditorRef.current);
+                    range.collapse(false);
+                    if (selection) {
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                    }
+                  }
+
+                  if (range) {
+                    const img = document.createElement('img');
+                    img.src = dataUrl;
+                    img.style.maxWidth = '100%';
+                    img.style.height = 'auto';
+                    img.alt = file.name;
+                    
+                    range.insertNode(img);
+                    range.setStartAfter(img);
+                    range.collapse(true);
+                    if (selection) {
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                    }
+                    
+                    if (descriptionEditorRef.current) {
+                      setTaskData({ ...taskData, description: descriptionEditorRef.current.innerHTML });
+                    }
+                  }
+                }
+              };
+              
+              reader.onerror = () => {
+                alert('Error al leer el archivo de imagen.');
+              };
+              
+              reader.readAsDataURL(file);
+              
+              if (imageInputRef.current) {
+                imageInputRef.current.value = '';
+              }
+            }}
+          />
+          {/* Input oculto para adjuntar archivos */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file || !descriptionEditorRef.current) return;
+
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                const dataUrl = event.target?.result as string;
+                if (dataUrl) {
+                  descriptionEditorRef.current?.focus();
+                  
+                  const selection = window.getSelection();
+                  let range: Range | null = null;
+                  
+                  if (selection && selection.rangeCount > 0) {
+                    range = selection.getRangeAt(0);
+                  } else if (descriptionEditorRef.current) {
+                    range = document.createRange();
+                    range.selectNodeContents(descriptionEditorRef.current);
+                    range.collapse(false);
+                    if (selection) {
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                    }
+                  }
+
+                  if (range) {
+                    const link = document.createElement('a');
+                    link.href = dataUrl;
+                    link.download = file.name;
+                    link.textContent = `📎 ${file.name}`;
+                    link.style.display = 'inline-block';
+                    link.style.margin = '4px';
+                    link.style.padding = '4px 8px';
+                    link.style.backgroundColor = theme.palette.mode === 'dark' ? '#2a2a2a' : '#f5f5f5';
+                    link.style.borderRadius = '4px';
+                    link.style.textDecoration = 'none';
+                    link.style.color = theme.palette.text.primary;
+                    
+                    range.insertNode(link);
+                    range.setStartAfter(link);
+                    range.collapse(true);
+                    if (selection) {
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                    }
+                    
+                    if (descriptionEditorRef.current) {
+                      setTaskData({ ...taskData, description: descriptionEditorRef.current.innerHTML });
+                    }
+                  }
+                }
+              };
+              
+              reader.onerror = () => {
+                alert('Error al leer el archivo.');
+              };
+              
+              reader.readAsDataURL(file);
+              
+              if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+              }
             }}
           />
         </DialogContent>
-        <DialogActions sx={{ px: 4, pb: 3, pt: 2, gap: 1 }}>
+        <Box sx={{ px: 2 }}>
+          <Divider sx={{ mt: 0.25, mb: 1.5 }} />
+        </Box>
+        <DialogActions sx={{ px: 2, pb: 1.5, pt: 0.5, gap: 0.75 }}>
           <Button 
             onClick={() => setTaskOpen(false)}
+            size="small"
             sx={{
               textTransform: 'none',
               color: theme.palette.text.secondary,
               fontWeight: 500,
-              px: 3,
+              px: 2,
+              py: 0.5,
+              fontSize: '0.75rem',
               '&:hover': {
                 bgcolor: theme.palette.action.hover,
               }
@@ -1207,11 +1969,14 @@ const DealDetail: React.FC = () => {
           <Button 
             onClick={handleSaveTask} 
             variant="contained" 
+            size="small"
             disabled={saving || !taskData.title.trim()}
             sx={{
               textTransform: 'none',
               fontWeight: 500,
-              px: 3,
+              px: 2,
+              py: 0.5,
+              fontSize: '0.75rem',
               bgcolor: taskData.title.trim() ? taxiMonterricoColors.green : theme.palette.action.disabledBackground,
               color: 'white',
               '&:hover': {
@@ -1244,16 +2009,17 @@ const DealDetail: React.FC = () => {
         }}
         PaperProps={{
           sx: {
-            borderRadius: 3,
+            borderRadius: 2,
             overflow: 'hidden',
             boxShadow: theme.palette.mode === 'dark' 
               ? '0 8px 32px rgba(0,0,0,0.4)' 
               : '0 8px 32px rgba(0,0,0,0.12)',
             mt: 0.5,
+            maxWidth: 280,
           },
         }}
       >
-        <Box sx={{ p: 3, bgcolor: theme.palette.background.paper }}>
+        <Box sx={{ p: 2, bgcolor: theme.palette.background.paper }}>
           {/* Header con mes y año - Mejorado */}
           <Box sx={{ 
             display: 'flex', 
@@ -1284,7 +2050,7 @@ const DealDetail: React.FC = () => {
             </IconButton>
             <Typography variant="h6" sx={{ 
               fontWeight: 600, 
-              fontSize: '1.15rem',
+              fontSize: '0.95rem',
               color: theme.palette.text.primary,
               letterSpacing: '-0.01em',
             }}>
@@ -1316,7 +2082,7 @@ const DealDetail: React.FC = () => {
             display: 'grid', 
             gridTemplateColumns: 'repeat(7, 1fr)', 
             gap: 0.5, 
-            mb: 2,
+            mb: 1.5,
           }}>
             {weekDays.map((day) => (
               <Typography
@@ -1326,8 +2092,8 @@ const DealDetail: React.FC = () => {
                   textAlign: 'center',
                   fontWeight: 600,
                   color: theme.palette.text.secondary,
-                  fontSize: '0.75rem',
-                  py: 1,
+                  fontSize: '0.7rem',
+                  py: 0.5,
                   textTransform: 'uppercase',
                   letterSpacing: '0.05em',
                 }}
@@ -1341,8 +2107,8 @@ const DealDetail: React.FC = () => {
           <Box sx={{ 
             display: 'grid', 
             gridTemplateColumns: 'repeat(7, 1fr)', 
-            gap: 0.75,
-            mb: 2,
+            gap: 0.5,
+            mb: 1.5,
           }}>
             {getDaysInMonth(currentMonth).map((item, index) => {
               const date = new Date(
@@ -1394,10 +2160,10 @@ const DealDetail: React.FC = () => {
                       ? theme.palette.text.primary
                       : theme.palette.text.disabled,
                     fontWeight: isSelected ? 700 : isToday ? 600 : 400,
-                    fontSize: '0.875rem',
+                    fontSize: '0.75rem',
                     position: 'relative',
-                    minHeight: '32px',
-                    minWidth: '32px',
+                    minHeight: '28px',
+                    minWidth: '28px',
                     '&:hover': {
                       bgcolor: item.isCurrentMonth
                         ? (isSelected
@@ -1419,8 +2185,8 @@ const DealDetail: React.FC = () => {
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
-            mt: 2, 
-            pt: 2, 
+            mt: 1.5, 
+            pt: 1.5, 
             borderTop: `1px solid ${theme.palette.divider}`,
             gap: 1,
           }}>
@@ -1430,9 +2196,9 @@ const DealDetail: React.FC = () => {
                 textTransform: 'none',
                 color: theme.palette.text.secondary,
                 fontWeight: 500,
-                px: 2,
-                py: 0.75,
-                borderRadius: 2,
+                px: 1.5,
+                py: 0.5,
+                borderRadius: 1,
                 '&:hover': {
                   bgcolor: theme.palette.action.hover,
                   color: theme.palette.text.primary,
@@ -1447,9 +2213,9 @@ const DealDetail: React.FC = () => {
                 textTransform: 'none',
                 color: taxiMonterricoColors.green,
                 fontWeight: 600,
-                px: 2,
-                py: 0.75,
-                borderRadius: 2,
+                px: 1.5,
+                py: 0.5,
+                borderRadius: 1,
                 '&:hover': {
                   bgcolor: `${taxiMonterricoColors.green}15`,
                 },
@@ -1460,6 +2226,508 @@ const DealDetail: React.FC = () => {
           </Box>
         </Box>
       </Popover>
+
+      {/* Dialog para asociar */}
+      <Dialog
+        open={associateOpen}
+        onClose={() => setAssociateOpen(false)}
+        maxWidth="sm"
+        fullWidth={false}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            maxHeight: '80vh',
+            width: '700px',
+            maxWidth: '90vw',
+          },
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            height: '500px',
+          }}
+        >
+          {/* Panel izquierdo - Categorías */}
+          <Box
+            sx={{
+              width: 160,
+              borderRight: `1px solid ${theme.palette.divider}`,
+              backgroundColor: theme.palette.mode === 'dark' ? '#1e1e1e' : '#fafafa',
+              overflowY: 'auto',
+            }}
+          >
+            <List sx={{ p: 0 }}>
+              <ListItem disablePadding>
+                <ListItemButton
+                  selected={selectedCategory === 'seleccionados'}
+                  onClick={() => setSelectedCategory('seleccionados')}
+                  sx={{
+                    py: 1.5,
+                    px: 2,
+                    '&.Mui-selected': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
+                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
+                      '&:hover': {
+                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                      },
+                    },
+                  }}
+                >
+                  <ListItemText
+                    primary="Seleccionados"
+                    secondary={Object.values(selectedAssociations).flat().length}
+                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                  />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton
+                  selected={selectedCategory === 'empresas'}
+                  onClick={() => setSelectedCategory('empresas')}
+                  sx={{
+                    py: 1.5,
+                    px: 2,
+                    '&.Mui-selected': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
+                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
+                      '&:hover': {
+                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                      },
+                    },
+                  }}
+                >
+                  <ListItemText
+                    primary="Empresas"
+                    secondary={companies.length}
+                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                  />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton
+                  selected={selectedCategory === 'contactos'}
+                  onClick={() => setSelectedCategory('contactos')}
+                  sx={{
+                    py: 1.5,
+                    px: 2,
+                    '&.Mui-selected': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
+                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
+                      '&:hover': {
+                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                      },
+                    },
+                  }}
+                >
+                  <ListItemText
+                    primary="Contactos"
+                    secondary={contacts.length}
+                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                  />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton
+                  selected={selectedCategory === 'negocios'}
+                  onClick={() => setSelectedCategory('negocios')}
+                  sx={{
+                    py: 1.5,
+                    px: 2,
+                    '&.Mui-selected': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
+                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
+                      '&:hover': {
+                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                      },
+                    },
+                  }}
+                >
+                  <ListItemText
+                    primary="Negocios"
+                    secondary={deals.length}
+                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                  />
+                </ListItemButton>
+              </ListItem>
+            </List>
+          </Box>
+
+          {/* Panel derecho - Contenido */}
+          <Box
+            sx={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Header */}
+            <Box
+              sx={{
+                p: 2,
+                borderBottom: `1px solid ${theme.palette.divider}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>
+                Asociar
+              </Typography>
+              <IconButton
+                onClick={() => setAssociateOpen(false)}
+                size="small"
+              >
+                <Close />
+              </IconButton>
+            </Box>
+
+            {/* Búsqueda */}
+            <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: 1,
+                  px: 1.5,
+                  py: 0.75,
+                  backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : '#f5f5f5',
+                }}
+              >
+                <Search sx={{ color: theme.palette.text.secondary, mr: 1, fontSize: 20 }} />
+                <InputBase
+                  placeholder="Buscar asociaciones actuales"
+                  value={associateSearch}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setAssociateSearch(value);
+                    // Cuando se escribe, buscar todos los resultados
+                    if (value.trim().length > 0) {
+                      fetchAssociations(value);
+                    } else {
+                      // Si se borra la búsqueda, volver a mostrar solo los vinculados
+                      fetchAssociations();
+                    }
+                  }}
+                  sx={{
+                    flex: 1,
+                    fontSize: '0.875rem',
+                    '& input': {
+                      py: 0.5,
+                    },
+                  }}
+                />
+              </Box>
+            </Box>
+
+            {/* Contenido */}
+            <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
+              {loadingAssociations ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <>
+                  {selectedCategory === 'empresas' && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                        Empresas
+                      </Typography>
+                      <List sx={{ p: 0 }}>
+                        {companies.map((company: any) => (
+                            <ListItem key={company.id} disablePadding>
+                              <ListItemButton
+                                sx={{ py: 0.75, px: 1 }}
+                                onClick={() => {
+                                  const current = selectedAssociations.companies || [];
+                                  if (current.includes(company.id)) {
+                                    setSelectedAssociations({
+                                      ...selectedAssociations,
+                                      companies: current.filter((id) => id !== company.id),
+                                    });
+                                  } else {
+                                    setSelectedAssociations({
+                                      ...selectedAssociations,
+                                      companies: [...current, company.id],
+                                    });
+                                  }
+                                }}
+                              >
+                                <Checkbox
+                                  checked={selectedAssociations.companies?.includes(company.id) || false}
+                                  size="small"
+                                  sx={{ p: 0.5, mr: 1 }}
+                                />
+                                <ListItemText
+                                  primary={company.name}
+                                  secondary={company.domain}
+                                  primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                  secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                />
+                              </ListItemButton>
+                            </ListItem>
+                          ))}
+                      </List>
+                    </Box>
+                  )}
+
+                  {selectedCategory === 'contactos' && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                        Contactos
+                      </Typography>
+                      <List sx={{ p: 0 }}>
+                        {contacts.map((contact: any) => (
+                            <ListItem key={contact.id} disablePadding>
+                              <ListItemButton
+                                sx={{ py: 0.75, px: 1 }}
+                                onClick={() => {
+                                  const current = selectedAssociations.contacts || [];
+                                  if (current.includes(contact.id)) {
+                                    setSelectedAssociations({
+                                      ...selectedAssociations,
+                                      contacts: current.filter((id) => id !== contact.id),
+                                    });
+                                  } else {
+                                    setSelectedAssociations({
+                                      ...selectedAssociations,
+                                      contacts: [...current, contact.id],
+                                    });
+                                  }
+                                }}
+                              >
+                                <Checkbox
+                                  checked={selectedAssociations.contacts?.includes(contact.id) || false}
+                                  size="small"
+                                  sx={{ p: 0.5, mr: 1 }}
+                                />
+                                <ListItemText
+                                  primary={`${contact.firstName} ${contact.lastName}`}
+                                  secondary={contact.email}
+                                  primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                  secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                />
+                              </ListItemButton>
+                            </ListItem>
+                          ))}
+                      </List>
+                    </Box>
+                  )}
+
+                  {selectedCategory === 'negocios' && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                        Negocios
+                      </Typography>
+                      <List sx={{ p: 0 }}>
+                        {deals.map((deal: any) => (
+                            <ListItem key={deal.id} disablePadding>
+                              <ListItemButton
+                                sx={{ py: 0.75, px: 1 }}
+                                onClick={() => {
+                                  const current = selectedAssociations.deals || [];
+                                  if (current.includes(deal.id)) {
+                                    setSelectedAssociations({
+                                      ...selectedAssociations,
+                                      deals: current.filter((id) => id !== deal.id),
+                                    });
+                                  } else {
+                                    setSelectedAssociations({
+                                      ...selectedAssociations,
+                                      deals: [...current, deal.id],
+                                    });
+                                  }
+                                }}
+                              >
+                                <Checkbox
+                                  checked={selectedAssociations.deals?.includes(deal.id) || false}
+                                  size="small"
+                                  sx={{ p: 0.5, mr: 1 }}
+                                />
+                                <ListItemText
+                                  primary={deal.name}
+                                  secondary={`${deal.amount ? `$${deal.amount.toLocaleString()}` : ''} ${deal.stage || ''}`}
+                                  primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                  secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                />
+                              </ListItemButton>
+                            </ListItem>
+                          ))}
+                      </List>
+                    </Box>
+                  )}
+
+                  {selectedCategory === 'seleccionados' && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                        Seleccionados ({Object.values(selectedAssociations).flat().length})
+                      </Typography>
+                      {Object.values(selectedAssociations).flat().length === 0 ? (
+                        <Typography variant="body2" sx={{ color: theme.palette.text.secondary, py: 2 }}>
+                          No hay elementos seleccionados
+                        </Typography>
+                      ) : (
+                        <List sx={{ p: 0 }}>
+                          {selectedAssociations.companies?.map((companyId) => {
+                            const company = companies.find((c: any) => c.id === companyId);
+                            if (!company) return null;
+                            return (
+                              <ListItem key={companyId} disablePadding>
+                                <ListItemButton
+                                  sx={{ py: 0.75, px: 1 }}
+                                  onClick={() => {
+                                    setSelectedAssociations({
+                                      ...selectedAssociations,
+                                      companies: selectedAssociations.companies.filter((id) => id !== companyId),
+                                    });
+                                  }}
+                                >
+                                  <Checkbox
+                                    checked={true}
+                                    size="small"
+                                    sx={{ p: 0.5, mr: 1 }}
+                                  />
+                                  <Business sx={{ fontSize: 18, mr: 1, color: theme.palette.text.secondary }} />
+                                  <ListItemText
+                                    primary={company.name}
+                                    secondary={company.domain}
+                                    primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  />
+                                </ListItemButton>
+                              </ListItem>
+                            );
+                          })}
+                          {selectedAssociations.contacts?.map((contactId) => {
+                            const contact = contacts.find((c: any) => c.id === contactId);
+                            if (!contact) return null;
+                            return (
+                              <ListItem key={contactId} disablePadding>
+                                <ListItemButton
+                                  sx={{ py: 0.75, px: 1 }}
+                                  onClick={() => {
+                                    setSelectedAssociations({
+                                      ...selectedAssociations,
+                                      contacts: selectedAssociations.contacts.filter((id) => id !== contactId),
+                                    });
+                                  }}
+                                >
+                                  <Checkbox
+                                    checked={true}
+                                    size="small"
+                                    sx={{ p: 0.5, mr: 1 }}
+                                  />
+                                  <Person sx={{ fontSize: 18, mr: 1, color: theme.palette.text.secondary }} />
+                                  <ListItemText
+                                    primary={`${contact.firstName} ${contact.lastName}`}
+                                    secondary={contact.email}
+                                    primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  />
+                                </ListItemButton>
+                              </ListItem>
+                            );
+                          })}
+                          {selectedAssociations.deals?.map((dealId) => {
+                            const deal = deals.find((d: any) => d.id === dealId);
+                            if (!deal) return null;
+                            return (
+                              <ListItem key={dealId} disablePadding>
+                                <ListItemButton
+                                  sx={{ py: 0.75, px: 1 }}
+                                  onClick={() => {
+                                    setSelectedAssociations({
+                                      ...selectedAssociations,
+                                      deals: selectedAssociations.deals.filter((id) => id !== dealId),
+                                    });
+                                  }}
+                                >
+                                  <Checkbox
+                                    checked={true}
+                                    size="small"
+                                    sx={{ p: 0.5, mr: 1 }}
+                                  />
+                                  <Assignment sx={{ fontSize: 18, mr: 1, color: theme.palette.text.secondary }} />
+                                  <ListItemText
+                                    primary={deal.name}
+                                    secondary={`${deal.amount ? `$${deal.amount.toLocaleString()}` : ''} ${deal.stage || ''}`}
+                                    primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  />
+                                </ListItemButton>
+                              </ListItem>
+                            );
+                          })}
+                        </List>
+                      )}
+                    </Box>
+                  )}
+                </>
+              )}
+            </Box>
+
+            {/* Footer con botones */}
+            <Box
+              sx={{
+                p: 2,
+                borderTop: `1px solid ${theme.palette.divider}`,
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: 1,
+              }}
+            >
+              <Button
+                onClick={() => setAssociateOpen(false)}
+                size="small"
+                sx={{
+                  textTransform: 'none',
+                  color: theme.palette.text.secondary,
+                  fontWeight: 500,
+                  px: 2,
+                  py: 0.5,
+                  fontSize: '0.75rem',
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={async () => {
+                  // TODO: Implementar guardado de asociaciones
+                  try {
+                    // Aquí iría la lógica para guardar las asociaciones
+                    console.log('Guardar asociaciones:', selectedAssociations);
+                    setAssociateOpen(false);
+                  } catch (error) {
+                    console.error('Error guardando asociaciones:', error);
+                  }
+                }}
+                variant="contained"
+                size="small"
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  px: 2,
+                  py: 0.5,
+                  fontSize: '0.75rem',
+                  bgcolor: taxiMonterricoColors.green,
+                  '&:hover': {
+                    bgcolor: taxiMonterricoColors.green,
+                    opacity: 0.9,
+                  },
+                }}
+              >
+                Guardar
+              </Button>
+            </Box>
+          </Box>
+        </Box>
+      </Dialog>
     </Box>
   );
 };
