@@ -47,7 +47,7 @@ export class Company extends Model<CompanyAttributes, CompanyCreationAttributes>
   public annualRevenue?: number;
   public description?: string;
   public ownerId?: number | null;
-  public lifecycleStage!: string;
+  public lifecycleStage!: 'lead' | 'contacto' | 'reunion_agendada' | 'reunion_efectiva' | 'propuesta_economica' | 'negociacion' | 'licitacion' | 'licitacion_etapa_final' | 'cierre_ganado' | 'cierre_perdido' | 'firma_contrato' | 'activo' | 'cliente_perdido' | 'lead_inactivo';
   public tags?: string[];
   public notes?: string;
   public readonly createdAt!: Date;
@@ -151,7 +151,7 @@ Company.init(
   }
 );
 
-Company.belongsTo(User, { foreignKey: 'ownerId', as: 'Owner', required: false });
+Company.belongsTo(User, { foreignKey: 'ownerId', as: 'Owner' });
 
 // Relación muchos-a-muchos con contactos se inicializa en models/index.ts después de que todos los modelos estén cargados
 

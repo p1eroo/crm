@@ -28,13 +28,13 @@ export class Subscription extends Model<SubscriptionAttributes, SubscriptionCrea
   public id!: number;
   public name!: string;
   public description?: string;
-  public status!: string;
+  public status!: 'active' | 'cancelled' | 'expired' | 'pending';
   public startDate!: Date;
   public endDate?: Date;
   public renewalDate?: Date;
   public amount!: number;
   public currency?: string;
-  public billingCycle!: string;
+  public billingCycle!: 'monthly' | 'quarterly' | 'yearly' | 'one-time';
   public contactId?: number;
   public companyId?: number;
   public createdById!: number;

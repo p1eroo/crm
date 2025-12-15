@@ -33,7 +33,7 @@ export const authenticateToken = (req: AuthRequest, res: Response, next: NextFun
     return res.status(401).json({ error: 'Token de acceso requerido' });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET || 'secret', (err: any, decoded: any) => {
+  jwt.verify(token, process.env.JWT_SECRET!, (err: any, decoded: any) => {
     if (err) {
       console.error('❌ Token verification failed:', err.message, 'for path:', req.path);
       console.error('❌ Token recibido:', token.substring(0, 20) + '...');

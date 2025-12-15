@@ -108,8 +108,8 @@ router.get('/callback', async (req, res) => {
     await UserGoogleToken.upsert({
       userId,
       accessToken: tokens.access_token || '',
-      refreshToken: tokens.refresh_token || null,
-      tokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : null,
+      refreshToken: tokens.refresh_token || undefined,
+      tokenExpiry: tokens.expiry_date ? new Date(tokens.expiry_date) : undefined,
       scope: tokens.scope || 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks',
     });
 
@@ -143,8 +143,8 @@ authRouter.post('/save-token', async (req: AuthRequest, res) => {
     await UserGoogleToken.upsert({
       userId,
       accessToken,
-      refreshToken: refreshToken || null,
-      tokenExpiry: expiryDate ? new Date(expiryDate) : null,
+      refreshToken: refreshToken || undefined,
+      tokenExpiry: expiryDate ? new Date(expiryDate) : undefined,
       scope: scope || 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks',
     });
 

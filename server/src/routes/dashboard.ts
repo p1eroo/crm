@@ -1,5 +1,5 @@
 import express from 'express';
-import { Op } from 'sequelize';
+import { Op, QueryTypes } from 'sequelize';
 import { sequelize } from '../config/database';
 import { Contact } from '../models/Contact';
 import { Company } from '../models/Company';
@@ -139,7 +139,7 @@ router.get('/stats', async (req: AuthRequest, res) => {
         GROUP BY status
       `, {
         replacements,
-        type: sequelize.QueryTypes.SELECT,
+        type: QueryTypes.SELECT,
       });
       
       tasksByStatus = tasksByStatusQuery as any[];
@@ -232,7 +232,7 @@ router.get('/stats', async (req: AuthRequest, res) => {
         ORDER BY "wonDeals" DESC, "totalDeals" DESC
       `, {
         replacements,
-        type: sequelize.QueryTypes.SELECT,
+        type: QueryTypes.SELECT,
       });
 
       // Procesar estadísticas por usuario
@@ -355,10 +355,10 @@ router.get('/stats', async (req: AuthRequest, res) => {
                   [Op.gte]: monthStart,
                   [Op.lt]: monthEnd
                 },
-                closeDate: null
+                closeDate: { [Op.is]: null as any }
               }
             ]
-          }
+          } as any
         }) || 0;
         
         monthlyPayments.push({
@@ -395,7 +395,7 @@ router.get('/stats', async (req: AuthRequest, res) => {
                     [Op.gte]: monthStart,
                     [Op.lt]: monthEnd
                   },
-                  closeDate: null
+                  closeDate: { [Op.is]: null as any }
                 }
               ]
             }
@@ -442,10 +442,10 @@ router.get('/stats', async (req: AuthRequest, res) => {
                   [Op.gte]: monthStart,
                   [Op.lt]: monthEnd
                 },
-                closeDate: null
+                closeDate: { [Op.is]: null as any }
               }
             ]
-          }
+          } as any
         }) || 0;
         
         monthlyPayments.push({
@@ -520,7 +520,7 @@ router.get('/stats', async (req: AuthRequest, res) => {
           WHERE status = 'completed' ${whereClause}
         `, {
           replacements,
-          type: sequelize.QueryTypes.SELECT,
+          type: QueryTypes.SELECT,
         });
         
         const newResult = await sequelize.query(`
@@ -529,7 +529,7 @@ router.get('/stats', async (req: AuthRequest, res) => {
           WHERE status IN ('not started', 'in progress') ${whereClause}
         `, {
           replacements,
-          type: sequelize.QueryTypes.SELECT,
+          type: QueryTypes.SELECT,
         });
         
         completedTasks = (completedResult[0] as any)?.count || 0;
@@ -647,7 +647,7 @@ router.get('/stats', async (req: AuthRequest, res) => {
     }
 
     // Agregar budgets a la respuesta
-    responseData.payments.budgets = formattedBudgets;
+    (responseData.payments as any).budgets = formattedBudgets;
 
     console.log('✅ Estadísticas enviadas correctamente');
     console.log('📊 Resumen de datos:', {
@@ -768,7 +768,7 @@ router.get('/recent-activities', async (req: AuthRequest, res) => {
       attributes: ['id', 'name', 'amount', 'stage', 'createdAt'],
     });
 
-    let recentTasks = [];
+    let recentTasks: any[] = [];
     try {
       recentTasks = await Task.findAll({
         limit: Number(limit),

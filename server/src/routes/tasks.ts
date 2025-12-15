@@ -64,7 +64,8 @@ router.get('/', async (req: AuthRequest, res) => {
     if (error.message && (error.message.includes('no existe la columna') || error.message.includes('does not exist'))) {
       console.warn('⚠️  Columna faltante detectada, intentando sin filtros de status/priority...');
       try {
-        const { assignedToId: fallbackAssignedToId, contactId: fallbackContactId, companyId: fallbackCompanyId } = req.query;
+        const { assignedToId: fallbackAssignedToId, contactId: fallbackContactId, companyId: fallbackCompanyId, page: fallbackPage = 1, limit: fallbackLimit = 50 } = req.query;
+        const fallbackOffset = (Number(fallbackPage) - 1) * Number(fallbackLimit);
         const simpleWhere: any = {};
         if (fallbackAssignedToId) simpleWhere.assignedToId = fallbackAssignedToId;
         if (fallbackContactId) simpleWhere.contactId = fallbackContactId;
@@ -79,16 +80,16 @@ router.get('/', async (req: AuthRequest, res) => {
             { model: Company, as: 'Company', attributes: ['id', 'name'], required: false },
             { model: Deal, as: 'Deal', attributes: ['id', 'name'], required: false },
           ],
-          limit: Number(limit),
-          offset,
+          limit: Number(fallbackLimit),
+          offset: fallbackOffset,
           order: [['createdAt', 'DESC']],
         });
         
         return res.json({
           tasks: tasks.rows,
           total: tasks.count,
-          page: Number(page),
-          totalPages: Math.ceil(tasks.count / Number(limit)),
+          page: Number(fallbackPage),
+          totalPages: Math.ceil(tasks.count / Number(fallbackLimit)),
         });
       } catch (fallbackError: any) {
         console.error('❌ Error en fallback:', fallbackError);
@@ -241,7 +242,7 @@ router.put('/:id', async (req, res) => {
         } else {
           await deleteTaskEvent(userId, task.googleCalendarEventId);
         }
-        await task.update({ googleCalendarEventId: null });
+        await task.update({ googleCalendarEventId: undefined });
         await task.reload();
       } catch (calendarError: any) {
         console.error('Error eliminando de Google Calendar:', calendarError.message);

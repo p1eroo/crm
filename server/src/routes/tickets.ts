@@ -67,7 +67,8 @@ router.get('/', async (req: AuthRequest, res) => {
     if (error.message && (error.message.includes('no existe la columna') || error.message.includes('does not exist') || error.message.includes('column'))) {
       console.warn('⚠️  Columna faltante detectada, intentando sin filtros de status/priority...');
       try {
-        const { assignedToId: fallbackAssignedToId, contactId: fallbackContactId, companyId: fallbackCompanyId } = req.query;
+        const { assignedToId: fallbackAssignedToId, contactId: fallbackContactId, companyId: fallbackCompanyId, page: fallbackPage = 1, limit: fallbackLimit = 50 } = req.query;
+        const fallbackOffset = (Number(fallbackPage) - 1) * Number(fallbackLimit);
         const simpleWhere: any = {};
         if (fallbackAssignedToId) simpleWhere.assignedToId = fallbackAssignedToId;
         if (fallbackContactId) simpleWhere.contactId = fallbackContactId;
@@ -84,16 +85,16 @@ router.get('/', async (req: AuthRequest, res) => {
             { model: Company, as: 'Company', attributes: ['id', 'name'], required: false },
             { model: Deal, as: 'Deal', attributes: ['id', 'name'], required: false },
           ],
-          limit: Number(limit),
-          offset,
+          limit: Number(fallbackLimit),
+          offset: fallbackOffset,
           order: [['createdAt', 'DESC']],
         });
         
         return res.json({
           tickets: tickets.rows,
           total: tickets.count,
-          page: Number(page),
-          totalPages: Math.ceil(tickets.count / Number(limit)),
+          page: Number(fallbackPage),
+          totalPages: Math.ceil(tickets.count / Number(fallbackLimit)),
         });
       } catch (fallbackError: any) {
         console.error('❌ Error en fallback:', fallbackError);

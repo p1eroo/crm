@@ -161,7 +161,7 @@ router.post('/:id/companies', async (req, res) => {
     }
 
     // Obtener IDs de empresas ya asociadas
-    const existingCompanyIds = (contact.Companies || []).map((c: any) => c.id);
+    const existingCompanyIds = ((contact as any).Companies || []).map((c: any) => c.id);
     
     // Filtrar solo las empresas nuevas
     const newCompanyIds = companyIds.filter((id: number) => !existingCompanyIds.includes(id));

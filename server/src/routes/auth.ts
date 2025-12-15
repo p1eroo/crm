@@ -66,7 +66,7 @@ router.post(
 
       const token = jwt.sign(
         { userId: user.id, usuario: user.usuario, email: user.email, role: userRoleName },
-        process.env.JWT_SECRET || 'secret',
+        process.env.JWT_SECRET!,
         { expiresIn: '7d' }
       );
 
@@ -270,7 +270,7 @@ router.post(
       // Generar JWT válido para el backend local
       const token = jwt.sign(
         { userId: user.id, usuario: user.usuario, email: user.email, role: roleName },
-        process.env.JWT_SECRET || 'secret',
+        process.env.JWT_SECRET!,
         { expiresIn: '7d' }
       );
 
@@ -332,7 +332,7 @@ router.post(
 
       const token = jwt.sign(
         { userId: user.id, usuario: user.usuario, email: user.email, role: roleName },
-        process.env.JWT_SECRET || 'secret',
+        process.env.JWT_SECRET!,
         { expiresIn: '7d' }
       );
 

@@ -2,6 +2,15 @@ import express from 'express';
 import cors from 'cors';
 import os from 'os';
 import './config/env'; // Cargar configuración de entorno (debe ser lo primero)
+
+// Validar variables de entorno críticas antes de continuar
+if (!process.env.JWT_SECRET) {
+  console.error('❌ ERROR CRÍTICO: JWT_SECRET no está configurado');
+  console.error('❌ Configura JWT_SECRET en tu archivo .env o .env.production');
+  console.error('❌ Ejemplo: JWT_SECRET=tu-secret-key-super-seguro-aqui');
+  process.exit(1);
+}
+
 import { sequelize } from './config/database';
 import './models'; // Import models to register associations
 import { Role } from './models/Role';

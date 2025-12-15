@@ -55,7 +55,7 @@ export class Contact extends Model<ContactAttributes, ContactCreationAttributes>
   public github?: string;
   public linkedin?: string;
   public youtube?: string;
-  public lifecycleStage!: string;
+  public lifecycleStage!: 'lead' | 'contacto' | 'reunion_agendada' | 'reunion_efectiva' | 'propuesta_economica' | 'negociacion' | 'licitacion' | 'licitacion_etapa_final' | 'cierre_ganado' | 'cierre_perdido' | 'firma_contrato' | 'activo' | 'cliente_perdido' | 'lead_inactivo';
   public leadStatus?: string;
   public tags?: string[];
   public notes?: string;
@@ -184,8 +184,8 @@ Contact.init(
   }
 );
 
-Contact.belongsTo(User, { foreignKey: 'ownerId', as: 'Owner', required: false });
-Contact.belongsTo(Company, { foreignKey: 'companyId', as: 'Company', required: false }); // Mantener para compatibilidad con empresa principal
+Contact.belongsTo(User, { foreignKey: 'ownerId', as: 'Owner' });
+Contact.belongsTo(Company, { foreignKey: 'companyId', as: 'Company' }); // Mantener para compatibilidad con empresa principal
 
 // Relación muchos-a-muchos con empresas se inicializa en models/index.ts después de que todos los modelos estén cargados
 

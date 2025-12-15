@@ -23,7 +23,7 @@ export class Automation extends Model<AutomationAttributes, AutomationCreationAt
   public trigger!: string;
   public conditions?: string;
   public actions?: string;
-  public status!: string;
+  public status!: 'active' | 'inactive' | 'draft';
   public ownerId!: number;
   public description?: string;
   public readonly createdAt!: Date;

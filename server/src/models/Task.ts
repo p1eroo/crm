@@ -29,9 +29,9 @@ export class Task extends Model<TaskAttributes, TaskCreationAttributes> implemen
   public id!: number;
   public title!: string;
   public description?: string;
-  public type!: string;
-  public status!: string;
-  public priority!: string;
+  public type!: 'call' | 'email' | 'meeting' | 'note' | 'todo' | 'other';
+  public status!: 'not started' | 'in progress' | 'completed' | 'cancelled';
+  public priority!: 'low' | 'medium' | 'high' | 'urgent';
   public dueDate?: Date;
   public assignedToId!: number;
   public createdById!: number;

@@ -25,8 +25,8 @@ interface CampaignCreationAttributes extends Optional<CampaignAttributes, 'id' |
 export class Campaign extends Model<CampaignAttributes, CampaignCreationAttributes> implements CampaignAttributes {
   public id!: number;
   public name!: string;
-  public type!: string;
-  public status!: string;
+  public type!: 'email' | 'social' | 'advertising' | 'other';
+  public status!: 'draft' | 'scheduled' | 'active' | 'paused' | 'completed' | 'cancelled';
   public startDate?: Date;
   public endDate?: Date;
   public budget?: number;
