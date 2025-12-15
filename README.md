@@ -1,6 +1,6 @@
 # CRM Monterrico
 
-Un sistema CRM completo tipo HubSpot con todas las funcionalidades principales para gestión de ventas, marketing y relaciones con clientes.
+Un sistema CRM completo con todas las funcionalidades principales para gestión de ventas, marketing y relaciones con clientes.
 
 ## 🚀 Características
 
