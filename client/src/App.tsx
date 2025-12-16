@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider as MUIThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -9,25 +9,24 @@ import { SidebarProvider } from './context/SidebarContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import MainLayout from './components/Layout/MainLayout';
 import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Contacts from './pages/Contacts';
-import ContactDetail from './pages/ContactDetail';
-import Companies from './pages/Companies';
-import CompanyDetail from './pages/CompanyDetail';
-import Deals from './pages/Deals';
-import DealDetail from './pages/DealDetail';
-import Tasks from './pages/Tasks';
-import Tickets from './pages/Tickets';
-import Campaigns from './pages/Campaigns';
-import Automations from './pages/Automations';
-import Profile from './pages/Profile';
-import Users from './pages/Users';
-import Pipeline from './pages/Pipeline';
-import Reports from './pages/Reports';
-import ReportDetail from './pages/ReportDetail';
-import Calendar from './pages/Calendar';
-
 import { taxiMonterricoColors } from './theme/colors';
+
+// Lazy loading de todas las páginas para code splitting
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Contacts = lazy(() => import('./pages/Contacts'));
+const ContactDetail = lazy(() => import('./pages/ContactDetail'));
+const Companies = lazy(() => import('./pages/Companies'));
+const CompanyDetail = lazy(() => import('./pages/CompanyDetail'));
+const Deals = lazy(() => import('./pages/Deals'));
+const DealDetail = lazy(() => import('./pages/DealDetail'));
+const Tasks = lazy(() => import('./pages/Tasks'));
+const Tickets = lazy(() => import('./pages/Tickets'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Users = lazy(() => import('./pages/Users'));
+const Pipeline = lazy(() => import('./pages/Pipeline'));
+const Reports = lazy(() => import('./pages/Reports'));
+const ReportDetail = lazy(() => import('./pages/ReportDetail'));
+const Calendar = lazy(() => import('./pages/Calendar'));
 
 const getTheme = (mode: 'light' | 'dark') => createTheme({
   palette: {
@@ -150,163 +149,178 @@ const AppContent: React.FC = () => {
     );
   }
 
+  // Componente de loading para las páginas lazy
+  const PageLoader = () => (
+    <Box sx={{ 
+      minHeight: '100vh', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      backgroundColor: theme.palette.background.default,
+    }}>
+      <CircularProgress />
+    </Box>
+  );
+
   // Si hay usuario, mostrar la aplicación con Router
   return (
     <MUIThemeProvider theme={theme}>
       <CssBaseline />
       <SidebarProvider>
         <Router>
-          <Routes>
-            <Route
-              path="/"
-              element={
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route
+                path="/"
+                element={
+                  <MainLayout>
+                    <Dashboard />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  <MainLayout>
+                    <Dashboard />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/contacts"
+                element={
+                  <MainLayout>
+                    <Contacts />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/contacts/:id"
+                element={
+                  <MainLayout>
+                    <ContactDetail />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/companies"
+                element={
+                  <MainLayout>
+                    <Companies />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/companies/:id"
+                element={
+                  <MainLayout>
+                    <CompanyDetail />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/deals"
+                element={
+                  <MainLayout>
+                    <Deals />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/deals/:id"
+                element={
+                  <MainLayout>
+                    <DealDetail />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/tasks"
+                element={
+                  <MainLayout>
+                    <Tasks />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/tickets"
+                element={
+                  <MainLayout>
+                    <Tickets />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/calendar"
+                element={
+                  <MainLayout>
+                    <Calendar />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/pipeline"
+                element={
+                  <MainLayout>
+                    <Pipeline />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/profile"
+                element={
+                  <MainLayout>
+                    <Profile />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/users"
+                element={
+                  <MainLayout>
+                    <Users />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/reports"
+                element={
+                  (() => {
+                    const userRole = user?.role;
+                    if (userRole === 'admin' || userRole === 'jefe_comercial') {
+                      return (
+                        <MainLayout>
+                          <Reports />
+                        </MainLayout>
+                      );
+                    }
+                    return <Navigate to="/" replace />;
+                  })()
+                }
+              />
+              <Route
+                path="/reports/:id"
+                element={
+                  (() => {
+                    const userRole = user?.role;
+                    if (userRole === 'admin' || userRole === 'jefe_comercial') {
+                      return (
+                        <MainLayout>
+                          <ReportDetail />
+                        </MainLayout>
+                      );
+                    }
+                    return <Navigate to="/" replace />;
+                  })()
+                }
+              />
+              <Route path="*" element={
                 <MainLayout>
                   <Dashboard />
                 </MainLayout>
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <MainLayout>
-                  <Dashboard />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/contacts"
-              element={
-                <MainLayout>
-                  <Contacts />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/contacts/:id"
-              element={
-                <MainLayout>
-                  <ContactDetail />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/companies"
-              element={
-                <MainLayout>
-                  <Companies />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/companies/:id"
-              element={
-                <MainLayout>
-                  <CompanyDetail />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/deals"
-              element={
-                <MainLayout>
-                  <Deals />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/deals/:id"
-              element={
-                <MainLayout>
-                  <DealDetail />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/tasks"
-              element={
-                <MainLayout>
-                  <Tasks />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/tickets"
-              element={
-                <MainLayout>
-                  <Tickets />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/calendar"
-              element={
-                <MainLayout>
-                  <Calendar />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/pipeline"
-              element={
-                <MainLayout>
-                  <Pipeline />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/profile"
-              element={
-                <MainLayout>
-                  <Profile />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/users"
-              element={
-                <MainLayout>
-                  <Users />
-                </MainLayout>
-              }
-            />
-            <Route
-              path="/reports"
-              element={
-                (() => {
-                  const userRole = user?.role;
-                  if (userRole === 'admin' || userRole === 'jefe_comercial') {
-                    return (
-                      <MainLayout>
-                        <Reports />
-                      </MainLayout>
-                    );
-                  }
-                  return <Navigate to="/" replace />;
-                })()
-              }
-            />
-            <Route
-              path="/reports/:id"
-              element={
-                (() => {
-                  const userRole = user?.role;
-                  if (userRole === 'admin' || userRole === 'jefe_comercial') {
-                    return (
-                      <MainLayout>
-                        <ReportDetail />
-                      </MainLayout>
-                    );
-                  }
-                  return <Navigate to="/" replace />;
-                })()
-              }
-            />
-            <Route path="*" element={
-              <MainLayout>
-                <Dashboard />
-              </MainLayout>
-            } />
-          </Routes>
+              } />
+            </Routes>
+          </Suspense>
         </Router>
       </SidebarProvider>
     </MUIThemeProvider>

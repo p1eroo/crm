@@ -57,7 +57,7 @@ router.post('/register', [
         await user.reload({ include: [{ model: Role_1.Role, as: 'Role' }] });
         // Obtener el nombre del rol directamente de la relación
         const userRoleName = user.Role?.name || user.role || 'user';
-        const token = jsonwebtoken_1.default.sign({ userId: user.id, usuario: user.usuario, email: user.email, role: userRoleName }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+        const token = jsonwebtoken_1.default.sign({ userId: user.id, usuario: user.usuario, email: user.email, role: userRoleName }, process.env.JWT_SECRET, { expiresIn: '7d' });
         res.status(201).json({
             token,
             user: {
@@ -227,7 +227,7 @@ router.post('/login-monterrico', [
         // Obtener el nombre del rol directamente de la relación
         const roleName = user.Role?.name || user.role || 'user';
         // Generar JWT válido para el backend local
-        const token = jsonwebtoken_1.default.sign({ userId: user.id, usuario: user.usuario, email: user.email, role: roleName }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+        const token = jsonwebtoken_1.default.sign({ userId: user.id, usuario: user.usuario, email: user.email, role: roleName }, process.env.JWT_SECRET, { expiresIn: '7d' });
         res.json({
             token,
             user: {
@@ -274,7 +274,7 @@ router.post('/login', [
         }
         // Obtener el nombre del rol directamente de la relación
         const roleName = user.Role?.name || user.role || 'user';
-        const token = jsonwebtoken_1.default.sign({ userId: user.id, usuario: user.usuario, email: user.email, role: roleName }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
+        const token = jsonwebtoken_1.default.sign({ userId: user.id, usuario: user.usuario, email: user.email, role: roleName }, process.env.JWT_SECRET, { expiresIn: '7d' });
         res.json({
             token,
             user: {

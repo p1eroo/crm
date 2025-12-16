@@ -14,7 +14,7 @@ router.use(authenticateToken);
 // Obtener todas las tareas
 router.get('/', async (req: AuthRequest, res) => {
   try {
-    const { page = 1, limit = 50, status, priority, assignedToId, type, contactId, companyId } = req.query;
+    const { page = 1, limit = 50, status, priority, assignedToId, type, contactId, companyId, dealId } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
     const where: any = {};
@@ -35,6 +35,9 @@ router.get('/', async (req: AuthRequest, res) => {
     }
     if (companyId) {
       where.companyId = companyId;
+    }
+    if (dealId) {
+      where.dealId = dealId;
     }
 
     const tasks = await Task.findAndCountAll({
@@ -64,12 +67,13 @@ router.get('/', async (req: AuthRequest, res) => {
     if (error.message && (error.message.includes('no existe la columna') || error.message.includes('does not exist'))) {
       console.warn('⚠️  Columna faltante detectada, intentando sin filtros de status/priority...');
       try {
-        const { assignedToId: fallbackAssignedToId, contactId: fallbackContactId, companyId: fallbackCompanyId, page: fallbackPage = 1, limit: fallbackLimit = 50 } = req.query;
+        const { assignedToId: fallbackAssignedToId, contactId: fallbackContactId, companyId: fallbackCompanyId, dealId: fallbackDealId, page: fallbackPage = 1, limit: fallbackLimit = 50 } = req.query;
         const fallbackOffset = (Number(fallbackPage) - 1) * Number(fallbackLimit);
         const simpleWhere: any = {};
         if (fallbackAssignedToId) simpleWhere.assignedToId = fallbackAssignedToId;
         if (fallbackContactId) simpleWhere.contactId = fallbackContactId;
         if (fallbackCompanyId) simpleWhere.companyId = fallbackCompanyId;
+        if (fallbackDealId) simpleWhere.dealId = fallbackDealId;
         
         const tasks = await Task.findAndCountAll({
           where: simpleWhere,

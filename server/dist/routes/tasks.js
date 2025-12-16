@@ -16,7 +16,7 @@ router.use(auth_1.authenticateToken);
 // Obtener todas las tareas
 router.get('/', async (req, res) => {
     try {
-        const { page = 1, limit = 50, status, priority, assignedToId, type, contactId, companyId } = req.query;
+        const { page = 1, limit = 50, status, priority, assignedToId, type, contactId, companyId, dealId } = req.query;
         const offset = (Number(page) - 1) * Number(limit);
         const where = {};
         if (status) {
@@ -36,6 +36,9 @@ router.get('/', async (req, res) => {
         }
         if (companyId) {
             where.companyId = companyId;
+        }
+        if (dealId) {
+            where.dealId = dealId;
         }
         const tasks = await Task_1.Task.findAndCountAll({
             where,
@@ -64,7 +67,7 @@ router.get('/', async (req, res) => {
         if (error.message && (error.message.includes('no existe la columna') || error.message.includes('does not exist'))) {
             console.warn('⚠️  Columna faltante detectada, intentando sin filtros de status/priority...');
             try {
-                const { assignedToId: fallbackAssignedToId, contactId: fallbackContactId, companyId: fallbackCompanyId, page: fallbackPage = 1, limit: fallbackLimit = 50 } = req.query;
+                const { assignedToId: fallbackAssignedToId, contactId: fallbackContactId, companyId: fallbackCompanyId, dealId: fallbackDealId, page: fallbackPage = 1, limit: fallbackLimit = 50 } = req.query;
                 const fallbackOffset = (Number(fallbackPage) - 1) * Number(fallbackLimit);
                 const simpleWhere = {};
                 if (fallbackAssignedToId)
@@ -73,6 +76,8 @@ router.get('/', async (req, res) => {
                     simpleWhere.contactId = fallbackContactId;
                 if (fallbackCompanyId)
                     simpleWhere.companyId = fallbackCompanyId;
+                if (fallbackDealId)
+                    simpleWhere.dealId = fallbackDealId;
                 const tasks = await Task_1.Task.findAndCountAll({
                     where: simpleWhere,
                     include: [

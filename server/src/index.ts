@@ -3,6 +3,9 @@ import cors from 'cors';
 import os from 'os';
 import './config/env'; // Cargar configuración de entorno (debe ser lo primero)
 
+// Configurar zona horaria de Perú (America/Lima, UTC-5)
+process.env.TZ = 'America/Lima';
+
 // Validar variables de entorno críticas antes de continuar
 if (!process.env.JWT_SECRET) {
   console.error('❌ ERROR CRÍTICO: JWT_SECRET no está configurado');

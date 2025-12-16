@@ -16,6 +16,15 @@ import {
   Paper,
   Divider,
   CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  List,
+  ListItem,
+  ListItemText,
+  Chip,
 } from '@mui/material';
 import { 
   Search, 
@@ -49,6 +58,7 @@ const Header: React.FC = () => {
   const [reminders, setReminders] = useState<any[]>([]);
   const [reminderCount, setReminderCount] = useState(0);
   const reminderButtonRef = useRef<HTMLButtonElement>(null);
+  const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -130,8 +140,9 @@ const Header: React.FC = () => {
     const fetchReminders = async (autoOpen: boolean = false) => {
       try {
         const now = new Date();
-        const tomorrow = new Date(now);
-        tomorrow.setDate(tomorrow.getDate() + 1);
+        now.setHours(0, 0, 0, 0); // Inicio del día actual
+        const nextWeek = new Date(now);
+        nextWeek.setDate(nextWeek.getDate() + 7); // 7 días desde hoy
         
         // Obtener tareas con fecha de vencimiento próxima
         const tasksResponse = await api.get('/tasks', {
@@ -139,11 +150,12 @@ const Header: React.FC = () => {
         });
         const tasks = tasksResponse.data.tasks || tasksResponse.data || [];
         
-        // Filtrar tareas que vencen hoy o mañana y no están completadas
+        // Filtrar tareas que vencen en los próximos 7 días y no están completadas
         const upcomingTasks = tasks.filter((task: any) => {
           if (!task.dueDate || task.status === 'completed') return false;
           const dueDate = new Date(task.dueDate);
-          return dueDate >= now && dueDate <= tomorrow;
+          dueDate.setHours(0, 0, 0, 0);
+          return dueDate >= now && dueDate <= nextWeek;
         });
 
         // Obtener eventos de Google Calendar (si están disponibles)
@@ -154,7 +166,8 @@ const Header: React.FC = () => {
             upcomingEvents = calendarResponse.data.filter((event: any) => {
               if (!event.start?.dateTime && !event.start?.date) return false;
               const eventDate = new Date(event.start.dateTime || event.start.date);
-              return eventDate >= now && eventDate <= tomorrow;
+              eventDate.setHours(0, 0, 0, 0);
+              return eventDate >= now && eventDate <= nextWeek;
             });
           }
         } catch (error) {
@@ -185,9 +198,9 @@ const Header: React.FC = () => {
         setReminders(allReminders);
         setReminderCount(allReminders.length);
 
-        // Abrir el menú automáticamente si hay recordatorios y autoOpen es true
-        if (autoOpen && allReminders.length > 0 && reminderButtonRef.current) {
-          setReminderAnchorEl(reminderButtonRef.current);
+        // Abrir el diálogo automáticamente si hay recordatorios y autoOpen es true
+        if (autoOpen && allReminders.length > 0) {
+          setReminderDialogOpen(true);
         }
       } catch (error) {
         console.error('Error fetching reminders:', error);
@@ -540,10 +553,10 @@ const Header: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Menu dropdown de recordatorios */}
+      {/* Menu dropdown de recordatorios (cuando se hace clic manualmente) */}
       <Menu
         anchorEl={reminderAnchorEl}
-        open={Boolean(reminderAnchorEl)}
+        open={Boolean(reminderAnchorEl) && !reminderDialogOpen}
         onClose={handleReminderClose}
         PaperProps={{
           sx: {
@@ -589,6 +602,99 @@ const Header: React.FC = () => {
           ))
         )}
       </Menu>
+
+      {/* Dialog de recordatorios (cuando se abre automáticamente) */}
+      <Dialog
+        open={reminderDialogOpen}
+        onClose={() => setReminderDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: theme.shadows[8],
+          },
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, pb: 1 }}>
+          <Alarm sx={{ color: taxiMonterricoColors.green, fontSize: 24 }} />
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Recordatorios
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ p: 0 }}>
+          {reminders.length === 0 ? (
+            <Box sx={{ p: 3, textAlign: 'center' }}>
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                No hay recordatorios próximos
+              </Typography>
+            </Box>
+          ) : (
+            <List sx={{ p: 0 }}>
+              {reminders.map((reminder, index) => (
+                <React.Fragment key={index}>
+                  <ListItem
+                    sx={{
+                      py: 2,
+                      px: 3,
+                      '&:hover': {
+                        bgcolor: theme.palette.action.hover,
+                      },
+                    }}
+                  >
+                    <ListItemText
+                      primary={
+                        <Typography variant="body1" sx={{ fontWeight: 500, mb: 0.5 }}>
+                          {reminder.title}
+                        </Typography>
+                      }
+                      secondary={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                          <Chip
+                            label={reminder.type === 'task' ? 'Tarea' : 'Evento'}
+                            size="small"
+                            sx={{
+                              height: 20,
+                              fontSize: '0.7rem',
+                              bgcolor: reminder.type === 'task' ? taxiMonterricoColors.green : '#2196F3',
+                              color: 'white',
+                            }}
+                          />
+                          <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                            {new Date(reminder.dueDate).toLocaleString('es-ES', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </Typography>
+                        </Box>
+                      }
+                    />
+                  </ListItem>
+                  {index < reminders.length - 1 && <Divider />}
+                </React.Fragment>
+              ))}
+            </List>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            onClick={() => setReminderDialogOpen(false)}
+            variant="contained"
+            sx={{
+              bgcolor: taxiMonterricoColors.green,
+              '&:hover': {
+                bgcolor: taxiMonterricoColors.green,
+                opacity: 0.9,
+              },
+            }}
+          >
+            Entendido
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Menu dropdown del usuario */}
       <Menu

@@ -40,6 +40,15 @@ const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const os_1 = __importDefault(require("os"));
 require("./config/env"); // Cargar configuración de entorno (debe ser lo primero)
+// Configurar zona horaria de Perú (America/Lima, UTC-5)
+process.env.TZ = 'America/Lima';
+// Validar variables de entorno críticas antes de continuar
+if (!process.env.JWT_SECRET) {
+    console.error('❌ ERROR CRÍTICO: JWT_SECRET no está configurado');
+    console.error('❌ Configura JWT_SECRET en tu archivo .env o .env.production');
+    console.error('❌ Ejemplo: JWT_SECRET=tu-secret-key-super-seguro-aqui');
+    process.exit(1);
+}
 const database_1 = require("./config/database");
 require("./models"); // Import models to register associations
 const Role_1 = require("./models/Role");
