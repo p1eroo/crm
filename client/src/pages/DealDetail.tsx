@@ -34,6 +34,17 @@ import {
   ListItemText,
   InputBase,
   InputAdornment,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TableSortLabel,
+  RadioGroup,
+  Radio,
+  FormControlLabel,
+  FormLabel,
 } from '@mui/material';
 import {
   Note,
@@ -75,8 +86,13 @@ import {
   KeyboardArrowRight,
   Edit,
   KeyboardArrowDown,
+  OpenInNew,
+  ContentCopy,
+  Delete,
+  Settings,
 } from '@mui/icons-material';
 import api from '../config/api';
+import axios from 'axios';
 import { taxiMonterricoColors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import negocioLogo from '../assets/negocio.png';
@@ -122,6 +138,9 @@ const DealDetail: React.FC = () => {
   const [activities, setActivities] = useState<any[]>([]);
   const [dealContacts, setDealContacts] = useState<any[]>([]);
   const [dealCompanies, setDealCompanies] = useState<any[]>([]);
+  const [dealDeals, setDealDeals] = useState<any[]>([]);
+  const [removeContactDialogOpen, setRemoveContactDialogOpen] = useState(false);
+  const [contactToRemove, setContactToRemove] = useState<{ id: number; name: string } | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
   const [noteData, setNoteData] = useState({ subject: '', description: '' });
   const [taskOpen, setTaskOpen] = useState(false);
@@ -160,7 +179,87 @@ const DealDetail: React.FC = () => {
   const [loadingAssociations, setLoadingAssociations] = useState(false);
   const [activitySearch, setActivitySearch] = useState('');
   const [companySearch, setCompanySearch] = useState('');
+  const [dealSearch, setDealSearch] = useState('');
   const [addCompanyMenuAnchor, setAddCompanyMenuAnchor] = useState<null | HTMLElement>(null);
+  const [contactSearch, setContactSearch] = useState('');
+  const [addContactMenuAnchor, setAddContactMenuAnchor] = useState<null | HTMLElement>(null);
+  const [contactSortField, setContactSortField] = useState<'firstName' | 'email' | 'phone'>('firstName');
+  const [contactSortOrder, setContactSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [companySortField, setCompanySortField] = useState<'name' | 'domain' | 'phone'>('name');
+  const [companySortOrder, setCompanySortOrder] = useState<'asc' | 'desc'>('asc');
+  const [addContactDialogOpen, setAddContactDialogOpen] = useState(false);
+  const [addCompanyDialogOpen, setAddCompanyDialogOpen] = useState(false);
+  const [companyDialogTab, setCompanyDialogTab] = useState<'create' | 'existing'>('create');
+  const [existingCompaniesSearch, setExistingCompaniesSearch] = useState('');
+  const [selectedExistingCompanies, setSelectedExistingCompanies] = useState<number[]>([]);
+  const [allCompanies, setAllCompanies] = useState<any[]>([]);
+  const [loadingAllCompanies, setLoadingAllCompanies] = useState(false);
+  const [companyFormData, setCompanyFormData] = useState({
+    name: '',
+    domain: '',
+    industry: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    country: '',
+    ruc: '',
+    lifecycleStage: 'lead',
+    ownerId: user?.id || null,
+  });
+  const [loadingRuc, setLoadingRuc] = useState(false);
+  const [rucError, setRucError] = useState('');
+  const [contactDialogTab, setContactDialogTab] = useState<'create' | 'existing'>('create');
+  const [existingContactsSearch, setExistingContactsSearch] = useState('');
+  const [selectedExistingContacts, setSelectedExistingContacts] = useState<number[]>([]);
+  const [allContacts, setAllContacts] = useState<any[]>([]);
+  const [loadingAllContacts, setLoadingAllContacts] = useState(false);
+  const [contactFormData, setContactFormData] = useState({
+    identificationType: 'dni',
+    dni: '',
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: '',
+    district: '',
+    province: '',
+    department: '',
+    jobTitle: '',
+    lifecycleStage: 'lead',
+    ownerId: user?.id || null,
+  });
+
+  // Función para ordenar contactos
+  const handleSortContacts = (field: 'firstName' | 'email' | 'phone') => {
+    const isAsc = contactSortField === field && contactSortOrder === 'asc';
+    setContactSortOrder(isAsc ? 'desc' : 'asc');
+    setContactSortField(field);
+  };
+
+  // Función para ordenar empresas
+  const handleSortCompanies = (field: 'name' | 'domain' | 'phone') => {
+    const isAsc = companySortField === field && companySortOrder === 'asc';
+    setCompanySortOrder(isAsc ? 'desc' : 'asc');
+    setCompanySortField(field);
+  };
+
+  // Estados para ordenar negocios
+  const [dealSortField, setDealSortField] = useState<'name' | 'amount' | 'closeDate' | 'stage'>('name');
+  const [dealSortOrder, setDealSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  // Función para ordenar negocios
+  const handleSortDeals = (field: 'name' | 'amount' | 'closeDate' | 'stage') => {
+    const isAsc = dealSortField === field && dealSortOrder === 'asc';
+    setDealSortOrder(isAsc ? 'desc' : 'asc');
+    setDealSortField(field);
+  };
+
+  // Función para copiar al portapapeles
+  const handleCopyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    // Podrías agregar una notificación aquí
+  };
   const [createActivityMenuAnchor, setCreateActivityMenuAnchor] = useState<null | HTMLElement>(null);
   const [selectedTimeRange, setSelectedTimeRange] = useState<string>('Todo hasta ahora');
   const [timeRangeMenuAnchor, setTimeRangeMenuAnchor] = useState<null | HTMLElement>(null);
@@ -170,6 +269,9 @@ const DealDetail: React.FC = () => {
   const [expandedActivity, setExpandedActivity] = useState<any | null>(null);
   const [completedActivities, setCompletedActivities] = useState<{ [key: number]: boolean }>({});
   const activityFilterChipRef = useRef<HTMLDivElement>(null);
+  const [selectedActivityType, setSelectedActivityType] = useState<string>('all'); // 'all', 'note', 'email', 'call', 'task', 'meeting'
+  const [allUsersFilter, setAllUsersFilter] = useState<string>('Todos los usuarios');
+  const [allUsersMenuAnchor, setAllUsersMenuAnchor] = useState<null | HTMLElement>(null);
 
   useEffect(() => {
     if (id) {
@@ -231,33 +333,76 @@ const DealDetail: React.FC = () => {
   const fetchDeal = async () => {
     try {
       const response = await api.get(`/deals/${id}`);
+      if (!response.data) {
+        setDeal(null);
+        setLoading(false);
+        return;
+      }
       setDeal(response.data);
       
-      // Obtener solo el contacto principal asociado al deal
-      // El deal tiene un contactId que apunta a un contacto específico
-      if (response.data.Contact) {
-        // Si hay un contacto asociado, mostrarlo
-        setDealContacts([response.data.Contact]);
+      // Obtener todos los contactos relacionados al deal (relación muchos a muchos)
+      // Solo usar la relación muchos a muchos (Contacts), no el contacto principal (Contact)
+      if (response.data.Contacts && Array.isArray(response.data.Contacts)) {
+        // Usar siempre la lista de Contacts, incluso si está vacía
+        setDealContacts(response.data.Contacts);
       } else {
-        // Si no hay contacto asociado, dejar el array vacío
+        // Si no hay contactos en la relación muchos a muchos, dejar el array vacío
         setDealContacts([]);
       }
 
-      // Obtener solo la empresa principal asociada al deal
-      // El deal tiene un companyId que apunta a una empresa específica
-      if (response.data.Company) {
-        // Si hay una empresa asociada, mostrarla
-        setDealCompanies([response.data.Company]);
+      // Obtener todas las empresas relacionadas al deal (relación muchos a muchos)
+      // Solo usar la relación muchos a muchos (Companies), no la empresa principal (Company)
+      if (response.data.Companies && Array.isArray(response.data.Companies)) {
+        // Usar siempre la lista de Companies, incluso si está vacía
+        setDealCompanies(response.data.Companies);
       } else {
-        // Si no hay empresa asociada, dejar el array vacío
+        // Si no hay empresas en la relación muchos a muchos, dejar el array vacío
         setDealCompanies([]);
       }
-    } catch (error) {
+
+      // Obtener todos los negocios relacionados al deal (relación muchos a muchos)
+      if (response.data.Deals && Array.isArray(response.data.Deals)) {
+        setDealDeals(response.data.Deals);
+      } else {
+        setDealDeals([]);
+      }
+    } catch (error: any) {
       console.error('Error fetching deal:', error);
-      setDealContacts([]);
-      setDealCompanies([]);
+      if (error.response?.status === 404) {
+        setDeal(null);
+      } else {
+        // Si hay un error pero no es 404, mantener el deal si existe
+        // pero limpiar los contactos y empresas
+        setDealContacts([]);
+        setDealCompanies([]);
+        setDealDeals([]);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchAllCompanies = async () => {
+    try {
+      setLoadingAllCompanies(true);
+      const response = await api.get('/companies', { params: { limit: 1000 } });
+      setAllCompanies(response.data.companies || response.data || []);
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+    } finally {
+      setLoadingAllCompanies(false);
+    }
+  };
+
+  const fetchAllContacts = async () => {
+    setLoadingAllContacts(true);
+    try {
+      const response = await api.get('/contacts', { params: { limit: 1000 } });
+      setAllContacts(response.data.contacts || response.data || []);
+    } catch (error) {
+      console.error('Error fetching all contacts:', error);
+    } finally {
+      setLoadingAllContacts(false);
     }
   };
 
@@ -300,6 +445,235 @@ const DealDetail: React.FC = () => {
       console.error('Error fetching associations:', error);
     } finally {
       setLoadingAssociations(false);
+    }
+  };
+
+  const handleCreateContact = async () => {
+    try {
+      setSaving(true);
+      // Mapear los campos del formulario a los campos del modelo
+      const contactData = {
+        firstName: contactFormData.firstName,
+        lastName: contactFormData.lastName,
+        email: contactFormData.email,
+        phone: contactFormData.phone,
+        address: contactFormData.address,
+        city: contactFormData.district, // district -> city
+        state: contactFormData.province, // province -> state
+        country: contactFormData.department, // department -> country
+        jobTitle: contactFormData.jobTitle,
+        lifecycleStage: contactFormData.lifecycleStage,
+        ownerId: contactFormData.ownerId,
+      };
+      const response = await api.post('/contacts', contactData);
+      // Asociar el contacto recién creado al deal usando la relación muchos a muchos
+      if (id && response.data.id) {
+        await api.post(`/deals/${id}/contacts`, { contactIds: [response.data.id] });
+      }
+      await fetchDeal();
+      setAddContactDialogOpen(false);
+      setContactFormData({
+        identificationType: 'dni',
+        dni: '',
+        firstName: '',
+        lastName: '',
+        email: '',
+        phone: '',
+        address: '',
+        district: '',
+        province: '',
+        department: '',
+        jobTitle: '',
+        lifecycleStage: 'lead',
+        ownerId: user?.id || null,
+      });
+    } catch (error) {
+      console.error('Error creating contact:', error);
+      alert('Error al crear el contacto');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddExistingContacts = async () => {
+    try {
+      setSaving(true);
+      // Asociar todos los contactos seleccionados al deal usando la relación muchos a muchos
+      if (id && selectedExistingContacts.length > 0) {
+        const response = await api.post(`/deals/${id}/contacts`, { contactIds: selectedExistingContacts });
+        // Recargar el deal para obtener los contactos actualizados
+        await fetchDeal();
+        setAddContactDialogOpen(false);
+        setSelectedExistingContacts([]);
+        setExistingContactsSearch('');
+      }
+    } catch (error: any) {
+      console.error('Error adding contacts:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Error al agregar los contactos';
+      alert(errorMessage);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCreateCompany = async () => {
+    try {
+      setSaving(true);
+      const companyData = {
+        ...companyFormData,
+        ownerId: companyFormData.ownerId || user?.id,
+      };
+      const response = await api.post('/companies', companyData);
+      // Asociar la empresa recién creada al deal usando la relación muchos a muchos
+      if (id && response.data.id) {
+        await api.post(`/deals/${id}/companies`, { companyIds: [response.data.id] });
+      }
+      await fetchDeal();
+      setAddCompanyDialogOpen(false);
+      setCompanyFormData({
+        name: '',
+        domain: '',
+        industry: '',
+        phone: '',
+        address: '',
+        city: '',
+        state: '',
+        country: '',
+        ruc: '',
+        lifecycleStage: 'lead',
+        ownerId: user?.id || null,
+      });
+    } catch (error) {
+      console.error('Error creating company:', error);
+      alert('Error al crear la empresa');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddExistingCompanies = async () => {
+    try {
+      setSaving(true);
+      // Asociar todas las empresas seleccionadas al deal usando la relación muchos a muchos
+      if (id && selectedExistingCompanies.length > 0) {
+        const response = await api.post(`/deals/${id}/companies`, { companyIds: selectedExistingCompanies });
+        // Recargar el deal para obtener las empresas actualizadas
+        await fetchDeal();
+        setAddCompanyDialogOpen(false);
+        setSelectedExistingCompanies([]);
+        setExistingCompaniesSearch('');
+      }
+    } catch (error: any) {
+      console.error('Error adding companies:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Error al agregar las empresas';
+      alert(errorMessage);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRemoveCompanyClick = (companyId: number, companyName: string) => {
+    setContactToRemove({ id: companyId, name: companyName });
+    setRemoveContactDialogOpen(true);
+  };
+
+  const handleConfirmRemoveCompany = async () => {
+    if (!contactToRemove || !id) return;
+    try {
+      setSaving(true);
+      await api.delete(`/deals/${id}/companies/${contactToRemove.id}`);
+      // Actualizar la lista de empresas inmediatamente sin esperar fetchDeal
+      setDealCompanies((prevCompanies) => prevCompanies.filter((company: any) => company.id !== contactToRemove.id));
+      // También recargar el deal completo para asegurar consistencia
+      await fetchDeal();
+      setRemoveContactDialogOpen(false);
+      setContactToRemove(null);
+    } catch (error: any) {
+      console.error('Error removing company:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Error al eliminar la empresa del negocio';
+      alert(errorMessage);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSearchRuc = async () => {
+    if (!companyFormData.ruc || companyFormData.ruc.length < 11) {
+      setRucError('El RUC debe tener 11 dígitos');
+      return;
+    }
+
+    setLoadingRuc(true);
+    setRucError('');
+
+    try {
+      // Obtener el token de la API de Factiliza desde variables de entorno
+      const factilizaToken = process.env.REACT_APP_FACTILIZA_TOKEN || '';
+      
+      if (!factilizaToken) {
+        setRucError('Token de API no configurado. Por favor, configure REACT_APP_FACTILIZA_TOKEN');
+        setLoadingRuc(false);
+        return;
+      }
+
+      const response = await axios.get(
+        `https://api.factiliza.com/v1/ruc/info/${companyFormData.ruc}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${factilizaToken}`,
+          },
+        }
+      );
+
+      if (response.data.success && response.data.data) {
+        const data = response.data.data;
+        
+        // Actualizar el formulario con los datos obtenidos
+        setCompanyFormData({
+          ...companyFormData,
+          name: data.nombre_o_razon_social || '',
+          address: data.direccion_completa || data.direccion || '',
+          city: data.distrito || '',
+          state: data.provincia || '',
+          country: data.departamento || 'Perú',
+        });
+      } else {
+        setRucError('No se encontró información para este RUC');
+      }
+    } catch (error: any) {
+      console.error('Error al buscar RUC:', error);
+      if (error.response?.status === 400) {
+        setRucError('RUC no válido o no encontrado');
+      } else if (error.response?.status === 401) {
+        setRucError('Error de autenticación con la API');
+      } else {
+        setRucError('Error al buscar RUC. Por favor, intente nuevamente');
+      }
+    } finally {
+      setLoadingRuc(false);
+    }
+  };
+
+  const handleRemoveContactClick = (contactId: number, contactName: string) => {
+    setContactToRemove({ id: contactId, name: contactName });
+    setRemoveContactDialogOpen(true);
+  };
+
+  const handleConfirmRemoveContact = async () => {
+    if (!id || !contactToRemove) return;
+
+    try {
+      await api.delete(`/deals/${id}/contacts/${contactToRemove.id}`);
+      // Actualizar la lista de contactos inmediatamente sin esperar fetchDeal
+      setDealContacts((prevContacts) => prevContacts.filter((contact: any) => contact.id !== contactToRemove.id));
+      // También recargar el deal completo para asegurar consistencia
+      await fetchDeal();
+      setRemoveContactDialogOpen(false);
+      setContactToRemove(null);
+    } catch (error: any) {
+      console.error('Error removing contact:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Error al eliminar el contacto';
+      alert(errorMessage);
     }
   };
 
@@ -1053,101 +1427,104 @@ const DealDetail: React.FC = () => {
             <Tab label="Actividades" />
           </Tabs>
 
-          {/* Cards de Fecha de Creación, Etapa del Negocio y Última Actividad */}
-          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
-            <Card
-              sx={{
-                flex: 1,
-                p: 2,
-                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
-                border: `1px solid ${theme.palette.divider}`,
-                borderRadius: 1.5,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                textAlign: 'center',
-              }}
-            >
-              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: theme.palette.text.primary }}>
-                Fecha de creación
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {deal.createdAt
-                  ? `${new Date(deal.createdAt).toLocaleDateString('es-ES', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                    })} ${new Date(deal.createdAt).toLocaleTimeString('es-ES', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}`
-                  : 'No disponible'}
-              </Typography>
-            </Card>
+          {/* Cards de Fecha de Creación, Etapa del Negocio y Última Actividad - Solo en pestaña Descripción */}
+          {activeTab === 0 && (
+            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <Card
+                sx={{
+                  flex: 1,
+                  p: 2,
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: 1.5,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: theme.palette.text.primary }}>
+                  Fecha de creación
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {deal.createdAt
+                    ? `${new Date(deal.createdAt).toLocaleDateString('es-ES', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })} ${new Date(deal.createdAt).toLocaleTimeString('es-ES', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}`
+                    : 'No disponible'}
+                </Typography>
+              </Card>
 
-            <Card
-              sx={{
-                flex: 1,
-                p: 2,
-                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
-                border: `1px solid ${theme.palette.divider}`,
-                borderRadius: 1.5,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                textAlign: 'center',
-              }}
-            >
-              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: theme.palette.text.primary }}>
-                Etapa del negocio
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {deal.stage ? getStageLabel(deal.stage) : 'No disponible'}
-              </Typography>
-            </Card>
+              <Card
+                sx={{
+                  flex: 1,
+                  p: 2,
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: 1.5,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: theme.palette.text.primary }}>
+                  Etapa del negocio
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {deal.stage ? getStageLabel(deal.stage) : 'No disponible'}
+                </Typography>
+              </Card>
 
-            <Card
-              sx={{
-                flex: 1,
-                p: 2,
-                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
-                border: `1px solid ${theme.palette.divider}`,
-                borderRadius: 1.5,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                textAlign: 'center',
-              }}
-            >
-              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: theme.palette.text.primary }}>
-                Última actividad
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {activities.length > 0 && activities[0].createdAt
-                  ? `${new Date(activities[0].createdAt).toLocaleDateString('es-ES', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                    })} ${new Date(activities[0].createdAt).toLocaleTimeString('es-ES', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}`
-                  : 'No hay actividades'}
-              </Typography>
-            </Card>
-          </Box>
+              <Card
+                sx={{
+                  flex: 1,
+                  p: 2,
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: 1.5,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: theme.palette.text.primary }}>
+                  Última actividad
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {activities.length > 0 && activities[0].createdAt
+                    ? `${new Date(activities[0].createdAt).toLocaleDateString('es-ES', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })} ${new Date(activities[0].createdAt).toLocaleTimeString('es-ES', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}`
+                    : 'No hay actividades'}
+                </Typography>
+              </Card>
+            </Box>
+          )}
 
-          <Card sx={{ 
-            borderRadius: 2,
-            boxShadow: 'none',
-            bgcolor: theme.palette.background.paper,
-            px: 2,
-            py: 2,
-            display: 'flex',
-            flexDirection: 'column',
-          }}>
-            {/* Vista de Descripción */}
-            {activeTab === 0 && (
+          {/* Card de Descripción - Solo visible en pestaña Descripción */}
+          {activeTab === 0 && (
+            <Card sx={{ 
+              borderRadius: 2,
+              boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+              bgcolor: theme.palette.background.paper,
+              px: 2,
+              py: 2,
+              display: 'flex',
+              flexDirection: 'column',
+            }}>
+              {/* Vista de Descripción */}
               <Box>
 
                 {deal.description ? (
@@ -1775,222 +2152,371 @@ const DealDetail: React.FC = () => {
                       </Box>
                       );
                     })()}
+                      </Box>
+                    )}
                   </Box>
-                )}
+            </Card>
+          )}
 
-              </Box>
-            )}
-
-            {/* Vista de Actividades */}
-            {activeTab === 1 && (
-              <Box>
-                {activities.length === 0 ? (
-                  <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      No hay actividades registradas
-                    </Typography>
-                  </Box>
-                ) : (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {activities.map((activity) => (
-                      <Paper
-                        key={activity.id}
-                        onClick={() => setExpandedActivity(activity)}
-                        sx={{
-                          p: 2,
-                          ...getActivityStatusColor(activity),
-                          borderRadius: 1.5,
-                          position: 'relative',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            opacity: 0.9,
-                            boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                          },
-                        }}
-                      >
-                        <Box
-                            sx={{
-                            position: 'absolute',
-                            top: 8,
-                            right: 8,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'flex-end',
-                            gap: 0.5,
-                          }}
-                        >
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              color: taxiMonterricoColors.green,
-                              fontWeight: 600,
-                              fontSize: '0.7rem',
-                              textTransform: 'uppercase',
-                            }}
-                          >
-                            {getActivityTypeLabel(activity.type)}
-                            </Typography>
-                            {activity.User && (
-                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                                Por {activity.User.firstName} {activity.User.lastName}
-                                {activity.createdAt && (
-                                  <span> • {new Date(activity.createdAt).toLocaleDateString('es-ES', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: 'numeric',
-                                  })}</span>
-                                )}
-                              </Typography>
-                            )}
-                          </Box>
-                        <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Checkbox
-                            checked={completedActivities[activity.id] || false}
-                            onChange={(e) => {
-                              e.stopPropagation();
-                              setCompletedActivities(prev => ({
-                                ...prev,
-                                [activity.id]: e.target.checked
-                              }));
-                            }}
-                            onClick={(e) => e.stopPropagation()}
-                            size="small"
-                            sx={{
-                              p: 0.5,
-                              '& .MuiSvgIcon-root': {
-                                fontSize: 20,
-                              },
-                            }}
-                          />
-                          <Typography 
-                            variant="subtitle2" 
-                            sx={{ 
-                              fontWeight: 600, 
-                              mb: 0.5, 
-                              pr: 6,
-                              flex: 1,
-                              textDecoration: completedActivities[activity.id] ? 'line-through' : 'none',
-                              opacity: completedActivities[activity.id] ? 0.6 : 1,
-                            }}
-                          >
-                            {activity.subject || activity.title}
-                          </Typography>
-                        </Box>
-                      </Paper>
-                    ))}
-                  </Box>
-                )}
-              </Box>
-            )}
-          </Card>
-
-          {/* Card de Contactos */}
-          <Card sx={{ 
+          {/* Cards de Contactos, Empresas, Negocios y Tickets - Solo en pestaña Descripción */}
+          {activeTab === 0 && (
+            <>
+              {/* Card de Contactos */}
+              <Card sx={{ 
             borderRadius: 2,
-            boxShadow: 'none',
+            boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
             bgcolor: theme.palette.background.paper,
-            flex: 1,
             px: 2,
             py: 2,
             display: 'flex',
             flexDirection: 'column',
             mt: 2,
-            maxHeight: '500px',
           }}>
             <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
               Contactos
             </Typography>
+            
+            {/* Cuadro de búsqueda y botón agregar */}
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+              <TextField
+                size="small"
+                placeholder="Buscar contactos"
+                value={contactSearch}
+                onChange={(e) => setContactSearch(e.target.value)}
+                sx={{
+                  width: '250px',
+                  transition: 'all 0.3s ease',
+                  '& .MuiOutlinedInput-root': {
+                    height: '32px',
+                    fontSize: '0.875rem',
+                    '&:hover': {
+                      '& fieldset': {
+                        borderColor: taxiMonterricoColors.green,
+                      },
+                    },
+                    '&.Mui-focused': {
+                      '& fieldset': {
+                        borderColor: taxiMonterricoColors.green,
+                        borderWidth: 2,
+                      },
+                    },
+                  },
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <Button 
+                size="small" 
+                variant="outlined" 
+                endIcon={<ExpandMore />}
+                onClick={(e) => setAddContactMenuAnchor(e.currentTarget)}
+                sx={{
+                  borderColor: taxiMonterricoColors.green,
+                  color: taxiMonterricoColors.green,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    borderColor: taxiMonterricoColors.green,
+                    backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
+                  },
+                  '&:active': {
+                    transform: 'translateY(0)',
+                  },
+                }}
+              >
+                Agregar
+              </Button>
+              </Box>
+
+            {/* Menú para agregar contacto */}
+            <Menu
+              anchorEl={addContactMenuAnchor}
+              open={Boolean(addContactMenuAnchor)}
+              onClose={() => setAddContactMenuAnchor(null)}
+              anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'left',
+              }}
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'left',
+              }}
+              PaperProps={{
+                sx: {
+                  mt: 1,
+                  minWidth: 200,
+                  borderRadius: 2,
+                  boxShadow: theme.palette.mode === 'dark' 
+                    ? '0 4px 20px rgba(0,0,0,0.5)' 
+                    : '0 4px 20px rgba(0,0,0,0.15)',
+                  bgcolor: theme.palette.background.paper,
+                },
+              }}
+            >
+              <MenuItem
+                onClick={() => {
+                  setAddContactMenuAnchor(null);
+                  setContactDialogTab('existing');
+                  // Preseleccionar los contactos que ya están asociados al deal
+                  const existingContactIds = dealContacts.map((contact: any) => contact.id);
+                  setSelectedExistingContacts(existingContactIds);
+                  setAddContactDialogOpen(true);
+                  fetchAllContacts();
+                }}
+                sx={{
+                  py: 1.5,
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? 'rgba(46, 125, 50, 0.15)' 
+                      : 'rgba(46, 125, 50, 0.08)',
+                  },
+                }}
+              >
+                <Person sx={{ mr: 1.5, fontSize: 20, color: taxiMonterricoColors.green }} />
+                <Typography variant="body2">Agregar contacto existente</Typography>
+              </MenuItem>
+              <MenuItem
+                onClick={() => {
+                  setAddContactMenuAnchor(null);
+                  setContactDialogTab('create');
+                  setAddContactDialogOpen(true);
+                }}
+                sx={{
+                  py: 1.5,
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? 'rgba(46, 125, 50, 0.15)' 
+                      : 'rgba(46, 125, 50, 0.08)',
+                  },
+                }}
+              >
+                <Add sx={{ mr: 1.5, fontSize: 20, color: taxiMonterricoColors.green }} />
+                <Typography variant="body2">Crear nuevo contacto</Typography>
+              </MenuItem>
+            </Menu>
             
             {dealContacts.length === 0 ? (
               <Box sx={{ textAlign: 'center', py: 4 }}>
                 <Typography variant="body2" color="text.secondary">
                   No hay contactos relacionados con este negocio
                 </Typography>
-        </Box>
-            ) : (
-              <Box sx={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                gap: 1.5,
-                overflowY: 'auto',
-                maxHeight: '400px',
-                pr: 1,
-                '&::-webkit-scrollbar': {
-                  width: '8px',
-                },
-                '&::-webkit-scrollbar-track': {
-                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-                  borderRadius: '4px',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
-                  borderRadius: '4px',
-                  '&:hover': {
-                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                  },
-                },
-              }}>
-                {dealContacts.map((contact: any) => (
-                  <Paper
-                    key={contact.id}
-                    onClick={() => navigate(`/contacts/${contact.id}`)}
-                    sx={{
-                      p: 2,
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
-                      borderRadius: 1.5,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#F5F5F5',
-                        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                      },
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar
-                        sx={{
-                          width: 40,
-                          height: 40,
-                          bgcolor: taxiMonterricoColors.green,
-                        }}
-                      >
-                        {contact.firstName?.[0]}{contact.lastName?.[0]}
-                      </Avatar>
-                      <Box sx={{ flex: 1 }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                          {contact.firstName} {contact.lastName}
-                        </Typography>
-                        {contact.email && (
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                            {contact.email}
-                          </Typography>
-                        )}
-                        {contact.phone && (
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', display: 'block' }}>
-                            {contact.phone}
-                          </Typography>
-                        )}
-                      </Box>
-                    </Box>
-                  </Paper>
-                ))}
               </Box>
-            )}
+            ) : (() => {
+              // Filtrar y ordenar contactos
+              let filteredContacts = dealContacts.filter((contact: any) => {
+                if (!contactSearch.trim()) return true;
+                const searchLower = contactSearch.toLowerCase();
+                return (
+                  contact.firstName?.toLowerCase().includes(searchLower) ||
+                  contact.lastName?.toLowerCase().includes(searchLower) ||
+                  contact.email?.toLowerCase().includes(searchLower) ||
+                  contact.phone?.toLowerCase().includes(searchLower)
+                );
+              });
+
+              // Ordenar contactos
+              filteredContacts = [...filteredContacts].sort((a: any, b: any) => {
+                let aValue: string = '';
+                let bValue: string = '';
+
+                if (contactSortField === 'firstName') {
+                  aValue = `${a.firstName || ''} ${a.lastName || ''}`.toLowerCase();
+                  bValue = `${b.firstName || ''} ${b.lastName || ''}`.toLowerCase();
+                } else {
+                  aValue = (a[contactSortField] || '').toLowerCase();
+                  bValue = (b[contactSortField] || '').toLowerCase();
+                }
+
+                if (contactSortOrder === 'asc') {
+                  return aValue.localeCompare(bValue);
+                } else {
+                  return bValue.localeCompare(aValue);
+                }
+              });
+
+              if (filteredContacts.length === 0) {
+                return (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      No se encontraron contactos
+                    </Typography>
+                  </Box>
+                );
+              }
+
+              return (
+                <TableContainer sx={{ width: '100%' }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>
+                          <TableSortLabel
+                            active={contactSortField === 'firstName'}
+                            direction={contactSortField === 'firstName' ? contactSortOrder : 'asc'}
+                            onClick={() => handleSortContacts('firstName')}
+                            sx={{
+                              '& .MuiTableSortLabel-icon': {
+                                color: contactSortField === 'firstName' ? taxiMonterricoColors.green : 'inherit',
+                              },
+                            }}
+                          >
+                            NOMBRE
+                          </TableSortLabel>
+                        </TableCell>
+                        <TableCell>
+                          <TableSortLabel
+                            active={contactSortField === 'email'}
+                            direction={contactSortField === 'email' ? contactSortOrder : 'asc'}
+                            onClick={() => handleSortContacts('email')}
+                            sx={{
+                              '& .MuiTableSortLabel-icon': {
+                                color: contactSortField === 'email' ? taxiMonterricoColors.green : 'inherit',
+                              },
+                            }}
+                          >
+                            CORREO
+                          </TableSortLabel>
+                        </TableCell>
+                        <TableCell>
+                          <TableSortLabel
+                            active={contactSortField === 'phone'}
+                            direction={contactSortField === 'phone' ? contactSortOrder : 'asc'}
+                            onClick={() => handleSortContacts('phone')}
+                            sx={{
+                              '& .MuiTableSortLabel-icon': {
+                                color: contactSortField === 'phone' ? taxiMonterricoColors.green : 'inherit',
+                              },
+                            }}
+                          >
+                            NÚMERO DE TELÉFONO
+                          </TableSortLabel>
+                        </TableCell>
+                        <TableCell align="right" sx={{ width: '80px' }}>
+                          ACCIONES
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {filteredContacts.map((contact: any) => (
+                        <TableRow
+                          key={contact.id}
+                          onClick={() => navigate(`/contacts/${contact.id}`)}
+                          sx={{
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              backgroundColor: 'rgba(46, 125, 50, 0.04)',
+                            },
+                          }}
+                        >
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Avatar
+                                sx={{
+                                  width: 32,
+                                  height: 32,
+                                  bgcolor: taxiMonterricoColors.green,
+                                  fontSize: '0.75rem',
+                                }}
+                              >
+                                {contact.firstName?.[0]}{contact.lastName?.[0]}
+                              </Avatar>
+                              <Typography
+                                sx={{
+                                  color: taxiMonterricoColors.green,
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {contact.firstName} {contact.lastName}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <Typography
+                                sx={{
+                                  color: taxiMonterricoColors.green,
+                                }}
+                              >
+                                {contact.email || '--'}
+                              </Typography>
+                              {contact.email && (
+                                <>
+                                  <IconButton
+                                    size="small"
+                                    sx={{ p: 0.5 }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.open(`mailto:${contact.email}`, '_blank');
+                                    }}
+                                    title="Enviar correo"
+                                  >
+                                    <OpenInNew fontSize="small" sx={{ color: taxiMonterricoColors.green }} />
+                                  </IconButton>
+                                  <IconButton
+                                    size="small"
+                                    sx={{ p: 0.5 }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCopyToClipboard(contact.email || '');
+                                    }}
+                                    title="Copiar correo"
+                                  >
+                                    <ContentCopy fontSize="small" sx={{ color: taxiMonterricoColors.green }} />
+                                  </IconButton>
+                                </>
+                              )}
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontSize: '0.8125rem' }}>
+                              {contact.phone || '--'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveContactClick(contact.id, `${contact.firstName} ${contact.lastName}`);
+                              }}
+                              sx={{
+                                color: theme.palette.error.main,
+                                '&:hover': {
+                                  backgroundColor: theme.palette.error.light,
+                                  color: theme.palette.error.dark,
+                                },
+                              }}
+                              title="Eliminar contacto del negocio"
+                            >
+                              <Delete fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              );
+            })()}
           </Card>
 
           {/* Card de Empresas */}
           <Card sx={{ 
             borderRadius: 2,
-            boxShadow: 'none',
+            boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
             bgcolor: theme.palette.background.paper,
-            flex: 1,
             px: 2,
             py: 2,
             display: 'flex',
             flexDirection: 'column',
             mt: 2,
-            maxHeight: '500px',
           }}>
             <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
               Empresas
@@ -2030,10 +2556,9 @@ const DealDetail: React.FC = () => {
                   ),
                 }}
               />
-              <Button 
-                size="small" 
-                variant="outlined" 
-                startIcon={<Add />}
+              <Button
+                size="small"
+                variant="outlined"
                 endIcon={<ExpandMore />}
                 onClick={(e) => setAddCompanyMenuAnchor(e.currentTarget)}
                 sx={{
@@ -2053,7 +2578,7 @@ const DealDetail: React.FC = () => {
               >
                 Agregar
               </Button>
-            </Box>
+        </Box>
 
             {/* Menú para agregar empresa */}
             <Menu
@@ -2083,8 +2608,12 @@ const DealDetail: React.FC = () => {
               <MenuItem
                 onClick={() => {
                   setAddCompanyMenuAnchor(null);
-                  // TODO: Implementar lógica para agregar empresa existente
-                  // Por ejemplo, abrir un modal de selección de empresas
+                  setCompanyDialogTab('existing');
+                  // Preseleccionar las empresas que ya están asociadas al deal
+                  const existingCompanyIds = dealCompanies.map((company: any) => company.id);
+                  setSelectedExistingCompanies(existingCompanyIds);
+                  setAddCompanyDialogOpen(true);
+                  fetchAllCompanies();
                 }}
                 sx={{
                   py: 1.5,
@@ -2101,9 +2630,8 @@ const DealDetail: React.FC = () => {
               <MenuItem
                 onClick={() => {
                   setAddCompanyMenuAnchor(null);
-                  // TODO: Implementar lógica para crear nueva empresa
-                  // Por ejemplo, navegar a la página de crear empresa o abrir un modal
-                  navigate('/companies/new');
+                  setCompanyDialogTab('create');
+                  setAddCompanyDialogOpen(true);
                 }}
                 sx={{
                   py: 1.5,
@@ -2120,22 +2648,42 @@ const DealDetail: React.FC = () => {
             </Menu>
             
             {dealCompanies.length === 0 ? (
-              <Box sx={{ textAlign: 'center', py: 4 }}>
-                <Typography variant="body2" color="text.secondary">
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="body2" color="text.secondary">
                   No hay empresas relacionadas con este negocio
                 </Typography>
               </Box>
             ) : (() => {
-              // Filtrar empresas según la búsqueda
-              const filteredCompanies = dealCompanies.filter((company: any) => {
+              // Filtrar y ordenar empresas
+              let filteredCompanies = dealCompanies.filter((company: any) => {
                 if (!companySearch.trim()) return true;
                 const searchLower = companySearch.toLowerCase();
                 return (
                   company.name?.toLowerCase().includes(searchLower) ||
-                  company.email?.toLowerCase().includes(searchLower) ||
+                  company.domain?.toLowerCase().includes(searchLower) ||
                   company.phone?.toLowerCase().includes(searchLower) ||
                   company.website?.toLowerCase().includes(searchLower)
                 );
+              });
+
+              // Ordenar empresas
+              filteredCompanies = [...filteredCompanies].sort((a: any, b: any) => {
+                let aValue: string = '';
+                let bValue: string = '';
+
+                if (companySortField === 'name') {
+                  aValue = (a.name || '').toLowerCase();
+                  bValue = (b.name || '').toLowerCase();
+                } else {
+                  aValue = (a[companySortField] || '').toLowerCase();
+                  bValue = (b[companySortField] || '').toLowerCase();
+                }
+
+                if (companySortOrder === 'asc') {
+                  return aValue.localeCompare(bValue);
+                } else {
+                  return bValue.localeCompare(aValue);
+                }
               });
 
               if (filteredCompanies.length === 0) {
@@ -2149,81 +2697,793 @@ const DealDetail: React.FC = () => {
               }
 
               return (
-                <Box sx={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  gap: 1.5,
-                  overflowY: 'auto',
-                  maxHeight: '400px',
-                  pr: 1,
-                  '&::-webkit-scrollbar': {
-                    width: '8px',
-                  },
-                  '&::-webkit-scrollbar-track': {
-                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-                    borderRadius: '4px',
-                  },
-                  '&::-webkit-scrollbar-thumb': {
-                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
-                    borderRadius: '4px',
-                    '&:hover': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                    },
-                  },
-                }}>
-                  {filteredCompanies.map((company: any) => (
-                  <Paper
-                    key={company.id}
-                    onClick={() => navigate(`/companies/${company.id}`)}
-                    sx={{
-                      p: 2,
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
-                      borderRadius: 1.5,
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#F5F5F5',
-                        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                      },
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Avatar
-                        sx={{
-                          width: 40,
-                          height: 40,
-                          bgcolor: taxiMonterricoColors.green,
-                        }}
-                      >
-                        {company.name?.[0]}{company.name?.[1] || ''}
-                      </Avatar>
-                      <Box sx={{ flex: 1 }}>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>
-                          {company.name}
-                        </Typography>
-                        {company.email && (
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                            {company.email}
-                          </Typography>
-                        )}
-                        {company.phone && (
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', display: 'block' }}>
-                            {company.phone}
-                          </Typography>
-                        )}
-                        {company.website && (
-                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', display: 'block' }}>
-                            {company.website}
-                          </Typography>
-                        )}
-                      </Box>
-                    </Box>
-                  </Paper>
-                  ))}
-                </Box>
+                <TableContainer sx={{ width: '100%' }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>
+                          <TableSortLabel
+                            active={companySortField === 'name'}
+                            direction={companySortField === 'name' ? companySortOrder : 'asc'}
+                            onClick={() => handleSortCompanies('name')}
+                            sx={{
+                              '& .MuiTableSortLabel-icon': {
+                                color: companySortField === 'name' ? taxiMonterricoColors.green : 'inherit',
+                              },
+                            }}
+                          >
+                            NOMBRE
+                          </TableSortLabel>
+                        </TableCell>
+                        <TableCell>
+                          <TableSortLabel
+                            active={companySortField === 'domain'}
+                            direction={companySortField === 'domain' ? companySortOrder : 'asc'}
+                            onClick={() => handleSortCompanies('domain')}
+                            sx={{
+                              '& .MuiTableSortLabel-icon': {
+                                color: companySortField === 'domain' ? taxiMonterricoColors.green : 'inherit',
+                              },
+                            }}
+                          >
+                            DOMINIO
+                          </TableSortLabel>
+                        </TableCell>
+                        <TableCell>
+                          <TableSortLabel
+                            active={companySortField === 'phone'}
+                            direction={companySortField === 'phone' ? companySortOrder : 'asc'}
+                            onClick={() => handleSortCompanies('phone')}
+                            sx={{
+                              '& .MuiTableSortLabel-icon': {
+                                color: companySortField === 'phone' ? taxiMonterricoColors.green : 'inherit',
+                              },
+                            }}
+                          >
+                            NÚMERO DE TELÉFONO
+                          </TableSortLabel>
+                        </TableCell>
+                        <TableCell align="right">ACCIONES</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {filteredCompanies.map((company: any) => (
+                        <TableRow
+                          key={company.id}
+                          onClick={() => navigate(`/companies/${company.id}`)}
+                          sx={{ cursor: 'pointer', '&:hover': { bgcolor: theme.palette.action.hover } }}
+                        >
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Avatar
+                                sx={{
+                                  width: 32,
+                                  height: 32,
+                                  bgcolor: taxiMonterricoColors.green,
+                                  fontSize: '0.875rem',
+                                }}
+                              >
+                                {company.name?.[0]}{company.name?.[1] || ''}
+                              </Avatar>
+                              <Typography variant="body2" sx={{ fontWeight: 500, color: taxiMonterricoColors.green }}>
+                                {company.name}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <Typography variant="body2" sx={{ fontSize: '0.8125rem', color: taxiMonterricoColors.green }}>
+                                {company.domain || company.website || '--'}
+                              </Typography>
+                              {company.domain && (
+                                <>
+                                  <IconButton
+                                    size="small"
+                                    sx={{ p: 0.5 }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      window.open(`http://${company.domain}`, '_blank');
+                                    }}
+                                    title="Abrir dominio"
+                                  >
+                                    <OpenInNew fontSize="small" sx={{ color: taxiMonterricoColors.green }} />
+                                  </IconButton>
+                                  <IconButton
+                                    size="small"
+                                    sx={{ p: 0.5 }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleCopyToClipboard(company.domain || '');
+                                    }}
+                                    title="Copiar dominio"
+                                  >
+                                    <ContentCopy fontSize="small" sx={{ color: taxiMonterricoColors.green }} />
+                                  </IconButton>
+                                </>
+                              )}
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontSize: '0.8125rem' }}>
+                              {company.phone || '--'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell align="right">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveCompanyClick(company.id, company.name);
+                              }}
+                              sx={{
+                                color: theme.palette.error.main,
+                                '&:hover': {
+                                  backgroundColor: theme.palette.error.light,
+                                  color: theme.palette.error.dark,
+                                },
+                              }}
+                              title="Eliminar empresa del negocio"
+                            >
+                              <Delete fontSize="small" />
+                            </IconButton>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
               );
             })()}
           </Card>
+
+          {/* Card de Negocios */}
+          <Card sx={{ 
+            borderRadius: 2,
+            boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+            bgcolor: theme.palette.background.paper,
+            px: 2,
+            py: 2,
+            display: 'flex',
+            flexDirection: 'column',
+            mt: 2,
+          }}>
+            <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
+              Negocios
+            </Typography>
+            
+            {/* Cuadro de búsqueda y botón agregar */}
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+              <TextField
+                size="small"
+                placeholder="Buscar negocios"
+                value={dealSearch}
+                onChange={(e) => setDealSearch(e.target.value)}
+                sx={{
+                  width: '250px',
+                  transition: 'all 0.3s ease',
+                  '& .MuiOutlinedInput-root': {
+                    height: '32px',
+                    fontSize: '0.875rem',
+                    '&:hover': {
+                      '& fieldset': {
+                        borderColor: taxiMonterricoColors.green,
+                      },
+                    },
+                    '&.Mui-focused': {
+                      '& fieldset': {
+                        borderColor: taxiMonterricoColors.green,
+                        borderWidth: 2,
+                      },
+                    },
+                  },
+                }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <Button
+                size="small"
+                variant="outlined"
+                endIcon={<ExpandMore />}
+                sx={{
+                  borderColor: taxiMonterricoColors.green,
+                  color: taxiMonterricoColors.green,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    borderColor: taxiMonterricoColors.green,
+                    backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
+                  },
+                  '&:active': {
+                    transform: 'translateY(0)',
+                  },
+                }}
+              >
+                Agregar
+              </Button>
+            </Box>
+
+            {dealDeals.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Typography variant="body2" color="text.secondary">
+                  No hay negocios relacionados con este negocio
+                </Typography>
+              </Box>
+            ) : (() => {
+              // Filtrar y ordenar negocios
+              let filteredDeals = dealDeals.filter((dealItem: any) => {
+                if (!dealSearch.trim()) return true;
+                const searchLower = dealSearch.toLowerCase();
+                return (
+                  dealItem.name?.toLowerCase().includes(searchLower) ||
+                  dealItem.stage?.toLowerCase().includes(searchLower) ||
+                  dealItem.amount?.toString().includes(searchLower)
+                );
+              });
+
+              // Ordenar negocios
+              filteredDeals = [...filteredDeals].sort((a: any, b: any) => {
+                let aValue: any = '';
+                let bValue: any = '';
+
+                if (dealSortField === 'name') {
+                  aValue = (a.name || '').toLowerCase();
+                  bValue = (b.name || '').toLowerCase();
+                } else if (dealSortField === 'amount') {
+                  aValue = a.amount || 0;
+                  bValue = b.amount || 0;
+                } else if (dealSortField === 'closeDate') {
+                  aValue = a.closeDate ? new Date(a.closeDate).getTime() : 0;
+                  bValue = b.closeDate ? new Date(b.closeDate).getTime() : 0;
+                } else {
+                  aValue = (a[dealSortField] || '').toLowerCase();
+                  bValue = (b[dealSortField] || '').toLowerCase();
+                }
+
+                if (dealSortOrder === 'asc') {
+                  return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
+                } else {
+                  return aValue < bValue ? 1 : aValue > bValue ? -1 : 0;
+                }
+              });
+
+              if (filteredDeals.length === 0) {
+                return (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="body2" color="text.secondary">
+                      No se encontraron negocios
+                    </Typography>
+                  </Box>
+                );
+              }
+
+              return (
+                <TableContainer sx={{ width: '100%' }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>
+                          <TableSortLabel
+                            active={dealSortField === 'name'}
+                            direction={dealSortField === 'name' ? dealSortOrder : 'asc'}
+                            onClick={() => handleSortDeals('name')}
+                            sx={{
+                              '& .MuiTableSortLabel-icon': {
+                                color: dealSortField === 'name' ? taxiMonterricoColors.green : 'inherit',
+                              },
+                            }}
+                          >
+                            NOMBRE DEL NEGOCIO
+                          </TableSortLabel>
+                        </TableCell>
+                        <TableCell>
+                          <TableSortLabel
+                            active={dealSortField === 'amount'}
+                            direction={dealSortField === 'amount' ? dealSortOrder : 'asc'}
+                            onClick={() => handleSortDeals('amount')}
+                            sx={{
+                              '& .MuiTableSortLabel-icon': {
+                                color: dealSortField === 'amount' ? taxiMonterricoColors.green : 'inherit',
+                              },
+                            }}
+                          >
+                            VALOR
+                          </TableSortLabel>
+                        </TableCell>
+                        <TableCell>
+                          <TableSortLabel
+                            active={dealSortField === 'closeDate'}
+                            direction={dealSortField === 'closeDate' ? dealSortOrder : 'asc'}
+                            onClick={() => handleSortDeals('closeDate')}
+                            sx={{
+                              '& .MuiTableSortLabel-icon': {
+                                color: dealSortField === 'closeDate' ? taxiMonterricoColors.green : 'inherit',
+                              },
+                            }}
+                          >
+                            FECHA DE CIERRE (GMT-5)
+                          </TableSortLabel>
+                        </TableCell>
+                        <TableCell>
+                          <TableSortLabel
+                            active={dealSortField === 'stage'}
+                            direction={dealSortField === 'stage' ? dealSortOrder : 'asc'}
+                            onClick={() => handleSortDeals('stage')}
+                            sx={{
+                              '& .MuiTableSortLabel-icon': {
+                                color: dealSortField === 'stage' ? taxiMonterricoColors.green : 'inherit',
+                              },
+                            }}
+                          >
+                            ETAPA DEL NEGOCIO
+                          </TableSortLabel>
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {filteredDeals.map((dealItem: any) => (
+                        <TableRow
+                          key={dealItem.id}
+                          onClick={() => navigate(`/deals/${dealItem.id}`)}
+                          sx={{ cursor: 'pointer', '&:hover': { bgcolor: theme.palette.action.hover } }}
+                        >
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Avatar
+                                sx={{
+                                  width: 32,
+                                  height: 32,
+                                  bgcolor: taxiMonterricoColors.green,
+                                  fontSize: '0.875rem',
+                                }}
+                              >
+                                {dealItem.name ? (dealItem.name.split(' ').length >= 2 
+                                  ? `${dealItem.name.split(' ')[0][0]}${dealItem.name.split(' ')[1][0]}`.toUpperCase()
+                                  : dealItem.name.substring(0, 2).toUpperCase()) : '--'}
+                              </Avatar>
+                              <Typography variant="body2" sx={{ fontWeight: 500, color: '#1976d2' }}>
+                                {dealItem.name}
+                              </Typography>
+                            </Box>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontSize: '0.8125rem' }}>
+                              {dealItem.amount ? `${dealItem.amount.toLocaleString()} US$` : '--'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontSize: '0.8125rem' }}>
+                              {dealItem.closeDate 
+                                ? new Date(dealItem.closeDate).toLocaleDateString('es-ES', { 
+                                    day: 'numeric', 
+                                    month: 'short', 
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    timeZone: 'America/Lima'
+                                  }) + ' GMT-5'
+                                : '--'}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" sx={{ fontSize: '0.8125rem' }}>
+                              {dealItem.stage ? getStageLabel(dealItem.stage) : '--'}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              );
+            })()}
+          </Card>
+            </>
+          )}
+
+          {/* Vista de Actividades */}
+            {activeTab === 1 && (
+              <Card sx={{ 
+                borderRadius: 2,
+                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                bgcolor: theme.palette.background.paper,
+                px: 2,
+                py: 2,
+                display: 'flex',
+                flexDirection: 'column',
+              }}>
+                {/* Barra de búsqueda y filtros */}
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 3, flexWrap: 'wrap' }}>
+                  <TextField
+                    size="small"
+                    placeholder="Buscar actividad"
+                    value={activitySearch}
+                    onChange={(e) => setActivitySearch(e.target.value)}
+                    sx={{
+                      flex: 1,
+                      minWidth: '250px',
+                      '& .MuiOutlinedInput-root': {
+                        height: '36px',
+                        fontSize: '0.875rem',
+                        '&:hover': {
+                          '& fieldset': {
+                            borderColor: taxiMonterricoColors.green,
+                          },
+                        },
+                        '&.Mui-focused': {
+                          '& fieldset': {
+                            borderColor: taxiMonterricoColors.green,
+                            borderWidth: 2,
+                          },
+                        },
+                      },
+                    }}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Search fontSize="small" />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    endIcon={<ExpandMore />}
+                    onClick={(e) => setActivityFilterMenuAnchor(e.currentTarget)}
+                    sx={{
+                      borderColor: taxiMonterricoColors.green,
+                      color: taxiMonterricoColors.green,
+                      textTransform: 'none',
+                      '&:hover': {
+                        borderColor: taxiMonterricoColors.green,
+                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                      },
+                    }}
+                  >
+                    Filtrar actividad ({activities.length}/{activities.length})
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    endIcon={<ExpandMore />}
+                    onClick={(e) => setAllUsersMenuAnchor(e.currentTarget)}
+                    sx={{
+                      borderColor: taxiMonterricoColors.green,
+                      color: taxiMonterricoColors.green,
+                      textTransform: 'none',
+                      '&:hover': {
+                        borderColor: taxiMonterricoColors.green,
+                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                      },
+                    }}
+                  >
+                    {allUsersFilter}
+                  </Button>
+                </Box>
+
+                {/* Menú de filtro de actividad */}
+                <Menu
+                  anchorEl={activityFilterMenuAnchor}
+                  open={Boolean(activityFilterMenuAnchor)}
+                  onClose={() => setActivityFilterMenuAnchor(null)}
+                  PaperProps={{
+                    sx: {
+                      mt: 1,
+                      minWidth: 280,
+                      borderRadius: 2,
+                      boxShadow: theme.palette.mode === 'dark' ? '0 4px 20px rgba(0,0,0,0.5)' : '0 4px 20px rgba(0,0,0,0.15)',
+                    },
+                  }}
+                >
+                  <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
+                    <TextField
+                      size="small"
+                      placeholder="Buscar"
+                      fullWidth
+                      value={activityFilterSearch}
+                      onChange={(e) => setActivityFilterSearch(e.target.value)}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Search fontSize="small" />
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                  </Box>
+                  {['Nota', 'Correo', 'Llamada', 'Tarea', 'Reunión'].map((type) => {
+                    const isSelected = selectedActivityTypes.includes(type);
+                    return (
+                      <MenuItem
+                        key={type}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedActivityTypes(selectedActivityTypes.filter(t => t !== type));
+                          } else {
+                            setSelectedActivityTypes([...selectedActivityTypes, type]);
+                          }
+                        }}
+                        sx={{
+                          py: 1.5,
+                          backgroundColor: isSelected ? 'rgba(46, 125, 50, 0.08)' : 'transparent',
+                        }}
+                      >
+                        <Checkbox checked={isSelected} size="small" sx={{ color: taxiMonterricoColors.green, '&.Mui-checked': { color: taxiMonterricoColors.green } }} />
+                        <Typography variant="body2">{type}</Typography>
+                      </MenuItem>
+                    );
+                  })}
+                </Menu>
+
+                {/* Menú de usuarios */}
+                <Menu
+                  anchorEl={allUsersMenuAnchor}
+                  open={Boolean(allUsersMenuAnchor)}
+                  onClose={() => setAllUsersMenuAnchor(null)}
+                  PaperProps={{
+                    sx: {
+                      mt: 1,
+                      minWidth: 200,
+                      borderRadius: 2,
+                    },
+                  }}
+                >
+                  <MenuItem onClick={() => { setAllUsersFilter('Todos los usuarios'); setAllUsersMenuAnchor(null); }}>
+                    Todos los usuarios
+                  </MenuItem>
+                  <MenuItem onClick={() => { setAllUsersFilter('Yo'); setAllUsersMenuAnchor(null); }}>
+                    Yo
+                  </MenuItem>
+                </Menu>
+
+                {/* Tabs secundarios de tipo de actividad */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: 0.5, 
+                  mb: 3, 
+                  borderBottom: `2px solid ${theme.palette.divider}`,
+                  overflowX: 'auto',
+                }}>
+                  {[
+                    { value: 'all', label: 'Actividad' },
+                    { value: 'note', label: 'Notas' },
+                    { value: 'email', label: 'Correos' },
+                    { value: 'call', label: 'Llamadas' },
+                    { value: 'task', label: 'Tareas' },
+                    { value: 'meeting', label: 'Reuniones' },
+                  ].map((tab) => (
+                    <Button
+                      key={tab.value}
+                      size="small"
+                      onClick={() => setSelectedActivityType(tab.value)}
+                      sx={{
+                        color: selectedActivityType === tab.value ? taxiMonterricoColors.green : theme.palette.text.secondary,
+                        textTransform: 'none',
+                        fontWeight: selectedActivityType === tab.value ? 600 : 500,
+                        borderBottom: selectedActivityType === tab.value ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
+                        borderRadius: 0,
+                        minWidth: 'auto',
+                        px: 2.5,
+                        py: 1.5,
+                        '&:hover': {
+                          color: taxiMonterricoColors.green,
+                          bgcolor: 'transparent',
+                        },
+                      }}
+                    >
+                      {tab.label}
+                    </Button>
+                  ))}
+                </Box>
+
+                {/* Contenido de actividades */}
+                {(() => {
+                  // Filtrar por búsqueda
+                  let filteredActivities = activitySearch
+                    ? activities.filter((activity) => {
+                        const searchTerm = activitySearch.toLowerCase();
+                        const subject = (activity.subject || activity.title || '').toLowerCase();
+                        const description = (activity.description || '').toLowerCase();
+                        return subject.includes(searchTerm) || description.includes(searchTerm);
+                      })
+                    : activities;
+
+                  // Filtrar por tipo de actividad (tab seleccionado)
+                  if (selectedActivityType !== 'all') {
+                    const typeMap: { [key: string]: string } = {
+                      'note': 'note',
+                      'email': 'email',
+                      'call': 'call',
+                      'task': 'task',
+                      'meeting': 'meeting',
+                    };
+                    filteredActivities = filteredActivities.filter((activity) => {
+                      let activityType = activity.type?.toLowerCase() || '';
+                      if (activity.isTask && !activityType) {
+                        activityType = 'task';
+                      }
+                      return activityType === typeMap[selectedActivityType];
+                    });
+                  }
+
+                  // Filtrar por tipos seleccionados en el menú de filtro
+                  if (selectedActivityTypes.length > 0) {
+                    const typeMap: { [key: string]: string[] } = {
+                      'Nota': ['note'],
+                      'Correo': ['email'],
+                      'Llamada': ['call'],
+                      'Tarea': ['task'],
+                      'Reunión': ['meeting'],
+                    };
+                    filteredActivities = filteredActivities.filter((activity) => {
+                      let activityType = activity.type?.toLowerCase() || '';
+                      if (activity.isTask && !activityType) {
+                        activityType = 'task';
+                      }
+                      return selectedActivityTypes.some(selectedType => {
+                        const mappedTypes = typeMap[selectedType] || [];
+                        return mappedTypes.includes(activityType);
+                      });
+                    });
+                  }
+
+                  // Filtrar por usuario
+                  if (allUsersFilter === 'Yo' && user) {
+                    filteredActivities = filteredActivities.filter((activity) => {
+                      return activity.User?.id === user.id;
+                    });
+                  }
+
+                  if (filteredActivities.length === 0) {
+                    return (
+                      <Box sx={{ textAlign: 'center', py: 8 }}>
+                        <Box
+                          sx={{
+                            width: 120,
+                            height: 120,
+                            borderRadius: '50%',
+                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F3F4F6',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mx: 'auto',
+                            mb: 2,
+                          }}
+                        >
+                          <Assignment sx={{ fontSize: 48, color: theme.palette.text.secondary }} />
+                        </Box>
+                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: theme.palette.text.primary }}>
+                      No hay actividades registradas
+                    </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          No hay actividades registradas para este negocio. Crea una nueva actividad para comenzar.
+                        </Typography>
+                  </Box>
+                    );
+                  }
+
+                  return (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {filteredActivities.map((activity) => (
+                      <Paper
+                        key={activity.id}
+                          onClick={() => setExpandedActivity(activity)}
+                        sx={{
+                          p: 2,
+                            ...getActivityStatusColor(activity),
+                          borderRadius: 1.5,
+                            position: 'relative',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              opacity: 0.9,
+                              boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                            },
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              top: 8,
+                              right: 8,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'flex-end',
+                              gap: 0.5,
+                            }}
+                          >
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: taxiMonterricoColors.green,
+                                fontWeight: 600,
+                                fontSize: '0.7rem',
+                                textTransform: 'uppercase',
+                              }}
+                            >
+                              {getActivityTypeLabel(activity.type)}
+                            </Typography>
+                            {activity.User && (
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                Por {activity.User.firstName} {activity.User.lastName}
+                                {activity.createdAt && (
+                                  <span> • {new Date(activity.createdAt).toLocaleDateString('es-ES', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric',
+                                  })}</span>
+                                )}
+                              </Typography>
+                            )}
+                          </Box>
+                          <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Checkbox
+                              checked={completedActivities[activity.id] || false}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                setCompletedActivities(prev => ({
+                                  ...prev,
+                                  [activity.id]: e.target.checked
+                                }));
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              size="small"
+                              sx={{
+                                p: 0.5,
+                                '& .MuiSvgIcon-root': {
+                                  fontSize: 20,
+                                },
+                              }}
+                            />
+                            <Typography 
+                              variant="subtitle2" 
+                              sx={{ 
+                                fontWeight: 600, 
+                                mb: 0.5, 
+                                pr: 6,
+                                flex: 1,
+                                textDecoration: completedActivities[activity.id] ? 'line-through' : 'none',
+                                opacity: completedActivities[activity.id] ? 0.6 : 1,
+                              }}
+                            >
+                              {activity.subject || activity.title}
+                            </Typography>
+                        </Box>
+                        {activity.description && (
+                          <Box
+                            sx={{
+                              mt: 2,
+                              p: 1.5,
+                              borderRadius: 1,
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
+                              border: `1px solid ${theme.palette.divider}`,
+                            }}
+                          >
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                color: theme.palette.text.secondary,
+                                whiteSpace: 'pre-wrap',
+                                fontSize: '0.875rem',
+                              }}
+                            >
+                              {activity.description}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Paper>
+                    ))}
+                  </Box>
+                  );
+                })()}
+              </Card>
+            )}
         </Box>
       </Box>
 
@@ -2842,7 +4102,6 @@ const DealDetail: React.FC = () => {
               >
                 <AttachFile sx={{ fontSize: 16 }} />
               </IconButton>
-              </Box>
               <IconButton
                 onClick={() => {
                   setAssociateOpen(true);
@@ -2869,6 +4128,7 @@ const DealDetail: React.FC = () => {
               >
                 <PersonAdd sx={{ fontSize: 16 }} />
               </IconButton>
+              </Box>
             </Box>
           </Box>
           {/* Input oculto para seleccionar archivos de imagen */}
@@ -3997,6 +5257,1055 @@ const DealDetail: React.FC = () => {
             </DialogActions>
           </>
         )}
+      </Dialog>
+
+      {/* Dialog para agregar/crear contacto */}
+      <Dialog
+        open={addContactDialogOpen}
+        onClose={() => {
+          setAddContactDialogOpen(false);
+          setContactFormData({
+            identificationType: 'dni',
+            dni: '',
+            firstName: '',
+            lastName: '',
+            email: '',
+            phone: '',
+            address: '',
+            district: '',
+            province: '',
+            department: '',
+            jobTitle: '',
+            lifecycleStage: 'lead',
+            ownerId: user?.id || null,
+          });
+          setSelectedExistingContacts([]);
+          setExistingContactsSearch('');
+        }}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            maxHeight: '90vh',
+          },
+        }}
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">Agregar Contacto</Typography>
+            <IconButton
+              onClick={() => {
+                setAddContactDialogOpen(false);
+                setContactDialogTab('create');
+                setContactFormData({
+                  identificationType: 'dni',
+                  dni: '',
+                  firstName: '',
+                  lastName: '',
+                  email: '',
+                  phone: '',
+                  address: '',
+                  district: '',
+                  province: '',
+                  department: '',
+                  jobTitle: '',
+                  lifecycleStage: 'lead',
+                  ownerId: user?.id || 0,
+                });
+              }}
+              size="small"
+            >
+              <Close />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {/* Pestañas */}
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+            <Tabs value={contactDialogTab === 'create' ? 0 : 1} onChange={(e, newValue) => setContactDialogTab(newValue === 0 ? 'create' : 'existing')}>
+              <Tab label="Crear nueva" />
+              <Tab label="Agregar existente" />
+            </Tabs>
+          </Box>
+
+          {contactDialogTab === 'create' ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
+              {/* Selección de tipo de identificación y campo de entrada */}
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', sm: 'row' } }}>
+                  <RadioGroup
+                    row
+                    value={contactFormData.identificationType}
+                    onChange={(e) => setContactFormData({ ...contactFormData, identificationType: e.target.value })}
+                    sx={{ gap: 2, flexShrink: 0 }}
+                  >
+                    <FormControlLabel
+                      value="dni"
+                      control={
+                        <Radio 
+                          sx={{ 
+                            color: theme.palette.text.secondary,
+                            '&.Mui-checked': {
+                              color: taxiMonterricoColors.orange,
+                            },
+                          }} 
+                        />
+                      }
+                      label="DNI"
+                      sx={{
+                        m: 0,
+                        px: 2,
+                        py: 0.75,
+                        height: '48px',
+                        border: `2px solid ${contactFormData.identificationType === 'dni' ? taxiMonterricoColors.orange : theme.palette.divider}`,
+                        borderRadius: 2,
+                        bgcolor: contactFormData.identificationType === 'dni' 
+                          ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : `${taxiMonterricoColors.orange}10`)
+                          : 'transparent',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        '&:hover': {
+                          borderColor: taxiMonterricoColors.orange,
+                          bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}15` : `${taxiMonterricoColors.orange}08`,
+                        },
+                        '& .MuiFormControlLabel-label': {
+                          color: theme.palette.text.primary,
+                          fontWeight: contactFormData.identificationType === 'dni' ? 500 : 400,
+                        },
+                      }}
+                    />
+                    <FormControlLabel
+                      value="cee"
+                      control={
+                        <Radio 
+                          sx={{ 
+                            color: theme.palette.text.secondary,
+                            '&.Mui-checked': {
+                              color: taxiMonterricoColors.orange,
+                            },
+                          }} 
+                        />
+                      }
+                      label="CEE"
+                      sx={{
+                        m: 0,
+                        px: 2,
+                        py: 0.75,
+                        height: '48px',
+                        border: `2px solid ${contactFormData.identificationType === 'cee' ? taxiMonterricoColors.orange : theme.palette.divider}`,
+                        borderRadius: 2,
+                        bgcolor: contactFormData.identificationType === 'cee' 
+                          ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : `${taxiMonterricoColors.orange}10`)
+                          : 'transparent',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        '&:hover': {
+                          borderColor: taxiMonterricoColors.orange,
+                          bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}15` : `${taxiMonterricoColors.orange}08`,
+                        },
+                        '& .MuiFormControlLabel-label': {
+                          color: theme.palette.text.primary,
+                          fontWeight: contactFormData.identificationType === 'cee' ? 500 : 400,
+                        },
+                      }}
+                    />
+                  </RadioGroup>
+
+                  {/* Campo de entrada según el tipo seleccionado */}
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <TextField
+                      label="DNI"
+                      value={contactFormData.dni}
+                      onChange={(e) => setContactFormData({ ...contactFormData, dni: e.target.value })}
+                      InputLabelProps={{ shrink: true }}
+                      sx={{
+                        width: '100%',
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 2,
+                          minHeight: '48px',
+                          height: '48px',
+                        },
+                        '& .MuiInputBase-input': {
+                          py: 1.5,
+                          height: '48px',
+                          display: 'flex',
+                          alignItems: 'center',
+                        },
+                      }}
+                      InputProps={{
+                        endAdornment: (
+                          <IconButton
+                            size="small"
+                            sx={{
+                              color: taxiMonterricoColors.orange,
+                              '&:hover': {
+                                bgcolor: `${taxiMonterricoColors.orange}15`,
+                              },
+                            }}
+                          >
+                            <Search />
+                          </IconButton>
+                        ),
+                      }}
+                    />
+                  </Box>
+                </Box>
+              </Box>
+
+              {/* Nombre y Apellido en su propia fila */}
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  label="Nombre"
+                  value={contactFormData.firstName}
+                  onChange={(e) => setContactFormData({ ...contactFormData, firstName: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+                <TextField
+                  label="Apellido"
+                  value={contactFormData.lastName}
+                  onChange={(e) => setContactFormData({ ...contactFormData, lastName: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+              </Box>
+              
+              {/* Email y Teléfono en su propia fila */}
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  label="Email"
+                  type="email"
+                  value={contactFormData.email}
+                  onChange={(e) => setContactFormData({ ...contactFormData, email: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+                <TextField
+                  label="Teléfono"
+                  value={contactFormData.phone}
+                  onChange={(e) => setContactFormData({ ...contactFormData, phone: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+              </Box>
+              
+              {/* Dirección en su propia fila */}
+              <TextField
+                label="Dirección"
+                value={contactFormData.address}
+                onChange={(e) => setContactFormData({ ...contactFormData, address: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              
+              {/* Distrito y Provincia en su propia fila */}
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  label="Distrito"
+                  value={contactFormData.district}
+                  onChange={(e) => setContactFormData({ ...contactFormData, district: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+                <TextField
+                  label="Provincia"
+                  value={contactFormData.province}
+                  onChange={(e) => setContactFormData({ ...contactFormData, province: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+              </Box>
+              
+              {/* Departamento en su propia fila */}
+              <TextField
+                label="Departamento"
+                value={contactFormData.department}
+                onChange={(e) => setContactFormData({ ...contactFormData, department: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              
+              {/* Cargo y Etapa del Ciclo de Vida en su propia fila */}
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  label="Cargo"
+                  value={contactFormData.jobTitle}
+                  onChange={(e) => setContactFormData({ ...contactFormData, jobTitle: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+                <TextField
+                  select
+                  label="Etapa del Ciclo de Vida"
+                  value={contactFormData.lifecycleStage}
+                  onChange={(e) => setContactFormData({ ...contactFormData, lifecycleStage: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                >
+                <MenuItem value="lead_inactivo">-5% Lead Inactivo</MenuItem>
+                <MenuItem value="cliente_perdido">-1% Cliente perdido</MenuItem>
+                <MenuItem value="cierre_perdido">-1% Cierre Perdido</MenuItem>
+                <MenuItem value="lead">0% Lead</MenuItem>
+                <MenuItem value="contacto">10% Contacto</MenuItem>
+                <MenuItem value="reunion_agendada">30% Reunión Agendada</MenuItem>
+                <MenuItem value="reunion_efectiva">40% Reunión Efectiva</MenuItem>
+                <MenuItem value="propuesta_economica">50% Propuesta Económica</MenuItem>
+                <MenuItem value="negociacion">70% Negociación</MenuItem>
+                <MenuItem value="licitacion">75% Licitación</MenuItem>
+                <MenuItem value="licitacion_etapa_final">85% Licitación Etapa Final</MenuItem>
+                <MenuItem value="cierre_ganado">90% Cierre Ganado</MenuItem>
+                <MenuItem value="firma_contrato">95% Firma de Contrato</MenuItem>
+                <MenuItem value="activo">100% Activo</MenuItem>
+              </TextField>
+            </Box>
+          </Box>
+          ) : (
+            <Box>
+              <TextField
+                size="small"
+                placeholder="Buscar Contactos"
+                value={existingContactsSearch}
+                onChange={(e) => setExistingContactsSearch(e.target.value)}
+                fullWidth
+                sx={{ mb: 2 }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {allContacts.filter((c: any) => {
+                    if (!existingContactsSearch.trim()) return true;
+                    const search = existingContactsSearch.toLowerCase();
+                    return (
+                      c.firstName?.toLowerCase().includes(search) ||
+                      c.lastName?.toLowerCase().includes(search) ||
+                      c.email?.toLowerCase().includes(search)
+                    );
+                  }).length} Contactos
+                </Typography>
+                <Select
+                  size="small"
+                  value="default"
+                  sx={{ minWidth: 200 }}
+                >
+                  <MenuItem value="default">Predeterminado (Agregado recientemente)</MenuItem>
+                </Select>
+              </Box>
+              <Box sx={{ maxHeight: '400px', overflowY: 'auto' }}>
+                {loadingAllContacts ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                    <CircularProgress />
+                  </Box>
+                ) : (
+                  allContacts
+                    .filter((contact: any) => {
+                      if (!existingContactsSearch.trim()) return true;
+                      const search = existingContactsSearch.toLowerCase();
+                      return (
+                        contact.firstName?.toLowerCase().includes(search) ||
+                        contact.lastName?.toLowerCase().includes(search) ||
+                        contact.email?.toLowerCase().includes(search)
+                      );
+                    })
+                    .map((contact: any) => (
+                      <Box
+                        key={contact.id}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          py: 1,
+                          px: 1,
+                          borderRadius: 1,
+                          '&:hover': {
+                            bgcolor: theme.palette.action.hover,
+                          },
+                        }}
+                      >
+                        <Checkbox
+                          checked={selectedExistingContacts.includes(contact.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedExistingContacts([...selectedExistingContacts, contact.id]);
+                            } else {
+                              setSelectedExistingContacts(selectedExistingContacts.filter(id => id !== contact.id));
+                            }
+                          }}
+                          size="small"
+                        />
+                        <Typography variant="body2" sx={{ flex: 1 }}>
+                          {contact.firstName} {contact.lastName}
+                          {contact.email && ` (${contact.email})`}
+                        </Typography>
+                      </Box>
+                    ))
+                )}
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
+          <Box>
+            {contactDialogTab === 'existing' && (
+              <Typography variant="body2" color="text.secondary">
+                {selectedExistingContacts.length} elementos
+              </Typography>
+            )}
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              onClick={() => {
+                setAddContactDialogOpen(false);
+                setContactFormData({
+                  identificationType: 'dni',
+                  dni: '',
+                  firstName: '',
+                  lastName: '',
+                  email: '',
+                  phone: '',
+                  address: '',
+                  district: '',
+                  province: '',
+                  department: '',
+                  jobTitle: '',
+                  lifecycleStage: 'lead',
+                  ownerId: user?.id || null,
+                });
+                setSelectedExistingContacts([]);
+                setExistingContactsSearch('');
+              }}
+              sx={{
+                textTransform: 'none',
+                borderColor: taxiMonterricoColors.orange,
+                color: taxiMonterricoColors.orange,
+                '&:hover': {
+                  borderColor: taxiMonterricoColors.orange,
+                  bgcolor: `${taxiMonterricoColors.orange}10`,
+                },
+              }}
+            >
+              Cancelar
+            </Button>
+            {contactDialogTab === 'create' ? (
+              <>
+                <Button
+                  onClick={handleCreateContact}
+                  variant="contained"
+                  disabled={saving || !contactFormData.firstName || !contactFormData.lastName}
+                  sx={{
+                    textTransform: 'none',
+                    bgcolor: '#2196F3',
+                    '&:hover': {
+                      bgcolor: '#1976D2',
+                    },
+                  }}
+                >
+                  Crear
+                </Button>
+                <Button
+                  onClick={async () => {
+                    await handleCreateContact();
+                    if (!saving) {
+                      setContactFormData({
+                        identificationType: 'dni',
+                        dni: '',
+                        firstName: '',
+                        lastName: '',
+                        email: '',
+                        phone: '',
+                        address: '',
+                        district: '',
+                        province: '',
+                        department: '',
+                        jobTitle: '',
+                        lifecycleStage: 'lead',
+                        ownerId: user?.id || null,
+                      });
+                    }
+                  }}
+                  variant="contained"
+                  disabled={saving || !contactFormData.firstName || !contactFormData.lastName}
+                  sx={{
+                    textTransform: 'none',
+                    bgcolor: '#2196F3',
+                    '&:hover': {
+                      bgcolor: '#1976D2',
+                    },
+                  }}
+                >
+                  Crear y agregar otro
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={handleAddExistingContacts}
+                variant="contained"
+                disabled={saving || selectedExistingContacts.length === 0}
+                sx={{
+                  textTransform: 'none',
+                  bgcolor: '#2196F3',
+                  '&:hover': {
+                    bgcolor: '#1976D2',
+                  },
+                }}
+              >
+                Guardar
+              </Button>
+            )}
+          </Box>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog para agregar empresa */}
+      <Dialog
+        open={addCompanyDialogOpen}
+        onClose={() => {
+          setAddCompanyDialogOpen(false);
+          setCompanyDialogTab('create');
+          setCompanyFormData({
+            name: '',
+            domain: '',
+            industry: '',
+            phone: '',
+            address: '',
+            city: '',
+            state: '',
+            country: '',
+            ruc: '',
+            lifecycleStage: 'lead',
+            ownerId: user?.id || null,
+          });
+        }}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+          },
+        }}
+      >
+        <DialogTitle>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h6">Agregar Empresa</Typography>
+            <IconButton
+              onClick={() => {
+                setAddCompanyDialogOpen(false);
+                setCompanyDialogTab('create');
+                setCompanyFormData({
+                  name: '',
+                  domain: '',
+                  industry: '',
+                  phone: '',
+                  address: '',
+                  city: '',
+                  state: '',
+                  country: '',
+                  ruc: '',
+                  lifecycleStage: 'lead',
+                  ownerId: user?.id || null,
+                });
+              }}
+              size="small"
+            >
+              <Close />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent>
+          {/* Pestañas */}
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+            <Tabs value={companyDialogTab === 'create' ? 0 : 1} onChange={(e, newValue) => setCompanyDialogTab(newValue === 0 ? 'create' : 'existing')}>
+              <Tab label="Crear nueva" />
+              <Tab label="Agregar existente" />
+            </Tabs>
+          </Box>
+
+          {companyDialogTab === 'create' ? (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
+              {/* RUC y Nombre en la misma fila */}
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Box sx={{ flex: '1 1 0%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  <TextField
+                    label="RUC"
+                    value={companyFormData.ruc || ''}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '');
+                      const limitedValue = value.slice(0, 11);
+                      setCompanyFormData({ ...companyFormData, ruc: limitedValue });
+                      setRucError(''); // Limpiar error al escribir
+                    }}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && companyFormData.ruc.length === 11) {
+                        handleSearchRuc();
+                      }
+                    }}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ maxLength: 11 }}
+                    error={!!rucError}
+                    helperText={rucError}
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 1.5,
+                      }
+                    }}
+                    InputProps={{
+                      endAdornment: (
+                        <InputAdornment position="end">
+                          <IconButton
+                            onClick={handleSearchRuc}
+                            disabled={loadingRuc || companyFormData.ruc.length !== 11}
+                            size="small"
+                            sx={{ p: 0.5 }}
+                            title="Buscar RUC"
+                          >
+                            {loadingRuc ? (
+                              <CircularProgress size={20} />
+                            ) : (
+                              <Search fontSize="small" />
+                            )}
+                          </IconButton>
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                </Box>
+                <TextField
+                  label="Nombre"
+                  value={companyFormData.name}
+                  onChange={(e) => setCompanyFormData({ ...companyFormData, name: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: '4 1 0%',
+                    minWidth: 0,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+              </Box>
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  label="Dominio"
+                  value={companyFormData.domain}
+                  onChange={(e) => setCompanyFormData({ ...companyFormData, domain: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+                <TextField
+                  label="Teléfono"
+                  value={companyFormData.phone}
+                  onChange={(e) => setCompanyFormData({ ...companyFormData, phone: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+              </Box>
+              <TextField
+                label="Dirección"
+                value={companyFormData.address}
+                onChange={(e) => setCompanyFormData({ ...companyFormData, address: e.target.value })}
+                multiline
+                rows={2}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <TextField
+                  label="Distrito"
+                  value={companyFormData.city}
+                  onChange={(e) => setCompanyFormData({ ...companyFormData, city: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+                <TextField
+                  label="Provincia"
+                  value={companyFormData.state}
+                  onChange={(e) => setCompanyFormData({ ...companyFormData, state: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+                <TextField
+                  label="Departamento"
+                  value={companyFormData.country}
+                  onChange={(e) => setCompanyFormData({ ...companyFormData, country: e.target.value })}
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 1.5,
+                    }
+                  }}
+                />
+              </Box>
+              <TextField
+                select
+                label="Etapa del Ciclo de Vida"
+                value={companyFormData.lifecycleStage}
+                onChange={(e) => setCompanyFormData({ ...companyFormData, lifecycleStage: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              >
+                <MenuItem value="lead_inactivo">-5% Lead Inactivo</MenuItem>
+                <MenuItem value="cliente_perdido">-1% Cliente perdido</MenuItem>
+                <MenuItem value="cierre_perdido">-1% Cierre Perdido</MenuItem>
+                <MenuItem value="lead">0% Lead</MenuItem>
+                <MenuItem value="contacto">10% Contacto</MenuItem>
+                <MenuItem value="reunion_agendada">30% Reunión Agendada</MenuItem>
+                <MenuItem value="reunion_efectiva">40% Reunión Efectiva</MenuItem>
+                <MenuItem value="propuesta_economica">50% Propuesta Económica</MenuItem>
+                <MenuItem value="negociacion">70% Negociación</MenuItem>
+                <MenuItem value="licitacion">75% Licitación</MenuItem>
+                <MenuItem value="licitacion_etapa_final">85% Licitación Etapa Final</MenuItem>
+                <MenuItem value="cierre_ganado">90% Cierre Ganado</MenuItem>
+                <MenuItem value="firma_contrato">95% Firma de Contrato</MenuItem>
+                <MenuItem value="activo">100% Activo</MenuItem>
+              </TextField>
+            </Box>
+          ) : (
+            <Box>
+              <TextField
+                size="small"
+                placeholder="Buscar Empresas"
+                value={existingCompaniesSearch}
+                onChange={(e) => setExistingCompaniesSearch(e.target.value)}
+                fullWidth
+                sx={{ mb: 2 }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Search fontSize="small" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {allCompanies.filter((c: any) => {
+                    if (!existingCompaniesSearch.trim()) return true;
+                    const search = existingCompaniesSearch.toLowerCase();
+                    return (
+                      c.name?.toLowerCase().includes(search) ||
+                      c.domain?.toLowerCase().includes(search) ||
+                      c.industry?.toLowerCase().includes(search)
+                    );
+                  }).length} Empresas
+                </Typography>
+                <Select
+                  size="small"
+                  value="default"
+                  sx={{ minWidth: 200 }}
+                >
+                  <MenuItem value="default">Predeterminado (Agregado recientemente)</MenuItem>
+                </Select>
+              </Box>
+              <Box sx={{ maxHeight: '400px', overflowY: 'auto' }}>
+                {loadingAllCompanies ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                    <CircularProgress />
+                  </Box>
+                ) : (
+                  allCompanies
+                    .filter((company: any) => {
+                      if (!existingCompaniesSearch.trim()) return true;
+                      const search = existingCompaniesSearch.toLowerCase();
+                      return (
+                        company.name?.toLowerCase().includes(search) ||
+                        company.domain?.toLowerCase().includes(search) ||
+                        company.industry?.toLowerCase().includes(search)
+                      );
+                    })
+                    .map((company: any) => (
+                      <Box
+                        key={company.id}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          py: 1,
+                          px: 1,
+                          borderRadius: 1,
+                          '&:hover': {
+                            bgcolor: theme.palette.action.hover,
+                          },
+                        }}
+                      >
+                        <Checkbox
+                          checked={selectedExistingCompanies.includes(company.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedExistingCompanies([...selectedExistingCompanies, company.id]);
+                            } else {
+                              setSelectedExistingCompanies(selectedExistingCompanies.filter(id => id !== company.id));
+                            }
+                          }}
+                          size="small"
+                        />
+                        <Typography variant="body2" sx={{ flex: 1 }}>
+                          {company.name}
+                          {company.domain && ` (${company.domain})`}
+                        </Typography>
+                      </Box>
+                    ))
+                )}
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
+          <Box>
+            {companyDialogTab === 'existing' && (
+              <Typography variant="body2" color="text.secondary">
+                {selectedExistingCompanies.length} elementos
+              </Typography>
+            )}
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              onClick={() => {
+                setAddCompanyDialogOpen(false);
+                setCompanyFormData({
+                  name: '',
+                  domain: '',
+                  industry: '',
+                  phone: '',
+                  address: '',
+                  city: '',
+                  state: '',
+                  country: '',
+                  ruc: '',
+                  lifecycleStage: 'lead',
+                  ownerId: user?.id || null,
+                });
+                setSelectedExistingCompanies([]);
+                setExistingCompaniesSearch('');
+              }}
+              sx={{
+                textTransform: 'none',
+                borderColor: taxiMonterricoColors.orange,
+                color: taxiMonterricoColors.orange,
+                '&:hover': {
+                  borderColor: taxiMonterricoColors.orange,
+                  bgcolor: `${taxiMonterricoColors.orange}10`,
+                },
+              }}
+            >
+              Cancelar
+            </Button>
+            {companyDialogTab === 'create' ? (
+              <>
+                <Button
+                  onClick={handleCreateCompany}
+                  variant="contained"
+                  disabled={saving || !companyFormData.name}
+                  sx={{
+                    textTransform: 'none',
+                    bgcolor: '#2196F3',
+                    '&:hover': {
+                      bgcolor: '#1976D2',
+                    },
+                  }}
+                >
+                  Crear
+                </Button>
+                <Button
+                  onClick={async () => {
+                    await handleCreateCompany();
+                    if (!saving) {
+                      setCompanyFormData({
+                        name: '',
+                        domain: '',
+                        industry: '',
+                        phone: '',
+                        address: '',
+                        city: '',
+                        state: '',
+                        country: '',
+                        ruc: '',
+                        lifecycleStage: 'lead',
+                        ownerId: user?.id || null,
+                      });
+                    }
+                  }}
+                  variant="contained"
+                  disabled={saving || !companyFormData.name}
+                  sx={{
+                    textTransform: 'none',
+                    bgcolor: '#2196F3',
+                    '&:hover': {
+                      bgcolor: '#1976D2',
+                    },
+                  }}
+                >
+                  Crear y agregar otro
+                </Button>
+              </>
+            ) : (
+              <Button
+                onClick={handleAddExistingCompanies}
+                variant="contained"
+                disabled={saving || selectedExistingCompanies.length === 0}
+                sx={{
+                  textTransform: 'none',
+                  bgcolor: '#2196F3',
+                  '&:hover': {
+                    bgcolor: '#1976D2',
+                  },
+                }}
+              >
+                Guardar
+              </Button>
+            )}
+          </Box>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog para confirmar eliminación de contacto */}
+      <Dialog
+        open={removeContactDialogOpen}
+        onClose={() => {
+          setRemoveContactDialogOpen(false);
+          setContactToRemove(null);
+        }}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1, fontWeight: 600 }}>
+          Eliminar asociación
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" sx={{ color: theme.palette.text.secondary }}>
+            {contactToRemove?.name} ya no se asociará con {deal?.name}.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button
+            onClick={() => {
+              setRemoveContactDialogOpen(false);
+              setContactToRemove(null);
+            }}
+            sx={{
+              textTransform: 'none',
+              color: theme.palette.text.secondary,
+              borderColor: theme.palette.divider,
+              '&:hover': {
+                borderColor: theme.palette.divider,
+                backgroundColor: theme.palette.action.hover,
+              },
+            }}
+            variant="outlined"
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={() => {
+              // Determinar si es contacto o empresa basándose en el contexto
+              if (dealContacts.some((c: any) => c.id === contactToRemove?.id)) {
+                handleConfirmRemoveContact();
+              } else if (dealCompanies.some((c: any) => c.id === contactToRemove?.id)) {
+                handleConfirmRemoveCompany();
+              }
+            }}
+            variant="contained"
+            sx={{
+              textTransform: 'none',
+              bgcolor: '#FF9800',
+              color: 'white',
+              '&:hover': {
+                bgcolor: '#F57C00',
+              },
+            }}
+          >
+            Eliminar asociación
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

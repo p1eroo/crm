@@ -483,11 +483,22 @@ sequelize.authenticate()
     await Subscription.sync({ alter: false });
     
     // Sincronizar el resto de las tablas con alter (excepto Deal que tiene columnas ENUM manuales)
-    const { Deal, User, Role, MonthlyBudget, UserGoogleToken, ...rest } = await import('./models');
+    const { Deal, User, Role, MonthlyBudget, UserGoogleToken, DealContact, DealCompany, ContactCompany, ...rest } = await import('./models');
     
     // Sincronizar Deal sin alter para evitar conflictos con ENUMs
     if (Deal && typeof (Deal as any).sync === 'function') {
       await (Deal as any).sync({ alter: false });
+    }
+    
+    // Sincronizar tablas de asociación (muchos a muchos)
+    if (DealContact && typeof (DealContact as any).sync === 'function') {
+      await (DealContact as any).sync({ alter: true });
+    }
+    if (DealCompany && typeof (DealCompany as any).sync === 'function') {
+      await (DealCompany as any).sync({ alter: true });
+    }
+    if (ContactCompany && typeof (ContactCompany as any).sync === 'function') {
+      await (ContactCompany as any).sync({ alter: true });
     }
     
     // Sincronizar el resto de modelos con alter

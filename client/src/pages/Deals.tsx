@@ -259,16 +259,64 @@ const Deals: React.FC = () => {
     return option ? option.label : stage;
   };
 
-  // Función para obtener el color de la etapa
+  // Función para obtener el color de la etapa (para el texto del chip)
   const getStageColor = (stage: string) => {
-    if (stage === 'cierre_ganado') {
+    // Cierre ganado y etapas finales exitosas
+    if (['cierre_ganado', 'firma_contrato', 'activo'].includes(stage)) {
       return { bg: '#E8F5E9', color: '#2E7D32' };
-    } else if (stage === 'cierre_perdido') {
+    }
+    // Cierre perdido y clientes perdidos
+    else if (stage === 'cierre_perdido' || stage === 'cliente_perdido') {
       return { bg: '#FFEBEE', color: '#C62828' };
-    } else if (['reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion'].includes(stage)) {
+    }
+    // Negociación y reuniones
+    else if (['reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion'].includes(stage)) {
       return { bg: '#FFF3E0', color: '#E65100' };
     }
+    // Licitación - Color de texto púrpura oscuro
+    else if (stage === 'licitacion_etapa_final' || stage === 'licitacion') {
+      return { bg: '#F3E5F5', color: '#7B1FA2' };
+    }
+    // Lead y Contacto - Azul oscuro
+    else if (['lead', 'contacto'].includes(stage)) {
+      return { bg: '#E3F2FD', color: '#1976D2' };
+    }
+    // Lead inactivo - Gris oscuro
+    else if (stage === 'lead_inactivo') {
+      return { bg: '#F5F5F5', color: '#616161' };
+    }
+    // Por defecto
     return { bg: '#E3F2FD', color: '#1976D2' };
+  };
+
+  // Función para obtener el color de fondo de la card según la etapa
+  const getStageCardColor = (stage: string) => {
+    // Cierre ganado y etapas finales exitosas
+    if (['cierre_ganado', 'firma_contrato', 'activo'].includes(stage)) {
+      return theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.15)' : '#E8F5E9';
+    }
+    // Cierre perdido y clientes perdidos
+    else if (stage === 'cierre_perdido' || stage === 'cliente_perdido') {
+      return theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.15)' : '#FFEBEE';
+    }
+    // Negociación y reuniones
+    else if (['reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion'].includes(stage)) {
+      return theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.15)' : '#FFF3E0';
+    }
+    // Licitación - Color distintivo (púrpura claro)
+    else if (stage === 'licitacion_etapa_final' || stage === 'licitacion') {
+      return theme.palette.mode === 'dark' ? 'rgba(156, 39, 176, 0.15)' : '#F3E5F5';
+    }
+    // Lead y Contacto - Azul claro
+    else if (['lead', 'contacto'].includes(stage)) {
+      return theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.1)' : '#E3F2FD';
+    }
+    // Lead inactivo
+    else if (stage === 'lead_inactivo') {
+      return theme.palette.mode === 'dark' ? 'rgba(158, 158, 158, 0.1)' : '#F5F5F5';
+    }
+    // Por defecto
+    return theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff';
   };
 
   useEffect(() => {
@@ -818,7 +866,7 @@ const Deals: React.FC = () => {
                   key={deal.id}
                 component="div"
                   sx={{ 
-                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+                  bgcolor: getStageCardColor(deal.stage),
                   transition: 'all 0.2s ease',
                   display: 'grid',
                   gridTemplateColumns: { xs: 'repeat(6, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 1fr 0.7fr' },
@@ -832,7 +880,8 @@ const Deals: React.FC = () => {
                   px: { xs: 1, md: 1.5 },
                   py: { xs: 0.5, md: 0.75 },
                   '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 1)' : '#ffffff',
+                    bgcolor: getStageCardColor(deal.stage),
+                    opacity: 0.9,
                     boxShadow: theme.palette.mode === 'dark' ? '0 2px 6px rgba(0,0,0,0.3)' : '0 2px 6px rgba(0,0,0,0.1)',
                   },
                 }}
@@ -859,7 +908,7 @@ const Deals: React.FC = () => {
                         sx={{ 
                           fontWeight: 500, 
                           color: theme.palette.text.primary,
-                          fontSize: { xs: '0.6875rem', md: '0.75rem' },
+                          fontSize: { xs: '0.8125rem', md: '0.875rem' },
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
@@ -891,7 +940,7 @@ const Deals: React.FC = () => {
                               variant="caption" 
                               sx={{ 
                                 color: theme.palette.text.secondary,
-                                fontSize: { xs: '0.5625rem', md: '0.625rem' },
+                                fontSize: { xs: '0.6875rem', md: '0.75rem' },
                                 textTransform: 'capitalize',
                               }}
                             >
@@ -904,7 +953,7 @@ const Deals: React.FC = () => {
                             variant="caption" 
                             sx={{ 
                               color: theme.palette.text.secondary,
-                              fontSize: { xs: '0.5625rem', md: '0.625rem' },
+                              fontSize: { xs: '0.6875rem', md: '0.75rem' },
                             }}
                           >
                             --
@@ -919,7 +968,7 @@ const Deals: React.FC = () => {
                       variant="body2" 
                       sx={{ 
                         color: theme.palette.text.primary,
-                      fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                      fontSize: { xs: '0.75rem', md: '0.8125rem' },
                         fontWeight: 500,
                       }}
                     >
@@ -938,10 +987,10 @@ const Deals: React.FC = () => {
                       disabled={updatingStage[deal.id]}
                       sx={{ 
                         fontWeight: 500,
-                      fontSize: { xs: '0.5625rem', md: '0.625rem' },
-                      height: { xs: 16, md: 18 },
+                      fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                      height: { xs: 22, md: 24 },
                       cursor: 'pointer',
-                        bgcolor: getStageColor(deal.stage).bg,
+                        bgcolor: getStageCardColor(deal.stage),
                         color: getStageColor(deal.stage).color,
                         '&:hover': {
                           opacity: 0.8,
@@ -999,7 +1048,7 @@ const Deals: React.FC = () => {
                         variant="body2" 
                         sx={{ 
                           color: theme.palette.text.primary,
-                        fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                        fontSize: { xs: '0.75rem', md: '0.8125rem' },
                         fontWeight: 400,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -1010,7 +1059,7 @@ const Deals: React.FC = () => {
                         {deal.Contact.firstName} {deal.Contact.lastName}
                       </Typography>
                     ) : (
-                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.625rem', md: '0.6875rem' }, fontWeight: 400 }}>
+                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.8125rem' }, fontWeight: 400 }}>
                         --
                       </Typography>
                     )}
@@ -1021,7 +1070,7 @@ const Deals: React.FC = () => {
                         variant="body2" 
                         sx={{ 
                           color: theme.palette.text.primary,
-                        fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                        fontSize: { xs: '0.75rem', md: '0.8125rem' },
                         fontWeight: 400,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -1032,7 +1081,7 @@ const Deals: React.FC = () => {
                         {deal.Company.name}
                       </Typography>
                     ) : (
-                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.625rem', md: '0.6875rem' }, fontWeight: 400 }}>
+                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.8125rem' }, fontWeight: 400 }}>
                         --
                       </Typography>
                     )}
@@ -1517,12 +1566,17 @@ const Deals: React.FC = () => {
                     height: 'calc(100vh - 200px)',
                     maxHeight: 'calc(100vh - 200px)',
                     overflow: 'hidden',
+                    borderRadius: 2,
+                    bgcolor: getStageCardColor(stage.id),
+                    boxShadow: theme.palette.mode === 'dark' 
+                      ? '0 2px 8px rgba(0,0,0,0.3)' 
+                      : '0 2px 8px rgba(0,0,0,0.08)',
                   }}
                 >
                   {/* Stage Header */}
                   <Box
                     sx={{
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
+                      bgcolor: 'transparent',
                       borderRadius: '8px 8px 0 0',
                       p: 1.5,
                       mb: 0,
@@ -1604,16 +1658,15 @@ const Deals: React.FC = () => {
                       overflowY: 'auto',
                       overflowX: 'hidden',
                       minHeight: 0,
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : '#FAFAFA',
+                      bgcolor: dragOverStage === stage.id 
+                        ? (theme.palette.mode === 'dark' 
+                          ? 'rgba(255, 255, 255, 0.1)' 
+                          : 'rgba(0, 0, 0, 0.04)')
+                        : 'transparent',
                       borderRadius: '0 0 8px 8px',
                       p: 1.5,
                       pt: 1.5,
                       transition: 'all 0.3s',
-                      backgroundColor: dragOverStage === stage.id 
-                        ? (theme.palette.mode === 'dark' 
-                          ? 'rgba(255, 255, 255, 0.1)' 
-                          : 'rgba(0, 0, 0, 0.04)')
-                        : (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : '#FAFAFA'),
                       border: dragOverStage === stage.id 
                         ? `2px dashed ${stage.color}` 
                         : '2px dashed transparent',
