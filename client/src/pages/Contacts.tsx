@@ -196,10 +196,19 @@ const Contacts: React.FC = () => {
 
   useEffect(() => {
     fetchContacts();
-    fetchUsers();
-  }, [search]);
+    // Solo intentar obtener usuarios si el usuario actual es admin
+    if (user?.role === 'admin') {
+      fetchUsers();
+    }
+  }, [search, user?.role]);
 
   const fetchUsers = async () => {
+    // Verificar nuevamente el rol antes de hacer la petición
+    if (user?.role !== 'admin') {
+      setUsers([]);
+      return;
+    }
+
     try {
       const response = await api.get('/users');
       setUsers(response.data || []);
@@ -212,6 +221,7 @@ const Contacts: React.FC = () => {
         return;
       }
       console.error('Error fetching users:', error);
+      setUsers([]);
     }
   };
 
