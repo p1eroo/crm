@@ -203,7 +203,14 @@ const Contacts: React.FC = () => {
     try {
       const response = await api.get('/users');
       setUsers(response.data || []);
-    } catch (error) {
+    } catch (error: any) {
+      // Si es un error de permisos (403), no mostrar error en consola
+      // Solo usuarios admin pueden acceder a /users
+      if (error.response?.status === 403 || error.isPermissionError) {
+        // Silenciar el error, simplemente no cargar usuarios
+        setUsers([]);
+        return;
+      }
       console.error('Error fetching users:', error);
     }
   };
