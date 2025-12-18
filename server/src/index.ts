@@ -55,9 +55,35 @@ const getLocalIP = (): string => {
   return 'localhost';
 };
 
-// Middleware CORS - Permitir todas las conexiones desde la red
+// Middleware CORS - Permitir conexiones desde la URL de producción y desarrollo
 app.use(cors({
-  origin: true, // Permitir cualquier origen (localhost, IPs locales, etc.)
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Permitir requests sin origin (como Postman, mobile apps, etc.)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // URLs permitidas
+    const allowedOrigins = [
+      'https://crm.taximonterrico.com',
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001',
+    ];
+    
+    // Permitir también cualquier IP local para desarrollo
+    const isLocalhost = /^http:\/\/localhost(:\d+)?$/.test(origin) || 
+                       /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin) ||
+                       /^http:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(origin) ||
+                       /^http:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/.test(origin);
+    
+    if (allowedOrigins.includes(origin) || isLocalhost) {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
+    }
+  },
   credentials: true, // Permitir cookies y credenciales
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
