@@ -4,8 +4,11 @@ import axios from 'axios';
 const getApiUrl = () => {
   // Si hay una variable de entorno, usarla
   if (process.env.REACT_APP_API_URL) {
+    console.log('🌐 Usando REACT_APP_API_URL del .env:', process.env.REACT_APP_API_URL);
     return process.env.REACT_APP_API_URL;
   }
+  
+  console.log('🌐 No se encontró REACT_APP_API_URL, detectando automáticamente...');
   
   const hostname = window.location.hostname;
   const protocol = window.location.protocol; // 'https:' o 'http:'
@@ -69,6 +72,7 @@ const getApiUrl = () => {
 
 // URL inicial
 const API_URL = getApiUrl();
+console.log('🔗 URL base de la API configurada:', API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
@@ -115,10 +119,18 @@ api.interceptors.request.use(
     // Agregar token de autenticación si existe
     const token = localStorage.getItem('token');
     if (token) {
+      // Asegurarse de que el header Authorization esté configurado correctamente
+      config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
       console.log('🔑 Token agregado a petición:', config.url);
     } else {
       console.warn('⚠️ No hay token disponible para petición:', config.url);
+      // No cerrar sesión si falta el token en peticiones que no requieren autenticación
+      const isPublicEndpoint = config.url?.includes('/auth/login') || 
+                                config.url?.includes('/auth/login-monterrico');
+      if (!isPublicEndpoint) {
+        console.warn('⚠️ Petición sin token a endpoint que probablemente requiere autenticación:', config.url);
+      }
     }
     
     console.log('📤 Petición a:', config.baseURL + (config.url || ''), 'con token:', token ? 'Sí' : 'No');
@@ -175,6 +187,17 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const url = error.config?.url || '';
+    const errorCode = error.code;
+    
+    // Log detallado para diagnóstico
+    console.log('🔍 [Interceptor] Error capturado:', {
+      status,
+      url,
+      errorCode,
+      message: error.message,
+      hasResponse: !!error.response,
+      pathname: window.location.pathname
+    });
     
     // Solo manejar errores 401/403, ignorar 404 (normal si no hay datos)
     if (status === 401 || status === 403) {
@@ -183,13 +206,26 @@ api.interceptors.response.use(
       const isLoginRequest = url.includes('/auth/login') || url.includes('/auth/login-monterrico');
       const isAuthMeRequest = url.includes('/auth/me'); // No redirigir si falla /auth/me
       const isGoogleTokenRequest = url.includes('/google/token'); // No redirigir si falla /google/token
+      const isGoogleCalendarRequest = url.includes('/google-calendar'); // No redirigir si falla /google-calendar
+      
+      console.log('🔍 [Interceptor] Verificando si debe cerrar sesión:', {
+        isLoginPage,
+        isLoginRequest,
+        isAuthMeRequest,
+        isGoogleTokenRequest,
+        isGoogleCalendarRequest,
+        status
+      });
       
       // Solo redirigir si NO es una petición de verificación y NO estamos en login
-      if (!isLoginPage && !isLoginRequest && !isAuthMeRequest && !isGoogleTokenRequest) {
+      if (!isLoginPage && !isLoginRequest && !isAuthMeRequest && !isGoogleTokenRequest && !isGoogleCalendarRequest) {
         const token = localStorage.getItem('token');
+        console.log('🔍 [Interceptor] Token presente:', !!token);
+        
         // Si no hay token O si hay token pero la petición falló con 401/403 (token inválido/expirado)
         if (!token || (token && (status === 401 || status === 403))) {
-          console.log('🔒 Token inválido o expirado, redirigiendo a login');
+          console.log('🔒 [Interceptor] Token inválido o expirado, redirigiendo a login');
+          console.log('🔒 [Interceptor] Detalles:', { status, url, hasToken: !!token });
           localStorage.removeItem('user');
           localStorage.removeItem('token');
           delete api.defaults.headers.common['Authorization'];
@@ -199,13 +235,16 @@ api.interceptors.response.use(
           // No rechazar el error para evitar que aparezca en la consola
           return Promise.resolve({ data: null, status: 401 });
         }
+      } else {
+        console.log('🔍 [Interceptor] No se cierra sesión porque es una petición de verificación o estamos en login');
       }
       // Para errores 401/403 en peticiones de verificación, no mostrar error en consola
       return Promise.resolve({ data: null, status });
     }
     
     // Para otros errores, mostrar información en consola solo si no es 404
-    if (status !== 404) {
+    // También ignorar errores de red (ERR_NETWORK) que no tienen status
+    if (status !== 404 && status !== undefined) {
       console.error('❌ Error en petición:', error.config?.baseURL + (error.config?.url || ''));
       console.error('❌ Detalles del error:', {
         message: error.message,
@@ -213,6 +252,9 @@ api.interceptors.response.use(
         response: status,
         responseData: error.response?.data,
       });
+    } else if (errorCode === 'ERR_NETWORK' || errorCode === 'ERR_INTERNET_DISCONNECTED') {
+      // Errores de red no deberían cerrar la sesión
+      console.warn('⚠️ Error de red (no se cierra sesión):', error.message);
     }
     
     return Promise.reject(error);

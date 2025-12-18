@@ -60,6 +60,7 @@ app.use(cors({
   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     // Permitir requests sin origin (como Postman, mobile apps, etc.)
     if (!origin) {
+      console.log('🌐 [CORS] Request sin origin, permitido');
       return callback(null, true);
     }
     
@@ -78,9 +79,14 @@ app.use(cors({
                        /^http:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(origin) ||
                        /^http:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/.test(origin);
     
-    if (allowedOrigins.includes(origin) || isLocalhost) {
+    const isAllowed = allowedOrigins.includes(origin) || isLocalhost;
+    
+    if (isAllowed) {
+      console.log('✅ [CORS] Origen permitido:', origin);
       callback(null, true);
     } else {
+      console.error('❌ [CORS] Origen NO permitido:', origin);
+      console.error('📋 [CORS] Orígenes permitidos:', allowedOrigins);
       callback(new Error('No permitido por CORS'));
     }
   },
