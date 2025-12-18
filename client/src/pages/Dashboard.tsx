@@ -282,9 +282,21 @@ const Dashboard: React.FC = () => {
           endDate: endDate.toISOString(),
         },
       });
+      
+      // Validar que la respuesta sea un objeto JSON válido
+      if (typeof response.data === 'string' && (response.data.includes('<!doctype') || response.data.includes('<!DOCTYPE'))) {
+        throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica la configuración del proxy reverso.');
+      }
+      
       console.log('✅ Dashboard stats recibidos:', response.data);
       console.log('Deals por etapa:', response.data.deals?.byStage);
-      setStats(response.data);
+      
+      // Validar que response.data sea un objeto antes de establecerlo
+      if (response.data && typeof response.data === 'object' && !Array.isArray(response.data)) {
+        setStats(response.data);
+      } else {
+        throw new Error('Respuesta inválida del servidor: se esperaba un objeto JSON');
+      }
     } catch (error: any) {
       console.error('❌ Error fetching stats:', error);
       console.error('❌ Error status:', error.response?.status);
@@ -319,7 +331,17 @@ const Dashboard: React.FC = () => {
       console.log('📋 Token disponible para fetchTasks:', token ? 'Sí' : 'No');
       
       const response = await api.get('/tasks?limit=10');
-      const tasksData = response.data.tasks || response.data || [];
+      
+      // Validar que la respuesta sea un array válido
+      let tasksData: any[] = [];
+      if (Array.isArray(response.data)) {
+        tasksData = response.data;
+      } else if (response.data?.tasks && Array.isArray(response.data.tasks)) {
+        tasksData = response.data.tasks;
+      } else if (response.data && typeof response.data === 'object') {
+        // Si es un objeto pero no tiene la propiedad tasks, usar array vacío
+        tasksData = [];
+      }
       setTasks(tasksData.slice(0, 5)); // Limitar a 5 tareas para el dashboard
     } catch (error: any) {
       console.error('❌ Error fetching tasks:', error);

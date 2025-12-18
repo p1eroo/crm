@@ -148,7 +148,17 @@ const Header: React.FC = () => {
         const tasksResponse = await api.get('/tasks', {
           params: { limit: 100 },
         });
-        const tasks = tasksResponse.data.tasks || tasksResponse.data || [];
+        
+        // Validar que la respuesta sea un array
+        let tasks: any[] = [];
+        if (Array.isArray(tasksResponse.data)) {
+          tasks = tasksResponse.data;
+        } else if (tasksResponse.data?.tasks && Array.isArray(tasksResponse.data.tasks)) {
+          tasks = tasksResponse.data.tasks;
+        } else if (tasksResponse.data && typeof tasksResponse.data === 'object') {
+          // Si es un objeto pero no tiene la propiedad tasks, intentar convertir a array
+          tasks = [];
+        }
         
         // Filtrar tareas que vencen en los próximos 7 días y no están completadas
         const upcomingTasks = tasks.filter((task: any) => {

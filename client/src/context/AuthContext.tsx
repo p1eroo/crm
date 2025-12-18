@@ -53,7 +53,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           if (ipRegex.test(hostname)) {
             return `${isHttps ? 'https' : 'http'}://${hostname}:5000/api`;
           }
-          return `${isHttps ? 'https' : 'http'}://${hostname}:5000/api`;
+          
+          // Si es un dominio en producción (HTTPS), usar el subdominio de la API
+          // En desarrollo (HTTP), usar el puerto 5000
+          if (isHttps) {
+            if (hostname === 'crm.taximonterrico.com') {
+              return 'https://api-crm.taximonterrico.com/api';
+            } else {
+              return `https://${hostname}/api`;
+            }
+          } else {
+            return `http://${hostname}:5000/api`;
+          }
         };
         
         // Intentar obtener datos actualizados del backend
@@ -151,10 +162,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return `${isHttps ? 'https' : 'http'}://${hostname}:5000/api`;
         }
         
-        // Si es un dominio en producción (HTTPS), usar el mismo dominio sin puerto
+        // Si es un dominio en producción (HTTPS), usar el subdominio de la API
         // En desarrollo (HTTP), usar el puerto 5000
         if (isHttps) {
-          return `https://${hostname}/api`;
+          if (hostname === 'crm.taximonterrico.com') {
+            return 'https://api-crm.taximonterrico.com/api';
+          } else {
+            return `https://${hostname}/api`;
+          }
         } else {
           return `http://${hostname}:5000/api`;
         }

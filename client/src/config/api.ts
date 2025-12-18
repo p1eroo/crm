@@ -39,16 +39,24 @@ const getApiUrl = () => {
     return url;
   }
   
-  // Si es un dominio en producción (HTTPS), usar el mismo dominio sin puerto
-  // (el proxy reverso maneja el enrutamiento al backend)
+  // Si es un dominio en producción (HTTPS), usar el subdominio de la API
   // Si es desarrollo (HTTP), usar el puerto 5000
   if (isHttps) {
-    // En producción con HTTPS, el proxy reverso maneja el enrutamiento
-    const url = `https://${hostname}/api`;
-    console.log('🌐 Detectado dominio en producción:', hostname);
-    console.log('🔒 Protocolo: HTTPS');
-    console.log('🔗 URL de API configurada:', url);
-    return url;
+    // En producción con HTTPS, usar el subdominio api-crm.taximonterrico.com
+    if (hostname === 'crm.taximonterrico.com') {
+      const url = 'https://api-crm.taximonterrico.com/api';
+      console.log('🌐 Detectado dominio en producción:', hostname);
+      console.log('🔒 Protocolo: HTTPS');
+      console.log('🔗 URL de API configurada:', url);
+      return url;
+    } else {
+      // Para otros dominios HTTPS, usar el mismo dominio sin puerto
+      const url = `https://${hostname}/api`;
+      console.log('🌐 Detectado dominio en producción:', hostname);
+      console.log('🔒 Protocolo: HTTPS');
+      console.log('🔗 URL de API configurada:', url);
+      return url;
+    }
   } else {
     // En desarrollo, usar el puerto 5000
     const url = `http://${hostname}:5000/api`;
@@ -90,10 +98,14 @@ api.interceptors.request.use(
         // Para IPs, usar el puerto 5000
         config.baseURL = `${isHttps ? 'https' : 'http'}://${currentHostname}:5000/api`;
       } else {
-        // Para dominios en producción (HTTPS), usar el mismo dominio sin puerto
+        // Para dominios en producción (HTTPS), usar el subdominio de la API
         // En desarrollo (HTTP), usar el puerto 5000
         if (isHttps) {
-          config.baseURL = `https://${currentHostname}/api`;
+          if (currentHostname === 'crm.taximonterrico.com') {
+            config.baseURL = 'https://api-crm.taximonterrico.com/api';
+          } else {
+            config.baseURL = `https://${currentHostname}/api`;
+          }
         } else {
           config.baseURL = `http://${currentHostname}:5000/api`;
         }
@@ -122,6 +134,42 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => {
     console.log('✅ Respuesta recibida de:', response.config.baseURL + (response.config.url || ''));
+    
+    // Validar que la respuesta sea JSON y no HTML
+    const contentType = response.headers['content-type'] || '';
+    const responseData = response.data;
+    
+    // Si la respuesta parece ser HTML (común cuando el proxy no está configurado)
+    if (
+      typeof responseData === 'string' && 
+      (responseData.trim().startsWith('<!doctype') || 
+       responseData.trim().startsWith('<!DOCTYPE') ||
+       responseData.includes('<html'))
+    ) {
+      console.error('❌ Error: El servidor devolvió HTML en lugar de JSON. Verifica la configuración del proxy reverso.');
+      return Promise.reject({
+        message: 'Error de configuración del servidor: se recibió HTML en lugar de JSON. Verifica que el proxy reverso esté configurado correctamente para redirigir /api/* al backend.',
+        code: 'ERR_HTML_RESPONSE',
+        response: {
+          status: 500,
+          data: 'HTML response received instead of JSON'
+        }
+      });
+    }
+    
+    // Si el content-type no es JSON pero la respuesta parece ser texto HTML
+    if (!contentType.includes('application/json') && typeof responseData === 'string' && responseData.includes('<html')) {
+      console.error('❌ Error: Content-Type incorrecto. Se esperaba JSON pero se recibió HTML.');
+      return Promise.reject({
+        message: 'Error de configuración del servidor: Content-Type incorrecto.',
+        code: 'ERR_INVALID_CONTENT_TYPE',
+        response: {
+          status: 500,
+          data: 'Invalid content type'
+        }
+      });
+    }
+    
     return response;
   },
   (error) => {
