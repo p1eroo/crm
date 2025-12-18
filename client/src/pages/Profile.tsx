@@ -20,17 +20,11 @@ import {
   TableHead,
   TableRow,
   Chip,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  FormHelperText,
 } from '@mui/material';
 import {
   Visibility,
   VisibilityOff,
   Edit,
-  Info,
   Email,
   Phone,
   CalendarToday,
@@ -277,7 +271,7 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <Box sx={{ maxWidth: 1200, mx: 'auto', px: { xs: 1.5, sm: 2, md: 2.5 }, pt: { xs: 2, sm: 2.5 }, pb: { xs: 2, sm: 3 } }}>
+    <Box sx={{ maxWidth: 1200, mx: 'auto', pb: { xs: 2, sm: 3, md: 4 } }}>
       <Box sx={{ mb: 2 }}>
         <Typography variant="h4" sx={{ mb: 1, fontWeight: 700, color: '#1a1a1a' }}>
           General

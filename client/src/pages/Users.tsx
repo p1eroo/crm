@@ -20,7 +20,6 @@ import {
   Switch,
   Tooltip,
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogContentText,
   DialogActions,
@@ -28,7 +27,6 @@ import {
   useTheme,
 } from '@mui/material';
 import {
-  Edit,
   CheckCircle,
   Cancel,
   Delete,
@@ -160,26 +158,6 @@ const Users: React.FC = () => {
     setUserToDelete(null);
   };
 
-  const getRoleLabel = (role: string) => {
-    const labels: { [key: string]: string } = {
-      admin: 'Administrador',
-      jefe_comercial: 'Jefe Comercial',
-      manager: 'Manager',
-      user: 'Usuario',
-    };
-    return labels[role] || role;
-  };
-
-  const getRoleColor = (role: string) => {
-    const colors: { [key: string]: string } = {
-      admin: '#d32f2f',
-      jefe_comercial: '#1976d2',
-      manager: '#ed6c02',
-      user: '#2e7d32',
-    };
-    return colors[role] || '#757575';
-  };
-
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
   };
@@ -196,9 +174,7 @@ const Users: React.FC = () => {
     <Box sx={{ 
       bgcolor: theme.palette.background.default, 
       minHeight: '100vh',
-      pb: { xs: 3, sm: 6, md: 8 },
-      px: { xs: 0, sm: 0, md: 0.25, lg: 0.5 },
-      pt: { xs: 0.25, sm: 0.5, md: 1 },
+      pb: { xs: 2, sm: 3, md: 4 },
     }}>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 1 }}>

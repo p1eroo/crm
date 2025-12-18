@@ -22,10 +22,8 @@ import {
   Menu,
   useTheme,
   Collapse,
-  Drawer,
-  Paper,
 } from '@mui/material';
-import { Add, Edit, Delete, Search, AttachMoney, TrendingUp, TrendingDown, Computer, Visibility, ViewList, AccountTree, Person, CalendarToday, DragIndicator, Close, FileDownload, UploadFile, FilterList, ExpandMore, Remove, Bolt, Business } from '@mui/icons-material';
+import { Add, Delete, AttachMoney, Visibility, ViewList, AccountTree, CalendarToday, Close, FileDownload, UploadFile, FilterList, ExpandMore, Remove, Bolt, Business } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
@@ -55,7 +53,7 @@ const Deals: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
-  const [search, setSearch] = useState('');
+  const [search] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [formData, setFormData] = useState({
     name: '',
@@ -74,7 +72,6 @@ const Deals: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [stageMenuAnchor, setStageMenuAnchor] = useState<{ [key: number]: HTMLElement | null }>({});
   const [updatingStage, setUpdatingStage] = useState<{ [key: number]: boolean }>({});
-  const [filterStage, setFilterStage] = useState<string | null>(null); // Filtro de etapa activo
   const [viewMode, setViewMode] = useState<'list' | 'funnel'>('list'); // Modo de vista: lista o funnel
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [selectedStages, setSelectedStages] = useState<string[]>([]);
@@ -82,7 +79,7 @@ const Deals: React.FC = () => {
   const [stagesExpanded, setStagesExpanded] = useState(true);
   const [ownerFilterExpanded, setOwnerFilterExpanded] = useState(true);
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage] = useState(10);
   const [importing, setImporting] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   
@@ -193,22 +190,6 @@ const Deals: React.FC = () => {
     page * rowsPerPage + rowsPerPage
   );
 
-  // Calcular estadísticas basadas en deals filtrados
-  const totalDeals = filteredDeals.length;
-  const wonDeals = deals.filter(d => d.stage === 'cierre_ganado' || d.stage === 'closed won' || d.stage === 'won').length;
-  
-  // El valor total debe reflejar los deals filtrados, no todos
-  const totalValue = filteredDeals.reduce((sum, deal) => {
-    const amount = parseAmount(deal.amount);
-    return sum + amount;
-  }, 0);
-  
-  const wonValue = deals
-    .filter(d => d.stage === 'cierre_ganado' || d.stage === 'closed won' || d.stage === 'won')
-    .reduce((sum, deal) => {
-      const amount = parseAmount(deal.amount);
-      return sum + amount;
-    }, 0);
 
   // Función para obtener iniciales
   const getInitials = (firstName?: string, lastName?: string) => {
@@ -633,9 +614,7 @@ const Deals: React.FC = () => {
     <Box sx={{ 
       bgcolor: theme.palette.background.default, 
       minHeight: '100vh',
-      pb: { xs: 3, sm: 6, md: 8 },
-      px: { xs: 0, sm: 0, md: 0.25, lg: 0.5 },
-      pt: { xs: 0.25, sm: 0.5, md: 1 },
+      pb: { xs: 2, sm: 3, md: 4 },
       width: '100%',
       maxWidth: '100%',
         overflow: 'hidden',

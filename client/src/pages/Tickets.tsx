@@ -7,7 +7,6 @@ import {
   IconButton,
   TextField,
   Chip,
-  Menu,
   MenuItem,
   Divider,
   Link,
@@ -22,7 +21,6 @@ import {
   Avatar,
   Tooltip,
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogActions,
   CircularProgress,
@@ -74,7 +72,7 @@ interface Ticket {
 const Tickets: React.FC = () => {
   const theme = useTheme();
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -171,9 +169,7 @@ const Tickets: React.FC = () => {
     <Box sx={{ 
       bgcolor: theme.palette.background.default, 
       minHeight: '100vh',
-      pb: { xs: 3, sm: 6, md: 8 },
-      px: { xs: 0, sm: 0, md: 0.25, lg: 0.5 },
-      pt: { xs: 0.25, sm: 0.5, md: 1 },
+      pb: { xs: 2, sm: 3, md: 4 },
     }}>
       {/* Cards de resumen */}
       <Card sx={{ 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { formatDatePeru, formatDateInputPeru, createDatePeru } from '../utils/dateUtils';
+import { formatDatePeru } from '../utils/dateUtils';
 import {
   Box,
   Typography,
@@ -23,8 +23,6 @@ import {
   MenuItem,
   Tabs,
   Tab,
-  FormControl,
-  InputLabel,
   Select,
   Popover,
   Checkbox,
@@ -44,22 +42,18 @@ import {
   RadioGroup,
   Radio,
   FormControlLabel,
-  FormLabel,
 } from '@mui/material';
 import {
   Note,
   Email,
   Phone,
-  AttachMoney,
   Person,
   Business,
   CalendarToday,
-  TrendingUp,
   Assignment,
   Search,
   MoreVert,
   Close,
-  CheckCircle,
   ChevronLeft,
   ChevronRight,
   FormatBold,
@@ -80,8 +74,6 @@ import {
   FormatAlignCenter,
   FormatAlignRight,
   FormatAlignJustify,
-  Cancel,
-  Check,
   Event,
   KeyboardArrowRight,
   Edit,
@@ -89,7 +81,6 @@ import {
   OpenInNew,
   ContentCopy,
   Delete,
-  Settings,
 } from '@mui/icons-material';
 import api from '../config/api';
 import axios from 'axios';
@@ -97,7 +88,7 @@ import { taxiMonterricoColors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import negocioLogo from '../assets/negocio.png';
 
-interface DealDetail {
+interface DealDetailData {
   id: number;
   name: string;
   amount: number;
@@ -133,7 +124,7 @@ const DealDetail: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const theme = useTheme();
-  const [deal, setDeal] = useState<DealDetail | null>(null);
+  const [deal, setDeal] = useState<DealDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<any[]>([]);
   const [dealContacts, setDealContacts] = useState<any[]>([]);
@@ -273,12 +264,116 @@ const DealDetail: React.FC = () => {
   const [allUsersFilter, setAllUsersFilter] = useState<string>('Todos los usuarios');
   const [allUsersMenuAnchor, setAllUsersMenuAnchor] = useState<null | HTMLElement>(null);
 
+  const fetchDeal = useCallback(async () => {
+    try {
+      const response = await api.get(`/deals/${id}`);
+      if (!response.data) {
+        setDeal(null);
+        setLoading(false);
+        return;
+      }
+      setDeal(response.data);
+      
+      // Obtener todos los contactos relacionados al deal (relación muchos a muchos)
+      // Solo usar la relación muchos a muchos (Contacts), no el contacto principal (Contact)
+      if (response.data.Contacts && Array.isArray(response.data.Contacts)) {
+        // Usar siempre la lista de Contacts, incluso si está vacía
+        setDealContacts(response.data.Contacts);
+      } else {
+        // Si no hay contactos en la relación muchos a muchos, dejar el array vacío
+        setDealContacts([]);
+      }
+
+      // Obtener todas las empresas relacionadas al deal (relación muchos a muchos)
+      // Solo usar la relación muchos a muchos (Companies), no la empresa principal (Company)
+      if (response.data.Companies && Array.isArray(response.data.Companies)) {
+        // Usar siempre la lista de Companies, incluso si está vacía
+        setDealCompanies(response.data.Companies);
+      } else {
+        // Si no hay empresas en la relación muchos a muchos, dejar el array vacío
+        setDealCompanies([]);
+      }
+
+      // Obtener todos los negocios relacionados al deal (relación muchos a muchos)
+      if (response.data.Deals && Array.isArray(response.data.Deals)) {
+        setDealDeals(response.data.Deals);
+      } else {
+        setDealDeals([]);
+      }
+    } catch (error: any) {
+      console.error('Error fetching deal:', error);
+      if (error.response?.status === 404) {
+        setDeal(null);
+      } else {
+        // Si hay un error pero no es 404, mantener el deal si existe
+        // pero limpiar los contactos y empresas
+        setDealContacts([]);
+        setDealCompanies([]);
+        setDealDeals([]);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  const fetchActivities = useCallback(async () => {
+    if (!id) return;
+    
+    try {
+      const response = await api.get('/activities', {
+        params: { dealId: id },
+      });
+      const activitiesData = response.data.activities || response.data || [];
+      
+      // Filtrar solo actividades que realmente pertenecen a este negocio
+      const dealIdNum = parseInt(id, 10);
+      const filteredActivities = activitiesData.filter((activity: any) => {
+        return activity.dealId === dealIdNum || activity.dealId === id;
+      });
+      
+      // Obtener tareas asociadas
+      const tasksResponse = await api.get('/tasks', {
+        params: { dealId: id },
+      });
+      const tasksData = tasksResponse.data.tasks || tasksResponse.data || [];
+      
+      // Filtrar solo tareas que realmente pertenecen a este negocio
+      const filteredTasks = tasksData.filter((task: any) => {
+        return task.dealId === dealIdNum || task.dealId === id;
+      });
+      
+      const tasksAsActivities = filteredTasks.map((task: any) => ({
+        id: task.id,
+        type: 'task',
+        subject: task.title,
+        description: task.description,
+        dueDate: task.dueDate,
+        createdAt: task.createdAt,
+        User: task.CreatedBy || task.AssignedTo,
+        isTask: true,
+        status: task.status,
+        priority: task.priority,
+        dealId: task.dealId,
+      }));
+      
+      const allActivities = [...filteredActivities, ...tasksAsActivities].sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
+        const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
+        return dateB - dateA;
+      });
+      
+      setActivities(allActivities);
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+    }
+  }, [id]);
+
   useEffect(() => {
     if (id) {
       fetchDeal();
       fetchActivities();
     }
-  }, [id]);
+  }, [id, fetchDeal, fetchActivities]);
 
   useEffect(() => {
     if (descriptionEditorRef.current && taskOpen) {
@@ -330,57 +425,6 @@ const DealDetail: React.FC = () => {
     };
   }, [updateActiveFormats, taskOpen]);
 
-  const fetchDeal = async () => {
-    try {
-      const response = await api.get(`/deals/${id}`);
-      if (!response.data) {
-        setDeal(null);
-        setLoading(false);
-        return;
-      }
-      setDeal(response.data);
-      
-      // Obtener todos los contactos relacionados al deal (relación muchos a muchos)
-      // Solo usar la relación muchos a muchos (Contacts), no el contacto principal (Contact)
-      if (response.data.Contacts && Array.isArray(response.data.Contacts)) {
-        // Usar siempre la lista de Contacts, incluso si está vacía
-        setDealContacts(response.data.Contacts);
-      } else {
-        // Si no hay contactos en la relación muchos a muchos, dejar el array vacío
-        setDealContacts([]);
-      }
-
-      // Obtener todas las empresas relacionadas al deal (relación muchos a muchos)
-      // Solo usar la relación muchos a muchos (Companies), no la empresa principal (Company)
-      if (response.data.Companies && Array.isArray(response.data.Companies)) {
-        // Usar siempre la lista de Companies, incluso si está vacía
-        setDealCompanies(response.data.Companies);
-      } else {
-        // Si no hay empresas en la relación muchos a muchos, dejar el array vacío
-        setDealCompanies([]);
-      }
-
-      // Obtener todos los negocios relacionados al deal (relación muchos a muchos)
-      if (response.data.Deals && Array.isArray(response.data.Deals)) {
-        setDealDeals(response.data.Deals);
-      } else {
-        setDealDeals([]);
-      }
-    } catch (error: any) {
-      console.error('Error fetching deal:', error);
-      if (error.response?.status === 404) {
-        setDeal(null);
-      } else {
-        // Si hay un error pero no es 404, mantener el deal si existe
-        // pero limpiar los contactos y empresas
-        setDealContacts([]);
-        setDealCompanies([]);
-        setDealDeals([]);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchAllCompanies = async () => {
     try {
@@ -500,7 +544,7 @@ const DealDetail: React.FC = () => {
       setSaving(true);
       // Asociar todos los contactos seleccionados al deal usando la relación muchos a muchos
       if (id && selectedExistingContacts.length > 0) {
-        const response = await api.post(`/deals/${id}/contacts`, { contactIds: selectedExistingContacts });
+        await api.post(`/deals/${id}/contacts`, { contactIds: selectedExistingContacts });
         // Recargar el deal para obtener los contactos actualizados
         await fetchDeal();
         setAddContactDialogOpen(false);
@@ -556,7 +600,7 @@ const DealDetail: React.FC = () => {
       setSaving(true);
       // Asociar todas las empresas seleccionadas al deal usando la relación muchos a muchos
       if (id && selectedExistingCompanies.length > 0) {
-        const response = await api.post(`/deals/${id}/companies`, { companyIds: selectedExistingCompanies });
+        await api.post(`/deals/${id}/companies`, { companyIds: selectedExistingCompanies });
         // Recargar el deal para obtener las empresas actualizadas
         await fetchDeal();
         setAddCompanyDialogOpen(false);
@@ -677,57 +721,6 @@ const DealDetail: React.FC = () => {
     }
   };
 
-  const fetchActivities = async () => {
-    if (!id) return;
-    
-    try {
-      const response = await api.get('/activities', {
-        params: { dealId: id },
-      });
-      const activitiesData = response.data.activities || response.data || [];
-      
-      // Filtrar solo actividades que realmente pertenecen a este negocio
-      const dealIdNum = parseInt(id, 10);
-      const filteredActivities = activitiesData.filter((activity: any) => {
-        return activity.dealId === dealIdNum || activity.dealId === id;
-      });
-      
-      // Obtener tareas asociadas
-      const tasksResponse = await api.get('/tasks', {
-        params: { dealId: id },
-      });
-      const tasksData = tasksResponse.data.tasks || tasksResponse.data || [];
-      
-      // Filtrar solo tareas que realmente pertenecen a este negocio
-      const filteredTasks = tasksData.filter((task: any) => {
-        return task.dealId === dealIdNum || task.dealId === id;
-      });
-      
-      const tasksAsActivities = filteredTasks.map((task: any) => ({
-        id: task.id,
-        type: 'task',
-        subject: task.title,
-        description: task.description,
-        dueDate: task.dueDate,
-        createdAt: task.createdAt,
-        User: task.CreatedBy || task.AssignedTo,
-        isTask: true,
-        status: task.status,
-        priority: task.priority,
-        dealId: task.dealId,
-      }));
-      
-      const allActivities = [...filteredActivities, ...tasksAsActivities].sort((a: any, b: any) => {
-        const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
-        const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
-        return dateB - dateA;
-      });
-      
-      setActivities(allActivities);
-    } catch (error) {
-      console.error('Error fetching activities:', error);
-    }
-  };
 
   const getInitials = (firstName?: string, lastName?: string) => {
     if (firstName && lastName) {
@@ -792,25 +785,25 @@ const DealDetail: React.FC = () => {
     }
   };
 
-  const getStageColor = (stage: string) => {
-    const colors: { [key: string]: string } = {
-      'lead': '#EF4444',
-      'contacto': '#F59E0B',
-      'reunion_agendada': '#F59E0B',
-      'reunion_efectiva': '#F59E0B',
-      'propuesta_economica': '#3B82F6',
-      'negociacion': '#10B981',
-      'licitacion': '#10B981',
-      'licitacion_etapa_final': '#10B981',
-      'cierre_ganado': '#10B981',
-      'cierre_perdido': '#EF4444',
-      'firma_contrato': '#10B981',
-      'activo': '#10B981',
-      'cliente_perdido': '#EF4444',
-      'lead_inactivo': '#EF4444',
-    };
-    return colors[stage] || '#6B7280';
-  };
+  // const getStageColor = (stage: string) => {
+  //   const colors: { [key: string]: string } = {
+  //     'lead': '#EF4444',
+  //     'contacto': '#F59E0B',
+  //     'reunion_agendada': '#F59E0B',
+  //     'reunion_efectiva': '#F59E0B',
+  //     'propuesta_economica': '#3B82F6',
+  //     'negociacion': '#10B981',
+  //     'licitacion': '#10B981',
+  //     'licitacion_etapa_final': '#10B981',
+  //     'cierre_ganado': '#10B981',
+  //     'cierre_perdido': '#EF4444',
+  //     'firma_contrato': '#10B981',
+  //     'activo': '#10B981',
+  //     'cliente_perdido': '#EF4444',
+  //     'lead_inactivo': '#EF4444',
+  //   };
+  //   return colors[stage] || '#6B7280';
+  // };
 
   const getStageLabel = (stage: string) => {
     const labels: { [key: string]: string } = {
@@ -1077,9 +1070,7 @@ const DealDetail: React.FC = () => {
     <Box sx={{ 
       bgcolor: theme.palette.background.default,
       minHeight: '100vh',
-      pb: { xs: 2, sm: 4, md: 8 },
-      px: { xs: 0, sm: 0, md: 0.25, lg: 0.5 },
-      pt: { xs: 0.25, sm: 0.5, md: 1 },
+      pb: { xs: 2, sm: 3, md: 4 },
     }}>
           {successMessage && (
             <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMessage('')}>

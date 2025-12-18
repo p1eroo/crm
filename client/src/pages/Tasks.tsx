@@ -28,7 +28,7 @@ import {
   Paper,
   useTheme,
 } from '@mui/material';
-import { Add, Edit, Delete, Search, Assignment, CheckCircle, TrendingUp, Computer, Visibility } from '@mui/icons-material';
+import { Add, Delete, Search, Assignment, CheckCircle, TrendingUp, Computer, Visibility } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 
@@ -227,26 +227,6 @@ const Tasks: React.FC = () => {
     setTaskToDelete(null);
   };
 
-  const getStatusColor = (status: string) => {
-    const colors: { [key: string]: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' } = {
-      'not started': 'default',
-      'in progress': 'info',
-      'completed': 'success',
-      'cancelled': 'error',
-    };
-    return colors[status] || 'default';
-  };
-
-  const getPriorityColor = (priority: string) => {
-    const colors: { [key: string]: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' } = {
-      'low': 'default',
-      'medium': 'warning',
-      'high': 'error',
-      'urgent': 'error',
-    };
-    return colors[priority] || 'default';
-  };
-
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -259,9 +239,7 @@ const Tasks: React.FC = () => {
     <Box sx={{ 
       bgcolor: theme.palette.background.default, 
       minHeight: '100vh',
-      pb: { xs: 3, sm: 6, md: 8 },
-      px: { xs: 0, sm: 0, md: 0.25, lg: 0.5 },
-      pt: { xs: 0.25, sm: 0.5, md: 1 },
+      pb: { xs: 2, sm: 3, md: 4 },
     }}>
       {/* Cards de resumen */}
       <Card sx={{ 

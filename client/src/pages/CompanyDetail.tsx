@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -14,10 +14,6 @@ import {
   Menu,
   MenuItem,
   CircularProgress,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
   Link,
   Dialog,
   DialogTitle,
@@ -31,50 +27,27 @@ import {
   TableSortLabel,
   RadioGroup,
   Radio,
-  FormLabel,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Collapse,
   Tooltip,
   Card,
-  useMediaQuery,
   useTheme,
+  Drawer,
 } from '@mui/material';
 import {
-  ArrowBack,
   MoreVert,
   Note,
   Email,
   Phone,
-  LocationOn,
   Assignment,
   Event,
   Business,
-  Flag,
-  Person,
-  TrendingUp,
-  AttachMoney,
-  Support,
-  Refresh,
-  ThumbUp,
-  ThumbDown,
   Comment,
-  FormatBold,
-  FormatItalic,
-  FormatUnderlined,
-  FormatStrikethrough,
-  FormatListBulleted,
-  FormatListNumbered,
   Link as LinkIcon,
-  Image,
-  Code,
-  TableChart,
-  AttachFile,
-  Add,
   ExpandMore,
   Fullscreen,
   Close,
@@ -82,19 +55,12 @@ import {
   KeyboardArrowLeft,
   Search,
   Settings,
-  ArrowUpward,
-  ArrowDownward,
   OpenInNew,
   ContentCopy,
   KeyboardArrowRight,
   Lock,
   Edit,
-  PushPin,
-  History,
-  Delete,
-  CheckCircle,
-  Visibility,
-  MoreHoriz,
+  ArrowBack,
 } from '@mui/icons-material';
 import {
   Facebook,
@@ -108,8 +74,20 @@ import { taxiMonterricoColors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import empresaLogo from '../assets/empresa.png';
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 
-interface CompanyDetail {
+interface CompanyDetailData {
   id: number;
   name: string;
   domain?: string;
@@ -138,35 +116,13 @@ interface CompanyDetail {
   };
 }
 
-interface TabPanelProps {
-  children?: React.ReactNode;
-  index: number;
-  value: number;
-}
-
-function TabPanel(props: TabPanelProps) {
-  const { children, value, index, ...other } = props;
-
-  return (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      id={`contact-tabpanel-${index}`}
-      aria-labelledby={`contact-tab-${index}`}
-      {...other}
-    >
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
-    </div>
-  );
-}
 
 const CompanyDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const [company, setCompany] = useState<CompanyDetail | null>(null);
+  const [company, setCompany] = useState<CompanyDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -181,7 +137,6 @@ const CompanyDetail: React.FC = () => {
   const [activitySearch, setActivitySearch] = useState('');
   const [contactSearch, setContactSearch] = useState('');
   const [dealSearch, setDealSearch] = useState('');
-  const [activityFilters, setActivityFilters] = useState<string[]>(['Todo hasta ahora']);
   const [activityFilterMenuAnchor, setActivityFilterMenuAnchor] = useState<null | HTMLElement>(null);
   const [activityFilterSearch, setActivityFilterSearch] = useState('');
   const [timeRangeMenuAnchor, setTimeRangeMenuAnchor] = useState<null | HTMLElement>(null);
@@ -210,9 +165,9 @@ const CompanyDetail: React.FC = () => {
   // Estados para funcionalidades de notas y actividades
   const [expandedNotes, setExpandedNotes] = useState<Set<number>>(new Set());
   const [expandedActivities, setExpandedActivities] = useState<Set<number>>(new Set());
-  const [noteActionMenus, setNoteActionMenus] = useState<{ [key: number]: HTMLElement | null }>({});
-  const [noteComments, setNoteComments] = useState<{ [key: number]: string }>({});
+  // const [noteActionMenus, setNoteActionMenus] = useState<{ [key: number]: HTMLElement | null }>({});
   const [summaryExpanded, setSummaryExpanded] = useState<boolean>(false);
+  const [timePeriod, setTimePeriod] = useState<'day' | 'week' | 'month'>('week');
   const [dealSortOrder, setDealSortOrder] = useState<'asc' | 'desc'>('asc');
   const [dealSortField, setDealSortField] = useState<string>('');
   const [contactSortOrder, setContactSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -253,22 +208,13 @@ const CompanyDetail: React.FC = () => {
   const [paymentFormData, setPaymentFormData] = useState({ amount: '', currency: 'USD', status: 'pending', paymentDate: '', dueDate: '', paymentMethod: 'credit_card', reference: '', description: '' });
   
   // Estados para edición de campos del contacto
-  const [leadStatusMenuAnchor, setLeadStatusMenuAnchor] = useState<null | HTMLElement>(null);
-  const [lifecycleStageMenuAnchor, setLifecycleStageMenuAnchor] = useState<null | HTMLElement>(null);
-  const [buyingRoleMenuAnchor, setBuyingRoleMenuAnchor] = useState<null | HTMLElement>(null);
-  const [editingPhone, setEditingPhone] = useState(false);
-  const [editingDomain, setEditingDomain] = useState(false);
-  const [phoneValue, setPhoneValue] = useState('');
-  const [domainValue, setDomainValue] = useState('');
   
   // Estados para asociaciones en nota
-  const [associationsExpanded, setAssociationsExpanded] = useState(false);
-  const [associationsMenuAnchor, setAssociationsMenuAnchor] = useState<null | HTMLElement>(null);
   const [selectedAssociationCategory, setSelectedAssociationCategory] = useState<string>('Contactos');
   const [associationSearch, setAssociationSearch] = useState('');
   const [selectedAssociations, setSelectedAssociations] = useState<number[]>([]);
   const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
-  const [selectedLeads, setSelectedLeads] = useState<number[]>([]);
+  const [selectedLeads] = useState<number[]>([]);
   const [allContacts, setAllContacts] = useState<any[]>([]);
   // Estados para elementos excluidos (desmarcados manualmente aunque estén asociados)
   const [excludedContacts, setExcludedContacts] = useState<number[]>([]);
@@ -277,12 +223,11 @@ const CompanyDetail: React.FC = () => {
   
   // Estados para asociaciones en actividades de Descripción (por actividad)
   const [activityAssociationsExpanded, setActivityAssociationsExpanded] = useState<{ [key: number]: boolean }>({});
-  const [activityAssociationsMenuAnchor, setActivityAssociationsMenuAnchor] = useState<{ [key: number]: HTMLElement | null }>({});
   const [activitySelectedCategory, setActivitySelectedCategory] = useState<{ [key: number]: string }>({});
   const [activityAssociationSearch, setActivityAssociationSearch] = useState<{ [key: number]: string }>({});
   const [activitySelectedAssociations, setActivitySelectedAssociations] = useState<{ [key: number]: number[] }>({});
   const [activitySelectedContacts, setActivitySelectedContacts] = useState<{ [key: number]: number[] }>({});
-  const [activitySelectedLeads, setActivitySelectedLeads] = useState<{ [key: number]: number[] }>({});
+  const [activitySelectedLeads] = useState<{ [key: number]: number[] }>({});
   // Estados para elementos excluidos por actividad
   const [activityExcludedContacts, setActivityExcludedContacts] = useState<{ [key: number]: number[] }>({});
   const [activityExcludedDeals, setActivityExcludedDeals] = useState<{ [key: number]: number[] }>({});
@@ -341,15 +286,6 @@ const CompanyDetail: React.FC = () => {
   const associatedContactIds = (associatedContacts || []).map((c: any) => c && c.id).filter((id: any) => id !== undefined && id !== null);
   const allContactIds = [...selectedContacts, ...associatedContactIds];
   const contactsToCount = allContactIds.filter((id, index) => allContactIds.indexOf(id) === index);
-  const selectedDealIds = selectedAssociations.filter((id: number) => id > 1000 && id < 2000).map(id => id - 1000);
-  const associatedDealIds = (associatedDeals || []).map((d: any) => d && d.id).filter((id: any) => id !== undefined && id !== null);
-  const allDealIds = [...selectedDealIds, ...associatedDealIds];
-  const dealsToCount = allDealIds.filter((id, index) => allDealIds.indexOf(id) === index).length;
-  const selectedTicketIds = selectedAssociations.filter((id: number) => id > 2000).map(id => id - 2000);
-  const associatedTicketIds = (associatedTickets || []).map((t: any) => t && t.id).filter((id: any) => id !== undefined && id !== null);
-  const allTicketIds = [...selectedTicketIds, ...associatedTicketIds];
-  const ticketsToCount = allTicketIds.filter((id, index) => allTicketIds.indexOf(id) === index).length;
-  
   // Función para calcular total de asociaciones por actividad (basado en selecciones y asociaciones automáticas)
   const getActivityTotalAssociations = (activityId: number) => {
     // Contactos: seleccionados manualmente + contactos asociados automáticamente (excluyendo los desmarcados)
@@ -402,16 +338,105 @@ const CompanyDetail: React.FC = () => {
   const [meetingData, setMeetingData] = useState({ subject: '', description: '', date: '', time: '' });
   const [createFollowUpTask, setCreateFollowUpTask] = useState(false);
 
+  const fetchCompany = useCallback(async () => {
+    try {
+      const response = await api.get(`/companies/${id}`);
+      setCompany(response.data);
+      // Actualizar contactos asociados desde la relación muchos-a-muchos
+      const contacts = (response.data.Contacts && Array.isArray(response.data.Contacts))
+        ? response.data.Contacts
+        : [];
+      setAssociatedContacts(contacts);
+    } catch (error) {
+      console.error('Error fetching company:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  const fetchAssociatedRecords = useCallback(async () => {
+    try {
+      // Obtener empresa con contactos asociados desde la relación muchos-a-muchos
+      const companyResponse = await api.get(`/companies/${id}`);
+      const contacts = (companyResponse.data.Contacts && Array.isArray(companyResponse.data.Contacts))
+        ? companyResponse.data.Contacts
+        : [];
+      setAssociatedContacts(contacts);
+
+      // Obtener deals asociados
+      const dealsResponse = await api.get('/deals', {
+        params: { companyId: id },
+      });
+      setAssociatedDeals(dealsResponse.data.deals || dealsResponse.data || []);
+
+      // Obtener actividades
+      const activitiesResponse = await api.get('/activities', {
+        params: { companyId: id },
+      });
+      const activitiesData = activitiesResponse.data.activities || activitiesResponse.data || [];
+
+      // Obtener tareas asociadas a la empresa
+      const tasksResponse = await api.get('/tasks', {
+        params: { companyId: id },
+      });
+      const tasksData = tasksResponse.data.tasks || tasksResponse.data || [];
+
+      // Convertir tareas a formato de actividad para mostrarlas en la lista
+      const tasksAsActivities = tasksData.map((task: any) => ({
+        id: task.id,
+        type: task.type || 'task',
+        subject: task.title,
+        description: task.description,
+        dueDate: task.dueDate,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+        User: task.CreatedBy || task.AssignedTo,
+        isTask: true, // Flag para identificar que es una tarea
+        status: task.status,
+        priority: task.priority,
+      }));
+
+      // Combinar actividades y tareas, ordenadas por fecha de creación (más recientes primero)
+      const allActivities = [...activitiesData, ...tasksAsActivities].sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
+        const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
+        return dateB - dateA;
+      });
+
+      setActivities(allActivities);
+
+      // Obtener tickets asociados
+      const ticketsResponse = await api.get('/tickets', {
+        params: { companyId: id },
+      });
+      setAssociatedTickets(ticketsResponse.data.tickets || ticketsResponse.data || []);
+
+      // Obtener suscripciones asociadas
+      const subscriptionsResponse = await api.get('/subscriptions', {
+        params: { companyId: id },
+      });
+      setAssociatedSubscriptions(subscriptionsResponse.data.subscriptions || subscriptionsResponse.data || []);
+
+      // Obtener pagos asociados
+      const paymentsResponse = await api.get('/payments', {
+        params: { companyId: id },
+      });
+      setAssociatedPayments(paymentsResponse.data.payments || paymentsResponse.data || []);
+    } catch (error) {
+      console.error('Error fetching associated records:', error);
+    }
+  }, [id]);
+
   useEffect(() => {
     fetchCompany();
-  }, [id]);
+  }, [fetchCompany]);
 
   useEffect(() => {
     if (company) {
       fetchAssociatedRecords();
       fetchAllContacts();
     }
-  }, [company, id]);
+  }, [company, id, fetchAssociatedRecords]);
 
   // Actualizar asociaciones seleccionadas cuando cambian los registros relacionados
   useEffect(() => {
@@ -496,106 +521,12 @@ const CompanyDetail: React.FC = () => {
     setSummaryExpanded(false);
   }, [id]);
 
-  const fetchCompany = async () => {
-    try {
-      const response = await api.get(`/companies/${id}`);
-      setCompany(response.data);
-      setPhoneValue(response.data.phone || '');
-      setDomainValue(response.data.domain || '');
-      // Actualizar contactos asociados desde la relación muchos-a-muchos
-      const contacts = (response.data.Contacts && Array.isArray(response.data.Contacts))
-        ? response.data.Contacts
-        : [];
-      setAssociatedContacts(contacts);
-    } catch (error) {
-      console.error('Error fetching company:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchAssociatedRecords = async () => {
-    try {
-      // Obtener empresa con contactos asociados desde la relación muchos-a-muchos
-      const companyResponse = await api.get(`/companies/${id}`);
-      const contacts = (companyResponse.data.Contacts && Array.isArray(companyResponse.data.Contacts))
-        ? companyResponse.data.Contacts
-        : [];
-      setAssociatedContacts(contacts);
-
-      // Obtener deals asociados
-      const dealsResponse = await api.get('/deals', {
-        params: { companyId: id },
-      });
-      setAssociatedDeals(dealsResponse.data.deals || dealsResponse.data || []);
-
-      // Obtener actividades
-      const activitiesResponse = await api.get('/activities', {
-        params: { companyId: id },
-      });
-      const activitiesData = activitiesResponse.data.activities || activitiesResponse.data || [];
-
-      // Obtener tareas asociadas a la empresa
-      const tasksResponse = await api.get('/tasks', {
-        params: { companyId: id },
-      });
-      const tasksData = tasksResponse.data.tasks || tasksResponse.data || [];
-
-      // Convertir tareas a formato de actividad para mostrarlas en la lista
-      const tasksAsActivities = tasksData.map((task: any) => ({
-        id: task.id,
-        type: task.type || 'task',
-        subject: task.title,
-        description: task.description,
-        dueDate: task.dueDate,
-        createdAt: task.createdAt,
-        updatedAt: task.updatedAt,
-        User: task.CreatedBy || task.AssignedTo,
-        isTask: true, // Flag para identificar que es una tarea
-        status: task.status,
-        priority: task.priority,
-      }));
-
-      // Combinar actividades y tareas, ordenadas por fecha de creación (más recientes primero)
-      const allActivities = [...activitiesData, ...tasksAsActivities].sort((a: any, b: any) => {
-        const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
-        const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
-        return dateB - dateA;
-      });
-
-      setActivities(allActivities);
-
-      // Obtener tickets asociados
-      const ticketsResponse = await api.get('/tickets', {
-        params: { companyId: id },
-      });
-      setAssociatedTickets(ticketsResponse.data.tickets || ticketsResponse.data || []);
-
-      // Obtener suscripciones asociadas
-      const subscriptionsResponse = await api.get('/subscriptions', {
-        params: { companyId: id },
-      });
-      setAssociatedSubscriptions(subscriptionsResponse.data.subscriptions || subscriptionsResponse.data || []);
-
-      // Obtener pagos asociados
-      const paymentsResponse = await api.get('/payments', {
-        params: { companyId: id },
-      });
-      setAssociatedPayments(paymentsResponse.data.payments || paymentsResponse.data || []);
-    } catch (error) {
-      console.error('Error fetching associated records:', error);
-    }
-  };
-
-  const getInitials = (firstName: string, lastName?: string) => {
-    if (lastName) {
-      return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-    }
-    const words = firstName.split(' ');
+  const getCompanyInitials = (companyName: string) => {
+    const words = companyName.trim().split(' ').filter(word => word.length > 0);
     if (words.length >= 2) {
       return `${words[0].charAt(0)}${words[1].charAt(0)}`.toUpperCase();
     }
-    return firstName.substring(0, 2).toUpperCase();
+    return companyName.substring(0, 2).toUpperCase();
   };
 
   const getStageColor = (stage: string) => {
@@ -1393,65 +1324,65 @@ const CompanyDetail: React.FC = () => {
     setExpandedActivities(newExpanded);
   };
 
-  const handleNoteActionMenuOpen = (event: React.MouseEvent<HTMLElement>, noteId: number) => {
-    event.stopPropagation();
-    setNoteActionMenus({ ...noteActionMenus, [noteId]: event.currentTarget });
-  };
+  // const handleNoteActionMenuOpen = (event: React.MouseEvent<HTMLElement>, noteId: number) => {
+  //   event.stopPropagation();
+  //   setNoteActionMenus({ ...noteActionMenus, [noteId]: event.currentTarget });
+  // };
 
-  const handleNoteActionMenuClose = (noteId: number) => {
-    setNoteActionMenus({ ...noteActionMenus, [noteId]: null });
-  };
+  // const handleNoteActionMenuClose = (noteId: number) => {
+  //   setNoteActionMenus({ ...noteActionMenus, [noteId]: null });
+  // };
 
-  const handlePinNote = async (noteId: number) => {
-    // TODO: Implementar funcionalidad de anclar
-    console.log('Anclar nota:', noteId);
-    handleNoteActionMenuClose(noteId);
-  };
+  // const handlePinNote = async (noteId: number) => {
+  //   // TODO: Implementar funcionalidad de anclar
+  //   console.log('Anclar nota:', noteId);
+  //   handleNoteActionMenuClose(noteId);
+  // };
 
-  const handleViewHistory = (noteId: number) => {
-    // TODO: Implementar historial
-    console.log('Ver historial:', noteId);
-    handleNoteActionMenuClose(noteId);
-  };
+  // const handleViewHistory = (noteId: number) => {
+  //   // TODO: Implementar historial
+  //   console.log('Ver historial:', noteId);
+  //   handleNoteActionMenuClose(noteId);
+  // };
 
-  const handleCopyLink = async (noteId: number) => {
-    try {
-      const noteUrl = `${window.location.origin}/companies/${id}?activity=${noteId}`;
-      await navigator.clipboard.writeText(noteUrl);
-      setSuccessMessage('Enlace copiado al portapapeles');
-      setTimeout(() => setSuccessMessage(''), 3000);
-      handleNoteActionMenuClose(noteId);
-    } catch (error) {
-      console.error('Error al copiar enlace:', error);
-      setSuccessMessage('Error al copiar enlace');
-      setTimeout(() => setSuccessMessage(''), 3000);
-    }
-  };
+  // const handleCopyLink = async (noteId: number) => {
+  //   try {
+  //     const noteUrl = `${window.location.origin}/companies/${id}?activity=${noteId}`;
+  //     await navigator.clipboard.writeText(noteUrl);
+  //     setSuccessMessage('Enlace copiado al portapapeles');
+  //     setTimeout(() => setSuccessMessage(''), 3000);
+  //     handleNoteActionMenuClose(noteId);
+  //   } catch (error) {
+  //     console.error('Error al copiar enlace:', error);
+  //     setSuccessMessage('Error al copiar enlace');
+  //     setTimeout(() => setSuccessMessage(''), 3000);
+  //   }
+  // };
 
-  const handleDeleteNote = async (noteId: number) => {
-    if (!window.confirm('¿Estás seguro de que deseas eliminar esta nota?')) {
-      handleNoteActionMenuClose(noteId);
-      return;
-    }
-    
-    try {
-      await api.delete(`/activities/${noteId}`);
-      setSuccessMessage('Nota eliminada exitosamente');
-      setTimeout(() => setSuccessMessage(''), 3000);
-      handleNoteActionMenuClose(noteId);
-      
-      // Eliminar la nota del estado local inmediatamente
-      setActivities(activities.filter(activity => activity.id !== noteId));
-      
-      // También actualizar desde el servidor para asegurar consistencia
-      fetchAssociatedRecords();
-    } catch (error: any) {
-      console.error('Error al eliminar nota:', error);
-      const errorMessage = error.response?.data?.error || error.message || 'Error al eliminar la nota';
-      setSuccessMessage(errorMessage);
-      setTimeout(() => setSuccessMessage(''), 3000);
-    }
-  };
+  // const handleDeleteNote = async (noteId: number) => {
+  //   if (!window.confirm('¿Estás seguro de que deseas eliminar esta nota?')) {
+  //     handleNoteActionMenuClose(noteId);
+  //     return;
+  //   }
+  //   
+  //   try {
+  //     await api.delete(`/activities/${noteId}`);
+  //     setSuccessMessage('Nota eliminada exitosamente');
+  //     setTimeout(() => setSuccessMessage(''), 3000);
+  //     handleNoteActionMenuClose(noteId);
+  //     
+  //     // Eliminar la nota del estado local inmediatamente
+  //     setActivities(activities.filter(activity => activity.id !== noteId));
+  //     
+  //     // También actualizar desde el servidor para asegurar consistencia
+  //     fetchAssociatedRecords();
+  //   } catch (error: any) {
+  //     console.error('Error al eliminar nota:', error);
+  //     const errorMessage = error.response?.data?.error || error.message || 'Error al eliminar la nota';
+  //     setSuccessMessage(errorMessage);
+  //     setTimeout(() => setSuccessMessage(''), 3000);
+  //   }
+  // };
 
   if (loading) {
     return (
@@ -1474,9 +1405,7 @@ const CompanyDetail: React.FC = () => {
     <Box sx={{ 
       bgcolor: theme.palette.background.default,
       minHeight: '100vh',
-      pb: { xs: 2, sm: 4, md: 8 },
-      px: { xs: 1.5, sm: 2, md: 2.5, lg: 3 },
-      pt: { xs: 2, sm: 2.5, md: 3 },
+      pb: { xs: 2, sm: 3, md: 4 },
       display: 'flex', 
       flexDirection: 'column',
     }}>
@@ -1491,260 +1420,180 @@ const CompanyDetail: React.FC = () => {
         minHeight: { xs: 'auto', md: 0 },
       }}>
         {/* Parte 1: Columna Izquierda - Información de la Empresa */}
-        <Card sx={{ 
-          borderRadius: { xs: 2, md: 6 },
-          boxShadow: 'none',
-          overflow: 'hidden',
-          bgcolor: theme.palette.background.paper,
+        <Box sx={{
+          width: { xs: '100%', md: '350px' },
+          flexShrink: 0,
           display: 'flex',
           flexDirection: 'column',
-          width: { xs: '100%', md: '500px' },
-          flexShrink: 0,
-          height: { xs: 'auto', md: 'calc(100vh - 100px)' },
-          maxHeight: { xs: 'none', md: 'calc(100vh - 100px)' },
-          p: { xs: 1, sm: 1.5, md: 2 },
+          gap: 2,
         }}>
-        {/* Columna Izquierda - Información de la Empresa */}
-        <Box sx={{ 
-          width: '100%', 
-          flexShrink: 0, 
-          height: { xs: 'auto', md: '100%' },
-          maxHeight: { xs: 'none', md: '100%' },
-          overflowY: { xs: 'visible', md: 'auto' },
-          overflowX: 'hidden',
-          animation: 'slideInLeft 0.4s ease',
-          '@keyframes slideInLeft': {
-            '0%': {
-              opacity: 0,
-              transform: 'translateX(-20px)',
-            },
-            '100%': {
-              opacity: 1,
-              transform: 'translateX(0)',
-            },
-          },
-          // Ocultar scrollbar pero mantener scroll funcional
-          '&::-webkit-scrollbar': {
-            display: 'none',
-            width: 0,
-          },
-          // Para Firefox
-          scrollbarWidth: 'none',
-        }}>
-          <Paper sx={{ 
-            p: 3,
+          {/* Botón de regresar */}
+          <Box>
+            <IconButton
+              onClick={() => navigate('/companies')}
+              sx={{
+                color: theme.palette.text.primary,
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                },
+              }}
+            >
+              <ArrowBack />
+            </IconButton>
+          </Box>
+
+          {/* Card 1: Avatar, Nombre y Botones */}
+          <Card sx={{ 
+            borderRadius: 2,
+            boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
             bgcolor: theme.palette.background.paper,
-            boxShadow: 'none',
-            transition: 'all 0.3s ease',
-            '&:hover': {
-              boxShadow: 'none',
-            },
+            px: 2,
+            py: 2,
+            border: `1px solid ${theme.palette.divider}`,
           }}>
-            {/* Avatar y Nombre */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: { xs: 2, md: 3 } }}>
-              <Box sx={{ position: 'relative', mb: { xs: 1, md: 2 } }}>
-                <Avatar
-                  src={empresaLogo}
+            {/* Header: Avatar con nombre a la derecha, botón de opciones a la derecha */}
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flex: 1 }}>
+                  <Box
+                    sx={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: '50%',
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#F3F4F6',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Avatar
+                      src={empresaLogo}
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        bgcolor: empresaLogo ? 'transparent' : taxiMonterricoColors.orange,
+                        fontSize: '1rem',
+                      }}
+                    >
+                      {!empresaLogo && getCompanyInitials(company.name)}
+                    </Avatar>
+                  </Box>
+                  <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.9rem' }}>
+                    {company.name}
+                  </Typography>
+                </Box>
+                <IconButton
+                  size="small"
+                  onClick={handleMenuOpen}
                   sx={{
-                    width: { xs: 80, md: 120 },
-                    height: { xs: 80, md: 120 },
-                    bgcolor: empresaLogo ? 'transparent' : taxiMonterricoColors.orange,
-                    fontSize: { xs: '2rem', md: '3rem' },
-                    transition: 'all 0.3s ease',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      transform: 'scale(1.05)',
-                      boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-                    },
-                  }}
-                >
-                  {!empresaLogo && getInitials(company.name)}
-                </Avatar>
-                <CheckCircle 
-                  sx={{ 
-                    position: 'absolute',
-                    bottom: 0,
-                    right: 0,
-                    fontSize: { xs: 20, md: 28 },
-                    color: '#10B981',
-                    bgcolor: theme.palette.background.paper,
-                    borderRadius: '50%',
-                    border: `2px solid ${theme.palette.background.paper}`,
-                  }} 
-                />
-              </Box>
-              <Typography 
-                variant="h6" 
-                align="center"
-                sx={{
-                  fontWeight: 700,
-                  fontSize: { xs: '1rem', md: '1.1rem' },
-                  color: theme.palette.text.primary,
-                  mb: 0.25,
-                  px: { xs: 1, md: 0 },
-                }}
-              >
-                {company.name}
-              </Typography>
-              {company.domain && (
-                <Typography 
-                  variant="body2"
-                  align="center"
-                  sx={{
-                    fontSize: { xs: '0.75rem', md: '0.875rem' },
                     color: theme.palette.text.secondary,
-                    fontWeight: 400,
-                    px: { xs: 1, md: 0 },
                   }}
                 >
-                  {company.domain}
+                  <MoreVert />
+                </IconButton>
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, pl: 0.5 }}>
+                {company.domain && (
+                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem' }}>
+                    {company.domain}
+                  </Typography>
+                )}
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem' }}>
+                  Etapa: {getStageLabel(company.lifecycleStage)}
                 </Typography>
-              )}
+              </Box>
             </Box>
 
             {/* Acciones Rápidas */}
-            <Box sx={{ display: 'flex', flexDirection: 'row', gap: { xs: 1, md: 1.5 }, mb: { xs: 2, md: 3 }, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: { xs: 0.5, md: 0.75 } }}>
-                <IconButton
-                  onClick={handleOpenNote}
-                  sx={{
-                    width: { xs: 44, md: 52 },
-                    height: { xs: 44, md: 52 },
-                    borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orange : taxiMonterricoColors.orange,
-                    color: 'white',
-                    transition: 'all 0.2s ease',
-                    boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
-                    '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orangeDark : taxiMonterricoColors.orangeDark,
-                      transform: 'scale(1.05)',
-                    },
-                  }}
-                >
-                  <Note sx={{ fontSize: { xs: 18, md: 22 } }} />
-                </IconButton>
-                <Typography variant="caption" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' }, color: theme.palette.text.primary, fontWeight: 500 }}>
+            <Box sx={{ display: 'flex', gap: 3, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Box 
+                onClick={handleOpenNote}
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    opacity: 0.8,
+                  },
+                }}
+              >
+                <Note sx={{ color: '#20B2AA', fontSize: 20 }} />
+                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 400 }}>
                   Nota
                 </Typography>
               </Box>
               
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: { xs: 0.5, md: 0.75 } }}>
-                <IconButton
-                  onClick={handleOpenEmail}
-                  sx={{
-                    width: { xs: 44, md: 52 },
-                    height: { xs: 44, md: 52 },
-                    borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orange : taxiMonterricoColors.orange,
-                    color: 'white',
-                    transition: 'all 0.2s ease',
-                    boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
-                    '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orangeDark : taxiMonterricoColors.orangeDark,
-                      transform: 'scale(1.05)',
-                    },
-                  }}
-                >
-                  <Email sx={{ fontSize: { xs: 18, md: 22 } }} />
-                </IconButton>
-                <Typography variant="caption" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' }, color: theme.palette.text.primary, fontWeight: 500 }}>
+              <Box 
+                onClick={handleOpenEmail}
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    opacity: 0.8,
+                  },
+                }}
+              >
+                <Email sx={{ color: '#20B2AA', fontSize: 20 }} />
+                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 400 }}>
                   Correo
                 </Typography>
               </Box>
               
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: { xs: 0.5, md: 0.75 } }}>
-                <IconButton
-                  onClick={handleOpenCall}
-                  sx={{
-                    width: { xs: 44, md: 52 },
-                    height: { xs: 44, md: 52 },
-                    borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orange : taxiMonterricoColors.orange,
-                    color: 'white',
-                    transition: 'all 0.2s ease',
-                    boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
-                    '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orangeDark : taxiMonterricoColors.orangeDark,
-                      transform: 'scale(1.05)',
-                    },
-                  }}
-                >
-                  <Phone sx={{ fontSize: { xs: 18, md: 22 } }} />
-                </IconButton>
-                <Typography variant="caption" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' }, color: theme.palette.text.primary, fontWeight: 500 }}>
-                  Llamada
+              <Box 
+                onClick={handleOpenCall}
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    opacity: 0.8,
+                  },
+                }}
+              >
+                <Phone sx={{ color: '#20B2AA', fontSize: 20 }} />
+                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 400 }}>
+                  Llamar
                 </Typography>
               </Box>
               
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: { xs: 0.5, md: 0.75 } }}>
-                <IconButton
-                  onClick={handleOpenTask}
-                  sx={{
-                    width: { xs: 44, md: 52 },
-                    height: { xs: 44, md: 52 },
-                    borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orange : taxiMonterricoColors.orange,
-                    color: 'white',
-                    transition: 'all 0.2s ease',
-                    boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
-                    '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orangeDark : taxiMonterricoColors.orangeDark,
-                      transform: 'scale(1.05)',
-                    },
-                  }}
-                >
-                  <Assignment sx={{ fontSize: { xs: 18, md: 22 } }} />
-                </IconButton>
-                <Typography variant="caption" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' }, color: theme.palette.text.primary, fontWeight: 500 }}>
+              <Box 
+                onClick={handleOpenTask}
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    opacity: 0.8,
+                  },
+                }}
+              >
+                <Assignment sx={{ color: '#20B2AA', fontSize: 20 }} />
+                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 400 }}>
                   Tarea
                 </Typography>
               </Box>
               
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: { xs: 0.5, md: 0.75 } }}>
-                <IconButton
-                  onClick={handleOpenMeeting}
-                  sx={{
-                    width: { xs: 44, md: 52 },
-                    height: { xs: 44, md: 52 },
-                    borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orange : taxiMonterricoColors.orange,
-                    color: 'white',
-                    transition: 'all 0.2s ease',
-                    boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
-                    '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orangeDark : taxiMonterricoColors.orangeDark,
-                      transform: 'scale(1.05)',
-                    },
-                  }}
-                >
-                  <Event sx={{ fontSize: { xs: 18, md: 22 } }} />
-                </IconButton>
-                <Typography variant="caption" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' }, color: theme.palette.text.primary, fontWeight: 500 }}>
+              <Box 
+                onClick={handleOpenMeeting}
+                sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1,
+                  cursor: 'pointer',
+                  '&:hover': {
+                    opacity: 0.8,
+                  },
+                }}
+              >
+                <Event sx={{ color: '#20B2AA', fontSize: 20 }} />
+                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 400 }}>
                   Reunión
-                </Typography>
-              </Box>
-              
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: { xs: 0.5, md: 0.75 } }}>
-                <IconButton
-                  onClick={handleMenuOpen}
-                  sx={{
-                    width: { xs: 44, md: 52 },
-                    height: { xs: 44, md: 52 },
-                    borderRadius: '50%',
-                    bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orange : taxiMonterricoColors.orange,
-                    color: 'white',
-                    transition: 'all 0.2s ease',
-                    boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 1px 3px rgba(0,0,0,0.1)',
-                    '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? taxiMonterricoColors.orangeDark : taxiMonterricoColors.orangeDark,
-                      transform: 'scale(1.05)',
-                    },
-                  }}
-                >
-                  <MoreVert sx={{ fontSize: { xs: 18, md: 22 } }} />
-                </IconButton>
-                <Typography variant="caption" sx={{ fontSize: { xs: '0.65rem', md: '0.75rem' }, color: theme.palette.text.primary, fontWeight: 500 }}>
-                  Más
                 </Typography>
               </Box>
             </Box>
@@ -1811,527 +1660,171 @@ const CompanyDetail: React.FC = () => {
                 Duplicar
               </MenuItem>
             </Menu>
+          </Card>
 
-            <Divider sx={{ my: 2 }} />
-
-            {/* Estadísticas */}
-            <Box sx={{ display: 'flex', gap: { xs: 1, md: 1.5 }, mb: { xs: 2, md: 3 }, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
+          {/* Card de Estadísticas */}
+          <Card sx={{ 
+            borderRadius: 2,
+            boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+            bgcolor: theme.palette.background.paper,
+            px: 2,
+            py: 2,
+            border: `1px solid ${theme.palette.divider}`,
+          }}>
+            <Box sx={{ display: 'flex', gap: 2 }}>
               <Box sx={{ 
-                flex: { xs: '1 1 calc(33.333% - 8px)', sm: 1 }, 
-                minWidth: { xs: 'calc(33.333% - 8px)', sm: 'auto' },
+                flex: 1,
                 border: `1px dashed ${theme.palette.divider}`, 
-                borderRadius: { xs: 1, md: 2 }, 
-                p: { xs: 1.5, md: 2 }, 
+                borderRadius: 2, 
+                p: 2, 
                 textAlign: 'center',
                 bgcolor: theme.palette.background.paper,
               }}>
-                <Typography sx={{ fontSize: { xs: '1.25rem', md: '1.5rem' }, fontWeight: 700, color: theme.palette.text.primary, mb: 0.5 }}>
+                <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: theme.palette.text.primary, mb: 0.5 }}>
                   {associatedDeals.length}
                 </Typography>
-                <Typography sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' }, color: theme.palette.text.secondary, fontWeight: 400 }}>
+                <Typography sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary, fontWeight: 400 }}>
                   Negocios
                 </Typography>
               </Box>
               <Box sx={{ 
-                flex: { xs: '1 1 calc(33.333% - 8px)', sm: 1 }, 
-                minWidth: { xs: 'calc(33.333% - 8px)', sm: 'auto' },
+                flex: 1,
                 border: `1px dashed ${theme.palette.divider}`, 
-                borderRadius: { xs: 1, md: 2 }, 
-                p: { xs: 1.5, md: 2 }, 
+                borderRadius: 2, 
+                p: 2, 
                 textAlign: 'center',
                 bgcolor: theme.palette.background.paper,
               }}>
-                <Typography sx={{ fontSize: { xs: '1.25rem', md: '1.5rem' }, fontWeight: 700, color: theme.palette.text.primary, mb: 0.5 }}>
-                  {associatedContacts.length}
+                <Typography sx={{ fontSize: '1.5rem', fontWeight: 700, color: theme.palette.text.primary, mb: 0.5 }}>
+                  0
                 </Typography>
-                <Typography sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' }, color: theme.palette.text.secondary, fontWeight: 400 }}>
-                  Contactos
-                </Typography>
-              </Box>
-              <Box sx={{ 
-                flex: { xs: '1 1 calc(33.333% - 8px)', sm: 1 }, 
-                minWidth: { xs: 'calc(33.333% - 8px)', sm: 'auto' },
-                border: `1px dashed ${theme.palette.divider}`, 
-                borderRadius: { xs: 1, md: 2 }, 
-                p: { xs: 1.5, md: 2 }, 
-                textAlign: 'center',
-                bgcolor: theme.palette.background.paper,
-              }}>
-                <Typography sx={{ fontSize: { xs: '1.25rem', md: '1.5rem' }, fontWeight: 700, color: theme.palette.text.primary, mb: 0.5 }}>
-                  {activities.length}
-                </Typography>
-                <Typography sx={{ fontSize: { xs: '0.7rem', md: '0.75rem' }, color: theme.palette.text.secondary, fontWeight: 400 }}>
-                  Actividades
+                <Typography sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary, fontWeight: 400 }}>
+                  Servicios
                 </Typography>
               </Box>
             </Box>
+          </Card>
 
-            {/* Información de la empresa */}
-            <Card sx={{ 
-              mb: { xs: 2, md: 3 }, 
-              p: 3, 
-              borderRadius: 2, 
-              boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
-              bgcolor: theme.palette.background.paper,
-              border: `1px solid ${theme.palette.divider}`,
-            }}>
-            {/* Location */}
-            <Box sx={{ mb: { xs: 1.5, md: 2 }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.5, sm: 0 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 }, flex: 1 }}>
-                <LocationOn sx={{ fontSize: { xs: 18, md: 20 }, color: theme.palette.text.secondary }} />
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    fontSize: { xs: '0.8rem', md: '0.875rem' },
-                    fontWeight: 400,
-                    color: theme.palette.text.secondary,
-                  }}
-                >
-                  Ubicación
+          {/* Card 2: Información de la Empresa */}
+          <Card sx={{ 
+            borderRadius: 2,
+            boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+            bgcolor: theme.palette.background.paper,
+            px: 2,
+            py: 2,
+            border: `1px solid ${theme.palette.divider}`,
+          }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+              Información de la Empresa
+            </Typography>
+            
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
+                  Propietario de la empresa
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 400, mt: 0.5, fontSize: '0.875rem' }}>
+                  {company.Owner ? `${company.Owner.firstName} ${company.Owner.lastName}` : '--'}
                 </Typography>
               </Box>
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  fontSize: { xs: '0.8rem', md: '0.875rem' },
-                  fontWeight: 400,
-                  color: (company.city || company.address) ? theme.palette.text.primary : theme.palette.text.disabled,
-                  textAlign: { xs: 'left', sm: 'right' },
-                  wordBreak: 'break-word',
-                }}
-              >
-                {company.city || company.address || '--'}
-              </Typography>
-            </Box>
 
-            {/* Número de teléfono */}
-            <Box sx={{ mb: { xs: 1.5, md: 2 }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.5, sm: 0 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 }, flex: 1 }}>
-                <Phone sx={{ fontSize: { xs: 18, md: 20 }, color: theme.palette.text.secondary }} />
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    fontSize: { xs: '0.8rem', md: '0.875rem' },
-                    fontWeight: 400,
-                    color: theme.palette.text.secondary,
-                  }}
-                >
-                  Teléfono
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
+                  Último contacto
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 400, mt: 0.5, fontSize: '0.875rem' }}>
+                  {activities.length > 0 && activities[0].createdAt
+                    ? new Date(activities[0].createdAt).toLocaleDateString('es-ES', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })
+                    : '--'}
                 </Typography>
               </Box>
-              {editingPhone ? (
-                <TextField
-                  size="small"
-                  value={phoneValue}
-                  onChange={(e) => setPhoneValue(e.target.value)}
-                  onBlur={async () => {
-                    try {
-                      await api.put(`/companies/${company.id}`, { phone: phoneValue });
-                      setCompany({ ...company, phone: phoneValue });
-                      setEditingPhone(false);
-                    } catch (error) {
-                      console.error('Error updating phone:', error);
-                      setPhoneValue(company.phone || '');
-                      setEditingPhone(false);
-                    }
-                  }}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      (e.target as HTMLInputElement).blur();
-                    }
-                  }}
-                  autoFocus
-                  sx={{
-                    width: { xs: '100%', sm: '200px' },
-                    '& .MuiOutlinedInput-root': {
-                      fontSize: { xs: '0.8rem', md: '0.875rem' },
-                      fontWeight: 400,
-                      '& fieldset': {
-                        borderColor: '#00bcd4',
-                      },
-                    },
-                  }}
-                />
-              ) : (
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    fontSize: { xs: '0.8rem', md: '0.875rem' },
-                    fontWeight: 400,
-                    color: company.phone ? theme.palette.text.primary : theme.palette.text.disabled,
-                    cursor: 'pointer',
-                    textAlign: { xs: 'left', sm: 'right' },
-                    wordBreak: 'break-word',
-                    '&:hover': {
-                      textDecoration: 'underline',
-                      textDecorationColor: '#00bcd4',
-                    },
-                  }}
-                  onClick={() => setEditingPhone(true)}
-                >
-                  {company.phone || '--'}
-                </Typography>
-              )}
-            </Box>
 
-            {/* Correo/Dominio */}
-            <Box sx={{ mb: { xs: 1.5, md: 2 }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.5, sm: 0 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 }, flex: 1 }}>
-                <Email sx={{ fontSize: { xs: 18, md: 20 }, color: theme.palette.text.secondary }} />
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    fontSize: { xs: '0.8rem', md: '0.875rem' },
-                    fontWeight: 400,
-                    color: theme.palette.text.secondary,
-                  }}
-                >
-                  Dominio
-                </Typography>
-              </Box>
-              {editingDomain ? (
-                <TextField
-                  size="small"
-                  value={domainValue}
-                  onChange={(e) => setDomainValue(e.target.value)}
-                  onBlur={async () => {
-                    try {
-                      await api.put(`/companies/${company.id}`, { domain: domainValue });
-                      setCompany({ ...company, domain: domainValue });
-                      setEditingDomain(false);
-                    } catch (error) {
-                      console.error('Error updating domain:', error);
-                      setDomainValue(company.domain || '');
-                      setEditingDomain(false);
-                    }
-                  }}
-                  onKeyPress={(e) => {
-                    if (e.key === 'Enter') {
-                      (e.target as HTMLInputElement).blur();
-                    }
-                  }}
-                  autoFocus
-                  sx={{
-                    width: { xs: '100%', sm: '200px' },
-                    '& .MuiOutlinedInput-root': {
-                      fontSize: { xs: '0.8rem', md: '0.875rem' },
-                      fontWeight: 400,
-                      '& fieldset': {
-                        borderColor: '#00bcd4',
-                      },
-                    },
-                  }}
-                />
-              ) : (
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    fontSize: { xs: '0.8rem', md: '0.875rem' },
-                    fontWeight: 400,
-                    color: company.domain ? theme.palette.text.primary : theme.palette.text.disabled,
-                    cursor: 'pointer',
-                    textAlign: { xs: 'left', sm: 'right' },
-                    wordBreak: 'break-word',
-                    '&:hover': {
-                      textDecoration: 'underline',
-                      textDecorationColor: '#00bcd4',
-                    },
-                  }}
-                  onClick={() => setEditingDomain(true)}
-                >
-                  {company.domain || '--'}
-                </Typography>
-              )}
-            </Box>
-
-            {/* Industria */}
-            {company.industry && (
-              <Box sx={{ mb: { xs: 1.5, md: 2 }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.5, sm: 0 } }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 }, flex: 1 }}>
-                  <Business sx={{ fontSize: { xs: 18, md: 20 }, color: theme.palette.text.secondary }} />
-                  <Typography 
-                    variant="body2" 
-                    sx={{ 
-                      fontSize: { xs: '0.8rem', md: '0.875rem' },
-                      fontWeight: 400,
-                      color: theme.palette.text.secondary,
-                    }}
-                  >
-                    Industria
-                  </Typography>
-                </Box>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    fontSize: { xs: '0.8rem', md: '0.875rem' },
-                    fontWeight: 400,
-                    color: theme.palette.text.primary,
-                    textAlign: { xs: 'left', sm: 'right' },
-                    wordBreak: 'break-word',
-                  }}
-                >
-                  {company.industry}
-                </Typography>
-              </Box>
-            )}
-
-            {/* Estado del lead */}
-            <Box sx={{ mb: { xs: 1.5, md: 2 }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.5, sm: 0 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 }, flex: 1 }}>
-                <Flag sx={{ fontSize: { xs: 18, md: 20 }, color: theme.palette.text.secondary }} />
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    fontSize: { xs: '0.8rem', md: '0.875rem' },
-                    fontWeight: 400,
-                    color: theme.palette.text.secondary,
-                  }}
-                >
-                  Estado del lead
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Typography
-                  variant="body2"
-                  onClick={(e) => setLeadStatusMenuAnchor(e.currentTarget)}
-                  sx={{
-                    fontSize: { xs: '0.8rem', md: '0.875rem' },
-                    fontWeight: 400,
-                    color: company.leadStatus ? theme.palette.text.primary : theme.palette.text.disabled,
-                    cursor: 'pointer',
-                    textAlign: { xs: 'left', sm: 'right' },
-                    wordBreak: 'break-word',
-                    '&:hover': {
-                      textDecoration: 'underline',
-                      textDecorationColor: '#00bcd4',
-                    },
-                  }}
-                >
-                  {company.leadStatus || '--'}
-                </Typography>
-                <KeyboardArrowDown sx={{ fontSize: { xs: 12, md: 14 }, color: theme.palette.text.secondary }} />
-              </Box>
-              <Menu
-                anchorEl={leadStatusMenuAnchor}
-                open={Boolean(leadStatusMenuAnchor)}
-                onClose={() => setLeadStatusMenuAnchor(null)}
-                PaperProps={{
-                  sx: {
-                    minWidth: 200,
-                    mt: 0.5,
-                  },
-                }}
-              >
-                {['Nuevo', 'Contactado', 'Calificado', 'Interesado', 'No calificado', 'Perdido'].map((status) => (
-                  <MenuItem
-                    key={status}
-                    onClick={async () => {
-                      try {
-                        await api.put(`/companies/${company.id}`, { leadStatus: status });
-                        setCompany({ ...company, leadStatus: status });
-                        setLeadStatusMenuAnchor(null);
-                        fetchCompany();
-                      } catch (error) {
-                        console.error('Error updating lead status:', error);
-                      }
-                    }}
-                    sx={{
-                      fontSize: '0.875rem',
-                      backgroundColor: company.leadStatus === status ? '#e3f2fd' : 'transparent',
-                    }}
-                  >
-                    {status}
-                  </MenuItem>
-                ))}
-              </Menu>
-            </Box>
-
-            {/* Etapa del ciclo de vida */}
-            <Box sx={{ mb: { xs: 1.5, md: 2 }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.5, sm: 0 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 }, flex: 1 }}>
-                <TrendingUp sx={{ fontSize: { xs: 18, md: 20 }, color: theme.palette.text.secondary }} />
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    fontSize: { xs: '0.8rem', md: '0.875rem' },
-                    fontWeight: 400,
-                    color: theme.palette.text.secondary,
-                  }}
-                >
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
                   Etapa del ciclo de vida
                 </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Typography
-                  variant="body2"
-                  onClick={(e) => setLifecycleStageMenuAnchor(e.currentTarget)}
-                  sx={{
-                    fontSize: { xs: '0.8rem', md: '0.875rem' },
-                    fontWeight: 400,
-                    color: theme.palette.text.primary,
-                    cursor: 'pointer',
-                    textAlign: { xs: 'left', sm: 'right' },
-                    textDecoration: 'none',
-                    wordBreak: 'break-word',
-                    '&:hover': {
-                      opacity: 0.8,
-                    },
-                  }}
-                >
+                <Typography variant="body2" sx={{ fontWeight: 400, mt: 0.5, fontSize: '0.875rem' }}>
                   {getStageLabel(company.lifecycleStage)}
                 </Typography>
-                <KeyboardArrowDown sx={{ fontSize: { xs: 12, md: 14 }, color: theme.palette.text.secondary }} />
               </Box>
+
+              {company.city || company.address ? (
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
+                    Ubicación
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 400, mt: 0.5, fontSize: '0.875rem' }}>
+                    {company.city || company.address || '--'}
+                  </Typography>
+                </Box>
+              ) : null}
+
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
+                  Teléfono
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 400, mt: 0.5, fontSize: '0.875rem' }}>
+                  {company.phone || '--'}
+                </Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
+                  Dominio
+                </Typography>
+                <Typography variant="body2" sx={{ fontWeight: 400, mt: 0.5, fontSize: '0.875rem' }}>
+                  {company.domain || '--'}
+                </Typography>
+              </Box>
+
+              {company.industry && (
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
+                    Industria
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 400, mt: 0.5, fontSize: '0.875rem' }}>
+                    {company.industry}
+                  </Typography>
+                </Box>
+              )}
+
+              {company.leadStatus && (
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6875rem' }}>
+                    Estado del lead
+                  </Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 400, mt: 0.5, fontSize: '0.875rem' }}>
+                    {company.leadStatus}
+                  </Typography>
+                </Box>
+              )}
             </Box>
-            <Menu
-              anchorEl={lifecycleStageMenuAnchor}
-              open={Boolean(lifecycleStageMenuAnchor)}
-              onClose={() => setLifecycleStageMenuAnchor(null)}
-              PaperProps={{
-                sx: {
-                  minWidth: 200,
-                  mt: 0.5,
-                  bgcolor: theme.palette.background.paper,
-                  boxShadow: theme.palette.mode === 'dark' 
-                    ? '0 4px 12px rgba(0,0,0,0.5)' 
-                    : '0 4px 12px rgba(0,0,0,0.15)',
-                  border: theme.palette.mode === 'dark' 
-                    ? `1px solid ${theme.palette.divider}` 
-                    : 'none',
-                },
-              }}
-            >
-              {['lead_inactivo', 'cliente_perdido', 'cierre_perdido', 'lead', 'contacto', 'reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion', 'licitacion', 'licitacion_etapa_final', 'cierre_ganado', 'firma_contrato', 'activo'].map((stage) => (
-                <MenuItem
-                  key={stage}
-                  onClick={async () => {
-                    try {
-                      await api.put(`/companies/${company.id}`, { lifecycleStage: stage });
-                      setCompany({ ...company, lifecycleStage: stage });
-                      setLifecycleStageMenuAnchor(null);
-                      fetchCompany(); // Refrescar para obtener datos actualizados
-                    } catch (error) {
-                      console.error('Error updating lifecycle stage:', error);
-                    }
-                  }}
-                  sx={{
-                    fontSize: '0.875rem',
-                    color: theme.palette.text.primary,
-                    backgroundColor: company.lifecycleStage === stage 
-                      ? (theme.palette.mode === 'dark' 
-                        ? 'rgba(144, 202, 249, 0.16)' 
-                        : '#e3f2fd')
-                      : 'transparent',
-                    '&:hover': {
-                      backgroundColor: company.lifecycleStage === stage
-                        ? (theme.palette.mode === 'dark' 
-                          ? 'rgba(144, 202, 249, 0.24)' 
-                          : '#bbdefb')
-                        : theme.palette.action.hover,
-                    },
-                  }}
-                >
-                  {getStageLabel(stage)}
-                </MenuItem>
-              ))}
-            </Menu>
+          </Card>
 
-            {/* Rol de compra */}
-            <Box sx={{ mb: { xs: 1.5, md: 2 }, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'flex-start', sm: 'center' }, justifyContent: 'space-between', gap: { xs: 0.5, sm: 0 } }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 }, flex: 1 }}>
-                <Person sx={{ fontSize: { xs: 18, md: 20 }, color: '#9E9E9E' }} />
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    fontSize: { xs: '0.8rem', md: '0.875rem' },
-                    fontWeight: 400,
-                    color: '#757575',
-                  }}
-                >
-                  Rol de compra
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Typography
-                  variant="body2"
-                  onClick={(e) => setBuyingRoleMenuAnchor(e.currentTarget)}
-                  sx={{
-                    fontSize: { xs: '0.8rem', md: '0.875rem' },
-                    fontWeight: 400,
-                    color: '#9CA3AF',
-                    cursor: 'pointer',
-                    textAlign: { xs: 'left', sm: 'right' },
-                    '&:hover': {
-                      textDecoration: 'underline',
-                      textDecorationColor: '#00bcd4',
-                    },
-                  }}
-                >
-                  --
-                </Typography>
-                <KeyboardArrowDown sx={{ fontSize: { xs: 12, md: 14 }, color: theme.palette.text.secondary }} />
-              </Box>
-              <Menu
-                anchorEl={buyingRoleMenuAnchor}
-                open={Boolean(buyingRoleMenuAnchor)}
-                onClose={() => setBuyingRoleMenuAnchor(null)}
-                PaperProps={{
-                  sx: {
-                    minWidth: 200,
-                    mt: 0.5,
-                  },
-                }}
-              >
-                {['Influenciador', 'Decisor', 'Evaluador', 'Usuario final', 'Comprador', 'Gatekeeper'].map((role) => (
-                  <MenuItem
-                    key={role}
-                    onClick={() => {
-                      // Aquí puedes agregar la lógica para guardar el rol de compra
-                      setBuyingRoleMenuAnchor(null);
-                    }}
-                    sx={{
-                      fontSize: '0.875rem',
-                    }}
-                  >
-                    {role}
-                  </MenuItem>
-                ))}
-              </Menu>
+          {/* Card de Sección Social */}
+          <Card sx={{ 
+            borderRadius: 2,
+            boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+            bgcolor: theme.palette.background.paper,
+            px: 2,
+            py: 2,
+            border: `1px solid ${theme.palette.divider}`,
+          }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Social
+              </Typography>
             </Box>
-            </Card>
-
-            <Divider sx={{ my: { xs: 1.5, md: 2 } }} />
-
-            {/* Sección Social */}
-            <Card sx={{ 
-              mb: { xs: 2, md: 3 }, 
-              p: 3, 
-              borderRadius: 2, 
-              boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
-              bgcolor: theme.palette.background.paper,
-              border: `1px solid ${theme.palette.divider}`,
-            }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold', fontSize: { xs: '0.875rem', md: '1rem' } }}>
-                  Social
-                </Typography>
-                <IconButton
-                  size="small"
-                  onClick={(e) => {
-                    // Aquí puedes agregar un menú de opciones si es necesario
-                  }}
-                  sx={{ p: 0.5 }}
-                >
-                  <MoreVert sx={{ fontSize: { xs: 16, md: 18 }, color: 'text.secondary' }} />
-                </IconButton>
-              </Box>
-              
-              {/* Lista de redes sociales */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1, md: 1.5 } }}>
+            
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               {/* Facebook */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
-                <Avatar sx={{ width: { xs: 32, md: 36 }, height: { xs: 32, md: 36 }, bgcolor: '#1877f2' }}>
-                  <Facebook sx={{ fontSize: { xs: 18, md: 20 } }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Avatar sx={{ width: 36, height: 36, bgcolor: '#1877f2' }}>
+                  <Facebook sx={{ fontSize: 20 }} />
                 </Avatar>
                 <Link
                   href={company.facebook || '#'}
@@ -2349,10 +1842,9 @@ const CompanyDetail: React.FC = () => {
                         }).catch(err => console.error('Error al guardar:', err));
                       }
                     }
-                    // Si existe URL, dejar que el link funcione normalmente
                   }}
                   sx={{
-                    fontSize: { xs: '0.8rem', md: '0.875rem' },
+                    fontSize: '0.875rem',
                     color: company.facebook ? '#1976d2' : '#9E9E9E',
                     textDecoration: 'none',
                     flex: 1,
@@ -2369,9 +1861,9 @@ const CompanyDetail: React.FC = () => {
               </Box>
 
               {/* Twitter */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
-                <Avatar sx={{ width: { xs: 32, md: 36 }, height: { xs: 32, md: 36 }, bgcolor: '#1da1f2' }}>
-                  <Twitter sx={{ fontSize: { xs: 18, md: 20 } }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Avatar sx={{ width: 36, height: 36, bgcolor: '#1da1f2' }}>
+                  <Twitter sx={{ fontSize: 20 }} />
                 </Avatar>
                 <Link
                   href={company.twitter || '#'}
@@ -2389,10 +1881,9 @@ const CompanyDetail: React.FC = () => {
                         }).catch(err => console.error('Error al guardar:', err));
                       }
                     }
-                    // Si existe URL, dejar que el link funcione normalmente
                   }}
                   sx={{
-                    fontSize: { xs: '0.8rem', md: '0.875rem' },
+                    fontSize: '0.875rem',
                     color: company.twitter ? '#1976d2' : '#9E9E9E',
                     textDecoration: 'none',
                     flex: 1,
@@ -2409,9 +1900,9 @@ const CompanyDetail: React.FC = () => {
               </Box>
 
               {/* LinkedIn */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
-                <Avatar sx={{ width: { xs: 32, md: 36 }, height: { xs: 32, md: 36 }, bgcolor: '#0077b5' }}>
-                  <LinkedIn sx={{ fontSize: { xs: 18, md: 20 } }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Avatar sx={{ width: 36, height: 36, bgcolor: '#0077b5' }}>
+                  <LinkedIn sx={{ fontSize: 20 }} />
                 </Avatar>
                 <Link
                   href={company.linkedin || '#'}
@@ -2429,10 +1920,9 @@ const CompanyDetail: React.FC = () => {
                         }).catch(err => console.error('Error al guardar:', err));
                       }
                     }
-                    // Si existe URL, dejar que el link funcione normalmente
                   }}
                   sx={{
-                    fontSize: { xs: '0.8rem', md: '0.875rem' },
+                    fontSize: '0.875rem',
                     color: company.linkedin ? '#1976d2' : '#9E9E9E',
                     textDecoration: 'none',
                     flex: 1,
@@ -2449,9 +1939,9 @@ const CompanyDetail: React.FC = () => {
               </Box>
 
               {/* YouTube */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
-                <Avatar sx={{ width: { xs: 32, md: 36 }, height: { xs: 32, md: 36 }, bgcolor: '#ff0000' }}>
-                  <YouTube sx={{ fontSize: { xs: 18, md: 20 } }} />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Avatar sx={{ width: 36, height: 36, bgcolor: '#ff0000' }}>
+                  <YouTube sx={{ fontSize: 20 }} />
                 </Avatar>
                 <Link
                   href={company.youtube || '#'}
@@ -2469,10 +1959,9 @@ const CompanyDetail: React.FC = () => {
                         }).catch(err => console.error('Error al guardar:', err));
                       }
                     }
-                    // Si existe URL, dejar que el link funcione normalmente
                   }}
                   sx={{
-                    fontSize: { xs: '0.8rem', md: '0.875rem' },
+                    fontSize: '0.875rem',
                     color: company.youtube ? '#1976d2' : '#9E9E9E',
                     textDecoration: 'none',
                     flex: 1,
@@ -2488,187 +1977,137 @@ const CompanyDetail: React.FC = () => {
                 </Link>
               </Box>
             </Box>
-            </Card>
-
-          </Paper>
+          </Card>
         </Box>
-        </Card>
 
-        {/* Parte 2: Columnas Central y Derecha */}
-        <Card sx={{ 
-          borderRadius: { xs: 2, md: 6 },
-          boxShadow: 'none',
-          overflow: 'hidden',
-          bgcolor: theme.palette.background.paper,
+        {/* Parte 2: Columna Derecha - Descripción y Actividades */}
+        <Box sx={{ 
+          flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          flex: 1,
-          width: { xs: '100%', md: 'auto' },
-          height: { xs: 'auto', md: 'calc(100vh - 100px)' },
-          maxHeight: { xs: 'none', md: 'calc(100vh - 100px)' },
-          p: { xs: 1, sm: 1.5, md: 2 },
         }}>
-          <Box sx={{ 
-            display: 'flex',
-            flexDirection: { xs: 'column', lg: 'row' },
-            gap: summaryExpanded ? { xs: 1, md: 2 } : 0,
-            flex: 1, 
-            overflow: 'hidden',
-            minHeight: 0,
-            position: 'relative',
-            transition: 'gap 0.2s ease',
-          }}>
-        {/* Columna Central - Pestañas */}
-        <Box sx={{ 
-          flex: 1, 
-          display: 'flex', 
-          flexDirection: 'column', 
-          overflow: 'hidden',
-          width: { xs: '100%', lg: 'auto' },
-          height: { xs: 'auto', md: '100%' },
-          minHeight: { xs: '400px', md: 0 },
-          maxHeight: { xs: '600px', md: 'none' },
-          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-          animation: 'fadeIn 0.5s ease',
-          '@keyframes fadeIn': {
-            '0%': {
-              opacity: 0,
-            },
-            '100%': {
-              opacity: 1,
-            },
-          },
-        }}>
-          <Paper sx={{ 
-            flex: 1, 
-            display: 'flex', 
-            flexDirection: 'column', 
-            overflow: 'hidden',
-            height: '100%',
-            minHeight: 0,
-            bgcolor: theme.palette.background.paper,
-            boxShadow: 'none',
-            transition: 'all 0.3s ease',
-            '&:hover': {
-              boxShadow: 'none',
-            },
-          }}>
-            <Tabs 
-              value={tabValue} 
-              onChange={(e, newValue) => setTabValue(newValue)}
-              variant={isMobile ? 'scrollable' : 'standard'}
-              scrollButtons="auto"
-              sx={{
-                flexShrink: 0,
-                '& .MuiTabs-flexContainer': {
-                  display: 'flex',
-                  width: '100%',
-                  padding: { xs: '0 8px', md: '0 24px' },
-                },
-                '& .MuiTab-root': {
-                  transition: 'all 0.2s ease',
-                  flex: { xs: '0 0 auto', md: 1 },
-                  minWidth: { xs: 'auto', md: 'auto' },
-                  maxWidth: { xs: 'none', md: 'none' },
-                  padding: { xs: '8px 12px', md: '12px 16px' },
-                  fontSize: { xs: '0.75rem', md: '0.875rem' },
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  color: '#9E9E9E',
-                  '&:hover': {
-                    backgroundColor: 'rgba(46, 125, 50, 0.04)',
-                  },
-                },
-                '& .Mui-selected': {
-                  color: '#2E7D32',
-                  fontWeight: 'bold',
-                  backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                },
-                '& .MuiTabs-indicator': {
-                  backgroundColor: '#2E7D32',
-                  height: 3,
-                  transition: 'all 0.3s ease',
-                },
-              }}
-            >
-              <Tab label="Descripción" />
-              <Tab label="Actividades" />
-              <Tab label="Información avanzada" />
-            </Tabs>
-
-            <Box sx={{ 
-              flex: 1, 
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              py: 0.5,
-              px: 0.5,
-              minHeight: 0,
-              // Ocultar scrollbar pero mantener scroll funcional
-              '&::-webkit-scrollbar': {
-                display: 'none',
-                width: 0,
+          <Tabs
+            value={tabValue}
+            onChange={(e, newValue) => setTabValue(newValue)}
+            sx={{
+              mb: 2,
+              borderBottom: `1px solid ${theme.palette.divider}`,
+              minHeight: 'auto',
+              '& .MuiTabs-flexContainer': {
+                minHeight: 'auto',
               },
-              // Para Firefox
-              scrollbarWidth: 'none',
-            }}>
-              <TabPanel value={tabValue} index={0}>
-                {/* Aspectos destacados de los datos */}
-                <Card sx={{ 
-                  mb: 3, 
-                  p: 3, 
-                  borderRadius: 2, 
-                  boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
-                  bgcolor: 'transparent',
-                  border: `1px solid ${theme.palette.divider}`,
-                  transition: 'all 0.3s ease',
-                }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                      Aspectos destacados de los datos
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 3 }}>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                        FECHA DE CREACIÓN
-                      </Typography>
-                      <Typography variant="body2" sx={{ mt: 0.5 }}>
-                        {company.createdAt 
-                          ? new Date(company.createdAt).toLocaleDateString('es-ES', { 
-                              day: '2-digit', 
-                              month: '2-digit', 
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            }) + ' GMT-5'
-                          : '--'}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                        ETAPA DEL CICLO DE VIDA
-                      </Typography>
-                      <Box sx={{ mt: 0.5, display: 'flex', justifyContent: 'center' }}>
-                        <Chip 
-                          label={getStageLabel(company.lifecycleStage)} 
-                          color={getStageColor(company.lifecycleStage)} 
-                          size="small"
-                        />
-                      </Box>
-                    </Box>
-                    <Box sx={{ textAlign: 'center' }}>
-                      <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                        ÚLTIMA ACTIVIDAD
-                      </Typography>
-                      <Typography variant="body2" sx={{ mt: 0.5 }}>
-                        --
-                      </Typography>
-                    </Box>
-                  </Box>
-                </Card>
+              '& .MuiTab-root': {
+                textTransform: 'none',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                minHeight: 'auto',
+                padding: '6px 16px',
+                paddingBottom: '4px',
+                lineHeight: 1.2,
+              },
+              '& .MuiTabs-indicator': {
+                bottom: 0,
+                height: 2,
+              },
+            }}
+          >
+            <Tab label="Descripción" />
+            <Tab label="Actividades" />
+            <Tab label="Información avanzada" />
+          </Tabs>
 
-                {/* Actividades recientes */}
+          {/* Cards de Fecha de Creación, Etapa del Ciclo de Vida y Última Actividad - Solo en pestaña Descripción */}
+          {tabValue === 0 && (
+            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <Card
+                sx={{
+                  flex: 1,
+                  p: 2,
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: 1.5,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: theme.palette.text.primary }}>
+                  Fecha de creación
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {company.createdAt
+                    ? `${new Date(company.createdAt).toLocaleDateString('es-ES', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })} ${new Date(company.createdAt).toLocaleTimeString('es-ES', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}`
+                    : 'No disponible'}
+                </Typography>
+              </Card>
+
+              <Card
+                sx={{
+                  flex: 1,
+                  p: 2,
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: 1.5,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: theme.palette.text.primary }}>
+                  Etapa del ciclo de vida
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {company.lifecycleStage ? getStageLabel(company.lifecycleStage) : 'No disponible'}
+                </Typography>
+              </Card>
+
+              <Card
+                sx={{
+                  flex: 1,
+                  p: 2,
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: 1.5,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  textAlign: 'center',
+                }}
+              >
+                <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: theme.palette.text.primary }}>
+                  Última actividad
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {activities.length > 0 && activities[0].createdAt
+                    ? `${new Date(activities[0].createdAt).toLocaleDateString('es-ES', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })} ${new Date(activities[0].createdAt).toLocaleTimeString('es-ES', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}`
+                    : 'No hay actividades'}
+                </Typography>
+              </Card>
+            </Box>
+          )}
+
+          {/* Contenido de las pestañas */}
+          <Box sx={{ flex: 1, overflow: 'auto' }}>
+            {/* Pestaña Descripción */}
+            {tabValue === 0 && (
+              <Box>
+                {/* Contactos */}
                 <Card sx={{ 
                   mb: 3, 
                   p: 3, 
@@ -3598,7 +3037,7 @@ const CompanyDetail: React.FC = () => {
                             {monthActivities.map((activity, index) => {
                               const isNote = activity.type === 'note';
                               const isExpanded = isNote ? expandedNotes.has(activity.id) : expandedActivities.has(activity.id);
-                              const actionMenuAnchor = noteActionMenus[activity.id];
+                              // const actionMenuAnchor = noteActionMenus[activity.id];
                               
                               return (
                                 <Box 
@@ -4898,10 +4337,20 @@ const CompanyDetail: React.FC = () => {
                     </TableContainer>
                   )}
                 </Card>
-              </TabPanel>
+              </Box>
+            )}
 
-              <TabPanel value={tabValue} index={1}>
-                <Box sx={{ p: { xs: 2, sm: 3 } }}>
+            {/* Pestaña Actividades */}
+            {tabValue === 1 && (
+              <Card sx={{ 
+                borderRadius: 2,
+                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                bgcolor: theme.palette.background.paper,
+                px: 2,
+                py: 2,
+                display: 'flex',
+                flexDirection: 'column',
+              }}>
                   {/* Barra de búsqueda y controles */}
                   <Box sx={{ 
                     display: 'flex', 
@@ -5329,540 +4778,361 @@ const CompanyDetail: React.FC = () => {
                       </Box>
                     );
                   })()}
-                </Box>
-              </TabPanel>
+              </Card>
+            )}
 
-              <TabPanel value={tabValue} index={2}>
+            {/* Pestaña Información avanzada */}
+            {tabValue === 2 && (
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                  CRM Taxi Monterrico no tiene datos de enriquecimiento para este registro todavía.
+                </Typography>
+
                 <Box sx={{ mb: 3 }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                    CRM Taxi Monterrico no tiene datos de enriquecimiento para este registro todavía.
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                    Etapa del ciclo de vida
                   </Typography>
-
-                  <Box sx={{ mb: 3 }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-                      Etapa del ciclo de vida
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                      <Chip label={getStageLabel(company.lifecycleStage)} color={getStageColor(company.lifecycleStage)} />
-                      {company.industry && <Chip label={`Industria: ${company.industry}`} />}
-                      {company.domain && <Chip label={company.domain} />}
-                      {company.city && <Chip label={company.city} />}
-                    </Box>
-                  </Box>
-
-                  <Box sx={{ mb: 3 }}>
-                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-                      Descripción de la empresa
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {company.notes || company.name || '--'}
-                    </Typography>
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                    <Chip label={getStageLabel(company.lifecycleStage)} color={getStageColor(company.lifecycleStage)} />
+                    {company.industry && <Chip label={`Industria: ${company.industry}`} />}
+                    {company.domain && <Chip label={company.domain} />}
+                    {company.city && <Chip label={company.city} />}
                   </Box>
                 </Box>
-              </TabPanel>
-            </Box>
-          </Paper>
-        </Box>
 
-        {/* Columna Derecha - Registros Asociados */}
-        <Box sx={{ 
-          display: { xs: summaryExpanded ? 'block' : 'none', lg: 'block' },
-          width: { xs: '100%', lg: summaryExpanded ? '320px' : '24px' },
-          flexShrink: 0,
-          height: { xs: 'auto', lg: '100%' },
-          maxHeight: { xs: '400px', lg: '100%' },
-          overflowY: 'auto',
-          overflowX: 'hidden',
-          position: { xs: 'relative', lg: summaryExpanded ? 'relative' : 'absolute' },
-          right: { xs: 'auto', lg: summaryExpanded ? 'auto' : 0 },
-          top: 0,
-          transition: 'width 0.2s ease',
-          mt: { xs: 2, lg: 0 },
-          // Ocultar scrollbar pero mantener scroll funcional
-          '&::-webkit-scrollbar': {
-            display: 'none',
-            width: 0,
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                    Descripción de la empresa
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {company.notes || company.name || '--'}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+          </Box>
+        </Box>
+      </Box>
+
+      {/* Botón flotante para abrir el Drawer de Registros Asociados */}
+      {!summaryExpanded && (
+        <Box
+          sx={{
+            position: 'fixed',
+            right: 0,
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 1000,
+            display: { xs: 'none', lg: 'flex' },
+          }}
+        >
+          <IconButton
+            onClick={() => setSummaryExpanded(true)}
+            sx={{
+              backgroundColor: theme.palette.mode === 'dark' 
+                ? 'rgba(46, 125, 50, 0.8)' 
+                : 'rgba(46, 125, 50, 0.1)',
+              color: '#2E7D32',
+              borderRadius: '8px 0 0 8px',
+              width: 40,
+              height: 80,
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                backgroundColor: theme.palette.mode === 'dark' 
+                  ? 'rgba(46, 125, 50, 0.9)' 
+                  : 'rgba(46, 125, 50, 0.15)',
+              },
+            }}
+          >
+            <KeyboardArrowLeft sx={{ fontSize: 24 }} />
+          </IconButton>
+        </Box>
+      )}
+
+      {/* Drawer de Registros Asociados */}
+      <Drawer
+        anchor="right"
+        open={summaryExpanded}
+        onClose={() => setSummaryExpanded(false)}
+        PaperProps={{
+          sx: {
+            width: '100vw',
+            maxWidth: '100vw',
+            height: '100vh',
+            maxHeight: '100vh',
           },
-          // Para Firefox
-          scrollbarWidth: 'none',
-        }}>
-          {/* Columna delgada para expandir cuando está contraído */}
-          {!summaryExpanded && (
+        }}
+      >
+        <Box
+          sx={{
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            bgcolor: theme.palette.background.default,
+          }}
+        >
+          {/* Header del Drawer */}
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              p: 3,
+              borderBottom: `1px solid ${theme.palette.divider}`,
+              bgcolor: theme.palette.background.paper,
+            }}
+          >
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+              Estadísticas de Servicios
+            </Typography>
+            <IconButton
+              onClick={() => setSummaryExpanded(false)}
+              sx={{
+                color: theme.palette.text.secondary,
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                },
+              }}
+            >
+              <Close />
+            </IconButton>
+          </Box>
+
+          {/* Contenido del Drawer */}
+          <Box
+            sx={{
+              flex: 1,
+              overflowY: 'auto',
+              overflowX: 'hidden',
+              width: '100%',
+              height: '100%',
+              p: 3,
+              // Ocultar scrollbar pero mantener scroll funcional
+              '&::-webkit-scrollbar': {
+                display: 'none',
+                width: 0,
+              },
+              // Para Firefox
+              scrollbarWidth: 'none',
+            }}
+          >
+            {/* Controles de período */}
             <Box
               sx={{
-                width: '100%',
-                height: '100%',
                 display: 'flex',
-                alignItems: 'center',
+                gap: 2,
+                mb: 4,
                 justifyContent: 'center',
               }}
             >
-              <IconButton
-                onClick={() => setSummaryExpanded(true)}
+              <Button
+                variant={timePeriod === 'day' ? 'contained' : 'outlined'}
+                onClick={() => setTimePeriod('day')}
                 sx={{
-                  backgroundColor: 'transparent',
-                  color: '#2E7D32',
-                  transition: 'all 0.2s ease',
+                  minWidth: 120,
+                  bgcolor: timePeriod === 'day' ? taxiMonterricoColors.green : 'transparent',
                   '&:hover': {
-                    backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                    bgcolor: timePeriod === 'day' ? taxiMonterricoColors.green : theme.palette.action.hover,
                   },
                 }}
               >
-                <KeyboardArrowLeft sx={{ fontSize: 20 }} />
-              </IconButton>
-            </Box>
-          )}
-          
-          <Paper sx={{ 
-            p: 2,
-            height: '100%',
-            width: summaryExpanded ? '100%' : 0,
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            opacity: summaryExpanded ? 1 : 0,
-            visibility: summaryExpanded ? 'visible' : 'hidden',
-            transition: 'opacity 0.2s ease, width 0.2s ease',
-          }}>
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center', 
-                mb: 2,
-                flexShrink: 0,
-              }}
-            >
-              <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                Resumen
-              </Typography>
-              <IconButton 
-                size="small"
-                onClick={() => setSummaryExpanded(!summaryExpanded)}
+                Por Día
+              </Button>
+              <Button
+                variant={timePeriod === 'week' ? 'contained' : 'outlined'}
+                onClick={() => setTimePeriod('week')}
                 sx={{
-                  transform: summaryExpanded ? 'rotate(0deg)' : 'rotate(180deg)',
-                  transition: 'transform 0.2s ease',
+                  minWidth: 120,
+                  bgcolor: timePeriod === 'week' ? taxiMonterricoColors.green : 'transparent',
+                  '&:hover': {
+                    bgcolor: timePeriod === 'week' ? taxiMonterricoColors.green : theme.palette.action.hover,
+                  },
                 }}
               >
-                <KeyboardArrowRight />
-              </IconButton>
+                Por Semana
+              </Button>
+              <Button
+                variant={timePeriod === 'month' ? 'contained' : 'outlined'}
+                onClick={() => setTimePeriod('month')}
+                sx={{
+                  minWidth: 120,
+                  bgcolor: timePeriod === 'month' ? taxiMonterricoColors.green : 'transparent',
+                  '&:hover': {
+                    bgcolor: timePeriod === 'month' ? taxiMonterricoColors.green : theme.palette.action.hover,
+                  },
+                }}
+              >
+                Por Mes
+              </Button>
             </Box>
 
-            {/* Contenido desplegable */}
-            <Box
+            {/* Gráfico de Servicios */}
+            <Paper
               sx={{
-                flex: 1,
-                overflowY: 'auto',
-                overflowX: 'hidden',
-                maxWidth: summaryExpanded ? '100%' : 0,
-                width: summaryExpanded ? '100%' : 0,
-                opacity: summaryExpanded ? 1 : 0,
-                visibility: summaryExpanded ? 'visible' : 'hidden',
-                // Ocultar scrollbar pero mantener scroll funcional
-                '&::-webkit-scrollbar': {
-                  display: 'none',
-                  width: 0,
-                },
-                // Para Firefox
-                scrollbarWidth: 'none',
+                p: 3,
+                mb: 3,
+                bgcolor: theme.palette.background.paper,
+                borderRadius: 2,
+                boxShadow: theme.palette.mode === 'dark'
+                  ? '0 4px 12px rgba(0,0,0,0.3)'
+                  : '0 4px 12px rgba(0,0,0,0.1)',
               }}
             >
-            {/* Contactos */}
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                  Contactos ({associatedContacts.length})
-                </Typography>
-                <Box>
-                  <Button 
-                    size="small" 
-                    variant="outlined" 
-                    onClick={handleOpenAddContactDialog}
-                    sx={{ 
-                      fontSize: '1.2rem',
-                      fontWeight: 600,
-                      minWidth: '36px',
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '50%',
-                      borderWidth: '0.5px',
-                      '&:hover': {
-                        borderWidth: '0.5px',
-                      }
+              <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+                Servicios Realizados
+              </Typography>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart
+                  data={
+                    timePeriod === 'day'
+                      ? [
+                          { servicio: 'Transporte', cantidad: 45 },
+                          { servicio: 'Envío', cantidad: 32 },
+                          { servicio: 'Carga', cantidad: 28 },
+                          { servicio: 'Mensajería', cantidad: 19 },
+                          { servicio: 'Delivery', cantidad: 15 },
+                          { servicio: 'Traslado', cantidad: 12 },
+                        ]
+                      : timePeriod === 'week'
+                      ? [
+                          { servicio: 'Transporte', cantidad: 285 },
+                          { servicio: 'Envío', cantidad: 198 },
+                          { servicio: 'Carga', cantidad: 175 },
+                          { servicio: 'Mensajería', cantidad: 124 },
+                          { servicio: 'Delivery', cantidad: 98 },
+                          { servicio: 'Traslado', cantidad: 76 },
+                        ]
+                      : [
+                          { servicio: 'Transporte', cantidad: 1245 },
+                          { servicio: 'Envío', cantidad: 892 },
+                          { servicio: 'Carga', cantidad: 756 },
+                          { servicio: 'Mensajería', cantidad: 534 },
+                          { servicio: 'Delivery', cantidad: 421 },
+                          { servicio: 'Traslado', cantidad: 328 },
+                        ]
+                  }
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                  <XAxis
+                    dataKey="servicio"
+                    tick={{ fill: theme.palette.text.secondary }}
+                    style={{ fontSize: '12px' }}
+                  />
+                  <YAxis
+                    tick={{ fill: theme.palette.text.secondary }}
+                    style={{ fontSize: '12px' }}
+                  />
+                  <RechartsTooltip
+                    contentStyle={{
+                      backgroundColor: theme.palette.background.paper,
+                      border: `1px solid ${theme.palette.divider}`,
+                      borderRadius: '8px',
                     }}
-                  >+</Button>
-                  <IconButton size="small">
-                    <MoreVert fontSize="small" />
-                  </IconButton>
-                </Box>
-              </Box>
-              {associatedContacts.length > 0 ? (
-                <List>
-                  {associatedContacts.map((contact: any) => (
-                    <ListItem key={contact.id} sx={{ px: 0 }}>
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: '#2E7D32' }}>
-                          {getInitials(contact.firstName || '', contact.lastName || '')}
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            {contact.firstName} {contact.lastName}
-                          </Box>
-                        }
-                        secondary={
-                          <Box>
-                            {contact.email && (
-                              <Typography variant="caption" display="block">
-                                {contact.email}
-                              </Typography>
-                            )}
-                            {contact.jobTitle && (
-                              <Typography variant="caption" display="block">
-                                {contact.jobTitle}
-                              </Typography>
-                            )}
-                            <Link href={`/contacts/${contact.id}`} variant="caption" sx={{ mr: 2 }}>
-                              Ver Contacto
-                            </Link>
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  No hay contactos asociados.
-                </Typography>
-              )}
-            </Box>
+                  />
+                  <Legend />
+                  <Bar
+                    dataKey="cantidad"
+                    fill={taxiMonterricoColors.green}
+                    radius={[8, 8, 0, 0]}
+                    name="Cantidad de Servicios"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </Paper>
 
-            {/* Deals */}
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                  Negocios ({associatedDeals.length})
-                </Typography>
-                <Box>
-                  <Button 
-                    size="small" 
-                    variant="outlined"
-                    sx={{ 
-                      fontSize: '1.2rem',
-                      fontWeight: 600,
-                      minWidth: '36px',
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '50%',
-                      borderWidth: '0.5px',
-                      '&:hover': {
-                        borderWidth: '0.5px',
-                      }
+            {/* Gráfico de Tendencia */}
+            <Paper
+              sx={{
+                p: 3,
+                bgcolor: theme.palette.background.paper,
+                borderRadius: 2,
+                boxShadow: theme.palette.mode === 'dark'
+                  ? '0 4px 12px rgba(0,0,0,0.3)'
+                  : '0 4px 12px rgba(0,0,0,0.1)',
+              }}
+            >
+              <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+                Tendencia de Servicios
+              </Typography>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart
+                  data={
+                    timePeriod === 'day'
+                      ? [
+                          { periodo: '00:00', Transporte: 2, Envío: 1, Carga: 1 },
+                          { periodo: '04:00', Transporte: 1, Envío: 0, Carga: 0 },
+                          { periodo: '08:00', Transporte: 8, Envío: 5, Carga: 4 },
+                          { periodo: '12:00', Transporte: 12, Envío: 9, Carga: 7 },
+                          { periodo: '16:00', Transporte: 15, Envío: 11, Carga: 9 },
+                          { periodo: '20:00', Transporte: 7, Envío: 6, Carga: 7 },
+                        ]
+                      : timePeriod === 'week'
+                      ? [
+                          { periodo: 'Lun', Transporte: 38, Envío: 27, Carga: 23 },
+                          { periodo: 'Mar', Transporte: 42, Envío: 30, Carga: 26 },
+                          { periodo: 'Mié', Transporte: 45, Envío: 32, Carga: 28 },
+                          { periodo: 'Jue', Transporte: 48, Envío: 35, Carga: 30 },
+                          { periodo: 'Vie', Transporte: 52, Envío: 38, Carga: 33 },
+                          { periodo: 'Sáb', Transporte: 35, Envío: 25, Carga: 22 },
+                          { periodo: 'Dom', Transporte: 25, Envío: 19, Carga: 13 },
+                        ]
+                      : [
+                          { periodo: 'Ene', Transporte: 1020, Envío: 730, Carga: 620 },
+                          { periodo: 'Feb', Transporte: 1150, Envío: 825, Carga: 700 },
+                          { periodo: 'Mar', Transporte: 1245, Envío: 892, Carga: 756 },
+                          { periodo: 'Abr', Transporte: 1180, Envío: 845, Carga: 715 },
+                          { periodo: 'May', Transporte: 1320, Envío: 945, Carga: 800 },
+                          { periodo: 'Jun', Transporte: 1280, Envío: 915, Carga: 775 },
+                        ]
+                  }
+                  margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                  <XAxis
+                    dataKey="periodo"
+                    tick={{ fill: theme.palette.text.secondary }}
+                    style={{ fontSize: '12px' }}
+                  />
+                  <YAxis
+                    tick={{ fill: theme.palette.text.secondary }}
+                    style={{ fontSize: '12px' }}
+                  />
+                  <RechartsTooltip
+                    contentStyle={{
+                      backgroundColor: theme.palette.background.paper,
+                      border: `1px solid ${theme.palette.divider}`,
+                      borderRadius: '8px',
                     }}
-                  >+</Button>
-                  <IconButton size="small">
-                    <MoreVert fontSize="small" />
-                  </IconButton>
-                </Box>
-              </Box>
-              {associatedDeals.length > 0 ? (
-                <List>
-                  {associatedDeals.map((deal) => (
-                    <ListItem key={deal.id} sx={{ px: 0 }}>
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: '#FF9800' }}>
-                          <AttachMoney />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={deal.name}
-                        secondary={
-                          <Box>
-                            <Typography variant="caption" display="block">
-                              Valor: ${deal.amount?.toLocaleString() || '0'}
-                            </Typography>
-                            {deal.closeDate && (
-                              <Typography variant="caption" display="block">
-                                Fecha de cierre: {new Date(deal.closeDate).toLocaleDateString('es-ES')}
-                              </Typography>
-                            )}
-                            <Typography variant="caption" display="block">
-                              Etapa: {deal.stage}
-                            </Typography>
-                            <Link href="#" variant="caption" sx={{ mr: 2 }}>
-                              Ver Negocios asociado
-                            </Link>
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  No hay negocios asociados.
-                </Typography>
-              )}
-            </Box>
-
-            {/* Tickets */}
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                  Tickets ({associatedTickets.length})
-                </Typography>
-                <Box>
-                  <Button 
-                    size="small" 
-                    variant="outlined" 
-                    onClick={() => setAddTicketOpen(true)}
-                    sx={{ 
-                      fontSize: '1.2rem',
-                      fontWeight: 600,
-                      minWidth: '36px',
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '50%',
-                      borderWidth: '0.5px',
-                      '&:hover': {
-                        borderWidth: '0.5px',
-                      }
-                    }}
-                  >+</Button>
-                  <IconButton size="small">
-                    <MoreVert fontSize="small" />
-                  </IconButton>
-                </Box>
-              </Box>
-              {associatedTickets.length > 0 ? (
-                <List>
-                  {associatedTickets.map((ticket) => (
-                    <ListItem key={ticket.id} sx={{ px: 0 }}>
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: '#1976d2' }}>
-                          <Support />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={ticket.subject}
-                        secondary={
-                          <Box>
-                            <Typography variant="caption" display="block">
-                              Estado: <Chip 
-                                label={ticket.status} 
-                                size="small" 
-                                sx={{ 
-                                  height: 18,
-                                  fontSize: '0.65rem',
-                                  bgcolor: ticket.status === 'closed' ? '#e0e0e0' : 
-                                          ticket.status === 'resolved' ? '#c8e6c9' :
-                                          ticket.status === 'pending' ? '#fff9c4' :
-                                          ticket.status === 'open' ? '#bbdefb' : '#f5f5f5',
-                                  textTransform: 'capitalize'
-                                }} 
-                              />
-                            </Typography>
-                            <Typography variant="caption" display="block">
-                              Prioridad: <Chip 
-                                label={ticket.priority} 
-                                size="small" 
-                                sx={{ 
-                                  height: 18,
-                                  fontSize: '0.65rem',
-                                  bgcolor: ticket.priority === 'urgent' ? '#ffcdd2' :
-                                          ticket.priority === 'high' ? '#ffe0b2' :
-                                          ticket.priority === 'medium' ? '#fff9c4' : '#e8f5e9',
-                                  textTransform: 'capitalize'
-                                }} 
-                              />
-                            </Typography>
-                            {ticket.createdAt && (
-                              <Typography variant="caption" display="block">
-                                Creado: {new Date(ticket.createdAt).toLocaleDateString('es-ES')}
-                              </Typography>
-                            )}
-                            <Link href="#" variant="caption" sx={{ mr: 2 }}>
-                              Ver Ticket asociado
-                            </Link>
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  No hay tickets asociados.
-                </Typography>
-              )}
-            </Box>
-
-            {/* Suscripciones en Resumen */}
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                  Suscripciones ({associatedSubscriptions.length})
-                </Typography>
-                <Box>
-                  <Button 
-                    size="small" 
-                    variant="outlined" 
-                    onClick={() => setAddSubscriptionOpen(true)}
-                    sx={{ 
-                      fontSize: '1.2rem',
-                      fontWeight: 600,
-                      minWidth: '36px',
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '50%',
-                      borderWidth: '0.5px',
-                      '&:hover': {
-                        borderWidth: '0.5px',
-                      }
-                    }}
-                  >+</Button>
-                  <IconButton size="small">
-                    <MoreVert fontSize="small" />
-                  </IconButton>
-                </Box>
-              </Box>
-              {associatedSubscriptions.length > 0 ? (
-                <List>
-                  {associatedSubscriptions.map((subscription) => (
-                    <ListItem key={subscription.id} sx={{ px: 0 }}>
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: '#9C27B0' }}>
-                          <Business />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={subscription.name}
-                        secondary={
-                          <Box>
-                            <Typography variant="caption" display="block">
-                              Estado: <Chip 
-                                label={subscription.status} 
-                                size="small" 
-                                sx={{ 
-                                  height: 18,
-                                  fontSize: '0.65rem',
-                                  bgcolor: subscription.status === 'active' ? '#c8e6c9' :
-                                          subscription.status === 'cancelled' ? '#ffcdd2' :
-                                          subscription.status === 'expired' ? '#e0e0e0' : '#fff9c4',
-                                  textTransform: 'capitalize'
-                                }} 
-                              />
-                            </Typography>
-                            <Typography variant="caption" display="block">
-                              Monto: {subscription.currency || 'USD'} ${parseFloat(subscription.amount || 0).toLocaleString()}
-                            </Typography>
-                            <Typography variant="caption" display="block">
-                              Ciclo: {subscription.billingCycle?.replace('_', ' ')}
-                            </Typography>
-                            <Link href="#" variant="caption" sx={{ mr: 2 }}>
-                              Ver Suscripción asociada
-                            </Link>
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  No hay suscripciones asociadas.
-                </Typography>
-              )}
-            </Box>
-
-            {/* Pagos en Resumen */}
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
-                  Pagos ({associatedPayments.length})
-                </Typography>
-                <Box>
-                  <Button 
-                    size="small" 
-                    variant="outlined" 
-                    onClick={() => setAddPaymentOpen(true)}
-                    sx={{ 
-                      fontSize: '1.2rem',
-                      fontWeight: 600,
-                      minWidth: '36px',
-                      width: '36px',
-                      height: '36px',
-                      borderRadius: '50%',
-                      borderWidth: '0.5px',
-                      '&:hover': {
-                        borderWidth: '0.5px',
-                      }
-                    }}
-                  >+</Button>
-                  <IconButton size="small">
-                    <MoreVert fontSize="small" />
-                  </IconButton>
-                </Box>
-              </Box>
-              {associatedPayments.length > 0 ? (
-                <List>
-                  {associatedPayments.map((payment) => (
-                    <ListItem key={payment.id} sx={{ px: 0 }}>
-                      <ListItemAvatar>
-                        <Avatar sx={{ bgcolor: '#4CAF50' }}>
-                          <AttachMoney />
-                        </Avatar>
-                      </ListItemAvatar>
-                      <ListItemText
-                        primary={`${payment.currency || 'USD'} $${parseFloat(payment.amount || 0).toLocaleString()}`}
-                        secondary={
-                          <Box>
-                            <Typography variant="caption" display="block">
-                              Estado: <Chip 
-                                label={payment.status} 
-                                size="small" 
-                                sx={{ 
-                                  height: 18,
-                                  fontSize: '0.65rem',
-                                  bgcolor: payment.status === 'completed' ? '#c8e6c9' :
-                                          payment.status === 'failed' ? '#ffcdd2' :
-                                          payment.status === 'refunded' ? '#e0e0e0' :
-                                          payment.status === 'cancelled' ? '#e0e0e0' : '#fff9c4',
-                                  textTransform: 'capitalize'
-                                }} 
-                              />
-                            </Typography>
-                            <Typography variant="caption" display="block">
-                              Método: {payment.paymentMethod?.replace('_', ' ')}
-                            </Typography>
-                            {payment.paymentDate && (
-                              <Typography variant="caption" display="block">
-                                Fecha: {new Date(payment.paymentDate).toLocaleDateString('es-ES')}
-                              </Typography>
-                            )}
-                            <Link href="#" variant="caption" sx={{ mr: 2 }}>
-                              Ver Pago asociado
-                            </Link>
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  No hay pagos asociados.
-                </Typography>
-              )}
-            </Box>
-            </Box>
-          </Paper>
-        </Box>
+                  />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="Transporte"
+                    stroke={taxiMonterricoColors.green}
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="Envío"
+                    stroke="#1976d2"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="Carga"
+                    stroke="#2e7d32"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </Paper>
           </Box>
-        </Card>
-      </Box>
+        </Box>
+      </Drawer>
 
       {/* Mensaje de éxito */}
       {successMessage && (

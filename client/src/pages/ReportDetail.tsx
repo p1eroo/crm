@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -25,12 +25,11 @@ import {
   AttachMoney,
   People,
   Business,
-  TrendingUp,
 } from '@mui/icons-material';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../config/api';
 import { useTheme } from '@mui/material/styles';
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface User {
   id: number;
@@ -69,24 +68,17 @@ const ReportDetail: React.FC = () => {
   const [stageStats, setStageStats] = useState<any>(null);
   const [loadingStageStats, setLoadingStageStats] = useState(false);
 
-  useEffect(() => {
-    if (id) {
-      fetchUserData();
-      fetchUserStats();
-      fetchStageStats();
-    }
-  }, [id]);
-
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
+    if (!id) return;
     try {
       const response = await api.get(`/users/${id}`);
       setUser(response.data);
     } catch (error: any) {
       setError(error.response?.data?.error || 'Error al cargar usuario');
     }
-  };
+  }, [id]);
 
-  const fetchUserStats = async () => {
+  const fetchUserStats = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -153,7 +145,28 @@ const ReportDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  const fetchStageStats = useCallback(async () => {
+    if (!id) return;
+    try {
+      setLoadingStageStats(true);
+      const response = await api.get(`/reports/user/${id}/stage-stats`);
+      setStageStats(response.data);
+    } catch (error: any) {
+      console.error('Error fetching stage stats:', error);
+    } finally {
+      setLoadingStageStats(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (id) {
+      fetchUserData();
+      fetchUserStats();
+      fetchStageStats();
+    }
+  }, [id, fetchUserData, fetchUserStats, fetchStageStats]);
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
@@ -173,19 +186,6 @@ const ReportDetail: React.FC = () => {
       style: 'currency',
       currency: 'PEN',
     }).format(amount);
-  };
-
-  const fetchStageStats = async () => {
-    if (!id) return;
-    try {
-      setLoadingStageStats(true);
-      const response = await api.get(`/reports/user/${id}/stage-stats`);
-      setStageStats(response.data);
-    } catch (error: any) {
-      console.error('Error fetching stage stats:', error);
-    } finally {
-      setLoadingStageStats(false);
-    }
   };
 
   if (loading) {

@@ -3,41 +3,22 @@ import {
   Box,
   Typography,
   Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Paper,
   IconButton,
   TextField,
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogActions,
   MenuItem,
   Chip,
   CircularProgress,
   Link,
-  Drawer,
   Avatar,
   Divider,
-  List,
-  ListItem,
-  ListItemText,
   Collapse,
   Tooltip,
-  Checkbox as MuiCheckbox,
   Select,
   FormControl,
-  InputLabel,
-  TablePagination,
-  Menu,
-  Card,
-  CardContent,
-  Tabs,
-  Tab,
   useTheme,
   Radio,
   RadioGroup,
@@ -45,33 +26,24 @@ import {
 } from '@mui/material';
 import { 
   Add, 
-  Edit, 
   Delete, 
   Search, 
   Close, 
   Business, 
   Email, 
   Phone, 
-  Work, 
   Person,
   Note,
   Assignment,
   Event,
   MoreVert,
   ExpandMore,
-  ContentCopy,
   KeyboardArrowDown,
-  Settings,
   LocationOn,
   Flag,
   TrendingUp,
-  BarChart,
   FilterList,
-  AttachFile,
   Visibility,
-  People,
-  TrendingDown,
-  Computer,
   ArrowBack,
   ArrowForward,
   CheckCircle,
@@ -144,18 +116,15 @@ const Contacts: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
-  const [search, setSearch] = useState('');
+  const [search] = useState('');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewContact, setPreviewContact] = useState<Contact | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [previewActivities, setPreviewActivities] = useState<any[]>([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
-  const [aboutExpanded, setAboutExpanded] = useState(true);
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
-  const [actionMenuAnchor, setActionMenuAnchor] = useState<{ [key: number]: HTMLElement | null }>({});
-  const [activeTab, setActiveTab] = useState(0);
+  const [rowsPerPage] = useState(10);
+  const [activeTab] = useState(0);
   const [sortBy, setSortBy] = useState('newest');
   const [formData, setFormData] = useState({
     firstName: '',
@@ -180,11 +149,9 @@ const Contacts: React.FC = () => {
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [contactToDelete, setContactToDelete] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [statusMenuAnchor, setStatusMenuAnchor] = useState<{ [key: number]: HTMLElement | null }>({});
-  const [updatingStatus, setUpdatingStatus] = useState<{ [key: number]: boolean }>({});
   const [importing, setImporting] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [selectedOwnerFilter, setSelectedOwnerFilter] = useState<string | number | null>(null);
+  const [selectedOwnerFilter] = useState<string | number | null>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [selectedStages, setSelectedStages] = useState<string[]>([]);
@@ -194,15 +161,7 @@ const Contacts: React.FC = () => {
   const [ownerFilterExpanded, setOwnerFilterExpanded] = useState(true);
   const [countryFilterExpanded, setCountryFilterExpanded] = useState(true);
 
-  useEffect(() => {
-    fetchContacts();
-    // Solo intentar obtener usuarios si el usuario actual es admin
-    if (user?.role === 'admin') {
-      fetchUsers();
-    }
-  }, [search, user?.role]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     // Verificar nuevamente el rol antes de hacer la petición
     if (user?.role !== 'admin') {
       setUsers([]);
@@ -223,7 +182,7 @@ const Contacts: React.FC = () => {
       console.error('Error fetching users:', error);
       setUsers([]);
     }
-  };
+  }, [user?.role]);
 
   const handleExportToExcel = () => {
     // Preparar los datos para exportar
@@ -362,7 +321,7 @@ const Contacts: React.FC = () => {
     }
   };
 
-  const fetchContacts = async () => {
+  const fetchContacts = useCallback(async () => {
     try {
       const params = search ? { search } : {};
       const response = await api.get('/contacts', { params });
@@ -372,7 +331,15 @@ const Contacts: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search]);
+
+  useEffect(() => {
+    fetchContacts();
+    // Solo intentar obtener usuarios si el usuario actual es admin
+    if (user?.role === 'admin') {
+      fetchUsers();
+    }
+  }, [fetchContacts, fetchUsers, user?.role]);
 
   const handleOpen = (contact?: Contact) => {
     setFormErrors({});
@@ -631,39 +598,6 @@ const Contacts: React.FC = () => {
     setContactToDelete(null);
   };
 
-  const handleStatusMenuOpen = (event: React.MouseEvent<HTMLElement>, contactId: number) => {
-    event.stopPropagation();
-    event.preventDefault();
-    setStatusMenuAnchor({ ...statusMenuAnchor, [contactId]: event.currentTarget });
-  };
-
-  const handleStatusMenuClose = (contactId: number) => {
-    setStatusMenuAnchor({ ...statusMenuAnchor, [contactId]: null });
-  };
-
-  const handleStatusChange = async (event: React.MouseEvent<HTMLElement>, contactId: number, isActive: boolean) => {
-    event.stopPropagation();
-    event.preventDefault();
-    setUpdatingStatus({ ...updatingStatus, [contactId]: true });
-    try {
-      // Si queremos activar, establecer a 'cierre_ganado', si queremos desactivar, establecer a 'lead'
-      const newStage = isActive ? 'cierre_ganado' : 'lead';
-      await api.put(`/contacts/${contactId}`, { lifecycleStage: newStage });
-      // Actualizar el contacto en la lista
-      setContacts(contacts.map(contact => 
-        contact.id === contactId 
-          ? { ...contact, lifecycleStage: newStage }
-          : contact
-      ));
-      handleStatusMenuClose(contactId);
-    } catch (error) {
-      console.error('Error updating contact status:', error);
-      alert('Error al actualizar el estado. Por favor, intenta nuevamente.');
-    } finally {
-      setUpdatingStatus({ ...updatingStatus, [contactId]: false });
-    }
-  };
-
   const handlePreview = async (contact: Contact) => {
     setLoadingPreview(true);
     setLoadingActivities(true);
@@ -740,16 +674,6 @@ const Contacts: React.FC = () => {
     return labels[stage] || stage;
   };
 
-  // Agrupar contactos por etapa
-  const groupedContacts = contacts.reduce((acc, contact) => {
-    const stage = contact.lifecycleStage || 'lead';
-    if (!acc[stage]) {
-      acc[stage] = [];
-    }
-    acc[stage].push(contact);
-    return acc;
-  }, {} as Record<string, Contact[]>);
-
   // Orden de las etapas según porcentaje
   const stageOrder = [
     'lead_inactivo', // -5%
@@ -768,73 +692,12 @@ const Contacts: React.FC = () => {
     'activo', // 100%
   ];
   
-  // Obtener todas las etapas que tienen contactos, ordenadas según stageOrder
-  const allStages = Object.keys(groupedContacts);
-  const orderedStages = [
-    ...stageOrder.filter(stage => groupedContacts[stage] && groupedContacts[stage].length > 0),
-    ...allStages.filter(stage => !stageOrder.includes(stage))
-  ];
-
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
   };
 
-  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.checked) {
-      const newSelected = paginatedContacts.map((contact) => contact.id);
-      setSelectedContacts(newSelected);
-    } else {
-      setSelectedContacts([]);
-    }
-  };
-
-  const handleSelectOne = (contactId: number) => {
-    const selectedIndex = selectedContacts.indexOf(contactId);
-    let newSelected: number[] = [];
-
-    if (selectedIndex === -1) {
-      newSelected = newSelected.concat(selectedContacts, contactId);
-    } else if (selectedIndex === 0) {
-      newSelected = newSelected.concat(selectedContacts.slice(1));
-    } else if (selectedIndex === selectedContacts.length - 1) {
-      newSelected = newSelected.concat(selectedContacts.slice(0, -1));
-    } else if (selectedIndex > 0) {
-      newSelected = newSelected.concat(
-        selectedContacts.slice(0, selectedIndex),
-        selectedContacts.slice(selectedIndex + 1)
-      );
-    }
-
-    setSelectedContacts(newSelected);
-  };
-
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
-  };
-
-  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setRowsPerPage(parseInt(event.target.value, 10));
-    setPage(0);
-  };
-
-  const handleActionMenuOpen = (event: React.MouseEvent<HTMLElement>, contactId: number) => {
-    setActionMenuAnchor({ ...actionMenuAnchor, [contactId]: event.currentTarget });
-  };
-
-  const handleActionMenuClose = (contactId: number) => {
-    setActionMenuAnchor({ ...actionMenuAnchor, [contactId]: null });
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '--';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
   };
 
   const getStageLabelWithoutPercentage = (stage: string) => {
@@ -936,20 +799,6 @@ const Contacts: React.FC = () => {
       }
     });
 
-  // Calcular estadísticas
-  const totalContacts = contacts.length;
-  const activeContacts = contacts.filter(c => c.lifecycleStage === 'cierre_ganado').length;
-  const totalCompanies = new Set(contacts.filter(c => c.Company).map(c => c.Company?.id)).size;
-  
-  // Calcular contactos nuevos este mes
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
-  const newThisMonth = contacts.filter(c => {
-    if (!c.createdAt) return false;
-    const createdDate = new Date(c.createdAt);
-    return createdDate.getMonth() === currentMonth && createdDate.getFullYear() === currentYear;
-  }).length;
-
   // Paginación
   const paginatedContacts = filteredContacts.slice(
     page * rowsPerPage,
@@ -968,9 +817,7 @@ const Contacts: React.FC = () => {
     <Box sx={{ 
       bgcolor: theme.palette.background.default, 
       minHeight: '100vh',
-      pb: { xs: 3, sm: 6, md: 8 },
-      px: { xs: 0, sm: 0, md: 0.25, lg: 0.5 },
-      pt: { xs: 0.25, sm: 0.5, md: 1 },
+      pb: { xs: 2, sm: 3, md: 4 },
     }}>
       {/* Header principal - fuera del contenedor */}
       <Box sx={{ pt: 0, pb: 2, mb: 2 }}>

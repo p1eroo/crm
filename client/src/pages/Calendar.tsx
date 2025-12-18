@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Typography,
   Box,
@@ -14,7 +14,6 @@ import {
   CheckCircle,
 } from '@mui/icons-material';
 import api from '../config/api';
-import { useAuth } from '../context/AuthContext';
 import { taxiMonterricoColors } from '../theme/colors';
 
 interface Task {
@@ -27,7 +26,6 @@ interface Task {
 }
 
 const Calendar: React.FC = () => {
-  const { user } = useAuth();
   const theme = useTheme();
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [allTasksWithDates, setAllTasksWithDates] = useState<Task[]>([]);
@@ -38,17 +36,66 @@ const Calendar: React.FC = () => {
   const [googleCalendarEvents, setGoogleCalendarEvents] = useState<any[]>([]);
   const [notes, setNotes] = useState<any[]>([]);
 
+  const fetchGoogleCalendarEvents = useCallback(async () => {
+    if (!googleCalendarConnected) {
+      setGoogleCalendarEvents([]);
+      return;
+    }
+
+    try {
+      const year = calendarDate.getFullYear();
+      const month = calendarDate.getMonth();
+      const startDate = new Date(year, month, 1);
+      const endDate = new Date(year, month + 1, 0, 23, 59, 59);
+
+      const response = await api.get('/google/events', {
+        params: {
+          timeMin: startDate.toISOString(),
+          timeMax: endDate.toISOString(),
+        },
+      });
+
+      setGoogleCalendarEvents(response.data.events || []);
+    } catch (error: any) {
+      console.error('Error obteniendo eventos de Google Calendar:', error);
+      setGoogleCalendarEvents([]);
+    }
+  }, [googleCalendarConnected, calendarDate]);
+
+  const checkGoogleCalendarConnection = useCallback(async () => {
+    try {
+      const response = await api.get('/google/token');
+      const isConnected = response.data.hasToken && !response.data.isExpired;
+      setGoogleCalendarConnected(isConnected);
+      
+      if (isConnected) {
+        await fetchGoogleCalendarEvents();
+      }
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        setGoogleCalendarConnected(false);
+        setGoogleCalendarEvents([]);
+      } else if (error.response?.status === 401 || error.response?.status === 403) {
+        return;
+      } else {
+        console.error('Error verificando conexión de Google Calendar:', error);
+        setGoogleCalendarConnected(false);
+        setGoogleCalendarEvents([]);
+      }
+    }
+  }, [fetchGoogleCalendarEvents]);
+
   useEffect(() => {
     fetchAllTasksWithDates();
     fetchNotes();
     checkGoogleCalendarConnection();
-  }, []);
+  }, [checkGoogleCalendarConnection]);
 
   useEffect(() => {
     if (googleCalendarConnected) {
       fetchGoogleCalendarEvents();
     }
-  }, [calendarDate, googleCalendarConnected]);
+  }, [calendarDate, googleCalendarConnected, fetchGoogleCalendarEvents]);
 
   const fetchAllTasksWithDates = async () => {
     try {
@@ -106,29 +153,6 @@ const Calendar: React.FC = () => {
     }
   };
 
-  const checkGoogleCalendarConnection = async () => {
-    try {
-      const response = await api.get('/google/token');
-      const isConnected = response.data.hasToken && !response.data.isExpired;
-      setGoogleCalendarConnected(isConnected);
-      
-      if (isConnected) {
-        await fetchGoogleCalendarEvents();
-      }
-    } catch (error: any) {
-      if (error.response?.status === 404) {
-        setGoogleCalendarConnected(false);
-        setGoogleCalendarEvents([]);
-      } else if (error.response?.status === 401 || error.response?.status === 403) {
-        return;
-      } else {
-        console.error('Error verificando conexión de Google Calendar:', error);
-        setGoogleCalendarConnected(false);
-        setGoogleCalendarEvents([]);
-      }
-    }
-  };
-
   const getEventDate = (event: any): Date => {
     if (event.start.dateTime) {
       const dateTime = new Date(event.start.dateTime);
@@ -142,32 +166,6 @@ const Calendar: React.FC = () => {
       return new Date(year, month - 1, day);
     }
     return new Date();
-  };
-
-  const fetchGoogleCalendarEvents = async () => {
-    if (!googleCalendarConnected) {
-      setGoogleCalendarEvents([]);
-      return;
-    }
-
-    try {
-      const year = calendarDate.getFullYear();
-      const month = calendarDate.getMonth();
-      const startDate = new Date(year, month, 1);
-      const endDate = new Date(year, month + 1, 0, 23, 59, 59);
-
-      const response = await api.get('/google/events', {
-        params: {
-          timeMin: startDate.toISOString(),
-          timeMax: endDate.toISOString(),
-        },
-      });
-
-      setGoogleCalendarEvents(response.data.events || []);
-    } catch (error: any) {
-      console.error('Error obteniendo eventos de Google Calendar:', error);
-      setGoogleCalendarEvents([]);
-    }
   };
 
   const getTaskTypeLabel = (type: string) => {
@@ -265,8 +263,6 @@ const Calendar: React.FC = () => {
     <Box sx={{ 
       backgroundColor: theme.palette.background.default, 
       minHeight: '100vh',
-      px: { xs: 0, sm: 0, md: 0.25, lg: 0.5 },
-      pt: { xs: 0.25, sm: 0.5, md: 1 },
       pb: { xs: 2, sm: 3, md: 4 },
     }}>
       <Box sx={{ 

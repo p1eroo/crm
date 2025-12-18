@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -14,10 +14,6 @@ import {
   Menu,
   MenuItem,
   CircularProgress,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
   Link,
   Dialog,
   DialogTitle,
@@ -26,62 +22,31 @@ import {
   TextField,
   Alert,
   Checkbox,
-  FormControlLabel,
   InputAdornment,
-  TableSortLabel,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Collapse,
   Tooltip,
   Card,
-  useMediaQuery,
   useTheme,
 } from '@mui/material';
 import {
-  ArrowBack,
   MoreVert,
   Note,
   Email,
   Phone,
-  LocationOn,
   Assignment,
   Event,
-  Business,
-  Flag,
-  Person,
-  AttachMoney,
-  Support,
-  Refresh,
-  ThumbUp,
-  ThumbDown,
   Comment,
-  FormatBold,
-  FormatItalic,
-  FormatUnderlined,
-  FormatStrikethrough,
-  FormatListBulleted,
-  FormatListNumbered,
   Link as LinkIcon,
-  Image,
-  Code,
-  TableChart,
-  AttachFile,
-  Add,
   ExpandMore,
   Fullscreen,
   Close,
   KeyboardArrowDown,
-  KeyboardArrowLeft,
   Search,
-  Settings,
-  ArrowUpward,
-  ArrowDownward,
-  TrendingUp,
-  OpenInNew,
   ContentCopy,
   KeyboardArrowRight,
   Lock,
@@ -90,20 +55,12 @@ import {
   History,
   Delete,
   CheckCircle,
-  Visibility,
-  MoreHoriz,
-} from '@mui/icons-material';
-import {
-  Facebook,
-  Twitter,
-  LinkedIn,
-  YouTube,
+  ArrowBack,
 } from '@mui/icons-material';
 import api from '../config/api';
 import RichTextEditor from '../components/RichTextEditor';
 import EmailComposer from '../components/EmailComposer';
 import { taxiMonterricoColors } from '../theme/colors';
-import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import contactLogo from '../assets/contact.png';
 
@@ -157,18 +114,16 @@ interface ContactDetailData {
 const ContactDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [contact, setContact] = useState<ContactDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [,] = useState<null | HTMLElement>(null);
   const [associatedDeals, setAssociatedDeals] = useState<any[]>([]);
   const [associatedCompanies, setAssociatedCompanies] = useState<any[]>([]);
   const [associatedTickets, setAssociatedTickets] = useState<any[]>([]);
-  const [associatedSubscriptions, setAssociatedSubscriptions] = useState<any[]>([]);
-  const [associatedPayments, setAssociatedPayments] = useState<any[]>([]);
+  const [, setAssociatedSubscriptions] = useState<any[]>([]);
+  const [, setAssociatedPayments] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
   
   // Estados para búsquedas y filtros
@@ -176,14 +131,12 @@ const ContactDetail: React.FC = () => {
   const [companySearch, setCompanySearch] = useState('');
   const [dealSearch, setDealSearch] = useState('');
   const [companyActionsMenu, setCompanyActionsMenu] = useState<{ [key: number]: HTMLElement | null }>({});
-  const [isRemovingCompany, setIsRemovingCompany] = useState(false);
-  const [activityFilters, setActivityFilters] = useState<string[]>(['Todo hasta ahora']);
+  const [isRemovingCompany] = useState(false);
   const [activityFilterMenuAnchor, setActivityFilterMenuAnchor] = useState<null | HTMLElement>(null);
   const [activityFilterSearch, setActivityFilterSearch] = useState('');
   const [timeRangeMenuAnchor, setTimeRangeMenuAnchor] = useState<null | HTMLElement>(null);
   const [timeRangeSearch, setTimeRangeSearch] = useState('');
   const [selectedTimeRange, setSelectedTimeRange] = useState<string>('Hoy');
-  const [selectedActivityType, setSelectedActivityType] = useState<string>('all'); // 'all', 'note', 'email', 'call', 'task', 'meeting'
   
   // Estados para los filtros de actividad
   const [communicationFilters, setCommunicationFilters] = useState({
@@ -207,11 +160,10 @@ const ContactDetail: React.FC = () => {
   const [expandedNotes, setExpandedNotes] = useState<Set<number>>(new Set());
   const [expandedActivities, setExpandedActivities] = useState<Set<number>>(new Set());
   const [noteActionMenus, setNoteActionMenus] = useState<{ [key: number]: HTMLElement | null }>({});
-  const [noteComments, setNoteComments] = useState<{ [key: number]: string }>({});
-  const [dealSortOrder, setDealSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [dealSortField, setDealSortField] = useState<string>('');
-  const [companySortOrder, setCompanySortOrder] = useState<'asc' | 'desc'>('asc');
-  const [companySortField, setCompanySortField] = useState<string>('');
+  // const [dealSortOrder] = useState<'asc' | 'desc'>('asc');
+  // const [dealSortField] = useState<string>('');
+  // const [companySortOrder] = useState<'asc' | 'desc'>('asc');
+  // const [companySortField] = useState<string>('');
   
   // Estados para diálogos
   const [addCompanyOpen, setAddCompanyOpen] = useState(false);
@@ -242,27 +194,17 @@ const ContactDetail: React.FC = () => {
   const [subscriptionFormData, setSubscriptionFormData] = useState({ name: '', description: '', status: 'active', amount: '', currency: 'USD', billingCycle: 'monthly', startDate: '', endDate: '', renewalDate: '' });
   const [paymentFormData, setPaymentFormData] = useState({ amount: '', currency: 'USD', status: 'pending', paymentDate: '', dueDate: '', paymentMethod: 'credit_card', reference: '', description: '' });
   
-  // Estados para edición de campos del contacto
-  const [leadStatusMenuAnchor, setLeadStatusMenuAnchor] = useState<null | HTMLElement>(null);
-  const [lifecycleStageMenuAnchor, setLifecycleStageMenuAnchor] = useState<null | HTMLElement>(null);
-  const [buyingRoleMenuAnchor, setBuyingRoleMenuAnchor] = useState<null | HTMLElement>(null);
-  const [editingEmail, setEditingEmail] = useState(false);
-  const [editingPhone, setEditingPhone] = useState(false);
-  const [editingCompany, setEditingCompany] = useState(false);
-  const [emailValue, setEmailValue] = useState('');
-  const [phoneValue, setPhoneValue] = useState('');
-  const [companyValue, setCompanyValue] = useState('');
-  
   // Estados para asociaciones en nota
-  const [associationsExpanded, setAssociationsExpanded] = useState(false);
-  const [associationsMenuAnchor, setAssociationsMenuAnchor] = useState<null | HTMLElement>(null);
   const [selectedAssociationCategory, setSelectedAssociationCategory] = useState<string>('Contactos');
   const [associationSearch, setAssociationSearch] = useState('');
   const [selectedAssociations, setSelectedAssociations] = useState<number[]>([]);
   const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
   const [selectedCompanies, setSelectedCompanies] = useState<number[]>([]);
-  const [selectedLeads, setSelectedLeads] = useState<number[]>([]);
+  const [selectedLeads] = useState<number[]>([]);
   const [allCompanies, setAllCompanies] = useState<any[]>([]);
+  const [, setEmailValue] = useState('');
+  const [, setPhoneValue] = useState('');
+  const [, setCompanyValue] = useState('');
   // Estados para elementos excluidos (desmarcados manualmente aunque estén asociados)
   const [excludedCompanies, setExcludedCompanies] = useState<number[]>([]);
   const [excludedDeals, setExcludedDeals] = useState<number[]>([]);
@@ -271,13 +213,12 @@ const ContactDetail: React.FC = () => {
   
   // Estados para asociaciones en actividades de Descripción (por actividad)
   const [activityAssociationsExpanded, setActivityAssociationsExpanded] = useState<{ [key: number]: boolean }>({});
-  const [activityAssociationsMenuAnchor, setActivityAssociationsMenuAnchor] = useState<{ [key: number]: HTMLElement | null }>({});
   const [activitySelectedCategory, setActivitySelectedCategory] = useState<{ [key: number]: string }>({});
   const [activityAssociationSearch, setActivityAssociationSearch] = useState<{ [key: number]: string }>({});
   const [activitySelectedAssociations, setActivitySelectedAssociations] = useState<{ [key: number]: number[] }>({});
   const [activitySelectedContacts, setActivitySelectedContacts] = useState<{ [key: number]: number[] }>({});
   const [activitySelectedCompanies, setActivitySelectedCompanies] = useState<{ [key: number]: number[] }>({});
-  const [activitySelectedLeads, setActivitySelectedLeads] = useState<{ [key: number]: number[] }>({});
+  const [activitySelectedLeads] = useState<{ [key: number]: number[] }>({});
   // Estados para elementos excluidos por actividad
   const [activityExcludedCompanies, setActivityExcludedCompanies] = useState<{ [key: number]: number[] }>({});
   const [activityExcludedDeals, setActivityExcludedDeals] = useState<{ [key: number]: number[] }>({});
@@ -337,20 +278,6 @@ const ContactDetail: React.FC = () => {
     return total;
   }, [associatedCompanies, selectedCompanies, excludedCompanies, associatedDeals, selectedAssociations, excludedDeals, associatedTickets, excludedTickets, selectedLeads, excludedContacts, contact?.id]);
   
-  // Variables derivadas para usar en otros lugares
-  const associatedCompanyIds = (associatedCompanies || []).map((c: any) => c && c.id).filter((id: any) => id !== undefined && id !== null);
-  const allCompanyIds = [...selectedCompanies, ...associatedCompanyIds];
-  const companiesToCount = allCompanyIds.filter((id, index) => allCompanyIds.indexOf(id) === index);
-  const selectedDealIds = selectedAssociations.filter((id: number) => id > 1000 && id < 2000).map(id => id - 1000);
-  const associatedDealIds = (associatedDeals || []).map((d: any) => d && d.id).filter((id: any) => id !== undefined && id !== null);
-  const allDealIds = [...selectedDealIds, ...associatedDealIds];
-  const dealsToCount = allDealIds.filter((id, index) => allDealIds.indexOf(id) === index).length;
-  const selectedTicketIds = selectedAssociations.filter((id: number) => id > 2000).map(id => id - 2000);
-  const associatedTicketIds = (associatedTickets || []).map((t: any) => t && t.id).filter((id: any) => id !== undefined && id !== null);
-  const allTicketIds = [...selectedTicketIds, ...associatedTicketIds];
-  const ticketsToCount = allTicketIds.filter((id, index) => allTicketIds.indexOf(id) === index).length;
-  const contactsCount = contact?.id ? 1 : 0;
-  
   // Función para calcular total de asociaciones por actividad (basado en selecciones y asociaciones automáticas)
   const getActivityTotalAssociations = (activityId: number) => {
     // Contactos seleccionados manualmente o el contacto actual si existe (excluyendo los desmarcados)
@@ -403,7 +330,7 @@ const ContactDetail: React.FC = () => {
   
   // Estados para formularios
   const [noteData, setNoteData] = useState({ subject: '', description: '' });
-  const [emailData, setEmailData] = useState({ subject: '', description: '', to: '' });
+  const [,] = useState({ subject: '', description: '', to: '' });
   const [callData, setCallData] = useState({ subject: '', description: '', duration: '' });
   const [taskData, setTaskData] = useState({ title: '', description: '', priority: 'medium', dueDate: '' });
   const [meetingData, setMeetingData] = useState({ subject: '', description: '', date: '', time: '' });
@@ -411,9 +338,109 @@ const ContactDetail: React.FC = () => {
 
   // Ya no se necesitan estados de OAuth individual - se usa el token guardado desde Perfil
 
+  const fetchContact = useCallback(async () => {
+    try {
+      const response = await api.get(`/contacts/${id}`);
+      setContact(response.data);
+      setEmailValue(response.data.email || '');
+      setPhoneValue(response.data.phone || '');
+      // Usar Companies si está disponible, sino Company (compatibilidad)
+      const companies = (response.data.Companies && Array.isArray(response.data.Companies)) 
+        ? response.data.Companies 
+        : (response.data.Company ? [response.data.Company] : []);
+      setCompanyValue(companies.length > 0 ? companies[0].name : '');
+      // Actualizar associatedCompanies también
+      setAssociatedCompanies(companies);
+    } catch (error) {
+      console.error('Error fetching contact:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  const fetchAssociatedRecords = useCallback(async () => {
+    try {
+      // Obtener deals asociados
+      const dealsResponse = await api.get('/deals', {
+        params: { contactId: id },
+      });
+      setAssociatedDeals(dealsResponse.data.deals || dealsResponse.data || []);
+
+      // Obtener empresas asociadas desde el contacto
+      const contactResponse = await api.get(`/contacts/${id}`);
+      const updatedContact = contactResponse.data;
+      
+      // Si estamos removiendo una empresa, no actualizar el estado desde la base de datos
+      // para evitar perder las empresas que están en el estado local
+      if (!isRemovingCompany) {
+        // Usar Companies (muchos-a-muchos) si está disponible, sino usar Company (compatibilidad)
+        const companies = (updatedContact?.Companies && Array.isArray(updatedContact.Companies))
+          ? updatedContact.Companies
+          : (updatedContact?.Company ? [updatedContact.Company] : []);
+        setAssociatedCompanies(companies);
+      }
+
+      // Obtener actividades
+      const activitiesResponse = await api.get('/activities', {
+        params: { contactId: id },
+      });
+      const activitiesData = activitiesResponse.data.activities || activitiesResponse.data || [];
+
+      // Obtener tareas asociadas al contacto
+      const tasksResponse = await api.get('/tasks', {
+        params: { contactId: id },
+      });
+      const tasksData = tasksResponse.data.tasks || tasksResponse.data || [];
+
+      // Convertir tareas a formato de actividad para mostrarlas en la lista
+      const tasksAsActivities = tasksData.map((task: any) => ({
+        id: task.id,
+        type: task.type || 'task',
+        subject: task.title,
+        description: task.description,
+        dueDate: task.dueDate,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt,
+        User: task.CreatedBy || task.AssignedTo,
+        isTask: true, // Flag para identificar que es una tarea
+        status: task.status,
+        priority: task.priority,
+      }));
+
+      // Combinar actividades y tareas, ordenadas por fecha de creación (más recientes primero)
+      const allActivities = [...activitiesData, ...tasksAsActivities].sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
+        const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
+        return dateB - dateA;
+      });
+
+      setActivities(allActivities);
+
+      // Obtener tickets asociados
+      const ticketsResponse = await api.get('/tickets', {
+        params: { contactId: id },
+      });
+      setAssociatedTickets(ticketsResponse.data.tickets || ticketsResponse.data || []);
+
+      // Obtener suscripciones asociadas
+      const subscriptionsResponse = await api.get('/subscriptions', {
+        params: { contactId: id },
+      });
+      setAssociatedSubscriptions(subscriptionsResponse.data.subscriptions || subscriptionsResponse.data || []);
+
+      // Obtener pagos asociados
+      const paymentsResponse = await api.get('/payments', {
+        params: { contactId: id },
+      });
+      setAssociatedPayments(paymentsResponse.data.payments || paymentsResponse.data || []);
+    } catch (error) {
+      console.error('Error fetching associated records:', error);
+    }
+  }, [id, isRemovingCompany]);
+
   useEffect(() => {
     fetchContact();
-  }, [id]);
+  }, [fetchContact]);
 
   useEffect(() => {
     if (contact && !isRemovingCompany) {
@@ -424,7 +451,7 @@ const ContactDetail: React.FC = () => {
         setSelectedContacts([contact.id]);
       }
     }
-  }, [contact, id, isRemovingCompany]);
+  }, [contact, id, isRemovingCompany, fetchAssociatedRecords]);
 
   // Actualizar asociaciones seleccionadas cuando cambian los registros relacionados
   useEffect(() => {
@@ -514,105 +541,6 @@ const ContactDetail: React.FC = () => {
   }, [noteOpen, emailOpen, callOpen, taskOpen, meetingOpen]);
 
 
-  const fetchContact = async () => {
-    try {
-      const response = await api.get(`/contacts/${id}`);
-      setContact(response.data);
-      setEmailValue(response.data.email || '');
-      setPhoneValue(response.data.phone || '');
-      // Usar Companies si está disponible, sino Company (compatibilidad)
-      const companies = (response.data.Companies && Array.isArray(response.data.Companies)) 
-        ? response.data.Companies 
-        : (response.data.Company ? [response.data.Company] : []);
-      setCompanyValue(companies.length > 0 ? companies[0].name : '');
-      // Actualizar associatedCompanies también
-      setAssociatedCompanies(companies);
-    } catch (error) {
-      console.error('Error fetching contact:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchAssociatedRecords = async () => {
-    try {
-      // Obtener deals asociados
-      const dealsResponse = await api.get('/deals', {
-        params: { contactId: id },
-      });
-      setAssociatedDeals(dealsResponse.data.deals || dealsResponse.data || []);
-
-      // Obtener empresas asociadas desde el contacto
-      const contactResponse = await api.get(`/contacts/${id}`);
-      const updatedContact = contactResponse.data;
-      
-      // Si estamos removiendo una empresa, no actualizar el estado desde la base de datos
-      // para evitar perder las empresas que están en el estado local
-      if (!isRemovingCompany) {
-        // Usar Companies (muchos-a-muchos) si está disponible, sino usar Company (compatibilidad)
-        const companies = (updatedContact?.Companies && Array.isArray(updatedContact.Companies))
-          ? updatedContact.Companies
-          : (updatedContact?.Company ? [updatedContact.Company] : []);
-        setAssociatedCompanies(companies);
-      }
-
-      // Obtener actividades
-      const activitiesResponse = await api.get('/activities', {
-        params: { contactId: id },
-      });
-      const activitiesData = activitiesResponse.data.activities || activitiesResponse.data || [];
-
-      // Obtener tareas asociadas al contacto
-      const tasksResponse = await api.get('/tasks', {
-        params: { contactId: id },
-      });
-      const tasksData = tasksResponse.data.tasks || tasksResponse.data || [];
-
-      // Convertir tareas a formato de actividad para mostrarlas en la lista
-      const tasksAsActivities = tasksData.map((task: any) => ({
-        id: task.id,
-        type: task.type || 'task',
-        subject: task.title,
-        description: task.description,
-        dueDate: task.dueDate,
-        createdAt: task.createdAt,
-        updatedAt: task.updatedAt,
-        User: task.CreatedBy || task.AssignedTo,
-        isTask: true, // Flag para identificar que es una tarea
-        status: task.status,
-        priority: task.priority,
-      }));
-
-      // Combinar actividades y tareas, ordenadas por fecha de creación (más recientes primero)
-      const allActivities = [...activitiesData, ...tasksAsActivities].sort((a: any, b: any) => {
-        const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
-        const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
-        return dateB - dateA;
-      });
-
-      setActivities(allActivities);
-
-      // Obtener tickets asociados
-      const ticketsResponse = await api.get('/tickets', {
-        params: { contactId: id },
-      });
-      setAssociatedTickets(ticketsResponse.data.tickets || ticketsResponse.data || []);
-
-      // Obtener suscripciones asociadas
-      const subscriptionsResponse = await api.get('/subscriptions', {
-        params: { contactId: id },
-      });
-      setAssociatedSubscriptions(subscriptionsResponse.data.subscriptions || subscriptionsResponse.data || []);
-
-      // Obtener pagos asociados
-      const paymentsResponse = await api.get('/payments', {
-        params: { contactId: id },
-      });
-      setAssociatedPayments(paymentsResponse.data.payments || paymentsResponse.data || []);
-    } catch (error) {
-      console.error('Error fetching associated records:', error);
-    }
-  };
 
   const getInitials = (firstName?: string, lastName?: string) => {
     if (firstName && lastName) {
@@ -629,25 +557,25 @@ const ContactDetail: React.FC = () => {
     return '?';
   };
 
-  const getStageColor = (stage: string) => {
-    const colors: { [key: string]: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' } = {
-      'lead': 'error', // Rojo para 0%
-      'contacto': 'warning', // Naranja para 10%
-      'reunion_agendada': 'warning', // Naranja para 30%
-      'reunion_efectiva': 'warning', // Amarillo para 40%
-      'propuesta_economica': 'info', // Verde claro para 50%
-      'negociacion': 'success', // Verde para 70%
-      'licitacion': 'success', // Verde para 75%
-      'licitacion_etapa_final': 'success', // Verde oscuro para 85%
-      'cierre_ganado': 'success', // Verde oscuro para 90%
-      'cierre_perdido': 'error', // Rojo para -1%
-      'firma_contrato': 'success', // Verde oscuro para 95%
-      'activo': 'success', // Verde más oscuro para 100%
-      'cliente_perdido': 'error', // Rojo para -1%
-      'lead_inactivo': 'error', // Rojo para -5%
-    };
-    return colors[stage] || 'default';
-  };
+  // const getStageColor = (stage: string) => {
+  //   const colors: { [key: string]: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' } = {
+  //     'lead': 'error', // Rojo para 0%
+  //     'contacto': 'warning', // Naranja para 10%
+  //     'reunion_agendada': 'warning', // Naranja para 30%
+  //     'reunion_efectiva': 'warning', // Amarillo para 40%
+  //     'propuesta_economica': 'info', // Verde claro para 50%
+  //     'negociacion': 'success', // Verde para 70%
+  //     'licitacion': 'success', // Verde para 75%
+  //     'licitacion_etapa_final': 'success', // Verde oscuro para 85%
+  //     'cierre_ganado': 'success', // Verde oscuro para 90%
+  //     'cierre_perdido': 'error', // Rojo para -1%
+  //     'firma_contrato': 'success', // Verde oscuro para 95%
+  //     'activo': 'success', // Verde más oscuro para 100%
+  //     'cliente_perdido': 'error', // Rojo para -1%
+  //     'lead_inactivo': 'error', // Rojo para -5%
+  //   };
+  //   return colors[stage] || 'default';
+  // };
 
   const getStageLabel = (stage: string) => {
     const labels: { [key: string]: string } = {
@@ -669,13 +597,13 @@ const ContactDetail: React.FC = () => {
     return labels[stage] || stage;
   };
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
+  // const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+  //   setAnchorEl(event.currentTarget);
+  // };
 
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
+  // const handleMenuClose = () => {
+  //   setAnchorEl(null);
+  // };
 
   // Funciones para abrir diálogos
   const handleOpenNote = () => {
@@ -905,50 +833,50 @@ const ContactDetail: React.FC = () => {
     }
   };
 
-  const handleSaveEmail = async () => {
-    if (!emailData.subject.trim()) {
-      return;
-    }
-    setSaving(true);
-    try {
-      // Obtener empresas asociadas al contacto
-      const companies = (contact?.Companies && Array.isArray(contact.Companies))
-        ? contact.Companies
-        : (contact?.Company ? [contact.Company] : []);
+  // const handleSaveEmail = async () => {
+  //   if (!emailData.subject.trim()) {
+  //     return;
+  //   }
+  //   setSaving(true);
+  //   try {
+  //     // Obtener empresas asociadas al contacto
+  //     const companies = (contact?.Companies && Array.isArray(contact.Companies))
+  //       ? contact.Companies
+  //       : (contact?.Company ? [contact.Company] : []);
 
-      // Crear una actividad para cada empresa asociada, o solo con contactId si no hay empresas
-      if (companies.length > 0) {
-        // Crear actividad para cada empresa asociada
-        const activityPromises = companies.map((company: any) =>
-          api.post('/activities', {
-            type: 'email',
-            subject: emailData.subject,
-            description: emailData.description,
-            contactId: id,
-            companyId: company.id,
-          })
-        );
-        await Promise.all(activityPromises);
-      } else {
-        // Si no hay empresas asociadas, crear solo con contactId
-        await api.post('/activities', {
-          type: 'email',
-          subject: emailData.subject,
-          description: emailData.description,
-          contactId: id,
-        });
-      }
-      setSuccessMessage('Email registrado exitosamente');
-      setEmailOpen(false);
-      setEmailData({ subject: '', description: '', to: '' });
-      fetchAssociatedRecords(); // Actualizar actividades
-      setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (error) {
-      console.error('Error saving email:', error);
-    } finally {
-      setSaving(false);
-    }
-  };
+  //     // Crear una actividad para cada empresa asociada, o solo con contactId si no hay empresas
+  //     if (companies.length > 0) {
+  //       // Crear actividad para cada empresa asociada
+  //       const activityPromises = companies.map((company: any) =>
+  //         api.post('/activities', {
+  //           type: 'email',
+  //           subject: emailData.subject,
+  //           description: emailData.description,
+  //           contactId: id,
+  //           companyId: company.id,
+  //         })
+  //       );
+  //       await Promise.all(activityPromises);
+  //     } else {
+  //       // Si no hay empresas asociadas, crear solo con contactId
+  //       await api.post('/activities', {
+  //         type: 'email',
+  //         subject: emailData.subject,
+  //         description: emailData.description,
+  //         contactId: id,
+  //       });
+  //     }
+  //     setSuccessMessage('Email registrado exitosamente');
+  //     setEmailOpen(false);
+  //     setEmailData({ subject: '', description: '', to: '' });
+  //     fetchAssociatedRecords(); // Actualizar actividades
+  //     setTimeout(() => setSuccessMessage(''), 3000);
+  //   } catch (error) {
+  //     console.error('Error saving email:', error);
+  //   } finally {
+  //     setSaving(false);
+  //   }
+  // };
 
   const handleSaveCall = async () => {
     if (!callData.subject.trim()) {
@@ -1137,7 +1065,7 @@ const ContactDetail: React.FC = () => {
 
   const handleAddCompany = async () => {
     try {
-      const response = await api.post('/companies', {
+      await api.post('/companies', {
         ...companyFormData,
         // No asociar automáticamente con el contacto - el usuario debe agregarla manualmente
       });
@@ -1204,85 +1132,85 @@ const ContactDetail: React.FC = () => {
     }
   };
 
-  const handleOpenAddCompanyDialog = () => {
-    setCompanyDialogTab('create');
-    setSelectedExistingCompanies([]);
-    setExistingCompaniesSearch('');
-    setCompanyFormData({ 
-      name: '', 
-      domain: '', 
-      phone: '', 
-      industry: '', 
-      lifecycleStage: 'lead',
-      ruc: '',
-      address: '',
-      city: '',
-      state: '',
-      country: '',
-    });
-    setRucError('');
-    setAddCompanyOpen(true);
-    // Cargar empresas disponibles cuando se abre el diálogo
-    if (allCompanies.length === 0) {
-      fetchAllCompanies();
-    }
-  };
+  // const handleOpenAddCompanyDialog = () => {
+  //   setCompanyDialogTab('create');
+  //   setSelectedExistingCompanies([]);
+  //   setExistingCompaniesSearch('');
+  //   setCompanyFormData({ 
+  //     name: '', 
+  //     domain: '', 
+  //     phone: '', 
+  //     industry: '', 
+  //     lifecycleStage: 'lead',
+  //     ruc: '', 
+  //     address: '', 
+  //     city: '', 
+  //     state: '', 
+  //     country: '', 
+  //   });
+  //   setRucError('');
+  //   setAddCompanyOpen(true);
+  //   // Cargar empresas disponibles cuando se abre el diálogo
+  //   if (allCompanies.length === 0) {
+  //     fetchAllCompanies();
+  //   }
+  // };
 
-  const handleRemoveCompanyAssociation = async (companyId: number) => {
-    try {
-      setIsRemovingCompany(true);
-      
-      // Verificar si esta empresa está asociada al contacto
-      const isAssociated = associatedCompanies.some((c: any) => c && c.id === companyId);
-      
-      if (!isAssociated) {
-        setSuccessMessage('Esta empresa no está asociada con este contacto');
-        setTimeout(() => setSuccessMessage(''), 3000);
-        setIsRemovingCompany(false);
-        return;
-      }
+  // const handleRemoveCompanyAssociation = async (companyId: number) => {
+  //   try {
+  //     setIsRemovingCompany(true);
+  //     
+  //     // Verificar si esta empresa está asociada al contacto
+  //     const isAssociated = associatedCompanies.some((c: any) => c && c.id === companyId);
+  //     
+  //     if (!isAssociated) {
+  //       setSuccessMessage('Esta empresa no está asociada con este contacto');
+  //       setTimeout(() => setSuccessMessage(''), 3000);
+  //       setIsRemovingCompany(false);
+  //       return;
+  //     }
 
-      // Eliminar la asociación usando el nuevo endpoint
-      const response = await api.delete(`/contacts/${id}/companies/${companyId}`);
-      
-      // Actualizar el contacto y las empresas asociadas
-      setContact(response.data);
-      const companies = response.data.Companies || [];
-      setAssociatedCompanies(companies);
-      
-      // También remover de selectedCompanies y excludedCompanies
-      setSelectedCompanies(selectedCompanies.filter(id => id !== companyId));
-      setExcludedCompanies(excludedCompanies.filter(id => id !== companyId));
-      
-      setSuccessMessage('Asociación eliminada exitosamente');
-      setCompanyActionsMenu({});
-      setIsRemovingCompany(false);
-      
-      setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (error) {
-      console.error('Error removing company association:', error);
-      setSuccessMessage('Error al eliminar la asociación');
-      setIsRemovingCompany(false);
-      // Revertir el cambio si hay error
-      fetchAssociatedRecords();
-      setTimeout(() => setSuccessMessage(''), 3000);
-    }
-  };
+  //     // Eliminar la asociación usando el nuevo endpoint
+  //     const response = await api.delete(`/contacts/${id}/companies/${companyId}`);
+  //     
+  //     // Actualizar el contacto y las empresas asociadas
+  //     setContact(response.data);
+  //     const companies = response.data.Companies || [];
+  //     setAssociatedCompanies(companies);
+  //     
+  //     // También remover de selectedCompanies y excludedCompanies
+  //     setSelectedCompanies(selectedCompanies.filter(id => id !== companyId));
+  //     setExcludedCompanies(excludedCompanies.filter(id => id !== companyId));
+  //     
+  //     setSuccessMessage('Asociación eliminada exitosamente');
+  //     setCompanyActionsMenu({});
+  //     setIsRemovingCompany(false);
+  //     
+  //     setTimeout(() => setSuccessMessage(''), 3000);
+  //   } catch (error) {
+  //     console.error('Error removing company association:', error);
+  //     setSuccessMessage('Error al eliminar la asociación');
+  //     setIsRemovingCompany(false);
+  //     // Revertir el cambio si hay error
+  //     fetchAssociatedRecords();
+  //     setTimeout(() => setSuccessMessage(''), 3000);
+  //   }
+  // };
 
-  const handleOpenCompanyActionsMenu = (event: React.MouseEvent<HTMLElement>, companyId: number) => {
-    event.stopPropagation();
-    setCompanyActionsMenu({
-      ...companyActionsMenu,
-      [companyId]: event.currentTarget,
-    });
-  };
+  // const handleOpenCompanyActionsMenu = (event: React.MouseEvent<HTMLElement>, companyId: number) => {
+  //   event.stopPropagation();
+  //   setCompanyActionsMenu({
+  //     ...companyActionsMenu,
+  //     [companyId]: event.currentTarget,
+  //   });
+  // };
 
-  const handleCloseCompanyActionsMenu = (companyId: number) => {
-    setCompanyActionsMenu({
-      ...companyActionsMenu,
-      [companyId]: null,
-    });
-  };
+  // const handleCloseCompanyActionsMenu = (companyId: number) => {
+  //   setCompanyActionsMenu({
+  //     ...companyActionsMenu,
+  //     [companyId]: null,
+  //   });
+  // };
 
   const handleAddDeal = async () => {
     try {
@@ -1379,63 +1307,63 @@ const ContactDetail: React.FC = () => {
     }
   };
 
-  const handleCopyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setSuccessMessage('Copiado al portapapeles');
-    setTimeout(() => setSuccessMessage(''), 2000);
-  };
+  // const handleCopyToClipboard = (text: string) => {
+  //   navigator.clipboard.writeText(text);
+  //   setSuccessMessage('Copiado al portapapeles');
+  //   setTimeout(() => setSuccessMessage(''), 2000);
+  // };
 
-  const handleSortDeals = (field: string) => {
-    if (dealSortField === field) {
-      setDealSortOrder(dealSortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setDealSortField(field);
-      setDealSortOrder('asc');
-    }
-  };
+  // const handleSortDeals = (field: string) => {
+  //   if (dealSortField === field) {
+  //     setDealSortOrder(dealSortOrder === 'asc' ? 'desc' : 'asc');
+  //   } else {
+  //     setDealSortField(field);
+  //     setDealSortOrder('asc');
+  //   }
+  // };
 
-  const handleSortCompanies = (field: string) => {
-    if (companySortField === field) {
-      setCompanySortOrder(companySortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setCompanySortField(field);
-      setCompanySortOrder('asc');
-    }
-  };
+  // const handleSortCompanies = (field: string) => {
+  //   if (companySortField === field) {
+  //     setCompanySortOrder(companySortOrder === 'asc' ? 'desc' : 'asc');
+  //   } else {
+  //     setCompanySortField(field);
+  //     setCompanySortOrder('asc');
+  //   }
+  // };
 
-  const sortedDeals = [...associatedDeals].sort((a, b) => {
-    if (!dealSortField) return 0;
-    let aVal: any = a[dealSortField];
-    let bVal: any = b[dealSortField];
-    
-    if (dealSortField === 'amount') {
-      aVal = aVal || 0;
-      bVal = bVal || 0;
-    } else if (dealSortField === 'closeDate') {
-      aVal = aVal ? new Date(aVal).getTime() : 0;
-      bVal = bVal ? new Date(bVal).getTime() : 0;
-    } else {
-      aVal = String(aVal || '').toLowerCase();
-      bVal = String(bVal || '').toLowerCase();
-    }
-    
-    if (aVal < bVal) return dealSortOrder === 'asc' ? -1 : 1;
-    if (aVal > bVal) return dealSortOrder === 'asc' ? 1 : -1;
-    return 0;
-  });
+  // const sortedDeals = [...associatedDeals].sort((a, b) => {
+  //   if (!dealSortField) return 0;
+  //   let aVal: any = a[dealSortField];
+  //   let bVal: any = b[dealSortField];
+  //   
+  //   if (dealSortField === 'amount') {
+  //     aVal = aVal || 0;
+  //     bVal = bVal || 0;
+  //   } else if (dealSortField === 'closeDate') {
+  //     aVal = aVal ? new Date(aVal).getTime() : 0;
+  //     bVal = bVal ? new Date(bVal).getTime() : 0;
+  //   } else {
+  //     aVal = String(aVal || '').toLowerCase();
+  //     bVal = String(bVal || '').toLowerCase();
+  //   }
+  //   
+  //   if (aVal < bVal) return dealSortOrder === 'asc' ? -1 : 1;
+  //   if (aVal > bVal) return dealSortOrder === 'asc' ? 1 : -1;
+  //   return 0;
+  // });
 
-  const sortedCompanies = [...associatedCompanies].sort((a, b) => {
-    if (!companySortField) return 0;
-    let aVal: any = a[companySortField];
-    let bVal: any = b[companySortField];
-    
-    aVal = String(aVal || '').toLowerCase();
-    bVal = String(bVal || '').toLowerCase();
-    
-    if (aVal < bVal) return companySortOrder === 'asc' ? -1 : 1;
-    if (aVal > bVal) return companySortOrder === 'asc' ? 1 : -1;
-    return 0;
-  });
+  // const sortedCompanies = [...associatedCompanies].sort((a, b) => {
+  //   if (!companySortField) return 0;
+  //   let aVal: any = a[companySortField];
+  //   let bVal: any = b[companySortField];
+  //   
+  //   aVal = String(aVal || '').toLowerCase();
+  //   bVal = String(bVal || '').toLowerCase();
+  //   
+  //   if (aVal < bVal) return companySortOrder === 'asc' ? -1 : 1;
+  //   if (aVal > bVal) return companySortOrder === 'asc' ? 1 : -1;
+  //   return 0;
+  // });
 
   const filteredActivities = activities.filter((activity) => {
     // Filtro por búsqueda de texto
@@ -1481,20 +1409,20 @@ const ContactDetail: React.FC = () => {
     return true;
   });
 
-  const filteredCompanies = sortedCompanies.filter((company) => {
-    if (companySearch && !company.name?.toLowerCase().includes(companySearch.toLowerCase()) &&
-        !company.domain?.toLowerCase().includes(companySearch.toLowerCase())) {
-      return false;
-    }
-    return true;
-  });
+  // const filteredCompanies = sortedCompanies.filter((company) => {
+  //   if (companySearch && !company.name?.toLowerCase().includes(companySearch.toLowerCase()) &&
+  //       !company.domain?.toLowerCase().includes(companySearch.toLowerCase())) {
+  //     return false;
+  //   }
+  //   return true;
+  // });
 
-  const filteredDeals = sortedDeals.filter((deal) => {
-    if (dealSearch && !deal.name?.toLowerCase().includes(dealSearch.toLowerCase())) {
-      return false;
-    }
-    return true;
-  });
+  // const filteredDeals = sortedDeals.filter((deal) => {
+  //   if (dealSearch && !deal.name?.toLowerCase().includes(dealSearch.toLowerCase())) {
+  //     return false;
+  //   }
+  //   return true;
+  // });
 
   // Función para obtener el rango de fechas según la opción seleccionada
   const getDateRange = (range: string): { start: Date | null; end: Date | null } => {
@@ -1689,9 +1617,7 @@ const ContactDetail: React.FC = () => {
         bgcolor: theme.palette.background.default,
         height: { xs: 'auto', md: '100vh' },
         minHeight: { xs: '100vh', md: '100vh' },
-        pb: { xs: 0, sm: 0, md: 0 },
-        px: { xs: 1.5, sm: 2, md: 2.5, lg: 3 },
-        pt: { xs: 2, sm: 2.5, md: 3 },
+        pb: { xs: 2, sm: 3, md: 4 },
         display: 'flex', 
         flexDirection: 'column',
         overflow: { xs: 'visible', md: 'hidden' },
@@ -1717,6 +1643,21 @@ const ContactDetail: React.FC = () => {
           flexDirection: 'column',
           gap: 2,
         }}>
+          {/* Botón de regresar */}
+          <Box>
+            <IconButton
+              onClick={() => navigate('/contacts')}
+              sx={{
+                color: theme.palette.text.primary,
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                },
+              }}
+            >
+              <ArrowBack />
+            </IconButton>
+          </Box>
+
           {/* Card 1: Avatar, Nombre y Botones */}
           <Card sx={{ 
             borderRadius: 2,
@@ -1754,7 +1695,7 @@ const ContactDetail: React.FC = () => {
                       {!contact.avatar && !contactLogo && getInitials(contact.firstName, contact.lastName)}
                     </Avatar>
                   </Box>
-                  <Typography variant="h6" sx={{ fontWeight: 700 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700, fontSize: '0.9rem' }}>
                     {contact.firstName} {contact.lastName}
                   </Typography>
                 </Box>
@@ -2041,32 +1982,6 @@ const ContactDetail: React.FC = () => {
                 </Typography>
               </Card>
             </Box>
-          )}
-
-          {/* Card de Descripción - Solo visible en pestaña Descripción */}
-          {activeTab === 0 && (
-            <Card sx={{ 
-              borderRadius: 2,
-              boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-              bgcolor: theme.palette.background.paper,
-              px: 2,
-              py: 2,
-              display: 'flex',
-              flexDirection: 'column',
-            }}>
-              {/* Vista de Descripción */}
-              <Box>
-                {contact.notes ? (
-                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, whiteSpace: 'pre-wrap' }}>
-                    {contact.notes}
-                  </Typography>
-                ) : (
-                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                    No hay descripción disponible.
-                  </Typography>
-                )}
-              </Box>
-            </Card>
           )}
 
           {/* Cards de Empresas y Negocios - Solo en pestaña Descripción */}

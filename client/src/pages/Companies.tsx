@@ -1,15 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
   Button,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   IconButton,
   TextField,
   Dialog,
@@ -19,21 +13,17 @@ import {
   MenuItem,
   Chip,
   CircularProgress,
-  Card,
-  CardContent,
   Divider,
   Avatar,
   FormControl,
   Select,
   Tooltip,
   InputAdornment,
-  Paper,
   Menu,
   useTheme,
-  Drawer,
   Collapse,
 } from '@mui/material';
-import { Add, Edit, Delete, Search, Business, Domain, TrendingUp, TrendingDown, Computer, Visibility, UploadFile, FileDownload, Warning, CheckCircle, FilterList, Close, ExpandMore, Remove, Bolt } from '@mui/icons-material';
+import { Add, Delete, Search, Visibility, UploadFile, FileDownload, Warning, CheckCircle, FilterList, Close, ExpandMore, Remove, Bolt } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
@@ -66,7 +56,7 @@ const Companies: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
-  const [search, setSearch] = useState('');
+  const [search] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [formData, setFormData] = useState({
     name: '',
@@ -82,7 +72,7 @@ const Companies: React.FC = () => {
   });
   const [loadingRuc, setLoadingRuc] = useState(false);
   const [rucError, setRucError] = useState('');
-  const [rucInfo, setRucInfo] = useState<any>(null);
+  const [, setRucInfo] = useState<any>(null);
   const [rucDebts, setRucDebts] = useState<any>(null);
   const [loadingDebts, setLoadingDebts] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -101,10 +91,6 @@ const Companies: React.FC = () => {
   const [ownerFilterExpanded, setOwnerFilterExpanded] = useState(true);
   const [countryFilterExpanded, setCountryFilterExpanded] = useState(true);
 
-  // Calcular estadísticas
-  const totalCompanies = companies.length;
-  const activeCompanies = companies.filter(c => c.lifecycleStage === 'cierre_ganado').length;
-
   // Función para obtener iniciales
   const getInitials = (name: string) => {
     if (!name) return '--';
@@ -120,12 +106,7 @@ const Companies: React.FC = () => {
     navigate(`/companies/${company.id}`);
   };
 
-  useEffect(() => {
-    fetchCompanies();
-    fetchUsers();
-  }, [search]);
-
-  const fetchCompanies = async () => {
+  const fetchCompanies = useCallback(async () => {
     try {
       const params = search ? { search } : {};
       const response = await api.get('/companies', { params });
@@ -135,16 +116,21 @@ const Companies: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search]);
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const response = await api.get('/users');
       setUsers(response.data || []);
     } catch (error) {
       console.error('Error fetching users:', error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchCompanies();
+    fetchUsers();
+  }, [fetchCompanies, fetchUsers]);
 
   const handleExportToExcel = () => {
     // Preparar los datos para exportar
@@ -717,9 +703,7 @@ const Companies: React.FC = () => {
     <Box sx={{ 
       bgcolor: theme.palette.background.default, 
       minHeight: '100vh',
-      pb: { xs: 3, sm: 6, md: 8 },
-      px: { xs: 0, sm: 0, md: 0.25, lg: 0.5 },
-      pt: { xs: 0.25, sm: 0.5, md: 1 },
+      pb: { xs: 2, sm: 3, md: 4 },
     }}>
       {/* Header principal - fuera del contenedor */}
       <Box sx={{ pt: 0, pb: 2, mb: 2 }}>

@@ -11,7 +11,6 @@ import {
 } from '@mui/material';
 import { Person, Lock } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
-import logo from '../assets/tm_logo.png';
 import fondoImage from '../assets/tm_fondo.png';
 
 const Login: React.FC = () => {
@@ -53,6 +52,7 @@ const Login: React.FC = () => {
     return () => {
       mountedRef.current = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Cargar usuario recordado cuando el usuario se desautentica (después del logout)

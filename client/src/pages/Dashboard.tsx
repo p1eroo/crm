@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Typography,
   Box,
@@ -9,40 +9,26 @@ import {
   Select,
   MenuItem,
   FormControl,
-  Link,
   Avatar,
-  Checkbox,
   IconButton,
-  CircularProgress as MUICircularProgress,
-  Divider,
-  Menu,
-  InputBase,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   TextField,
-  Chip,
   useTheme,
   Snackbar,
   Alert,
 } from '@mui/material';
 import {
   Download,
-  CheckCircle,
-  AccountCircle,
-  Search,
   People,
   AccountBalance,
   ShoppingCart,
   AttachMoney,
   Close,
-  Notifications,
-  Note,
 } from '@mui/icons-material';
 import {
-  LineChart,
-  Line,
   AreaChart,
   Area,
   BarChart,
@@ -54,13 +40,11 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   ReferenceLine,
 } from 'recharts';
 import api from '../config/api';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import { taxiMonterricoColors } from '../theme/colors';
 import * as XLSX from 'xlsx';
 
@@ -120,15 +104,13 @@ interface Task {
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const theme = useTheme();
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear.toString());
   const [selectedMonth, setSelectedMonth] = useState<string | null>(null); // null = todos los meses (para Ventas)
-  const [calendarSelectedMonth, setCalendarSelectedMonth] = useState<string | null>(new Date().getMonth().toString()); // Para Calendario (mes actual por defecto)
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [budgetModalOpen, setBudgetModalOpen] = useState(false);
   const [budgetValue, setBudgetValue] = useState<string>('');
@@ -155,15 +137,85 @@ const Dashboard: React.FC = () => {
     { value: '11', label: 'Diciembre' },
   ];
 
+  const fetchStats = useCallback(async () => {
+    try {
+      console.log('📊 Iniciando fetchStats...');
+      // Calcular fechas de inicio y fin según el año y mes seleccionado
+      const year = parseInt(selectedYear);
+      let startDate: Date;
+      let endDate: Date;
+      
+      if (selectedMonth !== null) {
+        // Si hay un mes seleccionado, filtrar solo ese mes
+        const month = parseInt(selectedMonth);
+        startDate = new Date(year, month, 1);
+        endDate = new Date(year, month + 1, 0, 23, 59, 59); // Último día del mes
+      } else {
+        // Si no hay mes seleccionado, mostrar todo el año
+        startDate = new Date(year, 0, 1); // 1 de enero
+        endDate = new Date(year, 11, 31, 23, 59, 59); // 31 de diciembre
+      }
+      
+      const token = localStorage.getItem('token');
+      console.log('📊 Token disponible para fetchStats:', token ? 'Sí' : 'No');
+      
+      const response = await api.get('/dashboard/stats', {
+        params: {
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        },
+      });
+      
+      // Validar que la respuesta sea un objeto JSON válido
+      if (typeof response.data === 'string' && (response.data.includes('<!doctype') || response.data.includes('<!DOCTYPE'))) {
+        throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica la configuración del proxy reverso.');
+      }
+      
+      console.log('✅ Dashboard stats recibidos:', response.data);
+      console.log('Deals por etapa:', response.data.deals?.byStage);
+      
+      // Validar que response.data sea un objeto antes de establecerlo
+      if (response.data && typeof response.data === 'object' && !Array.isArray(response.data)) {
+        setStats(response.data);
+      } else {
+        throw new Error('Respuesta inválida del servidor: se esperaba un objeto JSON');
+      }
+    } catch (error: any) {
+      console.error('❌ Error fetching stats:', error);
+      console.error('❌ Error status:', error.response?.status);
+      console.error('❌ Error details:', error.response?.data || error.message);
+      
+      // Si es un error 401/403, no inicializar con datos por defecto
+      // Dejar que el interceptor maneje la redirección
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        console.error('❌ Error de autenticación en fetchStats, el interceptor manejará la redirección');
+        throw error; // Re-lanzar para que el interceptor lo maneje
+      }
+      
+      // Para otros errores, inicializar con datos por defecto
+      setStats({
+        contacts: { total: 0, byStage: [] },
+        companies: { total: 0, byStage: [] },
+        deals: { total: 0, totalValue: 0, byStage: [], wonThisMonth: 0, wonValueThisMonth: 0 },
+        tasks: { total: 0, byStatus: [] },
+        campaigns: { total: 0, active: 0 },
+        payments: { revenue: 0, monthly: [], budgets: [] },
+        leads: { total: 0, converted: 0 },
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedYear, selectedMonth]);
+
   useEffect(() => {
     fetchStats();
     fetchTasks();
-  }, []);
+  }, [fetchStats]);
 
   // Recargar estadísticas cuando cambia el año o mes seleccionado
   useEffect(() => {
     fetchStats();
-  }, [selectedYear, selectedMonth]);
+  }, [fetchStats]);
 
   // Obtener deals ganados diarios cuando se selecciona un mes
   useEffect(() => {
@@ -254,75 +306,6 @@ const Dashboard: React.FC = () => {
 
 
 
-  const fetchStats = async () => {
-    try {
-      console.log('📊 Iniciando fetchStats...');
-      // Calcular fechas de inicio y fin según el año y mes seleccionado
-      const year = parseInt(selectedYear);
-      let startDate: Date;
-      let endDate: Date;
-      
-      if (selectedMonth !== null) {
-        // Si hay un mes seleccionado, filtrar solo ese mes
-        const month = parseInt(selectedMonth);
-        startDate = new Date(year, month, 1);
-        endDate = new Date(year, month + 1, 0, 23, 59, 59); // Último día del mes
-      } else {
-        // Si no hay mes seleccionado, mostrar todo el año
-        startDate = new Date(year, 0, 1); // 1 de enero
-        endDate = new Date(year, 11, 31, 23, 59, 59); // 31 de diciembre
-      }
-      
-      const token = localStorage.getItem('token');
-      console.log('📊 Token disponible para fetchStats:', token ? 'Sí' : 'No');
-      
-      const response = await api.get('/dashboard/stats', {
-        params: {
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-        },
-      });
-      
-      // Validar que la respuesta sea un objeto JSON válido
-      if (typeof response.data === 'string' && (response.data.includes('<!doctype') || response.data.includes('<!DOCTYPE'))) {
-        throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica la configuración del proxy reverso.');
-      }
-      
-      console.log('✅ Dashboard stats recibidos:', response.data);
-      console.log('Deals por etapa:', response.data.deals?.byStage);
-      
-      // Validar que response.data sea un objeto antes de establecerlo
-      if (response.data && typeof response.data === 'object' && !Array.isArray(response.data)) {
-        setStats(response.data);
-      } else {
-        throw new Error('Respuesta inválida del servidor: se esperaba un objeto JSON');
-      }
-    } catch (error: any) {
-      console.error('❌ Error fetching stats:', error);
-      console.error('❌ Error status:', error.response?.status);
-      console.error('❌ Error details:', error.response?.data || error.message);
-      
-      // Si es un error 401/403, no inicializar con datos por defecto
-      // Dejar que el interceptor maneje la redirección
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        console.error('❌ Error de autenticación en fetchStats, el interceptor manejará la redirección');
-        throw error; // Re-lanzar para que el interceptor lo maneje
-      }
-      
-      // Para otros errores, inicializar con datos por defecto
-      setStats({
-        contacts: { total: 0, byStage: [] },
-        companies: { total: 0, byStage: [] },
-        deals: { total: 0, totalValue: 0, byStage: [], wonThisMonth: 0, wonValueThisMonth: 0 },
-        tasks: { total: 0, byStatus: [] },
-        campaigns: { total: 0, active: 0 },
-        payments: { revenue: 0, monthly: [], budgets: [] },
-        leads: { total: 0, converted: 0 },
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const fetchTasks = async () => {
     try {
@@ -357,38 +340,38 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleTaskToggle = async (taskId: number, currentStatus: string) => {
-    try {
-      const newStatus = currentStatus === 'completed' ? 'not started' : 'completed';
-      await api.patch(`/tasks/${taskId}`, { status: newStatus });
-      setTasks(tasks.map(task => 
-        task.id === taskId ? { ...task, status: newStatus } : task
-      ));
-    } catch (error) {
-      console.error('Error updating task:', error);
-    }
-  };
+  // const handleTaskToggle = async (taskId: number, currentStatus: string) => {
+  //   try {
+  //     const newStatus = currentStatus === 'completed' ? 'not started' : 'completed';
+  //     await api.patch(`/tasks/${taskId}`, { status: newStatus });
+  //     setTasks(tasks.map(task => 
+  //       task.id === taskId ? { ...task, status: newStatus } : task
+  //     ));
+  //   } catch (error) {
+  //     console.error('Error updating task:', error);
+  //   }
+  // };
 
   const getInitials = (firstName?: string, lastName?: string) => {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
   };
 
-  const formatTime = (dateString?: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-  };
+  // const formatTime = (dateString?: string) => {
+  //   if (!dateString) return '';
+  //   const date = new Date(dateString);
+  //   return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  // };
 
-  const getTaskTypeLabel = (type?: string) => {
-    const types: { [key: string]: string } = {
-      'todo': 'Programming',
-      'call': 'Call',
-      'email': 'Email',
-      'meeting': 'Meeting',
-      'note': 'Note',
-    };
-    return types[type || 'todo'] || 'Task';
-  };
+  // const getTaskTypeLabel = (type?: string) => {
+  //   const types: { [key: string]: string } = {
+  //     'todo': 'Programming',
+  //     'call': 'Call',
+  //     'email': 'Email',
+  //     'meeting': 'Meeting',
+  //     'note': 'Note',
+  //   };
+  //   return types[type || 'todo'] || 'Task';
+  // };
 
   const handleDownloadSales = () => {
     if (!stats) {
@@ -403,7 +386,7 @@ const Dashboard: React.FC = () => {
     if (selectedMonth !== null) {
       const year = parseInt(selectedYear);
       const month = parseInt(selectedMonth);
-      const monthName = monthNames[month]?.label || '';
+      // const monthName = monthNames[month]?.label || '';
       
       // Usar datos diarios si están disponibles
       if (dailyPayments.length > 0) {
@@ -1273,7 +1256,7 @@ const Dashboard: React.FC = () => {
                     : [0, 'dataMax']}
                 />
                 <Tooltip 
-                  formatter={(value: number) => [`S/ ${value.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Ventas']}
+                  formatter={(value: number | undefined) => value !== undefined ? [`S/ ${value.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Ventas'] : ['', 'Ventas']}
                   labelFormatter={(label) => selectedMonth !== null ? `Día ${label}` : label}
                   contentStyle={{
                     backgroundColor: theme.palette.background.paper,
@@ -1621,7 +1604,7 @@ const Dashboard: React.FC = () => {
                         })}
                       </Pie>
                       <Tooltip 
-                        formatter={(value: number) => `${value.toFixed(1)}%`}
+                        formatter={(value: number | undefined) => value !== undefined ? `${value.toFixed(1)}%` : '0%'}
                         contentStyle={{
                           backgroundColor: theme.palette.background.paper,
                           border: `1px solid ${theme.palette.divider}`,

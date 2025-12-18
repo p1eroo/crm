@@ -16,19 +16,14 @@ import {
   CircularProgress,
   Paper,
   useTheme,
-  Tooltip,
-  Divider,
 } from '@mui/material';
 import {
   Edit,
-  Delete,
   AttachMoney,
   Person,
   Business,
   CalendarToday,
-  DragIndicator,
   Close,
-  Timeline,
   CheckCircle,
   RadioButtonUnchecked,
   Note,
@@ -90,7 +85,7 @@ const Pipeline: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
-  const [search, setSearch] = useState('');
+  const [search] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     amount: '',
@@ -322,11 +317,6 @@ const Pipeline: React.FC = () => {
     return stages.findIndex((s) => s.id === stageId);
   };
 
-  const getCompletedStages = (currentStage: string) => {
-    const currentIndex = getStageIndex(currentStage);
-    return stages.slice(0, currentIndex + 1);
-  };
-
   const getStageDate = (stageId: string, stageIndex: number, deal: Deal, allActivities: Activity[]) => {
     const currentIndex = getStageIndex(deal.stage);
     const isFirstStage = stageIndex === 0;
@@ -417,15 +407,6 @@ const Pipeline: React.FC = () => {
     return `S/ ${value.toFixed(0)}`;
   };
 
-  const getDealsByStage = (stageId: string) => {
-    if (!Array.isArray(deals)) return [];
-    return deals.filter((deal) => deal.stage === stageId);
-  };
-
-  const getStageTotal = (stageId: string) => {
-    return getDealsByStage(stageId).reduce((sum, deal) => sum + (deal.amount || 0), 0);
-  };
-
   const filteredDeals = Array.isArray(deals) ? deals.filter((deal) =>
     deal.name?.toLowerCase().includes(search.toLowerCase()) ||
     deal.Contact?.firstName?.toLowerCase().includes(search.toLowerCase()) ||
@@ -442,7 +423,7 @@ const Pipeline: React.FC = () => {
   }
 
   return (
-    <Box sx={{ px: { xs: 0, sm: 0, md: 0.25, lg: 0.5 }, pt: { xs: 0.25, sm: 0.5, md: 1 }, pb: 3, height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <Box sx={{ pb: { xs: 2, sm: 3, md: 4 }, height: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Pipeline Board Container */}
       <Card
         sx={{
