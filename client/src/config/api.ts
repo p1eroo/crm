@@ -8,8 +8,10 @@ const getApiUrl = () => {
   }
   
   const hostname = window.location.hostname;
+  const protocol = window.location.protocol; // 'https:' o 'http:'
+  const isHttps = protocol === 'https:';
   
-  // Si estamos accediendo desde localhost, usar localhost
+  // Si estamos accediendo desde localhost, usar localhost con HTTP
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'http://localhost:5000/api';
   }
@@ -27,19 +29,21 @@ const getApiUrl = () => {
     return 'http://localhost:5000/api';
   }
   
-  // Si estamos accediendo desde la red (IP), usar la misma IP pero puerto 5000
+  // Si estamos accediendo desde la red (IP), usar la misma IP pero con el protocolo correcto
   // Detectar si es una IP (IPv4)
   const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
   if (ipRegex.test(hostname)) {
-    const url = `http://${hostname}:5000/api`;
+    const url = `${isHttps ? 'https' : 'http'}://${hostname}:5000/api`;
     console.log('🌐 Detectada IP de red:', hostname);
     console.log('🔗 URL de API configurada:', url);
     return url;
   }
   
-  // Si es un dominio, usar el mismo dominio pero puerto 5000
-  const url = `http://${hostname}:5000/api`;
+  // Si es un dominio, usar el mismo dominio pero con el protocolo correcto y puerto 5000
+  // En producción (HTTPS), usar HTTPS; en desarrollo (HTTP), usar HTTP
+  const url = `${isHttps ? 'https' : 'http'}://${hostname}:5000/api`;
   console.log('🌐 Detectado dominio:', hostname);
+  console.log('🔒 Protocolo detectado:', protocol);
   console.log('🔗 URL de API configurada:', url);
   return url;
 };
@@ -60,6 +64,8 @@ api.interceptors.request.use(
   (config) => {
     // Recalcular la URL en cada petición para asegurar que sea correcta
     const currentHostname = window.location.hostname;
+    const protocol = window.location.protocol; // 'https:' o 'http:'
+    const isHttps = protocol === 'https:';
     
     // Si estamos accediendo desde un túnel localtunnel, usar el túnel del backend
     if (currentHostname.includes('.loca.lt')) {
@@ -70,9 +76,10 @@ api.interceptors.request.use(
     } else {
       const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
       if (ipRegex.test(currentHostname)) {
-        config.baseURL = `http://${currentHostname}:5000/api`;
+        config.baseURL = `${isHttps ? 'https' : 'http'}://${currentHostname}:5000/api`;
       } else {
-        config.baseURL = `http://${currentHostname}:5000/api`;
+        // Para dominios, usar el mismo protocolo que la página actual
+        config.baseURL = `${isHttps ? 'https' : 'http'}://${currentHostname}:5000/api`;
       }
     }
     

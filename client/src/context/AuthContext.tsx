@@ -43,14 +43,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             return process.env.REACT_APP_API_URL;
           }
           const hostname = window.location.hostname;
+          const protocol = window.location.protocol; // 'https:' o 'http:'
+          const isHttps = protocol === 'https:';
+          
           if (hostname === 'localhost' || hostname === '127.0.0.1') {
             return 'http://localhost:5000/api';
           }
           const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
           if (ipRegex.test(hostname)) {
-            return `http://${hostname}:5000/api`;
+            return `${isHttps ? 'https' : 'http'}://${hostname}:5000/api`;
           }
-          return `http://${hostname}:5000/api`;
+          return `${isHttps ? 'https' : 'http'}://${hostname}:5000/api`;
         };
         
         // Intentar obtener datos actualizados del backend
@@ -134,20 +137,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
         
         const hostname = window.location.hostname;
+        const protocol = window.location.protocol; // 'https:' o 'http:'
+        const isHttps = protocol === 'https:';
         
         // Si estamos accediendo desde localhost, usar localhost
         if (hostname === 'localhost' || hostname === '127.0.0.1') {
           return 'http://localhost:5000/api';
         }
         
-        // Si estamos accediendo desde la red (IP), usar la misma IP pero puerto 5000
+        // Si estamos accediendo desde la red (IP), usar la misma IP pero con el protocolo correcto
         const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
         if (ipRegex.test(hostname)) {
-          return `http://${hostname}:5000/api`;
+          return `${isHttps ? 'https' : 'http'}://${hostname}:5000/api`;
         }
         
-        // Si es un dominio, usar el mismo dominio pero puerto 5000
-        return `http://${hostname}:5000/api`;
+        // Si es un dominio, usar el mismo dominio pero con el protocolo correcto y puerto 5000
+        return `${isHttps ? 'https' : 'http'}://${hostname}:5000/api`;
       };
       
       const apiUrl = getBackendUrl();
