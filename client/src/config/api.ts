@@ -199,47 +199,87 @@ api.interceptors.response.use(
       pathname: window.location.pathname
     });
     
-    // Solo manejar errores 401/403, ignorar 404 (normal si no hay datos)
-    if (status === 401 || status === 403) {
-      // No redirigir si estamos en la página de login o si la petición es al endpoint de login
+    // Manejar errores 401 (siempre token inválido/expirado)
+    if (status === 401) {
       const isLoginPage = window.location.pathname === '/login';
       const isLoginRequest = url.includes('/auth/login') || url.includes('/auth/login-monterrico');
-      const isAuthMeRequest = url.includes('/auth/me'); // No redirigir si falla /auth/me
-      const isGoogleTokenRequest = url.includes('/google/token'); // No redirigir si falla /google/token
-      const isGoogleCalendarRequest = url.includes('/google-calendar'); // No redirigir si falla /google-calendar
+      const isAuthMeRequest = url.includes('/auth/me');
       
-      console.log('🔍 [Interceptor] Verificando si debe cerrar sesión:', {
+      if (!isLoginPage && !isLoginRequest && !isAuthMeRequest) {
+        console.log('🔒 [Interceptor] Error 401 - Token inválido o expirado, cerrando sesión');
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        delete api.defaults.headers.common['Authorization'];
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+        return Promise.resolve({ data: null, status: 401 });
+      }
+      return Promise.resolve({ data: null, status: 401 });
+    }
+    
+    // Manejar errores 403 (puede ser token inválido O falta de permisos)
+    if (status === 403) {
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || '';
+      const isLoginPage = window.location.pathname === '/login';
+      const isLoginRequest = url.includes('/auth/login') || url.includes('/auth/login-monterrico');
+      const isAuthMeRequest = url.includes('/auth/me');
+      const isGoogleTokenRequest = url.includes('/google/token');
+      const isGoogleCalendarRequest = url.includes('/google-calendar');
+      
+      // Rutas que requieren permisos específicos (no cerrar sesión por falta de permisos)
+      const requiresSpecificRole = url.includes('/users') || 
+                                   url.includes('/admin') ||
+                                   errorMessage.includes('permisos') ||
+                                   errorMessage.includes('No tienes permisos');
+      
+      console.log('🔍 [Interceptor] Error 403 detectado:', {
+        url,
+        errorMessage,
+        requiresSpecificRole,
         isLoginPage,
         isLoginRequest,
-        isAuthMeRequest,
-        isGoogleTokenRequest,
-        isGoogleCalendarRequest,
-        status
+        isAuthMeRequest
       });
       
-      // Solo redirigir si NO es una petición de verificación y NO estamos en login
-      if (!isLoginPage && !isLoginRequest && !isAuthMeRequest && !isGoogleTokenRequest && !isGoogleCalendarRequest) {
-        const token = localStorage.getItem('token');
-        console.log('🔍 [Interceptor] Token presente:', !!token);
-        
-        // Si no hay token O si hay token pero la petición falló con 401/403 (token inválido/expirado)
-        if (!token || (token && (status === 401 || status === 403))) {
-          console.log('🔒 [Interceptor] Token inválido o expirado, redirigiendo a login');
-          console.log('🔒 [Interceptor] Detalles:', { status, url, hasToken: !!token });
-          localStorage.removeItem('user');
-          localStorage.removeItem('token');
-          delete api.defaults.headers.common['Authorization'];
-          if (window.location.pathname !== '/login') {
-            window.location.href = '/login';
-          }
-          // No rechazar el error para evitar que aparezca en la consola
-          return Promise.resolve({ data: null, status: 401 });
-        }
-      } else {
-        console.log('🔍 [Interceptor] No se cierra sesión porque es una petición de verificación o estamos en login');
+      // REGLA PRINCIPAL: Solo cerrar sesión si el mensaje EXPLÍCITAMENTE dice que el token es inválido
+      // Cualquier otro 403 es por falta de permisos y NO debe cerrar sesión
+      const isTokenInvalid = errorMessage.includes('Token inválido') || 
+                              errorMessage.includes('Token expirado') || 
+                              errorMessage.includes('Token de acceso requerido');
+      
+      // Si es un 403 en una petición de verificación, no cerrar sesión
+      if (isLoginPage || isLoginRequest || isAuthMeRequest || isGoogleTokenRequest || isGoogleCalendarRequest) {
+        console.log('🔍 [Interceptor] Error 403 en petición de verificación, NO se cierra sesión');
+        return Promise.resolve({ data: null, status: 403 });
       }
-      // Para errores 401/403 en peticiones de verificación, no mostrar error en consola
-      return Promise.resolve({ data: null, status });
+      
+      // Si el mensaje indica explícitamente que el token es inválido, cerrar sesión
+      if (isTokenInvalid) {
+        console.log('🔒 [Interceptor] Error 403 - Token inválido según mensaje, cerrando sesión');
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        delete api.defaults.headers.common['Authorization'];
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+        return Promise.resolve({ data: null, status: 403 });
+      }
+      
+      // PARA CUALQUIER OTRO 403: NO cerrar sesión (es falta de permisos)
+      console.log('⚠️ [Interceptor] Error 403 por falta de permisos, NO se cierra sesión');
+      // Rechazar el error para que el componente lo maneje, pero marcarlo como error de permisos
+      return Promise.reject({
+        ...error,
+        isPermissionError: true, // Marcar como error de permisos
+        response: {
+          ...error.response,
+          data: {
+            ...error.response?.data,
+            isPermissionError: true
+          }
+        }
+      });
     }
     
     // Para otros errores, mostrar información en consola solo si no es 404
