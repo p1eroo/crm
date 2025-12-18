@@ -151,8 +151,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return `${isHttps ? 'https' : 'http'}://${hostname}:5000/api`;
         }
         
-        // Si es un dominio, usar el mismo dominio pero con el protocolo correcto y puerto 5000
-        return `${isHttps ? 'https' : 'http'}://${hostname}:5000/api`;
+        // Si es un dominio en producción (HTTPS), usar el mismo dominio sin puerto
+        // En desarrollo (HTTP), usar el puerto 5000
+        if (isHttps) {
+          return `https://${hostname}/api`;
+        } else {
+          return `http://${hostname}:5000/api`;
+        }
       };
       
       const apiUrl = getBackendUrl();

@@ -39,13 +39,24 @@ const getApiUrl = () => {
     return url;
   }
   
-  // Si es un dominio, usar el mismo dominio pero con el protocolo correcto y puerto 5000
-  // En producción (HTTPS), usar HTTPS; en desarrollo (HTTP), usar HTTP
-  const url = `${isHttps ? 'https' : 'http'}://${hostname}:5000/api`;
-  console.log('🌐 Detectado dominio:', hostname);
-  console.log('🔒 Protocolo detectado:', protocol);
-  console.log('🔗 URL de API configurada:', url);
-  return url;
+  // Si es un dominio en producción (HTTPS), usar el mismo dominio sin puerto
+  // (el proxy reverso maneja el enrutamiento al backend)
+  // Si es desarrollo (HTTP), usar el puerto 5000
+  if (isHttps) {
+    // En producción con HTTPS, el proxy reverso maneja el enrutamiento
+    const url = `https://${hostname}/api`;
+    console.log('🌐 Detectado dominio en producción:', hostname);
+    console.log('🔒 Protocolo: HTTPS');
+    console.log('🔗 URL de API configurada:', url);
+    return url;
+  } else {
+    // En desarrollo, usar el puerto 5000
+    const url = `http://${hostname}:5000/api`;
+    console.log('🌐 Detectado dominio en desarrollo:', hostname);
+    console.log('🔒 Protocolo: HTTP');
+    console.log('🔗 URL de API configurada:', url);
+    return url;
+  }
 };
 
 // URL inicial
@@ -76,10 +87,16 @@ api.interceptors.request.use(
     } else {
       const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
       if (ipRegex.test(currentHostname)) {
+        // Para IPs, usar el puerto 5000
         config.baseURL = `${isHttps ? 'https' : 'http'}://${currentHostname}:5000/api`;
       } else {
-        // Para dominios, usar el mismo protocolo que la página actual
-        config.baseURL = `${isHttps ? 'https' : 'http'}://${currentHostname}:5000/api`;
+        // Para dominios en producción (HTTPS), usar el mismo dominio sin puerto
+        // En desarrollo (HTTP), usar el puerto 5000
+        if (isHttps) {
+          config.baseURL = `https://${currentHostname}/api`;
+        } else {
+          config.baseURL = `http://${currentHostname}:5000/api`;
+        }
       }
     }
     
