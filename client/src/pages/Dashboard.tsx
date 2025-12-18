@@ -1256,7 +1256,12 @@ const Dashboard: React.FC = () => {
                     : [0, 'dataMax']}
                 />
                 <Tooltip 
-                  formatter={(value: number | undefined) => value !== undefined ? [`S/ ${value.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Ventas'] : ['', 'Ventas']}
+                  formatter={(value: any) => {
+                    const numValue = typeof value === 'number' ? value : Number(value);
+                    return numValue !== undefined && !isNaN(numValue) 
+                      ? [`S/ ${numValue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Ventas'] 
+                      : ['', 'Ventas'];
+                  }}
                   labelFormatter={(label) => selectedMonth !== null ? `Día ${label}` : label}
                   contentStyle={{
                     backgroundColor: theme.palette.background.paper,
