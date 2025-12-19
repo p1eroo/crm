@@ -58,3 +58,4 @@ DealCompany.init(
 
 export default DealCompany;
 
+

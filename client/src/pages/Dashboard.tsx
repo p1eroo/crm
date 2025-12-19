@@ -1609,7 +1609,10 @@ const Dashboard: React.FC = () => {
                         })}
                       </Pie>
                       <Tooltip 
-                        formatter={(value: number | undefined) => value !== undefined ? `${value.toFixed(1)}%` : '0%'}
+                        formatter={(value: any) => {
+                          const numValue = typeof value === 'number' ? value : Number(value);
+                          return numValue !== undefined && !isNaN(numValue) ? `${numValue.toFixed(1)}%` : '0%';
+                        }}
                         contentStyle={{
                           backgroundColor: theme.palette.background.paper,
                           border: `1px solid ${theme.palette.divider}`,
