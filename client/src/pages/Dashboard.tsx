@@ -19,6 +19,9 @@ import {
   useTheme,
   Snackbar,
   Alert,
+  Divider,
+  Tooltip,
+  Link,
 } from '@mui/material';
 import {
   Download,
@@ -27,6 +30,12 @@ import {
   ShoppingCart,
   AttachMoney,
   Close,
+  LocalOffer,
+  Receipt,
+  TrendingUp,
+  TrendingDown,
+  Groups,
+  ArrowDropDown,
 } from '@mui/icons-material';
 import {
   AreaChart,
@@ -39,7 +48,7 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
   ReferenceLine,
 } from 'recharts';
@@ -673,6 +682,18 @@ const Dashboard: React.FC = () => {
   const ordersInLine = stats.deals.total || 0;
   const newClients = stats.leads?.converted || stats.contacts.total || 0;
   
+  // Calcular KPI total del equipo (promedio de performance)
+  const teamKPI = stats.deals.userPerformance && stats.deals.userPerformance.length > 0
+    ? stats.deals.userPerformance.reduce((sum, user) => sum + (user.performance || 0), 0) / stats.deals.userPerformance.length
+    : 0;
+  
+  // Simular comparación con período anterior (en producción, esto debería venir del backend)
+  // Por ahora, comparamos con un valor base o calculamos basado en ventas del mes anterior
+  const previousTeamKPI = teamKPI * 0.95; // Simulación: 5% menos que el actual
+  const kpiChange = teamKPI - previousTeamKPI;
+  const kpiChangePercent = previousTeamKPI > 0 ? ((kpiChange / previousTeamKPI) * 100) : 0;
+  const isKPIIncreasing = kpiChange >= 0;
+  
   // Calcular presupuesto del mes actual
   const currentMonth = new Date().getMonth();
   const currentMonthNameForBudget = monthNames[currentMonth]?.label || '';
@@ -714,6 +735,39 @@ const Dashboard: React.FC = () => {
   }
   
   const monthlyBudget = currentMonthData?.amount || 0;
+
+  // Calcular valores del Pipeline de Ventas
+  const pipelineData = (() => {
+    const propuestaEconomica = stats.deals.byStage?.find(
+      (d: any) => d.stage === 'propuesta_economica'
+    ) || { total: 0, count: 0 };
+    
+    const negociacion = stats.deals.byStage?.find(
+      (d: any) => d.stage === 'negociacion'
+    ) || { total: 0, count: 0 };
+    
+    const cierreGanado = stats.deals.byStage?.find(
+      (d: any) => d.stage === 'cierre_ganado' || d.stage === 'won' || d.stage === 'closed won'
+    ) || { total: 0, count: 0 };
+    
+    const total = (propuestaEconomica.total || 0) + (negociacion.total || 0) + (cierreGanado.total || 0);
+    
+    return {
+      propuestaEconomica: {
+        value: typeof propuestaEconomica.total === 'number' ? propuestaEconomica.total : parseFloat(propuestaEconomica.total || 0),
+        count: typeof propuestaEconomica.count === 'number' ? propuestaEconomica.count : parseInt(propuestaEconomica.count || 0),
+      },
+      negociacion: {
+        value: typeof negociacion.total === 'number' ? negociacion.total : parseFloat(negociacion.total || 0),
+        count: typeof negociacion.count === 'number' ? negociacion.count : parseInt(negociacion.count || 0),
+      },
+      cierreGanado: {
+        value: typeof cierreGanado.total === 'number' ? cierreGanado.total : parseFloat(cierreGanado.total || 0),
+        count: typeof cierreGanado.count === 'number' ? cierreGanado.count : parseInt(cierreGanado.count || 0),
+      },
+      total,
+    };
+  })();
 
   // Calcular presupuesto del mes seleccionado (para mostrar en el gráfico)
   const selectedMonthBudget = selectedMonth !== null && (stats.payments?.budgets || stats.payments?.monthly)
@@ -879,7 +933,7 @@ const Dashboard: React.FC = () => {
       {/* Tarjetas KPI con gradientes - Diseño compacto y equilibrado */}
       <Box sx={{ 
         display: 'grid', 
-        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(2, 1fr)', lg: 'repeat(2, 1fr)', xl: 'repeat(4, 1fr)' }, 
+        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(2, 1fr)', lg: 'repeat(2, 1fr)', xl: 'repeat(5, 1fr)' }, 
         gap: { xs: 1, sm: 1.5, md: 2 }, 
         mb: { xs: 2, sm: 3, md: 4 } 
       }}>
@@ -887,276 +941,447 @@ const Dashboard: React.FC = () => {
         <Card 
           onClick={canEditBudget ? handleBudgetCardClick : undefined}
           sx={{ 
-            borderRadius: 3, 
+            borderRadius: 2, 
             boxShadow: theme.palette.mode === 'dark' 
-              ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
-              : '0 2px 4px rgba(0,0,0,0.08)',
+              ? '0 2px 8px rgba(0, 0, 0, 0.2)' 
+              : '0 1px 3px rgba(0,0,0,0.1)',
             background: theme.palette.background.paper,
             color: theme.palette.text.primary,
             transition: 'all 0.2s ease',
             overflow: 'hidden',
-            border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0,0,0,0.08)',
+            border: theme.palette.mode === 'dark' 
+              ? '1px solid rgba(255, 255, 255, 0.15)' 
+              : '1px solid rgba(0, 0, 0, 0.15)',
             cursor: canEditBudget ? 'pointer' : 'default',
             '&:hover': canEditBudget ? {
               transform: { xs: 'none', md: 'translateY(-2px)' },
               boxShadow: theme.palette.mode === 'dark'
-                ? '0 6px 16px rgba(0, 0, 0, 0.4)'
-                : '0 4px 12px rgba(0,0,0,0.15)',
+                ? '0 4px 12px rgba(0, 0, 0, 0.3)'
+                : '0 2px 6px rgba(0,0,0,0.15)',
             } : {},
           }}
         >
           <CardContent sx={{ 
-            p: { xs: 1.5, sm: 2, md: 2.25 },
-            position: 'relative',
+            p: { xs: 2, sm: 2.5, md: 3 },
           }}>
             <Box sx={{ 
               display: 'flex', 
-              justifyContent: 'space-between', 
               alignItems: 'flex-start',
+              gap: 2,
             }}>
-              <Box sx={{ flex: 1 }}>
+              <Box
+                sx={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 1.5,
+                  bgcolor: '#E8F5E9',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <AttachMoney 
+                  sx={{ 
+                    fontSize: 28,
+                    color: '#2E7D32',
+                  }} 
+                />
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography 
                   variant="body2" 
                   sx={{ 
-                    color: theme.palette.text.secondary,
-                    mb: 1,
-                    fontSize: { xs: '1rem', md: '1.125rem' },
-                    fontWeight: 500,
+                    color: '#000000',
+                    mb: 1.5,
+                    fontSize: '1.5rem',
+                    fontWeight: 600,
+                    lineHeight: 1.2,
                   }}
                 >
                   Presupuesto {currentMonthAbbr}
                 </Typography>
                 <Typography 
-                  variant="h5" 
+                  variant="h6" 
                   sx={{ 
-                    fontWeight: 700, 
-                    fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
-                    lineHeight: 1.1,
-                    color: theme.palette.text.primary,
+                    fontWeight: 600, 
+                    fontSize: '1.5rem',
+                    lineHeight: 1.2,
+                    color: '#757575',
                   }}
                 >
                   S/ {(monthlyBudget / 1000).toFixed(0)}k
                 </Typography>
               </Box>
-              <AttachMoney 
-                sx={{ 
-                  fontSize: { xs: 48, sm: 56, md: 64 },
-                  color: theme.palette.mode === 'dark' ? '#10B981' : '#059669',
-                  ml: 2,
-                  opacity: theme.palette.mode === 'dark' ? 0.8 : 1,
-                }} 
-              />
             </Box>
           </CardContent>
         </Card>
 
         {/* Weekly Balance */}
         <Card sx={{ 
-          borderRadius: 3, 
+          borderRadius: 2, 
           boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
-            : '0 2px 4px rgba(0,0,0,0.08)',
+            ? '0 2px 8px rgba(0, 0, 0, 0.2)' 
+            : '0 1px 3px rgba(0,0,0,0.1)',
           background: theme.palette.background.paper,
           color: theme.palette.text.primary,
           transition: 'all 0.2s ease',
           overflow: 'hidden',
-          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0,0,0,0.08)',
+          border: theme.palette.mode === 'dark' 
+            ? '1px solid rgba(255, 255, 255, 0.15)' 
+            : '1px solid rgba(0, 0, 0, 0.15)',
           '&:hover': {
             transform: { xs: 'none', md: 'translateY(-2px)' },
             boxShadow: theme.palette.mode === 'dark'
-              ? '0 6px 16px rgba(0, 0, 0, 0.4)'
-              : '0 4px 12px rgba(0,0,0,0.15)',
+              ? '0 4px 12px rgba(0, 0, 0, 0.3)'
+              : '0 2px 6px rgba(0,0,0,0.15)',
           },
         }}>
           <CardContent sx={{ 
-            p: { xs: 1.5, sm: 2, md: 2.25 },
-            position: 'relative',
+            p: { xs: 2, sm: 2.5, md: 3 },
           }}>
             <Box sx={{ 
               display: 'flex', 
-              justifyContent: 'space-between', 
               alignItems: 'flex-start',
+              gap: 2,
             }}>
-              <Box sx={{ flex: 1 }}>
+              <Box
+                sx={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 1.5,
+                  bgcolor: '#E8F5E9',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <AccountBalance 
+                  sx={{ 
+                    fontSize: 28,
+                    color: '#2E7D32',
+                  }} 
+                />
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography 
                   variant="body2" 
                   sx={{ 
-                    color: theme.palette.text.secondary,
-                    mb: 1,
-                    fontSize: { xs: '1rem', md: '1.125rem' },
-                    fontWeight: 500,
+                    color: '#000000',
+                    mb: 1.5,
+                    fontSize: '1.5rem',
+                    fontWeight: 600,
+                    lineHeight: 1.2,
                   }}
                 >
                   Balance Semanal
                 </Typography>
                 <Typography 
-                  variant="h5" 
+                  variant="h6" 
                   sx={{ 
-                    fontWeight: 700, 
-                    fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
-                    lineHeight: 1.1,
-                    color: theme.palette.text.primary,
+                    fontWeight: 600, 
+                    fontSize: '1.5rem',
+                    lineHeight: 1.2,
+                    color: '#757575',
                   }}
                 >
                   S/ {(weeklyBalance / 1000).toFixed(0)}k
                 </Typography>
               </Box>
-              <AccountBalance 
-                sx={{ 
-                  fontSize: { xs: 48, sm: 56, md: 64 },
-                  color: theme.palette.mode === 'dark' ? '#8B9AFF' : '#667eea',
-                  ml: 2,
-                  opacity: theme.palette.mode === 'dark' ? 0.8 : 1,
-                }} 
-              />
             </Box>
           </CardContent>
         </Card>
 
         {/* Orders In Line */}
         <Card sx={{ 
-          borderRadius: 3, 
+          borderRadius: 2, 
           boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
-            : '0 2px 4px rgba(0,0,0,0.08)',
+            ? '0 2px 8px rgba(0, 0, 0, 0.2)' 
+            : '0 1px 3px rgba(0,0,0,0.1)',
           background: theme.palette.background.paper,
           color: theme.palette.text.primary,
           transition: 'all 0.2s ease',
           overflow: 'hidden',
-          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0,0,0,0.08)',
+          border: theme.palette.mode === 'dark' 
+            ? '1px solid rgba(255, 255, 255, 0.15)' 
+            : '1px solid rgba(0, 0, 0, 0.15)',
           '&:hover': {
             transform: { xs: 'none', md: 'translateY(-2px)' },
             boxShadow: theme.palette.mode === 'dark'
-              ? '0 6px 16px rgba(0, 0, 0, 0.4)'
-              : '0 4px 12px rgba(0,0,0,0.15)',
+              ? '0 4px 12px rgba(0, 0, 0, 0.3)'
+              : '0 2px 6px rgba(0,0,0,0.15)',
           },
         }}>
           <CardContent sx={{ 
-            p: { xs: 1.5, sm: 2, md: 2.25 },
-            position: 'relative',
+            p: { xs: 2, sm: 2.5, md: 3 },
           }}>
             <Box sx={{ 
               display: 'flex', 
-              justifyContent: 'space-between', 
               alignItems: 'flex-start',
+              gap: 2,
             }}>
-              <Box sx={{ flex: 1 }}>
+              <Box
+                sx={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 1.5,
+                  bgcolor: '#E8F5E9',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <LocalOffer 
+                  sx={{ 
+                    fontSize: 28,
+                    color: '#2E7D32',
+                  }} 
+                />
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography 
                   variant="body2" 
                   sx={{ 
-                    color: theme.palette.text.secondary,
-                    mb: 1,
-                    fontSize: { xs: '1rem', md: '1.125rem' },
-                    fontWeight: 500,
+                    color: '#000000',
+                    mb: 1.5,
+                    fontSize: '1.5rem',
+                    fontWeight: 600,
+                    lineHeight: 1.2,
                   }}
                 >
                   Órdenes en Línea
                 </Typography>
                 <Typography 
-                  variant="h5" 
+                  variant="h6" 
                   sx={{ 
-                    fontWeight: 700, 
-                    fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
-                    lineHeight: 1.1,
-                    color: theme.palette.text.primary,
+                    fontWeight: 600, 
+                    fontSize: '1.5rem',
+                    lineHeight: 1.2,
+                    color: '#757575',
                   }}
                 >
                   {ordersInLine}
                 </Typography>
               </Box>
-              <ShoppingCart 
-                sx={{ 
-                  fontSize: { xs: 48, sm: 56, md: 64 },
-                  color: theme.palette.mode === 'dark' ? '#F093FB' : '#f5576c',
-                  ml: 2,
-                  opacity: theme.palette.mode === 'dark' ? 0.8 : 1,
-                }} 
-              />
             </Box>
           </CardContent>
         </Card>
 
         {/* New Clients */}
         <Card sx={{ 
-          borderRadius: 3, 
+          borderRadius: 2, 
           boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 12px rgba(0, 0, 0, 0.3)' 
-            : '0 2px 4px rgba(0,0,0,0.08)',
+            ? '0 2px 8px rgba(0, 0, 0, 0.2)' 
+            : '0 1px 3px rgba(0,0,0,0.1)',
           background: theme.palette.background.paper,
           color: theme.palette.text.primary,
           transition: 'all 0.2s ease',
           overflow: 'hidden',
           position: 'relative',
-          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(0,0,0,0.08)',
+          border: theme.palette.mode === 'dark' 
+            ? '1px solid rgba(255, 255, 255, 0.15)' 
+            : '1px solid rgba(0, 0, 0, 0.15)',
           '&:hover': {
             transform: { xs: 'none', md: 'translateY(-2px)' },
             boxShadow: theme.palette.mode === 'dark'
-              ? '0 6px 16px rgba(0, 0, 0, 0.4)'
-              : '0 4px 12px rgba(0,0,0,0.15)',
+              ? '0 4px 12px rgba(0, 0, 0, 0.3)'
+              : '0 2px 6px rgba(0,0,0,0.15)',
           },
         }}>
           <CardContent sx={{ 
-            p: { xs: 1.5, sm: 2, md: 2.25 },
-            position: 'relative',
+            p: { xs: 2, sm: 2.5, md: 3 },
           }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <Box sx={{ flex: 1 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'flex-start',
+              gap: 2,
+            }}>
+              <Box
+                sx={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 1.5,
+                  bgcolor: '#E8F5E9',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <People 
+                  sx={{ 
+                    fontSize: 28,
+                    color: '#2E7D32',
+                  }} 
+                />
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography 
                   variant="body2" 
                   sx={{ 
-                    color: theme.palette.text.secondary,
-                    mb: 1,
-                    fontSize: { xs: '1rem', md: '1.125rem' },
-                    fontWeight: 500,
+                    color: '#000000',
+                    mb: 1.5,
+                    fontSize: '1.5rem',
+                    fontWeight: 600,
+                    lineHeight: 1.2,
                   }}
                 >
                   Nuevos Clientes
                 </Typography>
                 <Typography 
-                  variant="h5" 
+                  variant="h6" 
                   sx={{ 
-                    fontWeight: 700, 
-                    fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
-                    lineHeight: 1.1,
-                    color: theme.palette.text.primary,
+                    fontWeight: 600, 
+                    fontSize: '1.5rem',
+                    lineHeight: 1.2,
+                    color: '#757575',
                   }}
                 >
                   {newClients}
                 </Typography>
               </Box>
-              <People 
-                sx={{ 
-                  fontSize: { xs: 56, sm: 64, md: 72 },
-                  color: theme.palette.mode === 'dark' ? '#FA709A' : '#fee140',
-                  ml: 2,
-                  opacity: theme.palette.mode === 'dark' ? 0.8 : 1,
-                }} 
-              />
+            </Box>
+          </CardContent>
+        </Card>
+
+        {/* Team KPI */}
+        <Card sx={{ 
+          borderRadius: 2, 
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 2px 8px rgba(0, 0, 0, 0.2)' 
+            : '0 1px 3px rgba(0,0,0,0.1)',
+          background: theme.palette.background.paper,
+          color: theme.palette.text.primary,
+          transition: 'all 0.2s ease',
+          overflow: 'hidden',
+          position: 'relative',
+          border: theme.palette.mode === 'dark' 
+            ? '1px solid rgba(255, 255, 255, 0.15)' 
+            : '1px solid rgba(0, 0, 0, 0.15)',
+          '&:hover': {
+            transform: { xs: 'none', md: 'translateY(-2px)' },
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 4px 12px rgba(0, 0, 0, 0.3)'
+              : '0 2px 6px rgba(0,0,0,0.15)',
+          },
+        }}>
+          <CardContent sx={{ 
+            p: { xs: 2, sm: 2.5, md: 3 },
+          }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'flex-start',
+              gap: 2,
+            }}>
+              <Box
+                sx={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 1.5,
+                  bgcolor: '#E8F5E9',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <Groups 
+                  sx={{ 
+                    fontSize: 28,
+                    color: '#2E7D32',
+                  }} 
+                />
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: '#000000',
+                    mb: 1.5,
+                    fontSize: '1.5rem',
+                    fontWeight: 600,
+                    lineHeight: 1.2,
+                  }}
+                >
+                  KPI Total Equipo
+                </Typography>
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center',
+                  gap: 1,
+                }}>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 600, 
+                      fontSize: '1.5rem',
+                      lineHeight: 1.2,
+                      color: '#757575',
+                    }}
+                  >
+                    {teamKPI.toFixed(1)}%
+                  </Typography>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center',
+                    gap: 0.5,
+                    ml: 'auto',
+                  }}>
+                    {isKPIIncreasing ? (
+                      <TrendingUp 
+                        sx={{ 
+                          fontSize: 20,
+                          color: '#2E7D32',
+                        }} 
+                      />
+                    ) : (
+                      <TrendingDown 
+                        sx={{ 
+                          fontSize: 20,
+                          color: '#D32F2F',
+                        }} 
+                      />
+                    )}
+                    <Typography 
+                      variant="caption" 
+                      sx={{ 
+                        fontWeight: 600,
+                        fontSize: '0.875rem',
+                        color: isKPIIncreasing ? '#2E7D32' : '#D32F2F',
+                      }}
+                    >
+                      {Math.abs(kpiChangePercent).toFixed(1)}%
+                    </Typography>
+                  </Box>
+                </Box>
+              </Box>
             </Box>
           </CardContent>
         </Card>
       </Box>
 
-      {/* Sección principal: Sales Chart */}
+      {/* Sección principal: Sales Chart y Pipeline de Ventas */}
       <Box sx={{ 
         display: 'grid',
         gridTemplateColumns: { 
           xs: '1fr', 
           md: '1fr',
-          lg: '1fr',
-          xl: '1fr' 
+          lg: '1.5fr 1fr',
+          xl: '1.5fr 1fr' 
         },
         gap: { xs: 1.5, sm: 2, md: 3 },
         mb: { xs: 2, sm: 2.5, md: 3 } 
       }}>
         {/* Sales Chart */}
         <Card sx={{ 
-          borderRadius: { xs: 3, md: 6 }, 
+          borderRadius: 2, 
           boxShadow: theme.palette.mode === 'dark' 
             ? '0 4px 12px rgba(0,0,0,0.3)' 
             : { xs: 1, md: 2 },
           bgcolor: theme.palette.background.paper,
-          border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
+          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
         }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
             <Box sx={{ 
@@ -1255,14 +1480,14 @@ const Dashboard: React.FC = () => {
                     ? [0, selectedMonthBudget * 1.1] 
                     : [0, 'dataMax']}
                 />
-                <Tooltip 
+                <RechartsTooltip 
                   formatter={(value: any) => {
                     const numValue = typeof value === 'number' ? value : Number(value);
                     return numValue !== undefined && !isNaN(numValue) 
                       ? [`S/ ${numValue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Ventas'] 
                       : ['', 'Ventas'];
                   }}
-                  labelFormatter={(label) => selectedMonth !== null ? `Día ${label}` : label}
+                  labelFormatter={(label: any) => selectedMonth !== null ? `Día ${label}` : label}
                   contentStyle={{
                     backgroundColor: theme.palette.background.paper,
                     border: `1px solid ${theme.palette.divider}`,
@@ -1297,6 +1522,307 @@ const Dashboard: React.FC = () => {
             </Box>
           </CardContent>
         </Card>
+
+        {/* Pipeline de Ventas */}
+        <Card sx={{ 
+          borderRadius: 2, 
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 4px 12px rgba(0,0,0,0.3)' 
+            : '0 1px 3px rgba(0,0,0,0.1)',
+          bgcolor: theme.palette.background.paper,
+          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
+        }}>
+          <CardContent sx={{ p: { xs: 2, md: 3 }, pb: { xs: 1.5, md: 2 }, '&:last-child': { pb: { xs: 1.5, md: 2 } } }}>
+            {/* Header */}
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              mb: 3,
+            }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 600, 
+                  color: theme.palette.text.primary,
+                  fontSize: { xs: '1rem', md: '1.25rem' },
+                }}
+              >
+                Pipeline de Ventas
+              </Typography>
+              <IconButton size="small" sx={{ color: theme.palette.text.secondary }}>
+                <ArrowDropDown />
+              </IconButton>
+            </Box>
+
+            {/* Tres columnas con etapas */}
+            <Box sx={{ 
+              bgcolor: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.05)' 
+                : '#F5F5F0',
+              borderRadius: 1,
+              p: 2,
+              mb: 3,
+            }}>
+              <Box sx={{ 
+                display: 'flex',
+                flexDirection: { xs: 'column', sm: 'row' },
+              }}>
+                {/* Propuesta Económica */}
+                <Box sx={{ flex: 1.2, px: { xs: 0, sm: 2 }, py: { xs: 1.5, sm: 0 }, textAlign: 'center' }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: theme.palette.text.secondary,
+                      fontSize: '0.875rem',
+                      mb: 1,
+                      fontWeight: 600,
+                    }}
+                  >
+                    Propuesta Económica
+                  </Typography>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 700,
+                      fontSize: '1.5rem',
+                      color: theme.palette.text.primary,
+                      mb: 0.5,
+                    }}
+                  >
+                    S/ {pipelineData.propuestaEconomica.value.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </Typography>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: theme.palette.text.secondary,
+                      fontSize: '0.75rem',
+                    }}
+                  >
+                    {pipelineData.propuestaEconomica.count} negocios
+                  </Typography>
+                </Box>
+
+                <Divider 
+                  orientation="vertical" 
+                  flexItem 
+                  sx={{ 
+                    display: { xs: 'none', sm: 'block' },
+                    mx: 1,
+                    borderColor: theme.palette.divider,
+                  }} 
+                />
+
+                {/* Negociación */}
+                <Box sx={{ flex: 1, px: { xs: 0, sm: 2 }, py: { xs: 1.5, sm: 0 }, textAlign: 'center' }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: theme.palette.text.secondary,
+                      fontSize: '0.875rem',
+                      mb: 1,
+                      fontWeight: 600,
+                    }}
+                  >
+                    Negociación
+                  </Typography>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 700,
+                      fontSize: '1.5rem',
+                      color: theme.palette.text.primary,
+                      mb: 0.5,
+                    }}
+                  >
+                    S/ {pipelineData.negociacion.value.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </Typography>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: theme.palette.text.secondary,
+                      fontSize: '0.75rem',
+                    }}
+                  >
+                    {pipelineData.negociacion.count} negocios
+                  </Typography>
+                </Box>
+
+                <Divider 
+                  orientation="vertical" 
+                  flexItem 
+                  sx={{ 
+                    display: { xs: 'none', sm: 'block' },
+                    mx: 1,
+                    borderColor: theme.palette.divider,
+                  }} 
+                />
+
+                {/* Cierre Ganado */}
+                <Box sx={{ flex: 1, px: { xs: 0, sm: 2 }, py: { xs: 1.5, sm: 0 }, textAlign: 'center' }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: theme.palette.text.secondary,
+                      fontSize: '0.875rem',
+                      mb: 1,
+                      fontWeight: 600,
+                    }}
+                  >
+                    Cierre Ganado
+                  </Typography>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 700,
+                      fontSize: '1.5rem',
+                      color: theme.palette.text.primary,
+                      mb: 0.5,
+                    }}
+                  >
+                    S/ {pipelineData.cierreGanado.value.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </Typography>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      color: theme.palette.text.secondary,
+                      fontSize: '0.75rem',
+                    }}
+                  >
+                    {pipelineData.cierreGanado.count} negocios
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+
+            {/* Gráfico de barras horizontales */}
+            <Box sx={{ mt: 3, mb: 0, pb: 0 }}>
+              {/* Barra de Propuesta Económica */}
+              <Tooltip
+                title={`Propuesta Económica: S/ ${pipelineData.propuestaEconomica.value.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} (${pipelineData.propuestaEconomica.count} negocios)`}
+                arrow
+                placement="top"
+              >
+                <Box sx={{ mb: 1.5, cursor: 'pointer' }}>
+                  <Box sx={{ 
+                    width: '100%', 
+                    height: 40, 
+                    borderRadius: 1,
+                    overflow: 'hidden',
+                    display: 'flex',
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.1)' 
+                      : '#E0E0E0',
+                  }}>
+                    <Box
+                      sx={{
+                        width: pipelineData.total > 0 
+                          ? `${(pipelineData.propuestaEconomica.value / pipelineData.total) * 100}%` 
+                          : '0%',
+                        bgcolor: '#2E7D32',
+                        height: '100%',
+                        minWidth: pipelineData.propuestaEconomica.value > 0 ? '2px' : '0',
+                        transition: 'opacity 0.2s',
+                        '&:hover': {
+                          opacity: 0.8,
+                        },
+                      }}
+                    />
+                  </Box>
+                </Box>
+              </Tooltip>
+
+              {/* Barra de Negociación */}
+              <Tooltip
+                title={`Negociación: S/ ${pipelineData.negociacion.value.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} (${pipelineData.negociacion.count} negocios)`}
+                arrow
+                placement="top"
+              >
+                <Box sx={{ mb: 1.5, cursor: 'pointer' }}>
+                  <Box sx={{ 
+                    width: '100%', 
+                    height: 40, 
+                    borderRadius: 1,
+                    overflow: 'hidden',
+                    display: 'flex',
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.1)' 
+                      : '#E0E0E0',
+                  }}>
+                    <Box
+                      sx={{
+                        width: pipelineData.total > 0 
+                          ? `${(pipelineData.negociacion.value / pipelineData.total) * 100}%` 
+                          : '0%',
+                        bgcolor: '#4CAF50',
+                        height: '100%',
+                        minWidth: pipelineData.negociacion.value > 0 ? '2px' : '0',
+                        transition: 'opacity 0.2s',
+                        '&:hover': {
+                          opacity: 0.8,
+                        },
+                      }}
+                    />
+                  </Box>
+                </Box>
+              </Tooltip>
+
+              {/* Barra de Cierre Ganado */}
+              <Tooltip
+                title={`Cierre Ganado: S/ ${pipelineData.cierreGanado.value.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} (${pipelineData.cierreGanado.count} negocios)`}
+                arrow
+                placement="top"
+              >
+                <Box sx={{ mb: 0, cursor: 'pointer' }}>
+                  <Box sx={{ 
+                    width: '100%', 
+                    height: 40, 
+                    borderRadius: 1,
+                    overflow: 'hidden',
+                    display: 'flex',
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.1)' 
+                      : '#E0E0E0',
+                  }}>
+                    <Box
+                      sx={{
+                        width: pipelineData.total > 0 
+                          ? `${(pipelineData.cierreGanado.value / pipelineData.total) * 100}%` 
+                          : '0%',
+                        bgcolor: '#81C784',
+                        height: '100%',
+                        minWidth: pipelineData.cierreGanado.value > 0 ? '2px' : '0',
+                        transition: 'opacity 0.2s',
+                        '&:hover': {
+                          opacity: 0.8,
+                        },
+                      }}
+                    />
+                  </Box>
+                </Box>
+              </Tooltip>
+
+              {/* Barra secundaria (total) */}
+              <Tooltip
+                title={`Total Pipeline: S/ ${pipelineData.total.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+                arrow
+                placement="top"
+              >
+                <Box sx={{ 
+                  width: pipelineData.total > 0 ? '85%' : '0%', 
+                  height: 24, 
+                  borderRadius: 1,
+                  bgcolor: '#C8E6C9',
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s',
+                  '&:hover': {
+                    opacity: 0.8,
+                  },
+                }} />
+              </Tooltip>
+            </Box>
+          </CardContent>
+        </Card>
       </Box>
 
       {/* Sección: Total de Ventas por Asesor (lg) y Distribución de Ventas */}
@@ -1315,12 +1841,12 @@ const Dashboard: React.FC = () => {
         {/* Visible solo en lg para estar al lado de Distribución de Ventas */}
         {(user?.role === 'admin' || user?.role === 'jefe_comercial') && (
         <Card sx={{ 
-          borderRadius: { xs: 3, md: 6 }, 
+          borderRadius: 2, 
           boxShadow: theme.palette.mode === 'dark' 
             ? '0 4px 12px rgba(0,0,0,0.3)' 
             : { xs: 1, md: 2 },
           bgcolor: theme.palette.background.paper,
-          border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
+          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
           display: { xs: 'block', lg: 'block', xl: 'block' },
         }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
@@ -1330,95 +1856,195 @@ const Dashboard: React.FC = () => {
                 fontWeight: 600, 
                 color: theme.palette.text.primary,
                 fontSize: { xs: '1rem', md: '1.25rem' },
-                mb: { xs: 2, md: 3 },
+                mb: 2,
               }}
             >
               Total de Ventas por Asesor
             </Typography>
             {stats.deals.userPerformance && stats.deals.userPerformance.length > 0 ? (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1.5, md: 2 } }}>
-                {stats.deals.userPerformance
-                  .sort((a, b) => (b.wonDealsValue || 0) - (a.wonDealsValue || 0))
-                  .map((user, index) => (
-                    <Box 
-                      key={user.userId}
-                      sx={{
-                        display: 'flex',
-                        flexDirection: { xs: 'column', sm: 'row' },
-                        justifyContent: 'space-between',
-                        alignItems: { xs: 'flex-start', sm: 'center' },
-                        p: { xs: 1.5, md: 2 },
-                        borderRadius: 2,
-                        bgcolor: theme.palette.mode === 'dark' 
-                          ? 'rgba(255, 255, 255, 0.05)' 
-                          : 'rgba(0, 0, 0, 0.02)',
-                        border: `1px solid ${theme.palette.divider}`,
-                        transition: 'all 0.2s',
-                        gap: { xs: 1.5, sm: 0 },
-                        '&:hover': {
-                          bgcolor: theme.palette.mode === 'dark' 
-                            ? 'rgba(255, 255, 255, 0.08)' 
-                            : 'rgba(0, 0, 0, 0.04)',
-                        },
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1.5, md: 2 }, flex: 1, minWidth: 0, width: { xs: '100%', sm: 'auto' } }}>
-                        <Avatar
-                          sx={{
-                            width: { xs: 44, md: 48 },
-                            height: { xs: 44, md: 48 },
-                            bgcolor: '#8B5CF6',
-                            fontSize: { xs: '1rem', md: '1.125rem' },
-                            fontWeight: 600,
-                            flexShrink: 0,
-                          }}
-                        >
-                          {getInitials(user.firstName, user.lastName)}
-                        </Avatar>
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
+              <>
+                {/* Resumen del periodo */}
+                {(() => {
+                  const sortedUsers = [...stats.deals.userPerformance]
+                    .sort((a, b) => (b.wonDealsValue || 0) - (a.wonDealsValue || 0));
+                  const topUsers = sortedUsers.slice(0, 5);
+                  const totalPeriod = sortedUsers.reduce((sum, user) => sum + (user.wonDealsValue || 0), 0);
+                  const totalAdvisors = sortedUsers.length;
+                  
+                  return (
+                    <>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        mb: 2,
+                        flexWrap: 'wrap',
+                        gap: 1,
+                      }}>
+                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                           <Typography 
                             variant="body2" 
                             sx={{ 
-                              fontWeight: 600, 
-                              color: theme.palette.text.primary,
-                              fontSize: { xs: '0.9375rem', md: '1rem' },
-                              mb: 0.5,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
+                              color: theme.palette.text.secondary,
+                              fontSize: '0.875rem',
                             }}
                           >
-                            {user.firstName} {user.lastName}
+                            Total del periodo: <strong style={{ color: theme.palette.text.primary }}>S/ {totalPeriod.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</strong>
                           </Typography>
                           <Typography 
-                            variant="caption" 
+                            variant="body2" 
                             sx={{ 
                               color: theme.palette.text.secondary,
-                              fontSize: { xs: '0.8125rem', md: '0.8125rem' },
+                              fontSize: '0.875rem',
                             }}
                           >
-                            {user.wonDeals || 0} {user.wonDeals === 1 ? 'venta' : 'ventas'}
+                            Asesores: <strong style={{ color: theme.palette.text.primary }}>{totalAdvisors}</strong>
                           </Typography>
                         </Box>
+                        <Link
+                          component="button"
+                          variant="body2"
+                          onClick={() => {
+                            // Aquí puedes agregar la funcionalidad para ver todos
+                            console.log('Ver todos los asesores');
+                          }}
+                          sx={{
+                            color: theme.palette.primary.main,
+                            textDecoration: 'none',
+                            fontSize: '0.875rem',
+                            fontWeight: 500,
+                            '&:hover': {
+                              textDecoration: 'underline',
+                            },
+                          }}
+                        >
+                          Ver todos
+                        </Link>
                       </Box>
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          fontWeight: 700, 
-                          color: theme.palette.text.primary,
-                          fontSize: { xs: '1.125rem', md: '1.125rem' },
-                          ml: { xs: 0, sm: 2 },
-                          mt: { xs: 0.5, sm: 0 },
-                          alignSelf: { xs: 'flex-end', sm: 'center' },
-                          flexShrink: 0,
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        S/ {(user.wonDealsValue || 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                      </Typography>
-                    </Box>
-                  ))}
-              </Box>
+
+                      {/* Lista de top 5 asesores */}
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                        {topUsers.map((user, index) => {
+                          const rank = index + 1;
+                          const maxValue = topUsers[0]?.wonDealsValue || 1;
+                          const percentage = ((user.wonDealsValue || 0) / maxValue) * 100;
+                          const avatarColors = ['#8B5CF6', '#10B981', '#3B82F6', '#F59E0B', '#EF4444'];
+                          
+                          return (
+                            <Box 
+                              key={user.userId}
+                              sx={{
+                                position: 'relative',
+                                p: 1.5,
+                                borderRadius: 1,
+                                bgcolor: 'transparent',
+                              }}
+                            >
+                              <Box sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: 1.5,
+                                mb: 1,
+                              }}>
+                                {/* Número de ranking */}
+                                <Box
+                                  sx={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    bgcolor: rank === 1 ? '#FFF4E6' : (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'),
+                                    color: rank === 1 ? '#F59E0B' : theme.palette.text.secondary,
+                                    fontWeight: 600,
+                                    fontSize: '0.875rem',
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {rank}
+                                </Box>
+
+                                {/* Avatar */}
+                                <Avatar
+                                  sx={{
+                                    width: 40,
+                                    height: 40,
+                                    bgcolor: avatarColors[index % avatarColors.length],
+                                    fontSize: '0.875rem',
+                                    fontWeight: 600,
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {getInitials(user.firstName, user.lastName)}
+                                </Avatar>
+
+                                {/* Nombre y ventas */}
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                  <Typography 
+                                    variant="body2" 
+                                    sx={{ 
+                                      fontWeight: 600, 
+                                      color: theme.palette.text.primary,
+                                      fontSize: '0.875rem',
+                                      mb: 0.25,
+                                    }}
+                                  >
+                                    {user.firstName} {user.lastName}
+                                  </Typography>
+                                  <Typography 
+                                    variant="caption" 
+                                    sx={{ 
+                                      color: theme.palette.text.secondary,
+                                      fontSize: '0.75rem',
+                                    }}
+                                  >
+                                    {user.wonDeals || 0} {user.wonDeals === 1 ? 'venta' : 'ventas'}
+                                  </Typography>
+                                </Box>
+
+                                {/* Monto */}
+                                <Typography 
+                                  variant="body2" 
+                                  sx={{ 
+                                    fontWeight: 600, 
+                                    color: theme.palette.text.primary,
+                                    fontSize: '0.875rem',
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  S/ {(user.wonDealsValue || 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                </Typography>
+                              </Box>
+
+                              {/* Barra de progreso */}
+                              <Box sx={{ 
+                                width: '100%', 
+                                height: 6, 
+                                borderRadius: 1,
+                                overflow: 'hidden',
+                                bgcolor: theme.palette.mode === 'dark' 
+                                  ? 'rgba(255, 255, 255, 0.1)' 
+                                  : 'rgba(0, 0, 0, 0.05)',
+                                position: 'relative',
+                              }}>
+                                <Box
+                                  sx={{
+                                    width: `${percentage}%`,
+                                    height: '100%',
+                                    bgcolor: '#10B981',
+                                    transition: 'width 0.3s ease',
+                                  }}
+                                />
+                              </Box>
+                            </Box>
+                          );
+                        })}
+                      </Box>
+                    </>
+                  );
+                })()}
+              </>
             ) : (
               <Typography 
                 variant="body2" 
@@ -1437,12 +2063,12 @@ const Dashboard: React.FC = () => {
 
         {/* Sales Distribution */}
         <Card sx={{ 
-          borderRadius: { xs: 3, md: 6 }, 
+          borderRadius: 2, 
           boxShadow: theme.palette.mode === 'dark' 
             ? '0 4px 12px rgba(0,0,0,0.3)' 
             : { xs: 1, md: 2 },
           bgcolor: theme.palette.background.paper,
-          border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
+          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
         }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
             <Typography 
@@ -1471,7 +2097,7 @@ const Dashboard: React.FC = () => {
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <RechartsTooltip />
               </PieChart>
             </ResponsiveContainer>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, justifyContent: 'center' }}>
@@ -1504,12 +2130,12 @@ const Dashboard: React.FC = () => {
           }}>
         {/* Weekly Sales */}
         <Card sx={{ 
-          borderRadius: { xs: 3, md: 6 }, 
+          borderRadius: 2, 
           boxShadow: theme.palette.mode === 'dark' 
             ? '0 4px 12px rgba(0,0,0,0.3)' 
             : { xs: 1, md: 2 },
           bgcolor: theme.palette.background.paper,
-          border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
+          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
         }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
             <Typography 
@@ -1528,7 +2154,7 @@ const Dashboard: React.FC = () => {
                 <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
                 <XAxis dataKey="week" stroke={theme.palette.text.secondary} />
                 <YAxis stroke={theme.palette.text.secondary} />
-                <Tooltip />
+                <RechartsTooltip />
                 <Bar dataKey="value" fill="#8B5CF6" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -1543,7 +2169,7 @@ const Dashboard: React.FC = () => {
               ? '0 4px 12px rgba(0,0,0,0.3)' 
               : { xs: 1, md: 2 },
             bgcolor: theme.palette.background.paper,
-            border: theme.palette.mode === 'dark' ? `1px solid ${theme.palette.divider}` : 'none',
+            border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
           }}>
             <CardContent sx={{ p: { xs: 2, md: 3 } }}>
               <Typography 
@@ -1608,7 +2234,7 @@ const Dashboard: React.FC = () => {
                           );
                         })}
                       </Pie>
-                      <Tooltip 
+                      <RechartsTooltip 
                         formatter={(value: any) => {
                           const numValue = typeof value === 'number' ? value : Number(value);
                           return numValue !== undefined && !isNaN(numValue) ? `${numValue.toFixed(1)}%` : '0%';

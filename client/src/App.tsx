@@ -11,6 +11,13 @@ import MainLayout from './components/Layout/MainLayout';
 import Login from './pages/Login';
 import { taxiMonterricoColors } from './theme/colors';
 
+// Importar fuente Inter con todos los pesos necesarios
+import '@fontsource/inter/300.css';
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/inter/700.css';
+
 // Lazy loading de todas las páginas para code splitting
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Contacts = lazy(() => import('./pages/Contacts'));
@@ -70,21 +77,22 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
   },
   typography: {
     fontFamily: [
-      'General Sans',
+      'Inter',
+      'system-ui',
       '-apple-system',
       'BlinkMacSystemFont',
-      '"Segoe UI"',
+      'Segoe UI',
       'Roboto',
-      '"Helvetica Neue"',
+      'Helvetica',
       'Arial',
       'sans-serif',
-    ].join(','),
+    ].join(', '),
     h1: {
-      fontWeight: 600,
+      fontWeight: 700,
       letterSpacing: '-0.02em',
     },
     h2: {
-      fontWeight: 600,
+      fontWeight: 700,
       letterSpacing: '-0.01em',
     },
     h3: {

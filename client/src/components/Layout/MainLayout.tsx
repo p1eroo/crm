@@ -49,7 +49,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </IconButton>
         )}
         <Header />
-        <Box sx={{ flex: 1, bgcolor: theme.palette.background.default, overflow: 'hidden', px: { xs: 4, sm: 5, md: 6 }, pt: { xs: 3, sm: 4, md: 5 } }}>
+        <Box sx={{ flex: 1, bgcolor: theme.palette.background.default, overflow: 'hidden', px: 3, pt: 2, pb: 2 }}>
           {children}
         </Box>
       </Box>

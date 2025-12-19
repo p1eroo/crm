@@ -32,6 +32,7 @@ import {
   Tooltip,
   Card,
   useTheme,
+  Popover,
 } from '@mui/material';
 import {
   MoreVert,
@@ -56,6 +57,27 @@ import {
   Delete,
   CheckCircle,
   ArrowBack,
+  Support,
+  AttachMoney,
+  AccountBalance,
+  CalendarToday,
+  ChevronLeft,
+  ChevronRight,
+  FormatBold,
+  FormatItalic,
+  FormatUnderlined,
+  FormatStrikethrough,
+  FormatListBulleted,
+  FormatListNumbered,
+  Image,
+  Code,
+  TableChart,
+  AttachFile,
+  PersonAdd,
+  FormatAlignLeft,
+  FormatAlignCenter,
+  FormatAlignRight,
+  FormatAlignJustify,
 } from '@mui/icons-material';
 import api from '../config/api';
 import RichTextEditor from '../components/RichTextEditor';
@@ -63,6 +85,7 @@ import EmailComposer from '../components/EmailComposer';
 import { taxiMonterricoColors } from '../theme/colors';
 import axios from 'axios';
 import contactLogo from '../assets/contact.png';
+import { formatDatePeru } from '../utils/dateUtils';
 
 interface ContactDetailData {
   id: number;
@@ -122,14 +145,17 @@ const ContactDetail: React.FC = () => {
   const [associatedDeals, setAssociatedDeals] = useState<any[]>([]);
   const [associatedCompanies, setAssociatedCompanies] = useState<any[]>([]);
   const [associatedTickets, setAssociatedTickets] = useState<any[]>([]);
-  const [, setAssociatedSubscriptions] = useState<any[]>([]);
-  const [, setAssociatedPayments] = useState<any[]>([]);
+  const [associatedSubscriptions, setAssociatedSubscriptions] = useState<any[]>([]);
+  const [associatedPayments, setAssociatedPayments] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
   
   // Estados para búsquedas y filtros
   const [activitySearch, setActivitySearch] = useState('');
   const [companySearch, setCompanySearch] = useState('');
   const [dealSearch, setDealSearch] = useState('');
+  const [ticketSearch, setTicketSearch] = useState('');
+  const [subscriptionSearch, setSubscriptionSearch] = useState('');
+  const [paymentSearch, setPaymentSearch] = useState('');
   const [companyActionsMenu, setCompanyActionsMenu] = useState<{ [key: number]: HTMLElement | null }>({});
   const [isRemovingCompany] = useState(false);
   const [activityFilterMenuAnchor, setActivityFilterMenuAnchor] = useState<null | HTMLElement>(null);
@@ -333,6 +359,21 @@ const ContactDetail: React.FC = () => {
   const [,] = useState({ subject: '', description: '', to: '' });
   const [callData, setCallData] = useState({ subject: '', description: '', duration: '' });
   const [taskData, setTaskData] = useState({ title: '', description: '', priority: 'medium', dueDate: '' });
+  const descriptionEditorRef = React.useRef<HTMLDivElement>(null);
+  const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const imageInputRef = React.useRef<HTMLInputElement>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [activeFormats, setActiveFormats] = useState({
+    bold: false,
+    italic: false,
+    underline: false,
+    strikeThrough: false,
+    unorderedList: false,
+    orderedList: false,
+  });
+  const [datePickerAnchorEl, setDatePickerAnchorEl] = useState<HTMLElement | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [meetingData, setMeetingData] = useState({ subject: '', description: '', date: '', time: '' });
   const [createFollowUpTask, setCreateFollowUpTask] = useState(false);
 
@@ -540,6 +581,56 @@ const ContactDetail: React.FC = () => {
     };
   }, [noteOpen, emailOpen, callOpen, taskOpen, meetingOpen]);
 
+  const updateActiveFormats = useCallback(() => {
+    if (descriptionEditorRef.current) {
+      setActiveFormats({
+        bold: document.queryCommandState('bold'),
+        italic: document.queryCommandState('italic'),
+        underline: document.queryCommandState('underline'),
+        strikeThrough: document.queryCommandState('strikeThrough'),
+        unorderedList: document.queryCommandState('insertUnorderedList'),
+        orderedList: document.queryCommandState('insertOrderedList'),
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (descriptionEditorRef.current && taskOpen) {
+      if (taskData.description !== descriptionEditorRef.current.innerHTML) {
+        descriptionEditorRef.current.innerHTML = taskData.description || '';
+      }
+    }
+  }, [taskData.description, taskOpen]);
+
+  useEffect(() => {
+    const editor = descriptionEditorRef.current;
+    if (!editor || !taskOpen) return;
+
+    const handleSelectionChange = () => {
+      updateActiveFormats();
+    };
+
+    const handleMouseUp = () => {
+      updateActiveFormats();
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Shift' || e.key === 'Control' || e.key === 'Meta')) {
+        updateActiveFormats();
+      }
+    };
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+    editor.addEventListener('mouseup', handleMouseUp);
+    editor.addEventListener('keyup', handleKeyUp as EventListener);
+
+    return () => {
+      document.removeEventListener('selectionchange', handleSelectionChange);
+      editor.removeEventListener('mouseup', handleMouseUp);
+      editor.removeEventListener('keyup', handleKeyUp as EventListener);
+    };
+  }, [updateActiveFormats, taskOpen]);
+
 
 
   const getInitials = (firstName?: string, lastName?: string) => {
@@ -697,8 +788,104 @@ const ContactDetail: React.FC = () => {
 
   const handleOpenTask = () => {
     setTaskData({ title: '', description: '', priority: 'medium', dueDate: '' });
+    setSelectedDate(null);
+    setCurrentMonth(new Date());
     setTaskOpen(true);
   };
+
+  const handleOpenDatePicker = (event: React.MouseEvent<HTMLElement>) => {
+    if (taskData.dueDate) {
+      // Parsear el string YYYY-MM-DD como fecha local para evitar problemas de UTC
+      const dateMatch = taskData.dueDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (dateMatch) {
+        const year = parseInt(dateMatch[1], 10);
+        const month = parseInt(dateMatch[2], 10) - 1; // Los meses en Date son 0-11
+        const day = parseInt(dateMatch[3], 10);
+        const date = new Date(year, month, day);
+        setSelectedDate(date);
+        setCurrentMonth(date);
+      } else {
+        const date = new Date(taskData.dueDate);
+        setSelectedDate(date);
+        setCurrentMonth(date);
+      }
+    } else {
+      const today = new Date();
+      setSelectedDate(null);
+      setCurrentMonth(today);
+    }
+    setDatePickerAnchorEl(event.currentTarget);
+  };
+
+  const handleDateSelect = (year: number, month: number, day: number) => {
+    // Crear fecha para mostrar en el calendario (mes es 1-12, pero Date usa 0-11)
+    const date = new Date(year, month - 1, day);
+    setSelectedDate(date);
+    // Formatear directamente como YYYY-MM-DD sin conversiones de zona horaria
+    const formattedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    setTaskData({ ...taskData, dueDate: formattedDate });
+    setDatePickerAnchorEl(null);
+  };
+
+  const handleClearDate = () => {
+    setSelectedDate(null);
+    setTaskData({ ...taskData, dueDate: '' });
+    setDatePickerAnchorEl(null);
+  };
+
+  const handleToday = () => {
+    // Obtener la fecha actual en hora de Perú
+    const today = new Date();
+    const peruToday = new Date(today.toLocaleString('en-US', { timeZone: 'America/Lima' }));
+    const year = peruToday.getFullYear();
+    const month = peruToday.getMonth() + 1; // getMonth() devuelve 0-11, necesitamos 1-12
+    const day = peruToday.getDate();
+    // Usar la misma función handleDateSelect con los valores directos
+    handleDateSelect(year, month, day);
+  };
+
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
+    
+    const days: Array<{ day: number; isCurrentMonth: boolean }> = [];
+    
+    // Días del mes anterior
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      const dayNumber = prevMonthLastDay - startingDayOfWeek + i + 1;
+      days.push({ day: dayNumber, isCurrentMonth: false });
+    }
+    
+    // Días del mes actual
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({ day: i, isCurrentMonth: true });
+    }
+    
+    // Completar hasta 42 días (6 semanas) con días del siguiente mes
+    const remainingDays = 42 - days.length;
+    for (let i = 1; i <= remainingDays; i++) {
+      days.push({ day: i, isCurrentMonth: false });
+    }
+    
+    return days;
+  };
+
+  const formatDateDisplay = (dateString: string) => {
+    return formatDatePeru(dateString);
+  };
+
+  const monthNames = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+
+  const weekDays = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'];
 
   const handleOpenMeeting = () => {
     setMeetingData({ subject: '', description: '', date: '', time: '' });
@@ -1615,12 +1802,11 @@ const ContactDetail: React.FC = () => {
   return (
       <Box sx={{ 
         bgcolor: theme.palette.background.default,
-        height: { xs: 'auto', md: '100vh' },
         minHeight: { xs: '100vh', md: '100vh' },
         pb: { xs: 2, sm: 3, md: 4 },
         display: 'flex', 
         flexDirection: 'column',
-        overflow: { xs: 'visible', md: 'hidden' },
+        overflow: 'visible',
       }}>
 
       {/* Contenido principal - Separado en 2 partes */}
@@ -1629,10 +1815,10 @@ const ContactDetail: React.FC = () => {
         flexDirection: { xs: 'column', md: 'row' },
         gap: { xs: 2, md: 3 },
         flex: 1,
-        overflow: { xs: 'visible', md: 'hidden' },
+        overflow: 'visible',
         minHeight: { xs: 'auto', md: 0 },
-        height: { xs: 'auto', md: '100%' },
-        maxHeight: { xs: 'none', md: '100%' },
+        height: { xs: 'auto', md: 'auto' },
+        maxHeight: { xs: 'none', md: 'none' },
         alignItems: { xs: 'stretch', md: 'stretch' },
       }}>
         {/* Columna Izquierda - Información del Contacto */}
@@ -1868,6 +2054,9 @@ const ContactDetail: React.FC = () => {
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
+          overflow: 'visible',
+          minHeight: 0,
+          width: { xs: '100%', md: 'auto' },
         }}>
           <Tabs
             value={activeTab}
@@ -1984,9 +2173,136 @@ const ContactDetail: React.FC = () => {
             </Box>
           )}
 
-          {/* Cards de Empresas y Negocios - Solo en pestaña Descripción */}
+          {/* Cards de Actividades, Empresas y Negocios - Solo en pestaña Descripción */}
           {activeTab === 0 && (
             <>
+              {/* Card de Actividades Recientes */}
+              <Card sx={{ 
+                borderRadius: 2,
+                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                bgcolor: theme.palette.background.paper,
+                px: 2,
+                py: 2,
+                display: 'flex',
+                flexDirection: 'column',
+                mt: 2,
+                height: 'fit-content',
+                minHeight: 'auto',
+                overflow: 'visible',
+              }}>
+                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
+                  Actividades Recientes
+                </Typography>
+                
+                {activities && activities.length > 0 ? (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    {activities
+                      .sort((a, b) => {
+                        const dateA = new Date(a.createdAt || 0).getTime();
+                        const dateB = new Date(b.createdAt || 0).getTime();
+                        return dateB - dateA;
+                      })
+                      .slice(0, 5)
+                      .map((activity) => {
+                        const getActivityIcon = () => {
+                          switch (activity.type) {
+                            case 'note':
+                              return <Note sx={{ fontSize: 18, color: '#9E9E9E' }} />;
+                            case 'email':
+                              return <Email sx={{ fontSize: 18, color: '#1976D2' }} />;
+                            case 'call':
+                              return <Phone sx={{ fontSize: 18, color: '#2E7D32' }} />;
+                            case 'task':
+                            case 'todo':
+                              return <Assignment sx={{ fontSize: 18, color: '#F57C00' }} />;
+                            case 'meeting':
+                              return <Event sx={{ fontSize: 18, color: '#7B1FA2' }} />;
+                            default:
+                              return <Comment sx={{ fontSize: 18, color: theme.palette.text.secondary }} />;
+                          }
+                        };
+
+                        const getActivityTypeLabel = () => {
+                          switch (activity.type) {
+                            case 'note':
+                              return 'Nota';
+                            case 'email':
+                              return 'Correo';
+                            case 'call':
+                              return 'Llamada';
+                            case 'task':
+                            case 'todo':
+                              return 'Tarea';
+                            case 'meeting':
+                              return 'Reunión';
+                            default:
+                              return 'Actividad';
+                          }
+                        };
+
+                        return (
+                          <Box
+                            key={activity.id}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: 1.5,
+                              p: 1.5,
+                              borderRadius: 1,
+                              border: `1px solid ${theme.palette.divider}`,
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                borderColor: taxiMonterricoColors.green,
+                                backgroundColor: theme.palette.mode === 'dark' 
+                                  ? 'rgba(46, 125, 50, 0.1)' 
+                                  : 'rgba(46, 125, 50, 0.05)',
+                              },
+                            }}
+                          >
+                            <Box sx={{ pt: 0.5 }}>
+                              {getActivityIcon()}
+                            </Box>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.875rem', color: theme.palette.text.primary }}>
+                                  {activity.subject || getActivityTypeLabel()}
+                                </Typography>
+                                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary, whiteSpace: 'nowrap', ml: 1 }}>
+                                  {activity.createdAt && new Date(activity.createdAt).toLocaleDateString('es-ES', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                  })}
+                                </Typography>
+                              </Box>
+                              {activity.description && (
+                                <Typography 
+                                  variant="body2" 
+                                  sx={{ 
+                                    fontSize: '0.75rem', 
+                                    color: theme.palette.text.secondary,
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    display: '-webkit-box',
+                                    WebkitLineClamp: 2,
+                                    WebkitBoxOrient: 'vertical',
+                                  }}
+                                >
+                                  {activity.description.replace(/<[^>]*>/g, '').substring(0, 100)}
+                                  {activity.description.replace(/<[^>]*>/g, '').length > 100 ? '...' : ''}
+                                </Typography>
+                              )}
+                            </Box>
+                          </Box>
+                        );
+                      })}
+                  </Box>
+                ) : (
+                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
+                    No hay actividades recientes
+                  </Typography>
+                )}
+              </Card>
+
               {/* Card de Empresas */}
               <Card sx={{ 
                 borderRadius: 2,
@@ -1997,6 +2313,9 @@ const ContactDetail: React.FC = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 mt: 2,
+                height: 'fit-content',
+                minHeight: 'auto',
+                overflow: 'visible',
               }}>
                 <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
                   Empresas
@@ -2078,14 +2397,16 @@ const ContactDetail: React.FC = () => {
                     }}
                   >
                     <MenuItem onClick={() => {
-                      // TODO: Implementar agregar empresa existente
                       setCompanyActionsMenu({});
+                      setCompanyDialogTab('existing');
+                      setAddCompanyOpen(true);
                     }}>
                       Agregar empresa existente
                     </MenuItem>
                     <MenuItem onClick={() => {
-                      // TODO: Implementar crear nueva empresa
                       setCompanyActionsMenu({});
+                      setCompanyDialogTab('create');
+                      setAddCompanyOpen(true);
                     }}>
                       Crear nueva empresa
                     </MenuItem>
@@ -2093,7 +2414,7 @@ const ContactDetail: React.FC = () => {
                 </Box>
                 
                 {/* Tabla de empresas */}
-                <TableContainer>
+                <TableContainer sx={{ maxHeight: 'none', height: 'auto', overflow: 'visible' }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
@@ -2151,6 +2472,9 @@ const ContactDetail: React.FC = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 mt: 2,
+                height: 'fit-content',
+                minHeight: 'auto',
+                overflow: 'visible',
               }}>
                 <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
                   Negocios
@@ -2193,6 +2517,7 @@ const ContactDetail: React.FC = () => {
                   <Button
                     size="small"
                     variant="outlined"
+                    onClick={() => setAddDealOpen(true)}
                     sx={{
                       borderColor: taxiMonterricoColors.green,
                       color: taxiMonterricoColors.green,
@@ -2213,7 +2538,7 @@ const ContactDetail: React.FC = () => {
                 </Box>
                 
                 {/* Tabla de negocios */}
-                <TableContainer>
+                <TableContainer sx={{ maxHeight: 'none', height: 'auto', overflow: 'visible' }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow>
@@ -2271,6 +2596,442 @@ const ContactDetail: React.FC = () => {
                           <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
                             <Typography variant="body2" color="text.secondary">
                               No hay negocios asociados
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Card>
+
+              {/* Card de Tickets */}
+              <Card sx={{ 
+                borderRadius: 2,
+                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                bgcolor: theme.palette.background.paper,
+                px: 2,
+                py: 2,
+                display: 'flex',
+                flexDirection: 'column',
+                mt: 2,
+                height: 'fit-content',
+                minHeight: 'auto',
+                overflow: 'visible',
+              }}>
+                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
+                  Tickets
+                </Typography>
+                
+                {/* Cuadro de búsqueda y botón agregar */}
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+                  <TextField
+                    size="small"
+                    placeholder="Buscar tickets"
+                    value={ticketSearch}
+                    onChange={(e) => setTicketSearch(e.target.value)}
+                    sx={{
+                      width: '250px',
+                      transition: 'all 0.3s ease',
+                      '& .MuiOutlinedInput-root': {
+                        height: '32px',
+                        fontSize: '0.875rem',
+                        '&:hover': {
+                          '& fieldset': {
+                            borderColor: taxiMonterricoColors.green,
+                          },
+                        },
+                        '&.Mui-focused': {
+                          '& fieldset': {
+                            borderColor: taxiMonterricoColors.green,
+                            borderWidth: 2,
+                          },
+                        },
+                      },
+                    }}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Search fontSize="small" />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => setAddTicketOpen(true)}
+                    sx={{
+                      borderColor: taxiMonterricoColors.green,
+                      color: taxiMonterricoColors.green,
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        borderColor: taxiMonterricoColors.green,
+                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
+                      },
+                      '&:active': {
+                        transform: 'translateY(0)',
+                      },
+                    }}
+                  >
+                    Agregar
+                  </Button>
+                </Box>
+                
+                {/* Tabla de tickets */}
+                <TableContainer sx={{ maxHeight: 'none', height: 'auto', overflow: 'visible' }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600 }}>Asunto</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Estado</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Prioridad</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Fecha</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {associatedTickets
+                        .filter((ticket: any) => 
+                          ticketSearch === '' || 
+                          ticket.subject?.toLowerCase().includes(ticketSearch.toLowerCase())
+                        )
+                        .map((ticket: any) => (
+                          <TableRow key={ticket.id} hover>
+                            <TableCell>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Support sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+                                <Typography variant="body2">
+                                  {ticket.subject || 'Sin asunto'}
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              {ticket.status ? (
+                                <Chip 
+                                  label={ticket.status} 
+                                  size="small"
+                                  sx={{ 
+                                    bgcolor: ticket.status === 'closed' ? taxiMonterricoColors.greenLight + '40' : taxiMonterricoColors.orangeLight + '40',
+                                    color: ticket.status === 'closed' ? taxiMonterricoColors.greenDark : taxiMonterricoColors.orangeDark,
+                                  }}
+                                />
+                              ) : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {ticket.priority ? (
+                                <Chip 
+                                  label={ticket.priority} 
+                                  size="small"
+                                  sx={{ 
+                                    bgcolor: ticket.priority === 'high' ? '#ef4444' + '40' : taxiMonterricoColors.grayLight,
+                                    color: ticket.priority === 'high' ? '#ef4444' : theme.palette.text.secondary,
+                                  }}
+                                />
+                              ) : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {ticket.createdAt 
+                                ? new Date(ticket.createdAt).toLocaleDateString('es-ES')
+                                : '-'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      {associatedTickets.filter((ticket: any) => 
+                        ticketSearch === '' || 
+                        ticket.subject?.toLowerCase().includes(ticketSearch.toLowerCase())
+                      ).length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              No hay tickets asociados
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Card>
+
+              {/* Card de Suscripciones */}
+              <Card sx={{ 
+                borderRadius: 2,
+                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                bgcolor: theme.palette.background.paper,
+                px: 2,
+                py: 2,
+                display: 'flex',
+                flexDirection: 'column',
+                mt: 2,
+                height: 'fit-content',
+                minHeight: 'auto',
+                overflow: 'visible',
+              }}>
+                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
+                  Suscripciones
+                </Typography>
+                
+                {/* Cuadro de búsqueda y botón agregar */}
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+                  <TextField
+                    size="small"
+                    placeholder="Buscar suscripciones"
+                    value={subscriptionSearch}
+                    onChange={(e) => setSubscriptionSearch(e.target.value)}
+                    sx={{
+                      width: '250px',
+                      transition: 'all 0.3s ease',
+                      '& .MuiOutlinedInput-root': {
+                        height: '32px',
+                        fontSize: '0.875rem',
+                        '&:hover': {
+                          '& fieldset': {
+                            borderColor: taxiMonterricoColors.green,
+                          },
+                        },
+                        '&.Mui-focused': {
+                          '& fieldset': {
+                            borderColor: taxiMonterricoColors.green,
+                            borderWidth: 2,
+                          },
+                        },
+                      },
+                    }}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Search fontSize="small" />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => setAddSubscriptionOpen(true)}
+                    sx={{
+                      borderColor: taxiMonterricoColors.green,
+                      color: taxiMonterricoColors.green,
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        borderColor: taxiMonterricoColors.green,
+                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
+                      },
+                      '&:active': {
+                        transform: 'translateY(0)',
+                      },
+                    }}
+                  >
+                    Agregar
+                  </Button>
+                </Box>
+                
+                {/* Tabla de suscripciones */}
+                <TableContainer sx={{ maxHeight: 'none', height: 'auto', overflow: 'visible' }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600 }}>Nombre</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Estado</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Monto</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Ciclo de Facturación</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {associatedSubscriptions
+                        .filter((subscription: any) => 
+                          subscriptionSearch === '' || 
+                          subscription.name?.toLowerCase().includes(subscriptionSearch.toLowerCase())
+                        )
+                        .map((subscription: any) => (
+                          <TableRow key={subscription.id} hover>
+                            <TableCell>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <AccountBalance sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+                                <Typography variant="body2">
+                                  {subscription.name || 'Sin nombre'}
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              {subscription.status ? (
+                                <Chip 
+                                  label={subscription.status} 
+                                  size="small"
+                                  sx={{ 
+                                    bgcolor: subscription.status === 'active' ? taxiMonterricoColors.greenLight + '40' : taxiMonterricoColors.grayLight,
+                                    color: subscription.status === 'active' ? taxiMonterricoColors.greenDark : theme.palette.text.secondary,
+                                  }}
+                                />
+                              ) : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {subscription.amount ? `${subscription.currency || 'USD'} ${parseFloat(subscription.amount).toLocaleString()}` : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {subscription.billingCycle || '-'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      {associatedSubscriptions.filter((subscription: any) => 
+                        subscriptionSearch === '' || 
+                        subscription.name?.toLowerCase().includes(subscriptionSearch.toLowerCase())
+                      ).length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              No hay suscripciones asociadas
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Card>
+
+              {/* Card de Pagos */}
+              <Card sx={{ 
+                borderRadius: 2,
+                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                bgcolor: theme.palette.background.paper,
+                px: 2,
+                py: 2,
+                display: 'flex',
+                flexDirection: 'column',
+                mt: 2,
+                height: 'fit-content',
+                minHeight: 'auto',
+                overflow: 'visible',
+              }}>
+                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
+                  Pagos
+                </Typography>
+                
+                {/* Cuadro de búsqueda y botón agregar */}
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
+                  <TextField
+                    size="small"
+                    placeholder="Buscar pagos"
+                    value={paymentSearch}
+                    onChange={(e) => setPaymentSearch(e.target.value)}
+                    sx={{
+                      width: '250px',
+                      transition: 'all 0.3s ease',
+                      '& .MuiOutlinedInput-root': {
+                        height: '32px',
+                        fontSize: '0.875rem',
+                        '&:hover': {
+                          '& fieldset': {
+                            borderColor: taxiMonterricoColors.green,
+                          },
+                        },
+                        '&.Mui-focused': {
+                          '& fieldset': {
+                            borderColor: taxiMonterricoColors.green,
+                            borderWidth: 2,
+                          },
+                        },
+                      },
+                    }}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Search fontSize="small" />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    onClick={() => setAddPaymentOpen(true)}
+                    sx={{
+                      borderColor: taxiMonterricoColors.green,
+                      color: taxiMonterricoColors.green,
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        borderColor: taxiMonterricoColors.green,
+                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
+                      },
+                      '&:active': {
+                        transform: 'translateY(0)',
+                      },
+                    }}
+                  >
+                    Agregar
+                  </Button>
+                </Box>
+                
+                {/* Tabla de pagos */}
+                <TableContainer sx={{ maxHeight: 'none', height: 'auto', overflow: 'visible' }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: 600 }}>Monto</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Estado</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Método de Pago</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Fecha de Pago</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {associatedPayments
+                        .filter((payment: any) => 
+                          paymentSearch === '' || 
+                          payment.reference?.toLowerCase().includes(paymentSearch.toLowerCase()) ||
+                          payment.description?.toLowerCase().includes(paymentSearch.toLowerCase())
+                        )
+                        .map((payment: any) => (
+                          <TableRow key={payment.id} hover>
+                            <TableCell>
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <AttachMoney sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                  {payment.currency || 'USD'} {payment.amount ? parseFloat(payment.amount).toLocaleString() : '0'}
+                                </Typography>
+                              </Box>
+                            </TableCell>
+                            <TableCell>
+                              {payment.status ? (
+                                <Chip 
+                                  label={payment.status} 
+                                  size="small"
+                                  sx={{ 
+                                    bgcolor: payment.status === 'completed' ? taxiMonterricoColors.greenLight + '40' : 
+                                            payment.status === 'pending' ? taxiMonterricoColors.orangeLight + '40' : 
+                                            taxiMonterricoColors.grayLight,
+                                    color: payment.status === 'completed' ? taxiMonterricoColors.greenDark : 
+                                           payment.status === 'pending' ? taxiMonterricoColors.orangeDark : 
+                                           theme.palette.text.secondary,
+                                  }}
+                                />
+                              ) : '-'}
+                            </TableCell>
+                            <TableCell>
+                              {payment.paymentMethod || '-'}
+                            </TableCell>
+                            <TableCell>
+                              {payment.paymentDate 
+                                ? new Date(payment.paymentDate).toLocaleDateString('es-ES')
+                                : '-'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      {associatedPayments.filter((payment: any) => 
+                        paymentSearch === '' || 
+                        payment.reference?.toLowerCase().includes(paymentSearch.toLowerCase()) ||
+                        payment.description?.toLowerCase().includes(paymentSearch.toLowerCase())
+                      ).length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              No hay pagos asociados
                             </Typography>
                           </TableCell>
                         </TableRow>
@@ -5659,321 +6420,1026 @@ const ContactDetail: React.FC = () => {
         </>
       )}
 
-      {/* Ventana flotante de Tarea */}
-      {taskOpen && (
-        <>
-          <Box
-            sx={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '600px',
-              maxWidth: '95vw',
-              maxHeight: '90vh',
-              backgroundColor: theme.palette.background.paper,
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
-              borderRadius: 4,
-              zIndex: 1300,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              animation: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              '@keyframes fadeInScale': {
-                '0%': {
-                  opacity: 0,
-                  transform: 'translate(-50%, -50%) scale(0.9)',
+      {/* Dialog de Tarea */}
+      <Dialog
+        open={taskOpen} 
+        onClose={() => setTaskOpen(false)} 
+        maxWidth={false}
+        fullWidth={false}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            maxHeight: '90vh',
+            width: '560px',
+            maxWidth: '90vw',
+          },
+        }}
+      >
+        <Box
+          sx={{
+            backgroundColor: 'transparent',
+            color: theme.palette.text.primary,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            minHeight: 48,
+            px: 2,
+            pt: 1.5,
+            pb: 0.5,
+          }}
+        >
+          <Typography variant="h5" sx={{ color: theme.palette.text.primary, fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.02em' }}>
+            Tarea
+          </Typography>
+          <IconButton 
+            sx={{ 
+              color: theme.palette.text.secondary,
+              transition: 'all 0.2s ease',
+              '&:hover': { 
+                backgroundColor: theme.palette.action.hover,
+                color: theme.palette.text.primary,
+                transform: 'rotate(90deg)',
+              }
+            }} 
+            size="medium" 
+            onClick={() => setTaskOpen(false)}
+          >
+            <Close />
+          </IconButton>
+    </Box>
+
+        <DialogContent sx={{ px: 2, pb: 1, pt: 0.5 }}>
+          <TextField
+            label="Título"
+            value={taskData.title}
+            onChange={(e) => setTaskData({ ...taskData, title: e.target.value })}
+            fullWidth
+            InputLabelProps={{
+              shrink: !!taskData.title,
+            }}
+            sx={{ 
+              mb: 1.5,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 0.5,
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                fontSize: '0.75rem',
+                '& fieldset': {
+                  borderWidth: 0,
+                  border: 'none',
+                  top: 0,
                 },
-                '100%': {
-                  opacity: 1,
-                  transform: 'translate(-50%, -50%) scale(1)',
+                '&:hover fieldset': {
+                  border: 'none',
+                },
+                '&.Mui-focused fieldset': {
+                  borderWidth: '2px !important',
+                  borderColor: `${taxiMonterricoColors.orange} !important`,
+                  borderStyle: 'solid !important',
+                  top: 0,
                 },
               },
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderWidth: '0px !important',
+                '& legend': {
+                  width: 0,
+                  display: 'none',
+                },
+              },
+              '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                borderWidth: '2px !important',
+                borderColor: `${taxiMonterricoColors.green} !important`,
+                borderStyle: 'solid !important',
+                '& legend': {
+                  width: 0,
+                  display: 'none',
+                },
+              },
+              '& .MuiInputLabel-root': {
+                fontWeight: 500,
+                position: 'absolute',
+                left: 12,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                pointerEvents: 'none',
+                zIndex: 0,
+                backgroundColor: 'transparent',
+                padding: 0,
+                margin: 0,
+                fontSize: '0.75rem',
+                '&.Mui-focused': {
+                  color: taxiMonterricoColors.orange,
+                  transform: 'translateY(-50%)',
+                  backgroundColor: 'transparent',
+                },
+                '&.MuiInputLabel-shrink': {
+                  display: 'none',
+                },
+              },
+              '& .MuiInputBase-input': {
+                position: 'relative',
+                zIndex: 1,
+                fontSize: '0.75rem',
+                py: 1,
+              },
             }}
-            onClick={(e) => e.stopPropagation()}
-          >
+          />
+          <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+            <Box sx={{ flex: 1 }}>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  mb: 0.75, 
+                  color: theme.palette.text.secondary,
+                  fontWeight: 500,
+                  fontSize: '0.75rem',
+                }}
+              >
+                Prioridad
+              </Typography>
+              <TextField
+                select
+                value={taskData.priority}
+                onChange={(e) => setTaskData({ ...taskData, priority: e.target.value })}
+                fullWidth
+                SelectProps={{
+                MenuProps: {
+                  PaperProps: {
+                    sx: {
+                      borderRadius: 2,
+                      mt: 1,
+                    },
+                  },
+                },
+              }}
+              sx={{ 
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 0.5,
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  fontSize: '0.75rem',
+                  '& fieldset': {
+                    borderWidth: '2px',
+                    borderColor: theme.palette.divider,
+                  },
+                  '&:hover fieldset': {
+                    borderColor: taxiMonterricoColors.orange,
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: taxiMonterricoColors.orange,
+                    borderWidth: '2px',
+                  },
+                },
+                '& .MuiInputBase-input': {
+                  fontSize: '0.75rem',
+                  py: 1,
+                },
+                '& .MuiInputLabel-root': {
+                  fontWeight: 500,
+                  fontSize: '0.75rem',
+                  '&.Mui-focused': {
+                    color: taxiMonterricoColors.orange,
+                  },
+                },
+              }}
+            >
+              <MenuItem value="low" sx={{ fontSize: '0.75rem', py: 0.75 }}>Baja</MenuItem>
+              <MenuItem value="medium" sx={{ fontSize: '0.75rem', py: 0.75 }}>Media</MenuItem>
+              <MenuItem value="high" sx={{ fontSize: '0.75rem', py: 0.75 }}>Alta</MenuItem>
+              <MenuItem value="urgent" sx={{ fontSize: '0.75rem', py: 0.75 }}>Urgente</MenuItem>
+            </TextField>
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  mb: 0.75, 
+                  color: theme.palette.text.secondary,
+                  fontWeight: 500,
+                  fontSize: '0.75rem',
+                }}
+              >
+                Fecha límite
+              </Typography>
+              <TextField
+                value={formatDateDisplay(taskData.dueDate)}
+                onClick={handleOpenDatePicker}
+                fullWidth
+                InputProps={{
+                readOnly: true,
+                endAdornment: (
+                  <IconButton
+                    size="small"
+                    onClick={handleOpenDatePicker}
+                    sx={{ 
+                      color: theme.palette.text.secondary,
+                      mr: 0.5,
+                      '&:hover': {
+                        backgroundColor: 'transparent',
+                        color: taxiMonterricoColors.orange,
+                      }
+                    }}
+                  >
+                    <CalendarToday sx={{ fontSize: 18 }} />
+                  </IconButton>
+                ),
+              }}
+              sx={{ 
+                cursor: 'pointer',
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 0.5,
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  fontSize: '0.75rem',
+                  '& fieldset': {
+                    borderWidth: '2px',
+                    borderColor: theme.palette.divider,
+                  },
+                  '&:hover fieldset': {
+                    borderColor: taxiMonterricoColors.orange,
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: taxiMonterricoColors.orange,
+                    borderWidth: '2px',
+                  },
+                },
+                '& .MuiInputBase-input': {
+                  fontSize: '0.75rem',
+                  py: 1,
+                  cursor: 'pointer',
+                },
+                '& .MuiInputLabel-root': {
+                  fontWeight: 500,
+                  fontSize: '0.75rem',
+                  '&.Mui-focused': {
+                    color: taxiMonterricoColors.orange,
+                  },
+                },
+              }}
+            />
+            </Box>
+          </Box>
+          <Divider sx={{ my: 1.5 }} />
+          <Box sx={{ position: 'relative' }}>
+            <Box
+              ref={descriptionEditorRef}
+              contentEditable
+              suppressContentEditableWarning
+              onInput={(e) => {
+                const html = (e.target as HTMLElement).innerHTML;
+                if (html !== taskData.description) {
+                  setTaskData({ ...taskData, description: html });
+                }
+              }}
+              sx={{
+                minHeight: '150px',
+                maxHeight: '250px',
+                overflowY: 'auto',
+                pt: 0,
+                pb: 1.5,
+                px: 1,
+                borderRadius: 0.5,
+                border: 'none',
+                outline: 'none',
+                fontSize: '0.75rem',
+                lineHeight: 1.5,
+                color: theme.palette.text.primary,
+                '&:empty:before': {
+                  content: '"Descripción"',
+                  color: theme.palette.text.disabled,
+                },
+                '&::-webkit-scrollbar': {
+                  width: '6px',
+                },
+                '&::-webkit-scrollbar-track': {
+                  backgroundColor: 'transparent',
+                },
+                '&::-webkit-scrollbar-thumb': {
+                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                  borderRadius: '3px',
+                },
+              }}
+            />
             <Box
               sx={{
-                backgroundColor: 'transparent',
-                color: theme.palette.text.primary,
+                position: 'absolute',
+                bottom: 0.5,
+                left: 4,
+                right: 4,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                minHeight: { xs: '64px', md: '72px' },
-                px: { xs: 3, md: 4 },
+                gap: 0.5,
+                backgroundColor: 'transparent',
+                borderRadius: 1,
+                p: 0.5,
+                border: 'none',
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'nowrap' }}>
+                <IconButton
+                  size="small"
+                  sx={{ 
+                    p: 0.25, 
+                    minWidth: 28, 
+                    height: 28,
+                    backgroundColor: activeFormats.bold ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                    '&:hover': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                    }
+                  }}
+                  onClick={() => {
+                    document.execCommand('bold');
+                    updateActiveFormats();
+                  }}
+                  title="Negrita"
+                >
+                  <FormatBold sx={{ fontSize: 16 }} />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  sx={{ 
+                    p: 0.25, 
+                    minWidth: 28, 
+                    height: 28,
+                    backgroundColor: activeFormats.italic ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                    '&:hover': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                    }
+                  }}
+                  onClick={() => {
+                    document.execCommand('italic');
+                    updateActiveFormats();
+                  }}
+                  title="Cursiva"
+                >
+                  <FormatItalic sx={{ fontSize: 16 }} />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  sx={{ 
+                    p: 0.25, 
+                    minWidth: 28, 
+                    height: 28,
+                    backgroundColor: activeFormats.underline ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                    '&:hover': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                    }
+                  }}
+                  onClick={() => {
+                    document.execCommand('underline');
+                    updateActiveFormats();
+                  }}
+                  title="Subrayado"
+                >
+                  <FormatUnderlined sx={{ fontSize: 16 }} />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  sx={{ 
+                    p: 0.25, 
+                    minWidth: 28, 
+                    height: 28,
+                    backgroundColor: activeFormats.strikeThrough ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                    '&:hover': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                    }
+                  }}
+                  onClick={() => {
+                    document.execCommand('strikeThrough');
+                    updateActiveFormats();
+                  }}
+                  title="Tachado"
+                >
+                  <FormatStrikethrough sx={{ fontSize: 16 }} />
+                </IconButton>
+              <IconButton
+                size="small"
+                sx={{ p: 0.25, minWidth: 28, height: 28 }}
+                onClick={(e) => setMoreMenuAnchorEl(e.currentTarget)}
+                title="Más opciones"
+              >
+                <MoreVert sx={{ fontSize: 16 }} />
+              </IconButton>
+              <Menu
+                anchorEl={moreMenuAnchorEl}
+                open={Boolean(moreMenuAnchorEl)}
+                onClose={() => setMoreMenuAnchorEl(null)}
+              >
+                <MenuItem 
+                  onClick={() => { document.execCommand('justifyLeft'); setMoreMenuAnchorEl(null); }}
+                  sx={{ py: 0.75, px: 1, minWidth: 'auto', justifyContent: 'center' }}
+                  title="Alinear izquierda"
+                >
+                  <FormatAlignLeft sx={{ fontSize: 16 }} />
+                </MenuItem>
+                <MenuItem 
+                  onClick={() => { document.execCommand('justifyCenter'); setMoreMenuAnchorEl(null); }}
+                  sx={{ py: 0.75, px: 1, minWidth: 'auto', justifyContent: 'center' }}
+                  title="Alinear centro"
+                >
+                  <FormatAlignCenter sx={{ fontSize: 16 }} />
+                </MenuItem>
+                <MenuItem 
+                  onClick={() => { document.execCommand('justifyRight'); setMoreMenuAnchorEl(null); }}
+                  sx={{ py: 0.75, px: 1, minWidth: 'auto', justifyContent: 'center' }}
+                  title="Alinear derecha"
+                >
+                  <FormatAlignRight sx={{ fontSize: 16 }} />
+                </MenuItem>
+                <MenuItem 
+                  onClick={() => { document.execCommand('justifyFull'); setMoreMenuAnchorEl(null); }}
+                  sx={{ py: 0.75, px: 1, minWidth: 'auto', justifyContent: 'center' }}
+                  title="Justificar"
+                >
+                  <FormatAlignJustify sx={{ fontSize: 16 }} />
+                </MenuItem>
+              </Menu>
+              <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: '20px' }} />
+              <IconButton
+                size="small"
+                sx={{ 
+                  p: 0.25, 
+                  minWidth: 28, 
+                  height: 28,
+                  backgroundColor: activeFormats.unorderedList ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                  '&:hover': {
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                  }
+                }}
+                onClick={() => {
+                  document.execCommand('insertUnorderedList');
+                  updateActiveFormats();
+                }}
+                title="Lista con viñetas"
+              >
+                <FormatListBulleted sx={{ fontSize: 16 }} />
+              </IconButton>
+              <IconButton
+                size="small"
+                sx={{ 
+                  p: 0.25, 
+                  minWidth: 28, 
+                  height: 28,
+                  backgroundColor: activeFormats.orderedList ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                  '&:hover': {
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                  }
+                }}
+                onClick={() => {
+                  document.execCommand('insertOrderedList');
+                  updateActiveFormats();
+                }}
+                title="Lista numerada"
+              >
+                <FormatListNumbered sx={{ fontSize: 16 }} />
+              </IconButton>
+              <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: '20px' }} />
+              <IconButton
+                size="small"
+                sx={{ p: 0.25, minWidth: 28, height: 28 }}
+                onClick={() => {
+                  const url = prompt('URL:');
+                  if (url) {
+                    document.execCommand('createLink', false, url);
+                  }
+                }}
+                title="Insertar enlace"
+              >
+                <LinkIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+              <IconButton
+                size="small"
+                sx={{ p: 0.25, minWidth: 28, height: 28 }}
+                onClick={() => imageInputRef.current?.click()}
+                title="Insertar imagen"
+              >
+                <Image sx={{ fontSize: 16 }} />
+              </IconButton>
+              <IconButton
+                size="small"
+                sx={{ p: 0.25, minWidth: 28, height: 28 }}
+                onClick={() => {
+                  const code = prompt('Ingresa el código:');
+                  if (code && descriptionEditorRef.current) {
+                    const selection = window.getSelection();
+                    let range: Range | null = null;
+                    
+                    if (selection && selection.rangeCount > 0) {
+                      range = selection.getRangeAt(0);
+                    } else {
+                      range = document.createRange();
+                      range.selectNodeContents(descriptionEditorRef.current);
+                      range.collapse(false);
+                    }
+                    
+                    if (range) {
+                      const pre = document.createElement('pre');
+                      pre.style.backgroundColor = theme.palette.mode === 'dark' ? '#1e1e1e' : '#f5f5f5';
+                      pre.style.color = theme.palette.text.primary;
+                      pre.style.padding = '8px';
+                      pre.style.borderRadius = '4px';
+                      pre.style.fontFamily = 'monospace';
+                      pre.style.fontSize = '0.75rem';
+                      pre.textContent = code;
+                      
+                      range.deleteContents();
+                      range.insertNode(pre);
+                      range.setStartAfter(pre);
+                      range.collapse(true);
+                      if (selection) {
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                      }
+                      setTaskData({ ...taskData, description: descriptionEditorRef.current.innerHTML });
+                    }
+                  }
+                }}
+                title="Insertar código"
+              >
+                <Code sx={{ fontSize: 16 }} />
+              </IconButton>
+              <IconButton
+                size="small"
+                sx={{ p: 0.25, minWidth: 28, height: 28 }}
+                onClick={() => {
+                  const rows = prompt('Número de filas:', '3');
+                  const cols = prompt('Número de columnas:', '3');
+                  if (rows && cols && descriptionEditorRef.current) {
+                    const table = document.createElement('table');
+                    table.style.borderCollapse = 'collapse';
+                    table.style.width = '100%';
+                    table.style.border = '1px solid #ccc';
+                    table.style.margin = '8px 0';
+                    
+                    for (let i = 0; i < parseInt(rows); i++) {
+                      const tr = document.createElement('tr');
+                      for (let j = 0; j < parseInt(cols); j++) {
+                        const td = document.createElement('td');
+                        td.style.border = '1px solid #ccc';
+                        td.style.padding = '8px';
+                        td.innerHTML = '&nbsp;';
+                        tr.appendChild(td);
+                      }
+                      table.appendChild(tr);
+                    }
+                    
+                    const selection = window.getSelection();
+                    if (selection && selection.rangeCount > 0) {
+                      const range = selection.getRangeAt(0);
+                      range.deleteContents();
+                      range.insertNode(table);
+                      range.setStartAfter(table);
+                      range.collapse(true);
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                      setTaskData({ ...taskData, description: descriptionEditorRef.current.innerHTML });
+                    }
+                  }
+                }}
+                title="Insertar tabla"
+              >
+                <TableChart sx={{ fontSize: 16 }} />
+              </IconButton>
+              <IconButton
+                size="small"
+                sx={{ p: 0.25, minWidth: 28, height: 28 }}
+                onClick={() => fileInputRef.current?.click()}
+                title="Adjuntar archivo"
+              >
+                <AttachFile sx={{ fontSize: 16 }} />
+              </IconButton>
+              </Box>
+            </Box>
+          </Box>
+          {/* Input oculto para seleccionar archivos de imagen */}
+          <input
+            ref={imageInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file || !descriptionEditorRef.current) return;
+
+              if (!file.type.startsWith('image/')) {
+                alert('Por favor, selecciona un archivo de imagen válido.');
+                return;
+              }
+
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                const dataUrl = event.target?.result as string;
+                if (dataUrl) {
+                  descriptionEditorRef.current?.focus();
+                  
+                  const selection = window.getSelection();
+                  let range: Range | null = null;
+                  
+                  if (selection && selection.rangeCount > 0) {
+                    range = selection.getRangeAt(0);
+                  } else if (descriptionEditorRef.current) {
+                    range = document.createRange();
+                    range.selectNodeContents(descriptionEditorRef.current);
+                    range.collapse(false);
+                    if (selection) {
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                    }
+                  }
+
+                  if (range) {
+                    const img = document.createElement('img');
+                    img.src = dataUrl;
+                    img.style.maxWidth = '100%';
+                    img.style.height = 'auto';
+                    img.alt = file.name;
+                    
+                    range.insertNode(img);
+                    range.setStartAfter(img);
+                    range.collapse(true);
+                    if (selection) {
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                    }
+                    
+                    if (descriptionEditorRef.current) {
+                      setTaskData({ ...taskData, description: descriptionEditorRef.current.innerHTML });
+                    }
+                  }
+                }
+              };
+              
+              reader.onerror = () => {
+                alert('Error al leer el archivo de imagen.');
+              };
+              
+              reader.readAsDataURL(file);
+              
+              if (imageInputRef.current) {
+                imageInputRef.current.value = '';
+              }
+            }}
+          />
+          {/* Input oculto para adjuntar archivos */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file || !descriptionEditorRef.current) return;
+
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                const dataUrl = event.target?.result as string;
+                if (dataUrl) {
+                  descriptionEditorRef.current?.focus();
+                  
+                  const selection = window.getSelection();
+                  let range: Range | null = null;
+                  
+                  if (selection && selection.rangeCount > 0) {
+                    range = selection.getRangeAt(0);
+                  } else if (descriptionEditorRef.current) {
+                    range = document.createRange();
+                    range.selectNodeContents(descriptionEditorRef.current);
+                    range.collapse(false);
+                    if (selection) {
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                    }
+                  }
+
+                  if (range) {
+                    const link = document.createElement('a');
+                    link.href = dataUrl;
+                    link.download = file.name;
+                    link.textContent = `📎 ${file.name}`;
+                    link.style.display = 'inline-block';
+                    link.style.margin = '4px';
+                    link.style.padding = '4px 8px';
+                    link.style.backgroundColor = theme.palette.mode === 'dark' ? '#2a2a2a' : '#f5f5f5';
+                    link.style.borderRadius = '4px';
+                    link.style.textDecoration = 'none';
+                    link.style.color = theme.palette.text.primary;
+                    
+                    range.insertNode(link);
+                    range.setStartAfter(link);
+                    range.collapse(true);
+                    if (selection) {
+                      selection.removeAllRanges();
+                      selection.addRange(range);
+                    }
+                    
+                    if (descriptionEditorRef.current) {
+                      setTaskData({ ...taskData, description: descriptionEditorRef.current.innerHTML });
+                    }
+                  }
+                }
+              };
+              
+              reader.onerror = () => {
+                alert('Error al leer el archivo.');
+              };
+              
+              reader.readAsDataURL(file);
+              
+              if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+              }
+            }}
+          />
+        </DialogContent>
+        <Box sx={{ px: 2 }}>
+          <Divider sx={{ mt: 0.25, mb: 1.5 }} />
+        </Box>
+        <DialogActions sx={{ px: 2, pb: 1.5, pt: 0.5, gap: 0.75 }}>
+          <Button 
+            onClick={() => setTaskOpen(false)}
+            size="small"
+            sx={{
+              textTransform: 'none',
+              color: theme.palette.text.secondary,
+              fontWeight: 500,
+              px: 2,
+              py: 0.5,
+              fontSize: '0.75rem',
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+              }
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSaveTask} 
+            variant="contained" 
+            size="small"
+            disabled={saving || !taskData.title.trim()}
+            sx={{
+              textTransform: 'none',
+              fontWeight: 500,
+              px: 2,
+              py: 0.5,
+              fontSize: '0.75rem',
+              bgcolor: taskData.title.trim() ? taxiMonterricoColors.green : theme.palette.action.disabledBackground,
+              color: 'white',
+              '&:hover': {
+                bgcolor: taskData.title.trim() ? taxiMonterricoColors.green : theme.palette.action.disabledBackground,
+                opacity: 0.9,
+              },
+              '&:disabled': {
+                bgcolor: theme.palette.action.disabledBackground,
+                color: theme.palette.action.disabled,
+              }
+            }}
+          >
+            {saving ? 'Guardando...' : 'Guardar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Date Picker Popover */}
+      <Popover
+        open={Boolean(datePickerAnchorEl)}
+        anchorEl={datePickerAnchorEl}
+        onClose={() => setDatePickerAnchorEl(null)}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            overflow: 'hidden',
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 8px 32px rgba(0,0,0,0.4)' 
+              : '0 8px 32px rgba(0,0,0,0.12)',
+            mt: 0.5,
+            maxWidth: 280,
+          },
+        }}
+      >
+        <Box sx={{ p: 2, bgcolor: theme.palette.background.paper }}>
+          {/* Header con mes y año */}
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            mb: 3,
+            pb: 2,
+            borderBottom: `1px solid ${theme.palette.divider}`,
+          }}>
+            <IconButton
+              size="small"
+              onClick={() => {
+                const newDate = new Date(currentMonth);
+                newDate.setMonth(newDate.getMonth() - 1);
+                setCurrentMonth(newDate);
+              }}
+              sx={{
+                color: theme.palette.text.secondary,
+                border: `1px solid ${theme.palette.divider}`,
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                  borderColor: taxiMonterricoColors.green,
+                  color: taxiMonterricoColors.green,
+                },
+              }}
+            >
+              <ChevronLeft />
+            </IconButton>
+            <Typography variant="h6" sx={{ 
+              fontWeight: 600, 
+              fontSize: '0.95rem',
+              color: theme.palette.text.primary,
+              letterSpacing: '-0.01em',
+            }}>
+              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+            </Typography>
+            <IconButton
+              size="small"
+              onClick={() => {
+                const newDate = new Date(currentMonth);
+                newDate.setMonth(newDate.getMonth() + 1);
+                setCurrentMonth(newDate);
+              }}
+              sx={{
+                color: theme.palette.text.secondary,
+                border: `1px solid ${theme.palette.divider}`,
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                  borderColor: taxiMonterricoColors.green,
+                  color: taxiMonterricoColors.green,
+                },
+              }}
+            >
+              <ChevronRight />
+            </IconButton>
+          </Box>
+
+          {/* Días de la semana */}
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(7, 1fr)', 
+            gap: 0.5, 
+            mb: 1.5,
+          }}>
+            {weekDays.map((day) => (
+              <Typography
+                key={day}
+                variant="caption"
+                sx={{
+                  textAlign: 'center',
+                  fontWeight: 600,
+                  color: theme.palette.text.secondary,
+                  fontSize: '0.7rem',
+                  py: 0.5,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                }}
+              >
+                {day}
+              </Typography>
+            ))}
+          </Box>
+
+          {/* Calendario */}
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(7, 1fr)', 
+            gap: 0.5,
+            mb: 1.5,
+          }}>
+            {getDaysInMonth(currentMonth).map((item, index) => {
+              // Calcular año y mes correctos
+              let year = currentMonth.getFullYear();
+              let month = currentMonth.getMonth();
+              
+              if (!item.isCurrentMonth) {
+                if (index < 7) {
+                  // Mes anterior
+                  month = month - 1;
+                  if (month < 0) {
+                    month = 11;
+                    year = year - 1;
+                  }
+                } else {
+                  // Mes siguiente
+                  month = month + 1;
+                  if (month > 11) {
+                    month = 0;
+                    year = year + 1;
+                  }
+                }
+              }
+              
+              const date = new Date(year, month, item.day);
+
+              const isSelected = selectedDate && 
+                item.isCurrentMonth &&
+                date.toDateString() === selectedDate.toDateString();
+              const isToday = item.isCurrentMonth &&
+                date.toDateString() === new Date().toDateString();
+
+              return (
                 <Box
+                  key={`${item.isCurrentMonth ? 'current' : 'other'}-${item.day}-${index}`}
+                  onClick={() => {
+                    if (item.isCurrentMonth) {
+                      // Pasar directamente año, mes y día para evitar problemas de zona horaria
+                      handleDateSelect(year, month + 1, item.day);
+                    }
+                  }}
                   sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: '50%',
-                    backgroundColor: `${taxiMonterricoColors.green}15`,
+                    aspectRatio: '1',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    borderRadius: 2,
+                    cursor: item.isCurrentMonth ? 'pointer' : 'default',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    bgcolor: isSelected
+                      ? taxiMonterricoColors.green
+                      : isToday
+                      ? `${taxiMonterricoColors.green}20`
+                      : 'transparent',
+                    color: isSelected
+                      ? 'white'
+                      : isToday
+                      ? taxiMonterricoColors.green
+                      : item.isCurrentMonth
+                      ? theme.palette.text.primary
+                      : theme.palette.text.disabled,
+                    fontWeight: isSelected ? 700 : isToday ? 600 : 400,
+                    fontSize: '0.75rem',
+                    position: 'relative',
+                    minHeight: '28px',
+                    minWidth: '28px',
+                    '&:hover': {
+                      bgcolor: item.isCurrentMonth
+                        ? (isSelected
+                            ? taxiMonterricoColors.green
+                            : `${taxiMonterricoColors.green}15`)
+                        : 'transparent',
+                      transform: item.isCurrentMonth && !isSelected ? 'scale(1.05)' : 'none',
+                    },
+                    opacity: item.isCurrentMonth ? 1 : 0.35,
                   }}
                 >
-                  <Assignment sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+                  {item.day}
                 </Box>
-                <Typography variant="h5" sx={{ color: theme.palette.text.primary, fontWeight: 700, fontSize: { xs: '1.1rem', md: '1.25rem' }, letterSpacing: '-0.02em' }}>
-                  Tarea
-                </Typography>
-              </Box>
-              <IconButton 
-                sx={{ 
-                  color: theme.palette.text.secondary,
-                  transition: 'all 0.2s ease',
-                  '&:hover': { 
-                    backgroundColor: theme.palette.action.hover,
-                    color: theme.palette.text.primary,
-                    transform: 'rotate(90deg)',
-                  }
-                }} 
-                size="medium" 
-                onClick={() => setTaskOpen(false)}
-              >
-                <Close />
-              </IconButton>
-            </Box>
-
-            <Box sx={{ 
-              flexGrow: 1, 
-              display: 'flex', 
-              flexDirection: 'column', 
-              p: { xs: 3, md: 4 }, 
-              overflow: 'hidden', 
-              overflowY: 'auto',
-              gap: 3,
-              '&::-webkit-scrollbar': {
-                width: '8px',
-              },
-              '&::-webkit-scrollbar-track': {
-                backgroundColor: 'transparent',
-                borderRadius: '4px',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                backgroundColor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255,255,255,0.2)' 
-                  : 'rgba(0,0,0,0.2)',
-                borderRadius: '4px',
-                '&:hover': {
-                  backgroundColor: theme.palette.mode === 'dark' 
-                    ? 'rgba(255,255,255,0.3)' 
-                    : 'rgba(0,0,0,0.3)',
-                },
-                transition: 'background-color 0.2s ease',
-              },
-            }}>
-              <TextField
-                label="Título"
-                value={taskData.title}
-                onChange={(e) => setTaskData({ ...taskData, title: e.target.value })}
-                required
-                fullWidth
-                sx={{ 
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '& fieldset': {
-                      borderWidth: '2px',
-                      borderColor: theme.palette.divider,
-                    },
-                    '&:hover fieldset': {
-                      borderColor: taxiMonterricoColors.green,
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: taxiMonterricoColors.green,
-                      borderWidth: '2px',
-                    },
-                  },
-                  '& .MuiInputLabel-root': {
-                    fontWeight: 500,
-                    '&.Mui-focused': {
-                      color: taxiMonterricoColors.green,
-                    },
-                  },
-                }}
-              />
-              <TextField
-                label="Descripción"
-                multiline
-                rows={5}
-                value={taskData.description}
-                onChange={(e) => setTaskData({ ...taskData, description: e.target.value })}
-                fullWidth
-                sx={{ 
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 2,
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '& fieldset': {
-                      borderWidth: '2px',
-                      borderColor: theme.palette.divider,
-                    },
-                    '&:hover fieldset': {
-                      borderColor: taxiMonterricoColors.green,
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: taxiMonterricoColors.green,
-                      borderWidth: '2px',
-                    },
-                  },
-                  '& .MuiInputLabel-root': {
-                    fontWeight: 500,
-                    '&.Mui-focused': {
-                      color: taxiMonterricoColors.green,
-                    },
-                  },
-                }}
-              />
-              <Box sx={{ display: 'flex', gap: 2 }}>
-                <TextField
-                  select
-                  label="Prioridad"
-                  value={taskData.priority}
-                  onChange={(e) => setTaskData({ ...taskData, priority: e.target.value })}
-                  fullWidth
-                  sx={{ 
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '& fieldset': {
-                        borderWidth: '2px',
-                        borderColor: theme.palette.divider,
-                      },
-                      '&:hover fieldset': {
-                        borderColor: taxiMonterricoColors.green,
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderColor: taxiMonterricoColors.green,
-                        borderWidth: '2px',
-                      },
-                    },
-                    '& .MuiInputLabel-root': {
-                      fontWeight: 500,
-                      '&.Mui-focused': {
-                        color: taxiMonterricoColors.green,
-                      },
-                    },
-                  }}
-                >
-                  <MenuItem value="low">Baja</MenuItem>
-                  <MenuItem value="medium">Media</MenuItem>
-                  <MenuItem value="high">Alta</MenuItem>
-                  <MenuItem value="urgent">Urgente</MenuItem>
-                </TextField>
-                <TextField
-                  label="Fecha límite"
-                  type="date"
-                  value={taskData.dueDate}
-                  onChange={(e) => setTaskData({ ...taskData, dueDate: e.target.value })}
-                  fullWidth
-                  InputLabelProps={{ shrink: true }}
-                  sx={{ 
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '& fieldset': {
-                        borderWidth: '2px',
-                        borderColor: theme.palette.divider,
-                      },
-                      '&:hover fieldset': {
-                        borderColor: taxiMonterricoColors.green,
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderColor: taxiMonterricoColors.green,
-                        borderWidth: '2px',
-                      },
-                    },
-                    '& .MuiInputLabel-root': {
-                      fontWeight: 500,
-                      '&.Mui-focused': {
-                        color: taxiMonterricoColors.green,
-                      },
-                    },
-                  }}
-                />
-              </Box>
-            </Box>
-
-            <Box sx={{ 
-              p: 3, 
-              borderTop: `1px solid ${theme.palette.divider}`, 
-              backgroundColor: theme.palette.background.paper, 
-              display: 'flex', 
-              justifyContent: 'flex-end', 
-              gap: 2 
-            }}>
-              <Button 
-                onClick={() => setTaskOpen(false)} 
-                variant="outlined"
-                sx={{ 
-                  textTransform: 'none',
-                  color: theme.palette.text.secondary,
-                  borderColor: theme.palette.divider,
-                  fontWeight: 600,
-                  px: 3,
-                  py: 1,
-                  borderRadius: 2,
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    bgcolor: theme.palette.action.hover,
-                    borderColor: theme.palette.text.secondary,
-                    transform: 'translateY(-1px)',
-                  },
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleSaveTask} 
-                variant="contained" 
-                disabled={saving || !taskData.title.trim()}
-                sx={{ 
-                  textTransform: 'none',
-                  bgcolor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.green,
-                  color: 'white',
-                  fontWeight: 600,
-                  px: 4,
-                  py: 1,
-                  borderRadius: 2,
-                  boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.green}40`,
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    bgcolor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.greenDark,
-                    boxShadow: saving ? 'none' : `0 6px 16px ${taxiMonterricoColors.green}50`,
-                    transform: 'translateY(-2px)',
-                  },
-                  '&:active': {
-                    transform: 'translateY(0)',
-                  },
-                  '&.Mui-disabled': {
-                    bgcolor: theme.palette.action.disabledBackground,
-                    color: theme.palette.action.disabled,
-                    boxShadow: 'none',
-                  },
-                }}
-              >
-                {saving ? 'Guardando...' : 'Guardar'}
-              </Button>
-            </Box>
+              );
+            })}
           </Box>
-          <Box
-            sx={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.1)',
-              zIndex: 1299,
-              animation: 'fadeIn 0.3s ease-out',
-            }}
-            onClick={() => setTaskOpen(false)}
-          />
-        </>
-      )}
+
+          {/* Botones de acción */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            mt: 1.5, 
+            pt: 1.5, 
+            borderTop: `1px solid ${theme.palette.divider}`,
+            gap: 1,
+          }}>
+            <Button
+              onClick={handleClearDate}
+              sx={{
+                textTransform: 'none',
+                color: theme.palette.text.secondary,
+                fontWeight: 500,
+                px: 1.5,
+                py: 0.5,
+                borderRadius: 1,
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                  color: theme.palette.text.primary,
+                },
+              }}
+            >
+              Borrar
+            </Button>
+            <Button
+              onClick={handleToday}
+              sx={{
+                textTransform: 'none',
+                color: taxiMonterricoColors.green,
+                fontWeight: 600,
+                px: 1.5,
+                py: 0.5,
+                borderRadius: 1,
+                '&:hover': {
+                  bgcolor: `${taxiMonterricoColors.green}15`,
+                },
+              }}
+            >
+              Hoy
+            </Button>
+          </Box>
+        </Box>
+      </Popover>
 
       {/* Ventana flotante de Reunión */}
       {meetingOpen && (

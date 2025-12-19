@@ -34,15 +34,26 @@ import {
   Business,
   AttachMoney,
   Assignment,
+  DarkMode,
+  LightMode,
+  Edit,
+  Logout,
+  Add,
+  Support,
+  Description,
+  CheckBox,
+  ConfirmationNumber,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { taxiMonterricoColors } from '../../theme/colors';
 import ProfileModal from '../ProfileModal';
 import api from '../../config/api';
+import { useTheme as useThemeContext } from '../../context/ThemeContext';
 
 const Header: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { mode, toggleTheme } = useThemeContext();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [reminderAnchorEl, setReminderAnchorEl] = useState<null | HTMLElement>(null);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
@@ -57,6 +68,7 @@ const Header: React.FC = () => {
   const [reminderCount, setReminderCount] = useState(0);
   const reminderButtonRef = useRef<HTMLButtonElement>(null);
   const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
+  const [createMenuAnchorEl, setCreateMenuAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -64,6 +76,37 @@ const Header: React.FC = () => {
 
   const handleClose = () => {
     setAnchorEl(null);
+  };
+
+  const handleCreateMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setCreateMenuAnchorEl(event.currentTarget);
+  };
+
+  const handleCreateMenuClose = () => {
+    setCreateMenuAnchorEl(null);
+  };
+
+  const handleCreateItem = (type: string) => {
+    handleCreateMenuClose();
+    switch (type) {
+      case 'contact':
+        navigate('/contacts');
+        break;
+      case 'company':
+        navigate('/companies');
+        break;
+      case 'deal':
+        navigate('/deals');
+        break;
+      case 'task':
+        navigate('/tasks');
+        break;
+      case 'ticket':
+        navigate('/tickets');
+        break;
+      default:
+        break;
+    }
   };
 
   const handleReminderMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -232,35 +275,40 @@ const Header: React.FC = () => {
     <Box
       sx={{
         width: '100%',
-        bgcolor: theme.palette.background.paper,
+        bgcolor: 'theme.palette.background.paper',
         px: 3,
-        py: 1,
+        pt: 2,
+        pb: 2,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: 2,
+        borderBottom: `1px solid ${theme.palette.divider}`,
       }}
     >
       {/* Barra de búsqueda */}
       <Box
         sx={{
-          flex: '0 1 350px',
+          flex: 1,
           position: 'relative',
+          maxWidth: 'calc(100% - 350px)',
         }}
       >
         <Box
           ref={searchInputRef}
           sx={{
-            bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f3f4f6',
+            bgcolor: '#ffffff',
             borderRadius: 1,
             px: 1.5,
             py: 0.75,
             display: 'flex',
             alignItems: 'center',
             transition: 'all 0.2s ease',
+            border: `1px solid ${theme.palette.divider}`,
             '&:focus-within': {
-              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : '#ffffff',
-              boxShadow: theme.palette.mode === 'dark' ? 'none' : '0 2px 4px rgba(0,0,0,0.1)',
+              bgcolor: '#ffffff',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              borderColor: taxiMonterricoColors.green,
             },
           }}
         >
@@ -475,7 +523,155 @@ const Header: React.FC = () => {
       </Box>
 
       {/* Elementos del lado derecho */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+        {/* Botón Crear */}
+        <Button
+          variant="contained"
+          startIcon={<Add sx={{ fontSize: 18 }} />}
+          onClick={handleCreateMenuOpen}
+          sx={{
+            bgcolor: '#5F9EA0',
+            color: 'white',
+            borderRadius: 2,
+            px: 2.5,
+            py: 0.875,
+            textTransform: 'none',
+            fontSize: '0.875rem',
+            fontWeight: 500,
+            boxShadow: '0 2px 8px rgba(95, 158, 160, 0.3)',
+            '&:hover': {
+              bgcolor: '#4a8a8c',
+              boxShadow: '0 4px 12px rgba(95, 158, 160, 0.4)',
+            },
+          }}
+        >
+          Crear
+        </Button>
+
+        {/* Menú desplegable de Crear */}
+        <Menu
+          anchorEl={createMenuAnchorEl}
+          open={Boolean(createMenuAnchorEl)}
+          onClose={handleCreateMenuClose}
+          PaperProps={{
+            sx: {
+              bgcolor: theme.palette.background.paper,
+              color: theme.palette.text.primary,
+              mt: 1,
+              minWidth: 220,
+              borderRadius: 2,
+              boxShadow: theme.shadows[3],
+              border: `1px solid ${theme.palette.divider}`,
+            },
+          }}
+          anchorOrigin={{
+            vertical: 'bottom',
+            horizontal: 'left',
+          }}
+          transformOrigin={{
+            vertical: 'top',
+            horizontal: 'left',
+          }}
+        >
+          <MenuItem 
+            onClick={() => handleCreateItem('contact')}
+            sx={{
+              py: 1.5,
+              px: 2,
+              gap: 1.5,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+              },
+            }}
+          >
+            <Person sx={{ fontSize: 20, color: theme.palette.primary.main }} />
+            <Typography variant="body2">Contacto</Typography>
+          </MenuItem>
+          <MenuItem 
+            onClick={() => handleCreateItem('company')}
+            sx={{
+              py: 1.5,
+              px: 2,
+              gap: 1.5,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+              },
+            }}
+          >
+            <Business sx={{ fontSize: 20, color: theme.palette.info.main }} />
+            <Typography variant="body2">Empresa</Typography>
+          </MenuItem>
+          <MenuItem 
+            onClick={() => handleCreateItem('deal')}
+            sx={{
+              py: 1.5,
+              px: 2,
+              gap: 1.5,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+              },
+            }}
+          >
+            <AttachMoney sx={{ fontSize: 20, color: theme.palette.success.main }} />
+            <Typography variant="body2">Negocio</Typography>
+          </MenuItem>
+          <MenuItem 
+            onClick={() => handleCreateItem('task')}
+            sx={{
+              py: 1.5,
+              px: 2,
+              gap: 1.5,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+              },
+            }}
+          >
+            <Assignment sx={{ fontSize: 20, color: theme.palette.warning.main }} />
+            <Typography variant="body2">Tarea</Typography>
+          </MenuItem>
+          <MenuItem 
+            onClick={() => handleCreateItem('ticket')}
+            sx={{
+              py: 1.5,
+              px: 2,
+              gap: 1.5,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+              },
+            }}
+          >
+            <Support sx={{ fontSize: 20, color: theme.palette.error.main }} />
+            <Typography variant="body2">Ticket</Typography>
+          </MenuItem>
+        </Menu>
+
+        <Divider orientation="vertical" flexItem sx={{ ml: 1, mr: 0.25, height: 32, alignSelf: 'center' }} />
+
+        {/* Modo oscuro */}
+        <Tooltip title={mode === 'light' ? 'Modo oscuro' : 'Modo claro'}>
+          <IconButton 
+            size="medium"
+            onClick={toggleTheme}
+            sx={{ 
+              bgcolor: 'transparent', 
+              borderRadius: 1, 
+              width: 40, 
+              height: 40,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+              },
+            }}
+          >
+            {mode === 'light' ? (
+              <DarkMode sx={{ fontSize: 22, color: theme.palette.text.secondary }} />
+            ) : (
+              <LightMode sx={{ fontSize: 22, color: theme.palette.text.secondary }} />
+            )}
+          </IconButton>
+        </Tooltip>
+
+        <Divider orientation="vertical" flexItem sx={{ mx: 0.25, height: 32, alignSelf: 'center' }} />
+
         {/* Recordatorios */}
         <Tooltip title="Recordatorios">
           <IconButton 
@@ -487,7 +683,6 @@ const Header: React.FC = () => {
               borderRadius: 1, 
               width: 40, 
               height: 40,
-              border: `1px solid ${theme.palette.divider}`,
               '&:hover': {
                 bgcolor: theme.palette.action.hover,
               },
@@ -506,10 +701,12 @@ const Header: React.FC = () => {
                 },
               }}
             >
-              <Alarm sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+              <Alarm sx={{ fontSize: 22, color: theme.palette.text.secondary }} />
             </Badge>
           </IconButton>
         </Tooltip>
+
+        <Divider orientation="vertical" flexItem sx={{ mx: 0.25, height: 32, alignSelf: 'center' }} />
 
         {/* Notificaciones */}
         <IconButton 
@@ -519,7 +716,6 @@ const Header: React.FC = () => {
             borderRadius: 1, 
             width: 40, 
             height: 40,
-            border: `1px solid ${theme.palette.divider}`,
             '&:hover': {
               bgcolor: theme.palette.action.hover,
             },
@@ -538,9 +734,11 @@ const Header: React.FC = () => {
               },
             }}
           >
-            <Notifications sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+            <Notifications sx={{ fontSize: 22, color: theme.palette.text.secondary }} />
           </Badge>
         </IconButton>
+
+        <Divider orientation="vertical" flexItem sx={{ ml: 0.25, mr: 1, height: 32, alignSelf: 'center' }} />
 
         {/* Avatar con dropdown */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }} onClick={handleMenu}>
@@ -715,7 +913,9 @@ const Header: React.FC = () => {
             color: theme.palette.text.primary,
             mt: 1,
             minWidth: 200,
-            boxShadow: theme.shadows[3],
+            borderRadius: 2,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            border: `1px solid ${theme.palette.divider}`,
             '& .MuiMenuItem-root': {
               color: theme.palette.text.primary,
               '&:hover': {
@@ -725,14 +925,48 @@ const Header: React.FC = () => {
           },
         }}
       >
-        <MenuItem onClick={handleProfileClick}>
-          <Typography variant="body2">Perfil</Typography>
+        <MenuItem 
+          onClick={handleProfileClick}
+          sx={{
+            py: 1.5,
+            px: 2,
+            gap: 1.5,
+            '&:hover': {
+              bgcolor: theme.palette.action.hover,
+            },
+          }}
+        >
+          <Edit sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
+          <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <Typography variant="body2" sx={{ fontWeight: 500, color: theme.palette.text.primary }}>
+              Editar perfil
+            </Typography>
+            <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+              Actualizar información
+            </Typography>
+          </Box>
         </MenuItem>
-        <MenuItem onClick={handleClose}>
-          <Typography variant="body2">Configuración</Typography>
-        </MenuItem>
-        <MenuItem onClick={handleClose}>
-          <Typography variant="body2">Cerrar Sesión</Typography>
+        <Divider />
+        <MenuItem 
+          onClick={() => {
+            handleClose();
+            logout();
+            navigate('/login');
+          }}
+          sx={{
+            py: 1.5,
+            px: 2,
+            gap: 1.5,
+            color: theme.palette.error.main,
+            '&:hover': {
+              bgcolor: theme.palette.mode === 'dark' ? `${theme.palette.error.main}20` : `${theme.palette.error.main}10`,
+            },
+          }}
+        >
+          <Logout sx={{ fontSize: 20 }} />
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+            Cerrar sesión
+          </Typography>
         </MenuItem>
       </Menu>
 

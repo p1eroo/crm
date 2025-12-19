@@ -21,11 +21,7 @@ import {
   AttachMoney,
   Assignment,
   Support,
-  Logout,
   AdminPanelSettings,
-  Edit,
-  DarkMode,
-  LightMode,
   Assessment,
   CalendarToday,
   Settings,
@@ -35,10 +31,9 @@ import { taxiMonterricoColors } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme as useThemeContext } from '../../context/ThemeContext';
 import { useSidebar } from '../../context/SidebarContext';
-import ProfileModal from '../ProfileModal';
 import logo from '../../assets/tm_logo.png';
 
-const drawerWidth = 220;
+const drawerWidth = 200;
 
 const mainMenuItems = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
@@ -56,31 +51,10 @@ const mainMenuItems = [
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { logout, user } = useAuth();
+  const { user } = useAuth();
   const theme = useTheme();
   const { mode, toggleTheme } = useThemeContext();
   const { open, toggleSidebar } = useSidebar();
-  const [profileAnchorEl, setProfileAnchorEl] = React.useState<null | HTMLElement>(null);
-  const [profileModalOpen, setProfileModalOpen] = React.useState(false);
-
-  const handleProfileClick = (event: React.MouseEvent<HTMLElement>) => {
-    setProfileAnchorEl(event.currentTarget);
-  };
-
-  const handleProfileMenuClose = () => {
-    setProfileAnchorEl(null);
-  };
-
-  const handleEditProfile = () => {
-    setProfileModalOpen(true);
-    handleProfileMenuClose();
-  };
-
-  const handleLogout = () => {
-    handleProfileMenuClose();
-    logout();
-    navigate('/login');
-  };
 
   if (!open) {
     return null;
@@ -108,7 +82,8 @@ const Sidebar: React.FC = () => {
       {/* Logo/Icono superior */}
       <Box sx={{ 
         mb: -4,
-        mt: -6,
+        mt: -5.5,
+        pt: 0,
         display: 'flex', 
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -171,11 +146,11 @@ const Sidebar: React.FC = () => {
               selected={isSelected}
               onClick={() => navigate(item.path)}
               sx={{
-              minHeight: 40,
+              minHeight: 48,
               borderRadius: 2,
               justifyContent: 'flex-start',
               px: 1,
-              py: 0.75,
+              py: 1,
               mb: 0,
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&.Mui-selected': {
@@ -222,7 +197,7 @@ const Sidebar: React.FC = () => {
               <Typography
                 variant="body2"
                 sx={{
-                  fontSize: '0.8125rem',
+                  fontSize: '0.875rem',
                   fontWeight: isSelected ? 600 : 400,
                   color: isSelected && theme.palette.mode === 'dark' 
                     ? '#FFFFFF' 
@@ -246,11 +221,11 @@ const Sidebar: React.FC = () => {
             selected={location.pathname === '/users'}
             onClick={() => navigate('/users')}
             sx={{
-              minHeight: 40,
+              minHeight: 48,
               borderRadius: 2,
               justifyContent: 'flex-start',
               px: 1,
-              py: 0.75,
+              py: 1,
               mb: 0,
               mt: 0,
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -298,7 +273,7 @@ const Sidebar: React.FC = () => {
             <Typography
               variant="body2"
               sx={{
-                fontSize: '0.8125rem',
+                fontSize: '0.875rem',
                 fontWeight: location.pathname === '/users' ? 600 : 400,
                 color: location.pathname === '/users' && theme.palette.mode === 'dark' 
                   ? '#FFFFFF' 
@@ -349,7 +324,7 @@ const Sidebar: React.FC = () => {
           <Typography
             variant="body2"
             sx={{
-              fontSize: '0.8125rem',
+              fontSize: '0.875rem',
               fontWeight: 400,
               color: theme.palette.text.primary,
               ml: 1,
@@ -360,147 +335,6 @@ const Sidebar: React.FC = () => {
         </ListItemButton>
       </Box>
       
-      {/* Perfil del usuario */}
-      <Box sx={{ width: '100%', px: 1, mb: 1.5 }}>
-        <ListItemButton
-          onClick={handleProfileClick}
-          sx={{
-            minHeight: 40,
-            borderRadius: 2,
-            justifyContent: 'flex-start',
-            px: 1,
-            py: 0.75,
-            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-            '&:hover': {
-              backgroundColor: theme.palette.action.hover,
-            },
-          }}
-        >
-          <ListItemIcon
-            sx={{
-              minWidth: 36,
-              justifyContent: 'center',
-              color: 'inherit',
-            }}
-          >
-            <Avatar
-              src={user?.avatar}
-              sx={{
-                width: 28,
-                height: 28,
-                bgcolor: user?.avatar ? 'transparent' : taxiMonterricoColors.green,
-                fontSize: '0.75rem',
-                fontWeight: 600,
-              }}
-            >
-              {!user?.avatar && `${user?.firstName?.[0] || ''}${user?.lastName?.[0] || ''}`.toUpperCase()}
-            </Avatar>
-          </ListItemIcon>
-          <Typography
-            variant="body2"
-            sx={{
-              fontSize: '0.8125rem',
-              fontWeight: 400,
-              color: theme.palette.text.primary,
-              ml: 1,
-            }}
-          >
-            Perfil
-          </Typography>
-        </ListItemButton>
-      </Box>
-      
-      {/* Menú del perfil */}
-      <Menu
-        anchorEl={profileAnchorEl}
-        open={Boolean(profileAnchorEl)}
-        onClose={handleProfileMenuClose}
-        anchorOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
-        PaperProps={{
-          sx: {
-            mt: -1,
-            ml: 1,
-            minWidth: 200,
-            borderRadius: 2,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            border: `1px solid ${theme.palette.divider}`,
-          },
-        }}
-      >
-        <MenuItem 
-          onClick={handleEditProfile}
-          sx={{
-            py: 1.5,
-            px: 2,
-            gap: 1.5,
-            '&:hover': {
-              bgcolor: theme.palette.action.hover,
-            },
-          }}
-        >
-          <Edit sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-          <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-            <Typography variant="body2" sx={{ fontWeight: 500, color: theme.palette.text.primary }}>
-              Editar perfil
-            </Typography>
-            <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-              Actualizar información
-            </Typography>
-          </Box>
-        </MenuItem>
-        <Divider />
-        <MenuItem 
-          onClick={toggleTheme}
-          sx={{
-            py: 1.5,
-            px: 2,
-            gap: 1.5,
-            '&:hover': {
-              bgcolor: theme.palette.action.hover,
-            },
-          }}
-        >
-          {mode === 'light' ? (
-            <DarkMode sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-          ) : (
-            <LightMode sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-          )}
-          <Typography variant="body2" sx={{ fontWeight: 500, color: theme.palette.text.primary }}>
-            {mode === 'light' ? 'Modo oscuro' : 'Modo claro'}
-          </Typography>
-        </MenuItem>
-        <Divider />
-        <MenuItem 
-          onClick={handleLogout}
-          sx={{
-            py: 1.5,
-            px: 2,
-            gap: 1.5,
-            color: theme.palette.error.main,
-            '&:hover': {
-              bgcolor: theme.palette.mode === 'dark' ? `${theme.palette.error.main}20` : `${theme.palette.error.main}10`,
-            },
-          }}
-        >
-          <Logout sx={{ fontSize: 20 }} />
-          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-            Cerrar sesión
-          </Typography>
-        </MenuItem>
-      </Menu>
-      
-      {/* Modal de perfil */}
-      <ProfileModal 
-        open={profileModalOpen} 
-        onClose={() => setProfileModalOpen(false)}
-      />
     </Drawer>
   );
 };
