@@ -47,6 +47,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { taxiMonterricoColors } from '../../theme/colors';
 import ProfileModal from '../ProfileModal';
+import CreateMenuButton from '../CreateMenuButton';
 import api from '../../config/api';
 import { useTheme as useThemeContext } from '../../context/ThemeContext';
 
@@ -68,7 +69,6 @@ const Header: React.FC = () => {
   const [reminderCount, setReminderCount] = useState(0);
   const reminderButtonRef = useRef<HTMLButtonElement>(null);
   const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
-  const [createMenuAnchorEl, setCreateMenuAnchorEl] = useState<null | HTMLElement>(null);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -78,16 +78,7 @@ const Header: React.FC = () => {
     setAnchorEl(null);
   };
 
-  const handleCreateMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setCreateMenuAnchorEl(event.currentTarget);
-  };
-
-  const handleCreateMenuClose = () => {
-    setCreateMenuAnchorEl(null);
-  };
-
   const handleCreateItem = (type: string) => {
-    handleCreateMenuClose();
     switch (type) {
       case 'contact':
         navigate('/contacts');
@@ -96,12 +87,34 @@ const Header: React.FC = () => {
         navigate('/companies');
         break;
       case 'deal':
+      case 'opportunity':
         navigate('/deals');
         break;
       case 'task':
         navigate('/tasks');
         break;
       case 'ticket':
+        navigate('/tickets');
+        break;
+      case 'note':
+        // Para notas, podrías navegar a una página específica o abrir un modal
+        // Por ahora, navegamos a contacts donde se pueden crear notas
+        navigate('/contacts');
+        break;
+      case 'contract':
+        // Para contratos/suscripciones, podrías navegar a companies o crear una nueva página
+        navigate('/companies');
+        break;
+      case 'invoice':
+        // Para facturas, podrías crear una nueva página o navegar a deals
+        navigate('/deals');
+        break;
+      case 'payment':
+        // Para pagos, podrías crear una nueva página o navegar a deals
+        navigate('/deals');
+        break;
+      case 'incident':
+        // Para incidencias, podrías navegar a tickets
         navigate('/tickets');
         break;
       default:
@@ -524,126 +537,8 @@ const Header: React.FC = () => {
 
       {/* Elementos del lado derecho */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-        {/* Botón Crear */}
-        <Button
-          variant="contained"
-          startIcon={<Add sx={{ fontSize: 18 }} />}
-          onClick={handleCreateMenuOpen}
-          sx={{
-            bgcolor: '#5F9EA0',
-            color: 'white',
-            borderRadius: 2,
-            px: 2.5,
-            py: 0.875,
-            textTransform: 'none',
-            fontSize: '0.875rem',
-            fontWeight: 500,
-            boxShadow: '0 2px 8px rgba(95, 158, 160, 0.3)',
-            '&:hover': {
-              bgcolor: '#4a8a8c',
-              boxShadow: '0 4px 12px rgba(95, 158, 160, 0.4)',
-            },
-          }}
-        >
-          Crear
-        </Button>
-
-        {/* Menú desplegable de Crear */}
-        <Menu
-          anchorEl={createMenuAnchorEl}
-          open={Boolean(createMenuAnchorEl)}
-          onClose={handleCreateMenuClose}
-          PaperProps={{
-            sx: {
-              bgcolor: theme.palette.background.paper,
-              color: theme.palette.text.primary,
-              mt: 1,
-              minWidth: 220,
-              borderRadius: 2,
-              boxShadow: theme.shadows[3],
-              border: `1px solid ${theme.palette.divider}`,
-            },
-          }}
-          anchorOrigin={{
-            vertical: 'bottom',
-            horizontal: 'left',
-          }}
-          transformOrigin={{
-            vertical: 'top',
-            horizontal: 'left',
-          }}
-        >
-          <MenuItem 
-            onClick={() => handleCreateItem('contact')}
-            sx={{
-              py: 1.5,
-              px: 2,
-              gap: 1.5,
-              '&:hover': {
-                bgcolor: theme.palette.action.hover,
-              },
-            }}
-          >
-            <Person sx={{ fontSize: 20, color: theme.palette.primary.main }} />
-            <Typography variant="body2">Contacto</Typography>
-          </MenuItem>
-          <MenuItem 
-            onClick={() => handleCreateItem('company')}
-            sx={{
-              py: 1.5,
-              px: 2,
-              gap: 1.5,
-              '&:hover': {
-                bgcolor: theme.palette.action.hover,
-              },
-            }}
-          >
-            <Business sx={{ fontSize: 20, color: theme.palette.info.main }} />
-            <Typography variant="body2">Empresa</Typography>
-          </MenuItem>
-          <MenuItem 
-            onClick={() => handleCreateItem('deal')}
-            sx={{
-              py: 1.5,
-              px: 2,
-              gap: 1.5,
-              '&:hover': {
-                bgcolor: theme.palette.action.hover,
-              },
-            }}
-          >
-            <AttachMoney sx={{ fontSize: 20, color: theme.palette.success.main }} />
-            <Typography variant="body2">Negocio</Typography>
-          </MenuItem>
-          <MenuItem 
-            onClick={() => handleCreateItem('task')}
-            sx={{
-              py: 1.5,
-              px: 2,
-              gap: 1.5,
-              '&:hover': {
-                bgcolor: theme.palette.action.hover,
-              },
-            }}
-          >
-            <Assignment sx={{ fontSize: 20, color: theme.palette.warning.main }} />
-            <Typography variant="body2">Tarea</Typography>
-          </MenuItem>
-          <MenuItem 
-            onClick={() => handleCreateItem('ticket')}
-            sx={{
-              py: 1.5,
-              px: 2,
-              gap: 1.5,
-              '&:hover': {
-                bgcolor: theme.palette.action.hover,
-              },
-            }}
-          >
-            <Support sx={{ fontSize: 20, color: theme.palette.error.main }} />
-            <Typography variant="body2">Ticket</Typography>
-          </MenuItem>
-        </Menu>
+        {/* Botón Crear con menú desplegable */}
+        <CreateMenuButton onSelect={handleCreateItem} />
 
         <Divider orientation="vertical" flexItem sx={{ ml: 1, mr: 0.25, height: 32, alignSelf: 'center' }} />
 

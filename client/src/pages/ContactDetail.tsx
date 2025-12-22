@@ -33,6 +33,13 @@ import {
   Card,
   useTheme,
   Popover,
+  Drawer,
+  useMediaQuery,
+  Skeleton,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
 } from '@mui/material';
 import {
   MoreVert,
@@ -78,6 +85,14 @@ import {
   FormatAlignCenter,
   FormatAlignRight,
   FormatAlignJustify,
+  AutoAwesome,
+  CloudUpload,
+  Description,
+  Message,
+  AddTask,
+  ReportProblem,
+  Receipt,
+  TaskAlt,
 } from '@mui/icons-material';
 import api from '../config/api';
 import RichTextEditor from '../components/RichTextEditor';
@@ -138,9 +153,11 @@ const ContactDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const [contact, setContact] = useState<ContactDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
+  const [copilotOpen, setCopilotOpen] = useState(false);
   const [,] = useState<null | HTMLElement>(null);
   const [associatedDeals, setAssociatedDeals] = useState<any[]>([]);
   const [associatedCompanies, setAssociatedCompanies] = useState<any[]>([]);
@@ -2049,7 +2066,7 @@ const ContactDetail: React.FC = () => {
 
         </Box>
 
-        {/* Parte 2: Columna Derecha - Descripción y Actividades */}
+        {/* Parte 2: Columna Derecha - Tabs y Contenido */}
         <Box sx={{ 
           flex: 1,
           display: 'flex',
@@ -2057,39 +2074,259 @@ const ContactDetail: React.FC = () => {
           overflow: 'visible',
           minHeight: 0,
           width: { xs: '100%', md: 'auto' },
+          pr: isDesktop && copilotOpen ? '400px' : 0,
+          transition: 'padding-right 0.3s ease',
         }}>
-          <Tabs
-            value={activeTab}
-            onChange={(e, newValue) => setActiveTab(newValue)}
+          {/* ContactHeader */}
+          <Paper
+            elevation={0}
             sx={{
+              borderRadius: 3,
+              p: 2.5,
               mb: 2,
-              borderBottom: `1px solid ${theme.palette.divider}`,
-              minHeight: 'auto',
-              '& .MuiTabs-flexContainer': {
-                minHeight: 'auto',
-              },
-              '& .MuiTab-root': {
-                textTransform: 'none',
-                fontSize: '0.875rem',
-                fontWeight: 500,
-                minHeight: 'auto',
-                padding: '6px 16px',
-                paddingBottom: '4px',
-                lineHeight: 1.2,
-              },
-              '& .MuiTabs-indicator': {
-                bottom: 0,
-                height: 2,
-              },
+              bgcolor: theme.palette.background.paper,
+              border: `1px solid ${theme.palette.divider}`,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1.5,
             }}
           >
-            <Tab label="Descripción" />
-            <Tab label="Actividades" />
-          </Tabs>
+            {/* Parte superior: Avatar + Info a la izquierda, Botones a la derecha */}
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+              {/* Izquierda: Avatar + Nombre + Subtítulo */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
+                <Avatar
+                  src={contact.avatar || contactLogo}
+                  sx={{
+                    width: 56,
+                    height: 56,
+                    bgcolor: (contact.avatar || contactLogo) ? 'transparent' : taxiMonterricoColors.green,
+                    fontSize: '1.25rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  {!contact.avatar && !contactLogo && getInitials(contact.firstName, contact.lastName)}
+                </Avatar>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.25rem', mb: 0.5 }}>
+                    {contact.firstName} {contact.lastName}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                    {contact.jobTitle || contact.email || 'Sin información adicional'}
+                  </Typography>
+                </Box>
+              </Box>
 
-          {/* Cards de Fecha de Creación, Etapa del Ciclo de Vida y Última Actividad - Solo en pestaña Descripción */}
+              {/* Derecha: IconButtons de acción */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <Tooltip title="Crear nota">
+                  <IconButton
+                    onClick={handleOpenNote}
+                    sx={{
+                      color: theme.palette.text.secondary,
+                      '&:hover': {
+                        bgcolor: theme.palette.action.hover,
+                        color: theme.palette.text.primary,
+                      },
+                    }}
+                  >
+                    <Note />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Llamar">
+                  <IconButton
+                    onClick={handleOpenCall}
+                    sx={{
+                      color: theme.palette.text.secondary,
+                      '&:hover': {
+                        bgcolor: theme.palette.action.hover,
+                        color: theme.palette.text.primary,
+                      },
+                    }}
+                  >
+                    <Phone />
+                  </IconButton>
+                </Tooltip>
+                {contact.email && (
+                  <Tooltip title="Enviar email">
+                    <IconButton
+                      onClick={handleOpenEmail}
+                      sx={{
+                        color: theme.palette.text.secondary,
+                        '&:hover': {
+                          bgcolor: theme.palette.action.hover,
+                          color: theme.palette.text.primary,
+                        },
+                      }}
+                    >
+                      <Email />
+                    </IconButton>
+                  </Tooltip>
+                )}
+                <Tooltip title="Crear tarea">
+                  <IconButton
+                    onClick={handleOpenTask}
+                    sx={{
+                      color: theme.palette.text.secondary,
+                      '&:hover': {
+                        bgcolor: theme.palette.action.hover,
+                        color: theme.palette.text.primary,
+                      },
+                    }}
+                  >
+                    <Assignment />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Más opciones">
+                  <IconButton
+                    sx={{
+                      color: theme.palette.text.secondary,
+                      '&:hover': {
+                        bgcolor: theme.palette.action.hover,
+                        color: theme.palette.text.primary,
+                      },
+                    }}
+                  >
+                    <MoreVert />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+            </Box>
+
+            {/* Línea separadora */}
+            <Divider sx={{ borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)' }} />
+
+            {/* Parte inferior: Chips */}
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+              {contact.email && (
+                <Chip
+                  icon={<Email sx={{ fontSize: 14 }} />}
+                  label={contact.email}
+                  size="small"
+                  sx={{
+                    height: 24,
+                    fontSize: '0.75rem',
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+                    border: `1px solid ${theme.palette.divider}`,
+                    '& .MuiChip-icon': {
+                      color: theme.palette.text.secondary,
+                    },
+                  }}
+                />
+              )}
+              {contact.phone && (
+                <Chip
+                  icon={<Phone sx={{ fontSize: 14 }} />}
+                  label={contact.phone}
+                  size="small"
+                  sx={{
+                    height: 24,
+                    fontSize: '0.75rem',
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+                    border: `1px solid ${theme.palette.divider}`,
+                    '& .MuiChip-icon': {
+                      color: theme.palette.text.secondary,
+                    },
+                  }}
+                />
+              )}
+              <Chip
+                label={getStageLabel(contact.lifecycleStage)}
+                size="small"
+                sx={{
+                  height: 24,
+                  fontSize: '0.75rem',
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(46, 125, 50, 0.2)' : 'rgba(46, 125, 50, 0.1)',
+                  color: taxiMonterricoColors.green,
+                  fontWeight: 500,
+                }}
+              />
+              {contact.Owner && (
+                <Chip
+                  label={`Owner: ${contact.Owner.firstName} ${contact.Owner.lastName}`}
+                  size="small"
+                  sx={{
+                    height: 24,
+                    fontSize: '0.75rem',
+                    bgcolor: theme.palette.action.hover,
+                  }}
+                />
+              )}
+              {activities.length > 0 && activities[0].createdAt && (
+                <Chip
+                  label={`Última actividad: ${new Date(activities[0].createdAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`}
+                  size="small"
+                  sx={{
+                    height: 24,
+                    fontSize: '0.75rem',
+                    bgcolor: theme.palette.action.hover,
+                  }}
+                />
+              )}
+            </Box>
+          </Paper>
+
+          {/* Tabs estilo pill */}
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+            <Tabs
+              value={activeTab}
+              onChange={(e, newValue) => setActiveTab(newValue)}
+              sx={{
+                minHeight: 'auto',
+                '& .MuiTabs-flexContainer': {
+                  gap: 1,
+                },
+                '& .MuiTabs-indicator': {
+                  display: 'none',
+                },
+                '& .MuiTab-root': {
+                  textTransform: 'none',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  minHeight: 40,
+                  height: 40,
+                  paddingX: 2,
+                  borderRadius: '999px',
+                  bgcolor: 'transparent',
+                  color: theme.palette.text.secondary,
+                  transition: 'all 0.2s ease',
+                  '&.Mui-selected': {
+                    bgcolor: theme.palette.action.selected,
+                    color: theme.palette.text.primary,
+                    fontWeight: 700,
+                  },
+                  '&:hover': {
+                    bgcolor: theme.palette.action.hover,
+                  },
+                },
+              }}
+            >
+              <Tab label="Resumen" />
+              <Tab label="Actividad" />
+              <Tab label="Registros" />
+              <Tab label="Documentos" />
+            </Tabs>
+            <Tooltip title="Copiloto IA">
+              <IconButton
+                onClick={() => setCopilotOpen(!copilotOpen)}
+                sx={{
+                  ml: 2,
+                  color: copilotOpen ? taxiMonterricoColors.green : theme.palette.text.secondary,
+                  '&:hover': {
+                    bgcolor: theme.palette.action.hover,
+                  },
+                }}
+              >
+                <AutoAwesome />
+              </IconButton>
+            </Tooltip>
+          </Box>
+
+          {/* Tab Resumen - Cards pequeñas y Actividades Recientes */}
           {activeTab === 0 && (
-            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <>
+              {/* Cards de Fecha de Creación, Etapa del Ciclo de Vida y Última Actividad */}
+              <Box sx={{ display: 'flex', gap: 2, mb: 2, '& > *': { height: 'fit-content', minHeight: 120 } }}>
               <Card
                 sx={{
                   flex: 1,
@@ -2170,12 +2407,8 @@ const ContactDetail: React.FC = () => {
                     : 'No hay actividades'}
                 </Typography>
               </Card>
-            </Box>
-          )}
+              </Box>
 
-          {/* Cards de Actividades, Empresas y Negocios - Solo en pestaña Descripción */}
-          {activeTab === 0 && (
-            <>
               {/* Card de Actividades Recientes */}
               <Card sx={{ 
                 borderRadius: 2,
@@ -2302,8 +2535,12 @@ const ContactDetail: React.FC = () => {
                   </Typography>
                 )}
               </Card>
+            </>
+          )}
 
-              {/* Card de Empresas */}
+          {/* Tab Actividad - Vista de Actividades completa */}
+          {activeTab === 1 && (
+            <>
               <Card sx={{ 
                 borderRadius: 2,
                 boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
@@ -3043,8 +3280,10 @@ const ContactDetail: React.FC = () => {
             </>
           )}
 
-          {/* Vista de Actividades */}
-          {activeTab === 1 && (
+          {/* Tab Registros - Cards grandes de Empresas, Negocios, Tickets, Suscripciones y Pagos */}
+          {activeTab === 2 && (
+            <>
+              {/* Card de Empresas */}
             <Card sx={{ 
               borderRadius: 2,
               boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
@@ -4928,9 +5167,286 @@ const ContactDetail: React.FC = () => {
                     </Box>
                   )}
                 </Card>
+            </>
+          )}
+
+          {/* Tab Documentos */}
+          {activeTab === 3 && (
+            <>
+              <Card sx={{ 
+                borderRadius: 2,
+                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                bgcolor: theme.palette.background.paper,
+                px: 2,
+                py: 2,
+                mt: 2,
+              }}>
+                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
+                  Documentos
+                </Typography>
+                <Box sx={{ textAlign: 'center', py: 4 }}>
+                  <Description sx={{ fontSize: 48, color: '#e0e0e0', mb: 1 }} />
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Próximamente
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    startIcon={<CloudUpload />}
+                    sx={{
+                      borderColor: taxiMonterricoColors.green,
+                      color: taxiMonterricoColors.green,
+                      '&:hover': {
+                        borderColor: taxiMonterricoColors.green,
+                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                      },
+                    }}
+                  >
+                    Subir archivo
+                  </Button>
+                </Box>
+              </Card>
+            </>
           )}
         </Box>
       </Box>
+
+      {/* Drawer Copiloto IA */}
+      <Drawer
+        anchor="right"
+        open={copilotOpen}
+        onClose={() => setCopilotOpen(false)}
+        variant={isDesktop ? "persistent" : "temporary"}
+        PaperProps={{
+          sx: {
+            width: { xs: '100%', md: 400 },
+            borderLeft: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'}`,
+            bgcolor: theme.palette.mode === 'dark' 
+              ? theme.palette.background.paper 
+              : 'linear-gradient(180deg, rgba(249, 250, 251, 0.5) 0%, rgba(255, 255, 255, 1) 100%)',
+            backgroundImage: theme.palette.mode === 'dark' 
+              ? 'none' 
+              : 'linear-gradient(180deg, rgba(249, 250, 251, 0.5) 0%, rgba(255, 255, 255, 1) 100%)',
+            p: 2,
+            boxSizing: 'border-box',
+          },
+        }}
+      >
+        {/* Header del Drawer */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <AutoAwesome sx={{ color: taxiMonterricoColors.green, fontSize: 24 }} />
+            <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
+              Copiloto IA
+            </Typography>
+          </Box>
+          <IconButton
+            size="small"
+            onClick={() => setCopilotOpen(false)}
+            sx={{
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+              },
+            }}
+          >
+            <Close />
+          </IconButton>
+        </Box>
+
+        {/* Card 1: Muestra preocupantes */}
+        <Card 
+          sx={{ 
+            mb: 2, 
+            p: 2, 
+            bgcolor: theme.palette.mode === 'dark' 
+              ? 'rgba(255, 152, 0, 0.1)' 
+              : 'rgba(255, 152, 0, 0.05)',
+            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 152, 0, 0.15)'}`,
+            borderRadius: 2,
+          }}
+        >
+          <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 1.5,
+                bgcolor: theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 152, 0, 0.2)' 
+                  : 'rgba(255, 152, 0, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <ReportProblem sx={{ fontSize: 20, color: '#FF9800' }} />
+            </Box>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem' }}>
+                Muestra preocupantes
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
+                {associatedTickets.length > 0 
+                  ? `Este contacto tiene ${associatedTickets.length} ticket(s) abierto(s) que requieren atención.`
+                  : 'Sin datos suficientes para generar alertas en este momento.'}
+              </Typography>
+            </Box>
+          </Box>
+          <Button
+            variant="outlined"
+            size="small"
+            fullWidth
+            sx={{
+              mt: 1,
+              borderColor: '#FF9800',
+              color: '#FF9800',
+              textTransform: 'none',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              '&:hover': {
+                borderColor: '#FF9800',
+                backgroundColor: 'rgba(255, 152, 0, 0.08)',
+              },
+            }}
+            onClick={() => {
+              setActiveTab(2);
+              setCopilotOpen(false);
+            }}
+          >
+            Ver tickets
+          </Button>
+        </Card>
+
+        {/* Card 2: Próximas pérdidas */}
+        <Card 
+          sx={{ 
+            mb: 2, 
+            p: 2, 
+            bgcolor: theme.palette.mode === 'dark' 
+              ? 'rgba(244, 67, 54, 0.1)' 
+              : 'rgba(244, 67, 54, 0.05)',
+            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(244, 67, 54, 0.15)'}`,
+            borderRadius: 2,
+          }}
+        >
+          <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 1.5,
+                bgcolor: theme.palette.mode === 'dark' 
+                  ? 'rgba(244, 67, 54, 0.2)' 
+                  : 'rgba(244, 67, 54, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <Receipt sx={{ fontSize: 20, color: '#F44336' }} />
+            </Box>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem' }}>
+                Próximas pérdidas
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
+                {associatedTickets.length > 0 || contact.lifecycleStage === 'customer'
+                  ? 'Facturas pendientes o pagos atrasados detectados. Revisa el estado financiero.'
+                  : 'Sin datos suficientes para identificar riesgos financieros en este momento.'}
+              </Typography>
+            </Box>
+          </Box>
+          <Button
+            variant="outlined"
+            size="small"
+            fullWidth
+            sx={{
+              mt: 1,
+              borderColor: '#F44336',
+              color: '#F44336',
+              textTransform: 'none',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              '&:hover': {
+                borderColor: '#F44336',
+                backgroundColor: 'rgba(244, 67, 54, 0.08)',
+              },
+            }}
+            onClick={() => {
+              setActiveTab(2);
+              setCopilotOpen(false);
+            }}
+          >
+            Ver facturas
+          </Button>
+        </Card>
+
+        {/* Card 3: Manejo seguimiento */}
+        <Card 
+          sx={{ 
+            p: 2, 
+            bgcolor: theme.palette.mode === 'dark' 
+              ? 'rgba(46, 125, 50, 0.1)' 
+              : 'rgba(46, 125, 50, 0.05)',
+            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(46, 125, 50, 0.2)' : 'rgba(46, 125, 50, 0.15)'}`,
+            borderRadius: 2,
+          }}
+        >
+          <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+            <Box
+              sx={{
+                width: 40,
+                height: 40,
+                borderRadius: 1.5,
+                bgcolor: theme.palette.mode === 'dark' 
+                  ? 'rgba(46, 125, 50, 0.2)' 
+                  : 'rgba(46, 125, 50, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <TaskAlt sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+            </Box>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem' }}>
+                Manejo seguimiento
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
+                {activities.length > 0
+                  ? `Última actividad hace ${Math.floor((Date.now() - new Date(activities[0].createdAt).getTime()) / (1000 * 60 * 60 * 24))} días. Es momento de hacer seguimiento.`
+                  : 'Sin datos suficientes. Crea una tarea para iniciar el seguimiento.'}
+              </Typography>
+            </Box>
+          </Box>
+          <Button
+            variant="outlined"
+            size="small"
+            fullWidth
+            sx={{
+              mt: 1,
+              borderColor: taxiMonterricoColors.green,
+              color: taxiMonterricoColors.green,
+              textTransform: 'none',
+              fontSize: '0.875rem',
+              fontWeight: 500,
+              '&:hover': {
+                borderColor: taxiMonterricoColors.green,
+                backgroundColor: 'rgba(46, 125, 50, 0.08)',
+              },
+            }}
+            onClick={() => {
+              handleOpenTask();
+              setCopilotOpen(false);
+            }}
+          >
+            Crear tarea
+          </Button>
+        </Card>
+      </Drawer>
 
       {/* Mensaje de éxito */}
       {successMessage && (
