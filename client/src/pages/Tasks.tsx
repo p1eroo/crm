@@ -28,7 +28,7 @@ import {
   Paper,
   useTheme,
 } from '@mui/material';
-import { Add, Delete, Search, Assignment, CheckCircle, TrendingUp, Computer, Visibility } from '@mui/icons-material';
+import { Add, Delete, Search, Assignment, CheckCircle, TrendingUp, Computer, Visibility, Warning, Schedule, PendingActions } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 
@@ -64,11 +64,75 @@ const Tasks: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<{ id: number; isActivity?: boolean } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
   // Calcular estadísticas
-  const totalTasks = tasks.length;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const overdueTasks = tasks.filter(t => {
+    if (!t.dueDate) return false;
+    const dueDate = new Date(t.dueDate);
+    dueDate.setHours(0, 0, 0, 0);
+    return dueDate < today && t.status !== 'completed';
+  }).length;
+
+  const dueTodayTasks = tasks.filter(t => {
+    if (!t.dueDate) return false;
+    const dueDate = new Date(t.dueDate);
+    dueDate.setHours(0, 0, 0, 0);
+    return dueDate.getTime() === today.getTime();
+  }).length;
+
+  const pendingTasks = tasks.filter(t => t.status === 'not started').length;
   const completedTasks = tasks.filter(t => t.status === 'completed').length;
-  const inProgressTasks = tasks.filter(t => t.status === 'in progress').length;
+
+  // Filtrar tareas según el filtro activo y búsqueda
+  const filteredTasks = tasks.filter(t => {
+    // Aplicar filtro de categoría
+    if (activeFilter) {
+      switch (activeFilter) {
+        case 'overdue':
+          if (!t.dueDate) return false;
+          const dueDate = new Date(t.dueDate);
+          dueDate.setHours(0, 0, 0, 0);
+          if (dueDate >= today || t.status === 'completed') return false;
+          break;
+        case 'dueToday':
+          if (!t.dueDate) return false;
+          const dueDateToday = new Date(t.dueDate);
+          dueDateToday.setHours(0, 0, 0, 0);
+          if (dueDateToday.getTime() !== today.getTime()) return false;
+          break;
+        case 'pending':
+          if (t.status !== 'not started') return false;
+          break;
+        case 'completed':
+          if (t.status !== 'completed') return false;
+          break;
+        default:
+          break;
+      }
+    }
+    
+    // Aplicar búsqueda
+    if (search) {
+      const searchLower = search.toLowerCase();
+      const titleMatch = (t.title || t.subject || '').toLowerCase().includes(searchLower);
+      const typeMatch = t.type?.toLowerCase().includes(searchLower);
+      const statusMatch = t.status?.toLowerCase().includes(searchLower);
+      const priorityMatch = t.priority?.toLowerCase().includes(searchLower);
+      const assignedMatch = (t.AssignedTo || t.User) 
+        ? `${t.AssignedTo?.firstName || t.User?.firstName || ''} ${t.AssignedTo?.lastName || t.User?.lastName || ''}`.toLowerCase().includes(searchLower)
+        : false;
+      
+      if (!titleMatch && !typeMatch && !statusMatch && !priorityMatch && !assignedMatch) {
+        return false;
+      }
+    }
+    
+    return true;
+  });
 
   // Función para obtener iniciales
   const getInitials = (title: string) => {
@@ -78,6 +142,17 @@ const Tasks: React.FC = () => {
       return `${words[0][0]}${words[1][0]}`.toUpperCase();
     }
     return title.substring(0, 2).toUpperCase();
+  };
+
+  // Función para obtener el label de prioridad en español
+  const getPriorityLabel = (priority: string) => {
+    const priorityMap: { [key: string]: string } = {
+      'low': 'Baja',
+      'medium': 'Media',
+      'high': 'Alta',
+      'urgent': 'Urgente',
+    };
+    return priorityMap[priority?.toLowerCase()] || priority;
   };
 
   // Función para vista previa
@@ -246,70 +321,172 @@ const Tasks: React.FC = () => {
         borderRadius: 6,
         boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
         bgcolor: theme.palette.background.paper,
-        mb: 4,
+        mb: 2.5,
       }}>
         <CardContent sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'stretch', flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
-            {/* Total Tasks */}
-            <Box sx={{ 
-              flex: { xs: '1 1 100%', sm: 1 },
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 4,
-              px: 1,
-              py: 1,
-              borderRadius: 1.5,
-              bgcolor: 'transparent',
-            }}>
+          <Box sx={{ display: 'flex', alignItems: 'stretch', flexWrap: { xs: 'wrap', sm: 'nowrap' }, gap: 2 }}>
+            {/* Vencidas */}
+            <Box 
+              onClick={() => setActiveFilter(activeFilter === 'overdue' ? null : 'overdue')}
+              sx={{ 
+                flex: { xs: '1 1 100%', sm: 1 },
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                px: 1,
+                py: 1,
+                borderRadius: 1.5,
+                bgcolor: activeFilter === 'overdue' ? theme.palette.action.hover : 'transparent',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
+                border: activeFilter === 'overdue' ? `1px solid ${theme.palette.divider}` : '1px solid transparent',
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                },
+              }}
+            >
               <Box sx={{ 
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 120,
-                height: 120,
+                width: 95,
+                height: 95,
                 borderRadius: '50%',
-                bgcolor: `${taxiMonterricoColors.green}15`,
+                bgcolor: `${theme.palette.error.main}15`,
                 flexShrink: 0,
               }}>
-                <Assignment sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
+                <Warning sx={{ color: theme.palette.error.main, fontSize: 60 }} />
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
                 <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
-                  Total Tareas
+                  Vencidas
                 </Typography>
                 <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
-                  {totalTasks.toLocaleString()}
+                  {overdueTasks.toLocaleString()}
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <TrendingUp sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
-                  <Typography variant="caption" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '1rem' }}>
-                    5% este mes
-                  </Typography>
-                </Box>
               </Box>
             </Box>
 
             <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
 
-            {/* Completed Tasks */}
-            <Box sx={{ 
-              flex: { xs: '1 1 100%', sm: 1 },
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 4,
-              px: 1,
-              py: 1,
-              borderRadius: 1.5,
-              bgcolor: 'transparent',
-            }}>
+            {/* Vencen hoy */}
+            <Box 
+              onClick={() => setActiveFilter(activeFilter === 'dueToday' ? null : 'dueToday')}
+              sx={{ 
+                flex: { xs: '1 1 100%', sm: 1 },
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                px: 1,
+                py: 1,
+                borderRadius: 1.5,
+                bgcolor: activeFilter === 'dueToday' ? theme.palette.action.hover : 'transparent',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
+                border: activeFilter === 'dueToday' ? `1px solid ${theme.palette.divider}` : '1px solid transparent',
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                },
+              }}
+            >
               <Box sx={{ 
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 120,
-                height: 120,
+                width: 95,
+                height: 95,
+                borderRadius: '50%',
+                bgcolor: `${taxiMonterricoColors.orange}15`,
+                flexShrink: 0,
+              }}>
+                <Schedule sx={{ color: taxiMonterricoColors.orange, fontSize: 60 }} />
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                  Vencen hoy
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                  {dueTodayTasks.toLocaleString()}
+                </Typography>
+              </Box>
+            </Box>
+
+            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
+
+            {/* Pendientes */}
+            <Box 
+              onClick={() => setActiveFilter(activeFilter === 'pending' ? null : 'pending')}
+              sx={{ 
+                flex: { xs: '1 1 100%', sm: 1 },
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                px: 1,
+                py: 1,
+                borderRadius: 1.5,
+                bgcolor: activeFilter === 'pending' ? theme.palette.action.hover : 'transparent',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
+                border: activeFilter === 'pending' ? `1px solid ${theme.palette.divider}` : '1px solid transparent',
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                },
+              }}
+            >
+              <Box sx={{ 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 95,
+                height: 95,
+                borderRadius: '50%',
+                bgcolor: `${theme.palette.warning.main}15`,
+                flexShrink: 0,
+              }}>
+                <PendingActions sx={{ color: theme.palette.warning.main, fontSize: 60 }} />
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                  Pendientes
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                  {pendingTasks.toLocaleString()}
+                </Typography>
+              </Box>
+            </Box>
+
+            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
+
+            {/* Completadas */}
+            <Box 
+              onClick={() => setActiveFilter(activeFilter === 'completed' ? null : 'completed')}
+              sx={{ 
+                flex: { xs: '1 1 100%', sm: 1 },
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                px: 1,
+                py: 1,
+                borderRadius: 1.5,
+                bgcolor: activeFilter === 'completed' ? theme.palette.action.hover : 'transparent',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
+                border: activeFilter === 'completed' ? `1px solid ${theme.palette.divider}` : '1px solid transparent',
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                },
+              }}
+            >
+              <Box sx={{ 
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 95,
+                height: 95,
                 borderRadius: '50%',
                 bgcolor: `${taxiMonterricoColors.green}15`,
                 flexShrink: 0,
@@ -318,75 +495,11 @@ const Tasks: React.FC = () => {
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
                 <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
-                  Tareas Completadas
+                  Completadas
                 </Typography>
                 <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
                   {completedTasks.toLocaleString()}
                 </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <TrendingUp sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
-                  <Typography variant="caption" sx={{ color: taxiMonterricoColors.green, fontWeight: 500, fontSize: '1rem' }}>
-                    2% este mes
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
-
-            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
-
-            {/* In Progress */}
-            <Box sx={{ 
-              flex: { xs: '1 1 100%', sm: 1 },
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 4,
-              px: 1,
-              py: 1,
-              borderRadius: 1.5,
-              bgcolor: 'transparent',
-            }}>
-              <Box sx={{ 
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 120,
-                height: 120,
-                borderRadius: '50%',
-                bgcolor: `${taxiMonterricoColors.green}15`,
-                flexShrink: 0,
-              }}>
-                <Computer sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
-                  En Progreso
-                </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
-                  {inProgressTasks.toLocaleString()}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: -0.75 }}>
-                  {Array.from({ length: Math.min(5, totalTasks) }).map((_, idx) => {
-                    const task = tasks[idx];
-                    return (
-                      <Avatar
-                        key={idx}
-                        sx={{
-                          width: 36,
-                          height: 36,
-                          border: `2px solid ${theme.palette.background.paper}`,
-                          ml: idx > 0 ? -0.75 : 0,
-                          bgcolor: taxiMonterricoColors.green,
-                          fontSize: '0.875rem',
-                          fontWeight: 600,
-                          zIndex: 5 - idx,
-                        }}
-                      >
-                        {task ? getInitials(task.title || task.subject || '') : String.fromCharCode(65 + idx)}
-                      </Avatar>
-                    );
-                  })}
-                </Box>
               </Box>
             </Box>
           </Box>
@@ -405,24 +518,6 @@ const Tasks: React.FC = () => {
             <Box>
               <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.25 }}>
                 Todas las Tareas
-              </Typography>
-              <Typography
-                component="a"
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                }}
-                sx={{
-                  fontSize: '0.875rem',
-                  color: theme.palette.primary.main,
-                  textDecoration: 'none',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    textDecoration: 'underline',
-                  },
-                }}
-              >
-                Tareas Completadas
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -505,6 +600,10 @@ const Tasks: React.FC = () => {
             overflowX: 'auto',
             overflowY: 'hidden',
             maxWidth: '100%',
+            borderRadius: 0,
+            '& .MuiPaper-root': {
+              borderRadius: 0,
+            },
             '&::-webkit-scrollbar': {
               height: 8,
             },
@@ -522,15 +621,20 @@ const Tasks: React.FC = () => {
         >
           <Table sx={{ minWidth: { xs: 800, md: 'auto' } }}>
             <TableHead>
-              <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa' }}>
+              <TableRow sx={{ 
+                bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa',
+                '& .MuiTableCell-head:first-of-type': {
+                  borderTopLeftRadius: 0,
+                },
+                '& .MuiTableCell-head:last-of-type': {
+                  borderTopRightRadius: 0,
+                },
+              }}>
                 <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '30%' } }}>
                   Nombre de la Tarea
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
                   Tipo
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
-                  Estado
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
                   Prioridad
@@ -547,7 +651,7 @@ const Tasks: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {tasks.map((task) => (
+              {filteredTasks.map((task) => (
                 <TableRow 
                   key={task.id}
                   hover
@@ -592,32 +696,9 @@ const Tasks: React.FC = () => {
                       {task.type}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
-                    <Chip
-                      label={task.status}
-                      size="small"
-                      sx={{ 
-                        fontWeight: 500,
-                        fontSize: { xs: '0.7rem', md: '0.75rem' },
-                        height: { xs: 20, md: 24 },
-                        bgcolor: task.status === 'completed' 
-                          ? '#E8F5E9' 
-                          : task.status === 'in progress'
-                          ? '#E3F2FD'
-                          : '#FFF3E0',
-                        color: task.status === 'completed'
-                          ? '#2E7D32'
-                          : task.status === 'in progress'
-                          ? '#1976D2'
-                          : '#E65100',
-                        border: 'none',
-                        borderRadius: 1,
-                      }}
-                    />
-                  </TableCell>
                   <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
                     <Chip
-                      label={task.priority}
+                      label={getPriorityLabel(task.priority)}
                       size="small"
                       sx={{ 
                         fontWeight: 500,

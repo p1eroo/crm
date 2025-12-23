@@ -36,13 +36,7 @@ import {
   Assignment,
   DarkMode,
   LightMode,
-  Edit,
   Logout,
-  Add,
-  Support,
-  Description,
-  CheckBox,
-  ConfirmationNumber,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { taxiMonterricoColors } from '../../theme/colors';
@@ -310,7 +304,7 @@ const Header: React.FC = () => {
         <Box
           ref={searchInputRef}
           sx={{
-            bgcolor: '#ffffff',
+            bgcolor: theme.palette.background.paper,
             borderRadius: 1,
             px: 1.5,
             py: 0.75,
@@ -319,8 +313,10 @@ const Header: React.FC = () => {
             transition: 'all 0.2s ease',
             border: `1px solid ${theme.palette.divider}`,
             '&:focus-within': {
-              bgcolor: '#ffffff',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+              bgcolor: theme.palette.background.paper,
+              boxShadow: theme.palette.mode === 'dark' 
+                ? '0 2px 8px rgba(0,0,0,0.3)' 
+                : '0 2px 4px rgba(0,0,0,0.1)',
               borderColor: taxiMonterricoColors.green,
             },
           }}
@@ -383,7 +379,7 @@ const Header: React.FC = () => {
               {/* Contactos */}
               {searchResults.contacts && searchResults.contacts.length > 0 && (
                 <>
-                  <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)' }}>
+                  <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
                     <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
                       Contactos
                     </Typography>
@@ -418,7 +414,7 @@ const Header: React.FC = () => {
               {searchResults.companies && searchResults.companies.length > 0 && (
                 <>
                   {(searchResults.contacts?.length > 0) && <Divider />}
-                  <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)' }}>
+                  <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
                     <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
                       Empresas
                     </Typography>
@@ -453,7 +449,7 @@ const Header: React.FC = () => {
               {searchResults.deals && searchResults.deals.length > 0 && (
                 <>
                   {((searchResults.contacts?.length > 0) || (searchResults.companies?.length > 0)) && <Divider />}
-                  <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)' }}>
+                  <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
                     <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
                       Negocios
                     </Typography>
@@ -488,7 +484,7 @@ const Header: React.FC = () => {
               {searchResults.tasks && searchResults.tasks.length > 0 && (
                 <>
                   {((searchResults.contacts?.length > 0) || (searchResults.companies?.length > 0) || (searchResults.deals?.length > 0)) && <Divider />}
-                  <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)' }}>
+                  <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
                     <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
                       Tareas
                     </Typography>
@@ -808,7 +804,7 @@ const Header: React.FC = () => {
             color: theme.palette.text.primary,
             mt: 1,
             minWidth: 200,
-            borderRadius: 2,
+            borderRadius: 1,
             boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
             border: `1px solid ${theme.palette.divider}`,
             '& .MuiMenuItem-root': {
@@ -820,26 +816,66 @@ const Header: React.FC = () => {
           },
         }}
       >
+        <Box sx={{ px: 2.5, pt: 2.5, pb: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <Avatar
+              src={user?.avatar}
+              sx={{
+                width: 48,
+                height: 48,
+                bgcolor: taxiMonterricoColors.green,
+              }}
+            >
+              {user?.firstName?.[0]}{user?.lastName?.[0]}
+            </Avatar>
+            <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  fontWeight: 500, 
+                  color: theme.palette.text.primary,
+                  fontSize: '0.875rem',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {user?.firstName && user?.lastName 
+                  ? `${user.firstName} ${user.lastName}`
+                  : user?.email || 'Usuario'}
+              </Typography>
+              <Typography 
+                variant="caption" 
+                sx={{ 
+                  color: theme.palette.text.secondary,
+                  fontSize: '0.75rem',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {user?.email}
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+        <Divider />
         <MenuItem 
           onClick={handleProfileClick}
           sx={{
             py: 1.5,
-            px: 2,
+            px: 3,
             gap: 1.5,
+            mt: 1,
             '&:hover': {
               bgcolor: theme.palette.action.hover,
             },
           }}
         >
-          <Edit sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-          <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-            <Typography variant="body2" sx={{ fontWeight: 500, color: theme.palette.text.primary }}>
-              Editar perfil
-            </Typography>
-            <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-              Actualizar información
-            </Typography>
-          </Box>
+          <Person sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
+          <Typography variant="body2" sx={{ fontWeight: 500, color: theme.palette.text.primary }}>
+            Editar perfil
+          </Typography>
         </MenuItem>
         <Divider />
         <MenuItem 
@@ -850,7 +886,7 @@ const Header: React.FC = () => {
           }}
           sx={{
             py: 1.5,
-            px: 2,
+            px: 3,
             gap: 1.5,
             color: theme.palette.error.main,
             '&:hover': {

@@ -7,10 +7,6 @@ import {
   ListItemIcon,
   Box,
   useTheme,
-  Avatar,
-  Menu,
-  MenuItem,
-  Divider,
   Typography,
   IconButton,
 } from '@mui/material';
@@ -29,7 +25,6 @@ import {
 } from '@mui/icons-material';
 import { taxiMonterricoColors } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
-import { useTheme as useThemeContext } from '../../context/ThemeContext';
 import { useSidebar } from '../../context/SidebarContext';
 import logo from '../../assets/tm_logo.png';
 
@@ -53,7 +48,6 @@ const Sidebar: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
   const theme = useTheme();
-  const { mode, toggleTheme } = useThemeContext();
   const { open, toggleSidebar } = useSidebar();
 
   if (!open) {
@@ -293,10 +287,7 @@ const Sidebar: React.FC = () => {
       {/* Configuración */}
       <Box sx={{ width: '100%', px: 1, mb: 1 }}>
         <ListItemButton
-          onClick={() => {
-            // Aquí puedes agregar la navegación o acción para configuración
-            console.log('Configuración');
-          }}
+          onClick={() => navigate('/settings')}
           sx={{
             minHeight: 40,
             borderRadius: 2,

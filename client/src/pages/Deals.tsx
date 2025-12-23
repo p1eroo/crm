@@ -29,6 +29,7 @@ import { taxiMonterricoColors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
+import negocioLogo from '../assets/negocio.png';
 
 interface Deal {
   id: number;
@@ -264,7 +265,7 @@ const Deals: React.FC = () => {
     }
     // Lead inactivo - Gris oscuro
     else if (stage === 'lead_inactivo') {
-      return { bg: '#F5F5F5', color: '#616161' };
+      return { bg: theme.palette.action.hover, color: theme.palette.text.secondary };
     }
     // Por defecto
     return { bg: '#E3F2FD', color: '#1976D2' };
@@ -294,10 +295,10 @@ const Deals: React.FC = () => {
     }
     // Lead inactivo
     else if (stage === 'lead_inactivo') {
-      return theme.palette.mode === 'dark' ? 'rgba(158, 158, 158, 0.1)' : '#F5F5F5';
+      return theme.palette.action.hover;
     }
     // Por defecto
-    return theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff';
+    return theme.palette.background.paper;
   };
 
   useEffect(() => {
@@ -707,7 +708,7 @@ const Deals: React.FC = () => {
                 sx={{
                   borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
                   color: theme.palette.text.primary,
-                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                  bgcolor: theme.palette.action.hover,
                   '&:hover': {
                     borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
                     bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
@@ -731,7 +732,7 @@ const Deals: React.FC = () => {
                       ? theme.palette.primary.main 
                       : theme.palette.mode === 'dark' 
                       ? 'rgba(255, 255, 255, 0.05)' 
-                      : '#F5F5F5',
+                      : theme.palette.action.hover,
                     color: viewMode === 'list' 
                       ? 'white' 
                       : theme.palette.text.secondary,
@@ -755,7 +756,7 @@ const Deals: React.FC = () => {
                       ? theme.palette.primary.main 
                       : theme.palette.mode === 'dark' 
                       ? 'rgba(255, 255, 255, 0.05)' 
-                      : '#F5F5F5',
+                      : theme.palette.action.hover,
                     color: viewMode === 'funnel' 
                       ? 'white' 
                       : theme.palette.text.secondary,
@@ -803,7 +804,7 @@ const Deals: React.FC = () => {
           <Box
             component="div"
           sx={{ 
-              bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+              bgcolor: theme.palette.background.paper,
               borderRadius: '8px 8px 0 0',
               overflow: 'hidden',
               display: 'grid',
@@ -844,8 +845,10 @@ const Deals: React.FC = () => {
               <Box
                   key={deal.id}
                 component="div"
+                onClick={() => navigate(`/deals/${deal.id}`)}
                   sx={{ 
                   bgcolor: getStageCardColor(deal.stage),
+                  cursor: 'pointer',
                   transition: 'all 0.2s ease',
                   display: 'grid',
                   gridTemplateColumns: { xs: 'repeat(6, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 1fr 0.7fr' },
@@ -862,28 +865,33 @@ const Deals: React.FC = () => {
                     bgcolor: getStageCardColor(deal.stage),
                     opacity: 0.9,
                     boxShadow: theme.palette.mode === 'dark' ? '0 2px 6px rgba(0,0,0,0.3)' : '0 2px 6px rgba(0,0,0,0.1)',
+                    transform: 'translateY(-1px)',
                   },
                 }}
               >
                 <Box sx={{ py: { xs: 0.5, md: 0.75 }, px: { xs: 0.75, md: 1 }, display: 'flex', alignItems: 'center' }}>
                   <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1, md: 1.5 }, width: '100%' }}>
                       <Avatar
+                        src={negocioLogo}
                         sx={{
                           width: { xs: 32, md: 40 },
                           height: { xs: 32, md: 40 },
-                          bgcolor: taxiMonterricoColors.green,
+                          bgcolor: negocioLogo ? 'transparent' : taxiMonterricoColors.green,
                           fontSize: { xs: '0.75rem', md: '0.875rem' },
                           fontWeight: 600,
                           boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
                           flexShrink: 0,
                         }}
                       >
-                        {getInitials(deal.name, undefined)}
+                        {!negocioLogo && getInitials(deal.name, undefined)}
                       </Avatar>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography 
                         variant="body2" 
-                        onClick={() => navigate(`/deals/${deal.id}`)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/deals/${deal.id}`);
+                        }}
                         sx={{ 
                           fontWeight: 500, 
                           color: theme.palette.text.primary,
@@ -893,11 +901,6 @@ const Deals: React.FC = () => {
                           whiteSpace: 'nowrap',
                           mb: 0.25,
                           maxWidth: { xs: '150px', md: '200px' },
-                          cursor: 'pointer',
-                          '&:hover': {
-                            color: '#20B2AA',
-                            textDecoration: 'underline',
-                          },
                         }}
                         title={deal.name}
                       >
@@ -1098,7 +1101,7 @@ const Deals: React.FC = () => {
                             padding: { xs: 0.5, md: 1 },
                             '&:hover': {
                               color: '#d32f2f',
-                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.1)' : '#ffebee',
+                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.15)' : '#ffebee',
                             },
                           }}
                         >
@@ -1113,7 +1116,7 @@ const Deals: React.FC = () => {
               <Box sx={{ 
                 textAlign: 'center',
                 py: 8,
-                bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+                bgcolor: theme.palette.background.paper,
                 borderRadius: 0,
                 border: 'none',
                 boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
@@ -1169,7 +1172,7 @@ const Deals: React.FC = () => {
           <Box
             sx={{
               width: { xs: '100%', md: 400 },
-              bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+              bgcolor: theme.palette.background.paper,
               borderLeft: { xs: 'none', md: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}` },
               borderTop: { xs: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`, md: 'none' },
               borderRadius: 2,
@@ -1258,7 +1261,7 @@ const Deals: React.FC = () => {
                     px: 2,
                     cursor: 'pointer',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                      bgcolor: theme.palette.action.hover,
                     },
                   }}
                 >
@@ -1333,7 +1336,7 @@ const Deals: React.FC = () => {
                     px: 2,
                     cursor: 'pointer',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                      bgcolor: theme.palette.action.hover,
                     },
                   }}
                 >
@@ -1663,7 +1666,7 @@ const Deals: React.FC = () => {
                         sx={{
                           p: 2,
                           textAlign: 'center',
-                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.02)' : '#FFFFFF',
+                          bgcolor: theme.palette.action.hover,
                           border: `1px dashed ${theme.palette.divider}`,
                           borderRadius: 1.5,
                           mt: 0.5,

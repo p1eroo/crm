@@ -9,6 +9,7 @@ import {
   Dialog,
   DialogContent,
   DialogActions,
+  DialogTitle,
   MenuItem,
   Chip,
   CircularProgress,
@@ -23,6 +24,7 @@ import {
   Radio,
   RadioGroup,
   FormControlLabel,
+  InputAdornment,
 } from '@mui/material';
 import { 
   Add, 
@@ -55,6 +57,7 @@ import {
   YouTube,
   Bolt,
   Remove,
+  Warning,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../config/api';
@@ -133,6 +136,7 @@ const Contacts: React.FC = () => {
     phone: '',
     jobTitle: '',
     lifecycleStage: 'lead',
+    companyId: '',
     dni: '',
     cee: '',
     address: '',
@@ -140,6 +144,24 @@ const Contacts: React.FC = () => {
     state: '',
     country: '',
   });
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+  const [createCompanyDialogOpen, setCreateCompanyDialogOpen] = useState(false);
+  const [companyFormData, setCompanyFormData] = useState({
+    name: '',
+    domain: '',
+    industry: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    country: '',
+    ruc: '',
+    lifecycleStage: 'lead',
+    ownerId: user?.id || null,
+  });
+  const [loadingRuc, setLoadingRuc] = useState(false);
+  const [rucError, setRucError] = useState('');
   const [idType, setIdType] = useState<'dni' | 'cee'>('dni');
   const [loadingDni, setLoadingDni] = useState(false);
   const [dniError, setDniError] = useState('');
@@ -333,13 +355,26 @@ const Contacts: React.FC = () => {
     }
   }, [search]);
 
+  const fetchCompanies = useCallback(async () => {
+    try {
+      setLoadingCompanies(true);
+      const response = await api.get('/companies');
+      setCompanies(response.data.companies || response.data || []);
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+    } finally {
+      setLoadingCompanies(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchContacts();
+    fetchCompanies();
     // Solo intentar obtener usuarios si el usuario actual es admin
     if (user?.role === 'admin') {
       fetchUsers();
     }
-  }, [fetchContacts, fetchUsers, user?.role]);
+  }, [fetchContacts, fetchUsers, fetchCompanies, user?.role]);
 
   const handleOpen = (contact?: Contact) => {
     setFormErrors({});
@@ -352,12 +387,13 @@ const Contacts: React.FC = () => {
         phone: contact.phone || '',
         jobTitle: contact.jobTitle || '',
         lifecycleStage: contact.lifecycleStage,
-    dni: '',
-    cee: '',
-    address: contact.address || '',
-    city: contact.city || '',
-    state: contact.state || '',
-    country: contact.country || '',
+        companyId: contact.Company?.id?.toString() || '',
+        dni: '',
+        cee: '',
+        address: contact.address || '',
+        city: contact.city || '',
+        state: contact.state || '',
+        country: contact.country || '',
       });
     } else {
       setEditingContact(null);
@@ -368,6 +404,7 @@ const Contacts: React.FC = () => {
         phone: '',
         jobTitle: '',
         lifecycleStage: 'lead',
+        companyId: '',
         dni: '',
         cee: '',
         address: '',
@@ -548,8 +585,104 @@ const Contacts: React.FC = () => {
       errors.email = 'El email no es válido';
     }
 
+    if (!formData.companyId) {
+      errors.companyId = 'La empresa principal es requerida';
+    }
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  const handleSearchRuc = async () => {
+    if (!companyFormData.ruc || companyFormData.ruc.length < 11) {
+      setRucError('El RUC debe tener 11 dígitos');
+      return;
+    }
+
+    setLoadingRuc(true);
+    setRucError('');
+
+    try {
+      const factilizaToken = process.env.REACT_APP_FACTILIZA_TOKEN || '';
+      
+      if (!factilizaToken) {
+        setRucError('Token de API no configurado');
+        setLoadingRuc(false);
+        return;
+      }
+
+      const response = await axios.get(
+        `https://api.factiliza.com/v1/ruc/info/${companyFormData.ruc}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${factilizaToken}`,
+          },
+        }
+      );
+
+      if (response.data.success && response.data.data) {
+        const data = response.data.data;
+        setCompanyFormData({
+          ...companyFormData,
+          name: data.nombre_o_razon_social || '',
+          industry: data.tipo_contribuyente || '',
+          address: data.direccion_completa || data.direccion || '',
+          city: data.distrito || '',
+          state: data.provincia || '',
+          country: data.departamento || 'Perú',
+        });
+      } else {
+        setRucError('No se encontró información para este RUC');
+      }
+    } catch (error: any) {
+      console.error('Error al buscar RUC:', error);
+      if (error.response?.status === 400) {
+        setRucError('RUC no válido o no encontrado');
+      } else if (error.response?.status === 401) {
+        setRucError('Error de autenticación con la API');
+      } else {
+        setRucError('Error al consultar el RUC. Por favor, intente nuevamente');
+      }
+    } finally {
+      setLoadingRuc(false);
+    }
+  };
+
+  const handleCreateCompany = async () => {
+    if (!companyFormData.name.trim()) {
+      return;
+    }
+
+    try {
+      const response = await api.post('/companies', {
+        ...companyFormData,
+        ownerId: companyFormData.ownerId || user?.id || null,
+      });
+      
+      // Agregar la nueva empresa a la lista y seleccionarla
+      setCompanies([...companies, response.data]);
+      setFormData(prev => ({ ...prev, companyId: response.data.id.toString() }));
+      
+      // Cerrar el diálogo y limpiar el formulario
+      setCreateCompanyDialogOpen(false);
+      setCompanyFormData({
+        name: '',
+        domain: '',
+        industry: '',
+        phone: '',
+        address: '',
+        city: '',
+        state: '',
+        country: '',
+        ruc: '',
+        lifecycleStage: 'lead',
+        ownerId: user?.id || null,
+      });
+      setRucError('');
+    } catch (error: any) {
+      console.error('Error creating company:', error);
+      setRucError(error.response?.data?.error || 'Error al crear la empresa');
+    }
   };
 
   const handleSubmit = async () => {
@@ -558,10 +691,16 @@ const Contacts: React.FC = () => {
     }
 
     try {
+      // Preparar los datos para enviar, convirtiendo companyId a número
+      const submitData = {
+        ...formData,
+        companyId: formData.companyId ? parseInt(formData.companyId) : undefined,
+      };
+      
       if (editingContact) {
-        await api.put(`/contacts/${editingContact.id}`, formData);
+        await api.put(`/contacts/${editingContact.id}`, submitData);
       } else {
-        await api.post('/contacts', formData);
+        await api.post('/contacts', submitData);
       }
       setFormErrors({});
       handleClose();
@@ -955,7 +1094,7 @@ const Contacts: React.FC = () => {
           <Box
             component="div"
             sx={{
-              bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+              bgcolor: theme.palette.mode === 'dark' ? '#152030' : theme.palette.background.paper,
               borderRadius: '8px 8px 0 0',
               overflow: 'hidden',
               display: 'grid',
@@ -998,7 +1137,7 @@ const Contacts: React.FC = () => {
               component="div"
               onClick={() => navigate(`/contacts/${contact.id}`)}
               sx={{
-                bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+                bgcolor: theme.palette.mode === 'dark' ? '#152030' : theme.palette.background.paper,
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 display: 'grid',
@@ -1013,7 +1152,7 @@ const Contacts: React.FC = () => {
                 px: { xs: 1, md: 1.5 },
                 py: { xs: 1, md: 1.25 },
                 '&:hover': {
-                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 1)' : '#ffffff',
+                  bgcolor: theme.palette.mode === 'dark' ? '#1A2740' : theme.palette.background.paper,
                   boxShadow: theme.palette.mode === 'dark' ? '0 2px 6px rgba(0,0,0,0.3)' : '0 2px 6px rgba(0,0,0,0.1)',
                   transform: 'translateY(-1px)',
                 },
@@ -1157,7 +1296,7 @@ const Contacts: React.FC = () => {
                           padding: { xs: 0.5, md: 1 },
                           '&:hover': {
                             color: '#d32f2f',
-                            bgcolor: '#ffebee',
+                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.15)' : '#ffebee',
                           },
                         }}
                       >
@@ -1172,7 +1311,7 @@ const Contacts: React.FC = () => {
             <Box sx={{ 
               textAlign: 'center',
               py: 8,
-              bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+              bgcolor: theme.palette.mode === 'dark' ? '#152030' : theme.palette.background.paper,
               borderRadius: 0,
               border: 'none',
               boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
@@ -1266,7 +1405,7 @@ const Contacts: React.FC = () => {
                           fontWeight: page === pageNum - 1 ? 600 : 400,
                           borderRadius: 1,
                           '&:hover': {
-                            bgcolor: page === pageNum - 1 ? taxiMonterricoColors.greenDark : (theme.palette.mode === 'dark' ? theme.palette.background.default : '#f5f5f5'),
+                            bgcolor: page === pageNum - 1 ? taxiMonterricoColors.greenDark : theme.palette.action.hover,
                           },
                         }}
                       >
@@ -1296,7 +1435,7 @@ const Contacts: React.FC = () => {
         <Box
           sx={{
             width: { xs: '100%', md: 400 },
-            bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+            bgcolor: theme.palette.background.paper,
             borderLeft: { xs: 'none', md: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}` },
             borderTop: { xs: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`, md: 'none' },
             borderRadius: 2,
@@ -2118,6 +2257,46 @@ const Contacts: React.FC = () => {
               />
             </Box>
             
+            {/* Empresa Principal */}
+            <TextField
+              select
+              label="Empresa Principal"
+              value={formData.companyId}
+              onChange={(e) => {
+                if (e.target.value === 'create_new') {
+                  setCreateCompanyDialogOpen(true);
+                } else {
+                  setFormData(prev => ({ ...prev, companyId: e.target.value }));
+                  if (formErrors.companyId) {
+                    setFormErrors(prev => ({ ...prev, companyId: '' }));
+                  }
+                }
+              }}
+              error={!!formErrors.companyId}
+              helperText={formErrors.companyId}
+              required
+              InputLabelProps={{ shrink: true }}
+              disabled={loadingCompanies}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            >
+              {companies.map((company) => (
+                <MenuItem key={company.id} value={company.id.toString()}>
+                  {company.name}
+                </MenuItem>
+              ))}
+              <Divider />
+              <MenuItem value="create_new" sx={{ color: taxiMonterricoColors.green }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Add sx={{ fontSize: 18 }} />
+                  Crear empresa
+                </Box>
+              </MenuItem>
+            </TextField>
+            
             {/* Cargo y Etapa del Ciclo de Vida en su propia fila */}
             <Box sx={{ display: 'flex', gap: 2 }}>
               <TextField
@@ -2848,7 +3027,7 @@ const Contacts: React.FC = () => {
                         width: 60, 
                         height: 60, 
                         borderRadius: '50%', 
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F3F4F6',
+                        bgcolor: theme.palette.action.hover,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -2871,7 +3050,7 @@ const Contacts: React.FC = () => {
                           sx={{
                             p: 1.5,
                             borderRadius: 2,
-                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
+                            bgcolor: theme.palette.action.hover,
                             border: `1px solid ${theme.palette.divider}`,
                             transition: 'all 0.2s ease',
                             maxWidth: '85%',
@@ -3025,6 +3204,245 @@ const Contacts: React.FC = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
+      {/* Diálogo para crear empresa */}
+      <Dialog
+        open={createCompanyDialogOpen}
+        onClose={() => {
+          setCreateCompanyDialogOpen(false);
+          setCompanyFormData({
+            name: '',
+            domain: '',
+            industry: '',
+            phone: '',
+            address: '',
+            city: '',
+            state: '',
+            country: '',
+            ruc: '',
+            lifecycleStage: 'lead',
+            ownerId: user?.id || null,
+          });
+          setRucError('');
+        }}
+        maxWidth="sm"
+        fullWidth
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          }
+        }}
+      >
+        <DialogTitle>Nueva Empresa</DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            {/* RUC y Tipo de Contribuyente */}
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="RUC"
+                value={companyFormData.ruc}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '');
+                  const limitedValue = value.slice(0, 11);
+                  setCompanyFormData({ ...companyFormData, ruc: limitedValue });
+                  setRucError('');
+                }}
+                error={!!rucError}
+                helperText={rucError}
+                inputProps={{ maxLength: 11 }}
+                InputLabelProps={{ shrink: true }}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={handleSearchRuc}
+                        disabled={loadingRuc || !companyFormData.ruc || companyFormData.ruc.length < 11}
+                        sx={{
+                          color: taxiMonterricoColors.green,
+                          '&:hover': {
+                            bgcolor: `${taxiMonterricoColors.green}15`,
+                          },
+                        }}
+                      >
+                        {loadingRuc ? (
+                          <CircularProgress size={20} />
+                        ) : (
+                          <Search />
+                        )}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  flex: '2 1 0%',
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              <TextField
+                label="Tipo de Contribuyente / Industria"
+                value={companyFormData.industry}
+                onChange={(e) => setCompanyFormData({ ...companyFormData, industry: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: '3 1 0%',
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+            </Box>
+            <TextField
+              label="Nombre"
+              value={companyFormData.name}
+              onChange={(e) => setCompanyFormData({ ...companyFormData, name: e.target.value })}
+              required
+              InputLabelProps={{ shrink: true }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            <TextField
+              label="Dominio"
+              value={companyFormData.domain}
+              onChange={(e) => setCompanyFormData({ ...companyFormData, domain: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            <TextField
+              label="Teléfono"
+              value={companyFormData.phone}
+              onChange={(e) => setCompanyFormData({ ...companyFormData, phone: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            <TextField
+              label="Dirección"
+              value={companyFormData.address}
+              onChange={(e) => setCompanyFormData({ ...companyFormData, address: e.target.value })}
+              multiline
+              rows={2}
+              InputLabelProps={{ shrink: true }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Distrito"
+                value={companyFormData.city}
+                onChange={(e) => setCompanyFormData({ ...companyFormData, city: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              <TextField
+                label="Provincia"
+                value={companyFormData.state}
+                onChange={(e) => setCompanyFormData({ ...companyFormData, state: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              <TextField
+                label="Departamento"
+                value={companyFormData.country}
+                onChange={(e) => setCompanyFormData({ ...companyFormData, country: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+            </Box>
+            <TextField
+              select
+              label="Etapa del Ciclo de Vida"
+              value={companyFormData.lifecycleStage}
+              onChange={(e) => setCompanyFormData({ ...companyFormData, lifecycleStage: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+            >
+              <MenuItem value="lead_inactivo">-5% Lead Inactivo</MenuItem>
+              <MenuItem value="cliente_perdido">-1% Cliente perdido</MenuItem>
+              <MenuItem value="cierre_perdido">-1% Cierre Perdido</MenuItem>
+              <MenuItem value="lead">0% Lead</MenuItem>
+              <MenuItem value="contacto">10% Contacto</MenuItem>
+              <MenuItem value="reunion_agendada">30% Reunión Agendada</MenuItem>
+              <MenuItem value="reunion_efectiva">40% Reunión Efectiva</MenuItem>
+              <MenuItem value="propuesta_economica">50% Propuesta Económica</MenuItem>
+              <MenuItem value="negociacion">70% Negociación</MenuItem>
+              <MenuItem value="licitacion">75% Licitación</MenuItem>
+              <MenuItem value="licitacion_etapa_final">85% Licitación Etapa Final</MenuItem>
+              <MenuItem value="cierre_ganado">90% Cierre Ganado</MenuItem>
+              <MenuItem value="firma_contrato">95% Firma de Contrato</MenuItem>
+              <MenuItem value="activo">100% Activo</MenuItem>
+            </TextField>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setCreateCompanyDialogOpen(false);
+              setCompanyFormData({
+                name: '',
+                domain: '',
+                industry: '',
+                phone: '',
+                address: '',
+                city: '',
+                state: '',
+                country: '',
+                ruc: '',
+                lifecycleStage: 'lead',
+                ownerId: user?.id || null,
+              });
+              setRucError('');
+            }}
+            sx={{ textTransform: 'none' }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleCreateCompany}
+            variant="contained"
+            disabled={!companyFormData.name.trim()}
+            sx={{
+              textTransform: 'none',
+              bgcolor: taxiMonterricoColors.green,
+              '&:hover': {
+                bgcolor: taxiMonterricoColors.green,
+                opacity: 0.9,
+              },
+            }}
+          >
+            Crear
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

@@ -302,6 +302,10 @@ const Profile: React.FC = () => {
               fontSize: '0.9375rem',
               minHeight: 64,
               px: 3,
+              gap: 1,
+              '& .MuiTab-iconWrapper': {
+                marginRight: '8px',
+              },
               '&.Mui-selected': {
                 color: taxiMonterricoColors.green,
               },

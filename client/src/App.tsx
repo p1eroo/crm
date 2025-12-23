@@ -1,6 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider as MUIThemeProvider, createTheme } from '@mui/material/styles';
+import { ThemeProvider as MUIThemeProvider, createTheme, Theme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Box, CircularProgress } from '@mui/material';
 import { GoogleOAuthProvider } from '@react-oauth/google';
@@ -34,12 +34,13 @@ const Pipeline = lazy(() => import('./pages/Pipeline'));
 const Reports = lazy(() => import('./pages/Reports'));
 const ReportDetail = lazy(() => import('./pages/ReportDetail'));
 const Calendar = lazy(() => import('./pages/Calendar'));
+const Settings = lazy(() => import('./pages/Settings'));
 
 const getTheme = (mode: 'light' | 'dark') => createTheme({
   palette: {
     mode,
     primary: {
-      main: taxiMonterricoColors.green, // Verde vibrante Taxi Monterrico
+      main: taxiMonterricoColors.green || '#22C55E', // Verde vibrante Taxi Monterrico o fallback
       light: taxiMonterricoColors.greenLight,
       dark: taxiMonterricoColors.greenDark,
     },
@@ -59,20 +60,20 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
       dark: taxiMonterricoColors.orangeDark,
     },
     background: {
-      default: mode === 'light' ? '#f5f7fa' : '#0a0a0a',
-      paper: mode === 'light' ? '#ffffff' : '#1a1a1a',
+      default: mode === 'light' ? '#f5f7fa' : '#0B1220', // Navy blue premium
+      paper: mode === 'light' ? '#ffffff' : '#111A2C', // Navy blue premium más claro
     },
     text: {
-      primary: mode === 'light' ? '#1F2937' : '#e5e5e5',
-      secondary: mode === 'light' ? '#6B7280' : '#a0a0a0',
+      primary: mode === 'light' ? '#1F2937' : '#E5E7EB', // Gris claro premium
+      secondary: mode === 'light' ? '#6B7280' : '#94A3B8', // Gris medio premium
     },
-    divider: mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.12)',
+    divider: mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(148, 163, 184, 0.16)', // Divider premium
     action: {
-      active: mode === 'light' ? 'rgba(0, 0, 0, 0.54)' : 'rgba(255, 255, 255, 0.7)',
-      hover: mode === 'light' ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.08)',
-      selected: mode === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.16)',
-      disabled: mode === 'light' ? 'rgba(0, 0, 0, 0.26)' : 'rgba(255, 255, 255, 0.3)',
-      disabledBackground: mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.12)',
+      active: mode === 'light' ? 'rgba(0, 0, 0, 0.54)' : 'rgba(229, 231, 235, 0.7)',
+      hover: mode === 'light' ? 'rgba(0, 0, 0, 0.04)' : 'rgba(148, 163, 184, 0.08)',
+      selected: mode === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(148, 163, 184, 0.16)',
+      disabled: mode === 'light' ? 'rgba(0, 0, 0, 0.26)' : 'rgba(148, 163, 184, 0.3)',
+      disabledBackground: mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(148, 163, 184, 0.12)',
     },
   },
   typography: {
@@ -121,6 +122,94 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
       textTransform: 'none',
     },
   },
+  components: {
+    // MuiPaper: borderRadius 16, border 1px con divider, background paper
+    MuiPaper: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          borderRadius: 16,
+          border: `1px solid ${theme.palette.divider}`,
+          backgroundColor: theme.palette.background.paper,
+        }),
+      },
+    },
+    // MuiCard: misma lógica + sombra suave
+    MuiCard: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          borderRadius: 16,
+          border: `1px solid ${theme.palette.divider}`,
+          backgroundColor: theme.palette.background.paper,
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 2px 8px rgba(0, 0, 0, 0.3)' 
+            : '0 2px 8px rgba(0, 0, 0, 0.1)',
+        }),
+      },
+    },
+    // MuiAppBar: background paper, border-bottom divider, sin transparencia
+    MuiAppBar: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          backgroundColor: theme.palette.background.paper,
+          borderBottom: `1px solid ${theme.palette.divider}`,
+          boxShadow: 'none',
+        }),
+      },
+    },
+    // MuiDrawer: background default/paper, border-right divider
+    MuiDrawer: {
+      styleOverrides: {
+        paper: ({ theme }) => ({
+          backgroundColor: theme.palette.background.default,
+          borderRight: `1px solid ${theme.palette.divider}`,
+        }),
+      },
+    },
+    // MuiButton: textTransform none
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+        },
+      },
+    },
+    // MuiTabs: indicator suave, tabs estilo pill en dark (opcional)
+    MuiTabs: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          '& .MuiTabs-indicator': {
+            height: 3,
+            borderRadius: '3px 3px 0 0',
+            transition: 'all 0.3s ease',
+          },
+        }),
+      },
+    },
+    MuiTab: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          textTransform: 'none',
+          ...(theme.palette.mode === 'dark' && {
+            borderRadius: 8,
+            margin: '0 4px',
+            minHeight: 36,
+            '&.Mui-selected': {
+              backgroundColor: 'rgba(148, 163, 184, 0.12)',
+            },
+          }),
+        }),
+      },
+    },
+    // CssBaseline: setear body background según theme
+    MuiCssBaseline: {
+      styleOverrides: {
+        body: ({ theme }: { theme: Theme }) => ({
+          backgroundColor: theme.palette.background.default,
+          transition: 'background-color 0.3s ease',
+        }),
+      },
+    },
+  },
 });
 
 
@@ -139,7 +228,7 @@ const AppContent: React.FC = () => {
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center',
-          backgroundColor: '#E1E7DC',
+          backgroundColor: theme.palette.background.default,
         }}>
           <CircularProgress />
         </Box>
@@ -320,6 +409,14 @@ const AppContent: React.FC = () => {
                     }
                     return <Navigate to="/" replace />;
                   })()
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <MainLayout>
+                    <Settings />
+                  </MainLayout>
                 }
               />
               <Route path="*" element={

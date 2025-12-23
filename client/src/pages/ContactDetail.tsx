@@ -35,11 +35,6 @@ import {
   Popover,
   Drawer,
   useMediaQuery,
-  Skeleton,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
 } from '@mui/material';
 import {
   MoreVert,
@@ -63,7 +58,6 @@ import {
   History,
   Delete,
   CheckCircle,
-  ArrowBack,
   Support,
   AttachMoney,
   AccountBalance,
@@ -80,16 +74,11 @@ import {
   Code,
   TableChart,
   AttachFile,
-  PersonAdd,
   FormatAlignLeft,
   FormatAlignCenter,
   FormatAlignRight,
   FormatAlignJustify,
   AutoAwesome,
-  CloudUpload,
-  Description,
-  Message,
-  AddTask,
   ReportProblem,
   Receipt,
   TaskAlt,
@@ -103,9 +92,11 @@ import api from '../config/api';
 import RichTextEditor from '../components/RichTextEditor';
 import EmailComposer from '../components/EmailComposer';
 import { taxiMonterricoColors } from '../theme/colors';
+import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import contactLogo from '../assets/contact.png';
 import { formatDatePeru } from '../utils/dateUtils';
+import empresaLogo from '../assets/empresa.png';
 
 interface ContactDetailData {
   id: number;
@@ -157,12 +148,13 @@ interface ContactDetailData {
 const ContactDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
   const [contact, setContact] = useState<ContactDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
-  const [copilotOpen, setCopilotOpen] = useState(false);
+  const [copilotOpen, setCopilotOpen] = useState(true);
   const [,] = useState<null | HTMLElement>(null);
   const [associatedDeals, setAssociatedDeals] = useState<any[]>([]);
   const [associatedCompanies, setAssociatedCompanies] = useState<any[]>([]);
@@ -273,6 +265,18 @@ const ContactDetail: React.FC = () => {
   const [activityExcludedTickets, setActivityExcludedTickets] = useState<{ [key: number]: number[] }>({});
   const [activityExcludedContacts, setActivityExcludedContacts] = useState<{ [key: number]: number[] }>({});
   
+  // Estados para diálogos de acciones
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
+  const [callOpen, setCallOpen] = useState(false);
+  const [taskOpen, setTaskOpen] = useState(false);
+  const [meetingOpen, setMeetingOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [warningMessage, setWarningMessage] = useState('');
+  const [emailConnectModalOpen, setEmailConnectModalOpen] = useState(false);
+  const [connectingEmail, setConnectingEmail] = useState(false);
+  
   // Calcular total de asociaciones basado en selecciones del usuario usando useMemo para asegurar actualización
   const totalAssociations = useMemo(() => {
     // Incluir empresas asociadas que aún no están en selectedCompanies pero deberían contarse
@@ -365,16 +369,6 @@ const ContactDetail: React.FC = () => {
     
     return contactsCount + companiesCount + leads.length + dealsCount + ticketsCount;
   };
-  
-  // Estados para diálogos de acciones
-  const [noteOpen, setNoteOpen] = useState(false);
-  const [emailOpen, setEmailOpen] = useState(false);
-  const [callOpen, setCallOpen] = useState(false);
-  const [taskOpen, setTaskOpen] = useState(false);
-  const [meetingOpen, setMeetingOpen] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [warningMessage, setWarningMessage] = useState('');
   
   // Estados para formularios
   const [noteData, setNoteData] = useState({ subject: '', description: '' });
@@ -671,6 +665,15 @@ const ContactDetail: React.FC = () => {
     return '?';
   };
 
+  const getCompanyInitials = (companyName: string) => {
+    if (!companyName) return '--';
+    const words = companyName.trim().split(' ').filter(word => word.length > 0);
+    if (words.length >= 2) {
+      return `${words[0].charAt(0)}${words[1].charAt(0)}`.toUpperCase();
+    }
+    return companyName.substring(0, 2).toUpperCase();
+  };
+
   // const getStageColor = (stage: string) => {
   //   const colors: { [key: string]: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' } = {
   //     'lead': 'error', // Rojo para 0%
@@ -746,17 +749,39 @@ const ContactDetail: React.FC = () => {
         return;
       }
     } catch (error: any) {
-      // Si no hay token (404) o hay otro error, mostrar mensaje
+      // Si no hay token (404) o hay otro error, mostrar modal
       if (error.response?.status === 404) {
-        setWarningMessage('Por favor, conecta tu correo desde Configuración > Perfil > Correo para poder enviar emails');
-        setTimeout(() => setWarningMessage(''), 5000);
+        setEmailConnectModalOpen(true);
         return;
       }
     }
 
     // Si llegamos aquí, no hay token guardado
-    setWarningMessage('Por favor, conecta tu correo desde Configuración > Perfil > Correo para poder enviar emails');
-    setTimeout(() => setWarningMessage(''), 5000);
+    setEmailConnectModalOpen(true);
+  };
+
+  const handleEmailConnect = async () => {
+    if (!user?.id) {
+      setWarningMessage('Usuario no identificado');
+      setTimeout(() => setWarningMessage(''), 3000);
+      return;
+    }
+
+    setConnectingEmail(true);
+    try {
+      const response = await api.get('/google/auth');
+      if (response.data.authUrl) {
+        window.location.href = response.data.authUrl;
+      } else {
+        throw new Error('No se pudo obtener la URL de autorización');
+      }
+    } catch (error: any) {
+      console.error('Error iniciando conexión con Google:', error);
+      const errorMessage = error.response?.data?.message || 'Error al conectar con Google. Por favor, intenta nuevamente.';
+      setWarningMessage(errorMessage);
+      setTimeout(() => setWarningMessage(''), 5000);
+      setConnectingEmail(false);
+    }
   };
 
   const handleSendEmail = async (emailData: { to: string; subject: string; body: string }) => {
@@ -2418,6 +2443,7 @@ const ContactDetail: React.FC = () => {
                     {associatedCompanies.slice(0, 5).map((company: any) => (
                       <Box
                         key={company.id}
+                        onClick={() => navigate(`/companies/${company.id}`)}
                         sx={{
                           display: 'flex',
                           alignItems: 'center',
@@ -2426,6 +2452,7 @@ const ContactDetail: React.FC = () => {
                           borderRadius: 1,
                           border: `1px solid ${theme.palette.divider}`,
                           transition: 'all 0.2s ease',
+                          cursor: 'pointer',
                           '&:hover': {
                             borderColor: taxiMonterricoColors.green,
                             backgroundColor: theme.palette.mode === 'dark' 
@@ -2702,6 +2729,7 @@ const ContactDetail: React.FC = () => {
                     <TableHead>
                       <TableRow>
                         <TableCell sx={{ fontWeight: 600 }}>Nombre</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Dominio</TableCell>
                         <TableCell sx={{ fontWeight: 600 }}>Industria</TableCell>
                         <TableCell sx={{ fontWeight: 600 }}>Teléfono</TableCell>
                       </TableRow>
@@ -2713,16 +2741,54 @@ const ContactDetail: React.FC = () => {
                           company.name?.toLowerCase().includes(companySearch.toLowerCase())
                         )
                         .map((company: any) => (
-                          <TableRow key={company.id} hover>
+                          <TableRow 
+                            key={company.id} 
+                            hover
+                            onClick={() => navigate(`/companies/${company.id}`)}
+                            sx={{
+                              cursor: 'pointer',
+                            }}
+                          >
                             <TableCell>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Avatar sx={{ width: 32, height: 32, bgcolor: taxiMonterricoColors.green }}>
-                                  {getInitials(company.name || '')}
+                                <Avatar 
+                                  src={empresaLogo}
+                                  sx={{ 
+                                    width: 32, 
+                                    height: 32, 
+                                    bgcolor: empresaLogo ? 'transparent' : taxiMonterricoColors.green 
+                                  }}
+                                >
+                                  {!empresaLogo && getCompanyInitials(company.name || '')}
                                 </Avatar>
                                 <Typography variant="body2">
                                   {company.name || 'Sin nombre'}
                                 </Typography>
                               </Box>
+                            </TableCell>
+                            <TableCell>
+                              {company.domain && company.domain !== '--' ? (
+                                <Link
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (company.domain && company.domain !== '--') {
+                                      const domainUrl = company.domain.startsWith('http') ? company.domain : `https://${company.domain}`;
+                                      window.open(domainUrl, '_blank');
+                                    }
+                                  }}
+                                  sx={{
+                                    color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
+                                    cursor: 'pointer',
+                                    '&:hover': {
+                                      textDecoration: 'underline',
+                                    },
+                                  }}
+                                >
+                                  {company.domain}
+                                </Link>
+                              ) : (
+                                '-'
+                              )}
                             </TableCell>
                             <TableCell>{company.industry || '-'}</TableCell>
                             <TableCell>{company.phone || '-'}</TableCell>
@@ -2733,7 +2799,7 @@ const ContactDetail: React.FC = () => {
                         company.name?.toLowerCase().includes(companySearch.toLowerCase())
                       ).length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={3} align="center" sx={{ py: 3 }}>
+                          <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
                             <Typography variant="body2" color="text.secondary">
                               No hay empresas asociadas
                             </Typography>
@@ -3008,7 +3074,7 @@ const ContactDetail: React.FC = () => {
                                   label={ticket.priority} 
                                   size="small"
                                   sx={{ 
-                                    bgcolor: ticket.priority === 'high' ? '#ef4444' + '40' : taxiMonterricoColors.grayLight,
+                                    bgcolor: ticket.priority === 'high' ? '#ef444440' : taxiMonterricoColors.grayLight,
                                     color: ticket.priority === 'high' ? '#ef4444' : theme.palette.text.secondary,
                                   }}
                                 />
@@ -5721,6 +5787,130 @@ const ContactDetail: React.FC = () => {
           {warningMessage}
         </Alert>
       )}
+
+      {/* Modal de conexión de correo */}
+      <Dialog
+        open={emailConnectModalOpen}
+        onClose={() => setEmailConnectModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          }
+        }}
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          }
+        }}
+      >
+        <DialogTitle
+          sx={{
+            bgcolor: theme.palette.mode === 'dark' ? '#0B1220' : '#f5f5f5',
+            borderBottom: `1px solid ${theme.palette.divider}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            py: 1.5,
+            px: 2,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Email sx={{ fontSize: 20, color: theme.palette.text.primary }} />
+            <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem', color: theme.palette.text.primary }}>
+              Correo
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <IconButton
+              size="small"
+              onClick={() => setEmailConnectModalOpen(false)}
+              sx={{
+                color: theme.palette.text.secondary,
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                },
+              }}
+            >
+              <Close fontSize="small" />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ px: 4, py: 4, textAlign: 'center' }}>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 600,
+              mb: 2,
+              color: theme.palette.text.primary,
+              fontSize: '1.5rem',
+            }}
+          >
+            Haz seguimiento de la actividad de tu correo en el CRM
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{
+              mb: 3,
+              color: theme.palette.text.secondary,
+              lineHeight: 1.7,
+              fontSize: '0.9375rem',
+            }}
+          >
+            Conecta tu cuenta de correo electrónico al CRM para comenzar a enviar correos desde tu plataforma. Todas tus conversaciones por correo electrónico aparecerán en la siguiente cronología.
+          </Typography>
+          <Link
+            component="button"
+            onClick={() => {
+              setEmailConnectModalOpen(false);
+              navigate('/settings');
+            }}
+            sx={{
+              color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
+              textDecoration: 'none',
+              fontSize: '0.875rem',
+              cursor: 'pointer',
+              '&:hover': {
+                textDecoration: 'underline',
+              },
+            }}
+          >
+            Más información
+          </Link>
+        </DialogContent>
+        <DialogActions sx={{ px: 4, pb: 4, justifyContent: 'center' }}>
+          <Button
+            onClick={handleEmailConnect}
+            disabled={connectingEmail}
+            variant="contained"
+            sx={{
+              bgcolor: '#FF6B35',
+              color: 'white',
+              fontWeight: 600,
+              textTransform: 'none',
+              fontSize: '0.9375rem',
+              px: 4,
+              py: 1.25,
+              borderRadius: 2,
+              boxShadow: '0 4px 12px rgba(255, 107, 53, 0.3)',
+              '&:hover': {
+                bgcolor: '#E55A2B',
+                boxShadow: '0 6px 16px rgba(255, 107, 53, 0.4)',
+              },
+              '&.Mui-disabled': {
+                bgcolor: '#FF6B35',
+                opacity: 0.6,
+              },
+            }}
+            startIcon={connectingEmail ? <CircularProgress size={16} sx={{ color: 'white' }} /> : <Email />}
+          >
+            {connectingEmail ? 'Conectando...' : 'Conectar bandeja de entrada'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Ventana flotante de Nota */}
       {noteOpen && (

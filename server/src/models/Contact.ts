@@ -102,7 +102,7 @@ Contact.init(
     },
     companyId: {
       type: DataTypes.INTEGER,
-      allowNull: true,
+      allowNull: false,
       references: {
         model: 'companies',
         key: 'id',

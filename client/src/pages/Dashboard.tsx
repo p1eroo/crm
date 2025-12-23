@@ -992,7 +992,7 @@ const Dashboard: React.FC = () => {
                 <Typography 
                   variant="body2" 
                   sx={{ 
-                    color: '#000000',
+                    color: theme.palette.text.primary,
                     mb: 1.5,
                     fontSize: '1.5rem',
                     fontWeight: 600,
@@ -1007,7 +1007,7 @@ const Dashboard: React.FC = () => {
                     fontWeight: 600, 
                     fontSize: '1.5rem',
                     lineHeight: 1.2,
-                    color: '#757575',
+                    color: theme.palette.text.secondary,
                   }}
                 >
                   S/ {(monthlyBudget / 1000).toFixed(0)}k
@@ -1068,7 +1068,7 @@ const Dashboard: React.FC = () => {
                 <Typography 
                   variant="body2" 
                   sx={{ 
-                    color: '#000000',
+                    color: theme.palette.text.primary,
                     mb: 1.5,
                     fontSize: '1.5rem',
                     fontWeight: 600,
@@ -1083,7 +1083,7 @@ const Dashboard: React.FC = () => {
                     fontWeight: 600, 
                     fontSize: '1.5rem',
                     lineHeight: 1.2,
-                    color: '#757575',
+                    color: theme.palette.text.secondary,
                   }}
                 >
                   S/ {(weeklyBalance / 1000).toFixed(0)}k
@@ -1144,7 +1144,7 @@ const Dashboard: React.FC = () => {
                 <Typography 
                   variant="body2" 
                   sx={{ 
-                    color: '#000000',
+                    color: theme.palette.text.primary,
                     mb: 1.5,
                     fontSize: '1.5rem',
                     fontWeight: 600,
@@ -1159,7 +1159,7 @@ const Dashboard: React.FC = () => {
                     fontWeight: 600, 
                     fontSize: '1.5rem',
                     lineHeight: 1.2,
-                    color: '#757575',
+                    color: theme.palette.text.secondary,
                   }}
                 >
                   {ordersInLine}
@@ -1221,7 +1221,7 @@ const Dashboard: React.FC = () => {
                 <Typography 
                   variant="body2" 
                   sx={{ 
-                    color: '#000000',
+                    color: theme.palette.text.primary,
                     mb: 1.5,
                     fontSize: '1.5rem',
                     fontWeight: 600,
@@ -1236,7 +1236,7 @@ const Dashboard: React.FC = () => {
                     fontWeight: 600, 
                     fontSize: '1.5rem',
                     lineHeight: 1.2,
-                    color: '#757575',
+                    color: theme.palette.text.secondary,
                   }}
                 >
                   {newClients}
@@ -1298,7 +1298,7 @@ const Dashboard: React.FC = () => {
                 <Typography 
                   variant="body2" 
                   sx={{ 
-                    color: '#000000',
+                    color: theme.palette.text.primary,
                     mb: 1.5,
                     fontSize: '1.5rem',
                     fontWeight: 600,
@@ -1318,7 +1318,7 @@ const Dashboard: React.FC = () => {
                       fontWeight: 600, 
                       fontSize: '1.5rem',
                       lineHeight: 1.2,
-                      color: '#757575',
+                      color: theme.palette.text.secondary,
                     }}
                   >
                     {teamKPI.toFixed(1)}%

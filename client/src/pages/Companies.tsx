@@ -793,7 +793,7 @@ const Companies: React.FC = () => {
                 sx={{
                   borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
                   color: theme.palette.text.primary,
-                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                  bgcolor: theme.palette.action.hover,
                   '&:hover': {
                     borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
                     bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
@@ -838,7 +838,7 @@ const Companies: React.FC = () => {
           <Box
             component="div"
           sx={{ 
-              bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+              bgcolor: theme.palette.background.paper,
               borderRadius: '8px 8px 0 0',
               overflow: 'hidden',
               display: 'grid',
@@ -878,7 +878,7 @@ const Companies: React.FC = () => {
               component="div"
               onClick={() => navigate(`/companies/${company.id}`)}
                   sx={{ 
-                bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+                bgcolor: theme.palette.background.paper,
                     cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 display: 'grid',
@@ -893,7 +893,7 @@ const Companies: React.FC = () => {
                 px: { xs: 1, md: 1.5 },
                 py: { xs: 1, md: 1.25 },
                 '&:hover': {
-                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 1)' : '#ffffff',
+                  bgcolor: theme.palette.background.paper,
                   boxShadow: theme.palette.mode === 'dark' ? '0 2px 6px rgba(0,0,0,0.3)' : '0 2px 6px rgba(0,0,0,0.1)',
                   transform: 'translateY(-1px)',
                 },
@@ -1111,7 +1111,7 @@ const Companies: React.FC = () => {
                             padding: { xs: 0.5, md: 1 },
                             '&:hover': {
                               color: '#d32f2f',
-                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.1)' : '#ffebee',
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.15)' : '#ffebee',
                             },
                           }}
                         >
@@ -1220,7 +1220,7 @@ const Companies: React.FC = () => {
                   px: 2,
                   cursor: 'pointer',
                   '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                    bgcolor: theme.palette.action.hover,
                   },
                 }}
               >
@@ -1317,7 +1317,7 @@ const Companies: React.FC = () => {
                   px: 2,
                   cursor: 'pointer',
                   '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                    bgcolor: theme.palette.action.hover,
                   },
                 }}
               >
@@ -1504,7 +1504,7 @@ const Companies: React.FC = () => {
                   px: 2,
                   cursor: 'pointer',
                   '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+                    bgcolor: theme.palette.action.hover,
                   },
                 }}
               >
