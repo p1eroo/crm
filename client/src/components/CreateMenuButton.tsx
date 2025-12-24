@@ -12,13 +12,8 @@ import {
   TaskAltRounded,
   TrendingUpRounded,
   ConfirmationNumberRounded,
-  NoteAltRounded,
   PersonAddAltRounded,
   BusinessRounded,
-  DescriptionRounded,
-  ReceiptLongRounded,
-  PaidRounded,
-  ReportProblemRounded,
 } from '@mui/icons-material';
 
 export interface CreateMenuOption {
@@ -41,7 +36,7 @@ const CREATE_OPTIONS: CreateMenuOption[] = [
   },
   {
     key: 'opportunity',
-    label: 'Oportunidad',
+    label: 'Negocio',
     icon: <TrendingUpRounded />,
     color: '#3B82F6',
   },
@@ -50,12 +45,6 @@ const CREATE_OPTIONS: CreateMenuOption[] = [
     label: 'Ticket',
     icon: <ConfirmationNumberRounded />,
     color: '#14B8A6',
-  },
-  {
-    key: 'note',
-    label: 'Nota',
-    icon: <NoteAltRounded />,
-    color: '#8B5CF6',
   },
   {
     key: 'contact',
@@ -68,30 +57,6 @@ const CREATE_OPTIONS: CreateMenuOption[] = [
     label: 'Empresa',
     icon: <BusinessRounded />,
     color: '#64748B',
-  },
-  {
-    key: 'contract',
-    label: 'Contrato/Suscripción',
-    icon: <DescriptionRounded />,
-    color: '#EAB308',
-  },
-  {
-    key: 'invoice',
-    label: 'Factura',
-    icon: <ReceiptLongRounded />,
-    color: '#10B981',
-  },
-  {
-    key: 'payment',
-    label: 'Pago',
-    icon: <PaidRounded />,
-    color: '#16A34A',
-  },
-  {
-    key: 'incident',
-    label: 'Incidencia',
-    icon: <ReportProblemRounded />,
-    color: '#EF4444',
   },
 ];
 

@@ -229,7 +229,7 @@ const ContactDetail: React.FC = () => {
   const [selectedExistingCompanies, setSelectedExistingCompanies] = useState<number[]>([]);
   const [loadingRuc, setLoadingRuc] = useState(false);
   const [rucError, setRucError] = useState('');
-  const [dealFormData, setDealFormData] = useState({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'medium' });
+  const [dealFormData, setDealFormData] = useState({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'baja' as 'baja' | 'media' | 'alta', companyId: '', contactId: '' });
   const [ticketFormData, setTicketFormData] = useState({ subject: '', description: '', status: 'new', priority: 'medium' });
   const [subscriptionFormData, setSubscriptionFormData] = useState({ name: '', description: '', status: 'active', amount: '', currency: 'USD', billingCycle: 'monthly', startDate: '', endDate: '', renewalDate: '' });
   const [paymentFormData, setPaymentFormData] = useState({ amount: '', currency: 'USD', status: 'pending', paymentDate: '', dueDate: '', paymentMethod: 'credit_card', reference: '', description: '' });
@@ -242,6 +242,7 @@ const ContactDetail: React.FC = () => {
   const [selectedCompanies, setSelectedCompanies] = useState<number[]>([]);
   const [selectedLeads] = useState<number[]>([]);
   const [allCompanies, setAllCompanies] = useState<any[]>([]);
+  const [allContacts, setAllContacts] = useState<any[]>([]);
   const [, setEmailValue] = useState('');
   const [, setPhoneValue] = useState('');
   const [, setCompanyValue] = useState('');
@@ -378,6 +379,7 @@ const ContactDetail: React.FC = () => {
   const descriptionEditorRef = React.useRef<HTMLDivElement>(null);
   const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [actionsMenuAnchorEl, setActionsMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const imageInputRef = React.useRef<HTMLInputElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [activeFormats, setActiveFormats] = useState({
@@ -573,12 +575,39 @@ const ContactDetail: React.FC = () => {
 
   const fetchAllCompanies = async () => {
     try {
-      const response = await api.get('/companies');
+      const response = await api.get('/companies', { params: { limit: 1000 } });
       setAllCompanies(response.data.companies || response.data || []);
     } catch (error) {
       console.error('Error fetching all companies:', error);
     }
   };
+
+  const fetchAllContacts = async () => {
+    try {
+      const response = await api.get('/contacts', { params: { limit: 1000 } });
+      setAllContacts(response.data.contacts || response.data || []);
+    } catch (error) {
+      console.error('Error fetching all contacts:', error);
+    }
+  };
+
+  // Opciones de etapa según las imágenes proporcionadas
+  const stageOptions = [
+    { value: 'lead_inactivo', label: 'Lead Inactivo' },
+    { value: 'cliente_perdido', label: 'Cliente perdido' },
+    { value: 'cierre_perdido', label: 'Cierre Perdido' },
+    { value: 'lead', label: 'Lead' },
+    { value: 'contacto', label: 'Contacto' },
+    { value: 'reunion_agendada', label: 'Reunión Agendada' },
+    { value: 'reunion_efectiva', label: 'Reunión Efectiva' },
+    { value: 'propuesta_economica', label: 'Propuesta Económica' },
+    { value: 'negociacion', label: 'Negociación' },
+    { value: 'licitacion', label: 'Licitación' },
+    { value: 'licitacion_etapa_final', label: 'Licitación Etapa Final' },
+    { value: 'cierre_ganado', label: 'Cierre Ganado' },
+    { value: 'firma_contrato', label: 'Firma de Contrato' },
+    { value: 'activo', label: 'Activo' },
+  ];
 
   // Manejar tecla ESC para cerrar paneles
   useEffect(() => {
@@ -714,13 +743,13 @@ const ContactDetail: React.FC = () => {
     return labels[stage] || stage;
   };
 
-  // const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-  //   setAnchorEl(event.currentTarget);
-  // };
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
 
-  // const handleMenuClose = () => {
-  //   setAnchorEl(null);
-  // };
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+  };
 
   // Funciones para abrir diálogos
   const handleOpenNote = () => {
@@ -1452,12 +1481,12 @@ const ContactDetail: React.FC = () => {
       await api.post('/deals', {
         ...dealFormData,
         amount: parseFloat(dealFormData.amount) || 0,
-        contactId: id,
-        companyId: contact?.Company?.id,
+        contactId: dealFormData.contactId ? parseInt(dealFormData.contactId) : id,
+        companyId: dealFormData.companyId ? parseInt(dealFormData.companyId) : contact?.Company?.id || contact?.Companies?.[0]?.id,
       });
       setSuccessMessage('Negocio agregado exitosamente');
       setAddDealOpen(false);
-      setDealFormData({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'medium' });
+      setDealFormData({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'baja' as 'baja' | 'media' | 'alta', companyId: '', contactId: '' });
       fetchAssociatedRecords();
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
@@ -1998,9 +2027,72 @@ const ContactDetail: React.FC = () => {
                     Crear tarea
                   </MenuItem>
                 </Menu>
+                <Menu 
+                  anchorEl={anchorEl} 
+                  open={Boolean(anchorEl)} 
+                  onClose={handleMenuClose}
+                  TransitionProps={{
+                    timeout: 200,
+                  }}
+                  PaperProps={{
+                    sx: {
+                      mt: 1,
+                      borderRadius: 2,
+                      boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                      animation: 'slideDown 0.2s ease',
+                      '@keyframes slideDown': {
+                        '0%': {
+                          opacity: 0,
+                          transform: 'translateY(-10px)',
+                        },
+                        '100%': {
+                          opacity: 1,
+                          transform: 'translateY(0)',
+                        },
+                      },
+                    },
+                  }}
+                >
+                  <MenuItem 
+                    onClick={handleMenuClose}
+                    sx={{
+                      transition: 'all 0.15s ease',
+                      '&:hover': {
+                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                        transform: 'translateX(4px)',
+                      },
+                    }}
+                  >
+                    Editar
+                  </MenuItem>
+                  <MenuItem 
+                    onClick={handleMenuClose}
+                    sx={{
+                      transition: 'all 0.15s ease',
+                      '&:hover': {
+                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                        transform: 'translateX(4px)',
+                      },
+                    }}
+                  >
+                    Eliminar
+                  </MenuItem>
+                  <MenuItem 
+                    onClick={handleMenuClose}
+                    sx={{
+                      transition: 'all 0.15s ease',
+                      '&:hover': {
+                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                        transform: 'translateX(4px)',
+                      },
+                    }}
+                  >
+                    Duplicar
+                  </MenuItem>
+                </Menu>
                 <Tooltip title="Más opciones">
                   <IconButton
-                    onClick={(e) => setMoreMenuAnchorEl(e.currentTarget)}
+                    onClick={handleMenuOpen}
                 sx={{ 
                       color: theme.palette.text.secondary,
                   '&:hover': {
@@ -2866,7 +2958,16 @@ const ContactDetail: React.FC = () => {
                   <Button
                     size="small"
                     variant="outlined"
-                    onClick={() => setAddDealOpen(true)}
+                    onClick={() => {
+                      setDealFormData({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'baja' as 'baja' | 'media' | 'alta', companyId: contact?.Company?.id?.toString() || contact?.Companies?.[0]?.id?.toString() || '', contactId: id?.toString() || '' });
+                      if (allCompanies.length === 0) {
+                        fetchAllCompanies();
+                      }
+                      if (allContacts.length === 0) {
+                        fetchAllContacts();
+                      }
+                      setAddDealOpen(true);
+                    }}
                     sx={{
                       borderColor: taxiMonterricoColors.green,
                       color: taxiMonterricoColors.green,
@@ -5923,10 +6024,10 @@ const ContactDetail: React.FC = () => {
             width: { xs: '95vw', sm: '1100px' },
             maxWidth: { xs: '95vw', sm: '95vw' },
             height: '85vh',
-            backgroundColor: theme.palette.mode === 'dark' ? '#1e1e1e' : theme.palette.background.paper,
+            backgroundColor: theme.palette.background.paper,
             boxShadow: theme.palette.mode === 'dark' 
-              ? '0 20px 60px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.08)' 
-              : '0 20px 60px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05)',
+              ? '0 20px 60px rgba(0,0,0,0.3)' 
+              : '0 20px 60px rgba(0,0,0,0.12)',
             zIndex: 1300,
             display: 'flex',
             flexDirection: 'column',
@@ -6024,10 +6125,7 @@ const ContactDetail: React.FC = () => {
               borderRadius: 3,
               overflow: 'hidden',
               minHeight: '300px',
-              backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : theme.palette.background.paper,
-              boxShadow: theme.palette.mode === 'dark' 
-                ? '0 2px 8px rgba(0,0,0,0.4)' 
-                : '0 2px 8px rgba(0,0,0,0.04)',
+              backgroundColor: theme.palette.background.paper,
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:focus-within': {
                 boxShadow: `0 4px 16px ${taxiMonterricoColors.orange}40`,
@@ -6051,22 +6149,19 @@ const ContactDetail: React.FC = () => {
               border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`, 
               borderRadius: 3, 
               p: 2.5, 
-              backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : theme.palette.background.paper,
+              backgroundColor: theme.palette.background.paper,
               display: 'flex',
               gap: 2.5,
               alignItems: 'flex-start',
               maxHeight: '500px',
               overflow: 'hidden',
-              boxShadow: theme.palette.mode === 'dark' 
-                ? '0 2px 8px rgba(0,0,0,0.4)' 
-                : '0 2px 8px rgba(0,0,0,0.04)',
               transition: 'all 0.2s ease',
             }}>
               {/* Lista de categorías en el lado izquierdo */}
               <Box sx={{ 
                 width: '220px', 
                 flexShrink: 0,
-                borderRight: `1px solid ${theme.palette.divider}`,
+                borderRight: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`,
                 pr: 2.5,
                 maxHeight: '500px',
                 overflowY: 'auto',
@@ -6596,9 +6691,8 @@ const ContactDetail: React.FC = () => {
                   sx={{
                     mb: 1.5,
                     flexShrink: 0,
-                    backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : 'transparent',
                     '& .MuiOutlinedInput-root': {
-                      backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : 'transparent',
+                      backgroundColor: 'transparent',
                       '& fieldset': {
                         borderColor: taxiMonterricoColors.orange,
                       },
@@ -6635,7 +6729,7 @@ const ContactDetail: React.FC = () => {
                           const shouldBeChecked = (isSelected || isAssociated) && !isExcluded;
                           
                           return (
-                            <Box key={company.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : '#f5f5f5' } }}>
+                            <Box key={company.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : theme.palette.action.hover } }}>
                               <Checkbox
                                 checked={shouldBeChecked}
                                 onChange={(e) => {
@@ -6731,7 +6825,7 @@ const ContactDetail: React.FC = () => {
                       </>
                   )}
                   {selectedAssociationCategory === 'Contactos' && contact && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: theme.palette.mode === 'dark' ? theme.palette.action.hover : '#f5f5f5' } }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : theme.palette.action.hover } }}>
                         <Checkbox
                           checked={(selectedContacts.includes(contact.id) || contact?.id !== undefined) && !excludedContacts.includes(contact.id)}
                           onChange={(e) => {
@@ -6809,7 +6903,7 @@ const ContactDetail: React.FC = () => {
                           const shouldBeChecked = (isSelected || isAssociated) && !isExcluded;
                           
                           return (
-                            <Box key={deal.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: '#f5f5f5' } }}>
+                            <Box key={deal.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : theme.palette.action.hover } }}>
                               <Checkbox
                                 checked={shouldBeChecked}
                                 onChange={(e) => {
@@ -6908,7 +7002,7 @@ const ContactDetail: React.FC = () => {
                           const shouldBeChecked = (isSelected || isAssociated) && !isExcluded;
                           
                           return (
-                            <Box key={ticket.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: '#f5f5f5' } }}>
+                            <Box key={ticket.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : theme.palette.action.hover } }}>
                               <Checkbox
                                 checked={shouldBeChecked}
                                 onChange={(e) => {
@@ -7009,8 +7103,8 @@ const ContactDetail: React.FC = () => {
           <Box sx={{ 
             px: 3,
             py: 2.5, 
-            borderTop: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`, 
-            backgroundColor: theme.palette.mode === 'dark' ? '#1e1e1e' : theme.palette.background.paper, 
+            borderTop: `1px solid ${theme.palette.divider}`, 
+            backgroundColor: theme.palette.background.paper, 
             display: 'flex', 
             justifyContent: 'flex-end', 
             gap: 2,
@@ -7075,7 +7169,7 @@ const ContactDetail: React.FC = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.1)',
+            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
             zIndex: 1299,
             animation: 'fadeIn 0.3s ease-out',
             '@keyframes fadeIn': {
@@ -9133,75 +9227,106 @@ const ContactDetail: React.FC = () => {
           }
         }}
       >
-        <DialogTitle>Agregar Negocio</DialogTitle>
+        <DialogTitle>
+          Nuevo Negocio
+        </DialogTitle>
         <DialogContent>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
             <TextField
-              label="Nombre del Negocio"
+              label="Nombre"
               value={dealFormData.name}
               onChange={(e) => setDealFormData({ ...dealFormData, name: e.target.value })}
               required
-              fullWidth
             />
             <TextField
-              label="Valor"
+              label="Monto"
               type="number"
               value={dealFormData.amount}
               onChange={(e) => setDealFormData({ ...dealFormData, amount: e.target.value })}
-              fullWidth
+              required
             />
             <TextField
               select
               label="Etapa"
               value={dealFormData.stage}
               onChange={(e) => setDealFormData({ ...dealFormData, stage: e.target.value })}
-              fullWidth
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
             >
-              <MenuItem value="lead">Lead</MenuItem>
-              <MenuItem value="contacto">Contacto</MenuItem>
-              <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
-              <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-              <MenuItem value="propuesta_economica">Propuesta económica</MenuItem>
-              <MenuItem value="negociacion">Negociación</MenuItem>
-              <MenuItem value="cierre_ganado">Cierre ganado</MenuItem>
-              <MenuItem value="cierre_perdido">Cierre perdido</MenuItem>
+              {stageOptions.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
             </TextField>
             <TextField
-              label="Fecha de cierre"
+              label="Fecha de Cierre"
               type="date"
               value={dealFormData.closeDate}
               onChange={(e) => setDealFormData({ ...dealFormData, closeDate: e.target.value })}
-              fullWidth
               InputLabelProps={{ shrink: true }}
             />
             <TextField
               select
               label="Prioridad"
               value={dealFormData.priority}
-              onChange={(e) => setDealFormData({ ...dealFormData, priority: e.target.value })}
-              fullWidth
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
+              onChange={(e) => setDealFormData({ ...dealFormData, priority: e.target.value as 'baja' | 'media' | 'alta' })}
             >
-              <MenuItem value="low">Baja</MenuItem>
-              <MenuItem value="medium">Media</MenuItem>
-              <MenuItem value="high">Alta</MenuItem>
-              <MenuItem value="urgent">Urgente</MenuItem>
+              <MenuItem value="baja">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#20B2AA' }} />
+                  Baja
+                </Box>
+              </MenuItem>
+              <MenuItem value="media">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#F59E0B' }} />
+                  Media
+                </Box>
+              </MenuItem>
+              <MenuItem value="alta">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#EF4444' }} />
+                  Alta
+                </Box>
+              </MenuItem>
+            </TextField>
+            <TextField
+              select
+              label="Empresa"
+              value={dealFormData.companyId || contact?.Company?.id?.toString() || contact?.Companies?.[0]?.id?.toString() || ''}
+              onChange={(e) => setDealFormData({ ...dealFormData, companyId: e.target.value })}
+              fullWidth
+            >
+              <MenuItem value="">
+                <em>Ninguna</em>
+              </MenuItem>
+              {allCompanies.map((comp) => (
+                <MenuItem key={comp.id} value={comp.id.toString()}>
+                  {comp.name}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Contacto"
+              value={dealFormData.contactId || id?.toString() || ''}
+              onChange={(e) => setDealFormData({ ...dealFormData, contactId: e.target.value })}
+              fullWidth
+            >
+              <MenuItem value="">
+                <em>Ninguno</em>
+              </MenuItem>
+              {allContacts.map((contactItem) => (
+                <MenuItem key={contactItem.id} value={contactItem.id.toString()}>
+                  {contactItem.firstName} {contactItem.lastName}
+                </MenuItem>
+              ))}
             </TextField>
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAddDealOpen(false)}>Cancelar</Button>
-          <Button onClick={handleAddDeal} variant="contained" disabled={!dealFormData.name.trim()}>
-            Agregar
+          <Button onClick={handleAddDeal} variant="contained">
+            Crear
           </Button>
         </DialogActions>
       </Dialog>

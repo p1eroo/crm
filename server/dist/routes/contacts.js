@@ -73,6 +73,10 @@ router.get('/:id', async (req, res) => {
 // Crear contacto
 router.post('/', async (req, res) => {
     try {
+        // Validar que companyId esté presente
+        if (!req.body.companyId) {
+            return res.status(400).json({ error: 'La empresa principal es requerida' });
+        }
         const contactData = {
             ...req.body,
             // Asignar automáticamente el usuario actual como propietario del contacto
@@ -94,6 +98,10 @@ router.post('/', async (req, res) => {
 // Actualizar contacto
 router.put('/:id', async (req, res) => {
     try {
+        // Validar que companyId esté presente si se está enviando en el body
+        if (req.body.hasOwnProperty('companyId') && !req.body.companyId) {
+            return res.status(400).json({ error: 'La empresa principal es requerida' });
+        }
         const contact = await Contact_1.Contact.findByPk(req.params.id);
         if (!contact) {
             return res.status(404).json({ error: 'Contacto no encontrado' });

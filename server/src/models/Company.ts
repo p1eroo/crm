@@ -9,6 +9,8 @@ interface CompanyAttributes {
   industry?: string;
   type?: string;
   phone?: string;
+  phone2?: string;
+  phone3?: string;
   ruc?: string;
   address?: string;
   city?: string;
@@ -16,6 +18,7 @@ interface CompanyAttributes {
   country?: string;
   postalCode?: string;
   website?: string;
+  linkedin?: string;
   numberOfEmployees?: number;
   annualRevenue?: number;
   description?: string;
@@ -27,7 +30,7 @@ interface CompanyAttributes {
   updatedAt?: Date;
 }
 
-interface CompanyCreationAttributes extends Optional<CompanyAttributes, 'id' | 'domain' | 'industry' | 'type' | 'phone' | 'ruc' | 'address' | 'city' | 'state' | 'country' | 'postalCode' | 'website' | 'numberOfEmployees' | 'annualRevenue' | 'description' | 'ownerId' | 'tags' | 'notes' | 'createdAt' | 'updatedAt'> {}
+interface CompanyCreationAttributes extends Optional<CompanyAttributes, 'id' | 'domain' | 'industry' | 'type' | 'phone' | 'phone2' | 'phone3' | 'ruc' | 'address' | 'city' | 'state' | 'country' | 'postalCode' | 'website' | 'linkedin' | 'numberOfEmployees' | 'annualRevenue' | 'description' | 'ownerId' | 'tags' | 'notes' | 'createdAt' | 'updatedAt'> {}
 
 export class Company extends Model<CompanyAttributes, CompanyCreationAttributes> implements CompanyAttributes {
   public id!: number;
@@ -36,6 +39,8 @@ export class Company extends Model<CompanyAttributes, CompanyCreationAttributes>
   public industry?: string;
   public type?: string;
   public phone?: string;
+  public phone2?: string;
+  public phone3?: string;
   public ruc?: string;
   public address?: string;
   public city?: string;
@@ -43,6 +48,7 @@ export class Company extends Model<CompanyAttributes, CompanyCreationAttributes>
   public country?: string;
   public postalCode?: string;
   public website?: string;
+  public linkedin?: string;
   public numberOfEmployees?: number;
   public annualRevenue?: number;
   public description?: string;
@@ -83,6 +89,14 @@ Company.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
+    phone2: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    phone3: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
     ruc: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -108,6 +122,10 @@ Company.init(
       allowNull: true,
     },
     website: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    linkedin: {
       type: DataTypes.STRING,
       allowNull: true,
     },
@@ -148,6 +166,8 @@ Company.init(
     sequelize,
     tableName: 'companies',
     timestamps: true,
+    // Hacer que Sequelize ignore campos que no existen en la base de datos
+    omitNull: false,
   }
 );
 

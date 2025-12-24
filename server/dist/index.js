@@ -87,9 +87,38 @@ const getLocalIP = () => {
     }
     return 'localhost';
 };
-// Middleware CORS - Permitir todas las conexiones desde la red
+// Middleware CORS - Permitir conexiones desde la URL de producción y desarrollo
 app.use((0, cors_1.default)({
-    origin: true, // Permitir cualquier origen (localhost, IPs locales, etc.)
+    origin: (origin, callback) => {
+        // Permitir requests sin origin (como Postman, mobile apps, etc.)
+        if (!origin) {
+            console.log('🌐 [CORS] Request sin origin, permitido');
+            return callback(null, true);
+        }
+        // URLs permitidas
+        const allowedOrigins = [
+            'https://crm.taximonterrico.com',
+            'http://localhost:3000',
+            'http://localhost:3001',
+            'http://127.0.0.1:3000',
+            'http://127.0.0.1:3001',
+        ];
+        // Permitir también cualquier IP local para desarrollo
+        const isLocalhost = /^http:\/\/localhost(:\d+)?$/.test(origin) ||
+            /^http:\/\/127\.0\.0\.1(:\d+)?$/.test(origin) ||
+            /^http:\/\/192\.168\.\d+\.\d+(:\d+)?$/.test(origin) ||
+            /^http:\/\/10\.\d+\.\d+\.\d+(:\d+)?$/.test(origin);
+        const isAllowed = allowedOrigins.includes(origin) || isLocalhost;
+        if (isAllowed) {
+            console.log('✅ [CORS] Origen permitido:', origin);
+            callback(null, true);
+        }
+        else {
+            console.error('❌ [CORS] Origen NO permitido:', origin);
+            console.error('📋 [CORS] Orígenes permitidos:', allowedOrigins);
+            callback(new Error('No permitido por CORS'));
+        }
+    },
     credentials: true, // Permitir cookies y credenciales
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
@@ -495,10 +524,6 @@ database_1.sequelize.authenticate()
     }
     if (DealCompany && typeof DealCompany.sync === 'function') {
         await DealCompany.sync({ alter: true });
-    }
-    const { DealDeal } = await Promise.resolve().then(() => __importStar(require('./models/DealDeal')));
-    if (DealDeal && typeof DealDeal.sync === 'function') {
-        await DealDeal.sync({ alter: true });
     }
     if (ContactCompany && typeof ContactCompany.sync === 'function') {
         await ContactCompany.sync({ alter: true });

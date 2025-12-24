@@ -155,7 +155,7 @@ router.put('/:id', async (req, res) => {
     if (req.body.contactIds && Array.isArray(req.body.contactIds)) {
       const dealInstance = await Deal.findByPk(deal.id);
       if (dealInstance) {
-        await dealInstance.setContacts(req.body.contactIds);
+        await (dealInstance as any).setContacts(req.body.contactIds);
       }
     }
 
@@ -203,13 +203,13 @@ router.post('/:id/contacts', async (req, res) => {
     }
 
     // Usar la relación muchos a muchos
-    const currentContacts = await deal.getContacts();
+    const currentContacts = await (deal as any).getContacts();
     const currentContactIds = currentContacts.map((c: any) => c.id);
 
     // Agregar solo los contactos que no están ya asociados
     const newContactIds = contactIds.filter((id: number) => !currentContactIds.includes(id));
     if (newContactIds.length > 0) {
-      await deal.addContacts(newContactIds);
+      await (deal as any).addContacts(newContactIds);
     }
 
     // Obtener el deal actualizado
@@ -240,7 +240,7 @@ router.delete('/:id/contacts/:contactId', async (req, res) => {
     
     // Intentar usar la relación muchos a muchos
     try {
-      await deal.removeContact(contactId);
+      await (deal as any).removeContact(contactId);
     } catch (relationError: any) {
       // Si falla, eliminar directamente de la tabla de asociación
       if (relationError.message && (relationError.message.includes('deal_contacts') || relationError.message.includes('does not exist'))) {
@@ -284,12 +284,12 @@ router.post('/:id/companies', async (req, res) => {
       return res.status(400).json({ error: 'Se requiere un array de companyIds' });
     }
 
-    const currentCompanies = await deal.getCompanies();
+    const currentCompanies = await (deal as any).getCompanies();
     const currentCompanyIds = currentCompanies.map((c: any) => c.id);
 
     const newCompanyIds = companyIds.filter((id: number) => !currentCompanyIds.includes(id));
     if (newCompanyIds.length > 0) {
-      await deal.addCompanies(newCompanyIds);
+      await (deal as any).addCompanies(newCompanyIds);
     }
 
     const updatedDeal = await Deal.findByPk(deal.id, {
@@ -319,7 +319,7 @@ router.delete('/:id/companies/:companyId', async (req, res) => {
     const companyIdToRemove = parseInt(req.params.companyId);
 
     try {
-      await deal.removeCompany(companyIdToRemove);
+      await (deal as any).removeCompany(companyIdToRemove);
     } catch (sequelizeError: any) {
       console.warn(`⚠️  Sequelize removeCompany failed, attempting direct deletion from DealCompany: ${sequelizeError.message}`);
       await DealCompany.destroy({

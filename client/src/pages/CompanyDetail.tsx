@@ -39,6 +39,7 @@ import {
   Drawer,
   useMediaQuery,
   Popover,
+  FormControl,
 } from '@mui/material';
 import {
   MoreVert,
@@ -230,7 +231,8 @@ const CompanyDetail: React.FC = () => {
   const [contactDialogTab, setContactDialogTab] = useState<'create' | 'existing'>('create');
   const [existingContactsSearch, setExistingContactsSearch] = useState('');
   const [selectedExistingContacts, setSelectedExistingContacts] = useState<number[]>([]);
-  const [dealFormData, setDealFormData] = useState({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'medium' });
+  const [dealFormData, setDealFormData] = useState({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'baja' as 'baja' | 'media' | 'alta', companyId: '', contactId: '' });
+  const [allCompanies, setAllCompanies] = useState<any[]>([]);
   const [ticketFormData, setTicketFormData] = useState({ subject: '', description: '', status: 'new', priority: 'medium' });
   const [subscriptionFormData, setSubscriptionFormData] = useState({ name: '', description: '', status: 'active', amount: '', currency: 'USD', billingCycle: 'monthly', startDate: '', endDate: '', renewalDate: '' });
   const [paymentFormData, setPaymentFormData] = useState({ amount: '', currency: 'USD', status: 'pending', paymentDate: '', dueDate: '', paymentMethod: 'credit_card', reference: '', description: '' });
@@ -310,6 +312,22 @@ const CompanyDetail: React.FC = () => {
   const [taskOpen, setTaskOpen] = useState(false);
   const [meetingOpen, setMeetingOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    domain: '',
+    linkedin: '',
+    industry: '',
+    phone: '',
+    phone2: '',
+    phone3: '',
+    lifecycleStage: 'lead',
+    ruc: '',
+    address: '',
+    city: '',
+    state: '',
+    country: '',
+  });
   const descriptionEditorRef = React.useRef<HTMLDivElement>(null);
   const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState<null | HTMLElement>(null);
   const imageInputRef = React.useRef<HTMLInputElement>(null);
@@ -432,6 +450,7 @@ const CompanyDetail: React.FC = () => {
     if (company) {
       fetchAssociatedRecords();
       fetchAllContacts();
+      fetchAllCompanies();
     }
   }, [company, id, fetchAssociatedRecords]);
 
@@ -494,6 +513,33 @@ const CompanyDetail: React.FC = () => {
       console.error('Error fetching all contacts:', error);
     }
   };
+
+  const fetchAllCompanies = async () => {
+    try {
+      const response = await api.get('/companies', { params: { limit: 1000 } });
+      setAllCompanies(response.data.companies || response.data || []);
+    } catch (error) {
+      console.error('Error fetching all companies:', error);
+    }
+  };
+
+  // Opciones de etapa según las imágenes proporcionadas
+  const stageOptions = [
+    { value: 'lead_inactivo', label: 'Lead Inactivo' },
+    { value: 'cliente_perdido', label: 'Cliente perdido' },
+    { value: 'cierre_perdido', label: 'Cierre Perdido' },
+    { value: 'lead', label: 'Lead' },
+    { value: 'contacto', label: 'Contacto' },
+    { value: 'reunion_agendada', label: 'Reunión Agendada' },
+    { value: 'reunion_efectiva', label: 'Reunión Efectiva' },
+    { value: 'propuesta_economica', label: 'Propuesta Económica' },
+    { value: 'negociacion', label: 'Negociación' },
+    { value: 'licitacion', label: 'Licitación' },
+    { value: 'licitacion_etapa_final', label: 'Licitación Etapa Final' },
+    { value: 'cierre_ganado', label: 'Cierre Ganado' },
+    { value: 'firma_contrato', label: 'Firma de Contrato' },
+    { value: 'activo', label: 'Activo' },
+  ];
 
   // Manejar tecla ESC para cerrar paneles
   useEffect(() => {
@@ -562,6 +608,67 @@ const CompanyDetail: React.FC = () => {
 
   const handleMenuClose = () => {
     setAnchorEl(null);
+  };
+
+  const handleOpenEditDialog = () => {
+    if (company) {
+      setEditFormData({
+        name: company.name || '',
+        domain: company.domain || '',
+        linkedin: company.linkedin || '',
+        industry: company.industry || '',
+        phone: company.phone || '',
+        phone2: (company as any).phone2 || '',
+        phone3: (company as any).phone3 || '',
+        lifecycleStage: company.lifecycleStage || 'lead',
+        ruc: (company as any).ruc || '',
+        address: company.address || '',
+        city: company.city || '',
+        state: company.state || '',
+        country: company.country || '',
+      });
+      setEditDialogOpen(true);
+    }
+    setAnchorEl(null);
+  };
+
+  const handleCloseEditDialog = () => {
+    setEditDialogOpen(false);
+    setEditFormData({
+      name: '',
+      domain: '',
+      linkedin: '',
+      industry: '',
+      phone: '',
+      phone2: '',
+      phone3: '',
+      lifecycleStage: 'lead',
+      ruc: '',
+      address: '',
+      city: '',
+      state: '',
+      country: '',
+    });
+  };
+
+  const handleSaveCompany = async () => {
+    if (!company || !editFormData.name.trim()) {
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const response = await api.put(`/companies/${company.id}`, editFormData);
+      setCompany(response.data);
+      handleCloseEditDialog();
+      // Recargar los datos de la empresa
+      await fetchCompany();
+    } catch (error: any) {
+      console.error('Error al actualizar la empresa:', error);
+      alert(error.response?.data?.error || 'Error al actualizar la empresa. Por favor, intenta nuevamente.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // Funciones para abrir diálogos
@@ -728,10 +835,6 @@ const CompanyDetail: React.FC = () => {
 
   const weekDays = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'];
 
-  const handleOpenMeeting = () => {
-    setMeetingData({ subject: '', description: '', date: '', time: '' });
-    setMeetingOpen(true);
-  };
 
   // Funciones para guardar
   const handleSaveNote = async () => {
@@ -1140,11 +1243,12 @@ const CompanyDetail: React.FC = () => {
       await api.post('/deals', {
         ...dealFormData,
         amount: parseFloat(dealFormData.amount) || 0,
-        companyId: company?.id,
+        companyId: dealFormData.companyId ? parseInt(dealFormData.companyId) : company?.id,
+        contactId: dealFormData.contactId ? parseInt(dealFormData.contactId) : null,
       });
       setSuccessMessage('Negocio agregado exitosamente');
       setAddDealOpen(false);
-      setDealFormData({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'medium' });
+      setDealFormData({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'baja' as 'baja' | 'media' | 'alta', companyId: '', contactId: '' });
       fetchAssociatedRecords();
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
@@ -1216,9 +1320,6 @@ const CompanyDetail: React.FC = () => {
         break;
       case 'task':
         handleOpenTask();
-        break;
-      case 'meeting':
-        handleOpenMeeting();
         break;
     }
   };
@@ -1574,7 +1675,7 @@ const CompanyDetail: React.FC = () => {
               }}
             >
               <MenuItem 
-                onClick={handleMenuClose}
+                onClick={handleOpenEditDialog}
                 sx={{
                   transition: 'all 0.15s ease',
                   '&:hover': {
@@ -1735,15 +1836,6 @@ const CompanyDetail: React.FC = () => {
                     <Assignment sx={{ fontSize: 20, mr: 1.5 }} />
                     Crear tarea
                   </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      handleOpenMeeting();
-                      setActionsMenuAnchorEl(null);
-                    }}
-                  >
-                    <Event sx={{ fontSize: 20, mr: 1.5 }} />
-                    Crear reunión
-                  </MenuItem>
                 </Menu>
                 <Tooltip title="Más opciones">
                   <IconButton
@@ -1826,14 +1918,8 @@ const CompanyDetail: React.FC = () => {
                 onClick={(e: React.MouseEvent<HTMLElement>) => {
                     if (!company.linkedin || company.linkedin === '#') {
                       e.preventDefault();
-                      const currentUrl = company.linkedin || '';
-                      const url = prompt('Ingresa la URL de LinkedIn:', currentUrl || 'https://www.linkedin.com/');
-                      if (url !== null) {
-                        api.put(`/companies/${company.id}`, { linkedin: url || null }).then(() => {
-                          setCompany({ ...company, linkedin: url || undefined });
-                          fetchCompany();
-                        }).catch(err => console.error('Error al guardar:', err));
-                      }
+                      // Abrir el diálogo de edición en lugar de mostrar un prompt
+                      handleOpenEditDialog();
                     }
                   }}
                   sx={{
@@ -2587,7 +2673,13 @@ const CompanyDetail: React.FC = () => {
                       <Link 
                         sx={{ fontSize: '0.875rem', cursor: 'pointer' }}
                         onClick={() => {
-                          setDealFormData({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'medium' });
+                          setDealFormData({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'baja' as 'baja' | 'media' | 'alta', companyId: company?.id?.toString() || '', contactId: '' });
+                          if (allCompanies.length === 0) {
+                            fetchAllCompanies();
+                          }
+                          if (allContacts.length === 0) {
+                            fetchAllContacts();
+                          }
                           setAddDealOpen(true);
                         }}
                       >
@@ -7742,121 +7834,105 @@ const CompanyDetail: React.FC = () => {
           }
         }}
       >
-        <DialogContent sx={{ pt: 5, pb: 2 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+        <DialogTitle>
+          Nuevo Negocio
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
             <TextField
-              label="Nombre del Negocio"
+              label="Nombre"
               value={dealFormData.name}
               onChange={(e) => setDealFormData({ ...dealFormData, name: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
+              required
             />
             <TextField
-              label="Valor"
+              label="Monto"
               type="number"
               value={dealFormData.amount}
               onChange={(e) => setDealFormData({ ...dealFormData, amount: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
+              required
             />
             <TextField
-              label="Fecha de cierre"
+              select
+              label="Etapa"
+              value={dealFormData.stage}
+              onChange={(e) => setDealFormData({ ...dealFormData, stage: e.target.value })}
+            >
+              {stageOptions.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              label="Fecha de Cierre"
               type="date"
               value={dealFormData.closeDate}
               onChange={(e) => setDealFormData({ ...dealFormData, closeDate: e.target.value })}
               InputLabelProps={{ shrink: true }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
             />
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                select
-                label="Etapa"
-                value={dealFormData.stage}
-                onChange={(e) => setDealFormData({ ...dealFormData, stage: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
-                  }
-                }}
-              >
-                <MenuItem value="lead">Lead</MenuItem>
-                <MenuItem value="contacto">Contacto</MenuItem>
-                <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
-                <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-                <MenuItem value="propuesta_economica">Propuesta económica</MenuItem>
-                <MenuItem value="negociacion">Negociación</MenuItem>
-                <MenuItem value="cierre_ganado">Cierre ganado</MenuItem>
-                <MenuItem value="cierre_perdido">Cierre perdido</MenuItem>
-              </TextField>
-              <TextField
-                select
-                label="Prioridad"
-                value={dealFormData.priority}
-                onChange={(e) => setDealFormData({ ...dealFormData, priority: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
-                  }
-                }}
-              >
-                <MenuItem value="low">Baja</MenuItem>
-                <MenuItem value="medium">Media</MenuItem>
-                <MenuItem value="high">Alta</MenuItem>
-                <MenuItem value="urgent">Urgente</MenuItem>
-              </TextField>
-            </Box>
+            <TextField
+              select
+              label="Prioridad"
+              value={dealFormData.priority}
+              onChange={(e) => setDealFormData({ ...dealFormData, priority: e.target.value as 'baja' | 'media' | 'alta' })}
+            >
+              <MenuItem value="baja">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#20B2AA' }} />
+                  Baja
+                </Box>
+              </MenuItem>
+              <MenuItem value="media">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#F59E0B' }} />
+                  Media
+                </Box>
+              </MenuItem>
+              <MenuItem value="alta">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#EF4444' }} />
+                  Alta
+                </Box>
+              </MenuItem>
+            </TextField>
+            <TextField
+              select
+              label="Empresa"
+              value={dealFormData.companyId || company?.id?.toString() || ''}
+              onChange={(e) => setDealFormData({ ...dealFormData, companyId: e.target.value })}
+              fullWidth
+            >
+              <MenuItem value="">
+                <em>Ninguna</em>
+              </MenuItem>
+              {allCompanies.map((comp) => (
+                <MenuItem key={comp.id} value={comp.id.toString()}>
+                  {comp.name}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Contacto"
+              value={dealFormData.contactId}
+              onChange={(e) => setDealFormData({ ...dealFormData, contactId: e.target.value })}
+              fullWidth
+            >
+              <MenuItem value="">
+                <em>Ninguno</em>
+              </MenuItem>
+              {allContacts.map((contact) => (
+                <MenuItem key={contact.id} value={contact.id.toString()}>
+                  {contact.firstName} {contact.lastName}
+                </MenuItem>
+              ))}
+            </TextField>
           </Box>
         </DialogContent>
-        <DialogActions sx={{ 
-          px: 3, 
-          py: 2,
-          borderTop: `1px solid ${theme.palette.divider}`,
-          gap: 1,
-        }}>
-          <Button 
-            onClick={() => setAddDealOpen(false)}
-            sx={{
-              textTransform: 'none',
-              color: theme.palette.text.secondary,
-              fontWeight: 500,
-              '&:hover': {
-                bgcolor: theme.palette.action.hover,
-              }
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button 
-            onClick={handleAddDeal} 
-            variant="contained" 
-            disabled={!dealFormData.name.trim()}
-            sx={{
-              textTransform: 'none',
-              fontWeight: 500,
-              borderRadius: 1.5,
-              px: 2.5,
-              bgcolor: taxiMonterricoColors.orange,
-              '&:hover': {
-                bgcolor: taxiMonterricoColors.orangeDark,
-              }
-            }}
-          >
+        <DialogActions>
+          <Button onClick={() => setAddDealOpen(false)}>Cancelar</Button>
+          <Button onClick={handleAddDeal} variant="contained">
             Crear
           </Button>
         </DialogActions>
@@ -8132,6 +8208,232 @@ const CompanyDetail: React.FC = () => {
           <Button onClick={() => setAddPaymentOpen(false)}>Cancelar</Button>
           <Button onClick={handleAddPayment} variant="contained" disabled={!paymentFormData.amount.trim() || !paymentFormData.paymentDate}>
             Crear
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog de Edición de Empresa */}
+      <Dialog 
+        open={editDialogOpen} 
+        onClose={handleCloseEditDialog} 
+        maxWidth="sm" 
+        fullWidth
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          }
+        }}
+      >
+        <DialogTitle>
+          Editar Empresa
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+            <TextField
+              label="Nombre"
+              value={editFormData.name}
+              onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              required
+              disabled
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            <TextField
+              label="RUC"
+              value={editFormData.ruc}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '');
+                const limitedValue = value.slice(0, 11);
+                setEditFormData({ ...editFormData, ruc: limitedValue });
+              }}
+              inputProps={{ maxLength: 11 }}
+              InputLabelProps={{ shrink: true }}
+              disabled
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Dominio"
+                value={editFormData.domain}
+                onChange={(e) => setEditFormData({ ...editFormData, domain: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              <TextField
+                label="LinkedIn"
+                value={editFormData.linkedin}
+                onChange={(e) => setEditFormData({ ...editFormData, linkedin: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                placeholder="https://www.linkedin.com/company/..."
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+            </Box>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Teléfono"
+                value={editFormData.phone}
+                onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              <TextField
+                label="Teléfono 2"
+                value={editFormData.phone2}
+                onChange={(e) => setEditFormData({ ...editFormData, phone2: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              <TextField
+                label="Teléfono 3"
+                value={editFormData.phone3}
+                onChange={(e) => setEditFormData({ ...editFormData, phone3: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+            </Box>
+            <TextField
+              label="Tipo de Contribuyente / Industria"
+              value={editFormData.industry}
+              onChange={(e) => setEditFormData({ ...editFormData, industry: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            <TextField
+              label="Dirección"
+              value={editFormData.address}
+              onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
+              multiline
+              rows={2}
+              InputLabelProps={{ shrink: true }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Distrito"
+                value={editFormData.city}
+                onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              <TextField
+                label="Provincia"
+                value={editFormData.state}
+                onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              <TextField
+                label="Departamento"
+                value={editFormData.country}
+                onChange={(e) => setEditFormData({ ...editFormData, country: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+            </Box>
+            <FormControl fullWidth>
+              <TextField
+                select
+                label="Etapa del Ciclo de Vida"
+                value={editFormData.lifecycleStage}
+                onChange={(e) => setEditFormData({ ...editFormData, lifecycleStage: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              >
+                <MenuItem value="lead_inactivo">-5% Lead Inactivo</MenuItem>
+                <MenuItem value="cliente_perdido">-1% Cliente perdido</MenuItem>
+                <MenuItem value="cierre_perdido">-1% Cierre Perdido</MenuItem>
+                <MenuItem value="lead">0% Lead</MenuItem>
+                <MenuItem value="contacto">10% Contacto</MenuItem>
+                <MenuItem value="reunion_agendada">30% Reunión Agendada</MenuItem>
+                <MenuItem value="reunion_efectiva">40% Reunión Efectiva</MenuItem>
+                <MenuItem value="propuesta_economica">50% Propuesta Económica</MenuItem>
+                <MenuItem value="negociacion">70% Negociación</MenuItem>
+                <MenuItem value="licitacion">75% Licitación</MenuItem>
+                <MenuItem value="licitacion_etapa_final">85% Licitación Etapa Final</MenuItem>
+                <MenuItem value="cierre_ganado">90% Cierre Ganado</MenuItem>
+                <MenuItem value="firma_contrato">95% Firma de Contrato</MenuItem>
+                <MenuItem value="activo">100% Activo</MenuItem>
+              </TextField>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseEditDialog} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSaveCompany} 
+            variant="contained"
+            disabled={saving || !editFormData.name.trim()}
+            sx={{
+              bgcolor: taxiMonterricoColors.green,
+              '&:hover': {
+                bgcolor: taxiMonterricoColors.greenDark,
+              },
+            }}
+          >
+            {saving ? 'Guardando...' : 'Guardar'}
           </Button>
         </DialogActions>
       </Dialog>

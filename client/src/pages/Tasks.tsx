@@ -28,7 +28,7 @@ import {
   Paper,
   useTheme,
 } from '@mui/material';
-import { Add, Delete, Search, Assignment, CheckCircle, TrendingUp, Computer, Visibility, Warning, Schedule, PendingActions } from '@mui/icons-material';
+import { Add, Delete, Search, CheckCircle, Visibility, Warning, Schedule, PendingActions } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 

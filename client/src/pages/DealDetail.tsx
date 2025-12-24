@@ -169,8 +169,6 @@ const DealDetail: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [successMessage, setSuccessMessage] = useState('');
-  const [priorityAnchorEl, setPriorityAnchorEl] = useState<null | HTMLElement>(null);
-  const [updatingPriority, setUpdatingPriority] = useState(false);
   const [activeTab, setActiveTab] = useState(0);
   const [associateOpen, setAssociateOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('empresas');
@@ -867,34 +865,6 @@ const DealDetail: React.FC = () => {
     setNoteOpen(true);
   };
 
-  const handlePriorityClick = (event: React.MouseEvent<HTMLElement>) => {
-    setPriorityAnchorEl(event.currentTarget);
-  };
-
-  const handlePriorityClose = () => {
-    setPriorityAnchorEl(null);
-  };
-
-  const handlePriorityChange = async (newPriority: 'baja' | 'media' | 'alta') => {
-    if (!deal || updatingPriority) return;
-    
-    setUpdatingPriority(true);
-    try {
-      await api.put(`/deals/${deal.id}`, {
-        priority: newPriority,
-      });
-      setDeal({ ...deal, priority: newPriority });
-      setSuccessMessage('Prioridad actualizada exitosamente');
-      setTimeout(() => setSuccessMessage(''), 3000);
-      handlePriorityClose();
-    } catch (error) {
-      console.error('Error updating priority:', error);
-      setSuccessMessage('Error al actualizar la prioridad');
-      setTimeout(() => setSuccessMessage(''), 3000);
-    } finally {
-      setUpdatingPriority(false);
-    }
-  };
 
   const handleSaveNote = async () => {
     if (!noteData.description.trim()) {

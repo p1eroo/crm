@@ -61,8 +61,11 @@ const Companies: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     domain: '',
+    linkedin: '',
     industry: '',
     phone: '',
+    phone2: '',
+    phone3: '',
     lifecycleStage: 'lead',
     ruc: '',
     address: '',
@@ -87,9 +90,9 @@ const Companies: React.FC = () => {
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [selectedOwnerFilters, setSelectedOwnerFilters] = useState<(string | number)[]>([]);
   const [users, setUsers] = useState<any[]>([]);
-  const [stagesExpanded, setStagesExpanded] = useState(true);
-  const [ownerFilterExpanded, setOwnerFilterExpanded] = useState(true);
-  const [countryFilterExpanded, setCountryFilterExpanded] = useState(true);
+  const [stagesExpanded, setStagesExpanded] = useState(false);
+  const [ownerFilterExpanded, setOwnerFilterExpanded] = useState(false);
+  const [countryFilterExpanded, setCountryFilterExpanded] = useState(false);
 
   // Función para obtener iniciales
   const getInitials = (name: string) => {
@@ -251,8 +254,11 @@ const Companies: React.FC = () => {
       setFormData({
         name: company.name,
         domain: company.domain || '',
+        linkedin: (company as any).linkedin || '',
         industry: company.industry || '',
         phone: company.phone || '',
+        phone2: (company as any).phone2 || '',
+        phone3: (company as any).phone3 || '',
         lifecycleStage: company.lifecycleStage,
         ruc: company.ruc || '',
         address: company.address || '',
@@ -265,8 +271,11 @@ const Companies: React.FC = () => {
       setFormData({
         name: '',
         domain: '',
+        linkedin: '',
         industry: '',
         phone: '',
+        phone2: '',
+        phone3: '',
         lifecycleStage: 'lead',
         ruc: '',
         address: '',
@@ -784,12 +793,20 @@ const Companies: React.FC = () => {
                 <FileDownload sx={{ fontSize: 18 }} />
                 </IconButton>
               </Tooltip>
-            <Tooltip title="Filtros">
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<FilterList sx={{ fontSize: 16 }} />}
-                onClick={() => setFilterDrawerOpen(!filterDrawerOpen)}
+              <Tooltip title="Filtros">
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<FilterList sx={{ fontSize: 16 }} />}
+                  onClick={() => {
+                    if (!filterDrawerOpen) {
+                      // Al abrir el drawer, asegurar que todas las secciones estén colapsadas
+                      setStagesExpanded(false);
+                      setOwnerFilterExpanded(false);
+                      setCountryFilterExpanded(false);
+                    }
+                    setFilterDrawerOpen(!filterDrawerOpen);
+                  }}
                 sx={{
                   borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
                   color: theme.palette.text.primary,
@@ -1130,7 +1147,7 @@ const Companies: React.FC = () => {
         <Box
           sx={{
             width: { xs: '100%', md: 400 },
-            bgcolor: theme.palette.mode === 'dark' ? 'rgba(35, 39, 44, 0.95)' : '#ffffff',
+            bgcolor: theme.palette.background.paper,
             borderLeft: { xs: 'none', md: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}` },
             borderTop: { xs: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`, md: 'none' },
             borderRadius: 2,
@@ -1220,7 +1237,7 @@ const Companies: React.FC = () => {
                   px: 2,
                   cursor: 'pointer',
                   '&:hover': {
-                    bgcolor: theme.palette.action.hover,
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
                   },
                 }}
               >
@@ -1317,7 +1334,7 @@ const Companies: React.FC = () => {
                   px: 2,
                   cursor: 'pointer',
                   '&:hover': {
-                    bgcolor: theme.palette.action.hover,
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
                   },
                 }}
               >
@@ -1504,7 +1521,7 @@ const Companies: React.FC = () => {
                   px: 2,
                   cursor: 'pointer',
                   '&:hover': {
-                    bgcolor: theme.palette.action.hover,
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
                   },
                 }}
               >
@@ -1665,28 +1682,71 @@ const Companies: React.FC = () => {
                 }
               }}
             />
-            <TextField
-              label="Dominio"
-              value={formData.domain}
-              onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            />
-            <TextField
-              label="Teléfono"
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            />
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Dominio"
+                value={formData.domain}
+                onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              <TextField
+                label="LinkedIn"
+                value={formData.linkedin}
+                onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                placeholder="https://www.linkedin.com/company/..."
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+            </Box>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Teléfono"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              <TextField
+                label="Teléfono 2"
+                value={formData.phone2}
+                onChange={(e) => setFormData({ ...formData, phone2: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+              <TextField
+                label="Teléfono 3"
+                value={formData.phone3}
+                onChange={(e) => setFormData({ ...formData, phone3: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  flex: 1,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              />
+            </Box>
             <TextField
               label="Dirección"
               value={formData.address}

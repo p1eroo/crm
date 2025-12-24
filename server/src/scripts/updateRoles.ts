@@ -27,35 +27,10 @@ async function updateRoles() {
       console.log('✓ Roles verificados.\n');
     }
 
-    // 2. Asignar rol de administrador a los usuarios especificados
-    console.log('Asignando roles de administrador...');
-    const usuarios = ['asistema', 'jvaldivia'];
-    let updatedCount = 0;
-
-    const adminRoleFinal = await Role.findOne({ where: { name: 'admin' } });
-    if (!adminRoleFinal) {
-      throw new Error('No se pudo encontrar el rol de administrador');
-    }
-
-    for (const usuario of usuarios) {
-      const user = await User.findOne({ 
-        where: { usuario },
-        include: [{ model: Role, as: 'Role' }]
-      });
-      
-      if (user) {
-        if (user.role !== 'admin') {
-          await user.update({ roleId: adminRoleFinal.id });
-          await user.reload({ include: [{ model: Role, as: 'Role' }] });
-          console.log(`✓ Rol de administrador asignado a: ${usuario} (${user.firstName} ${user.lastName})`);
-          updatedCount++;
-        } else {
-          console.log(`- ${usuario} ya tiene rol de administrador`);
-        }
-      } else {
-        console.log(`✗ Usuario no encontrado: ${usuario}`);
-      }
-    }
+    // 2. Los roles de usuario deben asignarse desde la interfaz de administración
+    // o mediante la base de datos. No se asignan roles automáticamente desde este script.
+    console.log('Nota: Los roles deben asignarse manualmente desde la interfaz de administración.');
+    const updatedCount = 0;
 
     // 3. Verificar los cambios
     console.log('\n--- Usuarios con rol de administrador ---');

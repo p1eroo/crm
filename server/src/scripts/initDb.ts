@@ -1,7 +1,5 @@
 import { sequelize } from '../config/database';
-import { User } from '../models/User';
 import { Role } from '../models/Role';
-import bcrypt from 'bcryptjs';
 
 async function initDatabase() {
   try {
@@ -21,25 +19,8 @@ async function initDatabase() {
       console.log('Roles por defecto creados.');
     }
 
-    // Crear usuario admin por defecto si no existe
-    const adminExists = await User.findOne({ where: { usuario: 'admin' } });
-    if (!adminExists) {
-      const adminRole = await Role.findOne({ where: { name: 'admin' } });
-      if (!adminRole) {
-        throw new Error('No se pudo encontrar el rol de administrador');
-      }
-
-      const hashedPassword = await bcrypt.hash('admin123', 10);
-      await User.create({
-        usuario: 'admin',
-        email: 'admin@crm.com',
-        password: hashedPassword,
-        firstName: 'Admin',
-        lastName: 'User',
-        roleId: adminRole.id,
-      });
-      console.log('Usuario admin creado: usuario=admin / contraseña=admin123');
-    }
+    // Nota: Los usuarios deben crearse manualmente desde la interfaz de administración
+    // o mediante la base de datos. No se crean usuarios automáticamente.
 
     console.log('Base de datos inicializada correctamente.');
     process.exit(0);

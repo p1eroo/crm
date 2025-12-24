@@ -166,7 +166,7 @@ const Settings: React.FC = () => {
         window.removeEventListener('resize', checkScrollButtons);
       };
     }
-  }, []);
+  }, [checkScrollButtons]);
 
   const handleEmailConnect = async () => {
     if (!user?.id) {

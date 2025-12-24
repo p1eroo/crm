@@ -44,6 +44,18 @@ export class Deal extends Model<DealAttributes, DealCreationAttributes> implemen
   public Owner?: User;
   public Contact?: Contact;
   public Company?: Company;
+  public Contacts?: Contact[];
+  public Companies?: Company[];
+
+  // Métodos de asociación generados por Sequelize para belongsToMany
+  public getContacts?: () => Promise<Contact[]>;
+  public setContacts?: (contactIds: number[]) => Promise<void>;
+  public addContacts?: (contactIds: number[]) => Promise<void>;
+  public removeContact?: (contactId: number) => Promise<void>;
+  public getCompanies?: () => Promise<Company[]>;
+  public setCompanies?: (companyIds: number[]) => Promise<void>;
+  public addCompanies?: (companyIds: number[]) => Promise<void>;
+  public removeCompany?: (companyId: number) => Promise<void>;
 }
 
 Deal.init(

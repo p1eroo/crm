@@ -57,7 +57,6 @@ import {
   YouTube,
   Bolt,
   Remove,
-  Warning,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../config/api';
@@ -179,9 +178,9 @@ const Contacts: React.FC = () => {
   const [selectedStages, setSelectedStages] = useState<string[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [selectedOwnerFilters, setSelectedOwnerFilters] = useState<(string | number)[]>([]);
-  const [stagesExpanded, setStagesExpanded] = useState(true);
-  const [ownerFilterExpanded, setOwnerFilterExpanded] = useState(true);
-  const [countryFilterExpanded, setCountryFilterExpanded] = useState(true);
+  const [stagesExpanded, setStagesExpanded] = useState(false);
+  const [ownerFilterExpanded, setOwnerFilterExpanded] = useState(false);
+  const [countryFilterExpanded, setCountryFilterExpanded] = useState(false);
 
   const fetchUsers = useCallback(async () => {
     // Verificar nuevamente el rol antes de hacer la petición
@@ -1042,7 +1041,15 @@ const Contacts: React.FC = () => {
                 variant="outlined"
                 size="small"
                 startIcon={<FilterList sx={{ fontSize: 16 }} />}
-                onClick={() => setFilterDrawerOpen(!filterDrawerOpen)}
+                onClick={() => {
+                  if (!filterDrawerOpen) {
+                    // Al abrir el drawer, asegurar que todas las secciones estén colapsadas
+                    setStagesExpanded(false);
+                    setOwnerFilterExpanded(false);
+                    setCountryFilterExpanded(false);
+                  }
+                  setFilterDrawerOpen(!filterDrawerOpen);
+                }}
                 sx={{
                   borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
                   color: theme.palette.text.primary,

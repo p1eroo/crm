@@ -77,8 +77,8 @@ const Deals: React.FC = () => {
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [selectedStages, setSelectedStages] = useState<string[]>([]);
   const [selectedOwnerFilters, setSelectedOwnerFilters] = useState<(string | number)[]>([]);
-  const [stagesExpanded, setStagesExpanded] = useState(true);
-  const [ownerFilterExpanded, setOwnerFilterExpanded] = useState(true);
+  const [stagesExpanded, setStagesExpanded] = useState(false);
+  const [ownerFilterExpanded, setOwnerFilterExpanded] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage] = useState(10);
   const [importing, setImporting] = useState(false);
@@ -704,7 +704,14 @@ const Deals: React.FC = () => {
                 variant="outlined"
                 size="small"
                 startIcon={<FilterList sx={{ fontSize: 16 }} />}
-                onClick={() => setFilterDrawerOpen(!filterDrawerOpen)}
+                onClick={() => {
+                  if (!filterDrawerOpen) {
+                    // Al abrir el drawer, asegurar que todas las secciones estén colapsadas
+                    setStagesExpanded(false);
+                    setOwnerFilterExpanded(false);
+                  }
+                  setFilterDrawerOpen(!filterDrawerOpen);
+                }}
                 sx={{
                   borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
                   color: theme.palette.text.primary,
@@ -1208,7 +1215,7 @@ const Deals: React.FC = () => {
                   color: theme.palette.text.primary,
                 }}
               >
-                Filtros
+                Filter
               </Typography>
               <Box sx={{ display: 'flex', gap: 0.5 }}>
                 <Button
@@ -1229,7 +1236,7 @@ const Deals: React.FC = () => {
                     },
                   }}
                 >
-                  Limpiar
+                  Clear
                 </Button>
                 <IconButton
                   size="small"
@@ -1261,7 +1268,7 @@ const Deals: React.FC = () => {
                     px: 2,
                     cursor: 'pointer',
                     '&:hover': {
-                      bgcolor: theme.palette.action.hover,
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
                     },
                   }}
                 >
@@ -1336,7 +1343,7 @@ const Deals: React.FC = () => {
                     px: 2,
                     cursor: 'pointer',
                     '&:hover': {
-                      bgcolor: theme.palette.action.hover,
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
                     },
                   }}
                 >

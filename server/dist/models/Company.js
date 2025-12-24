@@ -33,6 +33,14 @@ Company.init({
         type: sequelize_1.DataTypes.STRING,
         allowNull: true,
     },
+    phone2: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: true,
+    },
+    phone3: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: true,
+    },
     ruc: {
         type: sequelize_1.DataTypes.STRING,
         allowNull: true,
@@ -58,6 +66,10 @@ Company.init({
         allowNull: true,
     },
     website: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: true,
+    },
+    linkedin: {
         type: sequelize_1.DataTypes.STRING,
         allowNull: true,
     },
@@ -97,6 +109,8 @@ Company.init({
     sequelize: database_1.sequelize,
     tableName: 'companies',
     timestamps: true,
+    // Hacer que Sequelize ignore campos que no existen en la base de datos
+    omitNull: false,
 });
 Company.belongsTo(User_1.User, { foreignKey: 'ownerId', as: 'Owner' });
 // Relación muchos-a-muchos con contactos se inicializa en models/index.ts después de que todos los modelos estén cargados

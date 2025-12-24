@@ -43,7 +43,7 @@ Contact.init({
     },
     companyId: {
         type: sequelize_1.DataTypes.INTEGER,
-        allowNull: true,
+        allowNull: false,
         references: {
             model: 'companies',
             key: 'id',

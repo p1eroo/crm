@@ -374,25 +374,25 @@ const AppContent: React.FC = () => {
               <Route
                 path="/users"
                 element={
-                  <MainLayout>
-                    <Users />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/reports"
-                element={
                   (() => {
                     const userRole = user?.role;
-                    if (userRole === 'admin' || userRole === 'jefe_comercial') {
+                    if (userRole === 'admin') {
                       return (
                         <MainLayout>
-                          <Reports />
+                          <Users />
                         </MainLayout>
                       );
                     }
                     return <Navigate to="/" replace />;
                   })()
+                }
+              />
+              <Route
+                path="/reports"
+                element={
+                  <MainLayout>
+                    <Reports />
+                  </MainLayout>
                 }
               />
               <Route
