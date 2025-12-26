@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import api from '../config/api';
 
 interface User {
   id: number;
@@ -175,32 +176,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       };
       
+      // Usar la instancia de api (axios) en lugar de fetch para evitar problemas de CORS
+      // El interceptor de axios maneja automáticamente la detección de URL y CORS
       const apiUrl = getBackendUrl();
       console.log('🔗 URL del backend detectada:', apiUrl);
       let backendData: any = {};
       
       try {
-        const backendResponse = await fetch(`${apiUrl}/auth/login-monterrico`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            usuario: idacceso,
-            password: contraseña,
-          }),
+        // Usar api.post en lugar de fetch para aprovechar la configuración de axios
+        // El interceptor solo agregará el token si existe, así que está bien usarlo aquí
+        // El interceptor también recalcula la baseURL automáticamente, pero podemos sobrescribirla si es necesario
+        const backendResponse = await api.post('/auth/login-monterrico', {
+          usuario: idacceso,
+          password: contraseña,
+        }, {
+          // Sobrescribir la baseURL para esta petición específica para asegurar que use la URL correcta
+          baseURL: apiUrl,
         });
 
-        backendData = await backendResponse.json();
+        backendData = backendResponse.data;
 
-        if (!backendResponse.ok || !backendData.token) {
+        if (!backendData.token) {
           console.error('Error obteniendo JWT local:', backendData);
           // Continuar con el login aunque falle el backend, pero sin JWT local
           // Esto permite usar la app aunque el backend esté caído
         }
-      } catch (backendError) {
+      } catch (backendError: any) {
         console.error('Error al conectar con backend:', backendError);
-        // Continuar sin backend
+        // Si es un error 401, las credenciales son inválidas
+        if (backendError.response?.status === 401) {
+          setError('Credenciales incorrectas');
+          setLoading(false);
+          return false;
+        }
+        // Continuar sin backend si es otro tipo de error
       }
 
       // Guardar datos de Monterrico

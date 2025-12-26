@@ -186,6 +186,13 @@ const Header: React.FC = () => {
   // Obtener recordatorios de tareas y eventos
   useEffect(() => {
     const fetchReminders = async (autoOpen: boolean = false) => {
+      // Verificar autenticación antes de hacer requests
+      const token = localStorage.getItem('token');
+      if (!user || !token) {
+        console.log('⚠️ Usuario no autenticado, omitiendo fetchReminders');
+        return;
+      }
+
       try {
         const now = new Date();
         now.setHours(0, 0, 0, 0); // Inicio del día actual
@@ -219,6 +226,11 @@ const Header: React.FC = () => {
         // Obtener eventos de Google Calendar (si están disponibles)
         let upcomingEvents: any[] = [];
         try {
+          // Verificar autenticación nuevamente antes de hacer el request
+          const currentToken = localStorage.getItem('token');
+          if (!user || !currentToken) {
+            throw new Error('Usuario no autenticado');
+          }
           const calendarResponse = await api.get('/google/events');
           if (calendarResponse.data && Array.isArray(calendarResponse.data)) {
             upcomingEvents = calendarResponse.data.filter((event: any) => {
@@ -276,7 +288,7 @@ const Header: React.FC = () => {
     }, 5 * 60 * 1000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [user]);
 
   return (
     <Box
