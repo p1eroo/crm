@@ -105,21 +105,12 @@ const Calendar: React.FC = () => {
   }, [fetchGoogleCalendarEvents, user]);
 
   useEffect(() => {
-    // Solo hacer llamadas si el usuario está autenticado
-    if (user) {
-      fetchAllTasksWithDates();
-      fetchNotes();
-      checkGoogleCalendarConnection();
-    }
-  }, [checkGoogleCalendarConnection, user]);
-
-  useEffect(() => {
     if (googleCalendarConnected) {
       fetchGoogleCalendarEvents();
     }
   }, [calendarDate, googleCalendarConnected, fetchGoogleCalendarEvents]);
 
-  const fetchAllTasksWithDates = async () => {
+  const fetchAllTasksWithDates = useCallback(async () => {
     // Verificar autenticación antes de hacer la llamada
     const token = localStorage.getItem('token');
     if (!user || !token) {
@@ -165,9 +156,9 @@ const Calendar: React.FC = () => {
       }
       setAllTasksWithDates([]);
     }
-  };
+  }, [user]);
 
-  const fetchNotes = async () => {
+  const fetchNotes = useCallback(async () => {
     // Verificar autenticación antes de hacer la llamada
     const token = localStorage.getItem('token');
     if (!user || !token) {
@@ -189,7 +180,16 @@ const Calendar: React.FC = () => {
       }
       setNotes([]);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    // Solo hacer llamadas si el usuario está autenticado
+    if (user) {
+      fetchAllTasksWithDates();
+      fetchNotes();
+      checkGoogleCalendarConnection();
+    }
+  }, [checkGoogleCalendarConnection, user, fetchAllTasksWithDates, fetchNotes]);
 
   const getEventDate = (event: any): Date => {
     if (event.start.dateTime) {

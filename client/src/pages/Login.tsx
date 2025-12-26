@@ -8,10 +8,14 @@ import {
   Alert,
   Checkbox,
   FormControlLabel,
+  IconButton,
+  InputAdornment,
 } from '@mui/material';
-import { Person, Lock } from '@mui/icons-material';
+import { Person, Lock, Visibility, VisibilityOff } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
-import fondoImage from '../assets/tm_fondo.png';
+import fondoImage from '../assets/tm_fondo1.png';
+import logoImage from '../assets/tm_login.png';
+import { taxiMonterricoColors } from '../theme/colors';
 
 const Login: React.FC = () => {
   // Cargar usuario recordado al inicializar el estado
@@ -28,6 +32,7 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(() => {
     const saved = getRememberedUsername();
     return !!saved;
@@ -38,6 +43,14 @@ const Login: React.FC = () => {
   
   // Usar el error del contexto o el error local
   const error = authError || localError;
+  
+  const handleClickShowPassword = () => {
+    setShowPassword(!showPassword);
+  };
+  
+  const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+  };
 
   useEffect(() => {
     mountedRef.current = true;
@@ -117,7 +130,7 @@ const Login: React.FC = () => {
         padding: { xs: 2, sm: 3 },
       }}
     >
-      {/* Fondo con blur */}
+      {/* Fondo con overlay oscuro */}
       <Box
         sx={{
           position: 'absolute',
@@ -129,40 +142,68 @@ const Login: React.FC = () => {
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',
-          filter: 'blur(10px)',
           zIndex: 0,
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.4) 100%)',
+            zIndex: 1,
+          },
         }}
       />
       
-      {/* Formulario sin blur */}
+      {/* Card Glass */}
       <Box
+        component="main"
         sx={{
           position: 'relative',
-          zIndex: 1,
-          backgroundColor: 'rgba(245, 245, 245, 0.95)',
-          border: '1px solid rgba(255, 255, 255, 0.3)',
-          width: '90%',
-          maxWidth: '450px',
-          padding: { xs: '24px 32px', sm: '30px 40px' },
+          zIndex: 2,
+          width: { xs: '92%', sm: '480px' },
+          padding: '32px',
+          border: '1px solid rgba(255, 255, 255, 0.18)',
           borderRadius: '16px',
+          background: 'rgba(17, 24, 39, 0.55)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
           color: '#fff',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.6)',
-          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.2) 100%)',
         }}
       >
-        {/* Título */}
-        <Typography
-          variant="h4"
-          component="h1"
+        {/* Header de marca */}
+        <Box
           sx={{
-            textAlign: 'center',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
             mb: 4,
-            fontWeight: 500,
-            color: '#fff',
           }}
         >
-          Iniciar Sesión
-        </Typography>
+          <Box
+            component="img"
+            src={logoImage}
+            alt="CRM Monterrico"
+            sx={{
+              maxWidth: { xs: '140px', sm: '160px' },
+              width: '100%',
+              height: 'auto',
+              objectFit: 'contain',
+              mb: 2,
+            }}
+          />
+          <Typography
+            variant="body2"
+            sx={{
+              color: 'rgba(255, 255, 255, 0.7)',
+              fontSize: { xs: '0.875rem', sm: '0.9375rem' },
+            }}
+          >
+            Gestiona tus clientes y negocios
+          </Typography>
+        </Box>
 
         {error && (
           <Alert
@@ -171,8 +212,8 @@ const Login: React.FC = () => {
               setLocalError('');
             }}
             sx={{
-              mb: 2,
-              borderRadius: 1,
+              mb: 3,
+              borderRadius: '8px',
               backgroundColor: 'rgba(211, 47, 47, 0.9)',
               color: '#fff',
               '& .MuiAlert-icon': {
@@ -184,169 +225,176 @@ const Login: React.FC = () => {
           </Alert>
         )}
 
-        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
           {/* Campo Usuario */}
-          <Box
+          <TextField
+            required
+            fullWidth
+            inputRef={usernameInputRef}
+            id="username"
+            placeholder="Usuario"
+            name="username"
+            autoComplete="username"
+            autoFocus
+            value={username}
+            onChange={(e) => {
+              setUsername(e.target.value);
+              setLocalError('');
+              // Deseleccionar el texto después de un pequeño delay para evitar la selección del autocompletado
+              setTimeout(() => {
+                if (usernameInputRef.current) {
+                  const length = e.target.value.length;
+                  usernameInputRef.current.setSelectionRange(length, length);
+                }
+              }, 0);
+            }}
+            onSelect={(e) => {
+              // Deseleccionar el texto cuando se selecciona desde el autocompletado
+              setTimeout(() => {
+                if (usernameInputRef.current) {
+                  const length = usernameInputRef.current.value.length;
+                  usernameInputRef.current.setSelectionRange(length, length);
+                }
+              }, 0);
+            }}
+            onBlur={(e) => {
+              // Deseleccionar el texto cuando el campo pierde el foco
+              setTimeout(() => {
+                if (usernameInputRef.current) {
+                  const length = usernameInputRef.current.value.length;
+                  usernameInputRef.current.setSelectionRange(length, length);
+                }
+              }, 0);
+            }}
+            onInput={(e) => {
+              // Deseleccionar el texto inmediatamente cuando hay un cambio de input
+              setTimeout(() => {
+                if (usernameInputRef.current) {
+                  const length = (e.target as HTMLInputElement).value.length;
+                  usernameInputRef.current.setSelectionRange(length, length);
+                }
+              }, 0);
+            }}
+            error={!!error}
+            helperText={error ? '' : undefined}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Person sx={{ color: error ? 'error.main' : 'rgba(255, 255, 255, 0.7)' }} />
+                </InputAdornment>
+              ),
+            }}
             sx={{
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              height: '60px',
-              borderRadius: '40px',
-              padding: '0 20px',
-              transition: 'all 0.3s ease',
-              '&:hover': {
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                color: '#fff',
+                borderRadius: '25px',
+                '& fieldset': {
+                  borderColor: 'rgba(255, 255, 255, 0.2)',
+                  borderRadius: '25px',
+                },
+                '&:hover fieldset': {
+                  borderColor: 'rgba(255, 255, 255, 0.3)',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: taxiMonterricoColors.green,
+                },
+                '&.Mui-error fieldset': {
+                  borderColor: 'error.main',
+                },
               },
-              '&:focus-within': {
-                border: '1px solid rgba(255, 255, 255, 0.4)',
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.2)',
+              '& .MuiInputLabel-root': {
+                display: 'none', // Ocultar el label
+              },
+              '& input::placeholder': {
+                color: 'rgba(255, 255, 255, 0.7)',
+                opacity: 1,
+              },
+              '& .MuiFormHelperText-root': {
+                color: 'rgba(255, 255, 255, 0.6)',
+                '&.Mui-error': {
+                  color: 'error.main',
+                },
               },
             }}
-          >
-            <Person sx={{ color: '#fff', mr: 1.5, fontSize: 24 }} />
-            <TextField
-              required
-              fullWidth
-              inputRef={usernameInputRef}
-              id="username"
-              placeholder="Nombre de usuario"
-              name="username"
-              autoComplete="username"
-              autoFocus
-              value={username}
-              onChange={(e) => {
-                setUsername(e.target.value);
-                // Deseleccionar el texto después de un pequeño delay para evitar la selección del autocompletado
-                setTimeout(() => {
-                  if (usernameInputRef.current) {
-                    const length = e.target.value.length;
-                    usernameInputRef.current.setSelectionRange(length, length);
-                  }
-                }, 0);
-              }}
-              onSelect={(e) => {
-                // Deseleccionar el texto cuando se selecciona desde el autocompletado
-                setTimeout(() => {
-                  if (usernameInputRef.current) {
-                    const length = usernameInputRef.current.value.length;
-                    usernameInputRef.current.setSelectionRange(length, length);
-                  }
-                }, 0);
-              }}
-              onBlur={(e) => {
-                // Deseleccionar el texto cuando el campo pierde el foco
-                setTimeout(() => {
-                  if (usernameInputRef.current) {
-                    const length = usernameInputRef.current.value.length;
-                    usernameInputRef.current.setSelectionRange(length, length);
-                  }
-                }, 0);
-              }}
-              onInput={(e) => {
-                // Deseleccionar el texto inmediatamente cuando hay un cambio de input
-                setTimeout(() => {
-                  if (usernameInputRef.current) {
-                    const length = (e.target as HTMLInputElement).value.length;
-                    usernameInputRef.current.setSelectionRange(length, length);
-                  }
-                }, 0);
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  border: 'none',
-                  '& fieldset': {
-                    border: 'none',
-                  },
-                  '&:hover fieldset': {
-                    border: 'none',
-                  },
-                  '&.Mui-focused fieldset': {
-                    border: 'none',
-                  },
-                },
-                '& input': {
-                  color: '#fff',
-                  fontSize: '16px',
-                  padding: '0',
-                  '&::placeholder': {
-                    color: '#fff',
-                    opacity: 1,
-                  },
-                  '&::selection': {
-                    backgroundColor: 'transparent',
-                    color: '#fff',
-                  },
-                  '&::-moz-selection': {
-                    backgroundColor: 'transparent',
-                    color: '#fff',
-                  },
-                },
-              }}
-            />
-          </Box>
+          />
 
           {/* Campo Contraseña */}
-          <Box
+          <TextField
+            required
+            fullWidth
+            name="password"
+            placeholder="Contraseña"
+            type={showPassword ? 'text' : 'password'}
+            id="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setLocalError('');
+            }}
+            error={!!error}
+            helperText={error ? '' : undefined}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Lock sx={{ color: error ? 'error.main' : 'rgba(255, 255, 255, 0.7)' }} />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={handleClickShowPassword}
+                    onMouseDown={handleMouseDownPassword}
+                    edge="end"
+                    sx={{
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      '&:hover': {
+                        color: '#fff',
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      },
+                    }}
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
             sx={{
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              height: '60px',
-              borderRadius: '40px',
-              padding: '0 20px',
-              transition: 'all 0.3s ease',
-              '&:hover': {
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                backgroundColor: 'rgba(255, 255, 255, 0.15)',
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                color: '#fff',
+                borderRadius: '25px',
+                '& fieldset': {
+                  borderColor: 'rgba(255, 255, 255, 0.2)',
+                  borderRadius:'25px',
+                },
+                '&:hover fieldset': {
+                  borderColor: 'rgba(255, 255, 255, 0.3)',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: taxiMonterricoColors.green,
+                },
+                '&.Mui-error fieldset': {
+                  borderColor: 'error.main',
+                },
               },
-              '&:focus-within': {
-                border: '1px solid rgba(255, 255, 255, 0.4)',
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.2)',
+              '& .MuiInputLabel-root': {
+                display: 'none', // Ocultar el label
+              },
+              '& input::placeholder': {
+                color: 'rgba(255, 255, 255, 0.7)',
+                opacity: 1,
+              },
+              '& .MuiFormHelperText-root': {
+                color: 'rgba(255, 255, 255, 0.6)',
+                '&.Mui-error': {
+                  color: 'error.main',
+                },
               },
             }}
-          >
-            <Lock sx={{ color: '#fff', mr: 1.5, fontSize: 24 }} />
-            <TextField
-              required
-              fullWidth
-              name="password"
-              placeholder="Contraseña"
-              type="password"
-              id="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  border: 'none',
-                  '& fieldset': {
-                    border: 'none',
-                  },
-                  '&:hover fieldset': {
-                    border: 'none',
-                  },
-                  '&.Mui-focused fieldset': {
-                    border: 'none',
-                  },
-                },
-                '& input': {
-                  color: '#fff',
-                  fontSize: '16px',
-                  padding: '0',
-                  '&::placeholder': {
-                    color: '#fff',
-                    opacity: 1,
-                  },
-                },
-              }}
-            />
-          </Box>
+          />
 
           {/* Recordarme y Olvidé contraseña */}
           <Box
@@ -354,8 +402,8 @@ const Login: React.FC = () => {
               display: 'flex',
               justifyContent: 'space-between',
               flexWrap: 'wrap',
-              gap: 2,
-              fontSize: '14.5px',
+              gap: { xs: 1, sm: 2 },
+              alignItems: 'center',
             }}
           >
             <FormControlLabel
@@ -364,21 +412,27 @@ const Login: React.FC = () => {
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
                   sx={{
-                    color: '#fff',
+                    color: 'rgba(255, 255, 255, 0.7)',
                     '&.Mui-checked': {
-                      color: '#fff',
+                      color: taxiMonterricoColors.green,
+                    },
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
                     },
                   }}
                 />
               }
-              label="Recordarme"
-              sx={{
-                color: '#fff',
-                fontSize: '14.5px',
-                '& .MuiFormControlLabel-label': {
-                  fontSize: '14.5px',
-                },
-              }}
+              label={
+                <Typography
+                  component="span"
+                  sx={{
+                    fontSize: { xs: '0.875rem', sm: '0.9375rem' },
+                    color: 'rgba(255, 255, 255, 0.9)',
+                  }}
+                >
+                  Recordarme
+                </Typography>
+              }
             />
             <Typography
               component="a"
@@ -386,13 +440,19 @@ const Login: React.FC = () => {
               target="_blank"
               rel="noopener noreferrer"
               sx={{
-                fontSize: '14.5px',
-                color: '#fff',
+                fontSize: { xs: '0.875rem', sm: '0.9375rem' },
+                color: 'rgba(255, 255, 255, 0.9)',
                 textDecoration: 'none',
                 cursor: 'pointer',
-                alignSelf: 'center',
                 '&:hover': {
                   textDecoration: 'underline',
+                  color: '#fff',
+                },
+                '&:focus': {
+                  outline: '2px solid',
+                  outlineColor: taxiMonterricoColors.green,
+                  outlineOffset: '2px',
+                  borderRadius: '4px',
                 },
               }}
             >
@@ -405,29 +465,32 @@ const Login: React.FC = () => {
             type="submit"
             variant="contained"
             disabled={loading}
+            fullWidth
             sx={{
-              borderRadius: '30px',
-              border: 0,
-              outline: 0,
-              fontSize: '15px',
-              fontWeight: 500,
-              padding: '10px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              backgroundColor: loading ? 'rgba(255, 255, 255, 0.5)' : '#fff',
-              color: loading ? 'rgba(255, 255, 255, 0.7)' : '#000',
+              height: '48px',
+              borderRadius: '15px',
+              fontSize: '1rem',
+              fontWeight: 600,
               textTransform: 'none',
+              backgroundColor: taxiMonterricoColors.green,
+              color: '#fff',
               '&:hover': {
-                backgroundColor: loading ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.9)',
+                backgroundColor: taxiMonterricoColors.greenDark,
               },
               '&:disabled': {
-                backgroundColor: 'rgba(255, 255, 255, 0.5)',
+                backgroundColor: 'rgba(46, 125, 50, 0.5)',
                 color: 'rgba(255, 255, 255, 0.7)',
+              },
+              '&:focus': {
+                outline: '2px solid',
+                outlineColor: taxiMonterricoColors.greenLight,
+                outlineOffset: '2px',
               },
             }}
           >
             {loading ? (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CircularProgress size={16} sx={{ color: '#fff' }} />
+                <CircularProgress size={20} sx={{ color: '#fff' }} />
                 <span>Cargando...</span>
               </Box>
             ) : (
@@ -439,8 +502,9 @@ const Login: React.FC = () => {
           <Typography
             sx={{
               textAlign: 'center',
-              fontSize: '14.5px',
-              color: '#fff',
+              fontSize: { xs: '0.875rem', sm: '0.9375rem' },
+              color: 'rgba(255, 255, 255, 0.8)',
+              mt: 1,
             }}
           >
             ¿Todavía no tienes una cuenta?{' '}
@@ -450,13 +514,20 @@ const Login: React.FC = () => {
               target="_blank"
               rel="noopener noreferrer"
               sx={{
-                fontSize: '14.5px',
-                color: '#fff',
+                fontSize: 'inherit',
+                color: taxiMonterricoColors.greenLight,
                 textDecoration: 'none',
                 cursor: 'pointer',
-                marginLeft: '8px',
+                fontWeight: 500,
                 '&:hover': {
                   textDecoration: 'underline',
+                  color: taxiMonterricoColors.green,
+                },
+                '&:focus': {
+                  outline: '2px solid',
+                  outlineColor: taxiMonterricoColors.green,
+                  outlineOffset: '2px',
+                  borderRadius: '4px',
                 },
               }}
             >

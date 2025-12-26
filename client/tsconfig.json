@@ -18,7 +18,12 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@mui/material/*": ["node_modules/@mui/material/*"],
+      "@react-oauth/google": ["node_modules/@react-oauth/google"]
+    }
   },
   "include": [
     "src"

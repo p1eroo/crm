@@ -221,14 +221,6 @@ const Dashboard: React.FC = () => {
     }
   }, [selectedYear, selectedMonth, user]);
 
-  useEffect(() => {
-    // Solo hacer llamadas si el usuario está autenticado
-    if (user) {
-      fetchStats();
-      fetchTasks();
-    }
-  }, [fetchStats, user]);
-
   // Recargar estadísticas cuando cambia el año o mes seleccionado
   useEffect(() => {
     // Solo hacer llamadas si el usuario está autenticado
@@ -334,7 +326,7 @@ const Dashboard: React.FC = () => {
 
 
 
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     // Verificar autenticación antes de hacer la llamada
     const token = localStorage.getItem('token');
     if (!user || !token) {
@@ -372,7 +364,15 @@ const Dashboard: React.FC = () => {
       
       setTasks([]);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    // Solo hacer llamadas si el usuario está autenticado
+    if (user) {
+      fetchStats();
+      fetchTasks();
+    }
+  }, [fetchStats, user, fetchTasks]);
 
   // const handleTaskToggle = async (taskId: number, currentStatus: string) => {
   //   try {

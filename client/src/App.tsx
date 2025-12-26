@@ -125,7 +125,7 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
     // MuiPaper: borderRadius 16, border 1px con divider, background paper
     MuiPaper: {
       styleOverrides: {
-        root: ({ theme }) => ({
+        root: ({ theme }: { theme: Theme }) => ({
           borderRadius: 16,
           border: `1px solid ${theme.palette.divider}`,
           backgroundColor: theme.palette.background.paper,
@@ -135,7 +135,7 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
     // MuiCard: misma lógica + sombra suave
     MuiCard: {
       styleOverrides: {
-        root: ({ theme }) => ({
+        root: ({ theme }: { theme: Theme }) => ({
           borderRadius: 16,
           border: `1px solid ${theme.palette.divider}`,
           backgroundColor: theme.palette.background.paper,
@@ -148,7 +148,7 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
     // MuiAppBar: background paper, border-bottom divider, sin transparencia
     MuiAppBar: {
       styleOverrides: {
-        root: ({ theme }) => ({
+        root: ({ theme }: { theme: Theme }) => ({
           backgroundColor: theme.palette.background.paper,
           borderBottom: `1px solid ${theme.palette.divider}`,
           boxShadow: 'none',
@@ -158,7 +158,7 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
     // MuiDrawer: background default/paper, border-right divider
     MuiDrawer: {
       styleOverrides: {
-        paper: ({ theme }) => ({
+        paper: ({ theme }: { theme: Theme }) => ({
           backgroundColor: theme.palette.background.default,
           borderRight: `1px solid ${theme.palette.divider}`,
         }),
@@ -175,7 +175,7 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
     // MuiTabs: indicator suave, tabs estilo pill en dark (opcional)
     MuiTabs: {
       styleOverrides: {
-        root: ({ theme }) => ({
+        root: ({ theme }: { theme: Theme }) => ({
           '& .MuiTabs-indicator': {
             height: 3,
             borderRadius: '3px 3px 0 0',
@@ -186,7 +186,7 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
     },
     MuiTab: {
       styleOverrides: {
-        root: ({ theme }) => ({
+        root: ({ theme }: { theme: Theme }) => ({
           textTransform: 'none',
           ...(theme.palette.mode === 'dark' && {
             borderRadius: 8,

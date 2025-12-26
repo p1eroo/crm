@@ -22,6 +22,7 @@ import {
   Menu,
   useTheme,
   Collapse,
+  Pagination,
 } from '@mui/material';
 import { Add, Delete, Search, Visibility, UploadFile, FileDownload, Warning, CheckCircle, FilterList, Close, ExpandMore, Remove, Bolt } from '@mui/icons-material';
 import api from '../config/api';
@@ -93,6 +94,8 @@ const Companies: React.FC = () => {
   const [stagesExpanded, setStagesExpanded] = useState(false);
   const [ownerFilterExpanded, setOwnerFilterExpanded] = useState(false);
   const [countryFilterExpanded, setCountryFilterExpanded] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 7;
 
   // Función para obtener iniciales
   const getInitials = (name: string) => {
@@ -708,6 +711,17 @@ const Companies: React.FC = () => {
       }
     });
 
+  // Calcular paginación
+  const totalPages = Math.ceil(filteredCompanies.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedCompanies = filteredCompanies.slice(startIndex, endIndex);
+
+  // Resetear a la página 1 cuando cambien los filtros
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedStages, selectedCountries, selectedOwnerFilters, search, sortBy]);
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -897,7 +911,7 @@ const Companies: React.FC = () => {
 
           {/* Filas de empresas */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {filteredCompanies.map((company) => (
+          {paginatedCompanies.map((company) => (
             <Box
                   key={company.id}
               component="div"
@@ -1148,6 +1162,45 @@ const Companies: React.FC = () => {
             </Box>
           ))}
           </Box>
+
+          {/* Paginación */}
+          {totalPages > 1 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, mb: 2 }}>
+              <Pagination
+                count={totalPages}
+                page={currentPage}
+                onChange={(event, value) => setCurrentPage(value)}
+                color="primary"
+                sx={{
+                  '& .MuiPaginationItem-root': {
+                    color: theme.palette.text.primary,
+                    fontSize: '0.875rem',
+                    '&.Mui-selected': {
+                      bgcolor: taxiMonterricoColors.green,
+                      color: 'white',
+                      '&:hover': {
+                        bgcolor: taxiMonterricoColors.greenDark,
+                      },
+                    },
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(255, 255, 255, 0.08)' 
+                        : 'rgba(0, 0, 0, 0.04)',
+                    },
+                  },
+                }}
+              />
+            </Box>
+          )}
+
+          {/* Información de paginación */}
+          {filteredCompanies.length > 0 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 1, mb: 2 }}>
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem' }}>
+                Mostrando {startIndex + 1}-{Math.min(endIndex, filteredCompanies.length)} de {filteredCompanies.length} empresas
+              </Typography>
+            </Box>
+          )}
         </Box>
 
         {/* Panel de Filtros Lateral */}

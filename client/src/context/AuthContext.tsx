@@ -87,7 +87,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               ...userData,
               role: userData.role || parsedUser.role || 'user',
             };
-            console.log('👤 Usuario actualizado desde backend:', updatedUser);
+            console.log('👤 Usuario actualizado desde backend:', { id: updatedUser.id, usuario: updatedUser.usuario });
             console.log('🔑 Rol del usuario:', updatedUser.role);
             setUser(updatedUser);
             localStorage.setItem('user', JSON.stringify(updatedUser));
@@ -242,7 +242,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         avatar: monterricoData.usuarioimagen
       };
       
-      console.log('👤 Datos del usuario después del login:', userData);
+      console.log('👤 Usuario autenticado:', { id: userData.id, usuario: userData.usuario });
       console.log('🔑 Rol asignado:', userData.role);
       
       // Usar setTimeout para asegurar que el estado se actualice en el siguiente tick
