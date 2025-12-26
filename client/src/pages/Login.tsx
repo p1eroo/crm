@@ -113,25 +113,41 @@ const Login: React.FC = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundImage: `url(${fondoImage})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
+        position: 'relative',
         padding: { xs: 2, sm: 3 },
       }}
     >
+      {/* Fondo con blur */}
       <Box
         sx={{
-          backgroundColor: 'rgba(245, 245, 245, 0.85)',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundImage: `url(${fondoImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          filter: 'blur(10px)',
+          zIndex: 0,
+        }}
+      />
+      
+      {/* Formulario sin blur */}
+      <Box
+        sx={{
+          position: 'relative',
+          zIndex: 1,
+          backgroundColor: 'rgba(245, 245, 245, 0.95)',
           border: '1px solid rgba(255, 255, 255, 0.3)',
           width: '90%',
           maxWidth: '450px',
           padding: { xs: '24px 32px', sm: '30px 40px' },
           borderRadius: '16px',
           color: '#fff',
-          backdropFilter: 'blur(20px) saturate(180%)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.6)',
-          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.6)',
+          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.2) 100%)',
         }}
       >
         {/* Título */}
@@ -172,23 +188,22 @@ const Login: React.FC = () => {
           {/* Campo Usuario */}
           <Box
             sx={{
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
               display: 'flex',
               alignItems: 'center',
               height: '60px',
               borderRadius: '40px',
               padding: '0 20px',
-              backdropFilter: 'blur(10px)',
               transition: 'all 0.3s ease',
               '&:hover': {
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
               },
               '&:focus-within': {
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.4)',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.2)',
               },
             }}
           >
@@ -277,23 +292,22 @@ const Login: React.FC = () => {
           {/* Campo Contraseña */}
           <Box
             sx={{
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
               display: 'flex',
               alignItems: 'center',
               height: '60px',
               borderRadius: '40px',
               padding: '0 20px',
-              backdropFilter: 'blur(10px)',
               transition: 'all 0.3s ease',
               '&:hover': {
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                backgroundColor: 'rgba(255, 255, 255, 0.15)',
               },
               '&:focus-within': {
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.4)',
+                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                boxShadow: '0 0 0 2px rgba(255, 255, 255, 0.2)',
               },
             }}
           >
