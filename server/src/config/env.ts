@@ -17,13 +17,21 @@ const envLocalFile = env ? `.env.${env}.local` : '';
 const baseEnvFile = `.env`;
 
 // Cargar archivos en orden de prioridad (los últimos sobrescriben a los primeros)
+// IMPORTANTE: El orden es crítico - primero se carga el base, luego el específico del entorno
+// Esto asegura que .env.production sobrescriba .env
+
+// 1. Primero cargar .env base (valores por defecto)
 const baseResult = dotenv.config({ path: path.resolve(process.cwd(), baseEnvFile) });
+
+// 2. Luego cargar .env.{NODE_ENV} si existe (esto sobrescribe .env)
 // Solo cargar archivo específico del entorno si NODE_ENV está explícitamente definido
 const envResult = hasExplicitEnv && envFile 
-  ? dotenv.config({ path: path.resolve(process.cwd(), envFile) })
+  ? dotenv.config({ path: path.resolve(process.cwd(), envFile), override: true })
   : { error: null };
+
+// 3. Finalmente cargar .env.{NODE_ENV}.local si existe (esto sobrescribe todo)
 const localResult = hasExplicitEnv && envLocalFile
-  ? dotenv.config({ path: path.resolve(process.cwd(), envLocalFile) })
+  ? dotenv.config({ path: path.resolve(process.cwd(), envLocalFile), override: true })
   : { error: null };
 
 // Exportar información del entorno

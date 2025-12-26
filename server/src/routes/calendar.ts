@@ -156,7 +156,7 @@ authRouter.post('/save-token', async (req: AuthRequest, res) => {
 });
 
 // Obtener token del usuario
-authRouter.get('/token', async (req: AuthRequest, res) => {
+authRouter.get('/token', authenticateToken, async (req: AuthRequest, res) => {
   try {
     const userId = req.userId || req.user?.id;
 
@@ -169,7 +169,12 @@ authRouter.get('/token', async (req: AuthRequest, res) => {
     });
 
     if (!userToken) {
-      return res.status(404).json({ message: 'No hay token de Google Calendar configurado' });
+      // Devolver 200 con hasToken: false en lugar de 404 para evitar errores en el frontend
+      return res.json({ 
+        hasToken: false, 
+        isExpired: false,
+        message: 'No hay token de Google Calendar configurado' 
+      });
     }
 
     // Verificar si el token expiró

@@ -55,13 +55,69 @@ router.get('/', async (req: AuthRequest, res) => {
 // Obtener un contacto por ID
 router.get('/:id', async (req, res) => {
   try {
-    const contact = await Contact.findByPk(req.params.id, {
-      include: [
-        { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
-        { model: Company, as: 'Company' }, // Empresa principal (compatibilidad)
-        { model: Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'industry'] }, // Todas las empresas asociadas
-      ],
-    });
+    // Intentar obtener contact con todas las relaciones
+    let contact;
+    try {
+      contact = await Contact.findByPk(req.params.id, {
+        include: [
+          { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
+          { model: Company, as: 'Company', required: false }, // Empresa principal (compatibilidad)
+          { model: Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'industry'], required: false }, // Todas las empresas asociadas
+        ],
+      });
+    } catch (includeError: any) {
+      // Si falla por problemas con las relaciones, intentar sin includes
+      console.warn('⚠️ Error con relaciones en contact, intentando sin includes:', includeError.message);
+      contact = await Contact.findByPk(req.params.id);
+      
+      if (!contact) {
+        return res.status(404).json({ error: 'Contacto no encontrado' });
+      }
+
+      // Agregar relaciones manualmente solo para los que tienen IDs válidos
+      const contactData: any = contact.toJSON();
+      
+      // Agregar Owner si existe ownerId
+      if (contactData.ownerId) {
+        try {
+          const owner = await User.findByPk(contactData.ownerId, {
+            attributes: ['id', 'firstName', 'lastName', 'email'],
+          });
+          contactData.Owner = owner || null;
+        } catch (ownerError) {
+          console.warn(`⚠️ No se pudo obtener Owner para contact ${contactData.id}:`, ownerError);
+          contactData.Owner = null;
+        }
+      } else {
+        contactData.Owner = null;
+      }
+
+      // Agregar Company principal si existe companyId
+      if (contactData.companyId) {
+        try {
+          const company = await Company.findByPk(contactData.companyId, {
+            attributes: ['id', 'name', 'domain', 'phone', 'industry'],
+          });
+          contactData.Company = company || null;
+        } catch (companyError) {
+          console.warn(`⚠️ No se pudo obtener Company para contact ${contactData.id}:`, companyError);
+          contactData.Company = null;
+        }
+      } else {
+        contactData.Company = null;
+      }
+
+      // Agregar Companies asociadas (muchos-a-muchos)
+      try {
+        const companies = await (contact as any).getCompanies();
+        contactData.Companies = companies || [];
+      } catch (companiesError) {
+        console.warn(`⚠️ No se pudieron obtener Companies para contact ${contactData.id}:`, companiesError);
+        contactData.Companies = [];
+      }
+
+      return res.json(contactData);
+    }
 
     if (!contact) {
       return res.status(404).json({ error: 'Contacto no encontrado' });
@@ -69,7 +125,17 @@ router.get('/:id', async (req, res) => {
 
     res.json(contact);
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Error fetching contact:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      original: error.original,
+    });
+    res.status(500).json({ 
+      error: error.message || 'Error al obtener contacto',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
