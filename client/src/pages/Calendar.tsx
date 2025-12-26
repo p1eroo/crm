@@ -15,6 +15,7 @@ import {
 } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
+import { useAuth } from '../context/AuthContext';
 
 interface Task {
   id: number;
@@ -27,6 +28,7 @@ interface Task {
 
 const Calendar: React.FC = () => {
   const theme = useTheme();
+  const { user } = useAuth();
   const [calendarDate, setCalendarDate] = useState(new Date());
   const [allTasksWithDates, setAllTasksWithDates] = useState<Task[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -37,6 +39,14 @@ const Calendar: React.FC = () => {
   const [notes, setNotes] = useState<any[]>([]);
 
   const fetchGoogleCalendarEvents = useCallback(async () => {
+    // Verificar autenticación antes de hacer la llamada
+    const token = localStorage.getItem('token');
+    if (!user || !token) {
+      console.log('⚠️ Usuario no autenticado, omitiendo fetchGoogleCalendarEvents');
+      setGoogleCalendarEvents([]);
+      return;
+    }
+
     if (!googleCalendarConnected) {
       setGoogleCalendarEvents([]);
       return;
@@ -60,9 +70,18 @@ const Calendar: React.FC = () => {
       console.error('Error obteniendo eventos de Google Calendar:', error);
       setGoogleCalendarEvents([]);
     }
-  }, [googleCalendarConnected, calendarDate]);
+  }, [googleCalendarConnected, calendarDate, user]);
 
   const checkGoogleCalendarConnection = useCallback(async () => {
+    // Verificar autenticación antes de hacer la llamada
+    const token = localStorage.getItem('token');
+    if (!user || !token) {
+      console.log('⚠️ Usuario no autenticado, omitiendo checkGoogleCalendarConnection');
+      setGoogleCalendarConnected(false);
+      setGoogleCalendarEvents([]);
+      return;
+    }
+
     try {
       const response = await api.get('/google/token');
       const isConnected = response.data.hasToken && !response.data.isExpired;
@@ -83,13 +102,16 @@ const Calendar: React.FC = () => {
         setGoogleCalendarEvents([]);
       }
     }
-  }, [fetchGoogleCalendarEvents]);
+  }, [fetchGoogleCalendarEvents, user]);
 
   useEffect(() => {
-    fetchAllTasksWithDates();
-    fetchNotes();
-    checkGoogleCalendarConnection();
-  }, [checkGoogleCalendarConnection]);
+    // Solo hacer llamadas si el usuario está autenticado
+    if (user) {
+      fetchAllTasksWithDates();
+      fetchNotes();
+      checkGoogleCalendarConnection();
+    }
+  }, [checkGoogleCalendarConnection, user]);
 
   useEffect(() => {
     if (googleCalendarConnected) {
@@ -98,6 +120,14 @@ const Calendar: React.FC = () => {
   }, [calendarDate, googleCalendarConnected, fetchGoogleCalendarEvents]);
 
   const fetchAllTasksWithDates = async () => {
+    // Verificar autenticación antes de hacer la llamada
+    const token = localStorage.getItem('token');
+    if (!user || !token) {
+      console.log('⚠️ Usuario no autenticado, omitiendo fetchAllTasksWithDates');
+      setAllTasksWithDates([]);
+      return;
+    }
+
     try {
       // Obtener tareas desde /tasks
       const tasksResponse = await api.get('/tasks?limit=1000');
@@ -138,6 +168,14 @@ const Calendar: React.FC = () => {
   };
 
   const fetchNotes = async () => {
+    // Verificar autenticación antes de hacer la llamada
+    const token = localStorage.getItem('token');
+    if (!user || !token) {
+      console.log('⚠️ Usuario no autenticado, omitiendo fetchNotes');
+      setNotes([]);
+      return;
+    }
+
     try {
       const response = await api.get('/activities', {
         params: { type: 'note', limit: 1000 },

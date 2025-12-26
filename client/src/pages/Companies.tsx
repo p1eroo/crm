@@ -125,8 +125,16 @@ const Companies: React.FC = () => {
     try {
       const response = await api.get('/users');
       setUsers(response.data || []);
-    } catch (error) {
-      console.error('Error fetching users:', error);
+    } catch (error: any) {
+      // Si es un error 403, el usuario no tiene permisos para ver usuarios (no es admin)
+      // Esto es normal y no debería mostrar un error
+      if (error.response?.status === 403) {
+        console.log('Usuario no tiene permisos para ver usuarios (no es admin)');
+        setUsers([]);
+      } else {
+        console.error('Error fetching users:', error);
+        setUsers([]);
+      }
     }
   }, []);
 

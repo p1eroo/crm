@@ -31,15 +31,62 @@ router.get('/', async (req: AuthRequest, res) => {
       where.industry = industry;
     }
 
-    const companies = await Company.findAndCountAll({
-      where,
-      include: [
-        { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
-      ],
-      limit: Number(limit),
-      offset,
-      order: [['createdAt', 'DESC']],
-    });
+    // Intentar obtener companies con la relación Owner
+    let companies;
+    try {
+      companies = await Company.findAndCountAll({
+        where,
+        include: [
+          { 
+            model: User, 
+            as: 'Owner', 
+            attributes: ['id', 'firstName', 'lastName', 'email'], 
+            required: false 
+          },
+        ],
+        limit: Number(limit),
+        offset,
+        order: [['createdAt', 'DESC']],
+        distinct: true, // Importante para contar correctamente con includes
+      });
+    } catch (includeError: any) {
+      // Si falla por problemas con la relación Owner, intentar sin el include
+      console.warn('⚠️ Error con relación Owner, intentando sin include:', includeError.message);
+      companies = await Company.findAndCountAll({
+        where,
+        limit: Number(limit),
+        offset,
+        order: [['createdAt', 'DESC']],
+      });
+      
+      // Agregar Owner manualmente solo para los que tienen ownerId válido
+      const companiesWithOwner = await Promise.all(
+        companies.rows.map(async (company: any) => {
+          const companyData = company.toJSON();
+          if (companyData.ownerId) {
+            try {
+              const owner = await User.findByPk(companyData.ownerId, {
+                attributes: ['id', 'firstName', 'lastName', 'email'],
+              });
+              companyData.Owner = owner || null;
+            } catch (ownerError) {
+              console.warn(`⚠️ No se pudo obtener Owner para company ${companyData.id}:`, ownerError);
+              companyData.Owner = null;
+            }
+          } else {
+            companyData.Owner = null;
+          }
+          return companyData;
+        })
+      );
+      
+      return res.json({
+        companies: companiesWithOwner,
+        total: companies.count,
+        page: Number(page),
+        totalPages: Math.ceil(companies.count / Number(limit)),
+      });
+    }
 
     res.json({
       companies: companies.rows,
@@ -48,7 +95,17 @@ router.get('/', async (req: AuthRequest, res) => {
       totalPages: Math.ceil(companies.count / Number(limit)),
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('Error fetching companies:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', {
+      message: error.message,
+      name: error.name,
+      original: error.original,
+    });
+    res.status(500).json({ 
+      error: error.message || 'Error al obtener empresas',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 

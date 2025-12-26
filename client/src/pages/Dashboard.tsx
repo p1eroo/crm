@@ -145,6 +145,14 @@ const Dashboard: React.FC = () => {
   ];
 
   const fetchStats = useCallback(async () => {
+    // Verificar autenticación antes de hacer la llamada
+    const token = localStorage.getItem('token');
+    if (!user || !token) {
+      console.log('⚠️ Usuario no autenticado, omitiendo fetchStats');
+      setLoading(false);
+      return;
+    }
+
     try {
       console.log('📊 Iniciando fetchStats...');
       // Calcular fechas de inicio y fin según el año y mes seleccionado
@@ -163,7 +171,6 @@ const Dashboard: React.FC = () => {
         endDate = new Date(year, 11, 31, 23, 59, 59); // 31 de diciembre
       }
       
-      const token = localStorage.getItem('token');
       console.log('📊 Token disponible para fetchStats:', token ? 'Sí' : 'No');
       
       const response = await api.get('/dashboard/stats', {
@@ -212,21 +219,34 @@ const Dashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [selectedYear, selectedMonth]);
+  }, [selectedYear, selectedMonth, user]);
 
   useEffect(() => {
-    fetchStats();
-    fetchTasks();
-  }, [fetchStats]);
+    // Solo hacer llamadas si el usuario está autenticado
+    if (user) {
+      fetchStats();
+      fetchTasks();
+    }
+  }, [fetchStats, user]);
 
   // Recargar estadísticas cuando cambia el año o mes seleccionado
   useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+    // Solo hacer llamadas si el usuario está autenticado
+    if (user) {
+      fetchStats();
+    }
+  }, [fetchStats, user]);
 
   // Obtener deals ganados diarios cuando se selecciona un mes
   useEffect(() => {
     const fetchDailyDeals = async () => {
+      // Verificar autenticación antes de hacer la llamada
+      const token = localStorage.getItem('token');
+      if (!user || !token) {
+        console.log('⚠️ Usuario no autenticado, omitiendo fetchDailyDeals');
+        return;
+      }
+
       if (selectedMonth !== null) {
         try {
           const year = parseInt(selectedYear);
@@ -309,15 +329,22 @@ const Dashboard: React.FC = () => {
     };
 
     fetchDailyDeals();
-  }, [selectedYear, selectedMonth]);
+  }, [selectedYear, selectedMonth, user]);
 
 
 
 
   const fetchTasks = async () => {
+    // Verificar autenticación antes de hacer la llamada
+    const token = localStorage.getItem('token');
+    if (!user || !token) {
+      console.log('⚠️ Usuario no autenticado, omitiendo fetchTasks');
+      setTasks([]);
+      return;
+    }
+
     try {
       console.log('📋 Iniciando fetchTasks...');
-      const token = localStorage.getItem('token');
       console.log('📋 Token disponible para fetchTasks:', token ? 'Sí' : 'No');
       
       const response = await api.get('/tasks?limit=10');
