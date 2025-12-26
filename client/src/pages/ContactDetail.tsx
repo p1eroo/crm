@@ -2597,6 +2597,7 @@ const ContactDetail: React.FC = () => {
                     {associatedDeals.slice(0, 5).map((deal: any) => (
                       <Box
                         key={deal.id}
+                        onClick={() => navigate(`/deals/${deal.id}`)}
                         sx={{
                           display: 'flex',
                           alignItems: 'center',
@@ -2605,6 +2606,7 @@ const ContactDetail: React.FC = () => {
                           borderRadius: 1,
                           border: `1px solid ${theme.palette.divider}`,
                           transition: 'all 0.2s ease',
+                          cursor: 'pointer',
                           '&:hover': {
                             borderColor: taxiMonterricoColors.green,
                             backgroundColor: theme.palette.mode === 'dark' 
@@ -3005,7 +3007,14 @@ const ContactDetail: React.FC = () => {
                           deal.name?.toLowerCase().includes(dealSearch.toLowerCase())
                         )
                         .map((deal: any) => (
-                          <TableRow key={deal.id} hover>
+                          <TableRow 
+                            key={deal.id} 
+                            hover
+                            onClick={() => navigate(`/deals/${deal.id}`)}
+                            sx={{
+                              cursor: 'pointer',
+                            }}
+                          >
                             <TableCell>
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <Avatar sx={{ width: 32, height: 32, bgcolor: taxiMonterricoColors.green }}>

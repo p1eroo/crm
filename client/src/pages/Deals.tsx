@@ -895,10 +895,6 @@ const Deals: React.FC = () => {
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography 
                         variant="body2" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/deals/${deal.id}`);
-                        }}
                         sx={{ 
                           fontWeight: 500, 
                           color: theme.palette.text.primary,

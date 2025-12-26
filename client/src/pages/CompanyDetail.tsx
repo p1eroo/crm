@@ -2374,7 +2374,8 @@ const CompanyDetail: React.FC = () => {
                     {associatedDeals.slice(0, 5).map((deal: any) => (
                       <Box
                         key={deal.id}
-                                                                    sx={{
+                        onClick={() => navigate(`/deals/${deal.id}`)}
+                        sx={{
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
@@ -2382,6 +2383,7 @@ const CompanyDetail: React.FC = () => {
                           borderRadius: 1,
                           border: `1px solid ${theme.palette.divider}`,
                           transition: 'all 0.2s ease',
+                          cursor: 'pointer',
                           '&:hover': {
                             borderColor: taxiMonterricoColors.green,
                             backgroundColor: theme.palette.mode === 'dark' 
@@ -2759,6 +2761,7 @@ const CompanyDetail: React.FC = () => {
                           {filteredDeals.map((deal) => (
                             <TableRow 
                               key={deal.id}
+                              onClick={() => navigate(`/deals/${deal.id}`)}
                               sx={{
                                 transition: 'all 0.2s ease',
                                 cursor: 'pointer',

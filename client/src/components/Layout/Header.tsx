@@ -219,7 +219,7 @@ const Header: React.FC = () => {
         // Obtener eventos de Google Calendar (si están disponibles)
         let upcomingEvents: any[] = [];
         try {
-          const calendarResponse = await api.get('/google-calendar/events');
+          const calendarResponse = await api.get('/google/events');
           if (calendarResponse.data && Array.isArray(calendarResponse.data)) {
             upcomingEvents = calendarResponse.data.filter((event: any) => {
               if (!event.start?.dateTime && !event.start?.date) return false;
