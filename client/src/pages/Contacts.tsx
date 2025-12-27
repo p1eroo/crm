@@ -25,6 +25,7 @@ import {
   RadioGroup,
   FormControlLabel,
   InputAdornment,
+  Pagination,
 } from '@mui/material';
 import { 
   Add, 
@@ -46,8 +47,6 @@ import {
   TrendingUp,
   FilterList,
   Visibility,
-  ArrowBack,
-  ArrowForward,
   CheckCircle,
   FileDownload,
   UploadFile,
@@ -124,8 +123,8 @@ const Contacts: React.FC = () => {
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [previewActivities, setPreviewActivities] = useState<any[]>([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 7;
   const [activeTab] = useState(0);
   const [sortBy, setSortBy] = useState('newest');
   const [formData, setFormData] = useState({
@@ -834,9 +833,6 @@ const Contacts: React.FC = () => {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
   };
 
-  const handleChangePage = (event: unknown, newPage: number) => {
-    setPage(newPage);
-  };
 
   const getStageLabelWithoutPercentage = (stage: string) => {
     return getStageLabel(stage).replace(/\s*\d+%/, '').trim();
@@ -937,11 +933,16 @@ const Contacts: React.FC = () => {
       }
     });
 
-  // Paginación
-  const paginatedContacts = filteredContacts.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
+  // Calcular paginación
+  const totalPages = Math.ceil(filteredContacts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedContacts = filteredContacts.slice(startIndex, endIndex);
+
+  // Resetear a la página 1 cuando cambien los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedStages, selectedCountries, selectedOwnerFilters, search, sortBy]);
 
   if (loading) {
     return (
@@ -1336,105 +1337,44 @@ const Contacts: React.FC = () => {
           )}
           </Box>
 
-          {/* Paginación mejorada */}
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            px: 2, 
-            py: 2,
-            mt: 2,
-          }}>
-            <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.875rem' }}>
-              Mostrando {page * rowsPerPage + 1} a {Math.min((page + 1) * rowsPerPage, filteredContacts.length)} de {filteredContacts.length.toLocaleString()} registros
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <IconButton
-                onClick={() => handleChangePage(null, page - 1)}
-                disabled={page === 0}
+          {/* Paginación */}
+          {totalPages > 1 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, mb: 2 }}>
+              <Pagination
+                count={totalPages}
+                page={currentPage}
+                onChange={(event, value) => setCurrentPage(value)}
+                color="primary"
                 sx={{
-                  color: theme.palette.text.secondary,
-                  '&:hover': { bgcolor: theme.palette.action.hover },
-                  '&.Mui-disabled': { color: theme.palette.text.disabled },
+                  '& .MuiPaginationItem-root': {
+                    color: theme.palette.text.primary,
+                    fontSize: '0.875rem',
+                    '&.Mui-selected': {
+                      bgcolor: taxiMonterricoColors.green,
+                      color: 'white',
+                      '&:hover': {
+                        bgcolor: taxiMonterricoColors.greenDark,
+                      },
+                    },
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(255, 255, 255, 0.08)' 
+                        : 'rgba(0, 0, 0, 0.04)',
+                    },
+                  },
                 }}
-              >
-                <ArrowBack sx={{ fontSize: 20 }} />
-              </IconButton>
-              {(() => {
-                const totalPages = Math.ceil(filteredContacts.length / rowsPerPage);
-                const pagesToShow: number[] = [];
-                const currentPageNum = page + 1; // Convertir de 0-indexed a 1-indexed
-                
-                // Si hay pocas páginas, mostrar todas
-                if (totalPages <= 5) {
-                  for (let i = 1; i <= totalPages; i++) {
-                    pagesToShow.push(i);
-                  }
-                } else {
-                  // Siempre mostrar primera página
-                  pagesToShow.push(1);
-                  
-                  // Calcular rango de páginas alrededor de la actual
-                  const startPage = Math.max(2, currentPageNum - 1);
-                  const endPage = Math.min(totalPages - 1, currentPageNum + 1);
-                  
-                  // Agregar páginas alrededor de la actual
-                  for (let i = startPage; i <= endPage; i++) {
-                    if (!pagesToShow.includes(i)) {
-                      pagesToShow.push(i);
-                    }
-                  }
-                  
-                  // Mostrar última página si no está incluida
-                  if (!pagesToShow.includes(totalPages)) {
-                    pagesToShow.push(totalPages);
-                  }
-                }
-                
-                // Ordenar las páginas
-                pagesToShow.sort((a, b) => a - b);
-                
-                return pagesToShow.map((pageNum, idx) => {
-                  const showEllipsis = idx > 0 && pageNum - pagesToShow[idx - 1] > 1;
-                  return (
-                    <React.Fragment key={pageNum}>
-                      {showEllipsis && (
-                        <Typography sx={{ color: theme.palette.text.secondary, px: 0.5 }}>...</Typography>
-                      )}
-                      <IconButton
-                        onClick={() => handleChangePage(null, pageNum - 1)}
-                        sx={{
-                          minWidth: 32,
-                          height: 32,
-                          fontSize: '0.875rem',
-                          color: page === pageNum - 1 ? 'white' : theme.palette.text.secondary,
-                          bgcolor: page === pageNum - 1 ? taxiMonterricoColors.green : 'transparent',
-                          fontWeight: page === pageNum - 1 ? 600 : 400,
-                          borderRadius: 1,
-                          '&:hover': {
-                            bgcolor: page === pageNum - 1 ? taxiMonterricoColors.greenDark : theme.palette.action.hover,
-                          },
-                        }}
-                      >
-                        {pageNum}
-                      </IconButton>
-                    </React.Fragment>
-                  );
-                });
-              })()}
-              <IconButton
-                onClick={() => handleChangePage(null, page + 1)}
-                disabled={page >= Math.ceil(filteredContacts.length / rowsPerPage) - 1}
-                sx={{
-                  color: theme.palette.text.secondary,
-                  '&:hover': { bgcolor: theme.palette.action.hover },
-                  '&.Mui-disabled': { color: theme.palette.text.disabled },
-                }}
-              >
-                <ArrowForward sx={{ fontSize: 20 }} />
-              </IconButton>
+              />
             </Box>
-          </Box>
+          )}
+
+          {/* Información de paginación */}
+          {filteredContacts.length > 0 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 1, mb: 2 }}>
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem' }}>
+                Mostrando {startIndex + 1}-{Math.min(endIndex, filteredContacts.length)} de {filteredContacts.length} contactos
+              </Typography>
+            </Box>
+          )}
         </Box>
 
         {/* Panel de Filtros Lateral */}

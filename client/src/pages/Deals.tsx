@@ -22,6 +22,7 @@ import {
   Menu,
   useTheme,
   Collapse,
+  Pagination,
 } from '@mui/material';
 import { Add, Delete, AttachMoney, Visibility, ViewList, AccountTree, CalendarToday, Close, FileDownload, UploadFile, FilterList, ExpandMore, Remove, Bolt, Business } from '@mui/icons-material';
 import api from '../config/api';
@@ -79,8 +80,8 @@ const Deals: React.FC = () => {
   const [selectedOwnerFilters, setSelectedOwnerFilters] = useState<(string | number)[]>([]);
   const [stagesExpanded, setStagesExpanded] = useState(false);
   const [ownerFilterExpanded, setOwnerFilterExpanded] = useState(false);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage] = useState(10);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 7;
   const [importing, setImporting] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   
@@ -185,11 +186,16 @@ const Deals: React.FC = () => {
       }
     });
 
-  // Paginación
-  const paginatedDeals = filteredDeals.slice(
-    page * rowsPerPage,
-    page * rowsPerPage + rowsPerPage
-  );
+  // Calcular paginación
+  const totalPages = Math.ceil(filteredDeals.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedDeals = filteredDeals.slice(startIndex, endIndex);
+
+  // Resetear a la página 1 cuando cambien los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedStages, selectedOwnerFilters, search, sortBy]);
 
 
   // Función para obtener iniciales
@@ -1135,39 +1141,43 @@ const Deals: React.FC = () => {
           </Box>
 
           {/* Paginación */}
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center', 
-            px: 2, 
-            py: 2,
-            mt: 2,
-          }}>
-            <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.875rem' }}>
-              Mostrando {page * rowsPerPage + 1} a {Math.min((page + 1) * rowsPerPage, filteredDeals.length)} de {filteredDeals.length.toLocaleString()} registros
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Button
-                onClick={() => setPage(Math.max(0, page - 1))}
-                disabled={page === 0}
-                size="small"
-                sx={{ textTransform: 'none' }}
-              >
-                Anterior
-              </Button>
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                Página {page + 1} de {Math.ceil(filteredDeals.length / rowsPerPage) || 1}
-              </Typography>
-              <Button
-                onClick={() => setPage(Math.min(Math.ceil(filteredDeals.length / rowsPerPage) - 1, page + 1))}
-                disabled={page >= Math.ceil(filteredDeals.length / rowsPerPage) - 1}
-                size="small"
-                sx={{ textTransform: 'none' }}
-              >
-                Siguiente
-              </Button>
+          {totalPages > 1 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, mb: 2 }}>
+              <Pagination
+                count={totalPages}
+                page={currentPage}
+                onChange={(event, value) => setCurrentPage(value)}
+                color="primary"
+                sx={{
+                  '& .MuiPaginationItem-root': {
+                    color: theme.palette.text.primary,
+                    fontSize: '0.875rem',
+                    '&.Mui-selected': {
+                      bgcolor: taxiMonterricoColors.green,
+                      color: 'white',
+                      '&:hover': {
+                        bgcolor: taxiMonterricoColors.greenDark,
+                      },
+                    },
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(255, 255, 255, 0.08)' 
+                        : 'rgba(0, 0, 0, 0.04)',
+                    },
+                  },
+                }}
+              />
             </Box>
-          </Box>
+          )}
+
+          {/* Información de paginación */}
+          {filteredDeals.length > 0 && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 1, mb: 2 }}>
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem' }}>
+                Mostrando {startIndex + 1}-{Math.min(endIndex, filteredDeals.length)} de {filteredDeals.length} negocios
+              </Typography>
+            </Box>
+          )}
         </Box>
 
         {/* Panel de Filtros Lateral */}

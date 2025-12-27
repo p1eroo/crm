@@ -469,8 +469,8 @@ const Login: React.FC = () => {
             sx={{
               height: '48px',
               borderRadius: '15px',
-              fontSize: '1rem',
-              fontWeight: 600,
+              fontSize: '1.1rem',
+              fontWeight: 400,
               textTransform: 'none',
               backgroundColor: taxiMonterricoColors.green,
               color: '#fff',
