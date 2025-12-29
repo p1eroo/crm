@@ -13,8 +13,8 @@ import {
 } from '@mui/material';
 import { Person, Lock, Visibility, VisibilityOff } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
-import fondoImage from '../assets/tm_fondo1.png';
 import logoImage from '../assets/tm_login.png';
+import logoIcon from '../assets/logo.png';
 import { taxiMonterricoColors } from '../theme/colors';
 
 const Login: React.FC = () => {
@@ -130,7 +130,7 @@ const Login: React.FC = () => {
         padding: { xs: 2, sm: 3 },
       }}
     >
-      {/* Fondo con overlay oscuro */}
+      {/* Fondo corporativo con gradientes y blobs sutiles */}
       <Box
         sx={{
           position: 'absolute',
@@ -138,11 +138,21 @@ const Login: React.FC = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundImage: `url(${fondoImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          backgroundColor: '#0B1220',
+          backgroundAttachment: 'fixed',
+          backgroundImage: `
+            radial-gradient(ellipse 1200px 900px at 10% 20%, rgba(255, 193, 7, 0.15) 0%, transparent 60%),
+            radial-gradient(ellipse 1400px 1000px at 90% 80%, rgba(46, 125, 50, 0.18) 0%, transparent 65%),
+            radial-gradient(ellipse 1600px 1200px at 50% 50%, rgba(46, 125, 50, 0.12) 0%, transparent 70%),
+            radial-gradient(ellipse 1000px 800px at 0% 90%, rgba(255, 152, 0, 0.16) 0%, transparent 55%),
+            radial-gradient(ellipse 1100px 850px at 100% 10%, rgba(46, 125, 50, 0.14) 0%, transparent 60%),
+            radial-gradient(ellipse 900px 700px at 75% 35%, rgba(255, 193, 7, 0.13) 0%, transparent 50%)
+          `,
+          backgroundSize: '100% 100%',
+          backgroundPosition: '0% 0%',
           backgroundRepeat: 'no-repeat',
           zIndex: 0,
+          overflow: 'hidden',
           '&::before': {
             content: '""',
             position: 'absolute',
@@ -150,13 +160,17 @@ const Login: React.FC = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.4) 100%)',
+            background: `
+              radial-gradient(ellipse 800px 600px at 25% 55%, rgba(46, 125, 50, 0.10) 0%, transparent 45%),
+              radial-gradient(ellipse 600px 500px at 65% 25%, rgba(255, 183, 77, 0.12) 0%, transparent 45%)
+            `,
+            backgroundAttachment: 'fixed',
             zIndex: 1,
           },
         }}
       />
       
-      {/* Card Glass */}
+      {/* Card Glass Premium */}
       <Box
         component="main"
         sx={{
@@ -164,12 +178,12 @@ const Login: React.FC = () => {
           zIndex: 2,
           width: { xs: '92%', sm: '480px' },
           padding: '32px',
-          border: '1px solid rgba(255, 255, 255, 0.18)',
+          border: '1px solid rgba(255, 255, 255, 0.14)',
           borderRadius: '16px',
-          background: 'rgba(17, 24, 39, 0.55)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+          background: 'rgba(17, 24, 39, 0.60)',
+          backdropFilter: 'blur(14px)',
+          WebkitBackdropFilter: 'blur(14px)',
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)',
           color: '#fff',
         }}
       >
@@ -182,26 +196,51 @@ const Login: React.FC = () => {
             mb: 4,
           }}
         >
+          {/* Contenedor de logos */}
           <Box
-            component="img"
-            src={logoImage}
-            alt="CRM Monterrico"
             sx={{
-              maxWidth: { xs: '140px', sm: '160px' },
-              width: '100%',
-              height: 'auto',
-              objectFit: 'contain',
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 2,
               mb: 2,
             }}
-          />
+          >
+            <Box
+              component="img"
+              src={logoIcon}
+              alt="TM Logo"
+              sx={{
+                maxWidth: { xs: '60px', sm: '70px' },
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain',
+              }}
+            />
+            <Box
+              component="img"
+              src={logoImage}
+              alt="CRM Monterrico"
+              sx={{
+                maxWidth: { xs: '140px', sm: '160px' },
+                width: '100%',
+                height: 'auto',
+                objectFit: 'contain',
+              }}
+            />
+          </Box>
+          {/* Texto debajo de los logos */}
           <Typography
-            variant="body2"
+            variant="h6"
             sx={{
-              color: 'rgba(255, 255, 255, 0.7)',
-              fontSize: { xs: '0.875rem', sm: '0.9375rem' },
+              color: 'white',
+              fontSize: { xs: '1.25rem', sm: '1.5rem' },
+              textAlign: 'center',
+              fontWeight: 400,
             }}
           >
-            Gestiona tus clientes y negocios
+            Iniciar sesión
           </Typography>
         </Box>
 
@@ -225,7 +264,7 @@ const Login: React.FC = () => {
           </Alert>
         )}
 
-        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, marginTop: -2 }}>
           {/* Campo Usuario */}
           <TextField
             required
@@ -301,6 +340,25 @@ const Login: React.FC = () => {
                 },
                 '&.Mui-error fieldset': {
                   borderColor: 'error.main',
+                },
+              },
+              '& input': {
+                '&:-webkit-autofill': {
+                  WebkitBoxShadow: '0 0 0 1000px rgba(255, 255, 255, 0.05) inset',
+                  WebkitTextFillColor: '#fff',
+                  transition: 'background-color 5000s ease-in-out 0s',
+                },
+                '&:-webkit-autofill:hover': {
+                  WebkitBoxShadow: '0 0 0 1000px rgba(255, 255, 255, 0.05) inset',
+                  WebkitTextFillColor: '#fff',
+                },
+                '&:-webkit-autofill:focus': {
+                  WebkitBoxShadow: '0 0 0 1000px rgba(255, 255, 255, 0.05) inset',
+                  WebkitTextFillColor: '#fff',
+                },
+                '&:-webkit-autofill:active': {
+                  WebkitBoxShadow: '0 0 0 1000px rgba(255, 255, 255, 0.05) inset',
+                  WebkitTextFillColor: '#fff',
                 },
               },
               '& .MuiInputLabel-root': {

@@ -383,6 +383,8 @@ const Tickets: React.FC = () => {
               />
               <FormControl size="small" sx={{ minWidth: 150 }}>
                 <Select
+                  id="tickets-sort-select"
+                  name="tickets-sort"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   displayEmpty

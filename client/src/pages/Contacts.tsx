@@ -168,6 +168,12 @@ const Contacts: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [contactToDelete, setContactToDelete] = useState<number | null>(null);
+  const [emailValidationError, setEmailValidationError] = useState('');
+  const [dniValidationError, setDniValidationError] = useState('');
+  const [ceeValidationError, setCeeValidationError] = useState('');
+  const emailValidationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const dniValidationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const ceeValidationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -376,6 +382,9 @@ const Contacts: React.FC = () => {
 
   const handleOpen = (contact?: Contact) => {
     setFormErrors({});
+    setEmailValidationError('');
+    setDniValidationError('');
+    setCeeValidationError('');
     if (contact) {
       setEditingContact(contact);
       setFormData({
@@ -386,8 +395,8 @@ const Contacts: React.FC = () => {
         jobTitle: contact.jobTitle || '',
         lifecycleStage: contact.lifecycleStage,
         companyId: contact.Company?.id?.toString() || '',
-        dni: '',
-        cee: '',
+        dni: (contact as any).dni || '',
+        cee: (contact as any).cee || '',
         address: contact.address || '',
         city: contact.city || '',
         state: contact.state || '',
@@ -561,9 +570,181 @@ const Contacts: React.FC = () => {
     }
   };
 
+  // Función para validar email en tiempo real
+  const validateEmail = async (email: string) => {
+    if (emailValidationTimeoutRef.current) {
+      clearTimeout(emailValidationTimeoutRef.current);
+    }
+
+    if (!email || email.trim() === '' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setEmailValidationError('');
+      return;
+    }
+
+    if (editingContact && editingContact.email.toLowerCase() === email.trim().toLowerCase()) {
+      setEmailValidationError('');
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      try {
+        const response = await api.get('/contacts', {
+          params: { search: email.trim(), limit: 50 },
+        });
+        
+        const contacts = response.data.contacts || response.data || [];
+        const exactMatch = contacts.find((c: Contact) => 
+          c.email.toLowerCase().trim() === email.toLowerCase().trim()
+        );
+
+        if (exactMatch) {
+          setEmailValidationError('Ya existe un contacto con este email');
+        } else {
+          setEmailValidationError('');
+        }
+      } catch (error) {
+        setEmailValidationError('');
+      }
+    }, 500);
+
+    emailValidationTimeoutRef.current = timeoutId;
+  };
+
+  // Función para validar DNI en tiempo real
+  const validateDni = async (dni: string) => {
+    if (dniValidationTimeoutRef.current) {
+      clearTimeout(dniValidationTimeoutRef.current);
+    }
+
+    if (!dni || dni.trim() === '' || dni.length < 8) {
+      setDniValidationError('');
+      return;
+    }
+
+    if (editingContact && (editingContact as any).dni === dni.trim()) {
+      setDniValidationError('');
+      return;
+    }
+
+    // Si tiene exactamente 8 dígitos, validar inmediatamente
+    if (dni.length === 8) {
+      try {
+        const response = await api.get('/contacts', {
+          params: { search: dni.trim(), limit: 50 },
+        });
+        
+        const contacts = response.data.contacts || response.data || [];
+        const exactMatch = contacts.find((c: Contact) => (c as any).dni === dni.trim());
+
+        if (exactMatch) {
+          setDniValidationError('Ya existe un contacto con este DNI');
+        } else {
+          setDniValidationError('');
+        }
+      } catch (error) {
+        setDniValidationError('');
+      }
+    } else {
+      // Si tiene menos de 8 dígitos, usar debounce
+      const timeoutId = setTimeout(async () => {
+        try {
+          const response = await api.get('/contacts', {
+            params: { search: dni.trim(), limit: 50 },
+          });
+          
+          const contacts = response.data.contacts || response.data || [];
+          const exactMatch = contacts.find((c: Contact) => (c as any).dni === dni.trim());
+
+          if (exactMatch) {
+            setDniValidationError('Ya existe un contacto con este DNI');
+          } else {
+            setDniValidationError('');
+          }
+        } catch (error) {
+          setDniValidationError('');
+        }
+      }, 500);
+
+      dniValidationTimeoutRef.current = timeoutId;
+    }
+  };
+
+  // Función para validar CEE en tiempo real
+  const validateCee = async (cee: string) => {
+    if (ceeValidationTimeoutRef.current) {
+      clearTimeout(ceeValidationTimeoutRef.current);
+    }
+
+    const ceeUpper = cee.trim().toUpperCase();
+    if (!ceeUpper || ceeUpper.length < 12) {
+      setCeeValidationError('');
+      return;
+    }
+
+    if (editingContact && (editingContact as any).cee === ceeUpper) {
+      setCeeValidationError('');
+      return;
+    }
+
+    // Si tiene exactamente 12 caracteres, validar inmediatamente
+    if (ceeUpper.length === 12) {
+      try {
+        const response = await api.get('/contacts', {
+          params: { search: ceeUpper, limit: 50 },
+        });
+        
+        const contacts = response.data.contacts || response.data || [];
+        const exactMatch = contacts.find((c: Contact) => (c as any).cee === ceeUpper);
+
+        if (exactMatch) {
+          setCeeValidationError('Ya existe un contacto con este CEE');
+        } else {
+          setCeeValidationError('');
+        }
+      } catch (error) {
+        setCeeValidationError('');
+      }
+    } else {
+      // Si tiene menos de 12 caracteres, usar debounce
+      const timeoutId = setTimeout(async () => {
+        try {
+          const response = await api.get('/contacts', {
+            params: { search: ceeUpper, limit: 50 },
+          });
+          
+          const contacts = response.data.contacts || response.data || [];
+          const exactMatch = contacts.find((c: Contact) => (c as any).cee === ceeUpper);
+
+          if (exactMatch) {
+            setCeeValidationError('Ya existe un contacto con este CEE');
+          } else {
+            setCeeValidationError('');
+          }
+        } catch (error) {
+          setCeeValidationError('');
+        }
+      }, 500);
+
+      ceeValidationTimeoutRef.current = timeoutId;
+    }
+  };
+
   const handleClose = () => {
     setOpen(false);
     setEditingContact(null);
+    // Limpiar timeouts de validación
+    if (emailValidationTimeoutRef.current) {
+      clearTimeout(emailValidationTimeoutRef.current);
+    }
+    if (dniValidationTimeoutRef.current) {
+      clearTimeout(dniValidationTimeoutRef.current);
+    }
+    if (ceeValidationTimeoutRef.current) {
+      clearTimeout(ceeValidationTimeoutRef.current);
+    }
+    setEmailValidationError('');
+    setDniValidationError('');
+    setCeeValidationError('');
   };
 
   const validateForm = () => {
@@ -971,6 +1152,8 @@ const Contacts: React.FC = () => {
           <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
             <FormControl size="small" sx={{ minWidth: 130 }}>
               <Select
+                id="contacts-sort-select"
+                name="contacts-sort"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
                 displayEmpty
@@ -1348,13 +1531,13 @@ const Contacts: React.FC = () => {
                 sx={{
                   '& .MuiPaginationItem-root': {
                     color: theme.palette.text.primary,
-                    fontSize: '0.875rem',
+                          fontSize: '0.875rem',
                     '&.Mui-selected': {
                       bgcolor: taxiMonterricoColors.green,
                       color: 'white',
-                      '&:hover': {
+                          '&:hover': {
                         bgcolor: taxiMonterricoColors.greenDark,
-                      },
+                          },
                     },
                     '&:hover': {
                       bgcolor: theme.palette.mode === 'dark' 
@@ -1373,7 +1556,7 @@ const Contacts: React.FC = () => {
               <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem' }}>
                 Mostrando {startIndex + 1}-{Math.min(endIndex, filteredContacts.length)} de {filteredContacts.length} contactos
               </Typography>
-            </Box>
+          </Box>
           )}
         </Box>
 
@@ -1948,21 +2131,24 @@ const Contacts: React.FC = () => {
                     <TextField
                       label="DNI"
                       value={formData.dni}
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         const value = e.target.value.replace(/\D/g, ''); // Solo números
                         // Limitar a 8 dígitos
                         const limitedValue = value.slice(0, 8);
                         setFormData(prev => ({ ...prev, dni: limitedValue, cee: '' }));
                         setDniError('');
                         setCeeError('');
+                        setCeeValidationError('');
+                        // Validar DNI en tiempo real
+                        validateDni(limitedValue);
                       }}
                       onKeyPress={(e) => {
                         if (e.key === 'Enter' && formData.dni && formData.dni.length === 8 && !loadingDni) {
                           handleSearchDni();
                         }
                       }}
-                      error={!!dniError}
-                      helperText={dniError}
+                      error={!!dniError || !!dniValidationError}
+                      helperText={dniError || dniValidationError}
                       InputLabelProps={{ shrink: true }}
                       inputProps={{ maxLength: 8 }}
                       sx={{
@@ -2008,7 +2194,7 @@ const Contacts: React.FC = () => {
                     <TextField
                       label="CEE"
                       value={formData.cee}
-                      onChange={(e) => {
+                      onChange={async (e) => {
                         // Convertir a mayúsculas respetando caracteres especiales del español
                         const value = e.target.value.toLocaleUpperCase('es-ES');
                         // Limitar a 12 caracteres
@@ -2016,14 +2202,17 @@ const Contacts: React.FC = () => {
                         setFormData(prev => ({ ...prev, cee: limitedValue, dni: '' }));
                         setCeeError('');
                         setDniError('');
+                        setDniValidationError('');
+                        // Validar CEE en tiempo real
+                        validateCee(limitedValue);
                       }}
                       onKeyPress={(e) => {
                         if (e.key === 'Enter' && formData.cee && formData.cee.length === 12 && !loadingCee) {
                           handleSearchCee();
                         }
                       }}
-                      error={!!ceeError}
-                      helperText={ceeError}
+                      error={!!ceeError || !!ceeValidationError}
+                      helperText={ceeError || ceeValidationError}
                       InputLabelProps={{ shrink: true }}
                       inputProps={{ maxLength: 12 }}
                       sx={{
@@ -2118,14 +2307,17 @@ const Contacts: React.FC = () => {
                 label="Email"
                 type="email"
                 value={formData.email}
-                onChange={(e) => {
-                  setFormData(prev => ({ ...prev, email: e.target.value }));
+                onChange={async (e) => {
+                  const newEmail = e.target.value;
+                  setFormData(prev => ({ ...prev, email: newEmail }));
                   if (formErrors.email) {
                     setFormErrors(prev => ({ ...prev, email: '' }));
                   }
+                  // Validar email en tiempo real
+                  validateEmail(newEmail);
                 }}
-                error={!!formErrors.email}
-                helperText={formErrors.email}
+                error={!!formErrors.email || !!emailValidationError}
+                helperText={formErrors.email || emailValidationError}
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,

@@ -1436,6 +1436,8 @@ const Dashboard: React.FC = () => {
               }}>
                 <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 100 } }}>
                   <Select
+                    id="year-select"
+                    name="year-select"
                     value={selectedYear}
                     onChange={(e) => setSelectedYear(e.target.value)}
                     sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}
@@ -1449,6 +1451,8 @@ const Dashboard: React.FC = () => {
                 </FormControl>
                 <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 } }}>
                   <Select
+                    id="month-select"
+                    name="month-select"
                     value={selectedMonth || 'all'}
                     onChange={(e) => setSelectedMonth(e.target.value === 'all' ? null : e.target.value)}
                     displayEmpty
@@ -1476,8 +1480,8 @@ const Dashboard: React.FC = () => {
                 </Button>
               </Box>
             </Box>
-            <Box sx={{ width: '100%', height: { xs: 250, sm: 300 }, minHeight: { xs: 250, sm: 300 } }}>
-              <ResponsiveContainer width="100%" height="100%">
+            <Box sx={{ width: '100%', height: { xs: 250, sm: 300 }, minHeight: { xs: 250, sm: 300 }, minWidth: 0, position:'relative'}}>
+              <ResponsiveContainer width="100%" height={300} minHeight={250}>
                 <AreaChart 
                   data={salesChartData}
                   margin={selectedMonth !== null ? { top: 5, right: 5, bottom: 0, left: 5 } : { top: 5, right: 5, bottom: 20, left: 5 }}
@@ -2189,7 +2193,7 @@ const Dashboard: React.FC = () => {
         {/* Desempeño por Usuario - Solo visible para admin y jefe_comercial */}
         {(user?.role === 'admin' || user?.role === 'jefe_comercial') && (
           <Card sx={{ 
-            borderRadius: { xs: 3, md: 6 }, 
+            borderRadius: { xs: 1, md: 2 }, 
             boxShadow: theme.palette.mode === 'dark' 
               ? '0 4px 12px rgba(0,0,0,0.3)' 
               : { xs: 1, md: 2 },

@@ -16,9 +16,11 @@ router.get('/', async (req: AuthRequest, res) => {
 
     const where: any = {};
     if (search) {
+      const searchStr = typeof search === 'string' ? search : String(search);
       where[Op.or] = [
-        { name: { [Op.iLike]: `%${search}%` } },
-        { domain: { [Op.iLike]: `%${search}%` } },
+        { name: { [Op.iLike]: `%${searchStr}%` } },
+        { domain: { [Op.iLike]: `%${searchStr}%` } },
+        { ruc: { [Op.eq]: searchStr.trim() } }, // Búsqueda exacta por RUC
       ];
     }
     if (lifecycleStage) {
@@ -138,6 +140,42 @@ router.post('/', async (req: AuthRequest, res) => {
       ownerId: req.body.ownerId || req.userId || null,
     };
 
+    // Validar que no exista una empresa con el mismo nombre (case-insensitive)
+    if (companyData.name) {
+      const existingCompanyByName = await Company.findOne({
+        where: {
+          name: {
+            [Op.iLike]: companyData.name.trim(), // Case-insensitive
+          },
+        },
+      });
+
+      if (existingCompanyByName) {
+        return res.status(400).json({ 
+          error: 'Ya existe una empresa con este nombre',
+          duplicateField: 'name',
+          existingCompanyId: existingCompanyByName.id,
+        });
+      }
+    }
+
+    // Validar que no exista una empresa con el mismo RUC (si se proporciona)
+    if (companyData.ruc && companyData.ruc.trim() !== '') {
+      const existingCompanyByRuc = await Company.findOne({
+        where: {
+          ruc: companyData.ruc.trim(),
+        },
+      });
+
+      if (existingCompanyByRuc) {
+        return res.status(400).json({ 
+          error: 'Ya existe una empresa con este RUC',
+          duplicateField: 'ruc',
+          existingCompanyId: existingCompanyByRuc.id,
+        });
+      }
+    }
+
     const company = await Company.create(companyData);
     const newCompany = await Company.findByPk(company.id, {
       include: [
@@ -147,6 +185,7 @@ router.post('/', async (req: AuthRequest, res) => {
 
     res.status(201).json(newCompany);
   } catch (error: any) {
+    console.error('Error creating company:', error);
     res.status(500).json({ error: error.message });
   }
 });

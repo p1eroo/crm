@@ -249,6 +249,8 @@ const Users: React.FC = () => {
                   ) : (
                     <FormControl size="small" sx={{ minWidth: 150 }}>
                       <Select
+                        id={`user-role-select-${userItem.id}`}
+                        name={`user-role-${userItem.id}`}
                         value={userItem.role}
                         onChange={(e) => handleRoleChange(userItem.id, e.target.value)}
                         sx={{
@@ -314,22 +316,24 @@ const Users: React.FC = () => {
                       )}
                     </Tooltip>
                     <Tooltip title="Eliminar usuario">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDelete(userItem)}
-                        disabled={userItem.id === user?.id}
-                        sx={{
-                          color: '#EF4444',
-                          '&:hover': {
-                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.2)' : '#ffebee',
-                          },
-                          '&.Mui-disabled': {
-                            color: theme.palette.text.disabled,
-                          },
-                        }}
-                      >
-                        <Delete sx={{ fontSize: 18 }} />
-                      </IconButton>
+                      <span>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDelete(userItem)}
+                          disabled={userItem.id === user?.id}
+                          sx={{
+                            color: '#EF4444',
+                            '&:hover': {
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.2)' : '#ffebee',
+                            },
+                            '&.Mui-disabled': {
+                              color: theme.palette.text.disabled,
+                            },
+                          }}
+                        >
+                          <Delete />
+                        </IconButton>
+                      </span>
                     </Tooltip>
                   </Box>
                 </TableCell>

@@ -548,6 +548,8 @@ const Tasks: React.FC = () => {
               />
               <FormControl size="small" sx={{ minWidth: 150 }}>
                 <Select
+                  id="tasks-sort-select"
+                  name="tasks-sort"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   displayEmpty

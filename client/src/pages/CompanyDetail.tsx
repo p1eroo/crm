@@ -2140,7 +2140,7 @@ const CompanyDetail: React.FC = () => {
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <Person sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
                     <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                      Propietario de la empresa
+                      Propietario del registro
                     </Typography>
                       </Box>
                   <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>

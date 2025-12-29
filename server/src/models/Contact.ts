@@ -8,6 +8,8 @@ interface ContactAttributes {
   firstName: string;
   lastName: string;
   email: string;
+  dni?: string;
+  cee?: string;
   phone?: string;
   mobile?: string;
   jobTitle?: string;
@@ -32,13 +34,15 @@ interface ContactAttributes {
   updatedAt?: Date;
 }
 
-interface ContactCreationAttributes extends Optional<ContactAttributes, 'id' | 'phone' | 'mobile' | 'jobTitle' | 'companyId' | 'ownerId' | 'address' | 'city' | 'state' | 'country' | 'postalCode' | 'website' | 'facebook' | 'twitter' | 'github' | 'linkedin' | 'youtube' | 'leadStatus' | 'tags' | 'notes' | 'createdAt' | 'updatedAt'> {}
+interface ContactCreationAttributes extends Optional<ContactAttributes, 'id' | 'dni' | 'cee' | 'phone' | 'mobile' | 'jobTitle' | 'companyId' | 'ownerId' | 'address' | 'city' | 'state' | 'country' | 'postalCode' | 'website' | 'facebook' | 'twitter' | 'github' | 'linkedin' | 'youtube' | 'leadStatus' | 'tags' | 'notes' | 'createdAt' | 'updatedAt'> {}
 
 export class Contact extends Model<ContactAttributes, ContactCreationAttributes> implements ContactAttributes {
   public id!: number;
   public firstName!: string;
   public lastName!: string;
   public email!: string;
+  public dni?: string;
+  public cee?: string;
   public phone?: string;
   public mobile?: string;
   public jobTitle?: string;
@@ -87,6 +91,14 @@ Contact.init(
       validate: {
         isEmail: true,
       },
+    },
+    dni: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    cee: {
+      type: DataTypes.STRING,
+      allowNull: true,
     },
     phone: {
       type: DataTypes.STRING,

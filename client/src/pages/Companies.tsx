@@ -23,6 +23,8 @@ import {
   useTheme,
   Collapse,
   Pagination,
+  Snackbar,
+  Alert,
 } from '@mui/material';
 import { Add, Delete, Search, Visibility, UploadFile, FileDownload, Warning, CheckCircle, FilterList, Close, ExpandMore, Remove, Bolt } from '@mui/icons-material';
 import api from '../config/api';
@@ -45,6 +47,7 @@ interface Company {
   country?: string;
   lifecycleStage: string;
   createdAt?: string;
+  updatedAt?: string;
   ownerId?: number;
   Owner?: { firstName: string; lastName: string };
 }
@@ -76,6 +79,8 @@ const Companies: React.FC = () => {
   });
   const [loadingRuc, setLoadingRuc] = useState(false);
   const [rucError, setRucError] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [rucValidationError, setRucValidationError] = useState('');
   const [, setRucInfo] = useState<any>(null);
   const [rucDebts, setRucDebts] = useState<any>(null);
   const [loadingDebts, setLoadingDebts] = useState(false);
@@ -86,6 +91,8 @@ const Companies: React.FC = () => {
   const [updatingStatus, setUpdatingStatus] = useState<{ [key: number]: boolean }>({});
   const [importing, setImporting] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const nameValidationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const rucValidationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [selectedStages, setSelectedStages] = useState<string[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
@@ -96,6 +103,7 @@ const Companies: React.FC = () => {
   const [countryFilterExpanded, setCountryFilterExpanded] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 7;
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Función para obtener iniciales
   const getInitials = (name: string) => {
@@ -105,6 +113,148 @@ const Companies: React.FC = () => {
       return `${words[0][0]}${words[1][0]}`.toUpperCase();
     }
     return name.substring(0, 2).toUpperCase();
+  };
+  // Función para obtener iniciales de nombre y apellido separados
+  const getInitialsFromNames = (firstName?: string, lastName?: string) => {
+    const first = firstName?.[0]?.toUpperCase() || '';
+    const last = lastName?.[0]?.toUpperCase() || '';
+    return first && last ? `${first}${last}` : first || last || '--';
+  };
+
+  // Validar nombre en tiempo real con debounce
+  const validateCompanyName = async (name: string) => {
+    // Limpiar timeout anterior
+    if (nameValidationTimeoutRef.current) {
+      clearTimeout(nameValidationTimeoutRef.current);
+    }
+
+    // Si el campo está vacío, limpiar error
+    if (!name || name.trim() === '') {
+      setNameError('');
+      return;
+    }
+
+    // Si estamos editando, no validar contra la misma empresa
+    if (editingCompany && editingCompany.name.toLowerCase() === name.trim().toLowerCase()) {
+      setNameError('');
+      return;
+    }
+
+    // Debounce: esperar 500ms después de que el usuario deje de escribir
+    nameValidationTimeoutRef.current = setTimeout(async () => {
+      try {
+        const response = await api.get('/companies', {
+          params: { search: name.trim(), limit: 50 },
+        });
+        
+        const companies = response.data.companies || response.data || [];
+        const exactMatch = companies.find((c: Company) => 
+          c.name.toLowerCase().trim() === name.toLowerCase().trim()
+        );
+
+        if (exactMatch) {
+          setNameError('Ya existe una empresa con este nombre');
+        } else {
+          setNameError('');
+        }
+      } catch (error) {
+        // Si hay error en la validación, no mostrar error al usuario
+        setNameError('');
+      }
+    }, 500);
+  };
+
+  // Validar RUC en tiempo real con debounce
+  const validateCompanyRuc = async (ruc: string) => {
+    // Limpiar timeout anterior
+    if (rucValidationTimeoutRef.current) {
+      clearTimeout(rucValidationTimeoutRef.current);
+    }
+
+    // Si el campo está vacío o tiene menos de 11 dígitos, limpiar error
+    if (!ruc || ruc.trim() === '' || ruc.length < 11) {
+      setRucValidationError('');
+      return;
+    }
+
+    // Si estamos editando, no validar contra la misma empresa
+    if (editingCompany && editingCompany.ruc === ruc.trim()) {
+      setRucValidationError('');
+      return;
+    }
+
+    // Debounce: esperar 500ms después de que el usuario deje de escribir
+    rucValidationTimeoutRef.current = setTimeout(async () => {
+      try {
+        const response = await api.get('/companies', {
+          params: { search: ruc.trim(), limit: 50 },
+        });
+        
+        const companies = response.data.companies || response.data || [];
+        const exactMatch = companies.find((c: Company) => c.ruc === ruc.trim());
+
+        if (exactMatch) {
+          setRucValidationError('Ya existe una empresa con este RUC');
+        } else {
+          setRucValidationError('');
+        }
+      } catch (error) {
+        // Si hay error en la validación, no mostrar error al usuario
+        setRucValidationError('');
+      }
+    }, 500);
+  };
+
+  // Función para validar ambos campos en paralelo
+  const validateAllFields = async (name: string, ruc: string) => {
+    // Limpiar timeouts anteriores
+    if (nameValidationTimeoutRef.current) {
+      clearTimeout(nameValidationTimeoutRef.current);
+    }
+    if (rucValidationTimeoutRef.current) {
+      clearTimeout(rucValidationTimeoutRef.current);
+    }
+
+    // Si el RUC tiene 11 dígitos, validar inmediatamente sin debounce
+    if (ruc && ruc.trim().length === 11) {
+      // Ejecutar validación del RUC inmediatamente (sin debounce)
+      if (rucValidationTimeoutRef.current) {
+        clearTimeout(rucValidationTimeoutRef.current);
+      }
+      
+      // Validar RUC inmediatamente
+      if (!editingCompany || editingCompany.ruc !== ruc.trim()) {
+        try {
+          const response = await api.get('/companies', {
+            params: { search: ruc.trim(), limit: 50 },
+          });
+          
+          const companies = response.data.companies || response.data || [];
+          const exactMatch = companies.find((c: Company) => c.ruc === ruc.trim());
+
+          if (exactMatch) {
+            setRucValidationError('Ya existe una empresa con este RUC');
+          } else {
+            setRucValidationError('');
+          }
+        } catch (error) {
+          setRucValidationError('');
+        }
+      } else {
+        setRucValidationError('');
+      }
+      
+      // Validar nombre con debounce solo si tiene contenido
+      if (name && name.trim() !== '') {
+        validateCompanyName(name);
+      } else {
+        setNameError('');
+      }
+    } else {
+      // Si el RUC no tiene 11 dígitos, usar las funciones de validación con debounce
+      validateCompanyName(name);
+      validateCompanyRuc(ruc);
+    }
   };
 
   // Función para vista previa
@@ -145,6 +295,18 @@ const Companies: React.FC = () => {
     fetchCompanies();
     fetchUsers();
   }, [fetchCompanies, fetchUsers]);
+
+  // Limpiar timeouts al desmontar el componente
+  useEffect(() => {
+    return () => {
+      if (nameValidationTimeoutRef.current) {
+        clearTimeout(nameValidationTimeoutRef.current);
+      }
+      if (rucValidationTimeoutRef.current) {
+        clearTimeout(rucValidationTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleExportToExcel = () => {
     // Preparar los datos para exportar
@@ -332,22 +494,100 @@ const Companies: React.FC = () => {
       if (response.data.success && response.data.data) {
         const data = response.data.data;
         
+        // Guardar el RUC actual antes de actualizar el formulario
+        const currentRuc = formData.ruc;
+        const newName = data.nombre_o_razon_social || '';
+        
         // Guardar toda la información para mostrarla en el panel lateral
         setRucInfo(data);
         
         // Actualizar el formulario con los datos obtenidos
-        setFormData({
+        const updatedFormData = {
           ...formData,
-          name: data.nombre_o_razon_social || '',
+          name: newName,
           industry: data.tipo_contribuyente || '',
           address: data.direccion_completa || data.direccion || '',
           city: data.distrito || '',
           state: data.provincia || '',
           country: data.departamento || 'Perú',
-        });
+        };
+        setFormData(updatedFormData);
 
         // Consultar deudas automáticamente después de obtener la información del RUC
-        await handleSearchDebts(formData.ruc);
+        await handleSearchDebts(currentRuc);
+
+        // Validar ambos campos inmediatamente después de autocompletar
+        // Limpiar timeouts anteriores para evitar conflictos
+        if (nameValidationTimeoutRef.current) {
+          clearTimeout(nameValidationTimeoutRef.current);
+        }
+        if (rucValidationTimeoutRef.current) {
+          clearTimeout(rucValidationTimeoutRef.current);
+        }
+        
+        // Ejecutar validaciones inmediatamente sin debounce cuando se autocompleta
+        const validateNameImmediate = async () => {
+          if (!newName || newName.trim() === '') {
+            setNameError('');
+            return;
+          }
+
+          if (editingCompany && editingCompany.name.toLowerCase() === newName.trim().toLowerCase()) {
+            setNameError('');
+            return;
+          }
+
+          try {
+            const response = await api.get('/companies', {
+              params: { search: newName.trim(), limit: 50 },
+            });
+            
+            const companies = response.data.companies || response.data || [];
+            const exactMatch = companies.find((c: Company) => 
+              c.name.toLowerCase().trim() === newName.toLowerCase().trim()
+            );
+
+            if (exactMatch) {
+              setNameError('Ya existe una empresa con este nombre');
+            } else {
+              setNameError('');
+            }
+          } catch (error) {
+            setNameError('');
+          }
+        };
+
+        const validateRucImmediate = async () => {
+          if (!currentRuc || currentRuc.trim() === '' || currentRuc.length < 11) {
+            setRucValidationError('');
+            return;
+          }
+
+          if (editingCompany && editingCompany.ruc === currentRuc.trim()) {
+            setRucValidationError('');
+            return;
+          }
+
+          try {
+            const response = await api.get('/companies', {
+              params: { search: currentRuc.trim(), limit: 50 },
+            });
+            
+            const companies = response.data.companies || response.data || [];
+            const exactMatch = companies.find((c: Company) => c.ruc === currentRuc.trim());
+
+            if (exactMatch) {
+              setRucValidationError('Ya existe una empresa con este RUC');
+            } else {
+              setRucValidationError('');
+            }
+          } catch (error) {
+            setRucValidationError('');
+          }
+        };
+
+        // Ejecutar ambas validaciones inmediatamente en paralelo
+        await Promise.all([validateNameImmediate(), validateRucImmediate()]);
       } else {
         setRucError('No se encontró información para este RUC');
         setRucInfo(null);
@@ -492,9 +732,31 @@ const Companies: React.FC = () => {
     setRucInfo(null);
     setRucDebts(null);
     setRucError('');
+    setNameError('');
+    setRucValidationError('');
+    setErrorMessage(null);
+    
+    // Limpiar timeouts pendientes
+    if (nameValidationTimeoutRef.current) {
+      clearTimeout(nameValidationTimeoutRef.current);
+    }
+    if (rucValidationTimeoutRef.current) {
+      clearTimeout(rucValidationTimeoutRef.current);
+    }
   };
 
   const handleSubmit = async () => {
+    // Validar antes de enviar
+    if (nameError) {
+      setErrorMessage('Por favor, corrige el error en el nombre antes de guardar.');
+      return;
+    }
+
+    if (rucValidationError) {
+      setErrorMessage('Por favor, corrige el error en el RUC antes de guardar.');
+      return;
+    }
+
     try {
       if (editingCompany) {
         await api.put(`/companies/${editingCompany.id}`, formData);
@@ -503,8 +765,26 @@ const Companies: React.FC = () => {
       }
       handleClose();
       fetchCompanies();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving company:', error);
+      
+      // Manejar error de empresa duplicada del servidor
+      if (error.response?.status === 400 && error.response?.data?.error) {
+        const errorMessage = error.response.data.error;
+        const duplicateField = error.response.data.duplicateField;
+        
+        if (duplicateField === 'name') {
+          setNameError(errorMessage);
+          // El error ya se muestra en el campo, no necesitamos Snackbar adicional
+        } else if (duplicateField === 'ruc') {
+          setRucValidationError(errorMessage);
+          // El error ya se muestra en el campo, no necesitamos Snackbar adicional
+        } else {
+          setErrorMessage(errorMessage);
+        }
+      } else {
+        setErrorMessage('Error al guardar la empresa. Por favor, intenta nuevamente.');
+      }
     }
   };
 
@@ -749,6 +1029,8 @@ const Companies: React.FC = () => {
           <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
             <FormControl size="small" sx={{ minWidth: 130 }}>
                 <Select
+                  id="companies-sort-select"
+                  name="companies-sort"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   displayEmpty
@@ -881,7 +1163,7 @@ const Companies: React.FC = () => {
               borderRadius: '8px 8px 0 0',
               overflow: 'hidden',
               display: 'grid',
-              gridTemplateColumns: { xs: 'repeat(5, minmax(0, 1fr))', md: '1.5fr 1fr 0.9fr 1.2fr 0.7fr' },
+              gridTemplateColumns: { xs: 'repeat(7, minmax(0, 1fr))', md: '1.5fr 1fr 1fr 1fr 0.9fr 1.2fr 0.7fr' },
               columnGap: { xs: 1, md: 1.5 },
               minWidth: { xs: 800, md: 'auto' },
             maxWidth: '100%',
@@ -894,6 +1176,12 @@ const Companies: React.FC = () => {
           >
             <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
                   Nombre de Empresa
+            </Box>
+            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+                  Última Actividad
+            </Box>
+            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+                  Propietario
             </Box>
             <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
                   Industria
@@ -921,7 +1209,7 @@ const Companies: React.FC = () => {
                     cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 display: 'grid',
-                gridTemplateColumns: { xs: 'repeat(5, minmax(0, 1fr))', md: '1.5fr 1fr 0.9fr 1.2fr 0.7fr' },
+                gridTemplateColumns: { xs: 'repeat(7, minmax(0, 1fr))', md: '1.5fr 1fr 1fr 1fr 0.9fr 1.2fr 0.7fr' },
                 columnGap: { xs: 1, md: 1.5 },
                 minWidth: { xs: 800, md: 'auto' },
                 maxWidth: '100%',
@@ -1013,6 +1301,68 @@ const Companies: React.FC = () => {
                         )}
                       </Box>
                     </Box>
+                </Box>
+                {/* Nueva columna: Fecha de última actividad */}
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: theme.palette.text.secondary,
+                      fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                      fontWeight: 400,
+                    }}
+                  >
+                    {company.updatedAt 
+                      ? new Date(company.updatedAt).toLocaleDateString('es-ES', { 
+                          day: '2-digit', 
+                          month: 'short', 
+                          year: 'numeric' 
+                        })
+                      : '--'}
+                  </Typography>
+                </Box>
+                {/* Nueva columna: Propietario */}
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                  {company.Owner ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                      <Avatar
+                        sx={{
+                          width: { xs: 20, md: 24 },
+                          height: { xs: 20, md: 24 },
+                          fontSize: { xs: '0.5625rem', md: '0.625rem' },
+                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
+                        }}
+                      >
+                        {getInitialsFromNames(company.Owner.firstName || '', company.Owner.lastName || '')}
+                      </Avatar>
+                      <Typography
+                        variant="body2" 
+                        sx={{ 
+                          color: theme.palette.text.primary,
+                          fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                          fontWeight: 400,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          maxWidth: { xs: '80px', md: '120px' },
+                        }}
+                        title={`${company.Owner.firstName} ${company.Owner.lastName}`}
+                      >
+                        {company.Owner.firstName} {company.Owner.lastName}
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: theme.palette.text.disabled,
+                        fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                        fontWeight: 400,
+                      }}
+                    >
+                      Sin asignar
+                    </Typography>
+                  )}
                 </Box>
                 <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                     {company.industry ? (
@@ -1117,6 +1467,7 @@ const Companies: React.FC = () => {
                     ))}
                     </Menu>
                 </Box>
+                
                 <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
                       <Tooltip title="Vista previa">
@@ -1674,15 +2025,53 @@ const Companies: React.FC = () => {
               <TextField
                 label="RUC"
                 value={formData.ruc}
-                onChange={(e) => {
+                onChange={async (e) => {
                   const value = e.target.value.replace(/\D/g, ''); // Solo números
                   // Limitar a 11 dígitos
                   const limitedValue = value.slice(0, 11);
+                  const currentName = formData.name; // Obtener el nombre actual del estado
                   setFormData({ ...formData, ruc: limitedValue });
                   setRucError('');
+                  
+                  // Si el RUC tiene exactamente 11 dígitos, validar inmediatamente
+                  if (limitedValue.length === 11) {
+                    // NO limpiar el error aquí, dejar que la validación lo maneje
+                    // Validar RUC inmediatamente sin esperar debounce
+                    if (editingCompany && editingCompany.ruc === limitedValue.trim()) {
+                      setRucValidationError('');
+                    } else {
+                      try {
+                        const response = await api.get('/companies', {
+                          params: { search: limitedValue.trim(), limit: 50 },
+                        });
+                        
+                        const companies = response.data.companies || response.data || [];
+                        // Buscar coincidencia exacta por RUC
+                        const exactMatch = companies.find((c: Company) => c.ruc === limitedValue.trim());
+
+                        if (exactMatch) {
+                          setRucValidationError('Ya existe una empresa con este RUC');
+                        } else {
+                          setRucValidationError('');
+                        }
+                      } catch (error: any) {
+                        console.error('Error validando RUC:', error);
+                        setRucValidationError('');
+                      }
+                    }
+                    
+                    // Validar nombre con debounce si tiene contenido
+                    if (currentName && currentName.trim() !== '') {
+                      validateAllFields(currentName, limitedValue);
+                    }
+                  } else {
+                    // Si tiene menos de 11 dígitos, limpiar el error y usar validación normal
+                    setRucValidationError('');
+                    validateAllFields(currentName, limitedValue);
+                  }
                 }}
-                error={!!rucError}
-                helperText={rucError}
+                error={!!rucError || !!rucValidationError}
+                helperText={rucError || rucValidationError}
                 inputProps={{ maxLength: 11 }}
                 InputLabelProps={{ shrink: true }}
                 InputProps={{
@@ -1735,8 +2124,21 @@ const Companies: React.FC = () => {
             <TextField
               label="Nombre"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => {
+                const newName = e.target.value;
+                const currentRuc = formData.ruc; // Obtener el RUC actual del estado
+                setFormData({ ...formData, name: newName });
+                // Limpiar el error del nombre cuando el usuario empieza a escribir
+                if (!newName.trim()) {
+                  setNameError('');
+                }
+                // Validar ambos campos con los valores actuales
+                validateAllFields(newName, currentRuc);
+              }}
+              error={!!nameError}
+              helperText={nameError}
               InputLabelProps={{ shrink: true }}
+              required
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 1.5,
@@ -2008,6 +2410,22 @@ const Companies: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+      
+      {/* Snackbar para mensajes de error */}
+      <Snackbar
+        open={!!errorMessage}
+        autoHideDuration={4000}
+        onClose={() => setErrorMessage(null)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setErrorMessage(null)} 
+          severity="error" 
+          sx={{ width: '100%' }}
+        >
+          {errorMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

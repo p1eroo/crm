@@ -57,7 +57,8 @@ const Header: React.FC = () => {
   const [searchResults, setSearchResults] = useState<any>(null);
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchAnchorEl, setSearchAnchorEl] = useState<null | HTMLElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<HTMLElement>(null);
+  const searchInputElementRef = useRef<HTMLInputElement>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [reminders, setReminders] = useState<any[]>([]);
   const [reminderCount, setReminderCount] = useState(0);
@@ -157,6 +158,12 @@ const Header: React.FC = () => {
         if (searchInputRef.current) {
           setSearchAnchorEl(searchInputRef.current);
         }
+        // Mantener el foco en el input después de recibir resultados
+        setTimeout(() => {
+          if (searchInputElementRef.current) {
+            searchInputElementRef.current.focus();
+          }
+        }, 0);
       } catch (error) {
         console.error('Error en búsqueda:', error);
         setSearchResults(null);
@@ -171,6 +178,18 @@ const Header: React.FC = () => {
       }
     };
   }, [searchValue]);
+
+  // Mantener el foco en el input cuando el menú está abierto
+  useEffect(() => {
+    if (searchAnchorEl && searchResults && searchInputElementRef.current) {
+      // Usar requestAnimationFrame para asegurar que el foco se establezca después de que el menú se renderice
+      requestAnimationFrame(() => {
+        if (searchInputElementRef.current) {
+          searchInputElementRef.current.focus();
+        }
+      });
+    }
+  }, [searchAnchorEl, searchResults]);
 
   const handleSearchResultClick = (url: string) => {
     setSearchValue('');
@@ -240,8 +259,16 @@ const Header: React.FC = () => {
               return eventDate >= now && eventDate <= nextWeek;
             });
           }
-        } catch (error) {
-          // Si no hay eventos de Google Calendar, continuar sin ellos
+        } catch (error: any) {
+          // Si es un 401, significa que el usuario no tiene Google Calendar conectado
+          // o el token expiró. Esto es normal y no debería mostrar error.
+          if (error.response?.status === 401) {
+            console.log('ℹ️ Google Calendar no disponible o no conectado');
+          } else {
+            // Para otros errores, loguear pero no interrumpir el flujo
+            console.log('⚠️ Error obteniendo eventos de Google Calendar:', error.message);
+          }
+          // Continuar sin eventos de Google Calendar
         }
 
         const allReminders = [
@@ -341,9 +368,27 @@ const Header: React.FC = () => {
             }} 
           />
           <InputBase
+            id="global-search-input"
+            name="global-search"
             placeholder="Buscar contactos, empresas, negocios..."
             value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
+            onChange={(e) => {
+              setSearchValue(e.target.value);
+            }}
+            onKeyDown={(e) => {
+              // Prevenir que el menú capture las teclas
+              e.stopPropagation();
+              // Mantener el foco en el input
+              if (searchInputElementRef.current) {
+                searchInputElementRef.current.focus();
+              }
+            }}
+            onFocus={(e) => {
+              // Asegurar que el input mantiene el foco
+              e.target.focus();
+            }}
+            inputRef={searchInputElementRef}
+            autoFocus={false}
             sx={{
               flex: 1,
               fontSize: '0.8125rem',
@@ -364,6 +409,25 @@ const Header: React.FC = () => {
           anchorEl={searchAnchorEl}
           open={Boolean(searchAnchorEl && searchResults)}
           onClose={handleSearchClose}
+          disableAutoFocus
+          disableEnforceFocus
+          disableAutoFocusItem
+          disableRestoreFocus
+          MenuListProps={{
+            disablePadding: true,
+            onKeyDown: (e) => {
+              // Si es una tecla de escritura normal, prevenir que el menú la capture
+              // y mantener el foco en el input
+              if (e.key.length === 1 || e.key === 'Backspace' || e.key === 'Delete' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                e.stopPropagation();
+                if (searchInputElementRef.current) {
+                  searchInputElementRef.current.focus();
+                }
+                return;
+              }
+              // Para otras teclas (Enter, Escape, ArrowUp, ArrowDown), permitir el comportamiento normal
+            },
+          }}
           PaperProps={{
             sx: {
               bgcolor: theme.palette.background.paper,
@@ -386,159 +450,150 @@ const Header: React.FC = () => {
             horizontal: 'left',
           }}
         >
-          {searchResults && (
-            <>
-              {/* Contactos */}
-              {searchResults.contacts && searchResults.contacts.length > 0 && (
-                <>
-                  <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
-                    <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
-                      Contactos
+          {searchResults?.contacts && searchResults.contacts.length > 0 && (
+            <Box>
+              <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
+                  Contactos
+                </Typography>
+              </Box>
+              {searchResults.contacts.map((result: any) => (
+                <MenuItem
+                  key={`contact-${result.id}`}
+                  onClick={() => handleSearchResultClick(result.url)}
+                  sx={{
+                    py: 1.5,
+                    px: 2,
+                    '&:hover': {
+                      bgcolor: theme.palette.action.hover,
+                    },
+                  }}
+                >
+                  <Person sx={{ fontSize: 20, color: theme.palette.primary.main, mr: 1.5 }} />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {result.title}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {result.subtitle}
                     </Typography>
                   </Box>
-                  {searchResults.contacts.map((result: any) => (
-                    <MenuItem
-                      key={`contact-${result.id}`}
-                      onClick={() => handleSearchResultClick(result.url)}
-                      sx={{
-                        py: 1.5,
-                        px: 2,
-                        '&:hover': {
-                          bgcolor: theme.palette.action.hover,
-                        },
-                      }}
-                    >
-                      <Person sx={{ fontSize: 20, color: theme.palette.primary.main, mr: 1.5 }} />
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {result.title}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {result.subtitle}
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </>
-              )}
-
-              {/* Empresas */}
-              {searchResults.companies && searchResults.companies.length > 0 && (
-                <>
-                  {(searchResults.contacts?.length > 0) && <Divider />}
-                  <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
-                    <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
-                      Empresas
-                    </Typography>
-                  </Box>
-                  {searchResults.companies.map((result: any) => (
-                    <MenuItem
-                      key={`company-${result.id}`}
-                      onClick={() => handleSearchResultClick(result.url)}
-                      sx={{
-                        py: 1.5,
-                        px: 2,
-                        '&:hover': {
-                          bgcolor: theme.palette.action.hover,
-                        },
-                      }}
-                    >
-                      <Business sx={{ fontSize: 20, color: theme.palette.info.main, mr: 1.5 }} />
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {result.title}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {result.subtitle}
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </>
-              )}
-
-              {/* Negocios */}
-              {searchResults.deals && searchResults.deals.length > 0 && (
-                <>
-                  {((searchResults.contacts?.length > 0) || (searchResults.companies?.length > 0)) && <Divider />}
-                  <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
-                    <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
-                      Negocios
-                    </Typography>
-                  </Box>
-                  {searchResults.deals.map((result: any) => (
-                    <MenuItem
-                      key={`deal-${result.id}`}
-                      onClick={() => handleSearchResultClick(result.url)}
-                      sx={{
-                        py: 1.5,
-                        px: 2,
-                        '&:hover': {
-                          bgcolor: theme.palette.action.hover,
-                        },
-                      }}
-                    >
-                      <AttachMoney sx={{ fontSize: 20, color: theme.palette.success.main, mr: 1.5 }} />
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {result.title}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {result.subtitle} {result.amount && `• ${new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(result.amount)}`}
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </>
-              )}
-
-              {/* Tareas */}
-              {searchResults.tasks && searchResults.tasks.length > 0 && (
-                <>
-                  {((searchResults.contacts?.length > 0) || (searchResults.companies?.length > 0) || (searchResults.deals?.length > 0)) && <Divider />}
-                  <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
-                    <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
-                      Tareas
-                    </Typography>
-                  </Box>
-                  {searchResults.tasks.map((result: any) => (
-                    <MenuItem
-                      key={`task-${result.id}`}
-                      onClick={() => handleSearchResultClick(result.url)}
-                      sx={{
-                        py: 1.5,
-                        px: 2,
-                        '&:hover': {
-                          bgcolor: theme.palette.action.hover,
-                        },
-                      }}
-                    >
-                      <Assignment sx={{ fontSize: 20, color: theme.palette.warning.main, mr: 1.5 }} />
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {result.title}
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {result.subtitle}
-                        </Typography>
-                      </Box>
-                    </MenuItem>
-                  ))}
-                </>
-              )}
-
-              {/* Sin resultados */}
-              {(!searchResults.contacts || searchResults.contacts.length === 0) &&
-               (!searchResults.companies || searchResults.companies.length === 0) &&
-               (!searchResults.deals || searchResults.deals.length === 0) &&
-               (!searchResults.tasks || searchResults.tasks.length === 0) && (
-                <MenuItem disabled>
-                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                    No se encontraron resultados
-                  </Typography>
                 </MenuItem>
-              )}
-            </>
+              ))}
+            </Box>
+          )}
+
+          {searchResults?.companies && searchResults.companies.length > 0 && (
+            <Box>
+              {(searchResults.contacts?.length > 0) && <Divider />}
+              <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
+                  Empresas
+                </Typography>
+              </Box>
+              {searchResults.companies.map((result: any) => (
+                <MenuItem
+                  key={`company-${result.id}`}
+                  onClick={() => handleSearchResultClick(result.url)}
+                  sx={{
+                    py: 1.5,
+                    px: 2,
+                    '&:hover': {
+                      bgcolor: theme.palette.action.hover,
+                    },
+                  }}
+                >
+                  <Business sx={{ fontSize: 20, color: theme.palette.info.main, mr: 1.5 }} />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {result.title}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {result.subtitle}
+                    </Typography>
+                  </Box>
+                </MenuItem>
+              ))}
+            </Box>
+          )}
+
+          {searchResults?.deals && searchResults.deals.length > 0 && (
+            <Box>
+              {((searchResults.contacts?.length > 0) || (searchResults.companies?.length > 0)) && <Divider />}
+              <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
+                  Negocios
+                </Typography>
+              </Box>
+              {searchResults.deals.map((result: any) => (
+                <MenuItem
+                  key={`deal-${result.id}`}
+                  onClick={() => handleSearchResultClick(result.url)}
+                  sx={{
+                    py: 1.5,
+                    px: 2,
+                    '&:hover': {
+                      bgcolor: theme.palette.action.hover,
+                    },
+                  }}
+                >
+                  <AttachMoney sx={{ fontSize: 20, color: theme.palette.success.main, mr: 1.5 }} />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {result.title}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {result.subtitle} {result.amount && `• ${new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(result.amount)}`}
+                    </Typography>
+                  </Box>
+                </MenuItem>
+              ))}
+            </Box>
+          )}
+
+          {searchResults?.tasks && searchResults.tasks.length > 0 && (
+            <Box>
+              {((searchResults.contacts?.length > 0) || (searchResults.companies?.length > 0) || (searchResults.deals?.length > 0)) && <Divider />}
+              <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
+                <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
+                  Tareas
+                </Typography>
+              </Box>
+              {searchResults.tasks.map((result: any) => (
+                <MenuItem
+                  key={`task-${result.id}`}
+                  onClick={() => handleSearchResultClick(result.url)}
+                  sx={{
+                    py: 1.5,
+                    px: 2,
+                    '&:hover': {
+                      bgcolor: theme.palette.action.hover,
+                    },
+                  }}
+                >
+                  <Assignment sx={{ fontSize: 20, color: theme.palette.warning.main, mr: 1.5 }} />
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {result.title}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {result.subtitle}
+                    </Typography>
+                  </Box>
+                </MenuItem>
+              ))}
+            </Box>
+          )}
+
+          {(!searchResults?.contacts || searchResults.contacts.length === 0) &&
+           (!searchResults?.companies || searchResults.companies.length === 0) &&
+           (!searchResults?.deals || searchResults.deals.length === 0) &&
+           (!searchResults?.tasks || searchResults.tasks.length === 0) && (
+            <MenuItem disabled>
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                No se encontraron resultados
+              </Typography>
+            </MenuItem>
           )}
         </Menu>
       </Box>

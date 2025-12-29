@@ -17,10 +17,13 @@ router.get('/', async (req: AuthRequest, res) => {
 
     const where: any = {};
     if (search) {
+      const searchStr = typeof search === 'string' ? search : String(search);
       where[Op.or] = [
-        { firstName: { [Op.iLike]: `%${search}%` } },
-        { lastName: { [Op.iLike]: `%${search}%` } },
-        { email: { [Op.iLike]: `%${search}%` } },
+        { firstName: { [Op.iLike]: `%${searchStr}%` } },
+        { lastName: { [Op.iLike]: `%${searchStr}%` } },
+        { email: { [Op.iLike]: `%${searchStr}%` } },
+        { dni: { [Op.eq]: searchStr.trim() } }, // Búsqueda exacta por DNI
+        { cee: { [Op.eq]: searchStr.trim().toUpperCase() } }, // Búsqueda exacta por CEE
       ];
     }
     if (lifecycleStage) {
@@ -153,6 +156,59 @@ router.post('/', async (req: AuthRequest, res) => {
       ownerId: req.body.ownerId || req.userId || null,
     };
 
+    // Validar que no exista un contacto con el mismo email (case-insensitive)
+    if (contactData.email) {
+      const existingContactByEmail = await Contact.findOne({
+        where: {
+          email: {
+            [Op.iLike]: contactData.email.trim(),
+          },
+        },
+      });
+
+      if (existingContactByEmail) {
+        return res.status(400).json({ 
+          error: 'Ya existe un contacto con este email',
+          duplicateField: 'email',
+          existingContactId: existingContactByEmail.id,
+        });
+      }
+    }
+
+    // Validar que no exista un contacto con el mismo DNI (si se proporciona)
+    if (contactData.dni && contactData.dni.trim() !== '') {
+      const existingContactByDni = await Contact.findOne({
+        where: {
+          dni: contactData.dni.trim(),
+        },
+      });
+
+      if (existingContactByDni) {
+        return res.status(400).json({ 
+          error: 'Ya existe un contacto con este DNI',
+          duplicateField: 'dni',
+          existingContactId: existingContactByDni.id,
+        });
+      }
+    }
+
+    // Validar que no exista un contacto con el mismo CEE (si se proporciona)
+    if (contactData.cee && contactData.cee.trim() !== '') {
+      const existingContactByCee = await Contact.findOne({
+        where: {
+          cee: contactData.cee.trim().toUpperCase(),
+        },
+      });
+
+      if (existingContactByCee) {
+        return res.status(400).json({ 
+          error: 'Ya existe un contacto con este CEE',
+          duplicateField: 'cee',
+          existingContactId: existingContactByCee.id,
+        });
+      }
+    }
+
     const contact = await Contact.create(contactData);
     const newContact = await Contact.findByPk(contact.id, {
       include: [
@@ -168,7 +224,7 @@ router.post('/', async (req: AuthRequest, res) => {
 });
 
 // Actualizar contacto
-router.put('/:id', async (req, res) => {
+router.put('/:id', async (req: AuthRequest, res) => {
   try {
     // Validar que companyId esté presente si se está enviando en el body
     if (req.body.hasOwnProperty('companyId') && !req.body.companyId) {
@@ -180,7 +236,74 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Contacto no encontrado' });
     }
 
-    await contact.update(req.body);
+    const contactData = {
+      ...req.body,
+      ownerId: req.body.ownerId || req.userId || null,
+    };
+
+    // Validar que no exista otro contacto con el mismo email (excluyendo el actual)
+    if (contactData.email && contactData.email.trim() !== contact.email) {
+      const existingContactByEmail = await Contact.findOne({
+        where: {
+          email: {
+            [Op.iLike]: contactData.email.trim(),
+          },
+          id: {
+            [Op.ne]: contact.id, // Excluir el contacto actual
+          },
+        },
+      });
+
+      if (existingContactByEmail) {
+        return res.status(400).json({ 
+          error: 'Ya existe otro contacto con este email',
+          duplicateField: 'email',
+          existingContactId: existingContactByEmail.id,
+        });
+      }
+    }
+
+    // Validar que no exista otro contacto con el mismo DNI (excluyendo el actual)
+    if (contactData.dni && contactData.dni.trim() !== '' && contactData.dni.trim() !== (contact.dni || '')) {
+      const existingContactByDni = await Contact.findOne({
+        where: {
+          dni: contactData.dni.trim(),
+          id: {
+            [Op.ne]: contact.id,
+          },
+        },
+      });
+
+      if (existingContactByDni) {
+        return res.status(400).json({ 
+          error: 'Ya existe otro contacto con este DNI',
+          duplicateField: 'dni',
+          existingContactId: existingContactByDni.id,
+        });
+      }
+    }
+
+    // Validar que no exista otro contacto con el mismo CEE (excluyendo el actual)
+    if (contactData.cee && contactData.cee.trim() !== '' && contactData.cee.trim().toUpperCase() !== (contact.cee || '')) {
+      const existingContactByCee = await Contact.findOne({
+        where: {
+          cee: contactData.cee.trim().toUpperCase(),
+          id: {
+            [Op.ne]: contact.id,
+          },
+        },
+      });
+
+      if (existingContactByCee) {
+        return res.status(400).json({ 
+          error: 'Ya existe otro contacto con este CEE',
+          duplicateField: 'cee',
+          existingContactId: existingContactByCee.id,
+        });
+      }
+    }
+
+    await contact.update(contactData);
     const updatedContact = await Contact.findByPk(contact.id, {
       include: [
         { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },

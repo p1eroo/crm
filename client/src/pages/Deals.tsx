@@ -639,6 +639,8 @@ const Deals: React.FC = () => {
           <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
             <FormControl size="small" sx={{ minWidth: 130 }}>
                 <Select
+                  id="deals-sort-select"
+                  name="deals-sort"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   displayEmpty
@@ -1175,7 +1177,7 @@ const Deals: React.FC = () => {
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 1, mb: 2 }}>
               <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem' }}>
                 Mostrando {startIndex + 1}-{Math.min(endIndex, filteredDeals.length)} de {filteredDeals.length} negocios
-              </Typography>
+            </Typography>
             </Box>
           )}
         </Box>

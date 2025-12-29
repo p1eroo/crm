@@ -118,19 +118,21 @@ api.interceptors.request.use(
     
     // Agregar token de autenticación si existe
     const token = localStorage.getItem('token');
+
+    // Verificar si es un endpoint público que no requiere token
+    const isPublicEndpoint = config.url?.includes('/auth/login') || 
+                            config.url?.includes('/auth/login-monterrico') ||
+                            config.url?.includes('/auth/register');
+    
     if (token) {
       // Asegurarse de que el header Authorization esté configurado correctamente
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
       console.log('🔑 Token agregado a petición:', config.url);
-    } else {
+    } else if (!isPublicEndpoint) {
+      // Solo mostrar warning para endpoints que requieren autenticación
       console.warn('⚠️ No hay token disponible para petición:', config.url);
-      // No cerrar sesión si falta el token en peticiones que no requieren autenticación
-      const isPublicEndpoint = config.url?.includes('/auth/login') || 
-                                config.url?.includes('/auth/login-monterrico');
-      if (!isPublicEndpoint) {
-        console.warn('⚠️ Petición sin token a endpoint que probablemente requiere autenticación:', config.url);
-      }
+      console.warn('⚠️ Petición sin token a endpoint que probablemente requiere autenticación:', config.url);
     }
     
     console.log('📤 Petición a:', config.baseURL + (config.url || ''), 'con token:', token ? 'Sí' : 'No');
@@ -189,15 +191,24 @@ api.interceptors.response.use(
     const url = error.config?.url || '';
     const errorCode = error.code;
     
-    // Log detallado para diagnóstico
-    console.log('🔍 [Interceptor] Error capturado:', {
-      status,
-      url,
-      errorCode,
-      message: error.message,
-      hasResponse: !!error.response,
-      pathname: window.location.pathname
-    });
+    // Filtrar errores esperados que no necesitan logging detallado
+    const isGoogleEventsError = url.includes('/google/events') && status === 500;
+    const isExpectedError = status === 404 || isGoogleEventsError;
+    
+    // Solo loguear errores inesperados con un solo log consolidado
+    if (!isExpectedError && status !== undefined) {
+      console.error('❌ Error en petición:', {
+        url: error.config?.baseURL + (error.config?.url || ''),
+        status,
+        code: errorCode,
+        message: error.message,
+        responseData: error.response?.data,
+        pathname: window.location.pathname
+      });
+    } else if (errorCode === 'ERR_NETWORK' || errorCode === 'ERR_INTERNET_DISCONNECTED') {
+      // Errores de red no deberían cerrar la sesión
+      console.warn('⚠️ Error de red (no se cierra sesión):', error.message);
+    }
     
     // Manejar errores 401 (siempre token inválido/expirado)
     if (status === 401) {
@@ -227,21 +238,6 @@ api.interceptors.response.use(
       const isGoogleTokenRequest = url.includes('/google/token');
       const isGoogleCalendarRequest = url.includes('/google-calendar');
       
-      // Rutas que requieren permisos específicos (no cerrar sesión por falta de permisos)
-      const requiresSpecificRole = url.includes('/users') || 
-                                   url.includes('/admin') ||
-                                   errorMessage.includes('permisos') ||
-                                   errorMessage.includes('No tienes permisos');
-      
-      console.log('🔍 [Interceptor] Error 403 detectado:', {
-        url,
-        errorMessage,
-        requiresSpecificRole,
-        isLoginPage,
-        isLoginRequest,
-        isAuthMeRequest
-      });
-      
       // REGLA PRINCIPAL: Solo cerrar sesión si el mensaje EXPLÍCITAMENTE dice que el token es inválido
       // Cualquier otro 403 es por falta de permisos y NO debe cerrar sesión
       const isTokenInvalid = errorMessage.includes('Token inválido') || 
@@ -250,7 +246,6 @@ api.interceptors.response.use(
       
       // Si es un 403 en una petición de verificación, no cerrar sesión
       if (isLoginPage || isLoginRequest || isAuthMeRequest || isGoogleTokenRequest || isGoogleCalendarRequest) {
-        console.log('🔍 [Interceptor] Error 403 en petición de verificación, NO se cierra sesión');
         return Promise.resolve({ data: null, status: 403 });
       }
       
@@ -267,7 +262,6 @@ api.interceptors.response.use(
       }
       
       // PARA CUALQUIER OTRO 403: NO cerrar sesión (es falta de permisos)
-      console.log('⚠️ [Interceptor] Error 403 por falta de permisos, NO se cierra sesión');
       // Rechazar el error para que el componente lo maneje, pero marcarlo como error de permisos
       return Promise.reject({
         ...error,
@@ -280,21 +274,6 @@ api.interceptors.response.use(
           }
         }
       });
-    }
-    
-    // Para otros errores, mostrar información en consola solo si no es 404
-    // También ignorar errores de red (ERR_NETWORK) que no tienen status
-    if (status !== 404 && status !== undefined) {
-      console.error('❌ Error en petición:', error.config?.baseURL + (error.config?.url || ''));
-      console.error('❌ Detalles del error:', {
-        message: error.message,
-        code: error.code,
-        response: status,
-        responseData: error.response?.data,
-      });
-    } else if (errorCode === 'ERR_NETWORK' || errorCode === 'ERR_INTERNET_DISCONNECTED') {
-      // Errores de red no deberían cerrar la sesión
-      console.warn('⚠️ Error de red (no se cierra sesión):', error.message);
     }
     
     return Promise.reject(error);

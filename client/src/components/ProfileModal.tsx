@@ -480,6 +480,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ open, onClose, onSuccess })
                           }}
                         >
                           <Select
+                            id="country-code-select"
+                            name="country-code"
                             value={countryCode}
                             onChange={(e) => setCountryCode(e.target.value)}
                             size="small"

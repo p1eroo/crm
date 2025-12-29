@@ -12,6 +12,7 @@ interface CompanyAttributes {
   phone2?: string;
   phone3?: string;
   ruc?: string;
+  idClienteEmpresa?: string;
   address?: string;
   city?: string;
   state?: string;
@@ -42,6 +43,7 @@ export class Company extends Model<CompanyAttributes, CompanyCreationAttributes>
   public phone2?: string;
   public phone3?: string;
   public ruc?: string;
+  public idClienteEmpresa?: string;
   public address?: string;
   public city?: string;
   public state?: string;
@@ -98,6 +100,10 @@ Company.init(
       allowNull: true,
     },
     ruc: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    idClienteEmpresa: {
       type: DataTypes.STRING,
       allowNull: true,
     },

@@ -6679,6 +6679,8 @@ const DealDetail: React.FC = () => {
                   }).length} Contactos
                 </Typography>
                 <Select
+                  id="deal-contacts-sort-select"
+                  name="deal-contacts-sort"
                   size="small"
                   value="default"
                   sx={{ minWidth: 200 }}
@@ -7112,6 +7114,8 @@ const DealDetail: React.FC = () => {
                   }).length} Empresas
                 </Typography>
                 <Select
+                  id="deal-companies-sort-select"
+                  name="deal-companies-sort"
                   size="small"
                   value="default"
                   sx={{ minWidth: 200 }}
