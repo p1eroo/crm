@@ -452,148 +452,148 @@ const Header: React.FC = () => {
         >
           {searchResults?.contacts && searchResults.contacts.length > 0 && (
             <Box>
-              <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
-                  Contactos
-                </Typography>
-              </Box>
-              {searchResults.contacts.map((result: any) => (
-                <MenuItem
-                  key={`contact-${result.id}`}
-                  onClick={() => handleSearchResultClick(result.url)}
-                  sx={{
-                    py: 1.5,
-                    px: 2,
-                    '&:hover': {
-                      bgcolor: theme.palette.action.hover,
-                    },
-                  }}
-                >
-                  <Person sx={{ fontSize: 20, color: theme.palette.primary.main, mr: 1.5 }} />
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {result.title}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {result.subtitle}
+                  <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
+                      Contactos
                     </Typography>
                   </Box>
-                </MenuItem>
-              ))}
+                  {searchResults.contacts.map((result: any) => (
+                    <MenuItem
+                      key={`contact-${result.id}`}
+                      onClick={() => handleSearchResultClick(result.url)}
+                      sx={{
+                        py: 1.5,
+                        px: 2,
+                        '&:hover': {
+                          bgcolor: theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      <Person sx={{ fontSize: 20, color: theme.palette.primary.main, mr: 1.5 }} />
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {result.title}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {result.subtitle}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
             </Box>
-          )}
+              )}
 
           {searchResults?.companies && searchResults.companies.length > 0 && (
             <Box>
-              {(searchResults.contacts?.length > 0) && <Divider />}
-              <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
-                  Empresas
-                </Typography>
-              </Box>
-              {searchResults.companies.map((result: any) => (
-                <MenuItem
-                  key={`company-${result.id}`}
-                  onClick={() => handleSearchResultClick(result.url)}
-                  sx={{
-                    py: 1.5,
-                    px: 2,
-                    '&:hover': {
-                      bgcolor: theme.palette.action.hover,
-                    },
-                  }}
-                >
-                  <Business sx={{ fontSize: 20, color: theme.palette.info.main, mr: 1.5 }} />
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {result.title}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {result.subtitle}
+                  {(searchResults.contacts?.length > 0) && <Divider />}
+                  <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
+                      Empresas
                     </Typography>
                   </Box>
-                </MenuItem>
-              ))}
+                  {searchResults.companies.map((result: any) => (
+                    <MenuItem
+                      key={`company-${result.id}`}
+                      onClick={() => handleSearchResultClick(result.url)}
+                      sx={{
+                        py: 1.5,
+                        px: 2,
+                        '&:hover': {
+                          bgcolor: theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      <Business sx={{ fontSize: 20, color: theme.palette.info.main, mr: 1.5 }} />
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {result.title}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {result.subtitle}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
             </Box>
-          )}
+              )}
 
           {searchResults?.deals && searchResults.deals.length > 0 && (
             <Box>
-              {((searchResults.contacts?.length > 0) || (searchResults.companies?.length > 0)) && <Divider />}
-              <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
-                  Negocios
-                </Typography>
-              </Box>
-              {searchResults.deals.map((result: any) => (
-                <MenuItem
-                  key={`deal-${result.id}`}
-                  onClick={() => handleSearchResultClick(result.url)}
-                  sx={{
-                    py: 1.5,
-                    px: 2,
-                    '&:hover': {
-                      bgcolor: theme.palette.action.hover,
-                    },
-                  }}
-                >
-                  <AttachMoney sx={{ fontSize: 20, color: theme.palette.success.main, mr: 1.5 }} />
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {result.title}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {result.subtitle} {result.amount && `• ${new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(result.amount)}`}
+                  {((searchResults.contacts?.length > 0) || (searchResults.companies?.length > 0)) && <Divider />}
+                  <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
+                      Negocios
                     </Typography>
                   </Box>
-                </MenuItem>
-              ))}
+                  {searchResults.deals.map((result: any) => (
+                    <MenuItem
+                      key={`deal-${result.id}`}
+                      onClick={() => handleSearchResultClick(result.url)}
+                      sx={{
+                        py: 1.5,
+                        px: 2,
+                        '&:hover': {
+                          bgcolor: theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      <AttachMoney sx={{ fontSize: 20, color: theme.palette.success.main, mr: 1.5 }} />
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {result.title}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {result.subtitle} {result.amount && `• ${new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(result.amount)}`}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
             </Box>
-          )}
+              )}
 
           {searchResults?.tasks && searchResults.tasks.length > 0 && (
             <Box>
-              {((searchResults.contacts?.length > 0) || (searchResults.companies?.length > 0) || (searchResults.deals?.length > 0)) && <Divider />}
-              <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
-                <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
-                  Tareas
-                </Typography>
-              </Box>
-              {searchResults.tasks.map((result: any) => (
-                <MenuItem
-                  key={`task-${result.id}`}
-                  onClick={() => handleSearchResultClick(result.url)}
-                  sx={{
-                    py: 1.5,
-                    px: 2,
-                    '&:hover': {
-                      bgcolor: theme.palette.action.hover,
-                    },
-                  }}
-                >
-                  <Assignment sx={{ fontSize: 20, color: theme.palette.warning.main, mr: 1.5 }} />
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {result.title}
-                    </Typography>
-                    <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {result.subtitle}
+                  {((searchResults.contacts?.length > 0) || (searchResults.companies?.length > 0) || (searchResults.deals?.length > 0)) && <Divider />}
+                  <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
+                      Tareas
                     </Typography>
                   </Box>
-                </MenuItem>
-              ))}
+                  {searchResults.tasks.map((result: any) => (
+                    <MenuItem
+                      key={`task-${result.id}`}
+                      onClick={() => handleSearchResultClick(result.url)}
+                      sx={{
+                        py: 1.5,
+                        px: 2,
+                        '&:hover': {
+                          bgcolor: theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      <Assignment sx={{ fontSize: 20, color: theme.palette.warning.main, mr: 1.5 }} />
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {result.title}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {result.subtitle}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
             </Box>
-          )}
+              )}
 
           {(!searchResults?.contacts || searchResults.contacts.length === 0) &&
            (!searchResults?.companies || searchResults.companies.length === 0) &&
            (!searchResults?.deals || searchResults.deals.length === 0) &&
            (!searchResults?.tasks || searchResults.tasks.length === 0) && (
-            <MenuItem disabled>
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                No se encontraron resultados
-              </Typography>
-            </MenuItem>
+                <MenuItem disabled>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                    No se encontraron resultados
+                  </Typography>
+                </MenuItem>
           )}
         </Menu>
       </Box>

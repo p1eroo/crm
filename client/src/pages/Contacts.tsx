@@ -148,7 +148,7 @@ const Contacts: React.FC = () => {
   const [companyFormData, setCompanyFormData] = useState({
     name: '',
     domain: '',
-    industry: '',
+    companyname: '',
     phone: '',
     address: '',
     city: '',
@@ -804,7 +804,7 @@ const Contacts: React.FC = () => {
         setCompanyFormData({
           ...companyFormData,
           name: data.nombre_o_razon_social || '',
-          industry: data.tipo_contribuyente || '',
+          companyname: data.tipo_contribuyente || '',
           address: data.direccion_completa || data.direccion || '',
           city: data.distrito || '',
           state: data.provincia || '',
@@ -847,7 +847,7 @@ const Contacts: React.FC = () => {
       setCompanyFormData({
         name: '',
         domain: '',
-        industry: '',
+        companyname: '',
         phone: '',
         address: '',
         city: '',
@@ -3352,7 +3352,7 @@ const Contacts: React.FC = () => {
           setCompanyFormData({
             name: '',
             domain: '',
-            industry: '',
+            companyname: '',
             phone: '',
             address: '',
             city: '',
@@ -3421,9 +3421,9 @@ const Contacts: React.FC = () => {
                 }}
               />
               <TextField
-                label="Tipo de Contribuyente / Industria"
-                value={companyFormData.industry}
-                onChange={(e) => setCompanyFormData({ ...companyFormData, industry: e.target.value })}
+                label="Razón social"
+                value={companyFormData.companyname}
+                onChange={(e) => setCompanyFormData({ ...companyFormData, companyname: e.target.value })}
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: '3 1 0%',
@@ -3549,7 +3549,7 @@ const Contacts: React.FC = () => {
               setCompanyFormData({
                 name: '',
                 domain: '',
-                industry: '',
+                companyname: '',
                 phone: '',
                 address: '',
                 city: '',

@@ -65,7 +65,7 @@ router.get('/:id', async (req, res) => {
         include: [
           { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
           { model: Company, as: 'Company', required: false }, // Empresa principal (compatibilidad)
-          { model: Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'industry'], required: false }, // Todas las empresas asociadas
+          { model: Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname'], required: false }, // Todas las empresas asociadas
         ],
       });
     } catch (includeError: any) {
@@ -99,7 +99,7 @@ router.get('/:id', async (req, res) => {
       if (contactData.companyId) {
         try {
           const company = await Company.findByPk(contactData.companyId, {
-            attributes: ['id', 'name', 'domain', 'phone', 'industry'],
+            attributes: ['id', 'name', 'domain', 'phone', 'companyname'],
           });
           contactData.Company = company || null;
         } catch (companyError) {
@@ -375,7 +375,7 @@ router.post('/:id/companies', async (req, res) => {
       include: [
         { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
         { model: Company, as: 'Company' },
-        { model: Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'industry'] },
+        { model: Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname'] },
       ],
     });
 
@@ -405,7 +405,7 @@ router.delete('/:id/companies/:companyId', async (req, res) => {
       include: [
         { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
         { model: Company, as: 'Company' },
-        { model: Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'industry'] },
+        { model: Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname'] },
       ],
     });
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -46,6 +47,7 @@ interface Task {
 }
 
 const Tasks: React.FC = () => {
+  const navigate = useNavigate();
   const theme = useTheme();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -157,7 +159,7 @@ const Tasks: React.FC = () => {
 
   // Función para vista previa
   const handlePreview = (task: Task) => {
-    console.log('Preview task:', task);
+    navigate(`/tasks/${task.id}`);
   };
 
   useEffect(() => {
@@ -657,6 +659,7 @@ const Tasks: React.FC = () => {
                 <TableRow 
                   key={task.id}
                   hover
+                  onClick={() => handlePreview(task)}
                   sx={{ 
                     '&:hover': { bgcolor: theme.palette.mode === 'dark' ? theme.palette.action.hover : '#fafafa' },
                     cursor: 'pointer',

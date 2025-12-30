@@ -50,7 +50,7 @@ router.get('/global', async (req: AuthRequest, res) => {
         [Op.or]: [
           { name: { [Op.iLike]: `%${searchTerm}%` } },
           { domain: { [Op.iLike]: `%${searchTerm}%` } },
-          { industry: { [Op.iLike]: `%${searchTerm}%` } },
+          { companyname: { [Op.iLike]: `%${searchTerm}%` } },
           { phone: { [Op.iLike]: `%${searchTerm}%` } },
         ],
       },
@@ -58,7 +58,7 @@ router.get('/global', async (req: AuthRequest, res) => {
         { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName'], required: false },
       ],
       limit: searchLimit,
-      attributes: ['id', 'name', 'domain', 'industry', 'phone', 'lifecycleStage'],
+      attributes: ['id', 'name', 'domain', 'companyname', 'phone', 'lifecycleStage'],
     });
 
     // Búsqueda en negocios
@@ -106,7 +106,7 @@ router.get('/global', async (req: AuthRequest, res) => {
         id: c.id,
         type: 'company',
         title: c.name,
-        subtitle: c.industry || c.domain || 'Sin información',
+        subtitle: c.companyname || c.domain || 'Sin información',
         owner: c.Owner ? `${c.Owner.firstName} ${c.Owner.lastName}` : null,
         stage: c.lifecycleStage,
         url: `/companies/${c.id}`,

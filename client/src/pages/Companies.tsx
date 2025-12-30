@@ -38,7 +38,7 @@ interface Company {
   id: number;
   name: string;
   domain?: string;
-  industry?: string;
+  companyname?: string;
   phone?: string;
   ruc?: string;
   address?: string;
@@ -66,7 +66,7 @@ const Companies: React.FC = () => {
     name: '',
     domain: '',
     linkedin: '',
-    industry: '',
+    companyname: '',
     phone: '',
     phone2: '',
     phone3: '',
@@ -313,7 +313,7 @@ const Companies: React.FC = () => {
     const exportData = companies.map((company) => ({
       'Nombre': company.name || '--',
       'Dominio': company.domain || '--',
-      'Industria': company.industry || '--',
+      'Razón social': company.companyname || '--',
       'Teléfono': company.phone || '--',
       'RUC': company.ruc || '--',
       'Dirección': company.address || '--',
@@ -378,7 +378,7 @@ const Companies: React.FC = () => {
         return {
           name: (row['Nombre'] || '').toString().trim() || 'Sin nombre',
           domain: (row['Dominio'] || '').toString().trim() || undefined,
-          industry: (row['Industria'] || '').toString().trim() || undefined,
+          companyname: (row['Razón social'] || '').toString().trim() || undefined,
           phone: (row['Teléfono'] || '').toString().trim() || undefined,
           ruc: (row['RUC'] || '').toString().trim() || undefined,
           address: (row['Dirección'] || '').toString().trim() || undefined,
@@ -428,7 +428,7 @@ const Companies: React.FC = () => {
         name: company.name,
         domain: company.domain || '',
         linkedin: (company as any).linkedin || '',
-        industry: company.industry || '',
+        companyname: company.companyname || '',
         phone: company.phone || '',
         phone2: (company as any).phone2 || '',
         phone3: (company as any).phone3 || '',
@@ -445,7 +445,7 @@ const Companies: React.FC = () => {
         name: '',
         domain: '',
         linkedin: '',
-        industry: '',
+        companyname: '',
         phone: '',
         phone2: '',
         phone3: '',
@@ -505,7 +505,7 @@ const Companies: React.FC = () => {
         const updatedFormData = {
           ...formData,
           name: newName,
-          industry: data.tipo_contribuyente || '',
+          companyname: data.tipo_contribuyente || '',
           address: data.direccion_completa || data.direccion || '',
           city: data.distrito || '',
           state: data.provincia || '',
@@ -971,7 +971,7 @@ const Companies: React.FC = () => {
       const searchLower = search.toLowerCase();
       return (
         company.name.toLowerCase().includes(searchLower) ||
-        company.industry?.toLowerCase().includes(searchLower) ||
+        company.companyname?.toLowerCase().includes(searchLower) ||
         company.phone?.toLowerCase().includes(searchLower) ||
         company.domain?.toLowerCase().includes(searchLower)
       );
@@ -1184,7 +1184,7 @@ const Companies: React.FC = () => {
                   Propietario
             </Box>
             <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
-                  Industria
+                  Razón Social
             </Box>
             <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
                   Teléfono
@@ -1365,7 +1365,7 @@ const Companies: React.FC = () => {
                   )}
                 </Box>
                 <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
-                    {company.industry ? (
+                    {company.companyname ? (
                       <Typography 
                         variant="body2" 
                         sx={{ 
@@ -1378,7 +1378,7 @@ const Companies: React.FC = () => {
                         maxWidth: '100%',
                         }}
                       >
-                        {company.industry}
+                        {company.companyname}
                       </Typography>
                     ) : (
                     <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.625rem', md: '0.6875rem' }, fontWeight: 400 }}>
@@ -2108,9 +2108,9 @@ const Companies: React.FC = () => {
                 }}
               />
               <TextField
-                label="Tipo de Contribuyente / Industria"
-                value={formData.industry}
-                onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
+                label="Razón social"
+                value={formData.companyname}
+                onChange={(e) => setFormData({ ...formData, companyname: e.target.value })}
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: '3 1 0%',
@@ -2122,7 +2122,7 @@ const Companies: React.FC = () => {
               />
             </Box>
             <TextField
-              label="Nombre"
+              label="Nombre comercial"
               value={formData.name}
               onChange={(e) => {
                 const newName = e.target.value;
@@ -2138,7 +2138,6 @@ const Companies: React.FC = () => {
               error={!!nameError}
               helperText={nameError}
               InputLabelProps={{ shrink: true }}
-              required
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 1.5,

@@ -202,7 +202,7 @@ const DealDetail: React.FC = () => {
   const [companyFormData, setCompanyFormData] = useState({
     name: '',
     domain: '',
-    industry: '',
+    companyname: '',
     phone: '',
     address: '',
     city: '',
@@ -604,7 +604,7 @@ const DealDetail: React.FC = () => {
       setCompanyFormData({
         name: '',
         domain: '',
-        industry: '',
+        companyname: '',
         phone: '',
         address: '',
         city: '',
@@ -6861,7 +6861,7 @@ const DealDetail: React.FC = () => {
           setCompanyFormData({
             name: '',
             domain: '',
-            industry: '',
+            companyname: '',
             phone: '',
             address: '',
             city: '',
@@ -6890,7 +6890,7 @@ const DealDetail: React.FC = () => {
                 setCompanyFormData({
                   name: '',
                   domain: '',
-                  industry: '',
+                  companyname: '',
                   phone: '',
                   address: '',
                   city: '',
@@ -7109,7 +7109,7 @@ const DealDetail: React.FC = () => {
                     return (
                       c.name?.toLowerCase().includes(search) ||
                       c.domain?.toLowerCase().includes(search) ||
-                      c.industry?.toLowerCase().includes(search)
+                      c.companyname?.toLowerCase().includes(search)
                     );
                   }).length} Empresas
                 </Typography>
@@ -7136,7 +7136,7 @@ const DealDetail: React.FC = () => {
                       return (
                         company.name?.toLowerCase().includes(search) ||
                         company.domain?.toLowerCase().includes(search) ||
-                        company.industry?.toLowerCase().includes(search)
+                        company.companyname?.toLowerCase().includes(search)
                       );
                     })
                     .map((company: any) => (
@@ -7190,7 +7190,7 @@ const DealDetail: React.FC = () => {
                 setCompanyFormData({
                   name: '',
                   domain: '',
-                  industry: '',
+                  companyname: '',
                   phone: '',
                   address: '',
                   city: '',
@@ -7238,7 +7238,7 @@ const DealDetail: React.FC = () => {
                       setCompanyFormData({
                         name: '',
                         domain: '',
-                        industry: '',
+                        companyname: '',
                         phone: '',
                         address: '',
                         city: '',

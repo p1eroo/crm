@@ -6,7 +6,7 @@ interface CompanyAttributes {
   id: number;
   name: string;
   domain?: string;
-  industry?: string;
+  companyname?: string;
   type?: string;
   phone?: string;
   phone2?: string;
@@ -31,13 +31,13 @@ interface CompanyAttributes {
   updatedAt?: Date;
 }
 
-interface CompanyCreationAttributes extends Optional<CompanyAttributes, 'id' | 'domain' | 'industry' | 'type' | 'phone' | 'phone2' | 'phone3' | 'ruc' | 'address' | 'city' | 'state' | 'country' | 'postalCode' | 'website' | 'linkedin' | 'numberOfEmployees' | 'annualRevenue' | 'description' | 'ownerId' | 'tags' | 'notes' | 'createdAt' | 'updatedAt'> {}
+interface CompanyCreationAttributes extends Optional<CompanyAttributes, 'id' | 'domain' | 'companyname' | 'type' | 'phone' | 'phone2' | 'phone3' | 'ruc' | 'address' | 'city' | 'state' | 'country' | 'postalCode' | 'website' | 'linkedin' | 'numberOfEmployees' | 'annualRevenue' | 'description' | 'ownerId' | 'tags' | 'notes' | 'createdAt' | 'updatedAt'> {}
 
 export class Company extends Model<CompanyAttributes, CompanyCreationAttributes> implements CompanyAttributes {
   public id!: number;
   public name!: string;
   public domain?: string;
-  public industry?: string;
+  public companyname?: string;
   public type?: string;
   public phone?: string;
   public phone2?: string;
@@ -79,7 +79,7 @@ Company.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
-    industry: {
+    companyname: {
       type: DataTypes.STRING,
       allowNull: true,
     },

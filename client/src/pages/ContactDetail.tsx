@@ -60,7 +60,6 @@ import {
   CheckCircle,
   Support,
   AttachMoney,
-  AccountBalance,
   CalendarToday,
   ChevronLeft,
   ChevronRight,
@@ -134,7 +133,7 @@ interface ContactDetailData {
     name: string;
     domain?: string;
     phone?: string;
-    industry?: string;
+    companyname?: string;
   }>;
   Owner?: {
     id: number;
@@ -159,8 +158,6 @@ const ContactDetail: React.FC = () => {
   const [associatedDeals, setAssociatedDeals] = useState<any[]>([]);
   const [associatedCompanies, setAssociatedCompanies] = useState<any[]>([]);
   const [associatedTickets, setAssociatedTickets] = useState<any[]>([]);
-  const [associatedSubscriptions, setAssociatedSubscriptions] = useState<any[]>([]);
-  const [associatedPayments, setAssociatedPayments] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
   
   // Estados para búsquedas y filtros
@@ -168,8 +165,6 @@ const ContactDetail: React.FC = () => {
   const [companySearch, setCompanySearch] = useState('');
   const [dealSearch, setDealSearch] = useState('');
   const [ticketSearch, setTicketSearch] = useState('');
-  const [subscriptionSearch, setSubscriptionSearch] = useState('');
-  const [paymentSearch, setPaymentSearch] = useState('');
   const [companyActionsMenu, setCompanyActionsMenu] = useState<{ [key: number]: HTMLElement | null }>({});
   const [isRemovingCompany] = useState(false);
   const [activityFilterMenuAnchor, setActivityFilterMenuAnchor] = useState<null | HTMLElement>(null);
@@ -209,14 +204,12 @@ const ContactDetail: React.FC = () => {
   const [addCompanyOpen, setAddCompanyOpen] = useState(false);
   const [addDealOpen, setAddDealOpen] = useState(false);
   const [addTicketOpen, setAddTicketOpen] = useState(false);
-  const [addSubscriptionOpen, setAddSubscriptionOpen] = useState(false);
-  const [addPaymentOpen, setAddPaymentOpen] = useState(false);
   const [createActivityMenuAnchor, setCreateActivityMenuAnchor] = useState<null | HTMLElement>(null);
   const [companyFormData, setCompanyFormData] = useState({ 
     name: '', 
     domain: '', 
     phone: '', 
-    industry: '', 
+    companyname: '', 
     lifecycleStage: 'lead',
     ruc: '',
     address: '',
@@ -231,8 +224,6 @@ const ContactDetail: React.FC = () => {
   const [rucError, setRucError] = useState('');
   const [dealFormData, setDealFormData] = useState({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'baja' as 'baja' | 'media' | 'alta', companyId: '', contactId: '' });
   const [ticketFormData, setTicketFormData] = useState({ subject: '', description: '', status: 'new', priority: 'medium' });
-  const [subscriptionFormData, setSubscriptionFormData] = useState({ name: '', description: '', status: 'active', amount: '', currency: 'USD', billingCycle: 'monthly', startDate: '', endDate: '', renewalDate: '' });
-  const [paymentFormData, setPaymentFormData] = useState({ amount: '', currency: 'USD', status: 'pending', paymentDate: '', dueDate: '', paymentMethod: 'credit_card', reference: '', description: '' });
   
   // Estados para asociaciones en nota
   const [selectedAssociationCategory, setSelectedAssociationCategory] = useState<string>('Contactos');
@@ -481,18 +472,6 @@ const ContactDetail: React.FC = () => {
         params: { contactId: id },
       });
       setAssociatedTickets(ticketsResponse.data.tickets || ticketsResponse.data || []);
-
-      // Obtener suscripciones asociadas
-      const subscriptionsResponse = await api.get('/subscriptions', {
-        params: { contactId: id },
-      });
-      setAssociatedSubscriptions(subscriptionsResponse.data.subscriptions || subscriptionsResponse.data || []);
-
-      // Obtener pagos asociados
-      const paymentsResponse = await api.get('/payments', {
-        params: { contactId: id },
-      });
-      setAssociatedPayments(paymentsResponse.data.payments || paymentsResponse.data || []);
     } catch (error) {
       console.error('Error fetching associated records:', error);
     }
@@ -1304,7 +1283,7 @@ const ContactDetail: React.FC = () => {
         setCompanyFormData({
           ...companyFormData,
           name: data.nombre_o_razon_social || '',
-          industry: data.tipo_contribuyente || '',
+          companyname: data.tipo_contribuyente || '',
           address: data.direccion_completa || data.direccion || '',
           city: data.distrito || '',
           state: data.provincia || '',
@@ -1339,7 +1318,7 @@ const ContactDetail: React.FC = () => {
         name: '', 
         domain: '', 
         phone: '', 
-        industry: '', 
+        companyname: '', 
         lifecycleStage: 'lead',
         ruc: '',
         address: '',
@@ -1508,42 +1487,6 @@ const ContactDetail: React.FC = () => {
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
       console.error('Error adding ticket:', error);
-    }
-  };
-
-  const handleAddSubscription = async () => {
-    try {
-      await api.post('/subscriptions', {
-        ...subscriptionFormData,
-        amount: parseFloat(subscriptionFormData.amount) || 0,
-        contactId: id,
-        companyId: contact?.Company?.id,
-      });
-      setSuccessMessage('Suscripción creada exitosamente');
-      setAddSubscriptionOpen(false);
-      setSubscriptionFormData({ name: '', description: '', status: 'active', amount: '', currency: 'USD', billingCycle: 'monthly', startDate: '', endDate: '', renewalDate: '' });
-      fetchAssociatedRecords();
-      setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (error) {
-      console.error('Error adding subscription:', error);
-    }
-  };
-
-  const handleAddPayment = async () => {
-    try {
-      await api.post('/payments', {
-        ...paymentFormData,
-        amount: parseFloat(paymentFormData.amount) || 0,
-        contactId: id,
-        companyId: contact?.Company?.id,
-      });
-      setSuccessMessage('Pago creado exitosamente');
-      setAddPaymentOpen(false);
-      setPaymentFormData({ amount: '', currency: 'USD', status: 'pending', paymentDate: '', dueDate: '', paymentMethod: 'credit_card', reference: '', description: '' });
-      fetchAssociatedRecords();
-      setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (error) {
-      console.error('Error adding payment:', error);
     }
   };
 
@@ -2884,7 +2827,7 @@ const ContactDetail: React.FC = () => {
                                 '-'
                               )}
                             </TableCell>
-                            <TableCell>{company.industry || '-'}</TableCell>
+                            <TableCell>{company.companyname || '-'}</TableCell>
                             <TableCell>{company.phone || '-'}</TableCell>
                           </TableRow>
                         ))}
@@ -3213,296 +3156,10 @@ const ContactDetail: React.FC = () => {
                   </Table>
                 </TableContainer>
               </Card>
-
-              {/* Card de Suscripciones */}
-              <Card sx={{ 
-                borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 2,
-                display: 'flex',
-                flexDirection: 'column',
-                mt: 2,
-                height: 'fit-content',
-                minHeight: 'auto',
-                overflow: 'visible',
-              }}>
-                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
-                  Suscripciones
-                </Typography>
-                
-                {/* Cuadro de búsqueda y botón agregar */}
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
-                  <TextField
-                    size="small"
-                    placeholder="Buscar suscripciones"
-                    value={subscriptionSearch}
-                    onChange={(e) => setSubscriptionSearch(e.target.value)}
-                    sx={{
-                      width: '250px',
-                      transition: 'all 0.3s ease',
-                      '& .MuiOutlinedInput-root': {
-                        height: '32px',
-                        fontSize: '0.875rem',
-                        '&:hover': {
-                          '& fieldset': {
-                            borderColor: taxiMonterricoColors.green,
-                          },
-                        },
-                        '&.Mui-focused': {
-                          '& fieldset': {
-                            borderColor: taxiMonterricoColors.green,
-                            borderWidth: 2,
-                          },
-                        },
-                      },
-                    }}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Search fontSize="small" />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={() => setAddSubscriptionOpen(true)}
-                    sx={{
-                      borderColor: taxiMonterricoColors.green,
-                      color: taxiMonterricoColors.green,
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        borderColor: taxiMonterricoColors.green,
-                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
-                      },
-                      '&:active': {
-                        transform: 'translateY(0)',
-                      },
-                    }}
-                  >
-                    Agregar
-                  </Button>
-                </Box>
-                
-                {/* Tabla de suscripciones */}
-                <TableContainer sx={{ maxHeight: 'none', height: 'auto', overflow: 'visible' }}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 600 }}>Nombre</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Estado</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Monto</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Ciclo de Facturación</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {associatedSubscriptions
-                        .filter((subscription: any) => 
-                          subscriptionSearch === '' || 
-                          subscription.name?.toLowerCase().includes(subscriptionSearch.toLowerCase())
-                        )
-                        .map((subscription: any) => (
-                          <TableRow key={subscription.id} hover>
-                            <TableCell>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <AccountBalance sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
-                                <Typography variant="body2">
-                                  {subscription.name || 'Sin nombre'}
-                                </Typography>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              {subscription.status ? (
-                                <Chip 
-                                  label={subscription.status} 
-                                  size="small"
-                                  sx={{ 
-                                    bgcolor: subscription.status === 'active' ? taxiMonterricoColors.greenLight + '40' : taxiMonterricoColors.grayLight,
-                                    color: subscription.status === 'active' ? taxiMonterricoColors.greenDark : theme.palette.text.secondary,
-                                  }}
-                                />
-                              ) : '-'}
-                            </TableCell>
-                            <TableCell>
-                              {subscription.amount ? `${subscription.currency || 'USD'} ${parseFloat(subscription.amount).toLocaleString()}` : '-'}
-                            </TableCell>
-                            <TableCell>
-                              {subscription.billingCycle || '-'}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      {associatedSubscriptions.filter((subscription: any) => 
-                        subscriptionSearch === '' || 
-                        subscription.name?.toLowerCase().includes(subscriptionSearch.toLowerCase())
-                      ).length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              No hay suscripciones asociadas
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Card>
-
-              {/* Card de Pagos */}
-              <Card sx={{ 
-                borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 2,
-                display: 'flex',
-                flexDirection: 'column',
-                mt: 2,
-                height: 'fit-content',
-                minHeight: 'auto',
-                overflow: 'visible',
-              }}>
-                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
-                  Pagos
-                </Typography>
-                
-                {/* Cuadro de búsqueda y botón agregar */}
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
-                  <TextField
-                    size="small"
-                    placeholder="Buscar pagos"
-                    value={paymentSearch}
-                    onChange={(e) => setPaymentSearch(e.target.value)}
-                    sx={{
-                      width: '250px',
-                      transition: 'all 0.3s ease',
-                      '& .MuiOutlinedInput-root': {
-                        height: '32px',
-                        fontSize: '0.875rem',
-                        '&:hover': {
-                          '& fieldset': {
-                            borderColor: taxiMonterricoColors.green,
-                          },
-                        },
-                        '&.Mui-focused': {
-                          '& fieldset': {
-                            borderColor: taxiMonterricoColors.green,
-                            borderWidth: 2,
-                          },
-                        },
-                      },
-                    }}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Search fontSize="small" />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={() => setAddPaymentOpen(true)}
-                    sx={{
-                      borderColor: taxiMonterricoColors.green,
-                      color: taxiMonterricoColors.green,
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        borderColor: taxiMonterricoColors.green,
-                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
-                      },
-                      '&:active': {
-                        transform: 'translateY(0)',
-                      },
-                    }}
-                  >
-                    Agregar
-                  </Button>
-                </Box>
-                
-                {/* Tabla de pagos */}
-                <TableContainer sx={{ maxHeight: 'none', height: 'auto', overflow: 'visible' }}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 600 }}>Monto</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Estado</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Método de Pago</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Fecha de Pago</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {associatedPayments
-                        .filter((payment: any) => 
-                          paymentSearch === '' || 
-                          payment.reference?.toLowerCase().includes(paymentSearch.toLowerCase()) ||
-                          payment.description?.toLowerCase().includes(paymentSearch.toLowerCase())
-                        )
-                        .map((payment: any) => (
-                          <TableRow key={payment.id} hover>
-                            <TableCell>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <AttachMoney sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
-                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                  {payment.currency || 'USD'} {payment.amount ? parseFloat(payment.amount).toLocaleString() : '0'}
-                                </Typography>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              {payment.status ? (
-                                <Chip 
-                                  label={payment.status} 
-                                  size="small"
-                                  sx={{ 
-                                    bgcolor: payment.status === 'completed' ? taxiMonterricoColors.greenLight + '40' : 
-                                            payment.status === 'pending' ? taxiMonterricoColors.orangeLight + '40' : 
-                                            taxiMonterricoColors.grayLight,
-                                    color: payment.status === 'completed' ? taxiMonterricoColors.greenDark : 
-                                           payment.status === 'pending' ? taxiMonterricoColors.orangeDark : 
-                                           theme.palette.text.secondary,
-                                  }}
-                                />
-                              ) : '-'}
-                            </TableCell>
-                            <TableCell>
-                              {payment.paymentMethod || '-'}
-                            </TableCell>
-                            <TableCell>
-                              {payment.paymentDate 
-                                ? new Date(payment.paymentDate).toLocaleDateString('es-ES')
-                                : '-'}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      {associatedPayments.filter((payment: any) => 
-                        paymentSearch === '' || 
-                        payment.reference?.toLowerCase().includes(paymentSearch.toLowerCase()) ||
-                        payment.description?.toLowerCase().includes(paymentSearch.toLowerCase())
-                      ).length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              No hay pagos asociados
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Card>
             </>
           )}
 
-          {/* Tab Actividades - Cards grandes de Empresas, Negocios, Tickets, Suscripciones y Pagos */}
+          {/* Tab Actividades - Cards grandes de Empresas, Negocios y Tickets */}
           {activeTab === 2 && (
             <>
               {/* Card de Empresas */}
@@ -6249,147 +5906,6 @@ const ContactDetail: React.FC = () => {
                   </Box>
                   
                   <Box
-                    onClick={() => setSelectedAssociationCategory('Alertas')}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      p: 1.75,
-                      borderRadius: 2,
-                      cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Alertas' 
-                        ? taxiMonterricoColors.orange
-                        : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Alertas' 
-                        ? `4px solid ${taxiMonterricoColors.orangeDark}` 
-                        : '4px solid transparent',
-                      color: selectedAssociationCategory === 'Alertas' 
-                        ? 'white'
-                        : theme.palette.text.secondary,
-                      boxShadow: selectedAssociationCategory === 'Alertas' 
-                        ? `0 2px 8px ${taxiMonterricoColors.orange}40`
-                        : 'none',
-                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '&:hover': {
-                        backgroundColor: selectedAssociationCategory === 'Alertas' 
-                          ? taxiMonterricoColors.orangeDark
-                          : theme.palette.action.hover,
-                        transform: selectedAssociationCategory === 'Alertas' 
-                          ? 'scale(1.02)'
-                          : 'translateX(4px)',
-                        boxShadow: selectedAssociationCategory === 'Alertas' 
-                          ? `0 4px 12px ${taxiMonterricoColors.orange}50`
-                          : 'none',
-                      },
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ 
-                      fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Alertas' ? 'white' : theme.palette.text.secondary,
-                      fontWeight: selectedAssociationCategory === 'Alertas' ? 600 : 400,
-                    }}>
-                      Alertas del esp...
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: theme.palette.text.secondary }}>
-                      0
-                    </Typography>
-                  </Box>
-                  
-                  <Box
-                    onClick={() => setSelectedAssociationCategory('Carritos')}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      p: 1.75,
-                      borderRadius: 2,
-                      cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Carritos' 
-                        ? taxiMonterricoColors.orange
-                        : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Carritos' 
-                        ? `4px solid ${taxiMonterricoColors.orangeDark}` 
-                        : '4px solid transparent',
-                      color: selectedAssociationCategory === 'Carritos' 
-                        ? 'white'
-                        : theme.palette.text.secondary,
-                      boxShadow: selectedAssociationCategory === 'Carritos' 
-                        ? `0 2px 8px ${taxiMonterricoColors.orange}40`
-                        : 'none',
-                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '&:hover': {
-                        backgroundColor: selectedAssociationCategory === 'Carritos' 
-                          ? taxiMonterricoColors.orangeDark
-                          : theme.palette.action.hover,
-                        transform: selectedAssociationCategory === 'Carritos' 
-                          ? 'scale(1.02)'
-                          : 'translateX(4px)',
-                        boxShadow: selectedAssociationCategory === 'Carritos' 
-                          ? `0 4px 12px ${taxiMonterricoColors.orange}50`
-                          : 'none',
-                      },
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ 
-                      fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Carritos' ? 'white' : theme.palette.text.secondary,
-                      fontWeight: selectedAssociationCategory === 'Carritos' ? 600 : 400,
-                    }}>
-                      Carritos
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: theme.palette.text.secondary }}>
-                      0
-                    </Typography>
-                  </Box>
-                  
-                  <Box
-                    onClick={() => setSelectedAssociationCategory('Clientes')}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      p: 1.75,
-                      borderRadius: 2,
-                      cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Clientes' 
-                        ? taxiMonterricoColors.orange
-                        : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Clientes' 
-                        ? `4px solid ${taxiMonterricoColors.orangeDark}` 
-                        : '4px solid transparent',
-                      color: selectedAssociationCategory === 'Clientes' 
-                        ? 'white'
-                        : theme.palette.text.secondary,
-                      boxShadow: selectedAssociationCategory === 'Clientes' 
-                        ? `0 2px 8px ${taxiMonterricoColors.orange}40`
-                        : 'none',
-                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '&:hover': {
-                        backgroundColor: selectedAssociationCategory === 'Clientes' 
-                          ? taxiMonterricoColors.orangeDark
-                          : theme.palette.action.hover,
-                        transform: selectedAssociationCategory === 'Clientes' 
-                          ? 'scale(1.02)'
-                          : 'translateX(4px)',
-                        boxShadow: selectedAssociationCategory === 'Clientes' 
-                          ? `0 4px 12px ${taxiMonterricoColors.orange}50`
-                          : 'none',
-                      },
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ 
-                      fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Clientes' ? 'white' : theme.palette.text.secondary,
-                      fontWeight: selectedAssociationCategory === 'Clientes' ? 600 : 400,
-                    }}>
-                      Clientes de par...
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: theme.palette.text.secondary }}>
-                      0
-                    </Typography>
-                  </Box>
-                  
-                  <Box
                     onClick={() => setSelectedAssociationCategory('Contactos')}
                     sx={{
                       display: 'flex',
@@ -6490,53 +6006,6 @@ const ContactDetail: React.FC = () => {
                         const allCompanyIds = [...selectedCompanies, ...associatedCompanyIds];
                         return allCompanyIds.filter((id, index) => allCompanyIds.indexOf(id) === index).length;
                       })()}
-                    </Typography>
-                  </Box>
-                  
-                  <Box
-                    onClick={() => setSelectedAssociationCategory('Leads')}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      p: 1.75,
-                      borderRadius: 2,
-                      cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Leads' 
-                        ? taxiMonterricoColors.orange
-                        : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Leads' 
-                        ? `4px solid ${taxiMonterricoColors.orangeDark}` 
-                        : '4px solid transparent',
-                      color: selectedAssociationCategory === 'Leads' 
-                        ? 'white'
-                        : theme.palette.text.secondary,
-                      boxShadow: selectedAssociationCategory === 'Leads' 
-                        ? `0 2px 8px ${taxiMonterricoColors.orange}40`
-                        : 'none',
-                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '&:hover': {
-                        backgroundColor: selectedAssociationCategory === 'Leads' 
-                          ? taxiMonterricoColors.orangeDark
-                          : theme.palette.action.hover,
-                        transform: selectedAssociationCategory === 'Leads' 
-                          ? 'scale(1.02)'
-                          : 'translateX(4px)',
-                        boxShadow: selectedAssociationCategory === 'Leads' 
-                          ? `0 4px 12px ${taxiMonterricoColors.orange}50`
-                          : 'none',
-                      },
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ 
-                      fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Leads' ? 'white' : theme.palette.text.secondary,
-                      fontWeight: selectedAssociationCategory === 'Leads' ? 600 : 400,
-                    }}>
-                      Leads
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: theme.palette.text.secondary }}>
-                      {selectedLeads.length}
                     </Typography>
                   </Box>
                   
@@ -6678,15 +6147,14 @@ const ContactDetail: React.FC = () => {
                           .filter((id: any) => id !== undefined && id !== null && !excludedTickets.includes(id));
                         const allTicketIds = [...selectedTicketIds, ...associatedTicketIds];
                         return allTicketIds.filter((id, index) => allTicketIds.indexOf(id) === index).length;
-                      })() :
-                      selectedAssociationCategory === 'Leads' ? selectedLeads.length : 0
+                      })() : 0
                     })
                   </Typography>
                   <KeyboardArrowDown sx={{ color: taxiMonterricoColors.orange, fontSize: 18 }} />
                 </Box>
                 <TextField
                   size="small"
-                  placeholder={`Buscar ${selectedAssociationCategory === 'Empresas' ? 'Empresas' : selectedAssociationCategory === 'Contactos' ? 'Contactos' : selectedAssociationCategory === 'Leads' ? 'Leads' : selectedAssociationCategory}`}
+                  placeholder={`Buscar ${selectedAssociationCategory === 'Empresas' ? 'Empresas' : selectedAssociationCategory === 'Contactos' ? 'Contactos' : selectedAssociationCategory === 'Negocios' ? 'Negocios' : selectedAssociationCategory === 'Tickets' ? 'Tickets' : selectedAssociationCategory}`}
                   value={associationSearch}
                   onChange={(e) => setAssociationSearch(e.target.value)}
                   fullWidth
@@ -8824,7 +8292,7 @@ const ContactDetail: React.FC = () => {
           name: '', 
           domain: '', 
           phone: '', 
-          industry: '', 
+          companyname: '', 
           lifecycleStage: 'lead',
           ruc: '',
           address: '',
@@ -8907,9 +8375,9 @@ const ContactDetail: React.FC = () => {
                   }}
                 />
                 <TextField
-                  label="Tipo de Contribuyente / Industria"
-                  value={companyFormData.industry}
-                  onChange={(e) => setCompanyFormData({ ...companyFormData, industry: e.target.value })}
+                  label="Razón social"
+                  value={companyFormData.companyname}
+                  onChange={(e) => setCompanyFormData({ ...companyFormData, companyname: e.target.value })}
                   InputLabelProps={{ shrink: true }}
                   sx={{
                     flex: '3 1 0%',
@@ -9162,7 +8630,7 @@ const ContactDetail: React.FC = () => {
                 name: '', 
                 domain: '', 
                 phone: '', 
-                industry: '', 
+                companyname: '', 
                 lifecycleStage: 'lead',
                 ruc: '',
                 address: '',
@@ -9403,212 +8871,6 @@ const ContactDetail: React.FC = () => {
         <DialogActions>
           <Button onClick={() => setAddTicketOpen(false)}>Cancelar</Button>
           <Button onClick={handleAddTicket} variant="contained" disabled={!ticketFormData.subject.trim()}>
-            Crear
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Diálogo para agregar suscripción */}
-      <Dialog 
-        open={addSubscriptionOpen} 
-        onClose={() => setAddSubscriptionOpen(false)} 
-        maxWidth="sm" 
-        fullWidth
-        BackdropProps={{
-          sx: {
-            backdropFilter: 'blur(4px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          }
-        }}
-      >
-        <DialogTitle>Crear Suscripción</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField
-              label="Nombre"
-              value={subscriptionFormData.name}
-              onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, name: e.target.value })}
-              required
-              fullWidth
-            />
-            <TextField
-              label="Descripción"
-              value={subscriptionFormData.description}
-              onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, description: e.target.value })}
-              multiline
-              rows={3}
-              fullWidth
-            />
-            <TextField
-              select
-              label="Estado"
-              value={subscriptionFormData.status}
-              onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, status: e.target.value })}
-              fullWidth
-              SelectProps={{ native: true }}
-            >
-              <option value="active">Activa</option>
-              <option value="pending">Pendiente</option>
-              <option value="cancelled">Cancelada</option>
-              <option value="expired">Expirada</option>
-            </TextField>
-            <TextField
-              label="Monto"
-              type="number"
-              value={subscriptionFormData.amount}
-              onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, amount: e.target.value })}
-              required
-              fullWidth
-            />
-            <TextField
-              label="Moneda"
-              value={subscriptionFormData.currency}
-              onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, currency: e.target.value })}
-              fullWidth
-            />
-            <TextField
-              select
-              label="Ciclo de facturación"
-              value={subscriptionFormData.billingCycle}
-              onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, billingCycle: e.target.value })}
-              fullWidth
-              SelectProps={{ native: true }}
-            >
-              <option value="monthly">Mensual</option>
-              <option value="quarterly">Trimestral</option>
-              <option value="yearly">Anual</option>
-              <option value="one-time">Una vez</option>
-            </TextField>
-            <TextField
-              label="Fecha de inicio"
-              type="date"
-              value={subscriptionFormData.startDate}
-              onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, startDate: e.target.value })}
-              required
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              label="Fecha de fin"
-              type="date"
-              value={subscriptionFormData.endDate}
-              onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, endDate: e.target.value })}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              label="Fecha de renovación"
-              type="date"
-              value={subscriptionFormData.renewalDate}
-              onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, renewalDate: e.target.value })}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddSubscriptionOpen(false)}>Cancelar</Button>
-          <Button onClick={handleAddSubscription} variant="contained" disabled={!subscriptionFormData.name.trim() || !subscriptionFormData.startDate}>
-            Crear
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Diálogo para agregar pago */}
-      <Dialog 
-        open={addPaymentOpen} 
-        onClose={() => setAddPaymentOpen(false)} 
-        maxWidth="sm" 
-        fullWidth
-        BackdropProps={{
-          sx: {
-            backdropFilter: 'blur(4px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          }
-        }}
-      >
-        <DialogTitle>Crear Pago</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField
-              label="Monto"
-              type="number"
-              value={paymentFormData.amount}
-              onChange={(e) => setPaymentFormData({ ...paymentFormData, amount: e.target.value })}
-              required
-              fullWidth
-            />
-            <TextField
-              label="Moneda"
-              value={paymentFormData.currency}
-              onChange={(e) => setPaymentFormData({ ...paymentFormData, currency: e.target.value })}
-              fullWidth
-            />
-            <TextField
-              select
-              label="Estado"
-              value={paymentFormData.status}
-              onChange={(e) => setPaymentFormData({ ...paymentFormData, status: e.target.value })}
-              fullWidth
-              SelectProps={{ native: true }}
-            >
-              <option value="pending">Pendiente</option>
-              <option value="completed">Completado</option>
-              <option value="failed">Fallido</option>
-              <option value="refunded">Reembolsado</option>
-              <option value="cancelled">Cancelado</option>
-            </TextField>
-            <TextField
-              label="Fecha de pago"
-              type="date"
-              value={paymentFormData.paymentDate}
-              onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentDate: e.target.value })}
-              required
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              label="Fecha de vencimiento"
-              type="date"
-              value={paymentFormData.dueDate}
-              onChange={(e) => setPaymentFormData({ ...paymentFormData, dueDate: e.target.value })}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              select
-              label="Método de pago"
-              value={paymentFormData.paymentMethod}
-              onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentMethod: e.target.value })}
-              fullWidth
-              SelectProps={{ native: true }}
-            >
-              <option value="credit_card">Tarjeta de crédito</option>
-              <option value="debit_card">Tarjeta de débito</option>
-              <option value="bank_transfer">Transferencia bancaria</option>
-              <option value="cash">Efectivo</option>
-              <option value="check">Cheque</option>
-              <option value="other">Otro</option>
-            </TextField>
-            <TextField
-              label="Referencia"
-              value={paymentFormData.reference}
-              onChange={(e) => setPaymentFormData({ ...paymentFormData, reference: e.target.value })}
-              fullWidth
-            />
-            <TextField
-              label="Descripción"
-              value={paymentFormData.description}
-              onChange={(e) => setPaymentFormData({ ...paymentFormData, description: e.target.value })}
-              multiline
-              rows={3}
-              fullWidth
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddPaymentOpen(false)}>Cancelar</Button>
-          <Button onClick={handleAddPayment} variant="contained" disabled={!paymentFormData.amount.trim() || !paymentFormData.paymentDate}>
             Crear
           </Button>
         </DialogActions>

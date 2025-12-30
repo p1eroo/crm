@@ -34,6 +34,8 @@ import {
   TrendingDown,
   Groups,
   ArrowDropDown,
+  CalendarToday,
+  Assessment,
 } from '@mui/icons-material';
 import {
   AreaChart,
@@ -124,10 +126,8 @@ const Dashboard: React.FC = () => {
   const [savingBudget, setSavingBudget] = useState(false);
   const [dailyPayments, setDailyPayments] = useState<any[]>([]);
   const [editingBudgetMonth, setEditingBudgetMonth] = useState<number | null>(null); // Mes que se está editando (null = mes actual)
+  const [advisorsModalOpen, setAdvisorsModalOpen] = useState(false);
 
-  // Generar lista de años: año actual y 5 años anteriores
-  const availableYears = Array.from({ length: 6 }, (_, i) => currentYear - i);
-  
   // Generar lista de meses
   const monthNames = [
     { value: '0', label: 'Enero' },
@@ -210,7 +210,7 @@ const Dashboard: React.FC = () => {
       setStats({
         contacts: { total: 0, byStage: [] },
         companies: { total: 0, byStage: [] },
-        deals: { total: 0, totalValue: 0, byStage: [], wonThisMonth: 0, wonValueThisMonth: 0 },
+        deals: { total: 0, totalValue: 0, byStage: [], wonThisMonth: 0, wonValueThisMonth: 0, userPerformance: [] },
         tasks: { total: 0, byStatus: [] },
         campaigns: { total: 0, active: 0 },
         payments: { revenue: 0, monthly: [], budgets: [] },
@@ -705,7 +705,7 @@ const Dashboard: React.FC = () => {
   // Calcular valores para las tarjetas KPI
   const weeklyBalance = stats.payments?.revenue || 0;
   const ordersInLine = stats.deals.total || 0;
-  const newClients = stats.leads?.converted || stats.contacts.total || 0;
+  const newCompanies = stats.companies.total || 0;
   
   // Calcular KPI total del equipo (promedio de performance)
   const teamKPI = stats.deals.userPerformance && stats.deals.userPerformance.length > 0
@@ -891,7 +891,7 @@ const Dashboard: React.FC = () => {
       
       const budgetToEdit = monthData?.amount || 0;
       
-      setBudgetValue((budgetToEdit / 1000).toFixed(0));
+      setBudgetValue(budgetToEdit.toString());
       setBudgetModalOpen(true);
     }
   };
@@ -906,7 +906,7 @@ const Dashboard: React.FC = () => {
 
   // Handler para guardar presupuesto
   const handleSaveBudget = async () => {
-    const budgetAmount = parseFloat(budgetValue) * 1000; // Convertir de k a cantidad real
+    const budgetAmount = parseFloat(budgetValue);
     if (isNaN(budgetAmount) || budgetAmount < 0) {
       setSuccessMessage('Por favor ingresa un monto válido');
       return;
@@ -954,6 +954,68 @@ const Dashboard: React.FC = () => {
       }}>
       {/* Columna Principal Izquierda */}
       <Box sx={{ flex: 1, minWidth: 0 }}>
+      {/* Título Dashboard con selector de meses */}
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        mb: { xs: 2, sm: 3, md: 4 },
+        flexDirection: { xs: 'column', sm: 'row' },
+        gap: { xs: 2, sm: 0 },
+      }}>
+        <Typography 
+          variant="h4" 
+          sx={{ 
+            fontWeight: 600, 
+            color: theme.palette.text.primary, 
+            fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
+          }}
+        >
+          Dashboard
+        </Typography>
+        <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 180 } }}>
+          <Select
+            id="dashboard-month-year-select"
+            name="dashboard-month-year-select"
+            value={selectedMonth !== null ? `${selectedMonth}-2025` : `all-2025`}
+            onChange={(e) => {
+              const [month] = e.target.value.split('-');
+              setSelectedYear('2025');
+              setSelectedMonth(month === 'all' ? null : month);
+            }}
+            sx={{ 
+              fontSize: { xs: '0.8rem', md: '0.875rem' },
+            }}
+            renderValue={(value) => {
+              const [month] = value.split('-');
+              if (month === 'all') {
+                return (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <CalendarToday sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                    <span>Todos los meses 2025</span>
+                  </Box>
+                );
+              }
+              const monthLabel = monthNames.find(m => m.value === month)?.label || '';
+              return (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <CalendarToday sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                  <span>{monthLabel} 2025</span>
+                </Box>
+              );
+            }}
+          >
+            <MenuItem value={`all-2025`}>
+              Todos los meses 2025
+            </MenuItem>
+            {monthNames.map((month) => (
+              <MenuItem key={`${month.value}-2025`} value={`${month.value}-2025`}>
+                {month.label} 2025
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+      </Box>
 
       {/* Tarjetas KPI con gradientes - Diseño compacto y equilibrado */}
       <Box sx={{ 
@@ -1035,7 +1097,7 @@ const Dashboard: React.FC = () => {
                     color: theme.palette.text.secondary,
                   }}
                 >
-                  S/ {(monthlyBudget / 1000).toFixed(0)}k
+                  S/ {monthlyBudget.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </Typography>
               </Box>
             </Box>
@@ -1111,7 +1173,7 @@ const Dashboard: React.FC = () => {
                     color: theme.palette.text.secondary,
                   }}
                 >
-                  S/ {(weeklyBalance / 1000).toFixed(0)}k
+                  S/ {weeklyBalance.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </Typography>
               </Box>
             </Box>
@@ -1253,7 +1315,7 @@ const Dashboard: React.FC = () => {
                     lineHeight: 1.2,
                   }}
                 >
-                  Nuevos Clientes
+                  Empresas
                 </Typography>
                 <Typography 
                   variant="h6" 
@@ -1264,7 +1326,7 @@ const Dashboard: React.FC = () => {
                     color: theme.palette.text.secondary,
                   }}
                 >
-                  {newClients}
+                  {newCompanies}
                 </Typography>
               </Box>
             </Box>
@@ -1387,6 +1449,449 @@ const Dashboard: React.FC = () => {
         </Card>
       </Box>
 
+      {/* Sección: Distribución de Ventas, KPI's Área Comercial, Total de Ventas por Asesor y Ventas Semanales */}
+      <Box sx={{ 
+        display: 'grid',
+        gridTemplateColumns: { 
+          xs: '1fr', 
+          md: '1fr',
+          lg: 'repeat(4, 1fr)',
+          xl: 'repeat(4, 1fr)' 
+        },
+        gap: { xs: 1.5, sm: 2, md: 3 },
+        mb: { xs: 2, sm: 2.5, md: 3 } 
+      }}>
+        {/* Sales Distribution */}
+        <Card sx={{ 
+          borderRadius: 2, 
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 4px 12px rgba(0,0,0,0.3)' 
+            : { xs: 1, md: 2 },
+          bgcolor: theme.palette.background.paper,
+          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
+        }}>
+          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                fontWeight: 600, 
+                color: theme.palette.text.primary, 
+                mb: { xs: 2, md: 3 },
+                fontSize: { xs: '0.875rem', md: '1rem' },
+              }}
+            >
+              Distribución de Ventas
+            </Typography>
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={salesDistributionData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {salesDistributionData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <RechartsTooltip />
+              </PieChart>
+            </ResponsiveContainer>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, justifyContent: 'center' }}>
+              {salesDistributionData.map((entry, index) => (
+                <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: entry.color }} />
+                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                    {entry.name}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          </CardContent>
+        </Card>
+
+        {/* Desempeño por Usuario - Solo visible para admin y jefe_comercial */}
+        {(user?.role === 'admin' || user?.role === 'jefe_comercial') && (
+          <Card sx={{ 
+            borderRadius: { xs: 1, md: 2 }, 
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 4px 12px rgba(0,0,0,0.3)' 
+              : { xs: 1, md: 2 },
+            bgcolor: theme.palette.background.paper,
+            border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
+          }}>
+            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 600, 
+                  color: theme.palette.text.primary, 
+                  mb: { xs: 2, md: 3 },
+                  fontSize: { xs: '0.875rem', md: '1rem' },
+                }}
+              >
+                KPI's Área Comercial
+              </Typography>
+              {(() => {
+                // Asegurar que siempre tengamos un array válido
+                const userPerformance = (stats?.deals?.userPerformance && Array.isArray(stats.deals.userPerformance)) 
+                  ? stats.deals.userPerformance 
+                  : [];
+                const hasData = userPerformance.length > 0;
+                
+                if (hasData) {
+                  return (
+                    <Box>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                          <Pie
+                            data={userPerformance.map((user) => ({
+                              name: `${user.firstName} ${user.lastName}`,
+                              value: user.performance,
+                              percentage: user.performance,
+                            }))}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={true}
+                            label={(props: any) => {
+                              const { name, percentage, cx, cy, midAngle, innerRadius, outerRadius } = props;
+                              if (midAngle === undefined || innerRadius === undefined || outerRadius === undefined) {
+                                return null;
+                              }
+                              const RADIAN = Math.PI / 180;
+                              const radius = outerRadius + 20;
+                              const xPos = cx + radius * Math.cos(-midAngle * RADIAN);
+                              const yPos = cy + radius * Math.sin(-midAngle * RADIAN);
+                              
+                              return (
+                                <text
+                                  x={xPos}
+                                  y={yPos}
+                                  fill={theme.palette.text.primary}
+                                  textAnchor={xPos > cx ? 'start' : 'end'}
+                                  dominantBaseline="central"
+                                  fontSize={10}
+                                  fontWeight={600}
+                                >
+                                  {name}: {percentage.toFixed(1)}%
+                                </text>
+                              );
+                            }}
+                            outerRadius={80}
+                            innerRadius={50}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {userPerformance.map((user, index) => {
+                              const colors = ['#1F2937', '#F59E0B', '#10B981', '#8B5CF6', '#EF4444', '#06B6D4'];
+                              return (
+                                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                              );
+                            })}
+                          </Pie>
+                          <RechartsTooltip 
+                            formatter={(value: any) => {
+                              const numValue = typeof value === 'number' ? value : Number(value);
+                              return numValue !== undefined && !isNaN(numValue) ? `${numValue.toFixed(1)}%` : '0%';
+                            }}
+                            contentStyle={{
+                              backgroundColor: theme.palette.background.paper,
+                              border: `1px solid ${theme.palette.divider}`,
+                              borderRadius: '8px',
+                              padding: '8px',
+                              color: theme.palette.text.primary,
+                            }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </Box>
+                  );
+                }
+                
+                // Siempre mostrar el icono cuando no hay datos
+                return (
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    py: 6,
+                    minHeight: 300,
+                    width: '100%',
+                  }}>
+                    <Assessment 
+                      sx={{ 
+                        fontSize: 80, 
+                        color: theme.palette.text.disabled,
+                        opacity: 0.3,
+                        mb: 2,
+                      }} 
+                    />
+                  </Box>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Total de Ventas por Asesor - Solo visible para admin y jefe_comercial */}
+        {(user?.role === 'admin' || user?.role === 'jefe_comercial') && (
+          <Card sx={{ 
+            borderRadius: 2, 
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 4px 12px rgba(0,0,0,0.3)' 
+              : { xs: 1, md: 2 },
+            bgcolor: theme.palette.background.paper,
+            border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
+          }}>
+            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 600, 
+                  color: theme.palette.text.primary,
+                  fontSize: { xs: '0.875rem', md: '1rem' },
+                  mb: 2,
+                }}
+              >
+                Total de Ventas por Asesor
+              </Typography>
+              {stats.deals.userPerformance && stats.deals.userPerformance.length > 0 ? (
+                <>
+                  {/* Resumen del periodo */}
+                  {(() => {
+                    const sortedUsers = [...stats.deals.userPerformance]
+                      .sort((a, b) => (b.wonDealsValue || 0) - (a.wonDealsValue || 0));
+                    const topUsers = sortedUsers.slice(0, 5);
+                    const totalPeriod = sortedUsers.reduce((sum, user) => sum + (user.wonDealsValue || 0), 0);
+                    const totalAdvisors = sortedUsers.length;
+                    
+                    return (
+                      <>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center',
+                          mb: 2,
+                          flexWrap: 'wrap',
+                          gap: 1,
+                        }}>
+                          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                color: theme.palette.text.secondary,
+                                fontSize: '0.75rem',
+                              }}
+                            >
+                              Total del periodo: <strong style={{ color: theme.palette.text.primary }}>S/ {totalPeriod.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</strong>
+                            </Typography>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                color: theme.palette.text.secondary,
+                                fontSize: '0.75rem',
+                              }}
+                            >
+                              Asesores: <strong style={{ color: theme.palette.text.primary }}>{totalAdvisors}</strong>
+                            </Typography>
+                          </Box>
+                          <Link
+                            component="button"
+                            variant="body2"
+                            onClick={() => {
+                              setAdvisorsModalOpen(true);
+                            }}
+                            sx={{
+                              color: theme.palette.primary.main,
+                              textDecoration: 'none',
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              '&:hover': {
+                                textDecoration: 'underline',
+                              },
+                            }}
+                          >
+                            Ver todos
+                          </Link>
+                        </Box>
+
+                        {/* Lista de top 5 asesores */}
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                          {topUsers.map((user, index) => {
+                            const rank = index + 1;
+                            const maxValue = topUsers[0]?.wonDealsValue || 1;
+                            const percentage = ((user.wonDealsValue || 0) / maxValue) * 100;
+                            const avatarColors = ['#8B5CF6', '#10B981', '#3B82F6', '#F59E0B', '#EF4444'];
+                            
+                            return (
+                              <Box 
+                                key={user.userId}
+                                sx={{
+                                  position: 'relative',
+                                  p: 1.5,
+                                  borderRadius: 1,
+                                  bgcolor: 'transparent',
+                                }}
+                              >
+                                <Box sx={{ 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: 1.5,
+                                  mb: 1,
+                                }}>
+                                  {/* Número de ranking */}
+                                  <Box
+                                    sx={{
+                                      width: 32,
+                                      height: 32,
+                                      borderRadius: 1,
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      bgcolor: rank === 1 ? '#FFF4E6' : (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'),
+                                      color: rank === 1 ? '#F59E0B' : theme.palette.text.secondary,
+                                      fontWeight: 600,
+                                      fontSize: '0.75rem',
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    {rank}
+                                  </Box>
+
+                                  {/* Avatar */}
+                                  <Avatar
+                                    sx={{
+                                      width: 36,
+                                      height: 36,
+                                      bgcolor: avatarColors[index % avatarColors.length],
+                                      fontSize: '0.75rem',
+                                      fontWeight: 600,
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    {getInitials(user.firstName, user.lastName)}
+                                  </Avatar>
+
+                                  {/* Nombre y ventas */}
+                                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <Typography 
+                                      variant="body2" 
+                                      sx={{ 
+                                        fontWeight: 600, 
+                                        color: theme.palette.text.primary,
+                                        fontSize: '0.75rem',
+                                        mb: 0.25,
+                                      }}
+                                    >
+                                      {user.firstName} {user.lastName}
+                                    </Typography>
+                                    <Typography 
+                                      variant="caption" 
+                                      sx={{ 
+                                        color: theme.palette.text.secondary,
+                                        fontSize: '0.6875rem',
+                                      }}
+                                    >
+                                      {user.wonDeals || 0} {user.wonDeals === 1 ? 'venta' : 'ventas'}
+                                    </Typography>
+                                  </Box>
+
+                                  {/* Monto */}
+                                  <Typography 
+                                    variant="body2" 
+                                    sx={{ 
+                                      fontWeight: 600, 
+                                      color: theme.palette.text.primary,
+                                      fontSize: '0.75rem',
+                                      flexShrink: 0,
+                                    }}
+                                  >
+                                    S/ {(user.wonDealsValue || 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                                  </Typography>
+                                </Box>
+
+                                {/* Barra de progreso */}
+                                <Box sx={{ 
+                                  width: '100%', 
+                                  height: 6, 
+                                  borderRadius: 1,
+                                  overflow: 'hidden',
+                                  bgcolor: theme.palette.mode === 'dark' 
+                                    ? 'rgba(255, 255, 255, 0.1)' 
+                                    : 'rgba(0, 0, 0, 0.05)',
+                                  position: 'relative',
+                                }}>
+                                  <Box
+                                    sx={{
+                                      width: `${percentage}%`,
+                                      height: '100%',
+                                      bgcolor: '#10B981',
+                                      transition: 'width 0.3s ease',
+                                    }}
+                                  />
+                                </Box>
+                              </Box>
+                            );
+                          })}
+                        </Box>
+                      </>
+                    );
+                  })()}
+                </>
+              ) : (
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: theme.palette.text.secondary,
+                    textAlign: 'center',
+                    py: 3,
+                  }}
+                >
+                No hay datos de ventas por asesor disponibles
+              </Typography>
+            )}
+          </CardContent>
+        </Card>
+        )}
+
+        {/* Ventas Semanales */}
+        <Card sx={{ 
+          borderRadius: 2, 
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 4px 12px rgba(0,0,0,0.3)' 
+            : { xs: 1, md: 2 },
+          bgcolor: theme.palette.background.paper,
+          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
+        }}>
+          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                fontWeight: 600, 
+                color: theme.palette.text.primary, 
+                mb: { xs: 2, md: 3 },
+                fontSize: { xs: '0.875rem', md: '1rem' },
+              }}
+            >
+              Ventas Semanales
+            </Typography>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={weeklySalesData}>
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={true} vertical={false} />
+                <XAxis dataKey="week" stroke={theme.palette.text.secondary} />
+                <YAxis stroke={theme.palette.text.secondary} />
+                <RechartsTooltip />
+                <Bar dataKey="value" fill="#8B5CF6" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </Box>
+
       {/* Sección principal: Sales Chart y Pipeline de Ventas */}
       <Box sx={{ 
         display: 'grid',
@@ -1411,11 +1916,9 @@ const Dashboard: React.FC = () => {
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
             <Box sx={{ 
               display: 'flex', 
-              flexDirection: { xs: 'column', sm: 'row' },
               justifyContent: 'space-between', 
-              alignItems: { xs: 'flex-start', sm: 'center' },
+              alignItems: 'center',
               mb: { xs: 2, md: 3 },
-              gap: { xs: 2, sm: 0 },
             }}>
               <Typography 
                 variant="h6" 
@@ -1427,58 +1930,17 @@ const Dashboard: React.FC = () => {
               >
                 Ventas
               </Typography>
-              <Box sx={{ 
-                display: 'flex', 
-                gap: { xs: 1, md: 2 }, 
-                alignItems: 'center',
-                width: { xs: '100%', sm: 'auto' },
-                flexDirection: { xs: 'column', sm: 'row' },
-              }}>
-                <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 100 } }}>
-                  <Select
-                    id="year-select"
-                    name="year-select"
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(e.target.value)}
-                    sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}
-                  >
-                    {availableYears.map((year) => (
-                      <MenuItem key={year} value={year.toString()}>
-                        {year}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 } }}>
-                  <Select
-                    id="month-select"
-                    name="month-select"
-                    value={selectedMonth || 'all'}
-                    onChange={(e) => setSelectedMonth(e.target.value === 'all' ? null : e.target.value)}
-                    displayEmpty
-                    sx={{ fontSize: { xs: '0.8rem', md: '0.875rem' } }}
-                  >
-                    <MenuItem value="all">Todos los meses</MenuItem>
-                    {monthNames.map((month) => (
-                      <MenuItem key={month.value} value={month.value}>
-                        {month.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <Button
-                  size="small"
-                  endIcon={<Download sx={{ fontSize: { xs: 16, md: 18 } }} />}
-                  onClick={handleDownloadSales}
-                  sx={{ 
-                    fontSize: { xs: '0.75rem', md: '0.875rem' }, 
-                    textTransform: 'none',
-                    width: { xs: '100%', sm: 'auto' },
-                  }}
-                >
-                  Descargar
-                </Button>
-              </Box>
+              <Button
+                size="small"
+                endIcon={<Download sx={{ fontSize: { xs: 16, md: 18 } }} />}
+                onClick={handleDownloadSales}
+                sx={{ 
+                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                  textTransform: 'none',
+                }}
+              >
+                Descargar
+              </Button>
             </Box>
             <Box sx={{ width: '100%', height: { xs: 250, sm: 300 }, minHeight: { xs: 250, sm: 300 }, minWidth: 0, position:'relative'}}>
               <ResponsiveContainer width="100%" height={300} minHeight={250}>
@@ -1492,7 +1954,7 @@ const Dashboard: React.FC = () => {
                     <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={true} vertical={false} />
                 <XAxis 
                   dataKey={selectedMonth !== null ? "day" : "month"} 
                   stroke={theme.palette.text.secondary}
@@ -1504,7 +1966,16 @@ const Dashboard: React.FC = () => {
                 />
                 <YAxis 
                   stroke={theme.palette.text.secondary}
-                  tickFormatter={(value) => `S/ ${(value / 1000).toFixed(0)}k`}
+                  tickFormatter={(value) => {
+                    if (value === 0) return 'S/ 0';
+                    const valueInK = value / 1000;
+                    // Si es un número entero, mostrar sin decimales
+                    if (valueInK % 1 === 0) {
+                      return `S/ ${valueInK}k`;
+                    }
+                    // Si tiene decimales, mostrar con 1 decimal
+                    return `S/ ${valueInK.toFixed(1)}k`;
+                  }}
                   domain={selectedMonth !== null && selectedMonthBudget > 0 
                     ? [0, selectedMonthBudget * 1.1] 
                     : [0, 'dataMax']}
@@ -1530,7 +2001,7 @@ const Dashboard: React.FC = () => {
                     strokeWidth={2}
                     strokeDasharray="5 5"
                     label={{ 
-                      value: `Presupuesto: S/ ${(selectedMonthBudget / 1000).toFixed(0)}k`, 
+                      value: `Presupuesto: S/ ${selectedMonthBudget.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, 
                       position: "right",
                       fill: "#10B981",
                       fontSize: 12,
@@ -1854,444 +2325,7 @@ const Dashboard: React.FC = () => {
         </Card>
       </Box>
 
-      {/* Sección: Total de Ventas por Asesor (lg) y Distribución de Ventas */}
-      <Box sx={{ 
-        display: 'grid',
-        gridTemplateColumns: { 
-          xs: '1fr', 
-          md: '1fr',
-          lg: '1fr 1fr',
-          xl: '1fr 1fr' 
-        },
-        gap: { xs: 1.5, sm: 2, md: 3 },
-        mb: { xs: 2, sm: 2.5, md: 3 } 
-      }}>
-        {/* Total de Ventas por Asesor - Solo visible para admin y jefe_comercial en lg */}
-        {/* Visible solo en lg para estar al lado de Distribución de Ventas */}
-        {(user?.role === 'admin' || user?.role === 'jefe_comercial') && (
-        <Card sx={{ 
-          borderRadius: 2, 
-          boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 12px rgba(0,0,0,0.3)' 
-            : { xs: 1, md: 2 },
-          bgcolor: theme.palette.background.paper,
-          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
-          display: { xs: 'block', lg: 'block', xl: 'block' },
-        }}>
-          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                fontWeight: 600, 
-                color: theme.palette.text.primary,
-                fontSize: { xs: '1rem', md: '1.25rem' },
-                mb: 2,
-              }}
-            >
-              Total de Ventas por Asesor
-            </Typography>
-            {stats.deals.userPerformance && stats.deals.userPerformance.length > 0 ? (
-              <>
-                {/* Resumen del periodo */}
-                {(() => {
-                  const sortedUsers = [...stats.deals.userPerformance]
-                    .sort((a, b) => (b.wonDealsValue || 0) - (a.wonDealsValue || 0));
-                  const topUsers = sortedUsers.slice(0, 5);
-                  const totalPeriod = sortedUsers.reduce((sum, user) => sum + (user.wonDealsValue || 0), 0);
-                  const totalAdvisors = sortedUsers.length;
-                  
-                  return (
-                    <>
-                      <Box sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        mb: 2,
-                        flexWrap: 'wrap',
-                        gap: 1,
-                      }}>
-                        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              color: theme.palette.text.secondary,
-                              fontSize: '0.875rem',
-                            }}
-                          >
-                            Total del periodo: <strong style={{ color: theme.palette.text.primary }}>S/ {totalPeriod.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</strong>
-                          </Typography>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              color: theme.palette.text.secondary,
-                              fontSize: '0.875rem',
-                            }}
-                          >
-                            Asesores: <strong style={{ color: theme.palette.text.primary }}>{totalAdvisors}</strong>
-                          </Typography>
-                        </Box>
-                        <Link
-                          component="button"
-                          variant="body2"
-                          onClick={() => {
-                            // Aquí puedes agregar la funcionalidad para ver todos
-                            console.log('Ver todos los asesores');
-                          }}
-                          sx={{
-                            color: theme.palette.primary.main,
-                            textDecoration: 'none',
-                            fontSize: '0.875rem',
-                            fontWeight: 500,
-                            '&:hover': {
-                              textDecoration: 'underline',
-                            },
-                          }}
-                        >
-                          Ver todos
-                        </Link>
-                      </Box>
 
-                      {/* Lista de top 5 asesores */}
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                        {topUsers.map((user, index) => {
-                          const rank = index + 1;
-                          const maxValue = topUsers[0]?.wonDealsValue || 1;
-                          const percentage = ((user.wonDealsValue || 0) / maxValue) * 100;
-                          const avatarColors = ['#8B5CF6', '#10B981', '#3B82F6', '#F59E0B', '#EF4444'];
-                          
-                          return (
-                            <Box 
-                              key={user.userId}
-                              sx={{
-                                position: 'relative',
-                                p: 1.5,
-                                borderRadius: 1,
-                                bgcolor: 'transparent',
-                              }}
-                            >
-                              <Box sx={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: 1.5,
-                                mb: 1,
-                              }}>
-                                {/* Número de ranking */}
-                                <Box
-                                  sx={{
-                                    width: 32,
-                                    height: 32,
-                                    borderRadius: 1,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    bgcolor: rank === 1 ? '#FFF4E6' : (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'),
-                                    color: rank === 1 ? '#F59E0B' : theme.palette.text.secondary,
-                                    fontWeight: 600,
-                                    fontSize: '0.875rem',
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  {rank}
-                                </Box>
-
-                                {/* Avatar */}
-                                <Avatar
-                                  sx={{
-                                    width: 40,
-                                    height: 40,
-                                    bgcolor: avatarColors[index % avatarColors.length],
-                                    fontSize: '0.875rem',
-                                    fontWeight: 600,
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  {getInitials(user.firstName, user.lastName)}
-                                </Avatar>
-
-                                {/* Nombre y ventas */}
-                                <Box sx={{ flex: 1, minWidth: 0 }}>
-                                  <Typography 
-                                    variant="body2" 
-                                    sx={{ 
-                                      fontWeight: 600, 
-                                      color: theme.palette.text.primary,
-                                      fontSize: '0.875rem',
-                                      mb: 0.25,
-                                    }}
-                                  >
-                                    {user.firstName} {user.lastName}
-                                  </Typography>
-                                  <Typography 
-                                    variant="caption" 
-                                    sx={{ 
-                                      color: theme.palette.text.secondary,
-                                      fontSize: '0.75rem',
-                                    }}
-                                  >
-                                    {user.wonDeals || 0} {user.wonDeals === 1 ? 'venta' : 'ventas'}
-                                  </Typography>
-                                </Box>
-
-                                {/* Monto */}
-                                <Typography 
-                                  variant="body2" 
-                                  sx={{ 
-                                    fontWeight: 600, 
-                                    color: theme.palette.text.primary,
-                                    fontSize: '0.875rem',
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  S/ {(user.wonDealsValue || 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                </Typography>
-                              </Box>
-
-                              {/* Barra de progreso */}
-                              <Box sx={{ 
-                                width: '100%', 
-                                height: 6, 
-                                borderRadius: 1,
-                                overflow: 'hidden',
-                                bgcolor: theme.palette.mode === 'dark' 
-                                  ? 'rgba(255, 255, 255, 0.1)' 
-                                  : 'rgba(0, 0, 0, 0.05)',
-                                position: 'relative',
-                              }}>
-                                <Box
-                                  sx={{
-                                    width: `${percentage}%`,
-                                    height: '100%',
-                                    bgcolor: '#10B981',
-                                    transition: 'width 0.3s ease',
-                                  }}
-                                />
-                              </Box>
-                            </Box>
-                          );
-                        })}
-                      </Box>
-                    </>
-                  );
-                })()}
-              </>
-            ) : (
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  color: theme.palette.text.secondary,
-                  textAlign: 'center',
-                  py: 3,
-                }}
-              >
-                No hay datos de ventas por asesor disponibles
-              </Typography>
-            )}
-          </CardContent>
-        </Card>
-        )}
-
-        {/* Sales Distribution */}
-        <Card sx={{ 
-          borderRadius: 2, 
-          boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 12px rgba(0,0,0,0.3)' 
-            : { xs: 1, md: 2 },
-          bgcolor: theme.palette.background.paper,
-          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
-        }}>
-          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                fontWeight: 600, 
-                color: theme.palette.text.primary, 
-                mb: { xs: 2, md: 3 },
-                fontSize: { xs: '1rem', md: '1.25rem' },
-              }}
-            >
-              Distribución de Ventas
-            </Typography>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={salesDistributionData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {salesDistributionData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <RechartsTooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, justifyContent: 'center' }}>
-              {salesDistributionData.map((entry, index) => (
-                <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: entry.color }} />
-                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                    {entry.name}
-                  </Typography>
-                </Box>
-              ))}
-            </Box>
-          </CardContent>
-        </Card>
-      </Box>
-
-      {/* Sección inferior: Weekly Sales y Desempeño por Usuario */}
-      {/* Verificar si el usuario tiene permisos para ver KPIs comerciales */}
-      {(() => {
-        const canViewCommercialKPIs = user?.role === 'admin' || user?.role === 'jefe_comercial';
-        const gridCols = canViewCommercialKPIs 
-          ? { xs: '1fr', md: '1fr 1fr', lg: '1fr 1fr', xl: '1fr 1fr' } 
-          : { xs: '1fr', md: '1fr' };
-        
-        return (
-          <Box sx={{ 
-            display: 'grid', 
-            gridTemplateColumns: gridCols, 
-            gap: { xs: 2, md: 3 } 
-          }}>
-        {/* Weekly Sales */}
-        <Card sx={{ 
-          borderRadius: 2, 
-          boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 12px rgba(0,0,0,0.3)' 
-            : { xs: 1, md: 2 },
-          bgcolor: theme.palette.background.paper,
-          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
-        }}>
-          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-            <Typography 
-              variant="h6" 
-              sx={{ 
-                fontWeight: 600, 
-                color: theme.palette.text.primary, 
-                mb: { xs: 2, md: 3 },
-                fontSize: { xs: '1rem', md: '1.25rem' },
-              }}
-            >
-              Ventas Semanales
-            </Typography>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={weeklySalesData}>
-                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
-                <XAxis dataKey="week" stroke={theme.palette.text.secondary} />
-                <YAxis stroke={theme.palette.text.secondary} />
-                <RechartsTooltip />
-                <Bar dataKey="value" fill="#8B5CF6" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        {/* Desempeño por Usuario - Solo visible para admin y jefe_comercial */}
-        {(user?.role === 'admin' || user?.role === 'jefe_comercial') && (
-          <Card sx={{ 
-            borderRadius: { xs: 1, md: 2 }, 
-            boxShadow: theme.palette.mode === 'dark' 
-              ? '0 4px 12px rgba(0,0,0,0.3)' 
-              : { xs: 1, md: 2 },
-            bgcolor: theme.palette.background.paper,
-            border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
-          }}>
-            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-              <Typography 
-                variant="h6" 
-                sx={{ 
-                  fontWeight: 600, 
-                  color: theme.palette.text.primary, 
-                  mb: { xs: 2, md: 3 },
-                  fontSize: { xs: '1rem', md: '1.25rem' },
-                }}
-              >
-                KPI's Área Comercial
-              </Typography>
-              {stats.deals.userPerformance && stats.deals.userPerformance.length > 0 ? (
-                <Box>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={stats.deals.userPerformance.map((user) => ({
-                          name: `${user.firstName} ${user.lastName}`,
-                          value: user.performance,
-                          percentage: user.performance,
-                        }))}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={true}
-                        label={(props: any) => {
-                          const { name, percentage, cx, cy, midAngle, innerRadius, outerRadius } = props;
-                          if (midAngle === undefined || innerRadius === undefined || outerRadius === undefined) {
-                            return null;
-                          }
-                          const RADIAN = Math.PI / 180;
-                          // Calcular posición fuera del círculo
-                          const radius = outerRadius + 20; // 20px fuera del círculo
-                          const xPos = cx + radius * Math.cos(-midAngle * RADIAN);
-                          const yPos = cy + radius * Math.sin(-midAngle * RADIAN);
-                          
-                          return (
-                            <text
-                              x={xPos}
-                              y={yPos}
-                              fill={theme.palette.text.primary}
-                              textAnchor={xPos > cx ? 'start' : 'end'}
-                              dominantBaseline="central"
-                              fontSize={12}
-                              fontWeight={600}
-                            >
-                              {name}: {percentage.toFixed(1)}%
-                            </text>
-                          );
-                        }}
-                        outerRadius={80}
-                        innerRadius={50}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {stats.deals.userPerformance.map((user, index) => {
-                          // Colores similares a la imagen: negro, dorado, teal
-                          const colors = ['#1F2937', '#F59E0B', '#10B981', '#8B5CF6', '#EF4444', '#06B6D4'];
-                          return (
-                            <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                          );
-                        })}
-                      </Pie>
-                      <RechartsTooltip 
-                        formatter={(value: any) => {
-                          const numValue = typeof value === 'number' ? value : Number(value);
-                          return numValue !== undefined && !isNaN(numValue) ? `${numValue.toFixed(1)}%` : '0%';
-                        }}
-                        contentStyle={{
-                          backgroundColor: theme.palette.background.paper,
-                          border: `1px solid ${theme.palette.divider}`,
-                          borderRadius: '8px',
-                          padding: '8px',
-                          color: theme.palette.text.primary,
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </Box>
-              ) : (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                    No hay datos de desempeño disponibles
-                  </Typography>
-                </Box>
-              )}
-            </CardContent>
-          </Card>
-        )}
-          </Box>
-        );
-      })()}
       </Box>
 
       </Box>
@@ -2337,7 +2371,7 @@ const Dashboard: React.FC = () => {
           <TextField
             autoFocus
             margin="dense"
-            label="Presupuesto (en miles)"
+            label="Presupuesto"
             type="number"
             fullWidth
             variant="outlined"
@@ -2346,13 +2380,22 @@ const Dashboard: React.FC = () => {
             disabled={savingBudget}
             InputProps={{
               startAdornment: <Typography sx={{ mr: 1, color: theme.palette.text.secondary }}>S/</Typography>,
-              endAdornment: <Typography sx={{ ml: 1, color: theme.palette.text.secondary }}>k</Typography>,
             }}
-            sx={{ mt: 2 }}
+            sx={{ 
+              mt: 2,
+              '& input[type=number]': {
+                MozAppearance: 'textfield',
+              },
+              '& input[type=number]::-webkit-outer-spin-button': {
+                WebkitAppearance: 'none',
+                margin: 0,
+              },
+              '& input[type=number]::-webkit-inner-spin-button': {
+                WebkitAppearance: 'none',
+                margin: 0,
+              },
+            }}
           />
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-            El monto se guardará en miles. Ejemplo: 10 = S/ 10,000
-          </Typography>
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 1 }}>
           <Button
@@ -2376,6 +2419,268 @@ const Dashboard: React.FC = () => {
         </DialogActions>
       </Dialog>
       
+      {/* Modal de Todos los Asesores */}
+      <Dialog
+        open={advisorsModalOpen}
+        onClose={() => setAdvisorsModalOpen(false)}
+        maxWidth="md"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            maxHeight: '90vh',
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          pb: 1,
+        }}>
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Total de Ventas por Asesor
+          </Typography>
+          <IconButton
+            onClick={() => setAdvisorsModalOpen(false)}
+            size="small"
+            sx={{
+              color: theme.palette.text.secondary,
+            }}
+          >
+            <Close />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          {stats.deals.userPerformance && stats.deals.userPerformance.length > 0 ? (
+            <>
+              {/* Resumen del periodo */}
+              {(() => {
+                const sortedUsers = [...stats.deals.userPerformance]
+                  .sort((a, b) => (b.wonDealsValue || 0) - (a.wonDealsValue || 0));
+                const totalPeriod = sortedUsers.reduce((sum, user) => sum + (user.wonDealsValue || 0), 0);
+                const totalAdvisors = sortedUsers.length;
+                
+                return (
+                  <>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center',
+                      mb: 3,
+                      flexWrap: 'wrap',
+                      gap: 2,
+                      pb: 2,
+                      borderBottom: `1px solid ${theme.palette.divider}`,
+                    }}>
+                      <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                        <Typography 
+                          variant="body1" 
+                          sx={{ 
+                            color: theme.palette.text.secondary,
+                            fontSize: '0.875rem',
+                          }}
+                        >
+                          Total del periodo: <strong style={{ color: theme.palette.text.primary }}>S/ {totalPeriod.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</strong>
+                        </Typography>
+                        <Typography 
+                          variant="body1" 
+                          sx={{ 
+                            color: theme.palette.text.secondary,
+                            fontSize: '0.875rem',
+                          }}
+                        >
+                          Asesores: <strong style={{ color: theme.palette.text.primary }}>{totalAdvisors}</strong>
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    {/* Lista de todos los asesores */}
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      gap: 2,
+                      maxHeight: '60vh',
+                      overflowY: 'auto',
+                      pr: 1,
+                      '&::-webkit-scrollbar': {
+                        width: '8px',
+                      },
+                      '&::-webkit-scrollbar-track': {
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
+                        borderRadius: '4px',
+                      },
+                      '&::-webkit-scrollbar-thumb': {
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                        borderRadius: '4px',
+                        '&:hover': {
+                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                        },
+                      },
+                    }}>
+                      {sortedUsers.map((user, index) => {
+                        const rank = index + 1;
+                        const maxValue = sortedUsers[0]?.wonDealsValue || 1;
+                        const percentage = ((user.wonDealsValue || 0) / maxValue) * 100;
+                        const avatarColors = ['#8B5CF6', '#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#06B6D4', '#8B5CF6', '#10B981'];
+                        
+                        return (
+                          <Box 
+                            key={user.userId}
+                            sx={{
+                              position: 'relative',
+                              p: 2,
+                              borderRadius: 1.5,
+                              bgcolor: theme.palette.mode === 'dark' 
+                                ? 'rgba(255, 255, 255, 0.03)' 
+                                : 'rgba(0, 0, 0, 0.02)',
+                              border: `1px solid ${theme.palette.divider}`,
+                              '&:hover': {
+                                bgcolor: theme.palette.mode === 'dark' 
+                                  ? 'rgba(255, 255, 255, 0.05)' 
+                                  : 'rgba(0, 0, 0, 0.04)',
+                              },
+                            }}
+                          >
+                            <Box sx={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: 2,
+                              mb: 1.5,
+                            }}>
+                              {/* Número de ranking */}
+                              <Box
+                                sx={{
+                                  width: 40,
+                                  height: 40,
+                                  borderRadius: 1.5,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  bgcolor: rank === 1 ? '#FFF4E6' : rank === 2 ? '#E0F2FE' : rank === 3 ? '#F3E8FF' : (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'),
+                                  color: rank === 1 ? '#F59E0B' : rank === 2 ? '#0EA5E9' : rank === 3 ? '#8B5CF6' : theme.palette.text.secondary,
+                                  fontWeight: 700,
+                                  fontSize: '0.875rem',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {rank}
+                              </Box>
+
+                              {/* Avatar */}
+                              <Avatar
+                                sx={{
+                                  width: 48,
+                                  height: 48,
+                                  bgcolor: avatarColors[index % avatarColors.length],
+                                  fontSize: '0.875rem',
+                                  fontWeight: 600,
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {getInitials(user.firstName, user.lastName)}
+                              </Avatar>
+
+                              {/* Nombre y ventas */}
+                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography 
+                                  variant="body1" 
+                                  sx={{ 
+                                    fontWeight: 600, 
+                                    color: theme.palette.text.primary,
+                                    fontSize: '0.9375rem',
+                                    mb: 0.5,
+                                  }}
+                                >
+                                  {user.firstName} {user.lastName}
+                                </Typography>
+                                <Typography 
+                                  variant="body2" 
+                                  sx={{ 
+                                    color: theme.palette.text.secondary,
+                                    fontSize: '0.8125rem',
+                                  }}
+                                >
+                                  {user.wonDeals || 0} {user.wonDeals === 1 ? 'venta' : 'ventas'}
+                                </Typography>
+                              </Box>
+
+                              {/* Monto */}
+                              <Typography 
+                                variant="h6" 
+                                sx={{ 
+                                  fontWeight: 700, 
+                                  color: theme.palette.text.primary,
+                                  fontSize: '1rem',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                S/ {(user.wonDealsValue || 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                              </Typography>
+                            </Box>
+
+                            {/* Barra de progreso */}
+                            <Box sx={{ 
+                              width: '100%', 
+                              height: 8, 
+                              borderRadius: 1,
+                              overflow: 'hidden',
+                              bgcolor: theme.palette.mode === 'dark' 
+                                ? 'rgba(255, 255, 255, 0.1)' 
+                                : 'rgba(0, 0, 0, 0.05)',
+                              position: 'relative',
+                            }}>
+                              <Box
+                                sx={{
+                                  width: `${percentage}%`,
+                                  height: '100%',
+                                  bgcolor: '#10B981',
+                                  transition: 'width 0.3s ease',
+                                }}
+                              />
+                            </Box>
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                  </>
+                );
+              })()}
+            </>
+          ) : (
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              py: 6,
+            }}>
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  color: theme.palette.text.secondary,
+                  textAlign: 'center',
+                }}
+              >
+                No hay datos de ventas por asesor disponibles
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ p: 2, pt: 1, borderTop: `1px solid ${theme.palette.divider}` }}>
+          <Button
+            onClick={() => setAdvisorsModalOpen(false)}
+            variant="contained"
+            sx={{
+              bgcolor: taxiMonterricoColors.green,
+              '&:hover': { bgcolor: taxiMonterricoColors.greenDark },
+            }}
+          >
+            Cerrar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar
         open={!!successMessage}
         autoHideDuration={4000}

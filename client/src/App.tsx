@@ -26,6 +26,7 @@ const CompanyDetail = lazy(() => import('./pages/CompanyDetail'));
 const Deals = lazy(() => import('./pages/Deals'));
 const DealDetail = lazy(() => import('./pages/DealDetail'));
 const Tasks = lazy(() => import('./pages/Tasks'));
+const TaskDetail = lazy(() => import('./pages/TaskDetail'));
 const Tickets = lazy(() => import('./pages/Tickets'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Users = lazy(() => import('./pages/Users'));
@@ -335,6 +336,14 @@ const AppContent: React.FC = () => {
                 element={
                   <MainLayout>
                     <Tasks />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/tasks/:id"
+                element={
+                  <MainLayout>
+                    <TaskDetail />
                   </MainLayout>
                 }
               />

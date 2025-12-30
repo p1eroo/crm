@@ -11,7 +11,7 @@ router.use(authenticateToken);
 // Obtener todas las empresas
 router.get('/', async (req: AuthRequest, res) => {
   try {
-    const { page = 1, limit = 50, search, lifecycleStage, ownerId, industry } = req.query;
+    const { page = 1, limit = 50, search, lifecycleStage, ownerId, companyname } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
 
     const where: any = {};
@@ -29,8 +29,8 @@ router.get('/', async (req: AuthRequest, res) => {
     if (ownerId) {
       where.ownerId = ownerId;
     }
-    if (industry) {
-      where.industry = industry;
+    if (companyname) {
+      where.companyname = companyname;
     }
 
     // Intentar obtener companies con la relación Owner

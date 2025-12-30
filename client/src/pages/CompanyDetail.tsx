@@ -118,7 +118,7 @@ interface CompanyDetailData {
   id: number;
   name: string;
   domain?: string;
-  industry?: string;
+  companyname?: string;
   phone?: string;
   address?: string;
   city?: string;
@@ -317,7 +317,7 @@ const CompanyDetail: React.FC = () => {
     name: '',
     domain: '',
     linkedin: '',
-    industry: '',
+    companyname: '',
     phone: '',
     phone2: '',
     phone3: '',
@@ -616,7 +616,7 @@ const CompanyDetail: React.FC = () => {
         name: company.name || '',
         domain: company.domain || '',
         linkedin: company.linkedin || '',
-        industry: company.industry || '',
+        companyname: company.companyname || '',
         phone: company.phone || '',
         phone2: (company as any).phone2 || '',
         phone3: (company as any).phone3 || '',
@@ -638,7 +638,7 @@ const CompanyDetail: React.FC = () => {
       name: '',
       domain: '',
       linkedin: '',
-      industry: '',
+      companyname: '',
       phone: '',
       phone2: '',
       phone3: '',
@@ -1755,7 +1755,7 @@ const CompanyDetail: React.FC = () => {
                     {company.name}
             </Typography>
                   <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                    {company.domain || company.industry || 'Sin información adicional'}
+                    {company.domain || company.companyname || 'Sin información adicional'}
                 </Typography>
               </Box>
               </Box>
@@ -8329,9 +8329,9 @@ const CompanyDetail: React.FC = () => {
               />
             </Box>
             <TextField
-              label="Tipo de Contribuyente / Industria"
-              value={editFormData.industry}
-              onChange={(e) => setEditFormData({ ...editFormData, industry: e.target.value })}
+              label="Razón social"
+              value={editFormData.companyname}
+              onChange={(e) => setEditFormData({ ...editFormData, companyname: e.target.value })}
               InputLabelProps={{ shrink: true }}
               sx={{
                 '& .MuiOutlinedInput-root': {
