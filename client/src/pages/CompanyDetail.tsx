@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -40,6 +40,11 @@ import {
   useMediaQuery,
   Popover,
   FormControl,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  InputBase,
 } from '@mui/material';
 import {
   MoreVert,
@@ -51,7 +56,6 @@ import {
   Comment,
   Link as LinkIcon,
   ExpandMore,
-  Fullscreen,
   Close,
   KeyboardArrowDown,
   KeyboardArrowLeft,
@@ -89,12 +93,14 @@ import {
   FormatAlignJustify,
   ChevronLeft,
   ChevronRight,
+  Business,
 } from '@mui/icons-material';
 import {
   LinkedIn,
 } from '@mui/icons-material';
 import api from '../config/api';
 import RichTextEditor from '../components/RichTextEditor';
+import EmailComposer from '../components/EmailComposer';
 import { taxiMonterricoColors } from '../theme/colors';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
@@ -240,70 +246,11 @@ const CompanyDetail: React.FC = () => {
   // Estados para edición de campos del contacto
   
   // Estados para asociaciones en nota
-  const [selectedAssociationCategory, setSelectedAssociationCategory] = useState<string>('Contactos');
-  const [associationSearch, setAssociationSearch] = useState('');
   const [selectedAssociations, setSelectedAssociations] = useState<number[]>([]);
   const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
-  const [selectedLeads] = useState<number[]>([]);
   const [allContacts, setAllContacts] = useState<any[]>([]);
   // Estados para elementos excluidos (desmarcados manualmente aunque estén asociados)
   const [excludedContacts, setExcludedContacts] = useState<number[]>([]);
-  const [excludedDeals, setExcludedDeals] = useState<number[]>([]);
-  const [excludedTickets, setExcludedTickets] = useState<number[]>([]);
-  
-  // Calcular total de asociaciones basado en selecciones del usuario usando useMemo para asegurar actualización
-  const totalAssociations = useMemo(() => {
-    // Incluir contactos asociados que aún no están en selectedContacts pero deberían contarse
-    // Excluir los contactos que fueron desmarcados manualmente
-    const associatedContactIds = (associatedContacts || [])
-      .map((c: any) => c && c.id)
-      .filter((id: any) => id !== undefined && id !== null && !excludedContacts.includes(id));
-    
-    // Combinar contactos seleccionados manualmente y contactos asociados (sin duplicar)
-    const allContactIds = [...selectedContacts, ...associatedContactIds];
-    const contactsToCount = allContactIds.filter((id, index) => allContactIds.indexOf(id) === index);
-    
-    // Contar negocios: los seleccionados manualmente más los asociados (sin duplicar)
-    // Excluir los negocios que fueron desmarcados manualmente
-    const selectedDealIds = selectedAssociations.filter((id: number) => id > 1000 && id < 2000).map(id => id - 1000);
-    const associatedDealIds = (associatedDeals || [])
-      .map((d: any) => d && d.id)
-      .filter((id: any) => id !== undefined && id !== null && !excludedDeals.includes(id));
-    const allDealIds = [...selectedDealIds, ...associatedDealIds];
-    const dealsToCount = allDealIds.filter((id, index) => allDealIds.indexOf(id) === index).length;
-    
-    // Contar tickets: los seleccionados manualmente más los asociados (sin duplicar)
-    // Excluir los tickets que fueron desmarcados manualmente
-    const selectedTicketIds = selectedAssociations.filter((id: number) => id > 2000).map(id => id - 2000);
-    const associatedTicketIds = (associatedTickets || [])
-      .map((t: any) => t && t.id)
-      .filter((id: any) => id !== undefined && id !== null && !excludedTickets.includes(id));
-    const allTicketIds = [...selectedTicketIds, ...associatedTicketIds];
-    const ticketsToCount = allTicketIds.filter((id, index) => allTicketIds.indexOf(id) === index).length;
-    
-    const total = contactsToCount.length + selectedLeads.length + dealsToCount + ticketsToCount;
-    
-    // Debug: Log para verificar valores (solo en desarrollo)
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Debug asociaciones:', {
-        associatedContacts: associatedContacts.length,
-        associatedContactIds,
-        selectedContacts: selectedContacts.length,
-        excludedContacts,
-        contactsToCount: contactsToCount.length,
-        dealsToCount,
-        ticketsToCount,
-        total,
-      });
-    }
-    
-    return total;
-  }, [associatedContacts, selectedContacts, excludedContacts, associatedDeals, selectedAssociations, excludedDeals, associatedTickets, excludedTickets, selectedLeads]);
-  
-  // Variables derivadas para usar en otros lugares
-  const associatedContactIds = (associatedContacts || []).map((c: any) => c && c.id).filter((id: any) => id !== undefined && id !== null);
-  const allContactIds = [...selectedContacts, ...associatedContactIds];
-  const contactsToCount = allContactIds.filter((id, index) => allContactIds.indexOf(id) === index);
   
   // Estados para diálogos de acciones
   const [noteOpen, setNoteOpen] = useState(false);
@@ -311,6 +258,22 @@ const CompanyDetail: React.FC = () => {
   const [callOpen, setCallOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
   const [meetingOpen, setMeetingOpen] = useState(false);
+  const [noteAssociateModalOpen, setNoteAssociateModalOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('empresas');
+  const [associateSearch, setAssociateSearch] = useState('');
+  const [noteModalCompanies, setNoteModalCompanies] = useState<any[]>([]);
+  const [noteModalContacts, setNoteModalContacts] = useState<any[]>([]);
+  const [noteModalDeals, setNoteModalDeals] = useState<any[]>([]);
+  const [noteModalTickets, setNoteModalTickets] = useState<any[]>([]);
+  const [noteSelectedAssociations, setNoteSelectedAssociations] = useState<{ [key: string]: number[] }>({
+    companies: [],
+    contacts: [],
+    deals: [],
+    tickets: [],
+  });
+  const [loadingAssociations, setLoadingAssociations] = useState(false);
+  const [selectedCompanies, setSelectedCompanies] = useState<number[]>([]);
+  const [excludedCompanies, setExcludedCompanies] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({
@@ -344,10 +307,12 @@ const CompanyDetail: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [datePickerAnchorEl, setDatePickerAnchorEl] = useState<null | HTMLElement>(null);
   const [successMessage, setSuccessMessage] = useState('');
+  const [warningMessage, setWarningMessage] = useState('');
+  const [emailConnectModalOpen, setEmailConnectModalOpen] = useState(false);
+  const [connectingEmail, setConnectingEmail] = useState(false);
   
   // Estados para formularios
   const [noteData, setNoteData] = useState({ subject: '', description: '' });
-  const [emailData, setEmailData] = useState({ subject: '', description: '', to: '' });
   const [callData, setCallData] = useState({ subject: '', description: '', duration: '' });
   const [taskData, setTaskData] = useState({ title: '', description: '', priority: 'medium', dueDate: '' });
   const [meetingData, setMeetingData] = useState({ subject: '', description: '', date: '', time: '' });
@@ -678,10 +643,148 @@ const CompanyDetail: React.FC = () => {
     setNoteOpen(true);
   };
 
-  const handleOpenEmail = () => {
-    // Abrir Gmail
-    const gmailUrl = `https://mail.google.com/mail/?view=cm`;
-    window.open(gmailUrl, '_blank');
+  const fetchAssociations = useCallback(async (searchTerm?: string) => {
+    setLoadingAssociations(true);
+    try {
+      // Si hay búsqueda, cargar todos los resultados
+      if (searchTerm && searchTerm.trim().length > 0) {
+        const [companiesRes, contactsRes, dealsRes, ticketsRes] = await Promise.all([
+          api.get('/companies', { params: { limit: 1000, search: searchTerm } }),
+          api.get('/contacts', { params: { limit: 1000, search: searchTerm } }),
+          api.get('/deals', { params: { limit: 1000, search: searchTerm } }),
+          api.get('/tickets', { params: { limit: 1000, search: searchTerm } }),
+        ]);
+        setNoteModalCompanies(companiesRes.data.companies || companiesRes.data || []);
+        setNoteModalContacts(contactsRes.data.contacts || contactsRes.data || []);
+        setNoteModalDeals(dealsRes.data.deals || dealsRes.data || []);
+        setNoteModalTickets(ticketsRes.data.tickets || ticketsRes.data || []);
+      } else {
+        // Si no hay búsqueda, solo cargar los vinculados a la empresa actual
+        const associatedItems: { companies: any[]; contacts: any[]; deals: any[]; tickets: any[] } = {
+          companies: [],
+          contacts: [],
+          deals: [],
+          tickets: [],
+        };
+
+        // La empresa actual siempre está asociada
+        if (company) {
+          associatedItems.companies = [company];
+        }
+
+        // Cargar contactos vinculados si existen
+        if (associatedContacts && associatedContacts.length > 0) {
+          associatedItems.contacts = associatedContacts;
+        }
+
+        // Cargar negocios y tickets asociados si existen
+        if (associatedDeals && associatedDeals.length > 0) {
+          associatedItems.deals = associatedDeals;
+        }
+        if (associatedTickets && associatedTickets.length > 0) {
+          associatedItems.tickets = associatedTickets;
+        }
+
+        setNoteModalCompanies(associatedItems.companies);
+        setNoteModalContacts(associatedItems.contacts);
+        setNoteModalDeals(associatedItems.deals);
+        setNoteModalTickets(associatedItems.tickets);
+      }
+    } catch (error) {
+      console.error('Error fetching associations:', error);
+    } finally {
+      setLoadingAssociations(false);
+    }
+  }, [company, associatedContacts, associatedDeals, associatedTickets]);
+
+  // Inicializar asociaciones cuando se abre el modal de asociaciones
+  useEffect(() => {
+    if (noteAssociateModalOpen) {
+      fetchAssociations();
+      // Inicializar selecciones con los valores actuales
+      setNoteSelectedAssociations({
+        companies: selectedCompanies,
+        contacts: selectedContacts,
+        deals: selectedAssociations.filter((id: number) => id > 1000 && id < 2000).map(id => id - 1000),
+        tickets: selectedAssociations.filter((id: number) => id > 2000).map(id => id - 2000),
+      });
+      setSelectedCategory('empresas'); // Default to 'Empresas'
+    }
+  }, [noteAssociateModalOpen, fetchAssociations, selectedCompanies, selectedContacts, selectedAssociations]);
+
+  const handleOpenEmail = async () => {
+    // Verificar si hay token guardado en el backend
+    try {
+      const response = await api.get('/google/token');
+      const hasToken = response.data.hasToken && !response.data.isExpired;
+      
+      if (hasToken) {
+        // Ya está conectado, abrir el modal directamente
+        setEmailOpen(true);
+        return;
+      }
+    } catch (error: any) {
+      // Si no hay token (404) o hay otro error, mostrar modal
+      if (error.response?.status === 404) {
+        setEmailConnectModalOpen(true);
+        return;
+      }
+    }
+
+    // Si llegamos aquí, no hay token guardado
+    setEmailConnectModalOpen(true);
+  };
+
+  const handleEmailConnect = async () => {
+    if (!user?.id) {
+      setWarningMessage('Usuario no identificado');
+      setTimeout(() => setWarningMessage(''), 3000);
+      return;
+    }
+
+    setConnectingEmail(true);
+    try {
+      const response = await api.get('/google/auth');
+      if (response.data.authUrl) {
+        window.location.href = response.data.authUrl;
+      } else {
+        throw new Error('No se pudo obtener la URL de autorización');
+      }
+    } catch (error: any) {
+      console.error('Error iniciando conexión con Google:', error);
+      const errorMessage = error.response?.data?.message || 'Error al conectar con Google. Por favor, intenta nuevamente.';
+      setWarningMessage(errorMessage);
+      setTimeout(() => setWarningMessage(''), 5000);
+      setConnectingEmail(false);
+    }
+  };
+
+  const handleSendEmail = async (emailData: { to: string; subject: string; body: string }) => {
+    try {
+      // Enviar email a través del backend (el backend obtendrá el token automáticamente)
+      await api.post('/emails/send', {
+        to: emailData.to,
+        subject: emailData.subject,
+        body: emailData.body,
+      });
+
+      // Registrar como actividad
+      await api.post('/activities', {
+        type: 'email',
+        subject: emailData.subject,
+        description: emailData.body.replace(/<[^>]*>/g, ''), // Remover HTML para la descripción
+        companyId: id,
+      });
+
+      // Actualizar actividades
+      fetchAssociatedRecords();
+    } catch (error: any) {
+      // Si el token expiró o no hay token, mostrar mensaje
+      if (error.response?.status === 401) {
+        throw new Error('Por favor, conecta tu correo desde Configuración > Perfil > Correo');
+      }
+      throw error;
+    }
   };
 
   const handleOpenCall = () => {
@@ -843,63 +946,122 @@ const CompanyDetail: React.FC = () => {
       return;
     }
     setSaving(true);
+    
+    // Variables para debugging
+    let companiesToCreateNote: number[] = [];
+    let finalCompanyIds: number[] = [];
+    let contactsToAssociate: number[] = [];
+    
     try {
-      await api.post('/activities', {
-        type: 'note',
-        subject: noteData.subject || `Nota para ${company?.name || 'Empresa'}`,
-        description: noteData.description,
-        companyId: id,
-      });
+      // Obtener empresas seleccionadas (incluyendo la empresa actual si no está excluida)
+      companiesToCreateNote = selectedCompanies.filter(companyId => !excludedCompanies.includes(companyId));
       
-      // Crear tarea de seguimiento si está marcada
-      if (createFollowUpTask) {
+      // Si no hay empresas seleccionadas, usar la empresa actual
+      finalCompanyIds = companiesToCreateNote.length > 0 ? companiesToCreateNote : (company?.id ? [company.id] : []);
+      
+      if (finalCompanyIds.length === 0) {
+        setSuccessMessage('Error: No hay empresas seleccionadas');
+        setTimeout(() => setSuccessMessage(''), 3000);
+        setSaving(false);
+        return;
+      }
+
+      // Obtener contactos seleccionados
+      contactsToAssociate = selectedContacts.filter(contactId => !excludedContacts.includes(contactId));
+      
+      // Crear notas para cada empresa seleccionada
+      const activityPromises: Promise<any>[] = [];
+      
+      for (const companyId of finalCompanyIds) {
+        // Obtener información de la empresa para el subject
+        let companyName = `Empresa ${companyId}`;
+        try {
+          const companyResponse = await api.get(`/companies/${companyId}`);
+          const companyData = companyResponse.data;
+          companyName = companyData.name || companyName;
+        } catch (e) {
+          console.error(`Error fetching company ${companyId}:`, e);
+        }
+
+        if (contactsToAssociate.length > 0) {
+          // Crear una nota para cada combinación de empresa y contacto
+          for (const contactId of contactsToAssociate) {
+            activityPromises.push(
+              api.post('/activities', {
+                type: 'note',
+                subject: noteData.subject || `Nota para ${companyName}`,
+                description: noteData.description,
+                companyId: companyId,
+                contactId: contactId,
+              })
+            );
+          }
+        } else {
+          // Crear nota solo con la empresa (sin contacto)
+          activityPromises.push(
+            api.post('/activities', {
+              type: 'note',
+              subject: noteData.subject || `Nota para ${companyName}`,
+              description: noteData.description,
+              companyId: companyId,
+            })
+          );
+        }
+      }
+      
+      // Ejecutar todas las creaciones en paralelo
+      await Promise.all(activityPromises);
+      
+      // Crear tarea de seguimiento si está marcada (solo para la primera empresa)
+      if (createFollowUpTask && finalCompanyIds.length > 0) {
         const followUpDate = new Date();
         followUpDate.setDate(followUpDate.getDate() + 3); // 3 días laborables
+        
+        // Obtener nombre de la primera empresa
+        let firstCompanyName = `Empresa ${finalCompanyIds[0]}`;
+        try {
+          const companyResponse = await api.get(`/companies/${finalCompanyIds[0]}`);
+          const companyData = companyResponse.data;
+          firstCompanyName = companyData.name || firstCompanyName;
+        } catch (e) {
+          console.error(`Error fetching company ${finalCompanyIds[0]}:`, e);
+        }
+        
         await api.post('/tasks', {
-          title: `Seguimiento de nota: ${noteData.subject || `Nota para ${company?.name || 'Empresa'}`}`,
+          title: `Seguimiento de nota: ${noteData.subject || `Nota para ${firstCompanyName}`}`,
           description: `Tarea de seguimiento generada automáticamente por la nota: ${noteData.description}`,
           type: 'todo',
           status: 'not started',
           priority: 'medium',
           dueDate: followUpDate.toISOString().split('T')[0],
-          companyId: id,
+          companyId: finalCompanyIds[0],
         });
       }
       
-      setSuccessMessage('Nota creada exitosamente' + (createFollowUpTask ? ' y tarea de seguimiento creada' : ''));
+      const noteCount = activityPromises.length;
+      setSuccessMessage(`Nota${noteCount > 1 ? 's' : ''} creada${noteCount > 1 ? 's' : ''} exitosamente${createFollowUpTask ? ' y tarea de seguimiento creada' : ''}`);
       setNoteOpen(false);
       setNoteData({ subject: '', description: '' });
       setCreateFollowUpTask(false);
+      setSelectedContacts([]);
+      setSelectedCompanies([]);
+      setExcludedContacts([]);
+      setExcludedCompanies([]);
       fetchAssociatedRecords(); // Actualizar actividades
       setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving note:', error);
-      setSuccessMessage('Error al crear la nota');
-      setTimeout(() => setSuccessMessage(''), 3000);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSaveEmail = async () => {
-    if (!emailData.subject.trim()) {
-      return;
-    }
-    setSaving(true);
-    try {
-      await api.post('/activities', {
-        type: 'email',
-        subject: emailData.subject,
-        description: emailData.description,
-        companyId: id,
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        selectedCompanies,
+        finalCompanyIds: companiesToCreateNote.length > 0 ? companiesToCreateNote : (company?.id ? [company.id] : []),
+        contactsToAssociate,
       });
-      setSuccessMessage('Email registrado exitosamente');
-      setEmailOpen(false);
-      setEmailData({ subject: '', description: '', to: '' });
-      fetchAssociatedRecords(); // Actualizar actividades
-      setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (error) {
-      console.error('Error saving email:', error);
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Error desconocido';
+      setSuccessMessage(`Error al crear la nota: ${errorMessage}`);
+      setTimeout(() => setSuccessMessage(''), 5000);
     } finally {
       setSaving(false);
     }
@@ -4765,13 +4927,13 @@ const CompanyDetail: React.FC = () => {
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
-            width: { xs: '95vw', sm: '1100px' },
-            maxWidth: { xs: '95vw', sm: '95vw' },
+            width: { xs: '95vw', sm: '700px' },
+            maxWidth: { xs: '95vw', sm: '90vw' },
             height: '85vh',
             backgroundColor: theme.palette.background.paper,
             boxShadow: theme.palette.mode === 'dark' 
-              ? '0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)' 
-              : '0 20px 60px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05)',
+              ? '0 20px 60px rgba(0,0,0,0.3)' 
+              : '0 20px 60px rgba(0,0,0,0.12)',
             zIndex: 1300,
             display: 'flex',
             flexDirection: 'column',
@@ -4804,19 +4966,6 @@ const CompanyDetail: React.FC = () => {
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <IconButton 
-                sx={{ 
-                  color: theme.palette.text.secondary, 
-                  '&:hover': { 
-                    backgroundColor: theme.palette.action.hover,
-                    color: theme.palette.text.primary,
-                  },
-                  transition: 'all 0.2s ease',
-                }} 
-                size="small"
-              >
-                <KeyboardArrowDown />
-              </IconButton>
               <Typography variant="h6" sx={{ 
                 color: theme.palette.text.primary, 
                 fontWeight: 600, 
@@ -4827,19 +4976,6 @@ const CompanyDetail: React.FC = () => {
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <IconButton 
-                sx={{ 
-                  color: theme.palette.text.secondary,
-                  '&:hover': { 
-                    backgroundColor: theme.palette.action.hover,
-                    color: theme.palette.text.primary,
-                  },
-                  transition: 'all 0.2s ease',
-                }} 
-                size="small"
-              >
-                <Fullscreen fontSize="small" />
-              </IconButton>
               <IconButton 
                 sx={{ 
                   color: theme.palette.text.secondary,
@@ -4865,17 +5001,14 @@ const CompanyDetail: React.FC = () => {
               flexGrow: 1, 
               display: 'flex', 
               flexDirection: 'column', 
-              border: `1px solid ${theme.palette.divider}`, 
+              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`, 
               borderRadius: 3,
               overflow: 'hidden',
               minHeight: '300px',
               backgroundColor: theme.palette.background.paper,
-              boxShadow: theme.palette.mode === 'dark' 
-                ? '0 2px 8px rgba(0,0,0,0.2)' 
-                : '0 2px 8px rgba(0,0,0,0.04)',
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:focus-within': {
-                boxShadow: `0 4px 16px ${taxiMonterricoColors.orange}25`,
+                boxShadow: `0 4px 16px ${taxiMonterricoColors.orange}40`,
                 borderColor: taxiMonterricoColors.orange,
                 transform: 'translateY(-1px)',
               },
@@ -4884,781 +5017,22 @@ const CompanyDetail: React.FC = () => {
                 value={noteData.description}
                 onChange={(value: string) => setNoteData({ ...noteData, description: value })}
                 placeholder="Empieza a escribir para dejar una nota..."
+                onAssociateClick={() => {
+                  setNoteAssociateModalOpen(true);
+                  setSelectedCategory('empresas');
+                  setAssociateSearch('');
+                  // Inicializar selecciones con los valores actuales
+                  setNoteSelectedAssociations({
+                    companies: selectedCompanies,
+                    contacts: selectedContacts,
+                    deals: selectedAssociations.filter((id: number) => id > 1000 && id < 2000).map(id => id - 1000),
+                    tickets: selectedAssociations.filter((id: number) => id > 2000).map(id => id - 2000),
+                  });
+                  fetchAssociations();
+                }}
               />
             </Box>
           </Box>
-
-          {/* Columna Derecha: Sección de Asociaciones */}
-          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-            {/* Sección "Asociado con X registros" - Siempre visible */}
-            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-              <Box sx={{ 
-                flexGrow: 1,
-                border: `1px solid ${theme.palette.divider}`, 
-                borderRadius: 3, 
-                p: 2.5, 
-                backgroundColor: theme.palette.background.paper,
-                display: 'flex',
-                gap: 2.5,
-                alignItems: 'flex-start',
-                overflow: 'hidden',
-                boxShadow: theme.palette.mode === 'dark' 
-                  ? '0 2px 8px rgba(0,0,0,0.2)' 
-                  : '0 2px 8px rgba(0,0,0,0.04)',
-                transition: 'all 0.2s ease',
-              }}>
-            <Box sx={{ 
-              border: `1px solid ${theme.palette.divider}`, 
-              borderRadius: 2, 
-              p: 2, 
-              backgroundColor: theme.palette.background.paper,
-              display: 'flex',
-              gap: 2,
-              alignItems: 'flex-start',
-              maxHeight: '500px',
-              overflow: 'hidden',
-              boxShadow: theme.palette.mode === 'dark' 
-                ? '0 1px 3px rgba(0,0,0,0.3)' 
-                : '0 1px 3px rgba(0,0,0,0.08)',
-            }}>
-              {/* Lista de categorías en el lado izquierdo */}
-              <Box sx={{ 
-                width: '220px', 
-                flexShrink: 0,
-                borderRight: `1px solid ${theme.palette.divider}`,
-                pr: 2.5,
-                maxHeight: '500px',
-                overflowY: 'auto',
-                overflowX: 'hidden',
-                '&::-webkit-scrollbar': {
-                  width: '8px',
-                },
-                '&::-webkit-scrollbar-track': {
-                  backgroundColor: 'transparent',
-                  borderRadius: '4px',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  backgroundColor: theme.palette.mode === 'dark' 
-                    ? 'rgba(255,255,255,0.2)' 
-                    : 'rgba(0,0,0,0.2)',
-                  borderRadius: '4px',
-                  '&:hover': {
-                    backgroundColor: theme.palette.mode === 'dark' 
-                      ? 'rgba(255,255,255,0.3)' 
-                      : 'rgba(0,0,0,0.3)',
-                  },
-                  transition: 'background-color 0.2s ease',
-                },
-              }}>
-                {/* Lista de categorías siempre visible */}
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                  <Box
-                    onClick={() => setSelectedAssociationCategory('Seleccionados')}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      p: 1.75,
-                      borderRadius: 2,
-                      cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Seleccionados' ? taxiMonterricoColors.orange : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Seleccionados' ? `4px solid ${taxiMonterricoColors.orangeDark}` : '4px solid transparent',
-                      color: selectedAssociationCategory === 'Seleccionados' ? 'white' : theme.palette.text.secondary,
-                      boxShadow: selectedAssociationCategory === 'Seleccionados' ? `0 2px 8px ${taxiMonterricoColors.orange}40` : 'none',
-                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '&:hover': {
-                        backgroundColor: selectedAssociationCategory === 'Seleccionados' ? taxiMonterricoColors.orangeDark : theme.palette.action.hover,
-                        transform: selectedAssociationCategory === 'Seleccionados' ? 'scale(1.02)' : 'translateX(4px)',
-                        boxShadow: selectedAssociationCategory === 'Seleccionados' ? `0 4px 12px ${taxiMonterricoColors.orange}50` : 'none',
-                      },
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ 
-                      fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Seleccionados' ? 'white' : theme.palette.text.secondary,
-                      fontWeight: selectedAssociationCategory === 'Seleccionados' ? 700 : 400,
-                    }}>
-                      Seleccionados
-                    </Typography>
-                    <Typography variant="body2" sx={{ 
-                      fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Seleccionados' ? 'white' : theme.palette.text.secondary,
-                      fontWeight: selectedAssociationCategory === 'Seleccionados' ? 600 : 500,
-                    }}>
-                      {totalAssociations}
-                    </Typography>
-                  </Box>
-                  
-                  <Box
-                    onClick={() => setSelectedAssociationCategory('Alertas')}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      p: 1.5,
-                      borderRadius: 1,
-                      cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Alertas' ? taxiMonterricoColors.orange : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Alertas' ? `4px solid ${taxiMonterricoColors.orangeDark}` : '4px solid transparent',
-                      color: selectedAssociationCategory === 'Alertas' ? 'white' : theme.palette.text.secondary,
-                      boxShadow: selectedAssociationCategory === 'Alertas' ? `0 2px 8px ${taxiMonterricoColors.orange}40` : 'none',
-                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '&:hover': {
-                        backgroundColor: selectedAssociationCategory === 'Alertas' ? taxiMonterricoColors.orangeDark : theme.palette.action.hover,
-                        transform: selectedAssociationCategory === 'Alertas' ? 'scale(1.02)' : 'translateX(4px)',
-                        boxShadow: selectedAssociationCategory === 'Alertas' ? `0 4px 12px ${taxiMonterricoColors.orange}50` : 'none',
-                      },
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ 
-                      fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Alertas' ? 'white' : theme.palette.text.secondary,
-                      fontWeight: selectedAssociationCategory === 'Alertas' ? 600 : 400,
-                    }}>
-                      Alertas del esp...
-                    </Typography>
-                    <Typography variant="body2" sx={{ 
-                      fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Alertas' ? 'white' : theme.palette.text.secondary,
-                      fontWeight: selectedAssociationCategory === 'Alertas' ? 600 : 500,
-                    }}>
-                      0
-                    </Typography>
-                  </Box>
-                  
-                  <Box
-                    onClick={() => setSelectedAssociationCategory('Carritos')}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      p: 1.5,
-                      borderRadius: 1,
-                      cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Carritos' ? taxiMonterricoColors.orange : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Carritos' ? `4px solid ${taxiMonterricoColors.orangeDark}` : '4px solid transparent',
-                      color: selectedAssociationCategory === 'Carritos' ? 'white' : theme.palette.text.secondary,
-                      boxShadow: selectedAssociationCategory === 'Carritos' ? `0 2px 8px ${taxiMonterricoColors.orange}40` : 'none',
-                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '&:hover': {
-                        backgroundColor: selectedAssociationCategory === 'Carritos' ? taxiMonterricoColors.orangeDark : theme.palette.action.hover,
-                        transform: selectedAssociationCategory === 'Carritos' ? 'scale(1.02)' : 'translateX(4px)',
-                        boxShadow: selectedAssociationCategory === 'Carritos' ? `0 4px 12px ${taxiMonterricoColors.orange}50` : 'none',
-                      },
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ 
-                      fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Carritos' ? 'white' : theme.palette.text.secondary,
-                      fontWeight: selectedAssociationCategory === 'Carritos' ? 600 : 400,
-                    }}>
-                      Carritos
-                    </Typography>
-                    <Typography variant="body2" sx={{ 
-                      fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Carritos' ? 'white' : theme.palette.text.secondary,
-                      fontWeight: selectedAssociationCategory === 'Carritos' ? 600 : 500,
-                    }}>
-                      0
-                    </Typography>
-                  </Box>
-                  
-                  <Box
-                    onClick={() => setSelectedAssociationCategory('Clientes')}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      p: 1.5,
-                      borderRadius: 1,
-                      cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Clientes' ? taxiMonterricoColors.orange : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Clientes' ? `4px solid ${taxiMonterricoColors.orangeDark}` : '4px solid transparent',
-                      color: selectedAssociationCategory === 'Clientes' ? 'white' : theme.palette.text.secondary,
-                      boxShadow: selectedAssociationCategory === 'Clientes' ? `0 2px 8px ${taxiMonterricoColors.orange}40` : 'none',
-                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '&:hover': {
-                        backgroundColor: selectedAssociationCategory === 'Clientes' ? taxiMonterricoColors.orangeDark : theme.palette.action.hover,
-                        transform: selectedAssociationCategory === 'Clientes' ? 'scale(1.02)' : 'translateX(4px)',
-                        boxShadow: selectedAssociationCategory === 'Clientes' ? `0 4px 12px ${taxiMonterricoColors.orange}50` : 'none',
-                      },
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ 
-                      fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Clientes' ? 'white' : theme.palette.text.secondary,
-                      fontWeight: selectedAssociationCategory === 'Clientes' ? 600 : 400,
-                    }}>
-                      Clientes de par...
-                    </Typography>
-                    <Typography variant="body2" sx={{ 
-                      fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Clientes' ? 'white' : theme.palette.text.secondary,
-                      fontWeight: selectedAssociationCategory === 'Clientes' ? 600 : 500,
-                    }}>
-                      0
-                    </Typography>
-                  </Box>
-                  
-                  <Box
-                    onClick={() => setSelectedAssociationCategory('Contactos')}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      p: 1.5,
-                      borderRadius: 1,
-                      cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Contactos' ? taxiMonterricoColors.orange : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Contactos' ? `4px solid ${taxiMonterricoColors.orangeDark}` : '4px solid transparent',
-                      color: selectedAssociationCategory === 'Contactos' ? 'white' : theme.palette.text.secondary,
-                      boxShadow: selectedAssociationCategory === 'Contactos' ? `0 2px 8px ${taxiMonterricoColors.orange}40` : 'none',
-                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '&:hover': {
-                        backgroundColor: selectedAssociationCategory === 'Contactos' ? taxiMonterricoColors.orangeDark : theme.palette.action.hover,
-                        transform: selectedAssociationCategory === 'Contactos' ? 'scale(1.02)' : 'translateX(4px)',
-                        boxShadow: selectedAssociationCategory === 'Contactos' ? `0 4px 12px ${taxiMonterricoColors.orange}50` : 'none',
-                      },
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ 
-                      fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Contactos' ? 'white' : theme.palette.text.secondary,
-                      fontWeight: selectedAssociationCategory === 'Contactos' ? 600 : 400,
-                    }}>
-                      Contactos
-                    </Typography>
-                    <Typography variant="body2" sx={{ 
-                      fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Contactos' ? 'white' : theme.palette.text.secondary,
-                      fontWeight: selectedAssociationCategory === 'Contactos' ? 600 : 500,
-                    }}>
-                      {contactsToCount.length}
-                    </Typography>
-                  </Box>
-                  
-                  <Box
-                    onClick={() => setSelectedAssociationCategory('Leads')}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      p: 1.5,
-                      borderRadius: 1,
-                      cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Leads' ? taxiMonterricoColors.orange : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Leads' ? `4px solid ${taxiMonterricoColors.orangeDark}` : '4px solid transparent',
-                      color: selectedAssociationCategory === 'Leads' ? 'white' : theme.palette.text.secondary,
-                      boxShadow: selectedAssociationCategory === 'Leads' ? `0 2px 8px ${taxiMonterricoColors.orange}40` : 'none',
-                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '&:hover': {
-                        backgroundColor: selectedAssociationCategory === 'Leads' ? taxiMonterricoColors.orangeDark : theme.palette.action.hover,
-                        transform: selectedAssociationCategory === 'Leads' ? 'scale(1.02)' : 'translateX(4px)',
-                        boxShadow: selectedAssociationCategory === 'Leads' ? `0 4px 12px ${taxiMonterricoColors.orange}50` : 'none',
-                      },
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ 
-                      fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Leads' ? 'white' : theme.palette.text.secondary,
-                      fontWeight: selectedAssociationCategory === 'Leads' ? 600 : 400,
-                    }}>
-                      Leads
-                    </Typography>
-                    <Typography variant="body2" sx={{ 
-                      fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Leads' ? 'white' : theme.palette.text.secondary,
-                      fontWeight: selectedAssociationCategory === 'Leads' ? 600 : 500,
-                    }}>
-                      {selectedLeads.length}
-                    </Typography>
-                  </Box>
-                  
-                  <Box
-                    onClick={() => setSelectedAssociationCategory('Negocios')}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      p: 1.5,
-                      borderRadius: 1,
-                      cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Negocios' ? taxiMonterricoColors.orange : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Negocios' ? `4px solid ${taxiMonterricoColors.orangeDark}` : '4px solid transparent',
-                      color: selectedAssociationCategory === 'Negocios' ? 'white' : theme.palette.text.secondary,
-                      boxShadow: selectedAssociationCategory === 'Negocios' ? `0 2px 8px ${taxiMonterricoColors.orange}40` : 'none',
-                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '&:hover': {
-                        backgroundColor: selectedAssociationCategory === 'Negocios' ? taxiMonterricoColors.orangeDark : theme.palette.action.hover,
-                        transform: selectedAssociationCategory === 'Negocios' ? 'scale(1.02)' : 'translateX(4px)',
-                        boxShadow: selectedAssociationCategory === 'Negocios' ? `0 4px 12px ${taxiMonterricoColors.orange}50` : 'none',
-                      },
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ 
-                      fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Negocios' ? 'white' : theme.palette.text.secondary,
-                      fontWeight: selectedAssociationCategory === 'Negocios' ? 600 : 400,
-                    }}>
-                      Negocios
-                    </Typography>
-                    <Typography variant="body2" sx={{ 
-                      fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Negocios' ? 'white' : theme.palette.text.secondary,
-                      fontWeight: selectedAssociationCategory === 'Negocios' ? 600 : 500,
-                    }}>
-                      {(() => {
-                        const selectedDealIds = selectedAssociations.filter((id: number) => id > 1000 && id < 2000).map(id => id - 1000);
-                        const associatedDealIds = (associatedDeals || [])
-                          .map((d: any) => d && d.id)
-                          .filter((id: any) => id !== undefined && id !== null && !excludedDeals.includes(id));
-                        const allDealIds = [...selectedDealIds, ...associatedDealIds];
-                        return allDealIds.filter((id, index) => allDealIds.indexOf(id) === index).length;
-                      })()}
-                    </Typography>
-                  </Box>
-                  
-                  <Box
-                    onClick={() => setSelectedAssociationCategory('Tickets')}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      p: 1.5,
-                      borderRadius: 1,
-                      cursor: 'pointer',
-                      backgroundColor: selectedAssociationCategory === 'Tickets' ? taxiMonterricoColors.orange : 'transparent',
-                      borderLeft: selectedAssociationCategory === 'Tickets' ? `4px solid ${taxiMonterricoColors.orangeDark}` : '4px solid transparent',
-                      color: selectedAssociationCategory === 'Tickets' ? 'white' : theme.palette.text.secondary,
-                      boxShadow: selectedAssociationCategory === 'Tickets' ? `0 2px 8px ${taxiMonterricoColors.orange}40` : 'none',
-                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '&:hover': {
-                        backgroundColor: selectedAssociationCategory === 'Tickets' ? taxiMonterricoColors.orangeDark : theme.palette.action.hover,
-                        transform: selectedAssociationCategory === 'Tickets' ? 'scale(1.02)' : 'translateX(4px)',
-                        boxShadow: selectedAssociationCategory === 'Tickets' ? `0 4px 12px ${taxiMonterricoColors.orange}50` : 'none',
-                      },
-                    }}
-                  >
-                    <Typography variant="body2" sx={{ 
-                      fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Tickets' ? 'white' : theme.palette.text.secondary,
-                      fontWeight: selectedAssociationCategory === 'Tickets' ? 600 : 400,
-                    }}>
-                      Tickets
-                    </Typography>
-                    <Typography variant="body2" sx={{ 
-                      fontSize: '0.875rem', 
-                      color: selectedAssociationCategory === 'Tickets' ? 'white' : theme.palette.text.secondary,
-                      fontWeight: selectedAssociationCategory === 'Tickets' ? 600 : 500,
-                    }}>
-                      {(() => {
-                        const selectedTicketIds = selectedAssociations.filter((id: number) => id > 2000).map(id => id - 2000);
-                        const associatedTicketIds = (associatedTickets || [])
-                          .map((t: any) => t && t.id)
-                          .filter((id: any) => id !== undefined && id !== null && !excludedTickets.includes(id));
-                        const allTicketIds = [...selectedTicketIds, ...associatedTicketIds];
-                        return allTicketIds.filter((id, index) => allTicketIds.indexOf(id) === index).length;
-                      })()}
-                    </Typography>
-                  </Box>
-                </Box>
-              </Box>
-
-              {/* Área de búsqueda y resultados - Siempre visible */}
-              <Box sx={{ flex: 1, pl: 2, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, flexShrink: 0 }}>
-                  <Typography variant="body2" sx={{ color: taxiMonterricoColors.orange, fontWeight: 500, fontSize: '0.875rem' }}>
-                    {selectedAssociationCategory} ({
-                      selectedAssociationCategory === 'Contactos' ? (() => {
-                        const associatedContactIds = (associatedContacts || [])
-                          .map((c: any) => c && c.id)
-                          .filter((id: any) => id !== undefined && id !== null && !excludedContacts.includes(id));
-                        const allContactIds = [...selectedContacts, ...associatedContactIds];
-                        return allContactIds.filter((id, index) => allContactIds.indexOf(id) === index).length;
-                      })() :
-                      selectedAssociationCategory === 'Negocios' ? (() => {
-                        const selectedDealIds = selectedAssociations.filter((id: number) => id > 1000 && id < 2000).map(id => id - 1000);
-                        const associatedDealIds = (associatedDeals || [])
-                          .map((d: any) => d && d.id)
-                          .filter((id: any) => id !== undefined && id !== null && !excludedDeals.includes(id));
-                        const allDealIds = [...selectedDealIds, ...associatedDealIds];
-                        return allDealIds.filter((id, index) => allDealIds.indexOf(id) === index).length;
-                      })() :
-                      selectedAssociationCategory === 'Tickets' ? (() => {
-                        const selectedTicketIds = selectedAssociations.filter((id: number) => id > 2000).map(id => id - 2000);
-                        const associatedTicketIds = (associatedTickets || [])
-                          .map((t: any) => t && t.id)
-                          .filter((id: any) => id !== undefined && id !== null && !excludedTickets.includes(id));
-                        const allTicketIds = [...selectedTicketIds, ...associatedTicketIds];
-                        return allTicketIds.filter((id, index) => allTicketIds.indexOf(id) === index).length;
-                      })() :
-                      selectedAssociationCategory === 'Leads' ? selectedLeads.length : 0
-                    })
-                  </Typography>
-                  <KeyboardArrowDown sx={{ color: taxiMonterricoColors.orange, fontSize: 18 }} />
-                </Box>
-                <TextField
-                  size="small"
-                  placeholder={`Buscar ${selectedAssociationCategory === 'Contactos' ? 'Contactos' : selectedAssociationCategory === 'Leads' ? 'Leads' : selectedAssociationCategory === 'Negocios' ? 'Negocios' : selectedAssociationCategory === 'Tickets' ? 'Tickets' : selectedAssociationCategory}`}
-                  value={associationSearch}
-                  onChange={(e) => setAssociationSearch(e.target.value)}
-                  fullWidth
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <Search sx={{ color: taxiMonterricoColors.orange }} />
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    mb: 2,
-                    flexShrink: 0,
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 2,
-                      backgroundColor: theme.palette.background.paper,
-                      transition: 'all 0.2s ease',
-                      '& fieldset': {
-                        borderColor: theme.palette.divider,
-                        borderWidth: '1.5px',
-                      },
-                      '&:hover fieldset': {
-                        borderColor: taxiMonterricoColors.orange,
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderColor: taxiMonterricoColors.orange,
-                        borderWidth: '2px',
-                      },
-                    },
-                  }}
-                />
-                
-                {/* Resultados de búsqueda */}
-                <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}>
-                    {selectedAssociationCategory === 'Contactos' && (
-                      <>
-                        {(allContacts.length > 0 ? allContacts : associatedContacts).filter((contact: any) => 
-                          !associationSearch || 
-                          (contact.firstName && contact.firstName.toLowerCase().includes(associationSearch.toLowerCase())) ||
-                          (contact.lastName && contact.lastName.toLowerCase().includes(associationSearch.toLowerCase())) ||
-                          (contact.email && contact.email.toLowerCase().includes(associationSearch.toLowerCase()))
-                        ).map((contact: any) => {
-                          // Verificar si el contacto está asociado o seleccionado
-                          const isAssociated = associatedContacts.some((ac: any) => ac && ac.id === contact.id);
-                          const isSelected = selectedContacts.includes(contact.id);
-                          const isExcluded = excludedContacts.includes(contact.id);
-                          // Está marcado si está seleccionado o asociado, pero no si fue excluido
-                          const shouldBeChecked = (isSelected || isAssociated) && !isExcluded;
-                          
-                          return (
-                            <Box key={contact.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: theme.palette.action.hover } }}>
-                              <Checkbox
-                                checked={shouldBeChecked}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    // Si está asociado y estaba excluido, removerlo de excluidos
-                                    if (isExcluded) {
-                                      setExcludedContacts(excludedContacts.filter((id: number) => id !== contact.id));
-                                    }
-                                    // Si no está en selectedContacts, agregarlo
-                                    if (!selectedContacts.includes(contact.id)) {
-                                      setSelectedContacts([...selectedContacts, contact.id]);
-                                    }
-                                  } else {
-                                    // Si se desmarca, remover de selectedContacts y agregar a excluidos si está asociado
-                                    setSelectedContacts(selectedContacts.filter((id: number) => id !== contact.id));
-                                    if (isAssociated && !excludedContacts.includes(contact.id)) {
-                                      setExcludedContacts([...excludedContacts, contact.id]);
-                                    }
-                                  }
-                                }}
-                                sx={{
-                                  color: taxiMonterricoColors.orange,
-                                  borderRadius: '4px',
-                                  padding: '4px',
-                                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                  '&:hover': {
-                                    backgroundColor: `${taxiMonterricoColors.orange}10`,
-                                    transform: 'scale(1.1)',
-                                  },
-                                  '&.Mui-checked': {
-                                    color: 'white',
-                                    backgroundColor: taxiMonterricoColors.orange,
-                                    '&:hover': {
-                                      backgroundColor: taxiMonterricoColors.orangeDark,
-                                      transform: 'scale(1.1)',
-                                    },
-                                  },
-                                  '& .MuiSvgIcon-root': {
-                                    fontSize: '1.5rem',
-                                    borderRadius: '4px',
-                                    border: `2px solid ${taxiMonterricoColors.orange}`,
-                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                  },
-                                  '&.Mui-checked .MuiSvgIcon-root': {
-                                    border: `2px solid ${taxiMonterricoColors.orange}`,
-                                    boxShadow: `0 2px 8px ${taxiMonterricoColors.orange}40`,
-                                  },
-                                }}
-                              />
-                              <Tooltip
-                                title={
-                                  <Box>
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                                      {contact.firstName} {contact.lastName}
-                                    </Typography>
-                                    {contact.email && (
-                                      <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                                        {contact.email}
-                                      </Typography>
-                                    )}
-                                  </Box>
-                                }
-                                arrow
-                                placement="top"
-                              >
-                                <Typography 
-                                  variant="body2" 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigate(`/contacts/${contact.id}`);
-                                  }}
-                                  sx={{ 
-                                    fontSize: '0.875rem', 
-                                    flex: 1,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  {contact.firstName} {contact.lastName}
-                                  {contact.email && (
-                                    <Typography component="span" variant="body2" sx={{ color: 'text.secondary', ml: 0.5, fontSize: '0.875rem' }}>
-                                      ({contact.email})
-                                    </Typography>
-                                  )}
-                                </Typography>
-                              </Tooltip>
-                            </Box>
-                          );
-                        })}
-                        {(allContacts.length > 0 ? allContacts : associatedContacts).length === 0 && (
-                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', p: 1 }}>
-                            No hay contactos disponibles
-                          </Typography>
-                        )}
-                      </>
-                  )}
-                  {selectedAssociationCategory === 'Negocios' && (
-                      <>
-                        {associatedDeals.filter((deal: any) => 
-                          !associationSearch || deal.name.toLowerCase().includes(associationSearch.toLowerCase())
-                        ).map((deal: any) => {
-                          const dealId = 1000 + deal.id; // Usar IDs > 1000 para negocios
-                          // Verificar si el negocio está asociado automáticamente o seleccionado manualmente
-                          const isAssociated = associatedDeals.some((ad: any) => ad && ad.id === deal.id);
-                          const isSelected = selectedAssociations.includes(dealId);
-                          const isExcluded = excludedDeals.includes(deal.id);
-                          // Está marcado si está seleccionado o asociado, pero no si fue excluido
-                          const shouldBeChecked = (isSelected || isAssociated) && !isExcluded;
-                          
-                          return (
-                            <Box key={deal.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: theme.palette.action.hover } }}>
-                              <Checkbox
-                                checked={shouldBeChecked}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    // Si está asociado y estaba excluido, removerlo de excluidos
-                                    if (isExcluded) {
-                                      setExcludedDeals(excludedDeals.filter(id => id !== deal.id));
-                                    }
-                                    // Si no está en selectedAssociations, agregarlo
-                                    if (!selectedAssociations.includes(dealId)) {
-                                      setSelectedAssociations([...selectedAssociations, dealId]);
-                                    }
-                                  } else {
-                                    // Si se desmarca, remover de selectedAssociations y agregar a excluidos si está asociado
-                                    setSelectedAssociations(selectedAssociations.filter(id => id !== dealId));
-                                    if (isAssociated && !excludedDeals.includes(deal.id)) {
-                                      setExcludedDeals([...excludedDeals, deal.id]);
-                                    }
-                                  }
-                                }}
-                                sx={{
-                                  color: taxiMonterricoColors.orange,
-                                  borderRadius: '4px',
-                                  padding: '4px',
-                                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                  '&:hover': {
-                                    backgroundColor: `${taxiMonterricoColors.orange}10`,
-                                    transform: 'scale(1.1)',
-                                  },
-                                  '&.Mui-checked': {
-                                    color: 'white',
-                                    backgroundColor: taxiMonterricoColors.orange,
-                                    '&:hover': {
-                                      backgroundColor: taxiMonterricoColors.orangeDark,
-                                      transform: 'scale(1.1)',
-                                    },
-                                  },
-                                  '& .MuiSvgIcon-root': {
-                                    fontSize: '1.5rem',
-                                    borderRadius: '4px',
-                                    border: `2px solid ${taxiMonterricoColors.orange}`,
-                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                  },
-                                  '&.Mui-checked .MuiSvgIcon-root': {
-                                    border: `2px solid ${taxiMonterricoColors.orange}`,
-                                    boxShadow: `0 2px 8px ${taxiMonterricoColors.orange}40`,
-                                  },
-                                }}
-                              />
-                              <Tooltip
-                                title={
-                                  <Box>
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                      {deal.name}
-                                    </Typography>
-                                  </Box>
-                                }
-                                arrow
-                                placement="top"
-                              >
-                                <Typography 
-                                  variant="body2" 
-                                  sx={{ 
-                                    fontSize: '0.875rem', 
-                                    flex: 1,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  {deal.name}
-                                </Typography>
-                              </Tooltip>
-                            </Box>
-                          );
-                        })}
-                        {associatedDeals.length === 0 && (
-                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', p: 1 }}>
-                            No hay negocios asociados
-                          </Typography>
-                        )}
-                      </>
-                  )}
-                  {selectedAssociationCategory === 'Tickets' && (
-                      <>
-                        {associatedTickets.filter((ticket: any) => 
-                          !associationSearch || ticket.subject.toLowerCase().includes(associationSearch.toLowerCase())
-                        ).map((ticket: any) => {
-                          const ticketId = 2000 + ticket.id; // Usar IDs > 2000 para tickets
-                          // Verificar si el ticket está asociado automáticamente o seleccionado manualmente
-                          const isAssociated = associatedTickets.some((at: any) => at && at.id === ticket.id);
-                          const isSelected = selectedAssociations.includes(ticketId);
-                          const isExcluded = excludedTickets.includes(ticket.id);
-                          // Está marcado si está seleccionado o asociado, pero no si fue excluido
-                          const shouldBeChecked = (isSelected || isAssociated) && !isExcluded;
-                          
-                          return (
-                            <Box key={ticket.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: theme.palette.action.hover } }}>
-                              <Checkbox
-                                checked={shouldBeChecked}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    // Si está asociado y estaba excluido, removerlo de excluidos
-                                    if (isExcluded) {
-                                      setExcludedTickets(excludedTickets.filter(id => id !== ticket.id));
-                                    }
-                                    // Si no está en selectedAssociations, agregarlo
-                                    if (!selectedAssociations.includes(ticketId)) {
-                                      setSelectedAssociations([...selectedAssociations, ticketId]);
-                                    }
-                                  } else {
-                                    // Si se desmarca, remover de selectedAssociations y agregar a excluidos si está asociado
-                                    setSelectedAssociations(selectedAssociations.filter(id => id !== ticketId));
-                                    if (isAssociated && !excludedTickets.includes(ticket.id)) {
-                                      setExcludedTickets([...excludedTickets, ticket.id]);
-                                    }
-                                  }
-                                }}
-                                sx={{
-                                  color: taxiMonterricoColors.orange,
-                                  borderRadius: '4px',
-                                  padding: '4px',
-                                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                  '&:hover': {
-                                    backgroundColor: `${taxiMonterricoColors.orange}10`,
-                                    transform: 'scale(1.1)',
-                                  },
-                                  '&.Mui-checked': {
-                                    color: 'white',
-                                    backgroundColor: taxiMonterricoColors.orange,
-                                    '&:hover': {
-                                      backgroundColor: taxiMonterricoColors.orangeDark,
-                                      transform: 'scale(1.1)',
-                                    },
-                                  },
-                                  '& .MuiSvgIcon-root': {
-                                    fontSize: '1.5rem',
-                                    borderRadius: '4px',
-                                    border: `2px solid ${taxiMonterricoColors.orange}`,
-                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                  },
-                                  '&.Mui-checked .MuiSvgIcon-root': {
-                                    border: `2px solid ${taxiMonterricoColors.orange}`,
-                                    boxShadow: `0 2px 8px ${taxiMonterricoColors.orange}40`,
-                                  },
-                                }}
-                              />
-                              <Tooltip
-                                title={
-                                  <Box>
-                                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                                      {ticket.subject}
-                                    </Typography>
-                                    {ticket.description && (
-                                      <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                                        {ticket.description}
-                                      </Typography>
-                                    )}
-                                  </Box>
-                                }
-                                arrow
-                                placement="top"
-                              >
-                                <Typography 
-                                  variant="body2" 
-                                  sx={{ 
-                                    fontSize: '0.875rem', 
-                                    flex: 1,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    whiteSpace: 'nowrap',
-                                    cursor: 'pointer',
-                                  }}
-                                >
-                                  {ticket.subject}
-                                </Typography>
-                              </Tooltip>
-                            </Box>
-                          );
-                        })}
-                        {associatedTickets.length === 0 && (
-                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', p: 1 }}>
-                            No hay tickets asociados
-                          </Typography>
-                        )}
-                      </>
-                  )}
-                </Box>
-              </Box>
-            </Box>
-          </Box>
-          </Box>
-          </Box>
-
           </Box>
 
           {/* Footer con botones */}
@@ -5731,7 +5105,7 @@ const CompanyDetail: React.FC = () => {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.1)',
+            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
             zIndex: 1299,
             animation: 'fadeIn 0.3s ease-out',
             '@keyframes fadeIn': {
@@ -5747,120 +5121,740 @@ const CompanyDetail: React.FC = () => {
         />
       )}
 
-      {/* Ventana flotante de Email */}
-      {emailOpen && (
-        <>
+      {/* Modal de Asociados para Nota */}
+      <Dialog
+        open={noteAssociateModalOpen}
+        onClose={() => setNoteAssociateModalOpen(false)}
+        maxWidth="sm"
+        fullWidth={false}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            maxHeight: '80vh',
+            width: '700px',
+            maxWidth: '90vw',
+          },
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            height: '500px',
+          }}
+        >
+          {/* Panel izquierdo - Categorías */}
           <Box
             sx={{
-              position: 'fixed',
-              top: 0,
-              right: 0,
-              width: '500px',
-              maxWidth: '90vw',
-              height: '100vh',
-              backgroundColor: 'white',
-              boxShadow: '-4px 0 20px rgba(0,0,0,0.15)',
-              zIndex: 1300,
+              width: 160,
+              borderRight: `1px solid ${theme.palette.divider}`,
+              backgroundColor: theme.palette.mode === 'dark' ? '#1e1e1e' : '#fafafa',
+              overflowY: 'auto',
+            }}
+          >
+            <List sx={{ p: 0 }}>
+              <ListItem disablePadding>
+                <ListItemButton
+                  selected={selectedCategory === 'seleccionados'}
+                  onClick={() => setSelectedCategory('seleccionados')}
+                  sx={{
+                    py: 1.5,
+                    px: 2,
+                    '&.Mui-selected': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
+                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
+                      '&:hover': {
+                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                      },
+                    },
+                  }}
+                >
+                  <ListItemText
+                    primary="Seleccionados"
+                    secondary={Object.values(noteSelectedAssociations).flat().length}
+                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                  />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton
+                  selected={selectedCategory === 'empresas'}
+                  onClick={() => setSelectedCategory('empresas')}
+                  sx={{
+                    py: 1.5,
+                    px: 2,
+                    '&.Mui-selected': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
+                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
+                      '&:hover': {
+                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                      },
+                    },
+                  }}
+                >
+                  <ListItemText
+                    primary="Empresas"
+                    secondary={noteModalCompanies.length}
+                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                  />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton
+                  selected={selectedCategory === 'contactos'}
+                  onClick={() => setSelectedCategory('contactos')}
+                  sx={{
+                    py: 1.5,
+                    px: 2,
+                    '&.Mui-selected': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
+                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
+                      '&:hover': {
+                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                      },
+                    },
+                  }}
+                >
+                  <ListItemText
+                    primary="Contactos"
+                    secondary={noteModalContacts.length}
+                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                  />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton
+                  selected={selectedCategory === 'negocios'}
+                  onClick={() => setSelectedCategory('negocios')}
+                  sx={{
+                    py: 1.5,
+                    px: 2,
+                    '&.Mui-selected': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
+                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
+                      '&:hover': {
+                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                      },
+                    },
+                  }}
+                >
+                  <ListItemText
+                    primary="Negocios"
+                    secondary={noteModalDeals.length}
+                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                  />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton
+                  selected={selectedCategory === 'tickets'}
+                  onClick={() => setSelectedCategory('tickets')}
+                  sx={{
+                    py: 1.5,
+                    px: 2,
+                    '&.Mui-selected': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
+                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
+                      '&:hover': {
+                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                      },
+                    },
+                  }}
+                >
+                  <ListItemText
+                    primary="Tickets"
+                    secondary={noteModalTickets.length}
+                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                  />
+                </ListItemButton>
+              </ListItem>
+            </List>
+          </Box>
+
+          {/* Panel derecho - Contenido */}
+          <Box
+            sx={{
+              flex: 1,
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              animation: 'slideInRight 0.3s ease-out',
-              '@keyframes slideInRight': {
-                '0%': {
-                  transform: 'translateX(100%)',
-                },
-                '100%': {
-                  transform: 'translateX(0)',
-                },
-              },
             }}
-            onClick={(e) => e.stopPropagation()}
           >
+            {/* Header */}
             <Box
               sx={{
-                p: 0,
-                m: 0,
-                backgroundColor: '#37474F',
-                color: 'white',
+                p: 2,
+                borderBottom: `1px solid ${theme.palette.divider}`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                minHeight: '50px',
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', pl: 2 }}>
-                <Typography variant="h6" sx={{ color: 'white', fontWeight: 500 }}>Correo</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <IconButton sx={{ color: 'white', mr: 1 }} size="small" onClick={() => setEmailOpen(false)}>
-                  <Close fontSize="small" />
-                </IconButton>
-              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>
+                Asociar
+              </Typography>
+              <IconButton
+                onClick={() => setNoteAssociateModalOpen(false)}
+                size="small"
+              >
+                <Close />
+              </IconButton>
             </Box>
 
-            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 2, overflow: 'hidden', overflowY: 'auto' }}>
-              <TextField
-                label="Para"
-                value={emailData.to}
-                onChange={(e) => setEmailData({ ...emailData, to: e.target.value })}
-                fullWidth
-                disabled
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                label="Asunto"
-                value={emailData.subject}
-                onChange={(e) => setEmailData({ ...emailData, subject: e.target.value })}
-                required
-                fullWidth
-                sx={{ mb: 2 }}
-              />
-              <TextField
-                label="Mensaje"
-                multiline
-                rows={10}
-                value={emailData.description}
-                onChange={(e) => setEmailData({ ...emailData, description: e.target.value })}
-                fullWidth
-                sx={{ mb: 2 }}
-              />
-            </Box>
-
-            <Box sx={{ p: 2, borderTop: '1px solid #e0e0e0', backgroundColor: '#fafafa', display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
-              <Button onClick={() => setEmailOpen(false)} color="inherit" sx={{ textTransform: 'none' }}>
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleSaveEmail} 
-                variant="contained" 
-                disabled={saving || !emailData.subject.trim()}
-                sx={{ 
-                  textTransform: 'none',
-                  backgroundColor: saving ? '#bdbdbd' : '#757575',
-                  '&:hover': {
-                    backgroundColor: saving ? '#bdbdbd' : '#616161',
-                  },
+            {/* Búsqueda */}
+            <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: 1,
+                  px: 1.5,
+                  py: 0.75,
+                  backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : '#f5f5f5',
                 }}
               >
-                {saving ? 'Guardando...' : 'Guardar'}
-              </Button>
+                <Search sx={{ color: theme.palette.text.secondary, mr: 1, fontSize: 20 }} />
+                <InputBase
+                  placeholder="Buscar asociaciones actuales"
+                  value={associateSearch}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setAssociateSearch(value);
+                    if (value.trim().length > 0) {
+                      fetchAssociations(value);
+                    } else {
+                      fetchAssociations();
+                    }
+                  }}
+                  sx={{
+                    flex: 1,
+                    fontSize: '0.875rem',
+                    '& input': {
+                      py: 0.5,
+                    },
+                  }}
+                />
+              </Box>
+            </Box>
+
+            {/* Contenido */}
+            <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
+              {loadingAssociations ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                  <CircularProgress />
+                </Box>
+              ) : (
+                <>
+                  {selectedCategory === 'empresas' && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                        Empresas
+                      </Typography>
+                      <List sx={{ p: 0 }}>
+                        {noteModalCompanies
+                          .filter((company: any) => 
+                            !associateSearch || company.name?.toLowerCase().includes(associateSearch.toLowerCase()) || 
+                            company.domain?.toLowerCase().includes(associateSearch.toLowerCase())
+                          )
+                          .map((company: any) => (
+                            <ListItem key={company.id} disablePadding>
+                              <ListItemButton
+                                sx={{ py: 0.75, px: 1 }}
+                                onClick={() => {
+                                  const current = noteSelectedAssociations.companies || [];
+                                  if (current.includes(company.id)) {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      companies: current.filter((id) => id !== company.id),
+                                    });
+                                  } else {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      companies: [...current, company.id],
+                                    });
+                                  }
+                                }}
+                              >
+                                <Checkbox
+                                  checked={noteSelectedAssociations.companies?.includes(company.id) || false}
+                                  size="small"
+                                  sx={{ p: 0.5, mr: 1 }}
+                                />
+                                <ListItemText
+                                  primary={company.name}
+                                  secondary={company.domain}
+                                  primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                  secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                />
+                              </ListItemButton>
+                            </ListItem>
+                          ))}
+                      </List>
+                    </Box>
+                  )}
+
+                  {selectedCategory === 'contactos' && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                        Contactos
+                      </Typography>
+                      <List sx={{ p: 0 }}>
+                        {noteModalContacts
+                          .filter((contactItem: any) => 
+                            !associateSearch || 
+                            `${contactItem.firstName} ${contactItem.lastName}`.toLowerCase().includes(associateSearch.toLowerCase()) ||
+                            contactItem.email?.toLowerCase().includes(associateSearch.toLowerCase())
+                          )
+                          .map((contactItem: any) => (
+                            <ListItem key={contactItem.id} disablePadding>
+                              <ListItemButton
+                                sx={{ py: 0.75, px: 1 }}
+                                onClick={() => {
+                                  const current = noteSelectedAssociations.contacts || [];
+                                  if (current.includes(contactItem.id)) {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      contacts: current.filter((id) => id !== contactItem.id),
+                                    });
+                                  } else {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      contacts: [...current, contactItem.id],
+                                    });
+                                  }
+                                }}
+                              >
+                                <Checkbox
+                                  checked={noteSelectedAssociations.contacts?.includes(contactItem.id) || false}
+                                  size="small"
+                                  sx={{ p: 0.5, mr: 1 }}
+                                />
+                                <ListItemText
+                                  primary={`${contactItem.firstName} ${contactItem.lastName}`}
+                                  secondary={contactItem.email}
+                                  primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                  secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                />
+                              </ListItemButton>
+                            </ListItem>
+                          ))}
+                      </List>
+                    </Box>
+                  )}
+
+                  {selectedCategory === 'negocios' && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                        Negocios
+                      </Typography>
+                      <List sx={{ p: 0 }}>
+                        {noteModalDeals
+                          .filter((deal: any) => 
+                            !associateSearch || deal.name?.toLowerCase().includes(associateSearch.toLowerCase())
+                          )
+                          .map((deal: any) => (
+                            <ListItem key={deal.id} disablePadding>
+                              <ListItemButton
+                                sx={{ py: 0.75, px: 1 }}
+                                onClick={() => {
+                                  const current = noteSelectedAssociations.deals || [];
+                                  if (current.includes(deal.id)) {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      deals: current.filter((id) => id !== deal.id),
+                                    });
+                                  } else {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      deals: [...current, deal.id],
+                                    });
+                                  }
+                                }}
+                              >
+                                <Checkbox
+                                  checked={noteSelectedAssociations.deals?.includes(deal.id) || false}
+                                  size="small"
+                                  sx={{ p: 0.5, mr: 1 }}
+                                />
+                                <ListItemText
+                                  primary={deal.name}
+                                  secondary={`${deal.amount ? `$${deal.amount.toLocaleString()}` : ''} ${deal.stage || ''}`}
+                                  primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                  secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                />
+                              </ListItemButton>
+                            </ListItem>
+                          ))}
+                      </List>
+                    </Box>
+                  )}
+
+                  {selectedCategory === 'tickets' && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                        Tickets
+                      </Typography>
+                      <List sx={{ p: 0 }}>
+                        {noteModalTickets
+                          .filter((ticket: any) => 
+                            !associateSearch || ticket.subject?.toLowerCase().includes(associateSearch.toLowerCase())
+                          )
+                          .map((ticket: any) => (
+                            <ListItem key={ticket.id} disablePadding>
+                              <ListItemButton
+                                sx={{ py: 0.75, px: 1 }}
+                                onClick={() => {
+                                  const current = noteSelectedAssociations.tickets || [];
+                                  if (current.includes(ticket.id)) {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      tickets: current.filter((id) => id !== ticket.id),
+                                    });
+                                  } else {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      tickets: [...current, ticket.id],
+                                    });
+                                  }
+                                }}
+                              >
+                                <Checkbox
+                                  checked={noteSelectedAssociations.tickets?.includes(ticket.id) || false}
+                                  size="small"
+                                  sx={{ p: 0.5, mr: 1 }}
+                                />
+                                <ListItemText
+                                  primary={ticket.subject}
+                                  secondary={ticket.description}
+                                  primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                  secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                />
+                              </ListItemButton>
+                            </ListItem>
+                          ))}
+                      </List>
+                    </Box>
+                  )}
+
+                  {selectedCategory === 'seleccionados' && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                        Seleccionados ({Object.values(noteSelectedAssociations).flat().length})
+                      </Typography>
+                      {Object.values(noteSelectedAssociations).flat().length === 0 ? (
+                        <Typography variant="body2" sx={{ color: theme.palette.text.secondary, py: 2 }}>
+                          No hay elementos seleccionados
+                        </Typography>
+                      ) : (
+                        <List sx={{ p: 0 }}>
+                          {noteSelectedAssociations.companies?.map((companyId) => {
+                            const company = noteModalCompanies.find((c: any) => c.id === companyId);
+                            if (!company) return null;
+                            return (
+                              <ListItem key={companyId} disablePadding>
+                                <ListItemButton
+                                  sx={{ py: 0.75, px: 1 }}
+                                  onClick={() => {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      companies: noteSelectedAssociations.companies.filter((id) => id !== companyId),
+                                    });
+                                  }}
+                                >
+                                  <Checkbox
+                                    checked={true}
+                                    size="small"
+                                    sx={{ p: 0.5, mr: 1 }}
+                                  />
+                                  <Business sx={{ fontSize: 18, mr: 1, color: theme.palette.text.secondary }} />
+                                  <ListItemText
+                                    primary={company.name}
+                                    secondary={company.domain}
+                                    primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  />
+                                </ListItemButton>
+                              </ListItem>
+                            );
+                          })}
+                          {noteSelectedAssociations.contacts?.map((contactId) => {
+                            const contactItem = noteModalContacts.find((c: any) => c.id === contactId);
+                            if (!contactItem) return null;
+                            return (
+                              <ListItem key={contactId} disablePadding>
+                                <ListItemButton
+                                  sx={{ py: 0.75, px: 1 }}
+                                  onClick={() => {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      contacts: noteSelectedAssociations.contacts.filter((id) => id !== contactId),
+                                    });
+                                  }}
+                                >
+                                  <Checkbox
+                                    checked={true}
+                                    size="small"
+                                    sx={{ p: 0.5, mr: 1 }}
+                                  />
+                                  <Person sx={{ fontSize: 18, mr: 1, color: theme.palette.text.secondary }} />
+                                  <ListItemText
+                                    primary={`${contactItem.firstName} ${contactItem.lastName}`}
+                                    secondary={contactItem.email}
+                                    primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  />
+                                </ListItemButton>
+                              </ListItem>
+                            );
+                          })}
+                          {noteSelectedAssociations.deals?.map((dealId) => {
+                            const deal = noteModalDeals.find((d: any) => d.id === dealId);
+                            if (!deal) return null;
+                            return (
+                              <ListItem key={dealId} disablePadding>
+                                <ListItemButton
+                                  sx={{ py: 0.75, px: 1 }}
+                                  onClick={() => {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      deals: noteSelectedAssociations.deals.filter((id) => id !== dealId),
+                                    });
+                                  }}
+                                >
+                                  <Checkbox
+                                    checked={true}
+                                    size="small"
+                                    sx={{ p: 0.5, mr: 1 }}
+                                  />
+                                  <ListItemText
+                                    primary={deal.name}
+                                    secondary={`${deal.amount ? `$${deal.amount.toLocaleString()}` : ''} ${deal.stage || ''}`}
+                                    primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  />
+                                </ListItemButton>
+                              </ListItem>
+                            );
+                          })}
+                          {noteSelectedAssociations.tickets?.map((ticketId) => {
+                            const ticket = noteModalTickets.find((t: any) => t.id === ticketId);
+                            if (!ticket) return null;
+                            return (
+                              <ListItem key={ticketId} disablePadding>
+                                <ListItemButton
+                                  sx={{ py: 0.75, px: 1 }}
+                                  onClick={() => {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      tickets: noteSelectedAssociations.tickets.filter((id) => id !== ticketId),
+                                    });
+                                  }}
+                                >
+                                  <Checkbox
+                                    checked={true}
+                                    size="small"
+                                    sx={{ p: 0.5, mr: 1 }}
+                                  />
+                                  <ListItemText
+                                    primary={ticket.subject}
+                                    secondary={ticket.description}
+                                    primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  />
+                                </ListItemButton>
+                              </ListItem>
+                            );
+                          })}
+                        </List>
+                      )}
+                    </Box>
+                  )}
+                </>
+              )}
             </Box>
           </Box>
-          <Box
-            sx={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.1)',
-              zIndex: 1299,
-              animation: 'fadeIn 0.3s ease-out',
+        </Box>
+        <DialogActions sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
+          <Button
+            onClick={() => setNoteAssociateModalOpen(false)}
+            sx={{ textTransform: 'none' }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={() => {
+              // Aplicar las selecciones a los estados principales
+              setSelectedCompanies(noteSelectedAssociations.companies || []);
+              setSelectedContacts(noteSelectedAssociations.contacts || []);
+              // Convertir deals y tickets a la estructura esperada
+              const dealIds = (noteSelectedAssociations.deals || []).map(id => 1000 + id);
+              const ticketIds = (noteSelectedAssociations.tickets || []).map(id => 2000 + id);
+              setSelectedAssociations([...dealIds, ...ticketIds]);
+              setNoteAssociateModalOpen(false);
             }}
-            onClick={() => setEmailOpen(false)}
-          />
-        </>
+            variant="contained"
+            sx={{ 
+              textTransform: 'none',
+              backgroundColor: taxiMonterricoColors.green,
+              '&:hover': {
+                backgroundColor: taxiMonterricoColors.greenDark,
+              },
+            }}
+          >
+            Guardar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Mensaje de advertencia */}
+      {warningMessage && (
+        <Alert 
+          severity="warning" 
+          onClose={() => setWarningMessage('')}
+          sx={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999 }}
+        >
+          {warningMessage}
+        </Alert>
       )}
+
+      {/* Modal de conexión de correo */}
+      <Dialog
+        open={emailConnectModalOpen}
+        onClose={() => setEmailConnectModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+          }
+        }}
+        BackdropProps={{
+          sx: {
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          }
+        }}
+      >
+        <DialogTitle
+          sx={{
+            bgcolor: theme.palette.mode === 'dark' ? '#0B1220' : '#f5f5f5',
+            borderBottom: `1px solid ${theme.palette.divider}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            py: 1.5,
+            px: 2,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Email sx={{ fontSize: 20, color: theme.palette.text.primary }} />
+            <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem', color: theme.palette.text.primary }}>
+              Correo
+            </Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <IconButton
+              size="small"
+              onClick={() => setEmailConnectModalOpen(false)}
+              sx={{
+                color: theme.palette.text.secondary,
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                },
+              }}
+            >
+              <Close fontSize="small" />
+            </IconButton>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ px: 4, py: 4, textAlign: 'center' }}>
+          <Typography
+            variant="h5"
+            sx={{
+              fontWeight: 600,
+              mb: 2,
+              color: theme.palette.text.primary,
+              fontSize: '1.5rem',
+            }}
+          >
+            Haz seguimiento de la actividad de tu correo en el CRM
+          </Typography>
+          <Typography
+            variant="body1"
+            sx={{
+              mb: 3,
+              color: theme.palette.text.secondary,
+              lineHeight: 1.7,
+              fontSize: '0.9375rem',
+            }}
+          >
+            Conecta tu cuenta de correo electrónico al CRM para comenzar a enviar correos desde tu plataforma. Todas tus conversaciones por correo electrónico aparecerán en la siguiente cronología.
+          </Typography>
+          <Link
+            component="button"
+            onClick={() => {
+              setEmailConnectModalOpen(false);
+              navigate('/settings');
+            }}
+            sx={{
+              color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
+              textDecoration: 'none',
+              fontSize: '0.875rem',
+              cursor: 'pointer',
+              '&:hover': {
+                textDecoration: 'underline',
+              },
+            }}
+          >
+            Más información
+          </Link>
+        </DialogContent>
+        <DialogActions sx={{ px: 4, pb: 4, justifyContent: 'center' }}>
+          <Button
+            onClick={handleEmailConnect}
+            disabled={connectingEmail}
+            variant="contained"
+            sx={{
+              bgcolor: '#FF6B35',
+              color: 'white',
+              fontWeight: 600,
+              textTransform: 'none',
+              fontSize: '0.9375rem',
+              px: 4,
+              py: 1.25,
+              borderRadius: 2,
+              boxShadow: '0 4px 12px rgba(255, 107, 53, 0.3)',
+              '&:hover': {
+                bgcolor: '#E55A2B',
+                boxShadow: '0 6px 16px rgba(255, 107, 53, 0.4)',
+              },
+              '&.Mui-disabled': {
+                bgcolor: '#FF6B35',
+                opacity: 0.6,
+              },
+            }}
+            startIcon={connectingEmail ? <CircularProgress size={16} sx={{ color: 'white' }} /> : <Email />}
+          >
+            {connectingEmail ? 'Conectando...' : 'Conectar bandeja de entrada'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal de Email con Gmail API */}
+      <EmailComposer
+        open={emailOpen}
+        onClose={() => setEmailOpen(false)}
+        recipientEmail={associatedContacts && associatedContacts.length > 0 ? associatedContacts[0].email || '' : ''}
+        recipientName={associatedContacts && associatedContacts.length > 0 ? `${associatedContacts[0].firstName || ''} ${associatedContacts[0].lastName || ''}`.trim() : company?.name}
+        onSend={handleSendEmail}
+      />
+
 
       {/* Ventana flotante de Llamada */}
       {callOpen && (

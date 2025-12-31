@@ -29,6 +29,14 @@ Contact.init({
             isEmail: true,
         },
     },
+    dni: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: true,
+    },
+    cee: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: true,
+    },
     phone: {
         type: sequelize_1.DataTypes.STRING,
         allowNull: true,

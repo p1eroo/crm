@@ -18,10 +18,13 @@ router.get('/', async (req, res) => {
         const offset = (Number(page) - 1) * Number(limit);
         const where = {};
         if (search) {
+            const searchStr = typeof search === 'string' ? search : String(search);
             where[sequelize_1.Op.or] = [
-                { firstName: { [sequelize_1.Op.iLike]: `%${search}%` } },
-                { lastName: { [sequelize_1.Op.iLike]: `%${search}%` } },
-                { email: { [sequelize_1.Op.iLike]: `%${search}%` } },
+                { firstName: { [sequelize_1.Op.iLike]: `%${searchStr}%` } },
+                { lastName: { [sequelize_1.Op.iLike]: `%${searchStr}%` } },
+                { email: { [sequelize_1.Op.iLike]: `%${searchStr}%` } },
+                { dni: { [sequelize_1.Op.eq]: searchStr.trim() } }, // Búsqueda exacta por DNI
+                { cee: { [sequelize_1.Op.eq]: searchStr.trim().toUpperCase() } }, // Búsqueda exacta por CEE
             ];
         }
         if (lifecycleStage) {
@@ -54,20 +57,86 @@ router.get('/', async (req, res) => {
 // Obtener un contacto por ID
 router.get('/:id', async (req, res) => {
     try {
-        const contact = await Contact_1.Contact.findByPk(req.params.id, {
-            include: [
-                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
-                { model: Company_1.Company, as: 'Company' }, // Empresa principal (compatibilidad)
-                { model: Company_1.Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'industry'] }, // Todas las empresas asociadas
-            ],
-        });
+        // Intentar obtener contact con todas las relaciones
+        let contact;
+        try {
+            contact = await Contact_1.Contact.findByPk(req.params.id, {
+                include: [
+                    { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
+                    { model: Company_1.Company, as: 'Company', required: false }, // Empresa principal (compatibilidad)
+                    { model: Company_1.Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname'], required: false }, // Todas las empresas asociadas
+                ],
+            });
+        }
+        catch (includeError) {
+            // Si falla por problemas con las relaciones, intentar sin includes
+            console.warn('⚠️ Error con relaciones en contact, intentando sin includes:', includeError.message);
+            contact = await Contact_1.Contact.findByPk(req.params.id);
+            if (!contact) {
+                return res.status(404).json({ error: 'Contacto no encontrado' });
+            }
+            // Agregar relaciones manualmente solo para los que tienen IDs válidos
+            const contactData = contact.toJSON();
+            // Agregar Owner si existe ownerId
+            if (contactData.ownerId) {
+                try {
+                    const owner = await User_1.User.findByPk(contactData.ownerId, {
+                        attributes: ['id', 'firstName', 'lastName', 'email'],
+                    });
+                    contactData.Owner = owner || null;
+                }
+                catch (ownerError) {
+                    console.warn(`⚠️ No se pudo obtener Owner para contact ${contactData.id}:`, ownerError);
+                    contactData.Owner = null;
+                }
+            }
+            else {
+                contactData.Owner = null;
+            }
+            // Agregar Company principal si existe companyId
+            if (contactData.companyId) {
+                try {
+                    const company = await Company_1.Company.findByPk(contactData.companyId, {
+                        attributes: ['id', 'name', 'domain', 'phone', 'companyname'],
+                    });
+                    contactData.Company = company || null;
+                }
+                catch (companyError) {
+                    console.warn(`⚠️ No se pudo obtener Company para contact ${contactData.id}:`, companyError);
+                    contactData.Company = null;
+                }
+            }
+            else {
+                contactData.Company = null;
+            }
+            // Agregar Companies asociadas (muchos-a-muchos)
+            try {
+                const companies = await contact.getCompanies();
+                contactData.Companies = companies || [];
+            }
+            catch (companiesError) {
+                console.warn(`⚠️ No se pudieron obtener Companies para contact ${contactData.id}:`, companiesError);
+                contactData.Companies = [];
+            }
+            return res.json(contactData);
+        }
         if (!contact) {
             return res.status(404).json({ error: 'Contacto no encontrado' });
         }
         res.json(contact);
     }
     catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error fetching contact:', error);
+        console.error('Error stack:', error.stack);
+        console.error('Error details:', {
+            message: error.message,
+            name: error.name,
+            original: error.original,
+        });
+        res.status(500).json({
+            error: error.message || 'Error al obtener contacto',
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 });
 // Crear contacto
@@ -82,6 +151,53 @@ router.post('/', async (req, res) => {
             // Asignar automáticamente el usuario actual como propietario del contacto
             ownerId: req.body.ownerId || req.userId || null,
         };
+        // Validar que no exista un contacto con el mismo email (case-insensitive)
+        if (contactData.email) {
+            const existingContactByEmail = await Contact_1.Contact.findOne({
+                where: {
+                    email: {
+                        [sequelize_1.Op.iLike]: contactData.email.trim(),
+                    },
+                },
+            });
+            if (existingContactByEmail) {
+                return res.status(400).json({
+                    error: 'Ya existe un contacto con este email',
+                    duplicateField: 'email',
+                    existingContactId: existingContactByEmail.id,
+                });
+            }
+        }
+        // Validar que no exista un contacto con el mismo DNI (si se proporciona)
+        if (contactData.dni && contactData.dni.trim() !== '') {
+            const existingContactByDni = await Contact_1.Contact.findOne({
+                where: {
+                    dni: contactData.dni.trim(),
+                },
+            });
+            if (existingContactByDni) {
+                return res.status(400).json({
+                    error: 'Ya existe un contacto con este DNI',
+                    duplicateField: 'dni',
+                    existingContactId: existingContactByDni.id,
+                });
+            }
+        }
+        // Validar que no exista un contacto con el mismo CEE (si se proporciona)
+        if (contactData.cee && contactData.cee.trim() !== '') {
+            const existingContactByCee = await Contact_1.Contact.findOne({
+                where: {
+                    cee: contactData.cee.trim().toUpperCase(),
+                },
+            });
+            if (existingContactByCee) {
+                return res.status(400).json({
+                    error: 'Ya existe un contacto con este CEE',
+                    duplicateField: 'cee',
+                    existingContactId: existingContactByCee.id,
+                });
+            }
+        }
         const contact = await Contact_1.Contact.create(contactData);
         const newContact = await Contact_1.Contact.findByPk(contact.id, {
             include: [
@@ -106,7 +222,67 @@ router.put('/:id', async (req, res) => {
         if (!contact) {
             return res.status(404).json({ error: 'Contacto no encontrado' });
         }
-        await contact.update(req.body);
+        const contactData = {
+            ...req.body,
+            ownerId: req.body.ownerId || req.userId || null,
+        };
+        // Validar que no exista otro contacto con el mismo email (excluyendo el actual)
+        if (contactData.email && contactData.email.trim() !== contact.email) {
+            const existingContactByEmail = await Contact_1.Contact.findOne({
+                where: {
+                    email: {
+                        [sequelize_1.Op.iLike]: contactData.email.trim(),
+                    },
+                    id: {
+                        [sequelize_1.Op.ne]: contact.id, // Excluir el contacto actual
+                    },
+                },
+            });
+            if (existingContactByEmail) {
+                return res.status(400).json({
+                    error: 'Ya existe otro contacto con este email',
+                    duplicateField: 'email',
+                    existingContactId: existingContactByEmail.id,
+                });
+            }
+        }
+        // Validar que no exista otro contacto con el mismo DNI (excluyendo el actual)
+        if (contactData.dni && contactData.dni.trim() !== '' && contactData.dni.trim() !== (contact.dni || '')) {
+            const existingContactByDni = await Contact_1.Contact.findOne({
+                where: {
+                    dni: contactData.dni.trim(),
+                    id: {
+                        [sequelize_1.Op.ne]: contact.id,
+                    },
+                },
+            });
+            if (existingContactByDni) {
+                return res.status(400).json({
+                    error: 'Ya existe otro contacto con este DNI',
+                    duplicateField: 'dni',
+                    existingContactId: existingContactByDni.id,
+                });
+            }
+        }
+        // Validar que no exista otro contacto con el mismo CEE (excluyendo el actual)
+        if (contactData.cee && contactData.cee.trim() !== '' && contactData.cee.trim().toUpperCase() !== (contact.cee || '')) {
+            const existingContactByCee = await Contact_1.Contact.findOne({
+                where: {
+                    cee: contactData.cee.trim().toUpperCase(),
+                    id: {
+                        [sequelize_1.Op.ne]: contact.id,
+                    },
+                },
+            });
+            if (existingContactByCee) {
+                return res.status(400).json({
+                    error: 'Ya existe otro contacto con este CEE',
+                    duplicateField: 'cee',
+                    existingContactId: existingContactByCee.id,
+                });
+            }
+        }
+        await contact.update(contactData);
         const updatedContact = await Contact_1.Contact.findByPk(contact.id, {
             include: [
                 { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
@@ -168,7 +344,7 @@ router.post('/:id/companies', async (req, res) => {
             include: [
                 { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
                 { model: Company_1.Company, as: 'Company' },
-                { model: Company_1.Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'industry'] },
+                { model: Company_1.Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname'] },
             ],
         });
         res.json(updatedContact);
@@ -194,7 +370,7 @@ router.delete('/:id/companies/:companyId', async (req, res) => {
             include: [
                 { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
                 { model: Company_1.Company, as: 'Company' },
-                { model: Company_1.Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'industry'] },
+                { model: Company_1.Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname'] },
             ],
         });
         res.json(updatedContact);

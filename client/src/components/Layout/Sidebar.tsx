@@ -23,7 +23,6 @@ import {
   Settings,
   ChevronLeft,
 } from '@mui/icons-material';
-import { taxiMonterricoColors } from '../../theme/colors';
 import { useAuth } from '../../context/AuthContext';
 import { useSidebar } from '../../context/SidebarContext';
 import logo from '../../assets/tm_logo.png';
@@ -148,24 +147,17 @@ const Sidebar: React.FC = () => {
               mb: 0,
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&.Mui-selected': {
-                  backgroundColor: theme.palette.mode === 'dark' 
-                    ? taxiMonterricoColors.greenDark 
-                    : '#c4d4d4',
-                  color: theme.palette.mode === 'dark' 
-                    ? '#FFFFFF' 
-                    : theme.palette.text.primary,
+                  backgroundColor: '#2E7D32',
+                  color: '#FFFFFF',
+                  boxShadow: '0 0 15px rgba(46, 125, 50, 0.5), 0 0 30px rgba(46, 125, 50, 0.3)',
                   '&:hover': {
-                    backgroundColor: theme.palette.mode === 'dark' 
-                      ? taxiMonterricoColors.greenDark 
-                      : '#c4d4d4',
-                    opacity: theme.palette.mode === 'dark' ? 0.9 : 1,
+                    backgroundColor: '#2E7D32',
+                    boxShadow: '0 0 20px rgba(46, 125, 50, 0.6), 0 0 40px rgba(46, 125, 50, 0.4)',
                   },
                 },
                 '&:hover': {
                   backgroundColor: isSelected 
-                    ? (theme.palette.mode === 'dark' 
-                        ? taxiMonterricoColors.greenDark 
-                        : '#c4d4d4')
+                    ? '#2E7D32'
                     : theme.palette.action.hover,
                 },
                 '&:not(.Mui-selected)': {
@@ -178,9 +170,7 @@ const Sidebar: React.FC = () => {
                 sx={{
                   minWidth: 36,
                   justifyContent: 'center',
-                  color: isSelected && theme.palette.mode === 'dark' 
-                    ? '#FFFFFF' 
-                    : 'inherit',
+                  color: isSelected ? '#FFFFFF' : 'inherit',
                   '& svg': {
                     fontSize: 20,
                   },
@@ -193,9 +183,7 @@ const Sidebar: React.FC = () => {
                 sx={{
                   fontSize: '0.875rem',
                   fontWeight: isSelected ? 600 : 400,
-                  color: isSelected && theme.palette.mode === 'dark' 
-                    ? '#FFFFFF' 
-                    : 'inherit',
+                  color: isSelected ? '#FFFFFF' : 'inherit',
                   ml: 1,
                 }}
               >
@@ -224,24 +212,17 @@ const Sidebar: React.FC = () => {
               mt: 0,
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               '&.Mui-selected': {
-                backgroundColor: theme.palette.mode === 'dark' 
-                  ? taxiMonterricoColors.greenDark 
-                  : '#c4d4d4',
-                color: theme.palette.mode === 'dark' 
-                  ? '#FFFFFF' 
-                  : theme.palette.text.primary,
+                backgroundColor: '#2E7D32',
+                color: '#FFFFFF',
+                boxShadow: '0 0 15px rgba(46, 125, 50, 0.5), 0 0 30px rgba(46, 125, 50, 0.3)',
                 '&:hover': {
-                  backgroundColor: theme.palette.mode === 'dark' 
-                    ? taxiMonterricoColors.greenDark 
-                    : '#c4d4d4',
-                  opacity: theme.palette.mode === 'dark' ? 0.9 : 1,
+                  backgroundColor: '#2E7D32',
+                  boxShadow: '0 0 20px rgba(46, 125, 50, 0.6), 0 0 40px rgba(46, 125, 50, 0.4)',
                 },
               },
               '&:hover': {
                 backgroundColor: location.pathname === '/users' 
-                  ? (theme.palette.mode === 'dark' 
-                      ? taxiMonterricoColors.greenDark 
-                      : '#c4d4d4')
+                  ? '#2E7D32'
                   : theme.palette.action.hover,
               },
               '&:not(.Mui-selected)': {
@@ -254,9 +235,7 @@ const Sidebar: React.FC = () => {
               sx={{
                 minWidth: 36,
                 justifyContent: 'center',
-                color: location.pathname === '/users' && theme.palette.mode === 'dark' 
-                  ? '#FFFFFF' 
-                  : 'inherit',
+                color: location.pathname === '/users' ? '#FFFFFF' : 'inherit',
                 '& svg': {
                   fontSize: 20,
                 },
@@ -269,9 +248,7 @@ const Sidebar: React.FC = () => {
               sx={{
                 fontSize: '0.875rem',
                 fontWeight: location.pathname === '/users' ? 600 : 400,
-                color: location.pathname === '/users' && theme.palette.mode === 'dark' 
-                  ? '#FFFFFF' 
-                  : 'inherit',
+                color: location.pathname === '/users' ? '#FFFFFF' : 'inherit',
                 ml: 1,
               }}
             >

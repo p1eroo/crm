@@ -16,9 +16,6 @@ import {
 import {
   Close,
   Send,
-  AttachFile,
-  InsertPhoto,
-  Link as LinkIcon,
 } from '@mui/icons-material';
 import RichTextEditor from './RichTextEditor';
 import { taxiMonterricoColors } from '../theme/colors';
@@ -188,47 +185,9 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
         sx={{
           p: 2,
           borderTop: `1px solid ${theme.palette.divider}`,
-          justifyContent: 'space-between',
+          justifyContent: 'flex-end',
         }}
       >
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <IconButton 
-            size="small" 
-            disabled
-            sx={{
-              color: theme.palette.text.secondary,
-              '&.Mui-disabled': {
-                color: theme.palette.text.disabled,
-              },
-            }}
-          >
-            <AttachFile fontSize="small" />
-          </IconButton>
-          <IconButton 
-            size="small" 
-            disabled
-            sx={{
-              color: theme.palette.text.secondary,
-              '&.Mui-disabled': {
-                color: theme.palette.text.disabled,
-              },
-            }}
-          >
-            <InsertPhoto fontSize="small" />
-          </IconButton>
-          <IconButton 
-            size="small" 
-            disabled
-            sx={{
-              color: theme.palette.text.secondary,
-              '&.Mui-disabled': {
-                color: theme.palette.text.disabled,
-              },
-            }}
-          >
-            <LinkIcon fontSize="small" />
-          </IconButton>
-        </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button 
             onClick={handleClose} 

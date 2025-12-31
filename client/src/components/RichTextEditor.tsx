@@ -3,12 +3,14 @@ import {
   Box, 
   IconButton, 
   Divider, 
-  Button, 
-  Menu, 
-  MenuItem, 
+  Button,
   TextField, 
   Checkbox, 
   FormControlLabel,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
   useTheme
 } from '@mui/material';
 import {
@@ -19,30 +21,35 @@ import {
   FormatListBulleted,
   FormatListNumbered,
   Link as LinkIcon,
-  Image,
-  Code,
   TableChart,
   AttachFile,
-  Add,
-  ExpandMore,
+  PersonAdd,
+  FormatAlignLeft,
+  FormatAlignCenter,
+  FormatAlignRight,
+  FormatAlignJustify,
 } from '@mui/icons-material';
 
 interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  onAssociateClick?: () => void;
 }
 
-const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeholder = 'Empieza a escribir...' }) => {
+const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeholder = 'Empieza a escribir...', onAssociateClick }) => {
   const theme = useTheme();
   const editorRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [moreAnchorEl, setMoreAnchorEl] = useState<null | HTMLElement>(null);
+  const attachFileInputRef = useRef<HTMLInputElement>(null);
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [linkText, setLinkText] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [openInNewTab, setOpenInNewTab] = useState(true);
+  const [tableDialogOpen, setTableDialogOpen] = useState(false);
+  const [tableRows, setTableRows] = useState('3');
+  const [tableCols, setTableCols] = useState('3');
   const savedSelectionRef = useRef<Range | null>(null);
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
@@ -306,12 +313,100 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
     handleCloseLinkDialog();
   };
 
-  const insertImage = () => {
-    // Abrir el selector de archivos
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
+  const attachFile = () => {
+    // Abrir el selector de archivos (misma funcionalidad que insertar imagen)
+    if (attachFileInputRef.current) {
+      attachFileInputRef.current.click();
     }
-    setMoreAnchorEl(null);
+  };
+
+  const handleAttachFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Leer el archivo y convertirlo a data URL
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl && editorRef.current) {
+        // Restaurar el foco al editor
+        editorRef.current.focus();
+        
+        // Obtener la selección actual o crear una nueva
+        const selection = window.getSelection();
+        let range: Range | null = null;
+        
+        if (selection && selection.rangeCount > 0) {
+          range = selection.getRangeAt(0);
+        } else if (editorRef.current) {
+          range = document.createRange();
+          range.selectNodeContents(editorRef.current);
+          range.collapse(false);
+          if (selection) {
+            selection.removeAllRanges();
+            selection.addRange(range);
+          }
+        }
+
+        if (range) {
+          try {
+            // Si es una imagen, insertarla como imagen
+            if (file.type.startsWith('image/')) {
+              const img = document.createElement('img');
+              img.src = dataUrl;
+              img.style.maxWidth = '100%';
+              img.style.height = 'auto';
+              img.alt = file.name;
+              range.insertNode(img);
+              range.setStartAfter(img);
+            } else {
+              // Si no es imagen, crear un enlace al archivo
+              const link = document.createElement('a');
+              link.href = dataUrl;
+              link.textContent = `📎 ${file.name}`;
+              link.download = file.name;
+              link.style.textDecoration = 'none';
+              link.style.color = theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2';
+              link.style.marginRight = '4px';
+              range.insertNode(link);
+              range.setStartAfter(link);
+            }
+            
+            range.collapse(true);
+            if (selection) {
+              selection.removeAllRanges();
+              selection.addRange(range);
+            }
+            
+            // Actualizar el contenido
+            onChange(editorRef.current.innerHTML);
+          } catch (error) {
+            console.error('Error inserting file:', error);
+            // Fallback: insertar texto con el nombre del archivo
+            const textNode = document.createTextNode(`📎 ${file.name} `);
+            range.insertNode(textNode);
+            range.setStartAfter(textNode);
+            range.collapse(true);
+            if (selection) {
+              selection.removeAllRanges();
+              selection.addRange(range);
+            }
+            onChange(editorRef.current.innerHTML);
+          }
+        }
+      }
+    };
+    
+    reader.onerror = () => {
+      alert('Error al leer el archivo.');
+    };
+    
+    reader.readAsDataURL(file);
+    
+    // Limpiar el input para permitir seleccionar el mismo archivo nuevamente
+    if (attachFileInputRef.current) {
+      attachFileInputRef.current.value = '';
+    }
   };
 
   const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -394,21 +489,37 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
     }
   };
 
-  const insertTable = () => {
-    const rows = prompt('Número de filas:', '3');
-    const cols = prompt('Número de columnas:', '3');
-    if (rows && cols) {
+  const handleOpenTableDialog = () => {
+    setTableRows('3');
+    setTableCols('3');
+    setTableDialogOpen(true);
+  };
+
+  const handleCloseTableDialog = () => {
+    setTableDialogOpen(false);
+    setTableRows('3');
+    setTableCols('3');
+  };
+
+  const handleInsertTable = () => {
+    const rows = parseInt(tableRows);
+    const cols = parseInt(tableCols);
+    
+    if (rows > 0 && cols > 0 && !isNaN(rows) && !isNaN(cols)) {
       const table = document.createElement('table');
       table.style.borderCollapse = 'collapse';
       table.style.width = '100%';
-      table.style.border = '1px solid #ccc';
+      table.style.border = `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : '#ccc'}`;
+      table.style.marginTop = '8px';
+      table.style.marginBottom = '8px';
       
-      for (let i = 0; i < parseInt(rows); i++) {
+      for (let i = 0; i < rows; i++) {
         const tr = document.createElement('tr');
-        for (let j = 0; j < parseInt(cols); j++) {
+        for (let j = 0; j < cols; j++) {
           const td = document.createElement('td');
-          td.style.border = '1px solid #ccc';
+          td.style.border = `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : '#ccc'}`;
           td.style.padding = '8px';
+          td.style.minWidth = '50px';
           td.innerHTML = '&nbsp;';
           tr.appendChild(td);
         }
@@ -421,32 +532,28 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
         range.deleteContents();
         range.insertNode(table);
         onChange(editorRef.current?.innerHTML || '');
+      } else if (editorRef.current) {
+        // Si no hay selección, insertar al final
+        const range = document.createRange();
+        range.selectNodeContents(editorRef.current);
+        range.collapse(false);
+        const sel = window.getSelection();
+        if (sel) {
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+        range.insertNode(table);
+        onChange(editorRef.current.innerHTML);
       }
+      
+      handleCloseTableDialog();
     }
-    setMoreAnchorEl(null);
   };
 
-  const insertCodeBlock = () => {
-    const code = prompt('Ingresa el código:');
-    if (code) {
-      const pre = document.createElement('pre');
-      pre.style.backgroundColor = theme.palette.mode === 'dark' ? '#1e1e1e' : '#f5f5f5';
-      pre.style.color = theme.palette.text.primary;
-      pre.style.padding = '10px';
-      pre.style.borderRadius = '4px';
-      pre.style.fontFamily = 'monospace';
-      pre.textContent = code;
-      
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        range.deleteContents();
-        range.insertNode(pre);
-        onChange(editorRef.current?.innerHTML || '');
-      }
-    }
-    setMoreAnchorEl(null);
+  const insertTable = () => {
+    handleOpenTableDialog();
   };
+
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
@@ -535,39 +642,66 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
         >
           <FormatStrikethrough fontSize="small" />
         </IconButton>
-        <Button
+        <IconButton
           size="small"
-          endIcon={<ExpandMore fontSize="small" />}
-          onClick={(e) => setMoreAnchorEl(e.currentTarget)}
-          sx={{
-            textTransform: 'none',
-            color: theme.palette.text.primary,
-            minWidth: 'auto',
-            px: 1,
-            fontSize: '0.75rem',
+          sx={{ 
+            p: 0.75,
+            color: theme.palette.text.secondary,
             '&:hover': {
               backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.action.hover,
+              color: theme.palette.text.primary,
             }
           }}
+          onClick={() => execCommand('justifyLeft')}
+          title="Alinear izquierda"
         >
-          Más
-        </Button>
-        <Menu
-          anchorEl={moreAnchorEl}
-          open={Boolean(moreAnchorEl)}
-          onClose={() => setMoreAnchorEl(null)}
-          PaperProps={{
-            sx: {
-              backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : 'white',
-              border: theme.palette.mode === 'dark' ? '1px solid rgba(255,255,255,0.1)' : 'none',
+          <FormatAlignLeft fontSize="small" />
+        </IconButton>
+        <IconButton
+          size="small"
+          sx={{ 
+            p: 0.75,
+            color: theme.palette.text.secondary,
+            '&:hover': {
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.action.hover,
+              color: theme.palette.text.primary,
             }
           }}
+          onClick={() => execCommand('justifyCenter')}
+          title="Alinear centro"
         >
-          <MenuItem onClick={() => execCommand('justifyLeft')}>Alinear izquierda</MenuItem>
-          <MenuItem onClick={() => execCommand('justifyCenter')}>Alinear centro</MenuItem>
-          <MenuItem onClick={() => execCommand('justifyRight')}>Alinear derecha</MenuItem>
-          <MenuItem onClick={() => execCommand('justifyFull')}>Justificar</MenuItem>
-        </Menu>
+          <FormatAlignCenter fontSize="small" />
+        </IconButton>
+        <IconButton
+          size="small"
+          sx={{ 
+            p: 0.75,
+            color: theme.palette.text.secondary,
+            '&:hover': {
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.action.hover,
+              color: theme.palette.text.primary,
+            }
+          }}
+          onClick={() => execCommand('justifyRight')}
+          title="Alinear derecha"
+        >
+          <FormatAlignRight fontSize="small" />
+        </IconButton>
+        <IconButton
+          size="small"
+          sx={{ 
+            p: 0.75,
+            color: theme.palette.text.secondary,
+            '&:hover': {
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.action.hover,
+              color: theme.palette.text.primary,
+            }
+          }}
+          onClick={() => execCommand('justifyFull')}
+          title="Justificar"
+        >
+          <FormatAlignJustify fontSize="small" />
+        </IconButton>
         <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: '20px', borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : undefined }} />
         <IconButton
           size="small"
@@ -634,36 +768,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
               color: theme.palette.text.primary,
             }
           }}
-          onClick={insertImage}
-          title="Insertar imagen"
-        >
-          <Image fontSize="small" />
-        </IconButton>
-        <IconButton
-          size="small"
-          sx={{ 
-            p: 0.75,
-            color: theme.palette.text.secondary,
-            '&:hover': {
-              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.action.hover,
-              color: theme.palette.text.primary,
-            }
-          }}
-          onClick={insertCodeBlock}
-          title="Insertar código"
-        >
-          <Code fontSize="small" />
-        </IconButton>
-        <IconButton
-          size="small"
-          sx={{ 
-            p: 0.75,
-            color: theme.palette.text.secondary,
-            '&:hover': {
-              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.action.hover,
-              color: theme.palette.text.primary,
-            }
-          }}
           onClick={insertTable}
           title="Insertar tabla"
         >
@@ -679,6 +783,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
               color: theme.palette.text.primary,
             }
           }}
+          onClick={attachFile}
           title="Adjuntar archivo"
         >
           <AttachFile fontSize="small" />
@@ -693,9 +798,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
               color: theme.palette.text.primary,
             }
           }}
-          title="Agregar"
+          title="Asociado"
+          onClick={onAssociateClick}
         >
-          <Add fontSize="small" />
+          <PersonAdd fontSize="small" />
         </IconButton>
       </Box>
 
@@ -902,6 +1008,112 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
         style={{ display: 'none' }}
         onChange={handleImageFileSelect}
       />
+      {/* Input oculto para adjuntar archivos */}
+      <input
+        ref={attachFileInputRef}
+        type="file"
+        style={{ display: 'none' }}
+        onChange={handleAttachFileSelect}
+      />
+
+      {/* Dialog para insertar tabla */}
+      <Dialog
+        open={tableDialogOpen}
+        onClose={handleCloseTableDialog}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            backgroundColor: theme.palette.background.paper,
+          }
+        }}
+      >
+        <DialogTitle sx={{ 
+          pb: 1.5,
+          fontSize: '1.125rem',
+          fontWeight: 600,
+        }}>
+          Insertar tabla
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            <TextField
+              label="Número de filas"
+              type="number"
+              value={tableRows}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '' || (parseInt(value) > 0 && parseInt(value) <= 50)) {
+                  setTableRows(value);
+                }
+              }}
+              inputProps={{ min: 1, max: 50 }}
+              fullWidth
+              variant="outlined"
+              size="small"
+              autoFocus
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: theme.palette.mode === 'dark' ? '#1e1e1e' : '#f5f5f5',
+                },
+              }}
+            />
+            <TextField
+              label="Número de columnas"
+              type="number"
+              value={tableCols}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === '' || (parseInt(value) > 0 && parseInt(value) <= 50)) {
+                  setTableCols(value);
+                }
+              }}
+              inputProps={{ min: 1, max: 50 }}
+              fullWidth
+              variant="outlined"
+              size="small"
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: theme.palette.mode === 'dark' ? '#1e1e1e' : '#f5f5f5',
+                },
+              }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
+          <Button
+            onClick={handleCloseTableDialog}
+            sx={{
+              textTransform: 'none',
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                backgroundColor: theme.palette.action.hover,
+              },
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleInsertTable}
+            variant="contained"
+            disabled={!tableRows || !tableCols || parseInt(tableRows) <= 0 || parseInt(tableCols) <= 0}
+            sx={{
+              textTransform: 'none',
+              backgroundColor: theme.palette.primary.main,
+              '&:hover': {
+                backgroundColor: theme.palette.primary.dark,
+              },
+              '&:disabled': {
+                backgroundColor: theme.palette.action.disabledBackground,
+                color: theme.palette.action.disabled,
+              },
+            }}
+          >
+            Aceptar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

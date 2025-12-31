@@ -21,7 +21,7 @@ Company.init({
         type: sequelize_1.DataTypes.STRING,
         allowNull: true,
     },
-    industry: {
+    companyname: {
         type: sequelize_1.DataTypes.STRING,
         allowNull: true,
     },
@@ -42,6 +42,10 @@ Company.init({
         allowNull: true,
     },
     ruc: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: true,
+    },
+    idClienteEmpresa: {
         type: sequelize_1.DataTypes.STRING,
         allowNull: true,
     },

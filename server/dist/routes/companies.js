@@ -14,13 +14,15 @@ router.use(auth_1.authenticateToken);
 // Obtener todas las empresas
 router.get('/', async (req, res) => {
     try {
-        const { page = 1, limit = 50, search, lifecycleStage, ownerId, industry } = req.query;
+        const { page = 1, limit = 50, search, lifecycleStage, ownerId, companyname } = req.query;
         const offset = (Number(page) - 1) * Number(limit);
         const where = {};
         if (search) {
+            const searchStr = typeof search === 'string' ? search : String(search);
             where[sequelize_1.Op.or] = [
-                { name: { [sequelize_1.Op.iLike]: `%${search}%` } },
-                { domain: { [sequelize_1.Op.iLike]: `%${search}%` } },
+                { name: { [sequelize_1.Op.iLike]: `%${searchStr}%` } },
+                { domain: { [sequelize_1.Op.iLike]: `%${searchStr}%` } },
+                { ruc: { [sequelize_1.Op.eq]: searchStr.trim() } }, // Búsqueda exacta por RUC
             ];
         }
         if (lifecycleStage) {
@@ -29,18 +31,64 @@ router.get('/', async (req, res) => {
         if (ownerId) {
             where.ownerId = ownerId;
         }
-        if (industry) {
-            where.industry = industry;
+        if (companyname) {
+            where.companyname = companyname;
         }
-        const companies = await Company_1.Company.findAndCountAll({
-            where,
-            include: [
-                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
-            ],
-            limit: Number(limit),
-            offset,
-            order: [['createdAt', 'DESC']],
-        });
+        // Intentar obtener companies con la relación Owner
+        let companies;
+        try {
+            companies = await Company_1.Company.findAndCountAll({
+                where,
+                include: [
+                    {
+                        model: User_1.User,
+                        as: 'Owner',
+                        attributes: ['id', 'firstName', 'lastName', 'email'],
+                        required: false
+                    },
+                ],
+                limit: Number(limit),
+                offset,
+                order: [['createdAt', 'DESC']],
+                distinct: true, // Importante para contar correctamente con includes
+            });
+        }
+        catch (includeError) {
+            // Si falla por problemas con la relación Owner, intentar sin el include
+            console.warn('⚠️ Error con relación Owner, intentando sin include:', includeError.message);
+            companies = await Company_1.Company.findAndCountAll({
+                where,
+                limit: Number(limit),
+                offset,
+                order: [['createdAt', 'DESC']],
+            });
+            // Agregar Owner manualmente solo para los que tienen ownerId válido
+            const companiesWithOwner = await Promise.all(companies.rows.map(async (company) => {
+                const companyData = company.toJSON();
+                if (companyData.ownerId) {
+                    try {
+                        const owner = await User_1.User.findByPk(companyData.ownerId, {
+                            attributes: ['id', 'firstName', 'lastName', 'email'],
+                        });
+                        companyData.Owner = owner || null;
+                    }
+                    catch (ownerError) {
+                        console.warn(`⚠️ No se pudo obtener Owner para company ${companyData.id}:`, ownerError);
+                        companyData.Owner = null;
+                    }
+                }
+                else {
+                    companyData.Owner = null;
+                }
+                return companyData;
+            }));
+            return res.json({
+                companies: companiesWithOwner,
+                total: companies.count,
+                page: Number(page),
+                totalPages: Math.ceil(companies.count / Number(limit)),
+            });
+        }
         res.json({
             companies: companies.rows,
             total: companies.count,
@@ -49,7 +97,17 @@ router.get('/', async (req, res) => {
         });
     }
     catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Error fetching companies:', error);
+        console.error('Error stack:', error.stack);
+        console.error('Error details:', {
+            message: error.message,
+            name: error.name,
+            original: error.original,
+        });
+        res.status(500).json({
+            error: error.message || 'Error al obtener empresas',
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
     }
 });
 // Obtener una empresa por ID
@@ -78,6 +136,38 @@ router.post('/', async (req, res) => {
             // Asignar automáticamente el usuario actual como propietario del registro
             ownerId: req.body.ownerId || req.userId || null,
         };
+        // Validar que no exista una empresa con el mismo nombre (case-insensitive)
+        if (companyData.name) {
+            const existingCompanyByName = await Company_1.Company.findOne({
+                where: {
+                    name: {
+                        [sequelize_1.Op.iLike]: companyData.name.trim(), // Case-insensitive
+                    },
+                },
+            });
+            if (existingCompanyByName) {
+                return res.status(400).json({
+                    error: 'Ya existe una empresa con este nombre',
+                    duplicateField: 'name',
+                    existingCompanyId: existingCompanyByName.id,
+                });
+            }
+        }
+        // Validar que no exista una empresa con el mismo RUC (si se proporciona)
+        if (companyData.ruc && companyData.ruc.trim() !== '') {
+            const existingCompanyByRuc = await Company_1.Company.findOne({
+                where: {
+                    ruc: companyData.ruc.trim(),
+                },
+            });
+            if (existingCompanyByRuc) {
+                return res.status(400).json({
+                    error: 'Ya existe una empresa con este RUC',
+                    duplicateField: 'ruc',
+                    existingCompanyId: existingCompanyByRuc.id,
+                });
+            }
+        }
         const company = await Company_1.Company.create(companyData);
         const newCompany = await Company_1.Company.findByPk(company.id, {
             include: [
@@ -87,6 +177,7 @@ router.post('/', async (req, res) => {
         res.status(201).json(newCompany);
     }
     catch (error) {
+        console.error('Error creating company:', error);
         res.status(500).json({ error: error.message });
     }
 });

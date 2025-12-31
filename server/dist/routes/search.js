@@ -49,7 +49,7 @@ router.get('/global', async (req, res) => {
                 [sequelize_1.Op.or]: [
                     { name: { [sequelize_1.Op.iLike]: `%${searchTerm}%` } },
                     { domain: { [sequelize_1.Op.iLike]: `%${searchTerm}%` } },
-                    { industry: { [sequelize_1.Op.iLike]: `%${searchTerm}%` } },
+                    { companyname: { [sequelize_1.Op.iLike]: `%${searchTerm}%` } },
                     { phone: { [sequelize_1.Op.iLike]: `%${searchTerm}%` } },
                 ],
             },
@@ -57,7 +57,7 @@ router.get('/global', async (req, res) => {
                 { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName'], required: false },
             ],
             limit: searchLimit,
-            attributes: ['id', 'name', 'domain', 'industry', 'phone', 'lifecycleStage'],
+            attributes: ['id', 'name', 'domain', 'companyname', 'phone', 'lifecycleStage'],
         });
         // Búsqueda en negocios
         const deals = await Deal_1.Deal.findAll({
@@ -102,7 +102,7 @@ router.get('/global', async (req, res) => {
                 id: c.id,
                 type: 'company',
                 title: c.name,
-                subtitle: c.industry || c.domain || 'Sin información',
+                subtitle: c.companyname || c.domain || 'Sin información',
                 owner: c.Owner ? `${c.Owner.firstName} ${c.Owner.lastName}` : null,
                 stage: c.lifecycleStage,
                 url: `/companies/${c.id}`,

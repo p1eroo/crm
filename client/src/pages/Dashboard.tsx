@@ -21,7 +21,6 @@ import {
   Alert,
   Divider,
   Tooltip,
-  Link,
 } from '@mui/material';
 import {
   Download,
@@ -33,9 +32,9 @@ import {
   TrendingUp,
   TrendingDown,
   Groups,
-  ArrowDropDown,
   CalendarToday,
   Assessment,
+  ArrowOutward,
 } from '@mui/icons-material';
 import {
   AreaChart,
@@ -127,7 +126,13 @@ const Dashboard: React.FC = () => {
   const [dailyPayments, setDailyPayments] = useState<any[]>([]);
   const [editingBudgetMonth, setEditingBudgetMonth] = useState<number | null>(null); // Mes que se está editando (null = mes actual)
   const [advisorsModalOpen, setAdvisorsModalOpen] = useState(false);
-
+  const [maximizedSalesDistribution, setMaximizedSalesDistribution] = useState(false);
+  const [maximizedKPIArea, setMaximizedKPIArea] = useState(false);
+  const [maximizedAdvisors, setMaximizedAdvisors] = useState(false);
+  const [maximizedWeeklySales, setMaximizedWeeklySales] = useState(false);
+  const [maximizedSales, setMaximizedSales] = useState(false);
+  const [maximizedPipeline, setMaximizedPipeline] = useState(false);
+  
   // Generar lista de meses
   const monthNames = [
     { value: '0', label: 'Enero' },
@@ -407,134 +412,258 @@ const Dashboard: React.FC = () => {
   //   return types[type || 'todo'] || 'Task';
   // };
 
-  const handleDownloadSales = () => {
+  const handleDownloadDashboard = () => {
     if (!stats) {
       console.warn('No hay datos disponibles para descargar');
       return;
     }
     
-    // Preparar datos para Excel
-    let excelData: Array<{ [key: string]: string | number }> = [];
+    // Crear un libro de trabajo
+    const wb = XLSX.utils.book_new();
     
-    // Si hay un mes seleccionado, mostrar datos diarios
-    if (selectedMonth !== null) {
+    // 1. Hoja de KPIs
+    const kpiData = [
+      { Métrica: 'Presupuesto', Valor: `S/ ${monthlyBudget.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` },
+      { Métrica: 'Balance Semanal', Valor: `S/ ${weeklyBalance.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` },
+      { Métrica: 'Órdenes en Línea', Valor: ordersInLine },
+      { Métrica: 'Empresas', Valor: newCompanies },
+      { Métrica: 'KPI Total Equipo', Valor: `${teamKPI.toFixed(1)}%` },
+    ];
+    const wsKPIs = XLSX.utils.json_to_sheet(kpiData);
+    wsKPIs['!cols'] = [
+      { wch: 20 },
+      { wch: 20 },
+    ];
+    XLSX.utils.book_append_sheet(wb, wsKPIs, 'KPIs');
+    
+    // 2. Hoja de Distribución de Ventas
+    const salesDistributionData = stats.deals.byStage && stats.deals.byStage.length > 0
+      ? (() => {
+          const normalizedStages = stats.deals.byStage.map((d: any) => ({
+            stage: d.stage || d.stage,
+            count: typeof d.count === 'string' ? parseInt(d.count, 10) : (d.count || 0),
+            total: typeof d.total === 'string' ? parseFloat(d.total) : (d.total || 0),
+          }));
+          
+          const wonStages = normalizedStages.filter(d => 
+            ['won', 'closed won', 'cierre_ganado'].includes(d.stage)
+          );
+          const lostStages = normalizedStages.filter(d => 
+            ['lost', 'closed lost', 'cierre_perdido'].includes(d.stage)
+          );
+          const otherStages = normalizedStages.filter(d => 
+            !['won', 'closed won', 'cierre_ganado', 'lost', 'closed lost', 'cierre_perdido'].includes(d.stage)
+          );
+          
+          const wonTotal = wonStages.reduce((sum, d) => sum + d.count, 0);
+          const lostTotal = lostStages.reduce((sum, d) => sum + d.count, 0);
+          
+          const chartData: Array<{ Etapa: string; Cantidad: number; Valor: number }> = [];
+          
+          if (wonTotal > 0) {
+            const wonValue = wonStages.reduce((sum, d) => sum + d.total, 0);
+            chartData.push({ Etapa: 'Ganados', Cantidad: wonTotal, Valor: wonValue });
+          }
+          
+          if (lostTotal > 0) {
+            const lostValue = lostStages.reduce((sum, d) => sum + d.total, 0);
+            chartData.push({ Etapa: 'Perdidos', Cantidad: lostTotal, Valor: lostValue });
+          }
+          
+          const sortedOtherStages = otherStages.sort((a, b) => b.count - a.count);
+          sortedOtherStages.slice(0, 5).forEach((deal) => {
+            chartData.push({
+              Etapa: getStageLabel(deal.stage),
+              Cantidad: deal.count,
+              Valor: deal.total,
+            });
+          });
+          
+          return chartData.length > 0 ? chartData : [{ Etapa: 'Sin datos', Cantidad: 0, Valor: 0 }];
+        })()
+      : [{ Etapa: 'Sin datos', Cantidad: 0, Valor: 0 }];
+    
+    const wsDistribution = XLSX.utils.json_to_sheet(salesDistributionData);
+    wsDistribution['!cols'] = [
+      { wch: 25 },
+      { wch: 15 },
+      { wch: 18 },
+    ];
+    XLSX.utils.book_append_sheet(wb, wsDistribution, 'Distribución Ventas');
+    
+    // 3. Hoja de KPI's Área Comercial
+    if (stats.deals.userPerformance && stats.deals.userPerformance.length > 0) {
+      const kpiAreaData = stats.deals.userPerformance.map((user) => ({
+        Usuario: `${user.firstName} ${user.lastName}`,
+        Email: user.email || '',
+        'KPI (%)': user.performance.toFixed(1),
+        'Deals Totales': user.totalDeals || 0,
+        'Deals Ganados': user.wonDeals || 0,
+        'Valor Ganado': user.wonDealsValue || 0,
+      }));
+      const wsKPIArea = XLSX.utils.json_to_sheet(kpiAreaData);
+      wsKPIArea['!cols'] = [
+        { wch: 25 },
+        { wch: 30 },
+        { wch: 12 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 18 },
+      ];
+      XLSX.utils.book_append_sheet(wb, wsKPIArea, 'KPIs Área Comercial');
+    }
+    
+    // 4. Hoja de Ventas por Asesor
+    if (stats.deals.userPerformance && stats.deals.userPerformance.length > 0) {
+      const advisorsData = [...stats.deals.userPerformance]
+        .sort((a, b) => (b.wonDealsValue || 0) - (a.wonDealsValue || 0))
+        .map((user, index) => ({
+          Ranking: index + 1,
+          Usuario: `${user.firstName} ${user.lastName}`,
+          Email: user.email || '',
+          'Ventas': user.wonDeals || 0,
+          'Total Vendido': user.wonDealsValue || 0,
+        }));
+      const wsAdvisors = XLSX.utils.json_to_sheet(advisorsData);
+      wsAdvisors['!cols'] = [
+        { wch: 10 },
+        { wch: 25 },
+        { wch: 30 },
+        { wch: 12 },
+        { wch: 18 },
+      ];
+      XLSX.utils.book_append_sheet(wb, wsAdvisors, 'Ventas por Asesor');
+    }
+    
+    // 5. Hoja de Ventas Semanales
+    const weeklyData = weeklySalesData.map((item, index) => ({
+      Semana: item.week,
+      Valor: item.value,
+    }));
+    const wsWeekly = XLSX.utils.json_to_sheet(weeklyData);
+    wsWeekly['!cols'] = [
+      { wch: 15 },
+      { wch: 18 },
+    ];
+    XLSX.utils.book_append_sheet(wb, wsWeekly, 'Ventas Semanales');
+    
+    // 6. Hoja de Pipeline de Ventas
+    const pipelineDataForExport = (() => {
+      const propuestaEconomica = stats.deals.byStage?.find(
+        (d: any) => d.stage === 'propuesta_economica'
+      ) || { total: 0, count: 0 };
+      
+      const negociacion = stats.deals.byStage?.find(
+        (d: any) => d.stage === 'negociacion'
+      ) || { total: 0, count: 0 };
+      
+      const cierreGanado = stats.deals.byStage?.find(
+        (d: any) => d.stage === 'cierre_ganado' || d.stage === 'won' || d.stage === 'closed won'
+      ) || { total: 0, count: 0 };
+      
+      const total = (propuestaEconomica.total || 0) + (negociacion.total || 0) + (cierreGanado.total || 0);
+      
+      return {
+        propuestaEconomica: {
+          value: typeof propuestaEconomica.total === 'number' ? propuestaEconomica.total : parseFloat(propuestaEconomica.total || 0),
+          count: typeof propuestaEconomica.count === 'number' ? propuestaEconomica.count : parseInt(propuestaEconomica.count || 0),
+        },
+        negociacion: {
+          value: typeof negociacion.total === 'number' ? negociacion.total : parseFloat(negociacion.total || 0),
+          count: typeof negociacion.count === 'number' ? negociacion.count : parseInt(negociacion.count || 0),
+        },
+        cierreGanado: {
+          value: typeof cierreGanado.total === 'number' ? cierreGanado.total : parseFloat(cierreGanado.total || 0),
+          count: typeof cierreGanado.count === 'number' ? cierreGanado.count : parseInt(cierreGanado.count || 0),
+        },
+        total,
+      };
+    })();
+    
+    const pipelineExportData = [
+      {
+        Etapa: 'Propuesta Económica',
+        Valor: pipelineDataForExport.propuestaEconomica.value,
+        'Cantidad Negocios': pipelineDataForExport.propuestaEconomica.count,
+      },
+      {
+        Etapa: 'Negociación',
+        Valor: pipelineDataForExport.negociacion.value,
+        'Cantidad Negocios': pipelineDataForExport.negociacion.count,
+      },
+      {
+        Etapa: 'Cierre Ganado',
+        Valor: pipelineDataForExport.cierreGanado.value,
+        'Cantidad Negocios': pipelineDataForExport.cierreGanado.count,
+      },
+      {
+        Etapa: 'Total Pipeline',
+        Valor: pipelineDataForExport.total,
+        'Cantidad Negocios': pipelineDataForExport.propuestaEconomica.count + pipelineDataForExport.negociacion.count + pipelineDataForExport.cierreGanado.count,
+      },
+    ];
+    const wsPipeline = XLSX.utils.json_to_sheet(pipelineExportData);
+    wsPipeline['!cols'] = [
+      { wch: 25 },
+      { wch: 18 },
+      { wch: 20 },
+    ];
+    XLSX.utils.book_append_sheet(wb, wsPipeline, 'Pipeline Ventas');
+    
+    // 7. Hoja de Ventas (gráfico de área)
+    let salesData: Array<{ [key: string]: string | number }> = [];
+    if (selectedMonth !== null && dailyPayments.length > 0) {
       const year = parseInt(selectedYear);
       const month = parseInt(selectedMonth);
-      // const monthName = monthNames[month]?.label || '';
-      
-      // Usar datos diarios si están disponibles
-      if (dailyPayments.length > 0) {
-        excelData = dailyPayments.map((item, index) => {
-          // Calcular el monto del día individual (diferencia entre acumulados)
-          const previousValue = index > 0 ? (dailyPayments[index - 1].value || 0) : 0;
-          const currentValue = item.value || 0;
-          const dailyAmount = currentValue - previousValue;
-          
-          return {
-            Día: `Día ${item.day}`,
-            Fecha: `${item.day}/${month + 1}/${year}`,
-            'Ventas del día': dailyAmount,
-            'Ventas acumuladas': currentValue,
-          };
-        });
-      } else {
-        // Si no hay datos diarios, generar estructura con días del mes
-        const daysInMonth = new Date(year, month + 1, 0).getDate();
-        excelData = Array.from({ length: daysInMonth }, (_, i) => ({
-          Día: `Día ${i + 1}`,
-          Fecha: `${i + 1}/${month + 1}/${year}`,
-          'Ventas del día': 0,
-          'Ventas acumuladas': 0,
-        }));
-      }
+      salesData = dailyPayments.map((item, index) => {
+        const previousValue = index > 0 ? (dailyPayments[index - 1].value || 0) : 0;
+        const currentValue = item.value || 0;
+        const dailyAmount = currentValue - previousValue;
+        return {
+          Día: `Día ${item.day}`,
+          Fecha: `${item.day}/${month + 1}/${year}`,
+          'Ventas del día': dailyAmount,
+          'Ventas acumuladas': currentValue,
+        };
+      });
     } else {
-      // Si no hay mes seleccionado, mostrar datos mensuales
-      const salesData = stats.payments?.monthly || [];
-      
-      if (salesData.length > 0) {
-        excelData = salesData.map(item => ({
+      const salesMonthlyData = stats.payments?.monthly || [];
+      if (salesMonthlyData.length > 0) {
+        salesData = salesMonthlyData.map(item => ({
           Mes: item.month,
           Ventas: item.amount,
         }));
+      }
+    }
+    
+    if (salesData.length > 0) {
+      const wsSales = XLSX.utils.json_to_sheet(salesData);
+      if (selectedMonth !== null) {
+        wsSales['!cols'] = [
+          { wch: 10 },
+          { wch: 15 },
+          { wch: 18 },
+          { wch: 18 },
+        ];
       } else {
-        // Si no hay datos, generar estructura con meses del año seleccionado
-        const year = parseInt(selectedYear);
-        excelData = monthNames.map(month => ({
-          Mes: `${month.label} ${year}`,
-          Ventas: 0,
-        }));
+        wsSales['!cols'] = [
+          { wch: 25 },
+          { wch: 15 },
+        ];
       }
+      XLSX.utils.book_append_sheet(wb, wsSales, selectedMonth !== null ? 'Ventas Diarias' : 'Ventas Mensuales');
     }
     
-    // Crear un libro de trabajo
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(excelData);
-    
-    // Ajustar el ancho de las columnas
-    if (selectedMonth !== null) {
-      ws['!cols'] = [
-        { wch: 10 }, // Día
-        { wch: 15 }, // Fecha
-        { wch: 18 }, // Ventas del día
-        { wch: 18 }, // Ventas acumuladas
-      ];
-    } else {
-      ws['!cols'] = [
-        { wch: 25 }, // Mes
-        { wch: 15 }, // Ventas
-      ];
-    }
-    
-    // Agregar la hoja de ventas al libro
-    XLSX.utils.book_append_sheet(wb, ws, selectedMonth !== null ? 'Ventas Diarias' : 'Ventas');
-    
-    // Si hay un mes seleccionado, agregar segunda hoja con ventas por usuario
-    if (selectedMonth !== null && stats.deals.userPerformance && stats.deals.userPerformance.length > 0) {
-      // Preparar datos de ventas por usuario
-      const userSalesData = stats.deals.userPerformance
-        .filter(user => (user.wonDealsValue || 0) > 0) // Solo usuarios con ventas
-        .sort((a, b) => (b.wonDealsValue || 0) - (a.wonDealsValue || 0)) // Ordenar por ventas descendente
-        .map(user => ({
-          Usuario: `${user.firstName} ${user.lastName}`,
-          Email: user.email || '',
-          'Deals ganados': user.wonDeals || 0,
-          'Total vendido': user.wonDealsValue || 0,
-        }));
-      
-      // Si no hay usuarios con ventas, agregar una fila indicando que no hay datos
-      if (userSalesData.length === 0) {
-        userSalesData.push({
-          Usuario: 'Sin datos',
-          Email: '',
-          'Deals ganados': 0,
-          'Total vendido': 0,
-        });
-      }
-      
-      // Crear hoja de ventas por usuario
-      const wsUsers = XLSX.utils.json_to_sheet(userSalesData);
-      
-      // Ajustar el ancho de las columnas
-      wsUsers['!cols'] = [
-        { wch: 25 }, // Usuario
-        { wch: 30 }, // Email
-        { wch: 15 }, // Deals ganados
-        { wch: 18 }, // Total vendido
-      ];
-      
-      // Agregar la hoja de usuarios al libro
-      XLSX.utils.book_append_sheet(wb, wsUsers, 'Ventas por Usuario');
-    }
-    
-    // Nombre del archivo con año y mes si aplica
+    // Nombre del archivo
     const monthFilter = selectedMonth !== null 
       ? `_${monthNames[parseInt(selectedMonth)]?.label || ''}` 
       : '';
-    const fileName = `ventas_${selectedYear}${monthFilter}.xlsx`;
+    const fileName = `dashboard_${selectedYear}${monthFilter}.xlsx`;
     
     // Descargar el archivo
     XLSX.writeFile(wb, fileName);
   };
+
 
   if (loading) {
     return (
@@ -973,48 +1102,72 @@ const Dashboard: React.FC = () => {
         >
           Dashboard
         </Typography>
-        <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 180 } }}>
-          <Select
-            id="dashboard-month-year-select"
-            name="dashboard-month-year-select"
-            value={selectedMonth !== null ? `${selectedMonth}-2025` : `all-2025`}
-            onChange={(e) => {
-              const [month] = e.target.value.split('-');
-              setSelectedYear('2025');
-              setSelectedMonth(month === 'all' ? null : month);
-            }}
-            sx={{ 
-              fontSize: { xs: '0.8rem', md: '0.875rem' },
-            }}
-            renderValue={(value) => {
-              const [month] = value.split('-');
-              if (month === 'all') {
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1.5,
+          flexDirection: { xs: 'column', sm: 'row' },
+          width: { xs: '100%', sm: 'auto' },
+        }}>
+          <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 180 } }}>
+            <Select
+              id="dashboard-month-year-select"
+              name="dashboard-month-year-select"
+              value={selectedMonth !== null ? `${selectedMonth}-2025` : `all-2025`}
+              onChange={(e) => {
+                const [month] = e.target.value.split('-');
+                setSelectedYear('2025');
+                setSelectedMonth(month === 'all' ? null : month);
+              }}
+              sx={{ 
+                fontSize: { xs: '0.8rem', md: '0.875rem' },
+              }}
+              renderValue={(value) => {
+                const [month] = value.split('-');
+                if (month === 'all') {
+                  return (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CalendarToday sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                      <span>Todos los meses 2025</span>
+                    </Box>
+                  );
+                }
+                const monthLabel = monthNames.find(m => m.value === month)?.label || '';
                 return (
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <CalendarToday sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                    <span>Todos los meses 2025</span>
+                    <span>{monthLabel} 2025</span>
                   </Box>
                 );
-              }
-              const monthLabel = monthNames.find(m => m.value === month)?.label || '';
-              return (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <CalendarToday sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                  <span>{monthLabel} 2025</span>
-                </Box>
-              );
+              }}
+            >
+              <MenuItem value={`all-2025`}>
+                Todos los meses 2025
+              </MenuItem>
+              {monthNames.map((month) => (
+                <MenuItem key={`${month.value}-2025`} value={`${month.value}-2025`}>
+                  {month.label} 2025
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<Download sx={{ fontSize: { xs: 16, md: 18 } }} />}
+            onClick={handleDownloadDashboard}
+            sx={{
+              bgcolor: taxiMonterricoColors.green,
+              '&:hover': { bgcolor: taxiMonterricoColors.greenDark },
+              fontSize: { xs: '0.75rem', md: '0.875rem' },
+              textTransform: 'none',
+              whiteSpace: 'nowrap',
+              minWidth: { xs: '100%', sm: 'auto' },
             }}
           >
-            <MenuItem value={`all-2025`}>
-              Todos los meses 2025
-            </MenuItem>
-            {monthNames.map((month) => (
-              <MenuItem key={`${month.value}-2025`} value={`${month.value}-2025`}>
-                {month.label} 2025
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+            Descargar
+          </Button>
+        </Box>
       </Box>
 
       {/* Tarjetas KPI con gradientes - Diseño compacto y equilibrado */}
@@ -1080,8 +1233,8 @@ const Dashboard: React.FC = () => {
                   variant="body2" 
                   sx={{ 
                     color: theme.palette.text.primary,
-                    mb: 1.5,
-                    fontSize: '1.5rem',
+                    mb: 0.75,
+                    fontSize: '1.125rem',
                     fontWeight: 600,
                     lineHeight: 1.2,
                   }}
@@ -1156,8 +1309,8 @@ const Dashboard: React.FC = () => {
                   variant="body2" 
                   sx={{ 
                     color: theme.palette.text.primary,
-                    mb: 1.5,
-                    fontSize: '1.5rem',
+                    mb: 0.75,
+                    fontSize: '1.125rem',
                     fontWeight: 600,
                     lineHeight: 1.2,
                   }}
@@ -1232,8 +1385,8 @@ const Dashboard: React.FC = () => {
                   variant="body2" 
                   sx={{ 
                     color: theme.palette.text.primary,
-                    mb: 1.5,
-                    fontSize: '1.5rem',
+                    mb: 0.75,
+                    fontSize: '1.125rem',
                     fontWeight: 600,
                     lineHeight: 1.2,
                   }}
@@ -1309,8 +1462,8 @@ const Dashboard: React.FC = () => {
                   variant="body2" 
                   sx={{ 
                     color: theme.palette.text.primary,
-                    mb: 1.5,
-                    fontSize: '1.5rem',
+                    mb: 0.75,
+                    fontSize: '1.125rem',
                     fontWeight: 600,
                     lineHeight: 1.2,
                   }}
@@ -1386,8 +1539,8 @@ const Dashboard: React.FC = () => {
                   variant="body2" 
                   sx={{ 
                     color: theme.palette.text.primary,
-                    mb: 1.5,
-                    fontSize: '1.5rem',
+                    mb: 0.75,
+                    fontSize: '1.125rem',
                     fontWeight: 600,
                     lineHeight: 1.2,
                   }}
@@ -1463,25 +1616,63 @@ const Dashboard: React.FC = () => {
       }}>
         {/* Sales Distribution */}
         <Card sx={{ 
-          borderRadius: 2, 
-          boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 12px rgba(0,0,0,0.3)' 
-            : { xs: 1, md: 2 },
-          bgcolor: theme.palette.background.paper,
-          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
-        }}>
+            borderRadius: 2, 
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 4px 12px rgba(0,0,0,0.3)' 
+              : { xs: 1, md: 2 },
+            bgcolor: theme.palette.background.paper,
+            border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
+          }}
+        >
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-            <Typography 
-              variant="h6" 
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              mb: 1,
+            }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 600, 
+                  color: theme.palette.text.primary, 
+                  fontSize: { xs: '0.875rem', md: '1rem' },
+                }}
+              >
+                Distribución de Ventas
+              </Typography>
+              <IconButton 
+                size="small" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMaximizedSalesDistribution(!maximizedSalesDistribution);
+                }}
+                sx={{ 
+                  color: theme.palette.text.secondary,
+                  padding: 0.1,
+                  minWidth: 20,
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  '&:hover': {
+                    bgcolor: theme.palette.action.hover,
+                  },
+                  '& svg': {
+                    fontSize: 16,
+                  },
+                }}
+              >
+                <ArrowOutward />
+              </IconButton>
+            </Box>
+            <Divider 
               sx={{ 
-                fontWeight: 600, 
-                color: theme.palette.text.primary, 
-                mb: { xs: 2, md: 3 },
-                fontSize: { xs: '0.875rem', md: '1rem' },
-              }}
-            >
-              Distribución de Ventas
-            </Typography>
+                mt: { xs: 2, md: 2.5 },
+                mb: { xs: 2, md: 3 }, 
+                borderColor: theme.palette.divider,
+                mx: { xs: -2, md: -3 },
+              }} 
+            />
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
@@ -1513,9 +1704,8 @@ const Dashboard: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Desempeño por Usuario - Solo visible para admin y jefe_comercial */}
-        {(user?.role === 'admin' || user?.role === 'jefe_comercial') && (
-          <Card sx={{ 
+        {/* Desempeño por Usuario */}
+        <Card sx={{ 
             borderRadius: { xs: 1, md: 2 }, 
             boxShadow: theme.palette.mode === 'dark' 
               ? '0 4px 12px rgba(0,0,0,0.3)' 
@@ -1524,17 +1714,54 @@ const Dashboard: React.FC = () => {
             border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
           }}>
             <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-              <Typography 
-                variant="h6" 
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                mb: 1,
+              }}>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 600, 
+                    color: theme.palette.text.primary, 
+                    fontSize: { xs: '0.875rem', md: '1rem' },
+                  }}
+                >
+                  KPI's Área Comercial
+                </Typography>
+                <IconButton 
+                  size="small" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMaximizedKPIArea(!maximizedKPIArea);
+                  }}
+                  sx={{ 
+                    color: theme.palette.text.secondary,
+                    padding: 0.1,
+                    minWidth: 20,
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    '&:hover': {
+                      bgcolor: theme.palette.action.hover,
+                    },
+                    '& svg': {
+                      fontSize: 16,
+                    },
+                  }}
+                >
+                  <ArrowOutward />
+                </IconButton>
+              </Box>
+              <Divider 
                 sx={{ 
-                  fontWeight: 600, 
-                  color: theme.palette.text.primary, 
-                  mb: { xs: 2, md: 3 },
-                  fontSize: { xs: '0.875rem', md: '1rem' },
-                }}
-              >
-                KPI's Área Comercial
-              </Typography>
+                  mt: { xs: 2, md: 2.5 },
+                  mb: { xs: 2, md: 3 }, 
+                  borderColor: theme.palette.divider,
+                  mx: { xs: -2, md: -3 },
+                }} 
+              />
               {(() => {
                 // Asegurar que siempre tengamos un array válido
                 const userPerformance = (stats?.deals?.userPerformance && Array.isArray(stats.deals.userPerformance)) 
@@ -1635,11 +1862,9 @@ const Dashboard: React.FC = () => {
               })()}
             </CardContent>
           </Card>
-        )}
 
-        {/* Total de Ventas por Asesor - Solo visible para admin y jefe_comercial */}
-        {(user?.role === 'admin' || user?.role === 'jefe_comercial') && (
-          <Card sx={{ 
+        {/* Total de Ventas por Asesor */}
+        <Card sx={{ 
             borderRadius: 2, 
             boxShadow: theme.palette.mode === 'dark' 
               ? '0 4px 12px rgba(0,0,0,0.3)' 
@@ -1648,17 +1873,54 @@ const Dashboard: React.FC = () => {
             border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
           }}>
             <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-              <Typography 
-                variant="h6" 
+              <Box sx={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                mb: 1,
+              }}>
+                <Typography 
+                  variant="h6" 
+                  sx={{ 
+                    fontWeight: 600, 
+                    color: theme.palette.text.primary,
+                    fontSize: { xs: '0.875rem', md: '1rem' },
+                  }}
+                >
+                  Total de Ventas por Asesor
+                </Typography>
+                <IconButton 
+                  size="small" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMaximizedAdvisors(!maximizedAdvisors);
+                  }}
+                  sx={{ 
+                    color: theme.palette.text.secondary,
+                    padding: 0.1,
+                    minWidth: 20,
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    '&:hover': {
+                      bgcolor: theme.palette.action.hover,
+                    },
+                    '& svg': {
+                      fontSize: 16,
+                    },
+                  }}
+                >
+                  <ArrowOutward />
+                </IconButton>
+              </Box>
+              <Divider 
                 sx={{ 
-                  fontWeight: 600, 
-                  color: theme.palette.text.primary,
-                  fontSize: { xs: '0.875rem', md: '1rem' },
-                  mb: 2,
-                }}
-              >
-                Total de Ventas por Asesor
-              </Typography>
+                  mt: { xs: 2, md: 2.5 },
+                  mb: 2, 
+                  borderColor: theme.palette.divider,
+                  mx: { xs: -2, md: -3 },
+                }} 
+              />
               {stats.deals.userPerformance && stats.deals.userPerformance.length > 0 ? (
                 <>
                   {/* Resumen del periodo */}
@@ -1673,50 +1935,29 @@ const Dashboard: React.FC = () => {
                       <>
                         <Box sx={{ 
                           display: 'flex', 
-                          justifyContent: 'space-between', 
                           alignItems: 'center',
                           mb: 2,
                           flexWrap: 'wrap',
-                          gap: 1,
+                          gap: 2,
                         }}>
-                          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
-                                color: theme.palette.text.secondary,
-                                fontSize: '0.75rem',
-                              }}
-                            >
-                              Total del periodo: <strong style={{ color: theme.palette.text.primary }}>S/ {totalPeriod.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</strong>
-                            </Typography>
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
-                                color: theme.palette.text.secondary,
-                                fontSize: '0.75rem',
-                              }}
-                            >
-                              Asesores: <strong style={{ color: theme.palette.text.primary }}>{totalAdvisors}</strong>
-                            </Typography>
-                          </Box>
-                          <Link
-                            component="button"
-                            variant="body2"
-                            onClick={() => {
-                              setAdvisorsModalOpen(true);
-                            }}
-                            sx={{
-                              color: theme.palette.primary.main,
-                              textDecoration: 'none',
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              color: theme.palette.text.secondary,
                               fontSize: '0.75rem',
-                              fontWeight: 500,
-                              '&:hover': {
-                                textDecoration: 'underline',
-                              },
                             }}
                           >
-                            Ver todos
-                          </Link>
+                            Total del periodo: <strong style={{ color: theme.palette.text.primary }}>S/ {totalPeriod.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</strong>
+                          </Typography>
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              color: theme.palette.text.secondary,
+                              fontSize: '0.75rem',
+                            }}
+                          >
+                            Asesores: <strong style={{ color: theme.palette.text.primary }}>{totalAdvisors}</strong>
+                          </Typography>
                         </Box>
 
                         {/* Lista de top 5 asesores */}
@@ -1856,7 +2097,6 @@ const Dashboard: React.FC = () => {
             )}
           </CardContent>
         </Card>
-        )}
 
         {/* Ventas Semanales */}
         <Card sx={{ 
@@ -1868,17 +2108,54 @@ const Dashboard: React.FC = () => {
           border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
         }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-            <Typography 
-              variant="h6" 
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              mb: 1,
+            }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 600, 
+                  color: theme.palette.text.primary, 
+                  fontSize: { xs: '0.875rem', md: '1rem' },
+                }}
+              >
+                Ventas Semanales
+              </Typography>
+              <IconButton 
+                size="small" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMaximizedWeeklySales(!maximizedWeeklySales);
+                }}
+                sx={{ 
+                  color: theme.palette.text.secondary,
+                  padding: 0.1,
+                  minWidth: 20,
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  '&:hover': {
+                    bgcolor: theme.palette.action.hover,
+                  },
+                  '& svg': {
+                    fontSize: 16,
+                  },
+                }}
+              >
+                <ArrowOutward />
+              </IconButton>
+            </Box>
+            <Divider 
               sx={{ 
-                fontWeight: 600, 
-                color: theme.palette.text.primary, 
-                mb: { xs: 2, md: 3 },
-                fontSize: { xs: '0.875rem', md: '1rem' },
-              }}
-            >
-              Ventas Semanales
-            </Typography>
+                mt: { xs: 2, md: 2.5 },
+                mb: { xs: 2, md: 3 }, 
+                borderColor: theme.palette.divider,
+                mx: { xs: -2, md: -3 },
+              }} 
+            />
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={weeklySalesData}>
                 <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={true} vertical={false} />
@@ -1918,7 +2195,7 @@ const Dashboard: React.FC = () => {
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center',
-              mb: { xs: 2, md: 3 },
+              mb: 1,
             }}>
               <Typography 
                 variant="h6" 
@@ -1930,18 +2207,38 @@ const Dashboard: React.FC = () => {
               >
                 Ventas
               </Typography>
-              <Button
-                size="small"
-                endIcon={<Download sx={{ fontSize: { xs: 16, md: 18 } }} />}
-                onClick={handleDownloadSales}
+              <IconButton 
+                size="small" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMaximizedSales(!maximizedSales);
+                }}
                 sx={{ 
-                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
-                  textTransform: 'none',
+                  color: theme.palette.text.secondary,
+                  padding: 0.1,
+                  minWidth: 20,
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  '&:hover': {
+                    bgcolor: theme.palette.action.hover,
+                  },
+                  '& svg': {
+                    fontSize: 16,
+                  },
                 }}
               >
-                Descargar
-              </Button>
+                <ArrowOutward />
+              </IconButton>
             </Box>
+            <Divider 
+              sx={{ 
+                mt: { xs: 2, md: 2.5 },
+                mb: { xs: 2, md: 3 }, 
+                borderColor: theme.palette.divider,
+                mx: { xs: -2, md: -3 },
+              }} 
+            />
             <Box sx={{ width: '100%', height: { xs: 250, sm: 300 }, minHeight: { xs: 250, sm: 300 }, minWidth: 0, position:'relative'}}>
               <ResponsiveContainer width="100%" height={300} minHeight={250}>
                 <AreaChart 
@@ -2038,7 +2335,7 @@ const Dashboard: React.FC = () => {
               display: 'flex', 
               justifyContent: 'space-between', 
               alignItems: 'center',
-              mb: 3,
+              mb: 1,
             }}>
               <Typography 
                 variant="h6" 
@@ -2050,10 +2347,38 @@ const Dashboard: React.FC = () => {
               >
                 Pipeline de Ventas
               </Typography>
-              <IconButton size="small" sx={{ color: theme.palette.text.secondary }}>
-                <ArrowDropDown />
+              <IconButton 
+                size="small" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMaximizedPipeline(!maximizedPipeline);
+                }}
+                sx={{ 
+                  color: theme.palette.text.secondary,
+                  padding: 0.1,
+                  minWidth: 20,
+                  width: 20,
+                  height: 20,
+                  borderRadius: '50%',
+                  '&:hover': {
+                    bgcolor: theme.palette.action.hover,
+                  },
+                  '& svg': {
+                    fontSize: 16,
+                  },
+                }}
+              >
+                <ArrowOutward />
               </IconButton>
             </Box>
+            <Divider 
+              sx={{ 
+                mt: { xs: 2, md: 2.5 },
+                mb: 3, 
+                borderColor: theme.palette.divider,
+                mx: { xs: -2, md: -3 },
+              }} 
+            />
 
             {/* Tres columnas con etapas */}
             <Box sx={{ 
@@ -2343,8 +2668,8 @@ const Dashboard: React.FC = () => {
         fullWidth
         PaperProps={{
           sx: {
-            borderRadius: 2,
-            bgcolor: theme.palette.background.paper,
+          borderRadius: 2, 
+          bgcolor: theme.palette.background.paper,
           },
         }}
       >
@@ -2381,7 +2706,7 @@ const Dashboard: React.FC = () => {
             InputProps={{
               startAdornment: <Typography sx={{ mr: 1, color: theme.palette.text.secondary }}>S/</Typography>,
             }}
-            sx={{ 
+              sx={{ 
               mt: 2,
               '& input[type=number]': {
                 MozAppearance: 'textfield',
@@ -2439,8 +2764,8 @@ const Dashboard: React.FC = () => {
           pb: 1,
         }}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Total de Ventas por Asesor
-          </Typography>
+              Total de Ventas por Asesor
+            </Typography>
           <IconButton
             onClick={() => setAdvisorsModalOpen(false)}
             size="small"
@@ -2452,48 +2777,48 @@ const Dashboard: React.FC = () => {
           </IconButton>
         </DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
-          {stats.deals.userPerformance && stats.deals.userPerformance.length > 0 ? (
-            <>
-              {/* Resumen del periodo */}
-              {(() => {
-                const sortedUsers = [...stats.deals.userPerformance]
-                  .sort((a, b) => (b.wonDealsValue || 0) - (a.wonDealsValue || 0));
-                const totalPeriod = sortedUsers.reduce((sum, user) => sum + (user.wonDealsValue || 0), 0);
-                const totalAdvisors = sortedUsers.length;
-                
-                return (
-                  <>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center',
+            {stats.deals.userPerformance && stats.deals.userPerformance.length > 0 ? (
+              <>
+                {/* Resumen del periodo */}
+                {(() => {
+                  const sortedUsers = [...stats.deals.userPerformance]
+                    .sort((a, b) => (b.wonDealsValue || 0) - (a.wonDealsValue || 0));
+                  const totalPeriod = sortedUsers.reduce((sum, user) => sum + (user.wonDealsValue || 0), 0);
+                  const totalAdvisors = sortedUsers.length;
+                  
+                  return (
+                    <>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
                       mb: 3,
-                      flexWrap: 'wrap',
+                        flexWrap: 'wrap',
                       gap: 2,
                       pb: 2,
                       borderBottom: `1px solid ${theme.palette.divider}`,
-                    }}>
+                      }}>
                       <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-                        <Typography 
+                          <Typography 
                           variant="body1" 
-                          sx={{ 
-                            color: theme.palette.text.secondary,
-                            fontSize: '0.875rem',
-                          }}
-                        >
-                          Total del periodo: <strong style={{ color: theme.palette.text.primary }}>S/ {totalPeriod.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</strong>
-                        </Typography>
-                        <Typography 
+                            sx={{ 
+                              color: theme.palette.text.secondary,
+                              fontSize: '0.875rem',
+                            }}
+                          >
+                            Total del periodo: <strong style={{ color: theme.palette.text.primary }}>S/ {totalPeriod.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</strong>
+                          </Typography>
+                          <Typography 
                           variant="body1" 
-                          sx={{ 
-                            color: theme.palette.text.secondary,
-                            fontSize: '0.875rem',
-                          }}
-                        >
-                          Asesores: <strong style={{ color: theme.palette.text.primary }}>{totalAdvisors}</strong>
-                        </Typography>
+                            sx={{ 
+                              color: theme.palette.text.secondary,
+                              fontSize: '0.875rem',
+                            }}
+                          >
+                            Asesores: <strong style={{ color: theme.palette.text.primary }}>{totalAdvisors}</strong>
+                          </Typography>
+                        </Box>
                       </Box>
-                    </Box>
 
                     {/* Lista de todos los asesores */}
                     <Box sx={{ 
@@ -2519,16 +2844,16 @@ const Dashboard: React.FC = () => {
                       },
                     }}>
                       {sortedUsers.map((user, index) => {
-                        const rank = index + 1;
+                          const rank = index + 1;
                         const maxValue = sortedUsers[0]?.wonDealsValue || 1;
-                        const percentage = ((user.wonDealsValue || 0) / maxValue) * 100;
+                          const percentage = ((user.wonDealsValue || 0) / maxValue) * 100;
                         const avatarColors = ['#8B5CF6', '#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#06B6D4', '#8B5CF6', '#10B981'];
-                        
-                        return (
-                          <Box 
-                            key={user.userId}
-                            sx={{
-                              position: 'relative',
+                          
+                          return (
+                            <Box 
+                              key={user.userId}
+                              sx={{
+                                position: 'relative',
                               p: 2,
                               borderRadius: 1.5,
                               bgcolor: theme.palette.mode === 'dark' 
@@ -2540,114 +2865,114 @@ const Dashboard: React.FC = () => {
                                   ? 'rgba(255, 255, 255, 0.05)' 
                                   : 'rgba(0, 0, 0, 0.04)',
                               },
-                            }}
-                          >
-                            <Box sx={{ 
-                              display: 'flex', 
-                              alignItems: 'center', 
+                              }}
+                            >
+                              <Box sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
                               gap: 2,
                               mb: 1.5,
-                            }}>
-                              {/* Número de ranking */}
-                              <Box
-                                sx={{
+                              }}>
+                                {/* Número de ranking */}
+                                <Box
+                                  sx={{
                                   width: 40,
                                   height: 40,
                                   borderRadius: 1.5,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
                                   bgcolor: rank === 1 ? '#FFF4E6' : rank === 2 ? '#E0F2FE' : rank === 3 ? '#F3E8FF' : (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'),
                                   color: rank === 1 ? '#F59E0B' : rank === 2 ? '#0EA5E9' : rank === 3 ? '#8B5CF6' : theme.palette.text.secondary,
                                   fontWeight: 700,
-                                  fontSize: '0.875rem',
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {rank}
-                              </Box>
+                                    fontSize: '0.875rem',
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {rank}
+                                </Box>
 
-                              {/* Avatar */}
-                              <Avatar
-                                sx={{
+                                {/* Avatar */}
+                                <Avatar
+                                  sx={{
                                   width: 48,
                                   height: 48,
-                                  bgcolor: avatarColors[index % avatarColors.length],
-                                  fontSize: '0.875rem',
-                                  fontWeight: 600,
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {getInitials(user.firstName, user.lastName)}
-                              </Avatar>
+                                    bgcolor: avatarColors[index % avatarColors.length],
+                                    fontSize: '0.875rem',
+                                    fontWeight: 600,
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {getInitials(user.firstName, user.lastName)}
+                                </Avatar>
 
-                              {/* Nombre y ventas */}
-                              <Box sx={{ flex: 1, minWidth: 0 }}>
-                                <Typography 
+                                {/* Nombre y ventas */}
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                  <Typography 
                                   variant="body1" 
-                                  sx={{ 
-                                    fontWeight: 600, 
-                                    color: theme.palette.text.primary,
+                                    sx={{ 
+                                      fontWeight: 600, 
+                                      color: theme.palette.text.primary,
                                     fontSize: '0.9375rem',
                                     mb: 0.5,
-                                  }}
-                                >
-                                  {user.firstName} {user.lastName}
-                                </Typography>
-                                <Typography 
+                                    }}
+                                  >
+                                    {user.firstName} {user.lastName}
+                                  </Typography>
+                                  <Typography 
                                   variant="body2" 
-                                  sx={{ 
-                                    color: theme.palette.text.secondary,
+                                    sx={{ 
+                                      color: theme.palette.text.secondary,
                                     fontSize: '0.8125rem',
+                                    }}
+                                  >
+                                    {user.wonDeals || 0} {user.wonDeals === 1 ? 'venta' : 'ventas'}
+                                  </Typography>
+                                </Box>
+
+                                {/* Monto */}
+                                <Typography 
+                                variant="h6" 
+                                  sx={{ 
+                                  fontWeight: 700, 
+                                    color: theme.palette.text.primary,
+                                  fontSize: '1rem',
+                                    flexShrink: 0,
                                   }}
                                 >
-                                  {user.wonDeals || 0} {user.wonDeals === 1 ? 'venta' : 'ventas'}
+                                  S/ {(user.wonDealsValue || 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                                 </Typography>
                               </Box>
 
-                              {/* Monto */}
-                              <Typography 
-                                variant="h6" 
-                                sx={{ 
-                                  fontWeight: 700, 
-                                  color: theme.palette.text.primary,
-                                  fontSize: '1rem',
-                                  flexShrink: 0,
-                                }}
-                              >
-                                S/ {(user.wonDealsValue || 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                              </Typography>
-                            </Box>
-
-                            {/* Barra de progreso */}
-                            <Box sx={{ 
-                              width: '100%', 
+                              {/* Barra de progreso */}
+                              <Box sx={{ 
+                                width: '100%', 
                               height: 8, 
-                              borderRadius: 1,
-                              overflow: 'hidden',
-                              bgcolor: theme.palette.mode === 'dark' 
-                                ? 'rgba(255, 255, 255, 0.1)' 
-                                : 'rgba(0, 0, 0, 0.05)',
-                              position: 'relative',
-                            }}>
-                              <Box
-                                sx={{
-                                  width: `${percentage}%`,
-                                  height: '100%',
-                                  bgcolor: '#10B981',
-                                  transition: 'width 0.3s ease',
-                                }}
-                              />
+                                borderRadius: 1,
+                                overflow: 'hidden',
+                                bgcolor: theme.palette.mode === 'dark' 
+                                  ? 'rgba(255, 255, 255, 0.1)' 
+                                  : 'rgba(0, 0, 0, 0.05)',
+                                position: 'relative',
+                              }}>
+                                <Box
+                                  sx={{
+                                    width: `${percentage}%`,
+                                    height: '100%',
+                                    bgcolor: '#10B981',
+                                    transition: 'width 0.3s ease',
+                                  }}
+                                />
+                              </Box>
                             </Box>
-                          </Box>
-                        );
-                      })}
-                    </Box>
-                  </>
-                );
-              })()}
-            </>
-          ) : (
+                          );
+                        })}
+                      </Box>
+                    </>
+                  );
+                })()}
+              </>
+            ) : (
             <Box sx={{ 
               display: 'flex', 
               flexDirection: 'column', 
@@ -2663,9 +2988,9 @@ const Dashboard: React.FC = () => {
                 }}
               >
                 No hay datos de ventas por asesor disponibles
-              </Typography>
-            </Box>
-          )}
+                  </Typography>
+                </Box>
+              )}
         </DialogContent>
         <DialogActions sx={{ p: 2, pt: 1, borderTop: `1px solid ${theme.palette.divider}` }}>
           <Button
@@ -2681,6 +3006,553 @@ const Dashboard: React.FC = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Modal Fullscreen - Distribución de Ventas */}
+      <Dialog
+        open={maximizedSalesDistribution}
+        onClose={() => setMaximizedSalesDistribution(false)}
+        fullScreen
+        PaperProps={{
+          sx: {
+            bgcolor: theme.palette.background.default,
+          },
+        }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          borderBottom: `1px solid ${theme.palette.divider}`,
+          pb: 2,
+        }}>
+          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+            Distribución de Ventas
+          </Typography>
+          <IconButton
+            onClick={() => setMaximizedSalesDistribution(false)}
+            sx={{
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+              },
+            }}
+          >
+            <ArrowOutward sx={{ transform: 'rotate(180deg)' }} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 4 }}>
+          <ResponsiveContainer width="100%" height={600}>
+            <PieChart>
+              <Pie
+                data={salesDistributionData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                outerRadius={150}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {salesDistributionData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <RechartsTooltip />
+            </PieChart>
+          </ResponsiveContainer>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mt: 4, justifyContent: 'center' }}>
+            {salesDistributionData.map((entry, index) => (
+              <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: entry.color }} />
+                <Typography variant="body1" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
+                  {entry.name}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Fullscreen - KPI's Área Comercial */}
+      <Dialog
+        open={maximizedKPIArea}
+          onClose={() => setMaximizedKPIArea(false)}
+          fullScreen
+          PaperProps={{
+            sx: {
+              bgcolor: theme.palette.background.default,
+            },
+          }}
+        >
+          <DialogTitle sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            borderBottom: `1px solid ${theme.palette.divider}`,
+            pb: 2,
+          }}>
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+              KPI's Área Comercial
+            </Typography>
+            <IconButton
+              onClick={() => setMaximizedKPIArea(false)}
+              sx={{
+                color: theme.palette.text.secondary,
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                },
+              }}
+            >
+              <ArrowOutward sx={{ transform: 'rotate(180deg)' }} />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent sx={{ p: 4 }}>
+            {(() => {
+              const userPerformance = (stats?.deals?.userPerformance && Array.isArray(stats.deals.userPerformance)) 
+                ? stats.deals.userPerformance 
+                : [];
+              
+              if (userPerformance.length === 0) {
+                return (
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    py: 12,
+                    minHeight: 600,
+                    width: '100%',
+                  }}>
+                    <Assessment 
+                      sx={{ 
+                        fontSize: 120, 
+                        color: theme.palette.text.disabled,
+                        opacity: 0.3,
+                        mb: 2,
+                      }} 
+                    />
+                    <Typography variant="h6" sx={{ color: theme.palette.text.secondary }}>
+                      No hay datos disponibles
+                    </Typography>
+                  </Box>
+                );
+              }
+              
+              return (
+                <Box>
+                  <ResponsiveContainer width="100%" height={600}>
+                    <PieChart>
+                      <Pie
+                        data={userPerformance.map((user) => ({
+                          name: `${user.firstName} ${user.lastName}`,
+                          value: user.performance,
+                          percentage: user.performance,
+                        }))}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={true}
+                        label={(props: any) => {
+                          const { name, percentage, cx, cy, midAngle, innerRadius, outerRadius } = props;
+                          if (midAngle === undefined || innerRadius === undefined || outerRadius === undefined) {
+                            return null;
+                          }
+                          const RADIAN = Math.PI / 180;
+                          const radius = outerRadius + 30;
+                          const xPos = cx + radius * Math.cos(-midAngle * RADIAN);
+                          const yPos = cy + radius * Math.sin(-midAngle * RADIAN);
+                          
+                          return (
+                            <text
+                              x={xPos}
+                              y={yPos}
+                              fill={theme.palette.text.primary}
+                              textAnchor={xPos > cx ? 'start' : 'end'}
+                              dominantBaseline="central"
+                              fontSize={14}
+                              fontWeight={600}
+                            >
+                              {name}: {percentage.toFixed(1)}%
+                            </text>
+                          );
+                        }}
+                        outerRadius={150}
+                        innerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {userPerformance.map((user, index) => {
+                          const colors = ['#1F2937', '#F59E0B', '#10B981', '#8B5CF6', '#EF4444', '#06B6D4'];
+                          return (
+                            <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+                          );
+                        })}
+                      </Pie>
+                      <RechartsTooltip 
+                        formatter={(value: any) => {
+                          return [`${value.toFixed(1)}%`, 'Rendimiento'];
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </Box>
+              );
+            })()}
+          </DialogContent>
+        </Dialog>
+
+      {/* Modal Fullscreen - Total de Ventas por Asesor */}
+      <Dialog
+        open={maximizedAdvisors}
+          onClose={() => setMaximizedAdvisors(false)}
+          fullScreen
+          PaperProps={{
+            sx: {
+              bgcolor: theme.palette.background.default,
+            },
+          }}
+        >
+          <DialogTitle sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            borderBottom: `1px solid ${theme.palette.divider}`,
+            pb: 2,
+          }}>
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+              Total de Ventas por Asesor
+            </Typography>
+            <IconButton
+              onClick={() => setMaximizedAdvisors(false)}
+              sx={{
+                color: theme.palette.text.secondary,
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                },
+              }}
+            >
+              <ArrowOutward sx={{ transform: 'rotate(180deg)' }} />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent sx={{ p: 4 }}>
+            {stats.deals.userPerformance && stats.deals.userPerformance.length > 0 ? (
+              <>
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  mb: 4,
+                  flexWrap: 'wrap',
+                  gap: 2,
+                }}>
+                  <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    <Typography variant="h6" sx={{ color: theme.palette.text.secondary }}>
+                      Total del periodo: <strong style={{ color: theme.palette.text.primary }}>
+                        S/ {stats.deals.userPerformance.reduce((sum: number, user: any) => sum + (user.wonDealsValue || 0), 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                      </strong>
+                    </Typography>
+                    <Typography variant="h6" sx={{ color: theme.palette.text.secondary }}>
+                      Asesores: <strong style={{ color: theme.palette.text.primary }}>{stats.deals.userPerformance.length}</strong>
+                    </Typography>
+                  </Box>
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {[...stats.deals.userPerformance]
+                    .sort((a, b) => (b.wonDealsValue || 0) - (a.wonDealsValue || 0))
+                    .map((user, index) => {
+                      const maxValue = Math.max(...(stats.deals.userPerformance || []).map((u: any) => u.wonDealsValue || 0));
+                      const percentage = maxValue > 0 ? ((user.wonDealsValue || 0) / maxValue) * 100 : 0;
+                      const avatarColors = ['#8B5CF6', '#10B981', '#3B82F6', '#F59E0B', '#EF4444'];
+                      
+                      return (
+                        <Box 
+                          key={user.userId}
+                          sx={{
+                            position: 'relative',
+                            p: 3,
+                            borderRadius: 2,
+                            bgcolor: theme.palette.background.paper,
+                            border: `1px solid ${theme.palette.divider}`,
+                          }}
+                        >
+                          <Box sx={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: 2,
+                            mb: 2,
+                          }}>
+                            <Avatar sx={{ bgcolor: avatarColors[index % avatarColors.length], width: 56, height: 56 }}>
+                              {user.firstName?.[0]}{user.lastName?.[0]}
+                            </Avatar>
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                {user.firstName} {user.lastName}
+                              </Typography>
+                              <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                                S/ {user.wonDealsValue?.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                              </Typography>
+                            </Box>
+                            <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.secondary }}>
+                              #{index + 1}
+                            </Typography>
+                          </Box>
+                          <Box sx={{ 
+                            width: '100%', 
+                            height: 12, 
+                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                            borderRadius: 1,
+                            overflow: 'hidden',
+                          }}>
+                            <Box
+                              sx={{
+                                width: `${percentage}%`,
+                                height: '100%',
+                                bgcolor: avatarColors[index % avatarColors.length],
+                                transition: 'width 0.3s ease',
+                              }}
+                            />
+                          </Box>
+                        </Box>
+                      );
+                    })}
+                </Box>
+              </>
+            ) : (
+              <Box sx={{ 
+                display: 'flex', 
+                flexDirection: 'column', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                py: 12,
+                minHeight: 600,
+                width: '100%',
+              }}>
+                <Typography variant="h6" sx={{ color: theme.palette.text.secondary }}>
+                  No hay datos de ventas por asesor disponibles
+                </Typography>
+              </Box>
+            )}
+          </DialogContent>
+        </Dialog>
+
+      {/* Modal Fullscreen - Ventas Semanales */}
+      <Dialog
+        open={maximizedWeeklySales}
+        onClose={() => setMaximizedWeeklySales(false)}
+        fullScreen
+        PaperProps={{
+          sx: {
+            bgcolor: theme.palette.background.default,
+          },
+        }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          borderBottom: `1px solid ${theme.palette.divider}`,
+          pb: 2,
+        }}>
+          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+            Ventas Semanales
+          </Typography>
+          <IconButton
+            onClick={() => setMaximizedWeeklySales(false)}
+            sx={{
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+              },
+            }}
+          >
+            <ArrowOutward sx={{ transform: 'rotate(180deg)' }} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 4 }}>
+          <ResponsiveContainer width="100%" height={600}>
+            <BarChart data={weeklySalesData}>
+              <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={true} vertical={false} />
+              <XAxis dataKey="week" stroke={theme.palette.text.secondary} />
+              <YAxis stroke={theme.palette.text.secondary} />
+              <RechartsTooltip />
+              <Bar dataKey="value" fill="#8B5CF6" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Fullscreen - Ventas */}
+      <Dialog
+        open={maximizedSales}
+        onClose={() => setMaximizedSales(false)}
+        fullScreen
+        PaperProps={{
+          sx: {
+            bgcolor: theme.palette.background.default,
+          },
+        }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          borderBottom: `1px solid ${theme.palette.divider}`,
+          pb: 2,
+        }}>
+          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+            Ventas
+          </Typography>
+          <IconButton
+            onClick={() => setMaximizedSales(false)}
+            sx={{
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+              },
+            }}
+          >
+            <ArrowOutward sx={{ transform: 'rotate(180deg)' }} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 4 }}>
+          <Box sx={{ width: '100%', height: 600, minHeight: 600, minWidth: 0, position:'relative'}}>
+            <ResponsiveContainer width="100%" height={600} minHeight={600}>
+              <AreaChart 
+                data={salesChartData}
+                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                <XAxis 
+                  dataKey="label" 
+                  stroke={theme.palette.text.secondary}
+                  tick={{ fontSize: 12 }}
+                  angle={selectedMonth !== null ? -45 : 0}
+                  textAnchor={selectedMonth !== null ? "end" : "middle"}
+                  height={selectedMonth !== null ? 50 : undefined}
+                  dy={selectedMonth !== null ? 5 : undefined}
+                />
+                <YAxis 
+                  stroke={theme.palette.text.secondary}
+                  tickFormatter={(value) => {
+                    if (value === 0) return 'S/ 0';
+                    const valueInK = value / 1000;
+                    if (valueInK % 1 === 0) {
+                      return `S/ ${valueInK}k`;
+                    }
+                    return `S/ ${valueInK.toFixed(1)}k`;
+                  }}
+                  domain={selectedMonth !== null && selectedMonthBudget > 0 
+                    ? [0, selectedMonthBudget * 1.1] 
+                    : [0, 'dataMax']}
+                />
+                <RechartsTooltip 
+                  formatter={(value: any) => {
+                    const numValue = typeof value === 'number' ? value : Number(value);
+                    return numValue !== undefined && !isNaN(numValue) 
+                      ? [`S/ ${numValue.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Ventas'] 
+                      : ['', 'Ventas'];
+                  }}
+                  labelFormatter={(label: any) => selectedMonth !== null ? `Día ${label}` : label}
+                  contentStyle={{
+                    backgroundColor: theme.palette.background.paper,
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: '8px',
+                  }}
+                />
+                {selectedMonth !== null && selectedMonthBudget > 0 && (
+                  <ReferenceLine 
+                    y={selectedMonthBudget} 
+                    stroke="#10B981" 
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    label={{ 
+                      value: `Presupuesto: S/ ${selectedMonthBudget.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, 
+                      position: "right",
+                      fill: "#10B981",
+                      fontSize: 12,
+                    }}
+                  />
+                )}
+                <Area 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#10B981" 
+                  strokeWidth={3}
+                  fill="url(#colorSales)"
+                  dot={false}
+                  activeDot={{ r: 6, fill: '#10B981' }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </Box>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Fullscreen - Pipeline de Ventas */}
+      <Dialog
+        open={maximizedPipeline}
+        onClose={() => setMaximizedPipeline(false)}
+        fullScreen
+        PaperProps={{
+          sx: {
+            bgcolor: theme.palette.background.default,
+          },
+        }}
+      >
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          borderBottom: `1px solid ${theme.palette.divider}`,
+          pb: 2,
+        }}>
+          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+            Pipeline de Ventas
+          </Typography>
+          <IconButton
+            onClick={() => setMaximizedPipeline(false)}
+            sx={{
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+              },
+            }}
+          >
+            <ArrowOutward sx={{ transform: 'rotate(180deg)' }} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ p: 4 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }, gap: 3 }}>
+            {[
+              { label: 'Propuesta Económica', count: pipelineData.propuestaEconomica.count, value: pipelineData.propuestaEconomica.value, color: '#8B5CF6' },
+              { label: 'Negociación', count: pipelineData.negociacion.count, value: pipelineData.negociacion.value, color: '#F59E0B' },
+              { label: 'Cierre Ganado', count: pipelineData.cierreGanado.count, value: pipelineData.cierreGanado.value, color: '#10B981' },
+              { label: 'Total', count: pipelineData.propuestaEconomica.count + pipelineData.negociacion.count + pipelineData.cierreGanado.count, value: pipelineData.total, color: theme.palette.text.primary },
+            ].map((stage: { label: string; count: number; value: number; color: string }, index: number) => (
+              <Card key={index} sx={{ 
+                borderRadius: 2, 
+                bgcolor: theme.palette.background.paper,
+                border: `1px solid ${theme.palette.divider}`,
+                p: 3,
+              }}>
+                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, fontSize: '1.25rem' }}>
+                  {stage.label}
+                </Typography>
+                <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, color: stage.color }}>
+                  {stage.count}
+                </Typography>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                  S/ {stage.value.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Typography>
+              </Card>
+            ))}
+          </Box>
+        </DialogContent>
+      </Dialog>
+      
       <Snackbar
         open={!!successMessage}
         autoHideDuration={4000}

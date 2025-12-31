@@ -39,6 +39,11 @@ import {
   Snackbar,
   Alert,
   Popover,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  InputBase,
 } from '@mui/material';
 import {
   ChevronLeft,
@@ -82,7 +87,6 @@ import {
   FormatAlignCenter,
   FormatAlignRight,
   FormatAlignJustify,
-  Fullscreen,
 } from '@mui/icons-material';
 import api from '../config/api';
 import axios from 'axios';
@@ -155,17 +159,26 @@ const TaskDetail: React.FC = () => {
   const [callData, setCallData] = useState({ subject: '', description: '', duration: '' });
   const [newTaskData, setNewTaskData] = useState({ title: '', description: '', priority: 'medium', dueDate: '' });
   const [successMessage, setSuccessMessage] = useState('');
-  const [selectedAssociationCategory, setSelectedAssociationCategory] = useState<string>('Contactos');
-  const [associationSearch, setAssociationSearch] = useState('');
-  const [selectedNoteContacts, setSelectedNoteContacts] = useState<number[]>([]);
-  const [selectedNoteCompanies, setSelectedNoteCompanies] = useState<number[]>([]);
-  const [selectedNoteDeals, setSelectedNoteDeals] = useState<number[]>([]);
-  const [allNoteContacts, setAllNoteContacts] = useState<any[]>([]);
-  const [allNoteCompanies, setAllNoteCompanies] = useState<any[]>([]);
-  const [allNoteDeals, setAllNoteDeals] = useState<any[]>([]);
-  const [loadingNoteContacts, setLoadingNoteContacts] = useState(false);
-  const [loadingNoteCompanies, setLoadingNoteCompanies] = useState(false);
-  const [loadingNoteDeals, setLoadingNoteDeals] = useState(false);
+  // Estados para el modal de asociaciones de nota separado
+  const [noteAssociateModalOpen, setNoteAssociateModalOpen] = useState(false);
+  const [noteSelectedCategory, setNoteSelectedCategory] = useState('empresas');
+  const [noteAssociateSearch, setNoteAssociateSearch] = useState('');
+  const [noteModalCompanies, setNoteModalCompanies] = useState<any[]>([]);
+  const [noteModalContacts, setNoteModalContacts] = useState<any[]>([]);
+  const [noteModalDeals, setNoteModalDeals] = useState<any[]>([]);
+  const [noteModalTickets, setNoteModalTickets] = useState<any[]>([]);
+  const [noteSelectedAssociations, setNoteSelectedAssociations] = useState<{ [key: string]: number[] }>({
+    companies: [],
+    contacts: [],
+    deals: [],
+    tickets: [],
+  });
+  const [noteLoadingAssociations, setNoteLoadingAssociations] = useState(false);
+  const [selectedCompaniesForNote, setSelectedCompaniesForNote] = useState<number[]>([]);
+  const [selectedContactsForNote, setSelectedContactsForNote] = useState<number[]>([]);
+  const [selectedAssociationsForNote, setSelectedAssociationsForNote] = useState<number[]>([]);
+  const [excludedCompaniesForNote, setExcludedCompaniesForNote] = useState<number[]>([]);
+  const [excludedContactsForNote, setExcludedContactsForNote] = useState<number[]>([]);
   const noteEditorRef = React.useRef<HTMLDivElement>(null);
   const [datePickerAnchorEl, setDatePickerAnchorEl] = useState<HTMLElement | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -947,70 +960,71 @@ const TaskDetail: React.FC = () => {
     }
   }, [noteOpen, noteData.description]);
 
-  const fetchNoteContacts = async () => {
-    setLoadingNoteContacts(true);
+  const fetchAssociationsForNote = async (searchTerm?: string) => {
+    setNoteLoadingAssociations(true);
     try {
-      const response = await api.get('/contacts', { params: { limit: 1000 } });
-      setAllNoteContacts(response.data.contacts || response.data || []);
-    } catch (error) {
-      console.error('Error fetching contacts:', error);
-    } finally {
-      setLoadingNoteContacts(false);
-    }
-  };
+      if (searchTerm && searchTerm.trim().length > 0) {
+        const [companiesRes, contactsRes, dealsRes, ticketsRes] = await Promise.all([
+          api.get('/companies', { params: { limit: 1000, search: searchTerm } }),
+          api.get('/contacts', { params: { limit: 1000, search: searchTerm } }),
+          api.get('/deals', { params: { limit: 1000, search: searchTerm } }),
+          api.get('/tickets', { params: { limit: 1000, search: searchTerm } }),
+        ]);
+        setNoteModalCompanies(companiesRes.data.companies || companiesRes.data || []);
+        setNoteModalContacts(contactsRes.data.contacts || contactsRes.data || []);
+        setNoteModalDeals(dealsRes.data.deals || dealsRes.data || []);
+        setNoteModalTickets(ticketsRes.data.tickets || ticketsRes.data || []);
+      } else {
+        // Cargar elementos asociados a la tarea actual
+        const associatedItems: { companies: any[]; contacts: any[]; deals: any[]; tickets: any[] } = {
+          companies: [],
+          contacts: [],
+          deals: [],
+          tickets: [],
+        };
 
-  const fetchNoteCompanies = async () => {
-    setLoadingNoteCompanies(true);
-    try {
-      const response = await api.get('/companies', { params: { limit: 1000 } });
-      setAllNoteCompanies(response.data.companies || response.data || []);
-    } catch (error) {
-      console.error('Error fetching companies:', error);
-    } finally {
-      setLoadingNoteCompanies(false);
-    }
-  };
+        // Cargar empresas vinculadas
+        if (taskCompanies && taskCompanies.length > 0) {
+          associatedItems.companies = taskCompanies;
+        } else if (task?.Company) {
+          associatedItems.companies = [task.Company];
+        }
 
-  const fetchNoteDeals = async () => {
-    setLoadingNoteDeals(true);
-    try {
-      const response = await api.get('/deals', { params: { limit: 1000 } });
-      setAllNoteDeals(response.data.deals || response.data || []);
-    } catch (error) {
-      console.error('Error fetching deals:', error);
-    } finally {
-      setLoadingNoteDeals(false);
-    }
-  };
+        // Cargar contactos vinculados
+        if (taskContacts && taskContacts.length > 0) {
+          associatedItems.contacts = taskContacts;
+        } else if (task?.Contact) {
+          associatedItems.contacts = [task.Contact];
+        }
 
-  useEffect(() => {
-    if (noteOpen) {
-      if (selectedAssociationCategory === 'Contactos') {
-        fetchNoteContacts();
-      } else if (selectedAssociationCategory === 'Empresas') {
-        fetchNoteCompanies();
-      } else if (selectedAssociationCategory === 'Negocios') {
-        fetchNoteDeals();
+        // Cargar negocios vinculados
+        if (taskDeals && taskDeals.length > 0) {
+          associatedItems.deals = taskDeals;
+        } else if (task?.Deal) {
+          associatedItems.deals = [task.Deal];
+        }
+
+        setNoteModalCompanies(associatedItems.companies);
+        setNoteModalContacts(associatedItems.contacts);
+        setNoteModalDeals(associatedItems.deals);
+        setNoteModalTickets(associatedItems.tickets);
       }
+    } catch (error) {
+      console.error('Error fetching associations:', error);
+    } finally {
+      setNoteLoadingAssociations(false);
     }
-  }, [noteOpen, selectedAssociationCategory]);
-
-  // Calcular total de asociaciones para la nota
-  const totalNoteAssociations = React.useMemo(() => {
-    return selectedNoteContacts.length + selectedNoteCompanies.length + selectedNoteDeals.length;
-  }, [selectedNoteContacts, selectedNoteCompanies, selectedNoteDeals]);
+  };
 
   const handleOpenNote = () => {
     setNoteData({ subject: '', description: '' });
-    setSelectedAssociationCategory('Contactos');
-    setAssociationSearch('');
-    setSelectedNoteContacts([]);
-    setSelectedNoteCompanies([]);
-    setSelectedNoteDeals([]);
-    if (noteEditorRef.current) {
-      noteEditorRef.current.innerHTML = '';
-    }
     setNoteOpen(true);
+    // Inicializar asociaciones
+    setSelectedCompaniesForNote([]);
+    setSelectedContactsForNote([]);
+    setSelectedAssociationsForNote([]);
+    setExcludedCompaniesForNote([]);
+    setExcludedContactsForNote([]);
   };
 
   const handleOpenCall = () => {
@@ -1029,50 +1043,62 @@ const TaskDetail: React.FC = () => {
       return;
     }
     setSaving(true);
+    
     try {
-      // Crear la nota con las asociaciones seleccionadas
-      const notePayload: any = {
+      // Obtener empresas seleccionadas
+      const companiesToAssociate = selectedCompaniesForNote.filter(companyId => !excludedCompaniesForNote.includes(companyId));
+      
+      // Obtener contactos seleccionados
+      const contactsToAssociate = selectedContactsForNote.filter(contactId => !excludedContactsForNote.includes(contactId));
+      
+      // Obtener negocios seleccionados (de selectedAssociationsForNote, donde deals están en el rango 1000-2000)
+      const dealsToAssociate = selectedAssociationsForNote
+        .filter((id: number) => id > 1000 && id < 2000)
+        .map(id => id - 1000);
+      
+      // Crear nota asociada a la tarea actual
+      const activityData: any = {
         type: 'note',
         subject: noteData.subject || `Nota para ${task?.title || 'Tarea'}`,
         description: noteData.description,
       };
-
-      // Agregar asociaciones según lo seleccionado
-      if (selectedNoteContacts.length > 0) {
-        notePayload.contactId = selectedNoteContacts[0]; // El backend puede manejar múltiples después
-      } else if (task?.contactId) {
-        notePayload.contactId = task.contactId;
-      }
-
-      if (selectedNoteCompanies.length > 0) {
-        notePayload.companyId = selectedNoteCompanies[0];
+      
+      // Agregar asociaciones si existen
+      if (companiesToAssociate.length > 0) {
+        activityData.companyId = companiesToAssociate[0]; // Solo una empresa por nota
       } else if (task?.companyId) {
-        notePayload.companyId = task.companyId;
+        activityData.companyId = task.companyId;
       }
-
-      if (selectedNoteDeals.length > 0) {
-        notePayload.dealId = selectedNoteDeals[0];
+      
+      if (contactsToAssociate.length > 0) {
+        activityData.contactId = contactsToAssociate[0]; // Solo un contacto por nota
+      } else if (task?.contactId) {
+        activityData.contactId = task.contactId;
+      }
+      
+      if (dealsToAssociate.length > 0) {
+        activityData.dealId = dealsToAssociate[0];
       } else if (task?.dealId) {
-        notePayload.dealId = task.dealId;
+        activityData.dealId = task.dealId;
       }
-
-      await api.post('/activities', notePayload);
+      
+      await api.post('/activities', activityData);
+      
       setSuccessMessage('Nota creada exitosamente');
       setNoteOpen(false);
       setNoteData({ subject: '', description: '' });
-      if (noteEditorRef.current) {
-        noteEditorRef.current.innerHTML = '';
-      }
-      setSelectedNoteContacts([]);
-      setSelectedNoteCompanies([]);
-      setSelectedNoteDeals([]);
-      setAssociationSearch('');
+      setSelectedCompaniesForNote([]);
+      setSelectedContactsForNote([]);
+      setSelectedAssociationsForNote([]);
+      setExcludedCompaniesForNote([]);
+      setExcludedContactsForNote([]);
       fetchTask();
       setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving note:', error);
-      setSuccessMessage('Error al crear la nota');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Error desconocido';
+      setSuccessMessage(`Error al crear la nota: ${errorMessage}`);
+      setTimeout(() => setSuccessMessage(''), 5000);
     } finally {
       setSaving(false);
     }
@@ -4938,804 +4964,796 @@ const TaskDetail: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Ventana flotante de Nota */}
+      {/* Modal de crear nota */}
       {noteOpen && (
-        <>
+        <Box
+          sx={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: { xs: '95vw', sm: '700px' },
+            maxWidth: { xs: '95vw', sm: '90vw' },
+            height: '85vh',
+            backgroundColor: theme.palette.background.paper,
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 20px 60px rgba(0,0,0,0.3)' 
+              : '0 20px 60px rgba(0,0,0,0.12)',
+            zIndex: 1300,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            borderRadius: 4,
+            animation: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            '@keyframes fadeInScale': {
+              '0%': {
+                opacity: 0,
+                transform: 'translate(-50%, -50%) scale(0.95)',
+              },
+              '100%': {
+                opacity: 1,
+                transform: 'translate(-50%, -50%) scale(1)',
+              },
+            },
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Encabezado personalizado */}
           <Box
             sx={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: { xs: '95vw', sm: '1100px' },
-              maxWidth: { xs: '95vw', sm: '95vw' },
-              height: '85vh',
+              px: 3,
+              py: 2,
+              backgroundColor: 'transparent',
+              color: theme.palette.text.primary,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h6" sx={{ 
+                color: theme.palette.text.primary, 
+                fontWeight: 600, 
+                fontSize: '1.25rem',
+                letterSpacing: '-0.02em',
+              }}>
+                Nota
+              </Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <IconButton 
+                sx={{ 
+                  color: theme.palette.text.secondary,
+                  '&:hover': { 
+                    backgroundColor: theme.palette.error.main + '15',
+                    color: theme.palette.error.main,
+                  },
+                  transition: 'all 0.2s ease',
+                }} 
+                size="small" 
+                onClick={() => setNoteOpen(false)}
+              >
+                <Close fontSize="small" />
+              </IconButton>
+            </Box>
+          </Box>
+
+          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'row', p: 3, overflow: 'hidden', gap: 3 }}>
+          {/* Columna Izquierda: Editor */}
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            {/* Editor de texto enriquecido con barra de herramientas integrada */}
+            <Box sx={{ 
+              flexGrow: 1, 
+              display: 'flex', 
+              flexDirection: 'column', 
+              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`, 
+              borderRadius: 3,
+              overflow: 'hidden',
+              minHeight: '300px',
               backgroundColor: theme.palette.background.paper,
-              boxShadow: theme.palette.mode === 'dark' 
-                ? '0 20px 60px rgba(0,0,0,0.3)' 
-                : '0 20px 60px rgba(0,0,0,0.12)',
-              zIndex: 1300,
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:focus-within': {
+                boxShadow: `0 4px 16px ${taxiMonterricoColors.orange}40`,
+                borderColor: taxiMonterricoColors.orange,
+                transform: 'translateY(-1px)',
+              },
+            }}>
+              <RichTextEditor
+                value={noteData.description}
+                onChange={(value: string) => setNoteData({ ...noteData, description: value })}
+                placeholder="Empieza a escribir para dejar una nota..."
+                onAssociateClick={() => {
+                  setNoteAssociateModalOpen(true);
+                  setNoteSelectedCategory('empresas');
+                  setNoteAssociateSearch('');
+                  setNoteSelectedAssociations({
+                    companies: selectedCompaniesForNote,
+                    contacts: selectedContactsForNote,
+                    deals: selectedAssociationsForNote.filter((id: number) => id > 1000 && id < 2000).map(id => id - 1000),
+                    tickets: selectedAssociationsForNote.filter((id: number) => id > 2000).map(id => id - 2000),
+                  });
+                  fetchAssociationsForNote();
+                }}
+              />
+            </Box>
+          </Box>
+          </Box>
+
+          {/* Footer con botones */}
+          <Box sx={{ 
+            px: 3,
+            py: 2.5, 
+            borderTop: `1px solid ${theme.palette.divider}`, 
+            backgroundColor: theme.palette.background.paper, 
+            display: 'flex', 
+            justifyContent: 'flex-end', 
+            gap: 2,
+          }}>
+            <Button 
+              onClick={() => setNoteOpen(false)} 
+              sx={{ 
+                textTransform: 'none',
+                px: 3.5,
+                py: 1.25,
+                color: theme.palette.text.secondary,
+                fontWeight: 500,
+                borderRadius: 2,
+                '&:hover': {
+                  backgroundColor: theme.palette.action.hover,
+                },
+                transition: 'all 0.2s ease',
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleSaveNote} 
+              variant="contained" 
+              disabled={saving || !noteData.description.trim()}
+              sx={{ 
+                textTransform: 'none',
+                px: 4,
+                py: 1.25,
+                backgroundColor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.orange,
+                fontWeight: 600,
+                borderRadius: 2,
+                boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.orange}40`,
+                '&:hover': {
+                  backgroundColor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.orangeDark,
+                  boxShadow: saving ? 'none' : `0 6px 16px ${taxiMonterricoColors.orange}50`,
+                  transform: 'translateY(-1px)',
+                },
+                '&:active': {
+                  transform: 'translateY(0)',
+                },
+                '&:disabled': {
+                  backgroundColor: theme.palette.action.disabledBackground,
+                  color: theme.palette.action.disabled,
+                  boxShadow: 'none',
+                },
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            >
+              {saving ? 'Guardando...' : 'Crear nota'}
+            </Button>
+          </Box>
+        </Box>
+      )}
+
+      {/* Overlay de fondo cuando la ventana está abierta */}
+      {noteOpen && (
+        <Box
+          sx={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+            zIndex: 1299,
+            animation: 'fadeIn 0.3s ease-out',
+            '@keyframes fadeIn': {
+              '0%': {
+                opacity: 0,
+              },
+              '100%': {
+                opacity: 1,
+              },
+            },
+          }}
+          onClick={() => setNoteOpen(false)}
+        />
+      )}
+
+      {/* Modal de Asociados para Nota */}
+      <Dialog
+        open={noteAssociateModalOpen}
+        onClose={() => setNoteAssociateModalOpen(false)}
+        maxWidth="sm"
+        fullWidth={false}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            maxHeight: '80vh',
+            width: '700px',
+            maxWidth: '90vw',
+          },
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            height: '500px',
+          }}
+        >
+          {/* Panel izquierdo - Categorías */}
+          <Box
+            sx={{
+              width: 160,
+              borderRight: `1px solid ${theme.palette.divider}`,
+              backgroundColor: theme.palette.mode === 'dark' ? '#1e1e1e' : '#fafafa',
+              overflowY: 'auto',
+            }}
+          >
+            <List sx={{ p: 0 }}>
+              <ListItem disablePadding>
+                <ListItemButton
+                  selected={noteSelectedCategory === 'seleccionados'}
+                  onClick={() => setNoteSelectedCategory('seleccionados')}
+                  sx={{
+                    py: 1.5,
+                    px: 2,
+                    '&.Mui-selected': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
+                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
+                      '&:hover': {
+                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                      },
+                    },
+                  }}
+                >
+                  <ListItemText
+                    primary="Seleccionados"
+                    secondary={Object.values(noteSelectedAssociations).flat().length}
+                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                  />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton
+                  selected={noteSelectedCategory === 'empresas'}
+                  onClick={() => setNoteSelectedCategory('empresas')}
+                  sx={{
+                    py: 1.5,
+                    px: 2,
+                    '&.Mui-selected': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
+                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
+                      '&:hover': {
+                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                      },
+                    },
+                  }}
+                >
+                  <ListItemText
+                    primary="Empresas"
+                    secondary={noteModalCompanies.length}
+                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                  />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton
+                  selected={noteSelectedCategory === 'contactos'}
+                  onClick={() => setNoteSelectedCategory('contactos')}
+                  sx={{
+                    py: 1.5,
+                    px: 2,
+                    '&.Mui-selected': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
+                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
+                      '&:hover': {
+                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                      },
+                    },
+                  }}
+                >
+                  <ListItemText
+                    primary="Contactos"
+                    secondary={noteModalContacts.length}
+                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                  />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton
+                  selected={noteSelectedCategory === 'negocios'}
+                  onClick={() => setNoteSelectedCategory('negocios')}
+                  sx={{
+                    py: 1.5,
+                    px: 2,
+                    '&.Mui-selected': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
+                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
+                      '&:hover': {
+                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                      },
+                    },
+                  }}
+                >
+                  <ListItemText
+                    primary="Negocios"
+                    secondary={noteModalDeals.length}
+                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                  />
+                </ListItemButton>
+              </ListItem>
+              <ListItem disablePadding>
+                <ListItemButton
+                  selected={noteSelectedCategory === 'tickets'}
+                  onClick={() => setNoteSelectedCategory('tickets')}
+                  sx={{
+                    py: 1.5,
+                    px: 2,
+                    '&.Mui-selected': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
+                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
+                      '&:hover': {
+                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                      },
+                    },
+                  }}
+                >
+                  <ListItemText
+                    primary="Tickets"
+                    secondary={noteModalTickets.length}
+                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                  />
+                </ListItemButton>
+              </ListItem>
+            </List>
+          </Box>
+
+          {/* Panel derecho - Contenido */}
+          <Box
+            sx={{
+              flex: 1,
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              borderRadius: 4,
-              animation: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              '@keyframes fadeInScale': {
-                '0%': {
-                  opacity: 0,
-                  transform: 'translate(-50%, -50%) scale(0.95)',
-                },
-                '100%': {
-                  opacity: 1,
-                  transform: 'translate(-50%, -50%) scale(1)',
-                },
-              },
             }}
-            onClick={(e) => e.stopPropagation()}
           >
-            {/* Encabezado personalizado */}
+            {/* Header */}
             <Box
               sx={{
-                px: 3,
-                py: 2,
-                backgroundColor: 'transparent',
-                color: theme.palette.text.primary,
+                p: 2,
+                borderBottom: `1px solid ${theme.palette.divider}`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <IconButton 
-                  sx={{ 
-                    color: theme.palette.text.secondary, 
-                    '&:hover': { 
-                      backgroundColor: theme.palette.action.hover,
-                      color: theme.palette.text.primary,
+              <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>
+                Asociar
+              </Typography>
+              <IconButton
+                onClick={() => setNoteAssociateModalOpen(false)}
+                size="small"
+              >
+                <Close />
+              </IconButton>
+            </Box>
+
+            {/* Búsqueda */}
+            <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: 1,
+                  px: 1.5,
+                  py: 0.75,
+                  backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : '#f5f5f5',
+                }}
+              >
+                <Search sx={{ color: theme.palette.text.secondary, mr: 1, fontSize: 20 }} />
+                <InputBase
+                  placeholder="Buscar asociaciones actuales"
+                  value={noteAssociateSearch}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setNoteAssociateSearch(value);
+                    if (value.trim().length > 0) {
+                      fetchAssociationsForNote(value);
+                    } else {
+                      fetchAssociationsForNote();
+                    }
+                  }}
+                  sx={{
+                    flex: 1,
+                    fontSize: '0.875rem',
+                    '& input': {
+                      py: 0.5,
                     },
-                    transition: 'all 0.2s ease',
-                  }} 
-                  size="small"
-                >
-                  <KeyboardArrowDown />
-                </IconButton>
-                <Typography variant="h6" sx={{ 
-                  color: theme.palette.text.primary, 
-                  fontWeight: 600, 
-                  fontSize: '1.25rem',
-                  letterSpacing: '-0.02em',
-                }}>
-                  Nota
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <IconButton 
-                  sx={{ 
-                    color: theme.palette.text.secondary,
-                    '&:hover': { 
-                      backgroundColor: theme.palette.action.hover,
-                      color: theme.palette.text.primary,
-                    },
-                    transition: 'all 0.2s ease',
-                  }} 
-                  size="small"
-                >
-                  <Fullscreen fontSize="small" />
-                </IconButton>
-                <IconButton 
-                  sx={{ 
-                    color: theme.palette.text.secondary,
-                    '&:hover': { 
-                      backgroundColor: theme.palette.error.main + '15',
-                      color: theme.palette.error.main,
-                    },
-                    transition: 'all 0.2s ease',
-                  }} 
-                  size="small" 
-                  onClick={() => setNoteOpen(false)}
-                >
-                  <Close fontSize="small" />
-                </IconButton>
+                  }}
+                />
               </Box>
             </Box>
 
-            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'row', p: 3, overflow: 'hidden', gap: 3 }}>
-              {/* Columna Izquierda: Editor */}
-              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                {/* Editor de texto enriquecido con barra de herramientas integrada */}
-                <Box sx={{ 
-                  flexGrow: 1, 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`, 
-                  borderRadius: 3,
-                  overflow: 'hidden',
-                  minHeight: '300px',
-                  backgroundColor: theme.palette.background.paper,
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:focus-within': {
-                    boxShadow: `0 4px 16px ${taxiMonterricoColors.orange}40`,
-                    borderColor: taxiMonterricoColors.orange,
-                    transform: 'translateY(-1px)',
-                  },
-                }}>
-                  <RichTextEditor
-                    value={noteData.description}
-                    onChange={(value: string) => setNoteData({ ...noteData, description: value })}
-                    placeholder="Empieza a escribir para dejar una nota..."
-                  />
+            {/* Contenido */}
+            <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
+              {noteLoadingAssociations ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                  <CircularProgress />
                 </Box>
-              </Box>
-
-              {/* Columna Derecha: Sección de Asociaciones */}
-              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
-                <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-                  <Box sx={{ 
-                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`, 
-                    borderRadius: 3, 
-                    p: 2.5, 
-                    backgroundColor: theme.palette.background.paper,
-                    display: 'flex',
-                    gap: 2.5,
-                    alignItems: 'flex-start',
-                    maxHeight: '500px',
-                    overflow: 'hidden',
-                    transition: 'all 0.2s ease',
-                  }}>
-                    {/* Lista de categorías en el lado izquierdo */}
-                    <Box sx={{ 
-                      width: '220px', 
-                      flexShrink: 0,
-                      borderRight: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`,
-                      pr: 2.5,
-                      maxHeight: '500px',
-                      overflowY: 'auto',
-                      overflowX: 'hidden',
-                      '&::-webkit-scrollbar': {
-                        width: '8px',
-                      },
-                      '&::-webkit-scrollbar-track': {
-                        backgroundColor: 'transparent',
-                        borderRadius: '4px',
-                      },
-                      '&::-webkit-scrollbar-thumb': {
-                        backgroundColor: theme.palette.mode === 'dark' 
-                          ? 'rgba(255,255,255,0.2)' 
-                          : 'rgba(0,0,0,0.2)',
-                        borderRadius: '4px',
-                        '&:hover': {
-                          backgroundColor: theme.palette.mode === 'dark' 
-                            ? 'rgba(255,255,255,0.3)' 
-                            : 'rgba(0,0,0,0.3)',
-                        },
-                        transition: 'background-color 0.2s ease',
-                      },
-                    }}>
-                      {/* Lista de categorías siempre visible */}
-                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                        <Box
-                          onClick={() => setSelectedAssociationCategory('Seleccionados')}
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            p: 1.75,
-                            borderRadius: 2,
-                            cursor: 'pointer',
-                            backgroundColor: selectedAssociationCategory === 'Seleccionados' 
-                              ? taxiMonterricoColors.orange
-                              : 'transparent',
-                            borderLeft: selectedAssociationCategory === 'Seleccionados' 
-                              ? `4px solid ${taxiMonterricoColors.orangeDark}` 
-                              : '4px solid transparent',
-                            color: selectedAssociationCategory === 'Seleccionados' 
-                              ? 'white'
-                              : theme.palette.text.secondary,
-                            boxShadow: selectedAssociationCategory === 'Seleccionados' 
-                              ? `0 2px 8px ${taxiMonterricoColors.orange}40`
-                              : 'none',
-                            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                            '&:hover': {
-                              backgroundColor: selectedAssociationCategory === 'Seleccionados' 
-                                ? taxiMonterricoColors.orangeDark
-                                : theme.palette.action.hover,
-                              transform: selectedAssociationCategory === 'Seleccionados' 
-                                ? 'scale(1.02)'
-                                : 'translateX(4px)',
-                              boxShadow: selectedAssociationCategory === 'Seleccionados' 
-                                ? `0 4px 12px ${taxiMonterricoColors.orange}50`
-                                : 'none',
-                            },
-                          }}
-                        >
-                          <Typography variant="body2" sx={{ 
-                            fontSize: '0.875rem', 
-                            color: selectedAssociationCategory === 'Seleccionados' ? 'white' : theme.palette.text.secondary,
-                            fontWeight: selectedAssociationCategory === 'Seleccionados' ? 700 : 400,
-                          }}>
-                            Seleccionados
-                          </Typography>
-                          <Typography variant="body2" sx={{ 
-                            fontSize: '0.875rem', 
-                            color: selectedAssociationCategory === 'Seleccionados' ? 'white' : theme.palette.text.secondary,
-                            fontWeight: selectedAssociationCategory === 'Seleccionados' ? 600 : 500,
-                          }}>
-                            {totalNoteAssociations}
-                          </Typography>
-                        </Box>
-                        
-                        <Box
-                          onClick={() => setSelectedAssociationCategory('Contactos')}
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            p: 1.75,
-                            borderRadius: 2,
-                            cursor: 'pointer',
-                            backgroundColor: selectedAssociationCategory === 'Contactos' 
-                              ? taxiMonterricoColors.orange
-                              : 'transparent',
-                            borderLeft: selectedAssociationCategory === 'Contactos' 
-                              ? `4px solid ${taxiMonterricoColors.orangeDark}` 
-                              : '4px solid transparent',
-                            color: selectedAssociationCategory === 'Contactos' 
-                              ? 'white'
-                              : theme.palette.text.secondary,
-                            boxShadow: selectedAssociationCategory === 'Contactos' 
-                              ? `0 2px 8px ${taxiMonterricoColors.orange}40`
-                              : 'none',
-                            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                            '&:hover': {
-                              backgroundColor: selectedAssociationCategory === 'Contactos' 
-                                ? taxiMonterricoColors.orangeDark
-                                : theme.palette.action.hover,
-                              transform: selectedAssociationCategory === 'Contactos' 
-                                ? 'scale(1.02)'
-                                : 'translateX(4px)',
-                              boxShadow: selectedAssociationCategory === 'Contactos' 
-                                ? `0 4px 12px ${taxiMonterricoColors.orange}50`
-                                : 'none',
-                            },
-                          }}
-                        >
-                          <Typography variant="body2" sx={{ 
-                            fontSize: '0.875rem', 
-                            color: selectedAssociationCategory === 'Contactos' ? 'white' : theme.palette.text.secondary,
-                            fontWeight: selectedAssociationCategory === 'Contactos' ? 600 : 400,
-                          }}>
-                            Contactos
-                          </Typography>
-                          <Typography variant="body2" sx={{ 
-                            fontSize: '0.875rem', 
-                            color: selectedAssociationCategory === 'Contactos' ? taxiMonterricoColors.green : theme.palette.text.secondary,
-                            fontWeight: 500,
-                          }}>
-                            {selectedNoteContacts.length}
-                          </Typography>
-                        </Box>
-                        
-                        <Box
-                          onClick={() => setSelectedAssociationCategory('Empresas')}
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            p: 1.75,
-                            borderRadius: 2,
-                            cursor: 'pointer',
-                            backgroundColor: selectedAssociationCategory === 'Empresas' 
-                              ? taxiMonterricoColors.orange
-                              : 'transparent',
-                            borderLeft: selectedAssociationCategory === 'Empresas' 
-                              ? `4px solid ${taxiMonterricoColors.orangeDark}` 
-                              : '4px solid transparent',
-                            color: selectedAssociationCategory === 'Empresas' 
-                              ? 'white'
-                              : theme.palette.text.secondary,
-                            boxShadow: selectedAssociationCategory === 'Empresas' 
-                              ? `0 2px 8px ${taxiMonterricoColors.orange}40`
-                              : 'none',
-                            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                            '&:hover': {
-                              backgroundColor: selectedAssociationCategory === 'Empresas' 
-                                ? taxiMonterricoColors.orangeDark
-                                : theme.palette.action.hover,
-                              transform: selectedAssociationCategory === 'Empresas' 
-                                ? 'scale(1.02)'
-                                : 'translateX(4px)',
-                              boxShadow: selectedAssociationCategory === 'Empresas' 
-                                ? `0 4px 12px ${taxiMonterricoColors.orange}50`
-                                : 'none',
-                            },
-                          }}
-                        >
-                          <Typography variant="body2" sx={{ 
-                            fontSize: '0.875rem', 
-                            color: selectedAssociationCategory === 'Empresas' ? 'white' : theme.palette.text.secondary,
-                            fontWeight: selectedAssociationCategory === 'Empresas' ? 600 : 400,
-                          }}>
-                            Empresas
-                          </Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.875rem', color: theme.palette.text.secondary }}>
-                            {selectedNoteCompanies.length}
-                          </Typography>
-                        </Box>
-                        
-                        <Box
-                          onClick={() => setSelectedAssociationCategory('Negocios')}
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            p: 1.75,
-                            borderRadius: 2,
-                            cursor: 'pointer',
-                            backgroundColor: selectedAssociationCategory === 'Negocios' 
-                              ? taxiMonterricoColors.orange
-                              : 'transparent',
-                            borderLeft: selectedAssociationCategory === 'Negocios' 
-                              ? `4px solid ${taxiMonterricoColors.orangeDark}` 
-                              : '4px solid transparent',
-                            color: selectedAssociationCategory === 'Negocios' 
-                              ? 'white'
-                              : theme.palette.text.secondary,
-                            boxShadow: selectedAssociationCategory === 'Negocios' 
-                              ? `0 2px 8px ${taxiMonterricoColors.orange}40`
-                              : 'none',
-                            transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-                            '&:hover': {
-                              backgroundColor: selectedAssociationCategory === 'Negocios' 
-                                ? taxiMonterricoColors.orangeDark
-                                : theme.palette.action.hover,
-                              transform: selectedAssociationCategory === 'Negocios' 
-                                ? 'scale(1.02)'
-                                : 'translateX(4px)',
-                              boxShadow: selectedAssociationCategory === 'Negocios' 
-                                ? `0 4px 12px ${taxiMonterricoColors.orange}50`
-                                : 'none',
-                            },
-                          }}
-                        >
-                          <Typography variant="body2" sx={{ 
-                            fontSize: '0.875rem', 
-                            color: selectedAssociationCategory === 'Negocios' ? 'white' : theme.palette.text.secondary,
-                            fontWeight: selectedAssociationCategory === 'Negocios' ? 600 : 400,
-                          }}>
-                            Negocios
-                          </Typography>
-                          <Typography variant="body2" sx={{ fontSize: '0.875rem', color: theme.palette.text.secondary }}>
-                            {selectedNoteDeals.length}
-                          </Typography>
-                        </Box>
-                      </Box>
+              ) : (
+                <>
+                  {noteSelectedCategory === 'empresas' && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                        Empresas
+                      </Typography>
+                      <List sx={{ p: 0 }}>
+                        {noteModalCompanies
+                          .filter((company: any) => 
+                            !noteAssociateSearch || company.name?.toLowerCase().includes(noteAssociateSearch.toLowerCase()) || 
+                            company.domain?.toLowerCase().includes(noteAssociateSearch.toLowerCase())
+                          )
+                          .map((company: any) => (
+                            <ListItem key={company.id} disablePadding>
+                              <ListItemButton
+                                sx={{ py: 0.75, px: 1 }}
+                                onClick={() => {
+                                  const current = noteSelectedAssociations.companies || [];
+                                  if (current.includes(company.id)) {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      companies: current.filter((id) => id !== company.id),
+                                    });
+                                  } else {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      companies: [...current, company.id],
+                                    });
+                                  }
+                                }}
+                              >
+                                <Checkbox
+                                  checked={noteSelectedAssociations.companies?.includes(company.id) || false}
+                                  size="small"
+                                  sx={{ p: 0.5, mr: 1 }}
+                                />
+                                <ListItemText
+                                  primary={company.name}
+                                  secondary={company.domain}
+                                  primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                  secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                />
+                              </ListItemButton>
+                            </ListItem>
+                          ))}
+                      </List>
                     </Box>
+                  )}
 
-                    {/* Área de búsqueda y resultados - Siempre visible */}
-                    <Box sx={{ flex: 1, pl: 2, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, flexShrink: 0 }}>
-                        <Typography variant="body2" sx={{ color: taxiMonterricoColors.orange, fontWeight: 500, fontSize: '0.875rem' }}>
-                          {selectedAssociationCategory} ({
-                            selectedAssociationCategory === 'Contactos' ? selectedNoteContacts.length :
-                            selectedAssociationCategory === 'Empresas' ? selectedNoteCompanies.length :
-                            selectedAssociationCategory === 'Negocios' ? selectedNoteDeals.length : 0
-                          })
+                  {noteSelectedCategory === 'contactos' && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                        Contactos
+                      </Typography>
+                      <List sx={{ p: 0 }}>
+                        {noteModalContacts
+                          .filter((contactItem: any) => 
+                            !noteAssociateSearch || 
+                            `${contactItem.firstName} ${contactItem.lastName}`.toLowerCase().includes(noteAssociateSearch.toLowerCase()) ||
+                            contactItem.email?.toLowerCase().includes(noteAssociateSearch.toLowerCase())
+                          )
+                          .map((contactItem: any) => (
+                            <ListItem key={contactItem.id} disablePadding>
+                              <ListItemButton
+                                sx={{ py: 0.75, px: 1 }}
+                                onClick={() => {
+                                  const current = noteSelectedAssociations.contacts || [];
+                                  if (current.includes(contactItem.id)) {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      contacts: current.filter((id) => id !== contactItem.id),
+                                    });
+                                  } else {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      contacts: [...current, contactItem.id],
+                                    });
+                                  }
+                                }}
+                              >
+                                <Checkbox
+                                  checked={noteSelectedAssociations.contacts?.includes(contactItem.id) || false}
+                                  size="small"
+                                  sx={{ p: 0.5, mr: 1 }}
+                                />
+                                <ListItemText
+                                  primary={`${contactItem.firstName} ${contactItem.lastName}`}
+                                  secondary={contactItem.email}
+                                  primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                  secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                />
+                              </ListItemButton>
+                            </ListItem>
+                          ))}
+                      </List>
+                    </Box>
+                  )}
+
+                  {noteSelectedCategory === 'negocios' && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                        Negocios
+                      </Typography>
+                      <List sx={{ p: 0 }}>
+                        {noteModalDeals
+                          .filter((dealItem: any) => 
+                            !noteAssociateSearch || dealItem.name?.toLowerCase().includes(noteAssociateSearch.toLowerCase())
+                          )
+                          .map((dealItem: any) => (
+                            <ListItem key={dealItem.id} disablePadding>
+                              <ListItemButton
+                                sx={{ py: 0.75, px: 1 }}
+                                onClick={() => {
+                                  const current = noteSelectedAssociations.deals || [];
+                                  if (current.includes(dealItem.id)) {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      deals: current.filter((id) => id !== dealItem.id),
+                                    });
+                                  } else {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      deals: [...current, dealItem.id],
+                                    });
+                                  }
+                                }}
+                              >
+                                <Checkbox
+                                  checked={noteSelectedAssociations.deals?.includes(dealItem.id) || false}
+                                  size="small"
+                                  sx={{ p: 0.5, mr: 1 }}
+                                />
+                                <ListItemText
+                                  primary={dealItem.name}
+                                  secondary={`${dealItem.amount ? `$${dealItem.amount.toLocaleString()}` : ''} ${dealItem.stage || ''}`}
+                                  primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                  secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                />
+                              </ListItemButton>
+                            </ListItem>
+                          ))}
+                      </List>
+                    </Box>
+                  )}
+
+                  {noteSelectedCategory === 'tickets' && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                        Tickets
+                      </Typography>
+                      <List sx={{ p: 0 }}>
+                        {noteModalTickets
+                          .filter((ticket: any) => 
+                            !noteAssociateSearch || ticket.subject?.toLowerCase().includes(noteAssociateSearch.toLowerCase())
+                          )
+                          .map((ticket: any) => (
+                            <ListItem key={ticket.id} disablePadding>
+                              <ListItemButton
+                                sx={{ py: 0.75, px: 1 }}
+                                onClick={() => {
+                                  const current = noteSelectedAssociations.tickets || [];
+                                  if (current.includes(ticket.id)) {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      tickets: current.filter((id) => id !== ticket.id),
+                                    });
+                                  } else {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      tickets: [...current, ticket.id],
+                                    });
+                                  }
+                                }}
+                              >
+                                <Checkbox
+                                  checked={noteSelectedAssociations.tickets?.includes(ticket.id) || false}
+                                  size="small"
+                                  sx={{ p: 0.5, mr: 1 }}
+                                />
+                                <ListItemText
+                                  primary={ticket.subject}
+                                  secondary={ticket.description}
+                                  primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                  secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                />
+                              </ListItemButton>
+                            </ListItem>
+                          ))}
+                      </List>
+                    </Box>
+                  )}
+
+                  {noteSelectedCategory === 'seleccionados' && (
+                    <Box>
+                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                        Seleccionados ({Object.values(noteSelectedAssociations).flat().length})
+                      </Typography>
+                      {Object.values(noteSelectedAssociations).flat().length === 0 ? (
+                        <Typography variant="body2" sx={{ color: theme.palette.text.secondary, py: 2 }}>
+                          No hay elementos seleccionados
                         </Typography>
-                        <KeyboardArrowDown sx={{ color: taxiMonterricoColors.orange, fontSize: 18 }} />
-                      </Box>
-                      <TextField
-                        size="small"
-                        placeholder={`Buscar ${selectedAssociationCategory === 'Empresas' ? 'Empresas' : selectedAssociationCategory === 'Contactos' ? 'Contactos' : selectedAssociationCategory === 'Negocios' ? 'Negocios' : selectedAssociationCategory}`}
-                        value={associationSearch}
-                        onChange={(e) => setAssociationSearch(e.target.value)}
-                        fullWidth
-                        InputProps={{
-                          endAdornment: (
-                            <InputAdornment position="end">
-                              <Search sx={{ color: taxiMonterricoColors.orange }} />
-                            </InputAdornment>
-                          ),
-                        }}
-                        sx={{
-                          mb: 1.5,
-                          flexShrink: 0,
-                          '& .MuiOutlinedInput-root': {
-                            backgroundColor: 'transparent',
-                            '& fieldset': {
-                              borderColor: taxiMonterricoColors.orange,
-                            },
-                            '&:hover fieldset': {
-                              borderColor: taxiMonterricoColors.orange,
-                            },
-                            '&.Mui-focused fieldset': {
-                              borderColor: taxiMonterricoColors.orange,
-                            },
-                          },
-                          '& .MuiInputBase-input': {
-                            color: theme.palette.text.primary,
-                          },
-                          '& .MuiInputBase-input::placeholder': {
-                            color: theme.palette.text.secondary,
-                            opacity: 0.7,
-                          },
-                        }}
-                      />
-                      
-                      {/* Resultados de búsqueda */}
-                      <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}>
-                        {selectedAssociationCategory === 'Contactos' && (
-                          <>
-                            {loadingNoteContacts ? (
-                              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                                <CircularProgress size={24} />
-                              </Box>
-                            ) : (
-                              <>
-                                {allNoteContacts.filter((contact: any) => 
-                                  !associationSearch || 
-                                  `${contact.firstName || ''} ${contact.lastName || ''}`.toLowerCase().includes(associationSearch.toLowerCase()) ||
-                                  (contact.email && contact.email.toLowerCase().includes(associationSearch.toLowerCase()))
-                                ).map((contact: any) => (
-                                  <Box key={contact.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : theme.palette.action.hover } }}>
-                                    <Checkbox
-                                      checked={selectedNoteContacts.includes(contact.id)}
-                                      onChange={(e) => {
-                                        if (e.target.checked) {
-                                          setSelectedNoteContacts([...selectedNoteContacts, contact.id]);
-                                        } else {
-                                          setSelectedNoteContacts(selectedNoteContacts.filter(id => id !== contact.id));
-                                        }
-                                      }}
-                                      sx={{
-                                        color: taxiMonterricoColors.orange,
-                                        borderRadius: '4px',
-                                        padding: '4px',
-                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        '&:hover': {
-                                          backgroundColor: `${taxiMonterricoColors.orange}10`,
-                                          transform: 'scale(1.1)',
-                                        },
-                                        '&.Mui-checked': {
-                                          color: 'white',
-                                          backgroundColor: taxiMonterricoColors.orange,
-                                          '&:hover': {
-                                            backgroundColor: taxiMonterricoColors.orangeDark,
-                                            transform: 'scale(1.1)',
-                                          },
-                                        },
-                                        '& .MuiSvgIcon-root': {
-                                          fontSize: '1.5rem',
-                                          borderRadius: '4px',
-                                          border: `2px solid ${taxiMonterricoColors.orange}`,
-                                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        },
-                                        '&.Mui-checked .MuiSvgIcon-root': {
-                                          border: `2px solid ${taxiMonterricoColors.orange}`,
-                                          boxShadow: `0 2px 8px ${taxiMonterricoColors.orange}40`,
-                                        },
-                                      }}
-                                    />
-                                    <Tooltip
-                                      title={
-                                        <Box>
-                                          <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                                            {contact.firstName} {contact.lastName}
-                                          </Typography>
-                                          {contact.email && (
-                                            <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                                              {contact.email}
-                                            </Typography>
-                                          )}
-                                        </Box>
-                                      }
-                                      arrow
-                                      placement="top"
-                                    >
-                                      <Typography 
-                                        variant="body2" 
-                                        sx={{ 
-                                          fontSize: '0.875rem', 
-                                          flex: 1,
-                                          overflow: 'hidden',
-                                          textOverflow: 'ellipsis',
-                                          whiteSpace: 'nowrap',
-                                          cursor: 'pointer',
-                                        }}
-                                      >
-                                        {contact.firstName} {contact.lastName}
-                                        {contact.email && (
-                                          <Typography component="span" variant="body2" sx={{ color: 'text.secondary', ml: 0.5, fontSize: '0.875rem' }}>
-                                            ({contact.email})
-                                          </Typography>
-                                        )}
-                                      </Typography>
-                                    </Tooltip>
-                                  </Box>
-                                ))}
-                                {allNoteContacts.length === 0 && (
-                                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', p: 1 }}>
-                                    No hay contactos disponibles
-                                  </Typography>
-                                )}
-                              </>
-                            )}
-                          </>
-                        )}
-                        {selectedAssociationCategory === 'Empresas' && (
-                          <>
-                            {loadingNoteCompanies ? (
-                              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                                <CircularProgress size={24} />
-                              </Box>
-                            ) : (
-                              <>
-                                {allNoteCompanies.filter((company: any) => 
-                                  !associationSearch || 
-                                  company.name.toLowerCase().includes(associationSearch.toLowerCase()) || 
-                                  (company.domain && company.domain.toLowerCase().includes(associationSearch.toLowerCase()))
-                                ).map((company: any) => (
-                                  <Box key={company.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : theme.palette.action.hover } }}>
-                                    <Checkbox
-                                      checked={selectedNoteCompanies.includes(company.id)}
-                                      onChange={(e) => {
-                                        if (e.target.checked) {
-                                          setSelectedNoteCompanies([...selectedNoteCompanies, company.id]);
-                                        } else {
-                                          setSelectedNoteCompanies(selectedNoteCompanies.filter(id => id !== company.id));
-                                        }
-                                      }}
-                                      sx={{
-                                        color: taxiMonterricoColors.orange,
-                                        borderRadius: '4px',
-                                        padding: '4px',
-                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        '&:hover': {
-                                          backgroundColor: `${taxiMonterricoColors.orange}10`,
-                                          transform: 'scale(1.1)',
-                                        },
-                                        '&.Mui-checked': {
-                                          color: 'white',
-                                          backgroundColor: taxiMonterricoColors.orange,
-                                          '&:hover': {
-                                            backgroundColor: taxiMonterricoColors.orangeDark,
-                                            transform: 'scale(1.1)',
-                                          },
-                                        },
-                                        '& .MuiSvgIcon-root': {
-                                          fontSize: '1.5rem',
-                                          borderRadius: '4px',
-                                          border: `2px solid ${taxiMonterricoColors.orange}`,
-                                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        },
-                                        '&.Mui-checked .MuiSvgIcon-root': {
-                                          border: `2px solid ${taxiMonterricoColors.orange}`,
-                                          boxShadow: `0 2px 8px ${taxiMonterricoColors.orange}40`,
-                                        },
-                                      }}
-                                    />
-                                    <Tooltip 
-                                      title={
-                                        <Box>
-                                          <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                                            {company.name}
-                                          </Typography>
-                                          {company.domain && (
-                                            <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                                              {company.domain}
-                                            </Typography>
-                                          )}
-                                        </Box>
-                                      }
-                                      arrow
-                                      placement="top"
-                                    >
-                                      <Typography 
-                                        variant="body2" 
-                                        sx={{ 
-                                          fontSize: '0.875rem', 
-                                          flex: 1,
-                                          overflow: 'hidden',
-                                          textOverflow: 'ellipsis',
-                                          whiteSpace: 'nowrap',
-                                          cursor: 'pointer',
-                                        }}
-                                      >
-                                        {company.name}
-                                        {company.domain && (
-                                          <Typography component="span" variant="body2" sx={{ color: 'text.secondary', ml: 0.5, fontSize: '0.875rem' }}>
-                                            ({company.domain})
-                                          </Typography>
-                                        )}
-                                      </Typography>
-                                    </Tooltip>
-                                  </Box>
-                                ))}
-                                {allNoteCompanies.length === 0 && (
-                                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', p: 1 }}>
-                                    No hay empresas disponibles
-                                  </Typography>
-                                )}
-                              </>
-                            )}
-                          </>
-                        )}
-                        {selectedAssociationCategory === 'Negocios' && (
-                          <>
-                            {loadingNoteDeals ? (
-                              <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-                                <CircularProgress size={24} />
-                              </Box>
-                            ) : (
-                              <>
-                                {allNoteDeals.filter((deal: any) => 
-                                  !associationSearch || deal.name.toLowerCase().includes(associationSearch.toLowerCase())
-                                ).map((deal: any) => (
-                                  <Box key={deal.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : theme.palette.action.hover } }}>
-                                    <Checkbox
-                                      checked={selectedNoteDeals.includes(deal.id)}
-                                      onChange={(e) => {
-                                        if (e.target.checked) {
-                                          setSelectedNoteDeals([...selectedNoteDeals, deal.id]);
-                                        } else {
-                                          setSelectedNoteDeals(selectedNoteDeals.filter(id => id !== deal.id));
-                                        }
-                                      }}
-                                      sx={{
-                                        color: taxiMonterricoColors.orange,
-                                        borderRadius: '4px',
-                                        padding: '4px',
-                                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        '&:hover': {
-                                          backgroundColor: `${taxiMonterricoColors.orange}10`,
-                                          transform: 'scale(1.1)',
-                                        },
-                                        '&.Mui-checked': {
-                                          color: 'white',
-                                          backgroundColor: taxiMonterricoColors.orange,
-                                          '&:hover': {
-                                            backgroundColor: taxiMonterricoColors.orangeDark,
-                                            transform: 'scale(1.1)',
-                                          },
-                                        },
-                                        '& .MuiSvgIcon-root': {
-                                          fontSize: '1.5rem',
-                                          borderRadius: '4px',
-                                          border: `2px solid ${taxiMonterricoColors.orange}`,
-                                          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        },
-                                        '&.Mui-checked .MuiSvgIcon-root': {
-                                          border: `2px solid ${taxiMonterricoColors.orange}`,
-                                          boxShadow: `0 2px 8px ${taxiMonterricoColors.orange}40`,
-                                        },
-                                      }}
-                                    />
-                                    <Tooltip
-                                      title={
-                                        <Box>
-                                          <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                            {deal.name}
-                                          </Typography>
-                                        </Box>
-                                      }
-                                      arrow
-                                      placement="top"
-                                    >
-                                      <Typography 
-                                        variant="body2" 
-                                        sx={{ 
-                                          fontSize: '0.875rem', 
-                                          flex: 1,
-                                          overflow: 'hidden',
-                                          textOverflow: 'ellipsis',
-                                          whiteSpace: 'nowrap',
-                                          cursor: 'pointer',
-                                        }}
-                                      >
-                                        {deal.name}
-                                      </Typography>
-                                    </Tooltip>
-                                  </Box>
-                                ))}
-                                {allNoteDeals.length === 0 && (
-                                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', p: 1 }}>
-                                    No hay negocios disponibles
-                                  </Typography>
-                                )}
-                              </>
-                            )}
-                          </>
-                        )}
-                      </Box>
+                      ) : (
+                        <List sx={{ p: 0 }}>
+                          {noteSelectedAssociations.companies?.map((companyId) => {
+                            const company = noteModalCompanies.find((c: any) => c.id === companyId);
+                            if (!company) return null;
+                            return (
+                              <ListItem key={companyId} disablePadding>
+                                <ListItemButton
+                                  sx={{ py: 0.75, px: 1 }}
+                                  onClick={() => {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      companies: noteSelectedAssociations.companies.filter((id) => id !== companyId),
+                                    });
+                                  }}
+                                >
+                                  <Checkbox
+                                    checked={true}
+                                    size="small"
+                                    sx={{ p: 0.5, mr: 1 }}
+                                  />
+                                  <Business sx={{ fontSize: 18, mr: 1, color: theme.palette.text.secondary }} />
+                                  <ListItemText
+                                    primary={company.name}
+                                    secondary={company.domain}
+                                    primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  />
+                                </ListItemButton>
+                              </ListItem>
+                            );
+                          })}
+                          {noteSelectedAssociations.contacts?.map((contactId) => {
+                            const contactItem = noteModalContacts.find((c: any) => c.id === contactId);
+                            if (!contactItem) return null;
+                            return (
+                              <ListItem key={contactId} disablePadding>
+                                <ListItemButton
+                                  sx={{ py: 0.75, px: 1 }}
+                                  onClick={() => {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      contacts: noteSelectedAssociations.contacts.filter((id) => id !== contactId),
+                                    });
+                                  }}
+                                >
+                                  <Checkbox
+                                    checked={true}
+                                    size="small"
+                                    sx={{ p: 0.5, mr: 1 }}
+                                  />
+                                  <Person sx={{ fontSize: 18, mr: 1, color: theme.palette.text.secondary }} />
+                                  <ListItemText
+                                    primary={`${contactItem.firstName} ${contactItem.lastName}`}
+                                    secondary={contactItem.email}
+                                    primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  />
+                                </ListItemButton>
+                              </ListItem>
+                            );
+                          })}
+                          {noteSelectedAssociations.deals?.map((dealId) => {
+                            const dealItem = noteModalDeals.find((d: any) => d.id === dealId);
+                            if (!dealItem) return null;
+                            return (
+                              <ListItem key={dealId} disablePadding>
+                                <ListItemButton
+                                  sx={{ py: 0.75, px: 1 }}
+                                  onClick={() => {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      deals: noteSelectedAssociations.deals.filter((id) => id !== dealId),
+                                    });
+                                  }}
+                                >
+                                  <Checkbox
+                                    checked={true}
+                                    size="small"
+                                    sx={{ p: 0.5, mr: 1 }}
+                                  />
+                                  <ListItemText
+                                    primary={dealItem.name}
+                                    secondary={`${dealItem.amount ? `$${dealItem.amount.toLocaleString()}` : ''} ${dealItem.stage || ''}`}
+                                    primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  />
+                                </ListItemButton>
+                              </ListItem>
+                            );
+                          })}
+                          {noteSelectedAssociations.tickets?.map((ticketId) => {
+                            const ticket = noteModalTickets.find((t: any) => t.id === ticketId);
+                            if (!ticket) return null;
+                            return (
+                              <ListItem key={ticketId} disablePadding>
+                                <ListItemButton
+                                  sx={{ py: 0.75, px: 1 }}
+                                  onClick={() => {
+                                    setNoteSelectedAssociations({
+                                      ...noteSelectedAssociations,
+                                      tickets: noteSelectedAssociations.tickets.filter((id) => id !== ticketId),
+                                    });
+                                  }}
+                                >
+                                  <Checkbox
+                                    checked={true}
+                                    size="small"
+                                    sx={{ p: 0.5, mr: 1 }}
+                                  />
+                                  <ListItemText
+                                    primary={ticket.subject}
+                                    secondary={ticket.description}
+                                    primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  />
+                                </ListItemButton>
+                              </ListItem>
+                            );
+                          })}
+                        </List>
+                      )}
                     </Box>
-                  </Box>
-                </Box>
-              </Box>
-            </Box>
-
-            {/* Footer con botones */}
-            <Box sx={{ 
-              px: 3,
-              py: 2.5, 
-              borderTop: `1px solid ${theme.palette.divider}`, 
-              backgroundColor: theme.palette.background.paper, 
-              display: 'flex', 
-              justifyContent: 'flex-end', 
-              gap: 2,
-            }}>
-              <Button 
-                onClick={() => setNoteOpen(false)} 
-                sx={{ 
-                  textTransform: 'none',
-                  px: 3.5,
-                  py: 1.25,
-                  color: theme.palette.text.secondary,
-                  fontWeight: 500,
-                  borderRadius: 2,
-                  '&:hover': {
-                    backgroundColor: theme.palette.action.hover,
-                  },
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleSaveNote} 
-                variant="contained" 
-                disabled={saving || !noteData.description.trim()}
-                sx={{ 
-                  textTransform: 'none',
-                  px: 4,
-                  py: 1.25,
-                  backgroundColor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.orange,
-                  fontWeight: 600,
-                  borderRadius: 2,
-                  boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.orange}40`,
-                  '&:hover': {
-                    backgroundColor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.orangeDark,
-                    boxShadow: saving ? 'none' : `0 6px 16px ${taxiMonterricoColors.orange}50`,
-                    transform: 'translateY(-1px)',
-                  },
-                  '&:active': {
-                    transform: 'translateY(0)',
-                  },
-                  '&:disabled': {
-                    backgroundColor: theme.palette.action.disabledBackground,
-                    color: theme.palette.action.disabled,
-                    boxShadow: 'none',
-                  },
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                }}
-              >
-                {saving ? 'Guardando...' : 'Crear nota'}
-              </Button>
+                  )}
+                </>
+              )}
             </Box>
           </Box>
-
-          {/* Overlay de fondo cuando la ventana está abierta */}
-          <Box
-            sx={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
-              zIndex: 1299,
-              animation: 'fadeIn 0.3s ease-out',
-              '@keyframes fadeIn': {
-                '0%': {
-                  opacity: 0,
-                },
-                '100%': {
-                  opacity: 1,
-                },
+        </Box>
+        <DialogActions sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
+          <Button
+            onClick={() => setNoteAssociateModalOpen(false)}
+            sx={{ textTransform: 'none' }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={() => {
+              // Aplicar las selecciones a los estados principales
+              setSelectedCompaniesForNote(noteSelectedAssociations.companies || []);
+              setSelectedContactsForNote(noteSelectedAssociations.contacts || []);
+              // Convertir deals y tickets a la estructura esperada
+              const dealIds = (noteSelectedAssociations.deals || []).map(id => 1000 + id);
+              const ticketIds = (noteSelectedAssociations.tickets || []).map(id => 2000 + id);
+              setSelectedAssociationsForNote([...dealIds, ...ticketIds]);
+              setNoteAssociateModalOpen(false);
+            }}
+            variant="contained"
+            sx={{ 
+              textTransform: 'none',
+              backgroundColor: taxiMonterricoColors.green,
+              '&:hover': {
+                backgroundColor: taxiMonterricoColors.greenDark,
               },
             }}
-            onClick={() => setNoteOpen(false)}
-          />
-        </>
-      )}
+          >
+            Guardar
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Dialog para registrar llamada */}
       <Dialog open={callOpen} onClose={() => setCallOpen(false)} maxWidth="sm" fullWidth>
