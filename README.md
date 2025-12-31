@@ -1,6 +1,6 @@
 # CRM Monterrico
 
-Un sistema CRM completo con todas las funcionalidades principales para gestión de ventas, marketing y relaciones con clientes.
+Un sistema CRM completo con todas las funcionalidades principales para gestión de ventas y relaciones con clientes.
 
 ## 🚀 Características
 
@@ -206,17 +206,6 @@ Content-Type: application/json
 - Middleware de autenticación en todas las rutas protegidas
 - Validación de datos en el backend
 
-## 📈 Próximas Mejoras
-
-- [ ] Pipeline visual drag-and-drop
-- [ ] Integración con email
-- [ ] Reportes avanzados y exportación
-- [ ] Chat en vivo
-- [ ] Landing pages builder
-- [ ] Blog CMS
-- [ ] Integraciones con terceros (Google, Facebook, etc.)
-- [ ] Mobile app
-
 ## 📄 Licencia
 
 Este proyecto es de código abierto y está disponible bajo la licencia MIT.
@@ -224,5 +213,3 @@ Este proyecto es de código abierto y está disponible bajo la licencia MIT.
 ## 🤝 Contribuciones
 
 Las contribuciones son bienvenidas. Por favor, abre un issue o pull request para cualquier mejora.
-
-# crm2
