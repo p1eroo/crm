@@ -34,6 +34,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
+import { pageStyles } from '../theme/styles';
 
 interface User {
   id: number;
@@ -177,8 +178,8 @@ const Users: React.FC = () => {
       pb: { xs: 2, sm: 3, md: 4 },
     }}>
       <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 1 }}>
-          Administración de Usuarios
+        <Typography variant="h4" sx={pageStyles.pageTitle}>
+          Usuarios
         </Typography>
         <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
           Gestiona los usuarios del sistema y asigna roles

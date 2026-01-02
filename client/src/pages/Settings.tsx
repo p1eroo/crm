@@ -30,6 +30,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
+import { pageStyles } from '../theme/styles';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -251,7 +252,7 @@ const Settings: React.FC = () => {
         <Box sx={{ px: 3, pt: 2.5, pb: 1.5 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
             <Box>
-              <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.5, fontSize: '1.125rem' }}>
+              <Typography variant="h4" sx={pageStyles.pageTitle}>
                 Configuración
               </Typography>
               <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem' }}>

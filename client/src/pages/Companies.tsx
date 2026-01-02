@@ -25,10 +25,12 @@ import {
   Pagination,
   Snackbar,
   Alert,
+  LinearProgress,
 } from '@mui/material';
-import { Add, Delete, Search, Visibility, UploadFile, FileDownload, Warning, CheckCircle, FilterList, Close, ExpandMore, Remove, Bolt } from '@mui/icons-material';
+import { Add, Delete, Search, Visibility, UploadFile, FileDownload, Warning, CheckCircle, FilterList, Close, ExpandMore, Remove, Bolt, Edit, Business } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
+import { pageStyles } from '../theme/styles';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
@@ -91,6 +93,13 @@ const Companies: React.FC = () => {
   const [updatingStatus, setUpdatingStatus] = useState<{ [key: number]: boolean }>({});
   const [importing, setImporting] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [importProgressOpen, setImportProgressOpen] = useState(false);
+  const [importProgress, setImportProgress] = useState({
+    current: 0,
+    total: 0,
+    success: 0,
+    errors: 0,
+  });
   const nameValidationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const rucValidationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
@@ -366,6 +375,9 @@ const Companies: React.FC = () => {
     if (!file) return;
 
     setImporting(true);
+    setImportProgressOpen(true);
+    setImportProgress({ current: 0, total: 0, success: 0, errors: 0 });
+    
     try {
       // Leer el archivo Excel
       const data = await file.arrayBuffer();
@@ -385,21 +397,37 @@ const Companies: React.FC = () => {
           city: (row['Ciudad'] || '').toString().trim() || undefined,
           state: (row['Estado/Provincia'] || '').toString().trim() || undefined,
           country: (row['País'] || '').toString().trim() || undefined,
-          lifecycleStage: 'lead',
+          lifecycleStage: (row['Etapa'] || 'lead').toString().trim() || 'lead',
         };
       }).filter(company => company.name !== 'Sin nombre'); // Filtrar filas vacías
 
-      // Crear empresas en el backend
+      // Inicializar el progreso total
+      setImportProgress(prev => ({ ...prev, total: companiesToCreate.length }));
+
+      // Crear empresas en el backend con progreso
       let successCount = 0;
       let errorCount = 0;
 
-      for (const companyData of companiesToCreate) {
+      for (let i = 0; i < companiesToCreate.length; i++) {
+        const companyData = companiesToCreate[i];
         try {
           await api.post('/companies', companyData);
           successCount++;
+          setImportProgress({
+            current: i + 1,
+            total: companiesToCreate.length,
+            success: successCount,
+            errors: errorCount,
+          });
         } catch (error) {
           console.error('Error creating company:', error);
           errorCount++;
+          setImportProgress({
+            current: i + 1,
+            total: companiesToCreate.length,
+            success: successCount,
+            errors: errorCount,
+          });
         }
       }
 
@@ -408,14 +436,11 @@ const Companies: React.FC = () => {
         fileInputRef.current.value = '';
       }
 
-      // Mostrar mensaje de resultado
-      alert(`Importación completada:\n${successCount} empresas creadas exitosamente\n${errorCount} empresas con errores`);
-
       // Recargar la lista de empresas
       fetchCompanies();
     } catch (error) {
       console.error('Error importing file:', error);
-      alert('Error al importar el archivo. Por favor, verifica que el formato sea correcto.');
+      setImportProgress(prev => ({ ...prev, errors: prev.errors + 1 }));
     } finally {
       setImporting(false);
     }
@@ -1021,8 +1046,8 @@ const Companies: React.FC = () => {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box>
-              <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.25, fontSize: { xs: '1.25rem', md: '1.375rem' } }}>
-                Todas las Empresas
+              <Typography variant="h4" sx={pageStyles.pageTitle}>
+                Empresas
               </Typography>
             </Box>
           </Box>
@@ -1037,7 +1062,7 @@ const Companies: React.FC = () => {
                   sx={{
                     borderRadius: 1.5,
                     bgcolor: theme.palette.background.paper,
-                  fontSize: '0.8125rem',
+                    fontSize: '0.8125rem',
                     '& .MuiOutlinedInput-notchedOutline': {
                       borderColor: theme.palette.divider,
                     },
@@ -1045,7 +1070,7 @@ const Companies: React.FC = () => {
                       borderColor: theme.palette.text.secondary,
                     },
                     '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                    borderColor: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
+                      borderColor: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
                     },
                   }}
                 >
@@ -1060,20 +1085,7 @@ const Companies: React.FC = () => {
                 size="small"
                   onClick={handleImportFromExcel}
                   disabled={importing}
-                  sx={{
-                    border: `1px solid ${taxiMonterricoColors.green}`,
-                    color: taxiMonterricoColors.green,
-                    '&:hover': {
-                      borderColor: taxiMonterricoColors.greenDark,
-                      bgcolor: `${taxiMonterricoColors.green}10`,
-                    },
-                    '&:disabled': {
-                      borderColor: theme.palette.divider,
-                      color: theme.palette.text.disabled,
-                    },
-                    borderRadius: 1.5,
-                  p: 0.875,
-                  }}
+                  sx={pageStyles.outlinedIconButton}
                 >
                 <UploadFile sx={{ fontSize: 18 }} />
                 </IconButton>
@@ -1083,16 +1095,7 @@ const Companies: React.FC = () => {
                 <IconButton
                 size="small"
                   onClick={handleExportToExcel}
-                  sx={{
-                    border: `1px solid ${taxiMonterricoColors.green}`,
-                    color: taxiMonterricoColors.green,
-                    '&:hover': {
-                      borderColor: taxiMonterricoColors.greenDark,
-                      bgcolor: `${taxiMonterricoColors.green}10`,
-                    },
-                    borderRadius: 1.5,
-                  p: 0.875,
-                  }}
+                  sx={pageStyles.outlinedIconButton}
                 >
                 <FileDownload sx={{ fontSize: 18 }} />
                 </IconButton>
@@ -1111,26 +1114,14 @@ const Companies: React.FC = () => {
                     }
                     setFilterDrawerOpen(!filterDrawerOpen);
                   }}
-                sx={{
-                  borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
-                  color: theme.palette.text.primary,
-                  bgcolor: theme.palette.action.hover,
-                  '&:hover': {
-                    borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
-                  },
-                  fontSize: '0.8125rem',
-                  textTransform: 'none',
-                  borderRadius: 1.5,
-                  px: 1.5,
-                  py: 0.75,
-                }}
+                  sx={pageStyles.filterButton}
               >
                 Filter
               </Button>
               </Tooltip>
               <Tooltip title="Nueva Empresa">
                 <IconButton
+                  size="small"
                   onClick={() => handleOpen()}
                   sx={{
                     bgcolor: taxiMonterricoColors.green,
@@ -1138,13 +1129,12 @@ const Companies: React.FC = () => {
                     '&:hover': {
                       bgcolor: taxiMonterricoColors.greenDark,
                     },
-                  borderRadius: '50%',
-                  width: 40,
-                  height: 40,
+                    borderRadius: 1.5,
+                    p: 0.875,
                     boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
                   }}
                 >
-                  <Add />
+                  <Add sx={{ fontSize: 18 }} />
                 </IconButton>
               </Tooltip>
             </Box>
@@ -1174,25 +1164,29 @@ const Companies: React.FC = () => {
               boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
             }}
           >
-            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+            <Box sx={pageStyles.tableHeaderCell}>
                   Nombre de Empresa
             </Box>
-            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+            <Box sx={pageStyles.tableHeaderCell}>
                   Última Actividad
             </Box>
-            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+            <Box sx={pageStyles.tableHeaderCell}>
                   Propietario
             </Box>
-            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+            <Box sx={pageStyles.tableHeaderCell}>
                   Razón Social
             </Box>
-            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+            <Box sx={pageStyles.tableHeaderCell}>
                   Teléfono
             </Box>
-            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+            <Box sx={pageStyles.tableHeaderCell}>
                   Etapa
             </Box>
-            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+            <Box sx={{ 
+              ...pageStyles.tableHeaderCell, 
+              px: { xs: 0.75, md: 1 },
+              justifyContent: 'flex-start'
+            }}>
                   Acciones
             </Box>
           </Box>
@@ -1470,6 +1464,25 @@ const Companies: React.FC = () => {
                 
                 <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                      <Tooltip title="Editar">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpen(company);
+                          }}
+                          sx={{
+                            color: theme.palette.text.secondary,
+                            padding: { xs: 0.5, md: 1 },
+                            '&:hover': {
+                              color: taxiMonterricoColors.green,
+                              bgcolor: `${taxiMonterricoColors.green}15`,
+                            },
+                          }}
+                        >
+                          <Edit sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Vista previa">
                         <IconButton
                           size="small"
@@ -1512,6 +1525,19 @@ const Companies: React.FC = () => {
                 </Box>
             </Box>
           ))}
+          {paginatedCompanies.length === 0 && (
+            <Box sx={pageStyles.emptyState}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                <Business sx={{ fontSize: 48, color: theme.palette.text.disabled }} />
+                <Typography variant="body1" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
+                  No hay empresas para mostrar
+                </Typography>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                  Crea tu primera empresa para comenzar
+                </Typography>
+              </Box>
+            </Box>
+          )}
           </Box>
 
           {/* Paginación */}
@@ -1522,24 +1548,7 @@ const Companies: React.FC = () => {
                 page={currentPage}
                 onChange={(event, value) => setCurrentPage(value)}
                 color="primary"
-                sx={{
-                  '& .MuiPaginationItem-root': {
-                    color: theme.palette.text.primary,
-                    fontSize: '0.875rem',
-                    '&.Mui-selected': {
-                      bgcolor: taxiMonterricoColors.green,
-                      color: 'white',
-                      '&:hover': {
-                        bgcolor: taxiMonterricoColors.greenDark,
-                      },
-                    },
-                    '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.08)' 
-                        : 'rgba(0, 0, 0, 0.04)',
-                    },
-                  },
-                }}
+                sx={pageStyles.pagination}
               />
             </Box>
           )}
@@ -2351,13 +2360,10 @@ const Companies: React.FC = () => {
         maxWidth="sm"
         fullWidth
         PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-          }
+          sx: pageStyles.dialog
         }}
       >
-          <DialogContent sx={{ pt: 3 }}>
+          <DialogContent sx={pageStyles.dialogContent}>
           <Typography variant="body1" sx={{ color: theme.palette.text.primary, mb: 1 }}>
             ¿Estás seguro de que deseas eliminar esta empresa?
           </Typography>
@@ -2365,23 +2371,11 @@ const Companies: React.FC = () => {
             Esta acción no se puede deshacer. La empresa será eliminada permanentemente del sistema.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ 
-          px: 3, 
-          py: 2,
-          borderTop: `1px solid ${theme.palette.divider}`,
-          gap: 1,
-        }}>
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button 
             onClick={handleCancelDelete}
             disabled={deleting}
-            sx={{
-              textTransform: 'none',
-              color: theme.palette.text.secondary,
-              fontWeight: 500,
-              '&:hover': {
-                bgcolor: theme.palette.action.hover,
-              }
-            }}
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
@@ -2389,20 +2383,7 @@ const Companies: React.FC = () => {
             onClick={handleConfirmDelete}
             disabled={deleting}
             variant="contained"
-            sx={{
-              textTransform: 'none',
-              fontWeight: 500,
-              borderRadius: 1.5,
-              px: 2.5,
-              bgcolor: '#d32f2f',
-              '&:hover': {
-                bgcolor: '#b71c1c',
-              },
-              '&.Mui-disabled': {
-                bgcolor: '#ffcdd2',
-                color: '#ffffff',
-              }
-            }}
+            sx={pageStyles.deleteButton}
             startIcon={deleting ? <CircularProgress size={16} sx={{ color: '#ffffff' }} /> : <Delete />}
           >
             {deleting ? 'Eliminando...' : 'Eliminar'}
@@ -2425,6 +2406,93 @@ const Companies: React.FC = () => {
           {errorMessage}
         </Alert>
       </Snackbar>
+
+      {/* Modal de Progreso de Importación */}
+      <Dialog
+        open={importProgressOpen}
+        onClose={() => {
+          if (!importing && importProgress.current === importProgress.total) {
+            setImportProgressOpen(false);
+            setImportProgress({ current: 0, total: 0, success: 0, errors: 0 });
+          }
+        }}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+          },
+        }}
+      >
+        <DialogTitle>
+          {importing ? 'Importando...' : 'Importación Completada'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ py: 2 }}>
+            {importing ? (
+              <>
+                <Typography variant="body2" sx={{ mb: 2, color: theme.palette.text.secondary }}>
+                  Procesando {importProgress.current} de {importProgress.total} empresas...
+                </Typography>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={importProgress.total > 0 ? (importProgress.current / importProgress.total) * 100 : 0}
+                  sx={{
+                    height: 8,
+                    borderRadius: 1,
+                    mb: 2,
+                  }}
+                />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                  <Typography variant="caption" sx={{ color: theme.palette.success.main }}>
+                    ✓ Exitosos: {importProgress.success}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: theme.palette.error.main }}>
+                    ✗ Errores: {importProgress.errors}
+                  </Typography>
+                </Box>
+              </>
+            ) : (
+              <Box>
+                <Typography variant="body1" sx={{ mb: 2 }}>
+                  {importProgress.success > 0 || importProgress.errors > 0
+                    ? `Importación completada`
+                    : 'Error al procesar el archivo'}
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Typography variant="body2" sx={{ color: theme.palette.success.main }}>
+                    ✓ {importProgress.success} empresas creadas exitosamente
+                  </Typography>
+                  {importProgress.errors > 0 && (
+                    <Typography variant="body2" sx={{ color: theme.palette.error.main }}>
+                      ✗ {importProgress.errors} empresas con errores
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          {!importing && (
+            <Button 
+              onClick={() => {
+                setImportProgressOpen(false);
+                setImportProgress({ current: 0, total: 0, success: 0, errors: 0 });
+              }}
+              variant="contained"
+              sx={{
+                bgcolor: taxiMonterricoColors.green,
+                '&:hover': {
+                  bgcolor: taxiMonterricoColors.greenDark,
+                },
+              }}
+            >
+              Cerrar
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

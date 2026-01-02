@@ -37,9 +37,11 @@ import {
   Computer,
   Visibility,
   Delete,
+  Edit,
 } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
+import { pageStyles } from '../theme/styles';
 
 interface Ticket {
   id: number;
@@ -119,6 +121,12 @@ const Tickets: React.FC = () => {
   // Función para vista previa
   const handlePreview = (ticket: Ticket) => {
     console.log('Preview ticket:', ticket);
+  };
+
+  // Función para abrir modal de edición
+  const handleOpen = (ticket?: Ticket) => {
+    // TODO: Implementar modal de edición de ticket
+    console.log('Edit ticket:', ticket);
   };
 
   const handleDelete = (id: number) => {
@@ -333,7 +341,7 @@ const Tickets: React.FC = () => {
         <Box sx={{ px: 3, pt: 3, pb: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
             <Box>
-              <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.25 }}>
+              <Typography variant="h4" sx={pageStyles.pageTitle}>
                 Tickets
               </Typography>
               <Typography
@@ -388,19 +396,7 @@ const Tickets: React.FC = () => {
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   displayEmpty
-                  sx={{
-                    borderRadius: 1.5,
-                    bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme.palette.divider,
-                    },
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme.palette.text.secondary,
-                    },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme.palette.primary.main,
-                    },
-                  }}
+                  sx={pageStyles.select}
                 >
                   <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
                   <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
@@ -414,18 +410,7 @@ const Tickets: React.FC = () => {
                 onClick={() => {
                   // TODO: Implementar creación de ticket
                 }}
-                sx={{
-                  bgcolor: taxiMonterricoColors.green,
-                  '&:hover': {
-                    bgcolor: taxiMonterricoColors.green,
-                    opacity: 0.9,
-                  },
-                  textTransform: 'none',
-                  fontWeight: 500,
-                  borderRadius: 1.5,
-                  px: 2.5,
-                  py: 1,
-                }}
+                sx={pageStyles.primaryButton}
               >
                 Crear ticket
               </Button>
@@ -527,7 +512,18 @@ const Tickets: React.FC = () => {
                   <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
                     Fecha de Creación
                   </TableCell>
-                  <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
+                  <TableCell sx={{ 
+                    fontWeight: 600, 
+                    color: theme.palette.text.primary, 
+                    fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                    py: { xs: 1.5, md: 2 }, 
+                    px: 1, 
+                    width: { xs: 100, md: 120 }, 
+                    minWidth: { xs: 100, md: 120 },
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-start'
+                  }}>
                     Acciones
                   </TableCell>
                 </TableRow>
@@ -648,6 +644,25 @@ const Tickets: React.FC = () => {
                     </TableCell>
                     <TableCell sx={{ px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
                       <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                        <Tooltip title="Editar">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpen(ticket);
+                            }}
+                            sx={{
+                              color: theme.palette.text.secondary,
+                              padding: { xs: 0.5, md: 1 },
+                              '&:hover': {
+                                color: taxiMonterricoColors.green,
+                                bgcolor: `${taxiMonterricoColors.green}15`,
+                              },
+                            }}
+                          >
+                            <Edit sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                          </IconButton>
+                        </Tooltip>
                         <Tooltip title="Vista previa">
                           <IconButton
                             size="small"

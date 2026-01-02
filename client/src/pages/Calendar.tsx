@@ -15,6 +15,7 @@ import {
 } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
+import { pageStyles } from '../theme/styles';
 import { useAuth } from '../context/AuthContext';
 
 interface Task {
@@ -309,14 +310,7 @@ const Calendar: React.FC = () => {
         alignItems: 'center',
         mb: { xs: 2, sm: 2.5, md: 3 },
       }}>
-        <Typography 
-          variant="h4" 
-          sx={{ 
-            fontWeight: 600, 
-            color: theme.palette.text.primary, 
-            fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
-          }}
-        >
+        <Typography variant="h4" sx={pageStyles.pageTitle}>
           Calendario
         </Typography>
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>

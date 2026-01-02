@@ -39,48 +39,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(parsedUser);
         
         // Verificar con el backend para obtener el rol actualizado
-        const getBackendUrl = () => {
-          if (process.env.REACT_APP_API_URL) {
-            return process.env.REACT_APP_API_URL;
-          }
-          const hostname = window.location.hostname;
-          const protocol = window.location.protocol; // 'https:' o 'http:'
-          const isHttps = protocol === 'https:';
-          
-          if (hostname === 'localhost' || hostname === '127.0.0.1') {
-            return 'http://localhost:5000/api';
-          }
-          const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
-          if (ipRegex.test(hostname)) {
-            return `${isHttps ? 'https' : 'http'}://${hostname}:5000/api`;
-          }
-          
-          // Si es un dominio en producción (HTTPS), usar el subdominio de la API
-          // En desarrollo (HTTP), usar el puerto 5000
-          if (isHttps) {
-            if (hostname === 'crm.taximonterrico.com') {
-              return 'https://api-crm.taximonterrico.com/api';
-            } else {
-              return `https://${hostname}/api`;
-            }
-          } else {
-            return `http://${hostname}:5000/api`;
-          }
-        };
-        
         // Intentar obtener datos actualizados del backend
-        fetch(`${getBackendUrl()}/auth/me`, {
-          headers: {
-            'Authorization': `Bearer ${savedToken}`,
-          },
-        })
+        api.get('/auth/me')
           .then(response => {
-            if (response.ok) {
-              return response.json();
-            }
-            throw new Error('Failed to fetch user');
-          })
-          .then(userData => {
+            const userData = response.data;
             // Actualizar el usuario con los datos del backend (especialmente el rol)
             const updatedUser = {
               ...parsedUser,

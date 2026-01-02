@@ -24,9 +24,10 @@ import {
   Collapse,
   Pagination,
 } from '@mui/material';
-import { Add, Delete, AttachMoney, Visibility, ViewList, AccountTree, CalendarToday, Close, FileDownload, UploadFile, FilterList, ExpandMore, Remove, Bolt, Business } from '@mui/icons-material';
+import { Add, Delete, AttachMoney, Visibility, ViewList, AccountTree, CalendarToday, Close, FileDownload, UploadFile, FilterList, ExpandMore, Remove, Bolt, Business, Edit } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
+import { pageStyles } from '../theme/styles';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
@@ -631,8 +632,8 @@ const Deals: React.FC = () => {
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box>
-              <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.25, fontSize: { xs: '1.25rem', md: '1.375rem' } }}>
-                Todos los Negocios
+              <Typography variant="h4" sx={pageStyles.pageTitle}>
+                Negocios
               </Typography>
             </Box>
           </Box>
@@ -644,20 +645,7 @@ const Deals: React.FC = () => {
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   displayEmpty
-                  sx={{
-                    borderRadius: 1.5,
-                  bgcolor: theme.palette.background.paper,
-                  fontSize: '0.8125rem',
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme.palette.divider,
-                    },
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme.palette.text.secondary,
-                    },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                    borderColor: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
-                    },
-                  }}
+                  sx={pageStyles.select}
                 >
                   <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
                   <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
@@ -670,20 +658,7 @@ const Deals: React.FC = () => {
                 size="small"
                 onClick={handleImportFromExcel}
                 disabled={importing}
-                sx={{
-                  border: `1px solid ${taxiMonterricoColors.green}`,
-                  color: taxiMonterricoColors.green,
-                  '&:hover': {
-                    borderColor: taxiMonterricoColors.greenDark,
-                    bgcolor: `${taxiMonterricoColors.green}10`,
-                  },
-                  '&:disabled': {
-                    borderColor: theme.palette.divider,
-                    color: theme.palette.text.disabled,
-                  },
-                  borderRadius: 1.5,
-                  p: 0.875,
-                }}
+                sx={pageStyles.outlinedIconButton}
               >
                 <UploadFile sx={{ fontSize: 18 }} />
               </IconButton>
@@ -693,16 +668,7 @@ const Deals: React.FC = () => {
               <IconButton
                 size="small"
                 onClick={handleExportToExcel}
-                sx={{
-                  border: `1px solid ${taxiMonterricoColors.green}`,
-                  color: taxiMonterricoColors.green,
-                  '&:hover': {
-                    borderColor: taxiMonterricoColors.greenDark,
-                    bgcolor: `${taxiMonterricoColors.green}10`,
-                  },
-                  borderRadius: 1.5,
-                  p: 0.875,
-                }}
+                sx={pageStyles.outlinedIconButton}
               >
                 <FileDownload sx={{ fontSize: 18 }} />
               </IconButton>
@@ -720,20 +686,7 @@ const Deals: React.FC = () => {
                   }
                   setFilterDrawerOpen(!filterDrawerOpen);
                 }}
-                sx={{
-                  borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
-                  color: theme.palette.text.primary,
-                  bgcolor: theme.palette.action.hover,
-                  '&:hover': {
-                    borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
-                  },
-                  fontSize: '0.8125rem',
-                  textTransform: 'none',
-                  borderRadius: 1.5,
-                  px: 1.5,
-                  py: 0.75,
-                }}
+                sx={pageStyles.filterButton}
               >
                 Filter
               </Button>
@@ -744,18 +697,16 @@ const Deals: React.FC = () => {
                   onClick={() => setViewMode('list')}
                   sx={{
                     bgcolor: viewMode === 'list' 
-                      ? theme.palette.primary.main 
-                      : theme.palette.mode === 'dark' 
-                      ? 'rgba(255, 255, 255, 0.05)' 
-                      : theme.palette.action.hover,
+                      ? taxiMonterricoColors.green 
+                      : theme.palette.background.paper,
                     color: viewMode === 'list' 
                       ? 'white' 
                       : theme.palette.text.secondary,
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: 1,
+                    borderRadius: 1.5,
+                    p: 0.875,
                     '&:hover': {
                       bgcolor: viewMode === 'list' 
-                        ? theme.palette.primary.dark 
+                        ? taxiMonterricoColors.greenDark 
                         : theme.palette.action.hover,
                     },
                   }}
@@ -768,18 +719,16 @@ const Deals: React.FC = () => {
                   onClick={() => setViewMode('funnel')}
                   sx={{
                     bgcolor: viewMode === 'funnel' 
-                      ? theme.palette.primary.main 
-                      : theme.palette.mode === 'dark' 
-                      ? 'rgba(255, 255, 255, 0.05)' 
-                      : theme.palette.action.hover,
+                      ? taxiMonterricoColors.green 
+                      : theme.palette.background.paper,
                     color: viewMode === 'funnel' 
                       ? 'white' 
                       : theme.palette.text.secondary,
-                    border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: 1,
+                    borderRadius: 1.5,
+                    p: 0.875,
                     '&:hover': {
                       bgcolor: viewMode === 'funnel' 
-                        ? theme.palette.primary.dark 
+                        ? taxiMonterricoColors.greenDark 
                         : theme.palette.action.hover,
                     },
                   }}
@@ -790,6 +739,7 @@ const Deals: React.FC = () => {
             </Box>
             <Tooltip title="Nuevo Negocio">
               <IconButton
+                size="small"
                 onClick={() => handleOpen()}
                 sx={{
                   bgcolor: taxiMonterricoColors.green,
@@ -797,13 +747,12 @@ const Deals: React.FC = () => {
                   '&:hover': {
                     bgcolor: taxiMonterricoColors.greenDark,
                   },
-                  borderRadius: '50%',
-                  width: 40,
-                  height: 40,
+                  borderRadius: 1.5,
+                  p: 0.875,
                   boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
                 }}
               >
-                <Add />
+                <Add sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
             </Box>
@@ -834,22 +783,26 @@ const Deals: React.FC = () => {
               boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
             }}
           >
-            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+            <Box sx={pageStyles.tableHeaderCell}>
                   Nombre del Negocio
             </Box>
-            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+            <Box sx={pageStyles.tableHeaderCell}>
                   Monto
             </Box>
-            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+            <Box sx={pageStyles.tableHeaderCell}>
                   Etapa
             </Box>
-            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+            <Box sx={pageStyles.tableHeaderCell}>
                   Contacto
             </Box>
-            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+            <Box sx={pageStyles.tableHeaderCell}>
                   Empresa
             </Box>
-            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+            <Box sx={{ 
+              ...pageStyles.tableHeaderCell, 
+              px: { xs: 0.75, md: 1 },
+              justifyContent: 'flex-start'
+            }}>
                   Acciones
             </Box>
           </Box>
@@ -1081,6 +1034,18 @@ const Deals: React.FC = () => {
                       </Box>
                 <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                      <Tooltip title="Editar">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpen(deal);
+                          }}
+                          sx={pageStyles.previewIconButton}
+                        >
+                          <Edit sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Vista previa">
                         <IconButton
                           size="small"
@@ -1088,14 +1053,7 @@ const Deals: React.FC = () => {
                             e.stopPropagation();
                             handlePreview(deal);
                           }}
-                          sx={{
-                            color: theme.palette.text.secondary,
-                            padding: { xs: 0.5, md: 1 },
-                            '&:hover': {
-                              color: taxiMonterricoColors.green,
-                              bgcolor: `${taxiMonterricoColors.green}15`,
-                            },
-                          }}
+                          sx={pageStyles.previewIconButton}
                         >
                           <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
                         </IconButton>
@@ -1107,14 +1065,7 @@ const Deals: React.FC = () => {
                             e.stopPropagation();
                             handleDelete(deal.id);
                           }}
-                          sx={{
-                            color: theme.palette.text.secondary,
-                            padding: { xs: 0.5, md: 1 },
-                            '&:hover': {
-                              color: '#d32f2f',
-                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.15)' : '#ffebee',
-                            },
-                          }}
+                          sx={pageStyles.deleteIcon}
                         >
                           <Delete sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
                         </IconButton>
@@ -1124,14 +1075,7 @@ const Deals: React.FC = () => {
               </Box>
             ))}
             {paginatedDeals.length === 0 && (
-              <Box sx={{ 
-                textAlign: 'center',
-                py: 8,
-                bgcolor: theme.palette.background.paper,
-                borderRadius: 0,
-                border: 'none',
-                boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
-              }}>
+              <Box sx={pageStyles.emptyState}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                   <AttachMoney sx={{ fontSize: 48, color: theme.palette.text.disabled }} />
                   <Typography variant="body1" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
@@ -1150,24 +1094,7 @@ const Deals: React.FC = () => {
                 page={currentPage}
                 onChange={(event, value) => setCurrentPage(value)}
                 color="primary"
-                sx={{
-                  '& .MuiPaginationItem-root': {
-                    color: theme.palette.text.primary,
-                    fontSize: '0.875rem',
-                    '&.Mui-selected': {
-                      bgcolor: taxiMonterricoColors.green,
-                      color: 'white',
-                      '&:hover': {
-                        bgcolor: taxiMonterricoColors.greenDark,
-                      },
-                    },
-                    '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.08)' 
-                        : 'rgba(0, 0, 0, 0.04)',
-                    },
-                  },
-                }}
+                sx={pageStyles.pagination}
               />
             </Box>
           )}
@@ -1979,13 +1906,10 @@ const Deals: React.FC = () => {
         maxWidth="sm"
         fullWidth
         PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-          }
+          sx: pageStyles.dialog
         }}
       >
-          <DialogContent sx={{ pt: 3 }}>
+          <DialogContent sx={pageStyles.dialogContent}>
           <Typography variant="body1" sx={{ color: theme.palette.text.primary, mb: 1 }}>
             ¿Estás seguro de que deseas eliminar este negocio?
           </Typography>
@@ -1993,23 +1917,11 @@ const Deals: React.FC = () => {
             Esta acción no se puede deshacer. El negocio será eliminado permanentemente del sistema.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ 
-          px: 3, 
-          py: 2,
-          borderTop: `1px solid ${theme.palette.divider}`,
-          gap: 1,
-        }}>
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button 
             onClick={handleCancelDelete}
             disabled={deleting}
-            sx={{
-              textTransform: 'none',
-              color: theme.palette.text.secondary,
-              fontWeight: 500,
-              '&:hover': {
-                bgcolor: theme.palette.action.hover,
-              }
-            }}
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
@@ -2017,20 +1929,7 @@ const Deals: React.FC = () => {
             onClick={handleConfirmDelete}
             disabled={deleting}
             variant="contained"
-            sx={{
-              textTransform: 'none',
-              fontWeight: 500,
-              borderRadius: 1.5,
-              px: 2.5,
-              bgcolor: '#d32f2f',
-              '&:hover': {
-                bgcolor: '#b71c1c',
-              },
-              '&.Mui-disabled': {
-                bgcolor: '#ffcdd2',
-                color: '#ffffff',
-              }
-            }}
+            sx={pageStyles.deleteButton}
             startIcon={deleting ? <CircularProgress size={16} sx={{ color: '#ffffff' }} /> : <Delete />}
           >
             {deleting ? 'Eliminando...' : 'Eliminar'}

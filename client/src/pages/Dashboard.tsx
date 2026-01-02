@@ -6,9 +6,6 @@ import {
   CardContent,
   CircularProgress,
   Button,
-  Select,
-  MenuItem,
-  FormControl,
   Avatar,
   IconButton,
   Dialog,
@@ -35,6 +32,8 @@ import {
   CalendarToday,
   Assessment,
   ArrowOutward,
+  ChevronLeft,
+  ChevronRight,
 } from '@mui/icons-material';
 import {
   AreaChart,
@@ -132,6 +131,7 @@ const Dashboard: React.FC = () => {
   const [maximizedWeeklySales, setMaximizedWeeklySales] = useState(false);
   const [maximizedSales, setMaximizedSales] = useState(false);
   const [maximizedPipeline, setMaximizedPipeline] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   
   // Generar lista de meses
   const monthNames = [
@@ -1088,16 +1088,16 @@ const Dashboard: React.FC = () => {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        mb: { xs: 2, sm: 3, md: 4 },
+        mb: { xs: 1.5, sm: 2, md: 2.5 },
         flexDirection: { xs: 'column', sm: 'row' },
         gap: { xs: 2, sm: 0 },
       }}>
         <Typography 
           variant="h4" 
           sx={{ 
-            fontWeight: 600, 
+            fontWeight: 500, 
             color: theme.palette.text.primary, 
-            fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
+            fontSize: { xs: '0.9375rem', sm: '1.125rem', md: '1.25rem' },
           }}
         >
           Dashboard
@@ -1109,48 +1109,188 @@ const Dashboard: React.FC = () => {
           flexDirection: { xs: 'column', sm: 'row' },
           width: { xs: '100%', sm: 'auto' },
         }}>
-          <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 180 } }}>
-            <Select
-              id="dashboard-month-year-select"
-              name="dashboard-month-year-select"
-              value={selectedMonth !== null ? `${selectedMonth}-2025` : `all-2025`}
-              onChange={(e) => {
-                const [month] = e.target.value.split('-');
-                setSelectedYear('2025');
-                setSelectedMonth(month === 'all' ? null : month);
-              }}
-              sx={{ 
-                fontSize: { xs: '0.8rem', md: '0.875rem' },
-              }}
-              renderValue={(value) => {
-                const [month] = value.split('-');
-                if (month === 'all') {
+          {/* Botón que abre el calendario de meses */}
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => setCalendarOpen(true)}
+            startIcon={<CalendarToday sx={{ fontSize: 18 }} />}
+            sx={{
+              minWidth: { xs: '100%', sm: 180 },
+              justifyContent: 'flex-start',
+              textTransform: 'none',
+              borderColor: taxiMonterricoColors.green,
+              color: taxiMonterricoColors.green,
+              '&:hover': {
+                borderColor: taxiMonterricoColors.greenDark,
+                bgcolor: 'rgba(46, 125, 50, 0.04)',
+              },
+            }}
+          >
+            {selectedMonth !== null 
+              ? `${monthNames.find(m => m.value === selectedMonth)?.label} ${selectedYear}`
+              : `Todos los meses ${selectedYear}`
+            }
+          </Button>
+
+          {/* Dialog con el calendario de meses */}
+          <Dialog
+            open={calendarOpen}
+            onClose={() => setCalendarOpen(false)}
+            PaperProps={{
+              sx: {
+                minWidth: 320,
+                maxWidth: 400,
+              }
+            }}
+          >
+            <DialogTitle sx={{ pb: 1 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    const newYear = parseInt(selectedYear) - 1;
+                    if (newYear >= 2025) {
+                      setSelectedYear(newYear.toString());
+                    }
+                  }}
+                  disabled={parseInt(selectedYear) <= 2025}
+                  sx={{
+                    bgcolor: theme.palette.background.paper,
+                    border: `1px solid ${theme.palette.divider}`,
+                    '&:hover': {
+                      bgcolor: theme.palette.action.hover,
+                    },
+                    '&:disabled': {
+                      opacity: 0.5,
+                    },
+                  }}
+                >
+                  <ChevronLeft />
+                </IconButton>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  {selectedYear}
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    const newYear = parseInt(selectedYear) + 1;
+                    if (newYear <= currentYear) {
+                      setSelectedYear(newYear.toString());
+                    }
+                  }}
+                  disabled={parseInt(selectedYear) >= currentYear}
+                  sx={{
+                    bgcolor: theme.palette.background.paper,
+                    border: `1px solid ${theme.palette.divider}`,
+                    '&:hover': {
+                      bgcolor: theme.palette.action.hover,
+                    },
+                    '&:disabled': {
+                      opacity: 0.5,
+                    },
+                  }}
+                >
+                  <ChevronRight />
+                </IconButton>
+              </Box>
+            </DialogTitle>
+            <DialogContent sx={{ pt: 2 }}>
+              {/* Opción "Todos los meses" */}
+              <Button
+                fullWidth
+                variant={selectedMonth === null ? "contained" : "outlined"}
+                onClick={() => {
+                  setSelectedMonth(null);
+                  setCalendarOpen(false);
+                }}
+                sx={{
+                  mb: 2,
+                  textTransform: 'none',
+                  bgcolor: selectedMonth === null ? taxiMonterricoColors.green : 'transparent',
+                  color: selectedMonth === null ? 'white' : theme.palette.text.primary,
+                  borderColor: taxiMonterricoColors.green,
+                  '&:hover': {
+                    bgcolor: selectedMonth === null ? taxiMonterricoColors.greenDark : 'rgba(46, 125, 50, 0.04)',
+                  },
+                }}
+              >
+                Todos los meses {selectedYear}
+              </Button>
+
+              {/* Grid de meses (3 columnas x 4 filas) */}
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: 1,
+                }}
+              >
+                {monthNames.map((month) => {
+                  const isSelected = selectedMonth === month.value;
+                  const isCurrentMonth = 
+                    parseInt(month.value) === new Date().getMonth() && 
+                    parseInt(selectedYear) === currentYear;
+                  
                   return (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <CalendarToday sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                      <span>Todos los meses 2025</span>
-                    </Box>
+                    <Button
+                      key={month.value}
+                      variant={isSelected ? "contained" : "outlined"}
+                      onClick={() => {
+                        setSelectedMonth(month.value);
+                        setCalendarOpen(false);
+                      }}
+                      sx={{
+                        minHeight: 48,
+                        textTransform: 'none',
+                        fontSize: '0.875rem',
+                        bgcolor: isSelected ? taxiMonterricoColors.green : 'transparent',
+                        color: isSelected ? 'white' : theme.palette.text.primary,
+                        borderColor: isCurrentMonth && !isSelected 
+                          ? taxiMonterricoColors.green 
+                          : theme.palette.divider,
+                        fontWeight: isCurrentMonth ? 600 : 400,
+                        '&:hover': {
+                          bgcolor: isSelected 
+                            ? taxiMonterricoColors.greenDark 
+                            : 'rgba(46, 125, 50, 0.04)',
+                          borderColor: taxiMonterricoColors.green,
+                        },
+                      }}
+                    >
+                      {month.label}
+                    </Button>
                   );
-                }
-                const monthLabel = monthNames.find(m => m.value === month)?.label || '';
-                return (
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <CalendarToday sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                    <span>{monthLabel} 2025</span>
-                  </Box>
-                );
-              }}
-            >
-              <MenuItem value={`all-2025`}>
-                Todos los meses 2025
-              </MenuItem>
-              {monthNames.map((month) => (
-                <MenuItem key={`${month.value}-2025`} value={`${month.value}-2025`}>
-                  {month.label} 2025
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+                })}
+              </Box>
+            </DialogContent>
+            <DialogActions sx={{ px: 2, pb: 2 }}>
+              <Button
+                onClick={() => {
+                  // Seleccionar mes actual
+                  const today = new Date();
+                  setSelectedYear(today.getFullYear().toString());
+                  setSelectedMonth(today.getMonth().toString());
+                  setCalendarOpen(false);
+                }}
+                sx={{
+                  color: taxiMonterricoColors.green,
+                  textTransform: 'none',
+                }}
+              >
+                Hoy
+              </Button>
+              <Button
+                onClick={() => setCalendarOpen(false)}
+                sx={{
+                  color: theme.palette.text.secondary,
+                  textTransform: 'none',
+                }}
+              >
+                Cerrar
+              </Button>
+            </DialogActions>
+          </Dialog>
           <Button
             variant="contained"
             size="small"
@@ -1181,17 +1321,17 @@ const Dashboard: React.FC = () => {
         <Card 
           onClick={canEditBudget ? handleBudgetCardClick : undefined}
           sx={{ 
-            borderRadius: 2, 
+            borderRadius: 1, 
             boxShadow: theme.palette.mode === 'dark' 
               ? '0 2px 8px rgba(0, 0, 0, 0.2)' 
-              : '0 1px 3px rgba(0,0,0,0.1)',
+              : { xs: 1, md: 2 },
             background: theme.palette.background.paper,
             color: theme.palette.text.primary,
             transition: 'all 0.2s ease',
             overflow: 'hidden',
             border: theme.palette.mode === 'dark' 
               ? '1px solid rgba(255, 255, 255, 0.15)' 
-              : '1px solid rgba(0, 0, 0, 0.15)',
+              : 'none',
             cursor: canEditBudget ? 'pointer' : 'default',
             '&:hover': canEditBudget ? {
               transform: { xs: 'none', md: 'translateY(-2px)' },
@@ -1211,9 +1351,9 @@ const Dashboard: React.FC = () => {
             }}>
               <Box
                 sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 1.5,
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
                   bgcolor: '#E8F5E9',
                   display: 'flex',
                   alignItems: 'center',
@@ -1224,7 +1364,7 @@ const Dashboard: React.FC = () => {
                 <AttachMoney 
                   sx={{ 
                     fontSize: 28,
-                    color: '#2E7D32',
+                    color: taxiMonterricoColors.greenLight,
                   }} 
                 />
               </Box>
@@ -1259,17 +1399,17 @@ const Dashboard: React.FC = () => {
 
         {/* Weekly Balance */}
         <Card sx={{ 
-          borderRadius: 2, 
+          borderRadius: 1, 
           boxShadow: theme.palette.mode === 'dark' 
             ? '0 2px 8px rgba(0, 0, 0, 0.2)' 
-            : '0 1px 3px rgba(0,0,0,0.1)',
+            : { xs: 1, md: 2 },
           background: theme.palette.background.paper,
           color: theme.palette.text.primary,
           transition: 'all 0.2s ease',
           overflow: 'hidden',
           border: theme.palette.mode === 'dark' 
             ? '1px solid rgba(255, 255, 255, 0.15)' 
-            : '1px solid rgba(0, 0, 0, 0.15)',
+            : 'none',
           '&:hover': {
             transform: { xs: 'none', md: 'translateY(-2px)' },
             boxShadow: theme.palette.mode === 'dark'
@@ -1287,9 +1427,9 @@ const Dashboard: React.FC = () => {
             }}>
               <Box
                 sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 1.5,
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
                   bgcolor: '#E8F5E9',
                   display: 'flex',
                   alignItems: 'center',
@@ -1300,7 +1440,7 @@ const Dashboard: React.FC = () => {
                 <AccountBalance 
                   sx={{ 
                     fontSize: 28,
-                    color: '#2E7D32',
+                    color: taxiMonterricoColors.greenLight,
                   }} 
                 />
               </Box>
@@ -1335,17 +1475,17 @@ const Dashboard: React.FC = () => {
 
         {/* Orders In Line */}
         <Card sx={{ 
-          borderRadius: 2, 
+          borderRadius: 1, 
           boxShadow: theme.palette.mode === 'dark' 
             ? '0 2px 8px rgba(0, 0, 0, 0.2)' 
-            : '0 1px 3px rgba(0,0,0,0.1)',
+            : { xs: 1, md: 2 },
           background: theme.palette.background.paper,
           color: theme.palette.text.primary,
           transition: 'all 0.2s ease',
           overflow: 'hidden',
           border: theme.palette.mode === 'dark' 
             ? '1px solid rgba(255, 255, 255, 0.15)' 
-            : '1px solid rgba(0, 0, 0, 0.15)',
+            : 'none',
           '&:hover': {
             transform: { xs: 'none', md: 'translateY(-2px)' },
             boxShadow: theme.palette.mode === 'dark'
@@ -1363,9 +1503,9 @@ const Dashboard: React.FC = () => {
             }}>
               <Box
                 sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 1.5,
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
                   bgcolor: '#E8F5E9',
                   display: 'flex',
                   alignItems: 'center',
@@ -1376,7 +1516,7 @@ const Dashboard: React.FC = () => {
                 <LocalOffer 
                   sx={{ 
                     fontSize: 28,
-                    color: '#2E7D32',
+                    color: taxiMonterricoColors.greenLight,
                   }} 
                 />
               </Box>
@@ -1411,10 +1551,10 @@ const Dashboard: React.FC = () => {
 
         {/* New Clients */}
         <Card sx={{ 
-          borderRadius: 2, 
+          borderRadius: 1, 
           boxShadow: theme.palette.mode === 'dark' 
             ? '0 2px 8px rgba(0, 0, 0, 0.2)' 
-            : '0 1px 3px rgba(0,0,0,0.1)',
+            : { xs: 1, md: 2 },
           background: theme.palette.background.paper,
           color: theme.palette.text.primary,
           transition: 'all 0.2s ease',
@@ -1422,7 +1562,7 @@ const Dashboard: React.FC = () => {
           position: 'relative',
           border: theme.palette.mode === 'dark' 
             ? '1px solid rgba(255, 255, 255, 0.15)' 
-            : '1px solid rgba(0, 0, 0, 0.15)',
+            : 'none',
           '&:hover': {
             transform: { xs: 'none', md: 'translateY(-2px)' },
             boxShadow: theme.palette.mode === 'dark'
@@ -1440,9 +1580,9 @@ const Dashboard: React.FC = () => {
             }}>
               <Box
                 sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 1.5,
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
                   bgcolor: '#E8F5E9',
                   display: 'flex',
                   alignItems: 'center',
@@ -1453,7 +1593,7 @@ const Dashboard: React.FC = () => {
                 <People 
                   sx={{ 
                     fontSize: 28,
-                    color: '#2E7D32',
+                    color: taxiMonterricoColors.greenLight,
                   }} 
                 />
               </Box>
@@ -1488,10 +1628,10 @@ const Dashboard: React.FC = () => {
 
         {/* Team KPI */}
         <Card sx={{ 
-          borderRadius: 2, 
+          borderRadius: 1, 
           boxShadow: theme.palette.mode === 'dark' 
             ? '0 2px 8px rgba(0, 0, 0, 0.2)' 
-            : '0 1px 3px rgba(0,0,0,0.1)',
+            : { xs: 1, md: 2 },
           background: theme.palette.background.paper,
           color: theme.palette.text.primary,
           transition: 'all 0.2s ease',
@@ -1499,7 +1639,7 @@ const Dashboard: React.FC = () => {
           position: 'relative',
           border: theme.palette.mode === 'dark' 
             ? '1px solid rgba(255, 255, 255, 0.15)' 
-            : '1px solid rgba(0, 0, 0, 0.15)',
+            : 'none',
           '&:hover': {
             transform: { xs: 'none', md: 'translateY(-2px)' },
             boxShadow: theme.palette.mode === 'dark'
@@ -1517,9 +1657,9 @@ const Dashboard: React.FC = () => {
             }}>
               <Box
                 sx={{
-                  width: 48,
-                  height: 48,
-                  borderRadius: 1.5,
+                  width: 64,
+                  height: 64,
+                  borderRadius: '50%',
                   bgcolor: '#E8F5E9',
                   display: 'flex',
                   alignItems: 'center',
@@ -1530,7 +1670,7 @@ const Dashboard: React.FC = () => {
                 <Groups 
                   sx={{ 
                     fontSize: 28,
-                    color: '#2E7D32',
+                    color: taxiMonterricoColors.greenLight,
                   }} 
                 />
               </Box>
@@ -1607,8 +1747,8 @@ const Dashboard: React.FC = () => {
         display: 'grid',
         gridTemplateColumns: { 
           xs: '1fr', 
-          md: '1fr',
-          lg: 'repeat(4, 1fr)',
+          md: 'repeat(2, 1fr)',
+          lg: 'repeat(2, 1fr)',
           xl: 'repeat(4, 1fr)' 
         },
         gap: { xs: 1.5, sm: 2, md: 3 },
@@ -1616,12 +1756,12 @@ const Dashboard: React.FC = () => {
       }}>
         {/* Sales Distribution */}
         <Card sx={{ 
-            borderRadius: 2, 
+            borderRadius: 1, 
             boxShadow: theme.palette.mode === 'dark' 
               ? '0 4px 12px rgba(0,0,0,0.3)' 
               : { xs: 1, md: 2 },
             bgcolor: theme.palette.background.paper,
-            border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
+            border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : 'none',
           }}
         >
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
@@ -1706,12 +1846,12 @@ const Dashboard: React.FC = () => {
 
         {/* Desempeño por Usuario */}
         <Card sx={{ 
-            borderRadius: { xs: 1, md: 2 }, 
+            borderRadius: { xs: 0.5, md: 1 }, 
             boxShadow: theme.palette.mode === 'dark' 
               ? '0 4px 12px rgba(0,0,0,0.3)' 
               : { xs: 1, md: 2 },
             bgcolor: theme.palette.background.paper,
-            border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
+            border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : 'none',
           }}>
             <CardContent sx={{ p: { xs: 2, md: 3 } }}>
               <Box sx={{ 
@@ -1865,12 +2005,12 @@ const Dashboard: React.FC = () => {
 
         {/* Total de Ventas por Asesor */}
         <Card sx={{ 
-            borderRadius: 2, 
+            borderRadius: 1, 
             boxShadow: theme.palette.mode === 'dark' 
               ? '0 4px 12px rgba(0,0,0,0.3)' 
               : { xs: 1, md: 2 },
             bgcolor: theme.palette.background.paper,
-            border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
+            border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : 'none',
           }}>
             <CardContent sx={{ p: { xs: 2, md: 3 } }}>
               <Box sx={{ 
@@ -2100,12 +2240,12 @@ const Dashboard: React.FC = () => {
 
         {/* Ventas Semanales */}
         <Card sx={{ 
-          borderRadius: 2, 
+          borderRadius: 1, 
           boxShadow: theme.palette.mode === 'dark' 
             ? '0 4px 12px rgba(0,0,0,0.3)' 
             : { xs: 1, md: 2 },
           bgcolor: theme.palette.background.paper,
-          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
+          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : 'none',
         }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
             <Box sx={{ 
@@ -2174,8 +2314,8 @@ const Dashboard: React.FC = () => {
         display: 'grid',
         gridTemplateColumns: { 
           xs: '1fr', 
-          md: '1fr',
-          lg: '1.5fr 1fr',
+          md: 'repeat(2, 1fr)',
+          lg: 'repeat(2, 1fr)',
           xl: '1.5fr 1fr' 
         },
         gap: { xs: 1.5, sm: 2, md: 3 },
@@ -2183,12 +2323,12 @@ const Dashboard: React.FC = () => {
       }}>
         {/* Sales Chart */}
         <Card sx={{ 
-          borderRadius: 2, 
+          borderRadius: 1, 
           boxShadow: theme.palette.mode === 'dark' 
             ? '0 4px 12px rgba(0,0,0,0.3)' 
             : { xs: 1, md: 2 },
           bgcolor: theme.palette.background.paper,
-          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
+          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : 'none',
         }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
             <Box sx={{ 
@@ -2322,12 +2462,12 @@ const Dashboard: React.FC = () => {
 
         {/* Pipeline de Ventas */}
         <Card sx={{ 
-          borderRadius: 2, 
+          borderRadius: 1, 
           boxShadow: theme.palette.mode === 'dark' 
             ? '0 4px 12px rgba(0,0,0,0.3)' 
-            : '0 1px 3px rgba(0,0,0,0.1)',
+            : { xs: 1, md: 2 },
           bgcolor: theme.palette.background.paper,
-          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.15)',
+          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : 'none',
         }}>
           <CardContent sx={{ p: { xs: 2, md: 3 }, pb: { xs: 1.5, md: 2 }, '&:last-child': { pb: { xs: 1.5, md: 2 } } }}>
             {/* Header */}
@@ -3024,7 +3164,7 @@ const Dashboard: React.FC = () => {
           borderBottom: `1px solid ${theme.palette.divider}`,
           pb: 2,
         }}>
-          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+          <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
             Distribución de Ventas
           </Typography>
           <IconButton
@@ -3089,7 +3229,7 @@ const Dashboard: React.FC = () => {
             borderBottom: `1px solid ${theme.palette.divider}`,
             pb: 2,
           }}>
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+            <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
               KPI's Área Comercial
             </Typography>
             <IconButton
@@ -3216,7 +3356,7 @@ const Dashboard: React.FC = () => {
             borderBottom: `1px solid ${theme.palette.divider}`,
             pb: 2,
           }}>
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+            <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
               Total de Ventas por Asesor
             </Typography>
             <IconButton
@@ -3342,7 +3482,7 @@ const Dashboard: React.FC = () => {
             bgcolor: theme.palette.background.default,
           },
         }}
-      >
+      > 
         <DialogTitle sx={{ 
           display: 'flex', 
           justifyContent: 'space-between', 
@@ -3350,7 +3490,7 @@ const Dashboard: React.FC = () => {
           borderBottom: `1px solid ${theme.palette.divider}`,
           pb: 2,
         }}>
-          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+          <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
             Ventas Semanales
           </Typography>
           <IconButton
@@ -3396,7 +3536,7 @@ const Dashboard: React.FC = () => {
           borderBottom: `1px solid ${theme.palette.divider}`,
           pb: 2,
         }}>
-          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+          <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
             Ventas
           </Typography>
           <IconButton
@@ -3416,17 +3556,17 @@ const Dashboard: React.FC = () => {
             <ResponsiveContainer width="100%" height={600} minHeight={600}>
               <AreaChart 
                 data={salesChartData}
-                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                margin={selectedMonth !== null ? { top: 5, right: 5, bottom: 0, left: 5 } : { top: 5, right: 5, bottom: 20, left: 5 }}
               >
                 <defs>
-                  <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="colorSalesFullscreen" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
                     <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={true} vertical={false} />
                 <XAxis 
-                  dataKey="label" 
+                  dataKey={selectedMonth !== null ? "day" : "month"} 
                   stroke={theme.palette.text.secondary}
                   tick={{ fontSize: 12 }}
                   angle={selectedMonth !== null ? -45 : 0}
@@ -3481,7 +3621,7 @@ const Dashboard: React.FC = () => {
                   dataKey="value" 
                   stroke="#10B981" 
                   strokeWidth={3}
-                  fill="url(#colorSales)"
+                  fill="url(#colorSalesFullscreen)"
                   dot={false}
                   activeDot={{ r: 6, fill: '#10B981' }}
                 />
@@ -3509,7 +3649,7 @@ const Dashboard: React.FC = () => {
           borderBottom: `1px solid ${theme.palette.divider}`,
           pb: 2,
         }}>
-          <Typography variant="h5" sx={{ fontWeight: 600 }}>
+          <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
             Pipeline de Ventas
           </Typography>
           <IconButton

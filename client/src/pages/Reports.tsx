@@ -18,6 +18,7 @@ import { Assessment, Person } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../config/api';
 import { useTheme } from '@mui/material/styles';
+import { pageStyles } from '../theme/styles';
 
 interface User {
   id: number;
@@ -84,7 +85,7 @@ const Reports: React.FC = () => {
     <Box sx={{ p: 3 }}>
       <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
         <Assessment sx={{ fontSize: 40, color: theme.palette.primary.main }} />
-        <Typography variant="h4" sx={{ fontWeight: 600 }}>
+        <Typography variant="h4" sx={pageStyles.pageTitle}>
           Reportes
         </Typography>
       </Box>

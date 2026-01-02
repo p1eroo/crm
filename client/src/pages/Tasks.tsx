@@ -29,9 +29,10 @@ import {
   Paper,
   useTheme,
 } from '@mui/material';
-import { Add, Delete, Search, CheckCircle, Visibility, Warning, Schedule, PendingActions } from '@mui/icons-material';
+import { Add, Delete, Search, CheckCircle, Visibility, Warning, Schedule, PendingActions, Edit } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
+import { pageStyles } from '../theme/styles';
 
 interface Task {
   id: number;
@@ -518,8 +519,8 @@ const Tasks: React.FC = () => {
         <Box sx={{ px: 3, pt: 3, pb: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
             <Box>
-              <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.25 }}>
-                Todas las Tareas
+              <Typography variant="h4" sx={pageStyles.pageTitle}>
+                Tareas
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
@@ -555,19 +556,7 @@ const Tasks: React.FC = () => {
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   displayEmpty
-                  sx={{
-                    borderRadius: 1.5,
-                    bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme.palette.divider,
-                    },
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme.palette.text.secondary,
-                    },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme.palette.primary.main,
-                    },
-                  }}
+                  sx={pageStyles.select}
                 >
                   <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
                   <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
@@ -579,18 +568,7 @@ const Tasks: React.FC = () => {
                 variant="contained" 
                 startIcon={<Add />} 
                 onClick={() => handleOpen()}
-                sx={{
-                  bgcolor: taxiMonterricoColors.green,
-                  '&:hover': {
-                    bgcolor: taxiMonterricoColors.green,
-                    opacity: 0.9,
-                  },
-                  textTransform: 'none',
-                  fontWeight: 500,
-                  borderRadius: 1.5,
-                  px: 2.5,
-                  py: 1,
-                }}
+                sx={pageStyles.primaryButton}
               >
                 Nueva Tarea
               </Button>
@@ -649,7 +627,18 @@ const Tasks: React.FC = () => {
                 <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '13%' } }}>
                   Asignado a
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
+                <TableCell sx={{ 
+                  fontWeight: 600, 
+                  color: theme.palette.text.primary, 
+                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                  py: { xs: 1.5, md: 2 }, 
+                  px: 1, 
+                  width: { xs: 100, md: 120 }, 
+                  minWidth: { xs: 100, md: 120 },
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start'
+                }}>
                   Acciones
                 </TableCell>
               </TableRow>
@@ -779,6 +768,18 @@ const Tasks: React.FC = () => {
                   </TableCell>
                   <TableCell sx={{ px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
                     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                      <Tooltip title="Editar">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpen(task);
+                          }}
+                          sx={pageStyles.previewIconButton}
+                        >
+                          <Edit sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Vista previa">
                         <IconButton
                           size="small"
@@ -786,14 +787,7 @@ const Tasks: React.FC = () => {
                             e.stopPropagation();
                             handlePreview(task);
                           }}
-                          sx={{
-                            color: theme.palette.text.secondary,
-                            padding: { xs: 0.5, md: 1 },
-                            '&:hover': {
-                              color: taxiMonterricoColors.green,
-                              bgcolor: `${taxiMonterricoColors.green}15`,
-                            },
-                          }}
+                          sx={pageStyles.previewIconButton}
                         >
                           <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
                         </IconButton>
@@ -805,14 +799,7 @@ const Tasks: React.FC = () => {
                             e.stopPropagation();
                             handleDelete(task.id, task.isActivity);
                           }}
-                          sx={{
-                            color: theme.palette.text.secondary,
-                            padding: { xs: 0.5, md: 1 },
-                            '&:hover': {
-                              color: '#d32f2f',
-                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.2)' : '#ffebee',
-                            },
-                          }}
+                          sx={pageStyles.deleteIcon}
                         >
                           <Delete sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
                         </IconButton>
@@ -914,13 +901,10 @@ const Tasks: React.FC = () => {
         maxWidth="sm"
         fullWidth
         PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-          }
+          sx: pageStyles.dialog
         }}
       >
-        <DialogContent sx={{ pt: 3 }}>
+        <DialogContent sx={pageStyles.dialogContent}>
           <Typography variant="body1" sx={{ color: theme.palette.text.primary, mb: 1 }}>
             ¿Estás seguro de que deseas eliminar esta tarea?
           </Typography>
@@ -928,23 +912,11 @@ const Tasks: React.FC = () => {
             Esta acción no se puede deshacer. La tarea será eliminada permanentemente del sistema.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ 
-          px: 3, 
-          py: 2,
-          borderTop: `1px solid ${theme.palette.divider}`,
-          gap: 1,
-        }}>
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button 
             onClick={handleCancelDelete}
             disabled={deleting}
-            sx={{
-              textTransform: 'none',
-              color: theme.palette.text.secondary,
-              fontWeight: 500,
-              '&:hover': {
-                bgcolor: theme.palette.action.hover,
-              }
-            }}
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
@@ -952,20 +924,7 @@ const Tasks: React.FC = () => {
             onClick={handleConfirmDelete}
             disabled={deleting}
             variant="contained"
-            sx={{
-              textTransform: 'none',
-              fontWeight: 500,
-              borderRadius: 1.5,
-              px: 2.5,
-              bgcolor: '#d32f2f',
-              '&:hover': {
-                bgcolor: '#b71c1c',
-              },
-              '&.Mui-disabled': {
-                bgcolor: '#ffcdd2',
-                color: '#ffffff',
-              }
-            }}
+            sx={pageStyles.deleteButton}
             startIcon={deleting ? <CircularProgress size={16} sx={{ color: '#ffffff' }} /> : <Delete />}
           >
             {deleting ? 'Eliminando...' : 'Eliminar'}

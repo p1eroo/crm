@@ -37,6 +37,7 @@ import {
   DarkMode,
   LightMode,
   Logout,
+  Menu as MenuIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { taxiMonterricoColors } from '../../theme/colors';
@@ -44,11 +45,14 @@ import ProfileModal from '../ProfileModal';
 import CreateMenuButton from '../CreateMenuButton';
 import api from '../../config/api';
 import { useTheme as useThemeContext } from '../../context/ThemeContext';
+import { useSidebar } from '../../context/SidebarContext';
+import logo from '../../assets/tm_logo.png';
 
 const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { mode, toggleTheme } = useThemeContext();
+  const { open: sidebarOpen, toggleSidebar } = useSidebar();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [reminderAnchorEl, setReminderAnchorEl] = useState<null | HTMLElement>(null);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
@@ -320,33 +324,87 @@ const Header: React.FC = () => {
   return (
     <Box
       sx={{
-        width: '100%',
-        bgcolor: 'theme.palette.background.paper',
-        px: 3,
-        pt: 2,
-        pb: 2,
+        width: '100vw',
+        bgcolor: theme.palette.background.paper,
+        pl: 0,
+        pr: 2.5,
+        pt: 1.25,
+        pb: 1.25,
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 2,
-        borderBottom: `1px solid ${theme.palette.divider}`,
+        justifyContent: 'flex-start',
+        gap: 0,
+        height: 72,
+        position: 'sticky',
+        top: 0,
+        left: 0,
+        zIndex: 1300,
+        marginLeft: 0,
+        marginRight: 0,
       }}
     >
+      {/* Logo y botón de menú - siempre en la misma posición */}
+      <Box sx={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 0, 
+        flexShrink: 0,
+        marginLeft: -6,
+      }}>
+        {/* Logo */}
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <img
+            src={logo}
+            alt="Taxi Monterrico Logo"
+            style={{
+              width: 350,
+              height: 115,
+              objectFit: 'contain',
+            }}
+          />
+        </Box>
+        
+        {/* Icono de menú para toggle del sidebar */}
+        <IconButton
+          onClick={toggleSidebar}
+          size="small"
+          sx={{
+            p: 0.75,
+            borderRadius: '50%',
+            minWidth: 36,
+            width: 36,
+            height: 36,
+            flexShrink: 0,
+            marginLeft: -4,
+            '&:hover': {
+              bgcolor: theme.palette.action.hover,
+            },
+          }}
+        >
+          <MenuIcon sx={{ fontSize: 24, color: '#7081b9' }} />
+        </IconButton>
+      </Box>
+      
       {/* Barra de búsqueda */}
       <Box
         sx={{
           flex: 1,
           position: 'relative',
-          maxWidth: 'calc(100% - 350px)',
+          maxWidth: sidebarOpen ? '350px' : '450px',
+          minWidth: sidebarOpen ? '250px' : '300px',
+          transition: 'max-width 0.3s ease, min-width 0.3s ease',
+          marginLeft: 3.5,
         }}
       >
         <Box
           ref={searchInputRef}
           sx={{
-            bgcolor: theme.palette.background.paper,
-            borderRadius: 1,
+            bgcolor: theme.palette.mode === 'dark' 
+              ? 'rgba(255, 255, 255, 0.05)' 
+              : 'rgba(0, 0, 0, 0.02)',
+            borderRadius: '50px',
             px: 1.5,
-            py: 0.75,
+            py: 0.5,
             display: 'flex',
             alignItems: 'center',
             transition: 'all 0.2s ease',
@@ -362,15 +420,15 @@ const Header: React.FC = () => {
         >
           <Search 
             sx={{ 
-              fontSize: 16, 
-              color: theme.palette.text.secondary,
+              fontSize: 18,
+              color: '#7081b9',
               mr: 1,
             }} 
           />
           <InputBase
             id="global-search-input"
             name="global-search"
-            placeholder="Buscar contactos, empresas, negocios..."
+            placeholder="Buscar..."
             value={searchValue}
             onChange={(e) => {
               setSearchValue(e.target.value);
@@ -391,7 +449,7 @@ const Header: React.FC = () => {
             autoFocus={false}
             sx={{
               flex: 1,
-              fontSize: '0.8125rem',
+              fontSize: '0.875rem',
               color: theme.palette.text.primary,
               '&::placeholder': {
                 color: theme.palette.text.secondary,
@@ -599,48 +657,48 @@ const Header: React.FC = () => {
       </Box>
 
       {/* Elementos del lado derecho */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, marginLeft: 'auto' }}>
         {/* Botón Crear con menú desplegable */}
         <CreateMenuButton onSelect={handleCreateItem} />
 
-        <Divider orientation="vertical" flexItem sx={{ ml: 1, mr: 0.25, height: 32, alignSelf: 'center' }} />
+        <Divider orientation="vertical" flexItem sx={{ ml: 0.5, mr: 0.5, height: 24, alignSelf: 'center' }} />
 
         {/* Modo oscuro */}
         <Tooltip title={mode === 'light' ? 'Modo oscuro' : 'Modo claro'}>
           <IconButton 
-            size="medium"
+            size="small"
             onClick={toggleTheme}
             sx={{ 
               bgcolor: 'transparent', 
               borderRadius: 1, 
-              width: 40, 
-              height: 40,
+              width: 36,
+              height: 36,
               '&:hover': {
                 bgcolor: theme.palette.action.hover,
               },
             }}
           >
             {mode === 'light' ? (
-              <DarkMode sx={{ fontSize: 22, color: theme.palette.text.secondary }} />
+              <DarkMode sx={{ fontSize: 20, color: '#7081b9' }} />
             ) : (
-              <LightMode sx={{ fontSize: 22, color: theme.palette.text.secondary }} />
+              <LightMode sx={{ fontSize: 20, color: '#7081b9' }} />
             )}
           </IconButton>
         </Tooltip>
 
-        <Divider orientation="vertical" flexItem sx={{ mx: 0.25, height: 32, alignSelf: 'center' }} />
+        <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: 24, alignSelf: 'center' }} />
 
         {/* Recordatorios */}
         <Tooltip title="Recordatorios">
           <IconButton 
             ref={reminderButtonRef}
-            size="medium"
+            size="small"
             onClick={handleReminderMenu}
             sx={{ 
               bgcolor: 'transparent', 
               borderRadius: 1, 
-              width: 40, 
-              height: 40,
+              width: 36,
+              height: 36,
               '&:hover': {
                 bgcolor: theme.palette.action.hover,
               },
@@ -659,21 +717,21 @@ const Header: React.FC = () => {
                 },
               }}
             >
-              <Alarm sx={{ fontSize: 22, color: theme.palette.text.secondary }} />
+              <Alarm sx={{ fontSize: 20, color: '#7081b9' }} />
             </Badge>
           </IconButton>
         </Tooltip>
 
-        <Divider orientation="vertical" flexItem sx={{ mx: 0.25, height: 32, alignSelf: 'center' }} />
+        <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: 24, alignSelf: 'center' }} />
 
         {/* Notificaciones */}
         <IconButton 
-          size="medium"
+          size="small"
           sx={{ 
             bgcolor: 'transparent', 
             borderRadius: 1, 
-            width: 40, 
-            height: 40,
+            width: 36,
+            height: 36,
             '&:hover': {
               bgcolor: theme.palette.action.hover,
             },
@@ -692,28 +750,28 @@ const Header: React.FC = () => {
               },
             }}
           >
-            <Notifications sx={{ fontSize: 22, color: theme.palette.text.secondary }} />
+            <Notifications sx={{ fontSize: 20, color: '#7081b9' }} />
           </Badge>
         </IconButton>
 
-        <Divider orientation="vertical" flexItem sx={{ ml: 0.25, mr: 1, height: 32, alignSelf: 'center' }} />
+        <Divider orientation="vertical" flexItem sx={{ ml: 0.5, mr: 0.5, height: 24, alignSelf: 'center' }} />
 
         {/* Avatar con dropdown */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }} onClick={handleMenu}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, cursor: 'pointer' }} onClick={handleMenu}>
           <Avatar
             src={user?.avatar}
             sx={{
-              width: 36,
-              height: 36,
+              width: 32,
+              height: 32,
               bgcolor: user?.avatar ? 'transparent' : taxiMonterricoColors.green,
-              fontSize: '0.75rem',
+              fontSize: '0.7rem',
               fontWeight: 600,
               border: `1px solid ${theme.palette.divider}`,
             }}
           >
             {!user?.avatar && getInitials(user?.firstName, user?.lastName)}
           </Avatar>
-          <KeyboardArrowDown sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+          <KeyboardArrowDown sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
         </Box>
       </Box>
 

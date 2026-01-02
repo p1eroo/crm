@@ -26,6 +26,7 @@ import {
   FormControlLabel,
   InputAdornment,
   Pagination,
+  LinearProgress,
 } from '@mui/material';
 import { 
   Add, 
@@ -56,10 +57,12 @@ import {
   YouTube,
   Bolt,
   Remove,
+  Edit,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
+import { pageStyles } from '../theme/styles';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
@@ -177,6 +180,13 @@ const Contacts: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [importProgressOpen, setImportProgressOpen] = useState(false);
+  const [importProgress, setImportProgress] = useState({
+    current: 0,
+    total: 0,
+    success: 0,
+    errors: 0,
+  });
   const [selectedOwnerFilter] = useState<string | number | null>(null);
   const [users, setUsers] = useState<any[]>([]);
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
@@ -266,6 +276,9 @@ const Contacts: React.FC = () => {
     if (!file) return;
 
     setImporting(true);
+    setImportProgressOpen(true);
+    setImportProgress({ current: 0, total: 0, success: 0, errors: 0 });
+    
     try {
       // Leer el archivo Excel
       const data = await file.arrayBuffer();
@@ -273,9 +286,43 @@ const Contacts: React.FC = () => {
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = XLSX.utils.sheet_to_json(firstSheet) as any[];
 
+      // Función helper para buscar o crear empresa
+      const getOrCreateCompany = async (companyName: string): Promise<number | null> => {
+        if (!companyName || !companyName.trim()) {
+          return null;
+        }
+
+        try {
+          // Buscar empresa existente
+          const searchResponse = await api.get('/companies', {
+            params: { search: companyName.trim(), limit: 100 }
+          });
+          const companies = searchResponse.data.companies || searchResponse.data || [];
+          const existingCompany = companies.find((c: any) => 
+            c.name.toLowerCase().trim() === companyName.toLowerCase().trim()
+          );
+
+          if (existingCompany) {
+            return existingCompany.id;
+          }
+
+          // Si no existe, crear la empresa
+          const newCompanyResponse = await api.post('/companies', {
+            name: companyName.trim(),
+            lifecycleStage: 'lead',
+            ownerId: user?.id || null,
+          });
+          return newCompanyResponse.data.id;
+        } catch (error) {
+          console.error('Error al buscar/crear empresa:', error);
+          return null;
+        }
+      };
+
       // Procesar cada fila y crear contactos
-      const contactsToCreate = jsonData.map((row) => {
-        // Mapear columnas del Excel a los campos del contacto
+      const contactsToCreate = [];
+      
+      for (const row of jsonData) {
         const fullName = (row['Nombre'] || '').toString().trim();
         
         // Función para separar nombre y apellido
@@ -302,30 +349,54 @@ const Contacts: React.FC = () => {
           }
         }
 
-        return {
-          firstName: firstName || 'Sin nombre',
-          lastName: lastName || 'Sin apellido',
-          email: (row['Correo'] || '').toString().trim() || undefined,
-          phone: (row['Teléfono'] || '').toString().trim() || undefined,
-          jobTitle: (row['Cargo'] || '').toString().trim() || undefined,
-          city: (row['Ciudad'] || '').toString().trim() || undefined,
-          state: (row['Estado/Provincia'] || '').toString().trim() || undefined,
-          country: (row['País'] || '').toString().trim() || undefined,
-          lifecycleStage: 'lead',
-        };
-      }).filter(contact => contact.firstName !== 'Sin nombre' || contact.email); // Filtrar filas vacías
+        // Obtener o crear la empresa
+        const companyName = (row['Empresa'] || '').toString().trim();
+        const companyId = companyName ? await getOrCreateCompany(companyName) : null;
 
-      // Crear contactos en el backend
+        // Solo agregar si tiene nombre o email
+        if (firstName || (row['Correo'] || '').toString().trim()) {
+          contactsToCreate.push({
+            firstName: firstName || 'Sin nombre',
+            lastName: lastName || 'Sin apellido',
+            email: (row['Correo'] || '').toString().trim() || undefined,
+            phone: (row['Teléfono'] || '').toString().trim() || undefined,
+            jobTitle: (row['Cargo'] || '').toString().trim() || undefined,
+            city: (row['Ciudad'] || '').toString().trim() || undefined,
+            state: (row['Estado/Provincia'] || row['Estado/Provi'] || '').toString().trim() || undefined,
+            country: (row['País'] || '').toString().trim() || undefined,
+            lifecycleStage: (row['Etapa'] || 'lead').toString().trim() || 'lead',
+            companyId: companyId, // Incluir companyId
+          });
+        }
+      }
+
+      // Inicializar el progreso total
+      setImportProgress(prev => ({ ...prev, total: contactsToCreate.length }));
+
+      // Crear contactos en el backend con progreso
       let successCount = 0;
       let errorCount = 0;
 
-      for (const contactData of contactsToCreate) {
+      for (let i = 0; i < contactsToCreate.length; i++) {
+        const contactData = contactsToCreate[i];
         try {
           await api.post('/contacts', contactData);
           successCount++;
+          setImportProgress({
+            current: i + 1,
+            total: contactsToCreate.length,
+            success: successCount,
+            errors: errorCount,
+          });
         } catch (error) {
           console.error('Error creating contact:', error);
           errorCount++;
+          setImportProgress({
+            current: i + 1,
+            total: contactsToCreate.length,
+            success: successCount,
+            errors: errorCount,
+          });
         }
       }
 
@@ -334,14 +405,11 @@ const Contacts: React.FC = () => {
         fileInputRef.current.value = '';
       }
 
-      // Mostrar mensaje de resultado
-      alert(`Importación completada:\n${successCount} contactos creados exitosamente\n${errorCount} contactos con errores`);
-
       // Recargar la lista de contactos
       fetchContacts();
     } catch (error) {
       console.error('Error importing file:', error);
-      alert('Error al importar el archivo. Por favor, verifica que el formato sea correcto.');
+      setImportProgress(prev => ({ ...prev, errors: prev.errors + 1 }));
     } finally {
       setImporting(false);
     }
@@ -1144,8 +1212,8 @@ const Contacts: React.FC = () => {
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box>
-              <Typography variant="h5" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 0.25, fontSize: { xs: '1.25rem', md: '1.375rem' } }}>
-                Todos los Contactos
+              <Typography variant="h4" sx={pageStyles.pageTitle}>
+                Contactos
               </Typography>
             </Box>
           </Box>
@@ -1183,20 +1251,7 @@ const Contacts: React.FC = () => {
                 size="small"
                 onClick={handleImportFromExcel}
                 disabled={importing}
-                sx={{
-                  border: `1px solid ${taxiMonterricoColors.green}`,
-                  color: taxiMonterricoColors.green,
-                  '&:hover': {
-                    borderColor: taxiMonterricoColors.greenDark,
-                    bgcolor: `${taxiMonterricoColors.green}10`,
-                  },
-                  '&:disabled': {
-                    borderColor: theme.palette.divider,
-                    color: theme.palette.text.disabled,
-                  },
-                  borderRadius: 1.5,
-                  p: 0.875,
-                }}
+                sx={pageStyles.outlinedIconButton}
               >
                 <UploadFile sx={{ fontSize: 18 }} />
               </IconButton>
@@ -1206,16 +1261,7 @@ const Contacts: React.FC = () => {
               <IconButton
                 size="small"
                 onClick={handleExportToExcel}
-                sx={{
-                  border: `1px solid ${taxiMonterricoColors.green}`,
-                  color: taxiMonterricoColors.green,
-                  '&:hover': {
-                    borderColor: taxiMonterricoColors.greenDark,
-                    bgcolor: `${taxiMonterricoColors.green}10`,
-                  },
-                  borderRadius: 1.5,
-                  p: 0.875,
-                }}
+                sx={pageStyles.outlinedIconButton}
               >
                 <FileDownload sx={{ fontSize: 18 }} />
               </IconButton>
@@ -1234,23 +1280,7 @@ const Contacts: React.FC = () => {
                   }
                   setFilterDrawerOpen(!filterDrawerOpen);
                 }}
-                sx={{
-                  borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
-                  color: theme.palette.text.primary,
-                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
-                  '&:hover': {
-                    borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
-                  },
-                  borderRadius: 1.5,
-                  px: 1.5,
-                  py: 0.5,
-                  minWidth: 'auto',
-                  height: '32px',
-                  textTransform: 'none',
-                  fontSize: '0.8125rem',
-                  fontWeight: 500,
-                }}
+                sx={pageStyles.filterButton}
               >
                 Filter
               </Button>
@@ -1300,22 +1330,26 @@ const Contacts: React.FC = () => {
               boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
             }}
           >
-            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+            <Box sx={pageStyles.tableHeaderCell}>
               Nombre del Cliente
             </Box>
-            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+            <Box sx={pageStyles.tableHeaderCell}>
               Empresa
             </Box>
-            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+            <Box sx={pageStyles.tableHeaderCell}>
               Teléfono
             </Box>
-            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+            <Box sx={pageStyles.tableHeaderCell}>
               País
             </Box>
-            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+            <Box sx={pageStyles.tableHeaderCell}>
               Etapa
             </Box>
-            <Box sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.8125rem' }, display: 'flex', alignItems: 'center' }}>
+            <Box sx={{ 
+              ...pageStyles.tableHeaderCell, 
+              px: { xs: 0.75, md: 1 },
+              justifyContent: 'flex-start'
+            }}>
               Acciones
             </Box>
           </Box>
@@ -1456,6 +1490,18 @@ const Contacts: React.FC = () => {
                 </Box>
                 <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                   <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                    <Tooltip title="Editar">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpen(contact);
+                        }}
+                        sx={pageStyles.previewIconButton}
+                      >
+                        <Edit sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                      </IconButton>
+                    </Tooltip>
                     <Tooltip title="Vista previa">
                       <IconButton
                         size="small"
@@ -1463,14 +1509,7 @@ const Contacts: React.FC = () => {
                           e.stopPropagation();
                           handlePreview(contact);
                         }}
-                        sx={{
-                          color: theme.palette.text.secondary,
-                          padding: { xs: 0.5, md: 1 },
-                          '&:hover': {
-                            color: taxiMonterricoColors.green,
-                            bgcolor: `${taxiMonterricoColors.green}15`,
-                          },
-                        }}
+                        sx={pageStyles.previewIconButton}
                       >
                         <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
                       </IconButton>
@@ -1482,14 +1521,7 @@ const Contacts: React.FC = () => {
                           e.stopPropagation();
                           handleDelete(contact.id);
                         }}
-                        sx={{
-                          color: theme.palette.text.secondary,
-                          padding: { xs: 0.5, md: 1 },
-                          '&:hover': {
-                            color: '#d32f2f',
-                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.15)' : '#ffebee',
-                          },
-                        }}
+                        sx={pageStyles.deleteIcon}
                       >
                         <Delete sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
                       </IconButton>
@@ -1499,14 +1531,7 @@ const Contacts: React.FC = () => {
               </Box>
             ))}
           {paginatedContacts.length === 0 && (
-            <Box sx={{ 
-              textAlign: 'center',
-              py: 8,
-              bgcolor: theme.palette.mode === 'dark' ? '#152030' : theme.palette.background.paper,
-              borderRadius: 0,
-              border: 'none',
-              boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
-            }}>
+            <Box sx={pageStyles.emptyState}>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                 <Person sx={{ fontSize: 48, color: theme.palette.text.disabled }} />
                 <Typography variant="body1" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
@@ -1528,24 +1553,7 @@ const Contacts: React.FC = () => {
                 page={currentPage}
                 onChange={(event, value) => setCurrentPage(value)}
                 color="primary"
-                sx={{
-                  '& .MuiPaginationItem-root': {
-                    color: theme.palette.text.primary,
-                          fontSize: '0.875rem',
-                    '&.Mui-selected': {
-                      bgcolor: taxiMonterricoColors.green,
-                      color: 'white',
-                          '&:hover': {
-                        bgcolor: taxiMonterricoColors.greenDark,
-                          },
-                    },
-                    '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.08)' 
-                        : 'rgba(0, 0, 0, 0.04)',
-                    },
-                  },
-                }}
+                sx={pageStyles.pagination}
               />
             </Box>
           )}
@@ -2489,30 +2497,14 @@ const Contacts: React.FC = () => {
         }}>
           <Button 
             onClick={handleClose}
-            sx={{
-              textTransform: 'none',
-              color: theme.palette.text.secondary,
-              fontWeight: 500,
-              '&:hover': {
-                bgcolor: theme.palette.action.hover,
-              }
-            }}
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
           <Button 
             onClick={handleSubmit} 
             variant="contained"
-            sx={{
-              textTransform: 'none',
-              fontWeight: 500,
-              borderRadius: 1.5,
-              px: 2.5,
-              bgcolor: taxiMonterricoColors.green,
-              '&:hover': {
-                bgcolor: taxiMonterricoColors.greenDark,
-              }
-            }}
+            sx={pageStyles.saveButton}
           >
             {editingContact ? 'Actualizar' : 'Crear'}
           </Button>
@@ -3285,13 +3277,10 @@ const Contacts: React.FC = () => {
           maxWidth="sm"
           fullWidth
           PaperProps={{
-            sx: {
-              borderRadius: 2,
-              boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-            }
+            sx: pageStyles.dialog
           }}
         >
-          <DialogContent sx={{ pt: 3 }}>
+          <DialogContent sx={pageStyles.dialogContent}>
             <Typography variant="body1" sx={{ color: theme.palette.text.primary, mb: 1 }}>
               ¿Estás seguro de que deseas eliminar este contacto?
             </Typography>
@@ -3299,23 +3288,11 @@ const Contacts: React.FC = () => {
               Esta acción no se puede deshacer. El contacto será eliminado permanentemente del sistema.
             </Typography>
           </DialogContent>
-          <DialogActions sx={{ 
-            px: 2, 
-            py: 2,
-            borderTop: `1px solid ${theme.palette.divider}`,
-            gap: 1,
-          }}>
+          <DialogActions sx={pageStyles.dialogActions}>
             <Button 
               onClick={handleCancelDelete}
               disabled={deleting}
-              sx={{
-                textTransform: 'none',
-                color: theme.palette.text.secondary,
-                fontWeight: 500,
-                '&:hover': {
-                  bgcolor: theme.palette.action.hover,
-                }
-              }}
+              sx={pageStyles.cancelButton}
             >
               Cancelar
             </Button>
@@ -3323,24 +3300,11 @@ const Contacts: React.FC = () => {
               onClick={handleConfirmDelete}
               disabled={deleting}
               variant="contained"
-              sx={{
-                textTransform: 'none',
-                fontWeight: 500,
-                borderRadius: 1.5,
-                px: 2.5,
-                bgcolor: '#d32f2f',
-                '&:hover': {
-                  bgcolor: '#b71c1c',
-                },
-                '&.Mui-disabled': {
-                  bgcolor: '#ffcdd2',
-                  color: '#ffffff',
-                }
-              }}
-              startIcon={deleting ? <CircularProgress size={16} sx={{ color: '#ffffff' }} /> : <Delete />}
-            >
-              {deleting ? 'Eliminando...' : 'Eliminar'}
-            </Button>
+              sx={pageStyles.deleteButton}
+            startIcon={deleting ? <CircularProgress size={16} sx={{ color: '#ffffff' }} /> : <Delete />}
+          >
+            {deleting ? 'Eliminando...' : 'Eliminar'}
+          </Button>
           </DialogActions>
         </Dialog>
 
@@ -3580,6 +3544,93 @@ const Contacts: React.FC = () => {
           >
             Crear
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal de Progreso de Importación */}
+      <Dialog
+        open={importProgressOpen}
+        onClose={() => {
+          if (!importing && importProgress.current === importProgress.total) {
+            setImportProgressOpen(false);
+            setImportProgress({ current: 0, total: 0, success: 0, errors: 0 });
+          }
+        }}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+          },
+        }}
+      >
+        <DialogTitle>
+          {importing ? 'Importando...' : 'Importación Completada'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ py: 2 }}>
+            {importing ? (
+              <>
+                <Typography variant="body2" sx={{ mb: 2, color: theme.palette.text.secondary }}>
+                  Procesando {importProgress.current} de {importProgress.total} contactos...
+                </Typography>
+                <LinearProgress 
+                  variant="determinate" 
+                  value={importProgress.total > 0 ? (importProgress.current / importProgress.total) * 100 : 0}
+                  sx={{
+                    height: 8,
+                    borderRadius: 1,
+                    mb: 2,
+                  }}
+                />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+                  <Typography variant="caption" sx={{ color: theme.palette.success.main }}>
+                    ✓ Exitosos: {importProgress.success}
+                  </Typography>
+                  <Typography variant="caption" sx={{ color: theme.palette.error.main }}>
+                    ✗ Errores: {importProgress.errors}
+                  </Typography>
+                </Box>
+              </>
+            ) : (
+              <Box>
+                <Typography variant="body1" sx={{ mb: 2 }}>
+                  {importProgress.success > 0 || importProgress.errors > 0
+                    ? `Importación completada`
+                    : 'Error al procesar el archivo'}
+                </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  <Typography variant="body2" sx={{ color: theme.palette.success.main }}>
+                    ✓ {importProgress.success} contactos creados exitosamente
+                  </Typography>
+                  {importProgress.errors > 0 && (
+                    <Typography variant="body2" sx={{ color: theme.palette.error.main }}>
+                      ✗ {importProgress.errors} contactos con errores
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          {!importing && (
+            <Button 
+              onClick={() => {
+                setImportProgressOpen(false);
+                setImportProgress({ current: 0, total: 0, success: 0, errors: 0 });
+              }}
+              variant="contained"
+              sx={{
+                bgcolor: taxiMonterricoColors.green,
+                '&:hover': {
+                  bgcolor: taxiMonterricoColors.greenDark,
+                },
+              }}
+            >
+              Cerrar
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
     </Box>

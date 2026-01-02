@@ -60,7 +60,7 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
       dark: taxiMonterricoColors.orangeDark,
     },
     background: {
-      default: mode === 'light' ? '#f5f7fa' : '#0B1220', // Navy blue premium
+      default: mode === 'light' ? '#edf0f5' : '#0B1220', // Navy blue premium
       paper: mode === 'light' ? '#ffffff' : '#111A2C', // Navy blue premium más claro
     },
     text: {
@@ -127,7 +127,7 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
     MuiPaper: {
       styleOverrides: {
         root: ({ theme }: { theme: Theme }) => ({
-          borderRadius: 16,
+          borderRadius: 0,
           border: `1px solid ${theme.palette.divider}`,
           backgroundColor: theme.palette.background.paper,
         }),

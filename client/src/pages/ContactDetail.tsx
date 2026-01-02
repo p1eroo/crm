@@ -163,6 +163,8 @@ const ContactDetail: React.FC = () => {
   const [associatedCompanies, setAssociatedCompanies] = useState<any[]>([]);
   const [associatedTickets, setAssociatedTickets] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
+  const [activityLogs, setActivityLogs] = useState<any[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
   
   // Estados para búsquedas y filtros
   const [activitySearch, setActivitySearch] = useState('');
@@ -437,6 +439,79 @@ const ContactDetail: React.FC = () => {
     }
   }, [id, isRemovingCompany]);
 
+  // Funciones helper para los logs
+  const getActivityDescription = (activity: any) => {
+    const typeMap: { [key: string]: string } = {
+      'note': 'Nota creada',
+      'email': 'Email enviado',
+      'call': 'Llamada registrada',
+      'meeting': 'Reunión agendada',
+      'task': 'Tarea creada',
+    };
+    return typeMap[activity.type] || 'Actividad creada';
+  };
+
+  const getActivityIconType = (type: string) => {
+    return type; // Retornar el tipo para renderizar después
+  };
+
+  const fetchActivityLogs = useCallback(async () => {
+    if (!id) return;
+    setLoadingLogs(true);
+    try {
+      // Obtener actividades y cambios del contacto
+      const [activitiesResponse, contactResponse] = await Promise.all([
+        api.get('/activities', { params: { contactId: id } }),
+        api.get(`/contacts/${id}`)
+      ]);
+      
+      const activities = activitiesResponse.data.activities || activitiesResponse.data || [];
+      const contactData = contactResponse.data;
+      
+      // Crear logs a partir de actividades y cambios
+      const logs: any[] = [];
+      
+      // Agregar actividades como logs
+      activities.forEach((activity: any) => {
+        logs.push({
+          id: `activity-${activity.id}`,
+          type: activity.type,
+          action: 'created',
+          description: getActivityDescription(activity),
+          user: activity.User,
+          timestamp: activity.createdAt,
+          iconType: getActivityIconType(activity.type),
+        });
+      });
+      
+      // Agregar cambios en el contacto si hay updatedAt
+      if (contactData.updatedAt && contactData.createdAt !== contactData.updatedAt) {
+        logs.push({
+          id: `contact-update-${contactData.id}`,
+          type: 'contact',
+          action: 'updated',
+          description: 'Información del contacto actualizada',
+          user: contactData.Owner,
+          timestamp: contactData.updatedAt,
+          iconType: 'contact',
+        });
+      }
+      
+      // Ordenar por fecha (más recientes primero)
+      logs.sort((a, b) => {
+        const dateA = new Date(a.timestamp || 0).getTime();
+        const dateB = new Date(b.timestamp || 0).getTime();
+        return dateB - dateA;
+      });
+      
+      setActivityLogs(logs.slice(0, 10)); // Mostrar solo los últimos 10
+    } catch (error) {
+      console.error('Error fetching activity logs:', error);
+    } finally {
+      setLoadingLogs(false);
+    }
+  }, [id]);
+
   useEffect(() => {
     fetchContact();
   }, [fetchContact]);
@@ -451,6 +526,12 @@ const ContactDetail: React.FC = () => {
       }
     }
   }, [contact, id, isRemovingCompany, fetchAssociatedRecords]);
+
+  useEffect(() => {
+    if (id) {
+      fetchActivityLogs();
+    }
+  }, [id, fetchActivityLogs]);
 
   // Actualizar asociaciones seleccionadas cuando cambian los registros relacionados
   useEffect(() => {
@@ -5067,31 +5148,36 @@ const ContactDetail: React.FC = () => {
 
         </Box>
 
-        {/* Columna Copiloto IA - Solo en desktop cuando está abierto */}
+        {/* Columna Copiloto IA y Registro de Cambios - Solo en desktop cuando está abierto */}
         {isDesktop && copilotOpen && (
         <Box sx={{
           width: 380,
           flexShrink: 0,
           display: 'flex',
           flexDirection: 'column',
-          border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-          borderRight: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-          borderRadius: 2,
-          bgcolor: theme.palette.mode === 'dark' 
-            ? theme.palette.background.paper 
-            : 'linear-gradient(180deg, rgba(249, 250, 251, 0.5) 0%, rgba(255, 255, 255, 1) 100%)',
-          backgroundImage: theme.palette.mode === 'dark' 
-            ? 'none' 
-            : 'linear-gradient(180deg, rgba(249, 250, 251, 0.5) 0%, rgba(255, 255, 255, 1) 100%)',
-          p: 2,
-          pb: 3,
-          boxSizing: 'border-box',
-          overflowY: 'auto',
-          height: 'fit-content',
-          maxHeight: 'calc(100vh - 80px)',
+          gap: 2,
           alignSelf: 'flex-start',
-          mb: 2,
         }}>
+          {/* Copiloto IA */}
+          <Box sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+            borderRight: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+            borderRadius: 2,
+            bgcolor: theme.palette.mode === 'dark' 
+              ? theme.palette.background.paper 
+              : 'linear-gradient(180deg, rgba(249, 250, 251, 0.5) 0%, rgba(255, 255, 255, 1) 100%)',
+            backgroundImage: theme.palette.mode === 'dark' 
+              ? 'none' 
+              : 'linear-gradient(180deg, rgba(249, 250, 251, 0.5) 0%, rgba(255, 255, 255, 1) 100%)',
+            p: 2,
+            pb: 3,
+            boxSizing: 'border-box',
+            overflowY: 'auto',
+            height: 'fit-content',
+            maxHeight: 'calc(100vh - 80px)',
+          }}>
         {/* Header del Drawer */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -5307,6 +5393,351 @@ const ContactDetail: React.FC = () => {
             Crear tarea
           </Button>
         </Card>
+          </Box>
+
+          {/* Card Independiente: Registro de Cambios / Logs */}
+          <Box sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+            borderRadius: 2,
+            bgcolor: theme.palette.background.paper,
+            p: 2,
+            pb: 3,
+            boxSizing: 'border-box',
+            overflowY: 'auto',
+            height: 'fit-content',
+            maxHeight: 'calc(100vh - 80px)',
+          }}>
+          {/* Card: Registro de Cambios */}
+          <Card 
+            sx={{ 
+              p: 2, 
+              bgcolor: theme.palette.mode === 'dark' 
+                ? 'rgba(33, 150, 243, 0.1)' 
+                : 'rgba(33, 150, 243, 0.05)',
+              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.15)'}`,
+              borderRadius: 2,
+              maxHeight: 400,
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 1.5,
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(33, 150, 243, 0.2)' 
+                    : 'rgba(33, 150, 243, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <History sx={{ fontSize: 20, color: '#2196F3' }} />
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem' }}>
+                  Registro de Cambios
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
+                  Historial de actividades y modificaciones recientes
+                </Typography>
+              </Box>
+            </Box>
+            
+            {/* Lista de logs */}
+            <Box sx={{ 
+              overflowY: 'auto', 
+              maxHeight: 280,
+              mt: 1,
+              '&::-webkit-scrollbar': {
+                width: 6,
+              },
+              '&::-webkit-scrollbar-track': {
+                backgroundColor: 'transparent',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                borderRadius: 3,
+              },
+            }}>
+              {loadingLogs ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                  <CircularProgress size={20} />
+                </Box>
+              ) : activityLogs.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', textAlign: 'center', py: 2, fontStyle: 'italic' }}>
+                  No hay registros disponibles
+                </Typography>
+              ) : (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  {activityLogs.map((log, index) => {
+                    const renderIcon = () => {
+                      switch (log.iconType) {
+                        case 'note':
+                          return <Note sx={{ fontSize: 16 }} />;
+                        case 'email':
+                          return <Email sx={{ fontSize: 16 }} />;
+                        case 'call':
+                          return <Phone sx={{ fontSize: 16 }} />;
+                        case 'meeting':
+                          return <Event sx={{ fontSize: 16 }} />;
+                        case 'task':
+                          return <TaskAlt sx={{ fontSize: 16 }} />;
+                        case 'contact':
+                          return <Person sx={{ fontSize: 16 }} />;
+                        default:
+                          return <History sx={{ fontSize: 16 }} />;
+                      }
+                    };
+
+                    return (
+                    <Box
+                      key={log.id}
+                      sx={{
+                        display: 'flex',
+                        gap: 1,
+                        alignItems: 'flex-start',
+                        pb: index < activityLogs.length - 1 ? 1.5 : 0,
+                        borderBottom: index < activityLogs.length - 1 
+                          ? `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}` 
+                          : 'none',
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 1,
+                          bgcolor: theme.palette.mode === 'dark' 
+                            ? 'rgba(33, 150, 243, 0.15)' 
+                            : 'rgba(33, 150, 243, 0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          mt: 0.25,
+                        }}
+                      >
+                        {renderIcon()}
+                      </Box>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 500, mb: 0.25 }}>
+                          {log.description}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                          {log.user && (
+                            <Typography variant="caption" sx={{ fontSize: '0.6875rem', color: theme.palette.text.secondary }}>
+                              {log.user.firstName} {log.user.lastName}
+                            </Typography>
+                          )}
+                          {log.timestamp && (
+                            <>
+                              {log.user && (
+                                <Typography variant="caption" sx={{ fontSize: '0.6875rem', color: theme.palette.text.disabled }}>
+                                  •
+                                </Typography>
+                              )}
+                              <Typography variant="caption" sx={{ fontSize: '0.6875rem', color: theme.palette.text.secondary }}>
+                                {new Date(log.timestamp).toLocaleDateString('es-ES', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </Typography>
+                            </>
+                          )}
+                        </Box>
+                      </Box>
+                    </Box>
+                    );
+                  })}
+                </Box>
+              )}
+            </Box>
+          </Card>
+          </Box>
+        </Box>
+        )}
+
+        {/* Card Independiente: Registro de Cambios / Logs - Solo cuando Copiloto IA está cerrado */}
+        {isDesktop && !copilotOpen && (
+        <Box sx={{
+          width: 380,
+          flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+          borderRadius: 2,
+          bgcolor: theme.palette.background.paper,
+          p: 2,
+          pb: 3,
+          boxSizing: 'border-box',
+          overflowY: 'auto',
+          height: 'fit-content',
+          maxHeight: 'calc(100vh - 80px)',
+          alignSelf: 'flex-start',
+          mb: 2,
+        }}>
+          {/* Card: Registro de Cambios */}
+          <Card 
+            sx={{ 
+              p: 2, 
+              bgcolor: theme.palette.mode === 'dark' 
+                ? 'rgba(33, 150, 243, 0.1)' 
+                : 'rgba(33, 150, 243, 0.05)',
+              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.15)'}`,
+              borderRadius: 2,
+              maxHeight: 400,
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+              <Box
+                sx={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 1.5,
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(33, 150, 243, 0.2)' 
+                    : 'rgba(33, 150, 243, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <History sx={{ fontSize: 20, color: '#2196F3' }} />
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem' }}>
+                  Registro de Cambios
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
+                  Historial de actividades y modificaciones recientes
+                </Typography>
+              </Box>
+            </Box>
+            
+            {/* Lista de logs */}
+            <Box sx={{ 
+              overflowY: 'auto', 
+              maxHeight: 280,
+              mt: 1,
+              '&::-webkit-scrollbar': {
+                width: 6,
+              },
+              '&::-webkit-scrollbar-track': {
+                backgroundColor: 'transparent',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                borderRadius: 3,
+              },
+            }}>
+              {loadingLogs ? (
+                <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                  <CircularProgress size={20} />
+                </Box>
+              ) : activityLogs.length === 0 ? (
+                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', textAlign: 'center', py: 2, fontStyle: 'italic' }}>
+                  No hay registros disponibles
+                </Typography>
+              ) : (
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  {activityLogs.map((log, index) => {
+                    const renderIcon = () => {
+                      switch (log.iconType) {
+                        case 'note':
+                          return <Note sx={{ fontSize: 16 }} />;
+                        case 'email':
+                          return <Email sx={{ fontSize: 16 }} />;
+                        case 'call':
+                          return <Phone sx={{ fontSize: 16 }} />;
+                        case 'meeting':
+                          return <Event sx={{ fontSize: 16 }} />;
+                        case 'task':
+                          return <TaskAlt sx={{ fontSize: 16 }} />;
+                        case 'contact':
+                          return <Person sx={{ fontSize: 16 }} />;
+                        default:
+                          return <History sx={{ fontSize: 16 }} />;
+                      }
+                    };
+
+                    return (
+                    <Box
+                      key={log.id}
+                      sx={{
+                        display: 'flex',
+                        gap: 1,
+                        alignItems: 'flex-start',
+                        pb: index < activityLogs.length - 1 ? 1.5 : 0,
+                        borderBottom: index < activityLogs.length - 1 
+                          ? `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}` 
+                          : 'none',
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 1,
+                          bgcolor: theme.palette.mode === 'dark' 
+                            ? 'rgba(33, 150, 243, 0.15)' 
+                            : 'rgba(33, 150, 243, 0.1)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          mt: 0.25,
+                        }}
+                      >
+                        {renderIcon()}
+                      </Box>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 500, mb: 0.25 }}>
+                          {log.description}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                          {log.user && (
+                            <Typography variant="caption" sx={{ fontSize: '0.6875rem', color: theme.palette.text.secondary }}>
+                              {log.user.firstName} {log.user.lastName}
+                            </Typography>
+                          )}
+                          {log.timestamp && (
+                            <>
+                              {log.user && (
+                                <Typography variant="caption" sx={{ fontSize: '0.6875rem', color: theme.palette.text.disabled }}>
+                                  •
+                                </Typography>
+                              )}
+                              <Typography variant="caption" sx={{ fontSize: '0.6875rem', color: theme.palette.text.secondary }}>
+                                {new Date(log.timestamp).toLocaleDateString('es-ES', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </Typography>
+                            </>
+                          )}
+                        </Box>
+                      </Box>
+                    </Box>
+                    );
+                  })}
+                </Box>
+              )}
+            </Box>
+          </Card>
         </Box>
         )}
       </Box>
@@ -5710,7 +6141,7 @@ const ContactDetail: React.FC = () => {
             boxShadow: theme.palette.mode === 'dark' 
               ? '0 20px 60px rgba(0,0,0,0.3)' 
               : '0 20px 60px rgba(0,0,0,0.12)',
-            zIndex: 1300,
+            zIndex: 1401,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -5882,7 +6313,7 @@ const ContactDetail: React.FC = () => {
             right: 0,
             bottom: 0,
             backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
-            zIndex: 1299,
+            zIndex: 1400,
             animation: 'fadeIn 0.3s ease-out',
             '@keyframes fadeIn': {
               '0%': {

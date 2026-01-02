@@ -8,7 +8,6 @@ import {
   Box,
   useTheme,
   Typography,
-  IconButton,
 } from '@mui/material';
 import {
   Dashboard,
@@ -21,13 +20,11 @@ import {
   Assessment,
   CalendarToday,
   Settings,
-  ChevronLeft,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useSidebar } from '../../context/SidebarContext';
-import logo from '../../assets/tm_logo.png';
 
-const drawerWidth = 200;
+const drawerWidth = 260;
 
 const mainMenuItems = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
@@ -47,7 +44,7 @@ const Sidebar: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
   const theme = useTheme();
-  const { open, toggleSidebar } = useSidebar();
+  const { open } = useSidebar();
 
   if (!open) {
     return null;
@@ -59,6 +56,9 @@ const Sidebar: React.FC = () => {
       sx={{
         width: drawerWidth,
         flexShrink: 0,
+        position: 'fixed',
+        height: '100vh',
+        zIndex: 1200,
         '& .MuiDrawer-paper': {
           width: drawerWidth,
           boxSizing: 'border-box',
@@ -69,49 +69,16 @@ const Sidebar: React.FC = () => {
           display: 'flex',
           flexDirection: 'column',
           py: 2,
+          position: 'fixed',
+          height: '100vh',
         },
       }}
     >
-      {/* Logo/Icono superior */}
-      <Box sx={{ 
-        mb: -4,
-        mt: -5.5,
-        pt: 0,
-        display: 'flex', 
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        width: '100%',
-        pl: 2.5,
-        pr: 1,
-      }}>
-        <img
-          src={logo}
-          alt="Taxi Monterrico Logo"
-          style={{
-            width: 130,
-            height: 130,
-            objectFit: 'contain',
-          }}
-        />
-        <IconButton
-          onClick={toggleSidebar}
-          size="small"
-          sx={{
-            color: theme.palette.text.secondary,
-            '&:hover': {
-              bgcolor: theme.palette.action.hover,
-            },
-          }}
-        >
-          <ChevronLeft />
-        </IconButton>
-      </Box>
-
       {/* Lista de items del menú */}
       <List sx={{ 
         width: '100%', 
-        px: 1, 
-        pt: -10,
+        px: 3, 
+        pt: 9.5, // Padding superior para que no quede oculto por el header (72px + espacio extra)
         pb: 0,
         display: 'flex',
         flexDirection: 'column',
@@ -139,26 +106,26 @@ const Sidebar: React.FC = () => {
               selected={isSelected}
               onClick={() => navigate(item.path)}
               sx={{
-              minHeight: 48,
-              borderRadius: 2,
+              minHeight: 44,
+              borderRadius: 1,
               justifyContent: 'flex-start',
-              px: 1,
-              py: 1,
+              px: 2,
+              py: 0.875,
               mb: 0,
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&.Mui-selected': {
-                  backgroundColor: '#2E7D32',
+                  background: 'linear-gradient(14deg, #1db513 0%, rgb(95 215 37 / 60%))',
                   color: '#FFFFFF',
-                  boxShadow: '0 0 15px rgba(46, 125, 50, 0.5), 0 0 30px rgba(46, 125, 50, 0.3)',
                   '&:hover': {
-                    backgroundColor: '#2E7D32',
-                    boxShadow: '0 0 20px rgba(46, 125, 50, 0.6), 0 0 40px rgba(46, 125, 50, 0.4)',
+                    background: 'linear-gradient(14deg, #1db513 0%, rgb(95 215 37 / 60%))',
                   },
                 },
                 '&:hover': {
-                  backgroundColor: isSelected 
-                    ? '#2E7D32'
-                    : theme.palette.action.hover,
+                  ...(isSelected ? {
+                    background: 'linear-gradient(14deg, #1db513 0%, rgb(95 215 37 / 60%))',
+                  } : {
+                    backgroundColor: theme.palette.action.hover,
+                  }),
                 },
                 '&:not(.Mui-selected)': {
                   color: theme.palette.text.secondary,
@@ -170,7 +137,7 @@ const Sidebar: React.FC = () => {
                 sx={{
                   minWidth: 36,
                   justifyContent: 'center',
-                  color: isSelected ? '#FFFFFF' : 'inherit',
+                  color: isSelected ? '#FFFFFF' : '#a6aed4',
                   '& svg': {
                     fontSize: 20,
                   },
@@ -182,8 +149,8 @@ const Sidebar: React.FC = () => {
                 variant="body2"
                 sx={{
                   fontSize: '0.875rem',
-                  fontWeight: isSelected ? 600 : 400,
-                  color: isSelected ? '#FFFFFF' : 'inherit',
+                  fontWeight: 400,
+                  color: isSelected ? '#FFFFFF' : '#5a5c61',
                   ml: 1,
                 }}
               >
@@ -203,27 +170,27 @@ const Sidebar: React.FC = () => {
             selected={location.pathname === '/users'}
             onClick={() => navigate('/users')}
             sx={{
-              minHeight: 48,
-              borderRadius: 2,
+              minHeight: 44,
+              borderRadius: 1,
               justifyContent: 'flex-start',
-              px: 1,
-              py: 1,
+              px: 2,
+              py: 0.875,
               mb: 0,
               mt: 0,
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               '&.Mui-selected': {
-                backgroundColor: '#2E7D32',
+                background: 'linear-gradient(14deg, #1db513 0%, rgb(95 215 37 / 60%))',
                 color: '#FFFFFF',
-                boxShadow: '0 0 15px rgba(46, 125, 50, 0.5), 0 0 30px rgba(46, 125, 50, 0.3)',
                 '&:hover': {
-                  backgroundColor: '#2E7D32',
-                  boxShadow: '0 0 20px rgba(46, 125, 50, 0.6), 0 0 40px rgba(46, 125, 50, 0.4)',
+                  background: 'linear-gradient(14deg, #1db513 0%, rgb(95 215 37 / 60%))',
                 },
               },
               '&:hover': {
-                backgroundColor: location.pathname === '/users' 
-                  ? '#2E7D32'
-                  : theme.palette.action.hover,
+                ...(location.pathname === '/users' ? {
+                  background: 'linear-gradient(14deg, #1db513 0%, rgb(95 215 37 / 60%))',
+                } : {
+                  backgroundColor: theme.palette.action.hover,
+                }),
               },
               '&:not(.Mui-selected)': {
                 color: theme.palette.text.secondary,
@@ -235,7 +202,7 @@ const Sidebar: React.FC = () => {
               sx={{
                 minWidth: 36,
                 justifyContent: 'center',
-                color: location.pathname === '/users' ? '#FFFFFF' : 'inherit',
+                color: location.pathname === '/users' ? '#FFFFFF' : '#a6aed4',
                 '& svg': {
                   fontSize: 20,
                 },
@@ -247,8 +214,8 @@ const Sidebar: React.FC = () => {
               variant="body2"
               sx={{
                 fontSize: '0.875rem',
-                fontWeight: location.pathname === '/users' ? 600 : 400,
-                color: location.pathname === '/users' ? '#FFFFFF' : 'inherit',
+                fontWeight: 400,
+                color: location.pathname === '/users' ? '#FFFFFF' : '#5a5c61',
                 ml: 1,
               }}
             >
@@ -262,12 +229,12 @@ const Sidebar: React.FC = () => {
       <Box sx={{ flex: 1 }} />
       
       {/* Configuración */}
-      <Box sx={{ width: '100%', px: 1, mb: 1 }}>
+      <Box sx={{ width: '100%', px: 3, mb: 1 }}>
         <ListItemButton
           onClick={() => navigate('/settings')}
           sx={{
             minHeight: 40,
-            borderRadius: 2,
+            borderRadius: 1,
             justifyContent: 'flex-start',
             px: 1,
             py: 0.75,
@@ -281,7 +248,7 @@ const Sidebar: React.FC = () => {
             sx={{
               minWidth: 36,
               justifyContent: 'center',
-              color: theme.palette.text.secondary,
+              color: '#a6aed4',
               '& svg': {
                 fontSize: 20,
               },
@@ -294,7 +261,7 @@ const Sidebar: React.FC = () => {
             sx={{
               fontSize: '0.875rem',
               fontWeight: 400,
-              color: theme.palette.text.primary,
+              color: '#5a5c61',
               ml: 1,
             }}
           >
