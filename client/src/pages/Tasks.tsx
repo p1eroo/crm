@@ -33,6 +33,7 @@ import { Add, Delete, Search, CheckCircle, Visibility, Warning, Schedule, Pendin
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
+import { useAuth } from '../context/AuthContext';
 
 interface Task {
   id: number;
@@ -50,6 +51,7 @@ interface Task {
 const Tasks: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
+  const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -63,7 +65,9 @@ const Tasks: React.FC = () => {
     status: 'not started',
     priority: 'medium',
     dueDate: '',
+    assignedToId: '',
   });
+  const [users, setUsers] = useState<any[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<{ id: number; isActivity?: boolean } | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -163,9 +167,43 @@ const Tasks: React.FC = () => {
     navigate(`/tasks/${task.id}`);
   };
 
+  const fetchUsers = async () => {
+    try {
+      // Solo usuarios admin pueden ver la lista completa de usuarios
+      if (user?.role === 'admin') {
+        const response = await api.get('/users');
+        setUsers(response.data || []);
+      } else {
+        // Usuarios no admin solo pueden asignarse a sí mismos
+        if (user) {
+          setUsers([user]);
+        } else {
+          setUsers([]);
+        }
+      }
+    } catch (error: any) {
+      // Si es un error de permisos (403), solo asignar al usuario actual
+      if (error.response?.status === 403 || error.isPermissionError) {
+        if (user) {
+          setUsers([user]);
+        } else {
+          setUsers([]);
+        }
+        return;
+      }
+      console.error('Error fetching users:', error);
+      if (user) {
+        setUsers([user]);
+      } else {
+        setUsers([]);
+      }
+    }
+  };
+
   useEffect(() => {
     fetchTasks();
-  }, [search]);
+    fetchUsers();
+  }, [search, user]);
 
   const fetchTasks = async () => {
     try {
@@ -220,6 +258,7 @@ const Tasks: React.FC = () => {
       setEditingTask(task);
       // Si es una actividad, obtener la descripción si existe
       const description = (task as any).description || '';
+      const assignedToId = (task as any).assignedToId || '';
       setFormData({
         title: task.title || task.subject || '',
         description: description,
@@ -227,6 +266,7 @@ const Tasks: React.FC = () => {
         status: task.status,
         priority: task.priority,
         dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
+        assignedToId: assignedToId ? assignedToId.toString() : (user?.id ? user.id.toString() : ''),
       });
     } else {
       setEditingTask(null);
@@ -237,6 +277,7 @@ const Tasks: React.FC = () => {
         status: 'not started',
         priority: 'medium',
         dueDate: '',
+        assignedToId: user?.id ? user.id.toString() : '',
       });
     }
     setOpen(true);
@@ -249,6 +290,11 @@ const Tasks: React.FC = () => {
 
   const handleSubmit = async () => {
     try {
+      const submitData = {
+        ...formData,
+        assignedToId: formData.assignedToId ? parseInt(formData.assignedToId) : (user?.id || undefined),
+      };
+      
       if (editingTask) {
         // Si es una actividad, actualizar en /activities
         if (editingTask.isActivity) {
@@ -260,10 +306,10 @@ const Tasks: React.FC = () => {
           });
         } else {
           // Si es una tarea normal, actualizar en /tasks
-          await api.put(`/tasks/${editingTask.id}`, formData);
+          await api.put(`/tasks/${editingTask.id}`, submitData);
         }
       } else {
-        await api.post('/tasks', formData);
+        await api.post('/tasks', submitData);
       }
       handleClose();
       fetchTasks();
@@ -326,19 +372,19 @@ const Tasks: React.FC = () => {
         bgcolor: theme.palette.background.paper,
         mb: 2.5,
       }}>
-        <CardContent sx={{ p: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'stretch', flexWrap: { xs: 'wrap', sm: 'nowrap' }, gap: 2 }}>
+        <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
+          <Box sx={{ display: 'flex', alignItems: 'stretch', flexWrap: { xs: 'wrap', sm: 'nowrap' }, gap: { xs: 1.5, sm: 2 } }}>
             {/* Vencidas */}
             <Box 
               onClick={() => setActiveFilter(activeFilter === 'overdue' ? null : 'overdue')}
               sx={{ 
-                flex: { xs: '1 1 100%', sm: 1 },
+                flex: { xs: '1 1 calc(50% - 0.75px)', sm: 1 },
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: 4,
-                px: 1,
-                py: 1,
+                justifyContent: { xs: 'flex-start', sm: 'center' },
+                gap: { xs: 2, sm: 3, md: 4 },
+                px: { xs: 0.75, sm: 1 },
+                py: { xs: 1, sm: 1 },
                 borderRadius: 1.5,
                 bgcolor: activeFilter === 'overdue' ? theme.palette.action.hover : 'transparent',
                 cursor: 'pointer',
@@ -353,19 +399,19 @@ const Tasks: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 95,
-                height: 95,
+                width: { xs: 60, sm: 75, md: 95 },
+                height: { xs: 60, sm: 75, md: 95 },
                 borderRadius: '50%',
                 bgcolor: `${theme.palette.error.main}15`,
                 flexShrink: 0,
               }}>
-                <Warning sx={{ color: theme.palette.error.main, fontSize: 60 }} />
+                <Warning sx={{ color: theme.palette.error.main, fontSize: { xs: 35, sm: 45, md: 60 } }} />
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: { xs: '0.875rem', sm: '1rem', md: '1.125rem' }, fontWeight: 400, lineHeight: 1.4 }}>
                   Vencidas
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: { xs: '2rem', sm: '2.75rem', md: '3.5rem' }, lineHeight: 1.2 }}>
                   {overdueTasks.toLocaleString()}
                 </Typography>
               </Box>
@@ -377,13 +423,13 @@ const Tasks: React.FC = () => {
             <Box 
               onClick={() => setActiveFilter(activeFilter === 'dueToday' ? null : 'dueToday')}
               sx={{ 
-                flex: { xs: '1 1 100%', sm: 1 },
+                flex: { xs: '1 1 calc(50% - 0.75px)', sm: 1 },
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: 4,
-                px: 1,
-                py: 1,
+                justifyContent: { xs: 'flex-start', sm: 'center' },
+                gap: { xs: 2, sm: 3, md: 4 },
+                px: { xs: 0.75, sm: 1 },
+                py: { xs: 1, sm: 1 },
                 borderRadius: 1.5,
                 bgcolor: activeFilter === 'dueToday' ? theme.palette.action.hover : 'transparent',
                 cursor: 'pointer',
@@ -398,19 +444,19 @@ const Tasks: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 95,
-                height: 95,
+                width: { xs: 60, sm: 75, md: 95 },
+                height: { xs: 60, sm: 75, md: 95 },
                 borderRadius: '50%',
                 bgcolor: `${taxiMonterricoColors.orange}15`,
                 flexShrink: 0,
               }}>
-                <Schedule sx={{ color: taxiMonterricoColors.orange, fontSize: 60 }} />
+                <Schedule sx={{ color: taxiMonterricoColors.orange, fontSize: { xs: 35, sm: 45, md: 60 } }} />
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: { xs: '0.875rem', sm: '1rem', md: '1.125rem' }, fontWeight: 400, lineHeight: 1.4 }}>
                   Vencen hoy
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: { xs: '2rem', sm: '2.75rem', md: '3.5rem' }, lineHeight: 1.2 }}>
                   {dueTodayTasks.toLocaleString()}
                 </Typography>
               </Box>
@@ -422,13 +468,13 @@ const Tasks: React.FC = () => {
             <Box 
               onClick={() => setActiveFilter(activeFilter === 'pending' ? null : 'pending')}
               sx={{ 
-                flex: { xs: '1 1 100%', sm: 1 },
+                flex: { xs: '1 1 calc(50% - 0.75px)', sm: 1 },
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: 4,
-                px: 1,
-                py: 1,
+                justifyContent: { xs: 'flex-start', sm: 'center' },
+                gap: { xs: 2, sm: 3, md: 4 },
+                px: { xs: 0.75, sm: 1 },
+                py: { xs: 1, sm: 1 },
                 borderRadius: 1.5,
                 bgcolor: activeFilter === 'pending' ? theme.palette.action.hover : 'transparent',
                 cursor: 'pointer',
@@ -443,19 +489,19 @@ const Tasks: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 95,
-                height: 95,
+                width: { xs: 60, sm: 75, md: 95 },
+                height: { xs: 60, sm: 75, md: 95 },
                 borderRadius: '50%',
                 bgcolor: `${theme.palette.warning.main}15`,
                 flexShrink: 0,
               }}>
-                <PendingActions sx={{ color: theme.palette.warning.main, fontSize: 60 }} />
+                <PendingActions sx={{ color: theme.palette.warning.main, fontSize: { xs: 35, sm: 45, md: 60 } }} />
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: { xs: '0.875rem', sm: '1rem', md: '1.125rem' }, fontWeight: 400, lineHeight: 1.4 }}>
                   Pendientes
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: { xs: '2rem', sm: '2.75rem', md: '3.5rem' }, lineHeight: 1.2 }}>
                   {pendingTasks.toLocaleString()}
                 </Typography>
               </Box>
@@ -467,13 +513,13 @@ const Tasks: React.FC = () => {
             <Box 
               onClick={() => setActiveFilter(activeFilter === 'completed' ? null : 'completed')}
               sx={{ 
-                flex: { xs: '1 1 100%', sm: 1 },
+                flex: { xs: '1 1 calc(50% - 0.75px)', sm: 1 },
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
-                gap: 4,
-                px: 1,
-                py: 1,
+                justifyContent: { xs: 'flex-start', sm: 'center' },
+                gap: { xs: 2, sm: 3, md: 4 },
+                px: { xs: 0.75, sm: 1 },
+                py: { xs: 1, sm: 1 },
                 borderRadius: 1.5,
                 bgcolor: activeFilter === 'completed' ? theme.palette.action.hover : 'transparent',
                 cursor: 'pointer',
@@ -488,19 +534,19 @@ const Tasks: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 95,
-                height: 95,
+                width: { xs: 60, sm: 75, md: 95 },
+                height: { xs: 60, sm: 75, md: 95 },
                 borderRadius: '50%',
                 bgcolor: `${taxiMonterricoColors.green}15`,
                 flexShrink: 0,
               }}>
-                <CheckCircle sx={{ color: taxiMonterricoColors.green, fontSize: 60 }} />
+                <CheckCircle sx={{ color: taxiMonterricoColors.green, fontSize: { xs: 35, sm: 45, md: 60 } }} />
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: '1.125rem', fontWeight: 400, lineHeight: 1.4 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: { xs: '0.875rem', sm: '1rem', md: '1.125rem' }, fontWeight: 400, lineHeight: 1.4 }}>
                   Completadas
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: '3.5rem', lineHeight: 1.2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: { xs: '2rem', sm: '2.75rem', md: '3.5rem' }, lineHeight: 1.2 }}>
                   {completedTasks.toLocaleString()}
                 </Typography>
               </Box>
@@ -635,11 +681,11 @@ const Tasks: React.FC = () => {
                   px: 1, 
                   width: { xs: 100, md: 120 }, 
                   minWidth: { xs: 100, md: 120 },
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'flex-start'
+                  pr: { xs: 2, md: 3 }
                 }}>
-                  Acciones
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                    Acciones
+                  </Box>
                 </TableCell>
               </TableRow>
             </TableHead>
@@ -766,7 +812,7 @@ const Tasks: React.FC = () => {
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell sx={{ px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
+                  <TableCell sx={{ px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 }, pr: { xs: 2, md: 3 } }}>
                     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
                       <Tooltip title="Editar">
                         <IconButton
@@ -885,6 +931,21 @@ const Tasks: React.FC = () => {
               onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
               InputLabelProps={{ shrink: true }}
             />
+            {users.length > 0 && (
+              <TextField
+                select
+                label="Asignado a"
+                value={formData.assignedToId}
+                onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
+                InputLabelProps={{ shrink: true }}
+              >
+                {users.map((userItem) => (
+                  <MenuItem key={userItem.id} value={userItem.id.toString()}>
+                    {userItem.firstName} {userItem.lastName}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
           </Box>
         </DialogContent>
         <DialogActions>

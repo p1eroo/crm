@@ -42,6 +42,8 @@ interface Company {
   domain?: string;
   companyname?: string;
   phone?: string;
+  email?: string;
+  leadSource?: string;
   ruc?: string;
   address?: string;
   city?: string;
@@ -72,6 +74,8 @@ const Companies: React.FC = () => {
     phone: '',
     phone2: '',
     phone3: '',
+    email: '',
+    leadSource: '',
     lifecycleStage: 'lead',
     ruc: '',
     address: '',
@@ -128,6 +132,34 @@ const Companies: React.FC = () => {
     const first = firstName?.[0]?.toUpperCase() || '';
     const last = lastName?.[0]?.toUpperCase() || '';
     return first && last ? `${first}${last}` : first || last || '--';
+  };
+
+  // Función para obtener el label del origen de lead
+  const getLeadSourceLabel = (source?: string) => {
+    const labels: { [key: string]: string } = {
+      'referido': 'Referido',
+      'base': 'Base',
+      'entorno': 'Entorno',
+      'feria': 'Feria',
+      'masivo': 'Masivo',
+    };
+    return source && labels[source] ? labels[source] : (source || '--');
+  };
+
+  // Función auxiliar para normalizar el origen de lead en la importación
+  const normalizeLeadSource = (source: string): string | undefined => {
+    if (!source || source.trim() === '') return undefined;
+    
+    const normalized = source.trim().toLowerCase();
+    const mapping: { [key: string]: string } = {
+      'referido': 'referido',
+      'base': 'base',
+      'entorno': 'entorno',
+      'feria': 'feria',
+      'masivo': 'masivo',
+    };
+    
+    return mapping[normalized] || normalized;
   };
 
   // Validar nombre en tiempo real con debounce
@@ -324,7 +356,10 @@ const Companies: React.FC = () => {
       'Dominio': company.domain || '--',
       'Razón social': company.companyname || '--',
       'Teléfono': company.phone || '--',
+      'Correo': (company as any).email || '--',
+      'Origen de lead': getLeadSourceLabel((company as any).leadSource),
       'RUC': company.ruc || '--',
+      'Propietario': company.Owner ? `${company.Owner.firstName} ${company.Owner.lastName}` : 'Sin asignar',
       'Dirección': company.address || '--',
       'Ciudad': company.city || '--',
       'Estado/Provincia': company.state || '--',
@@ -342,9 +377,12 @@ const Companies: React.FC = () => {
     const colWidths = [
       { wch: 30 }, // Nombre
       { wch: 25 }, // Dominio
-      { wch: 20 }, // Industria
+      { wch: 20 }, // Razón social
       { wch: 15 }, // Teléfono
+      { wch: 25 }, // Correo
+      { wch: 20 }, // Origen de lead
       { wch: 15 }, // RUC
+      { wch: 20 }, // Propietario
       { wch: 30 }, // Dirección
       { wch: 15 }, // Ciudad
       { wch: 18 }, // Estado/Provincia
@@ -370,6 +408,51 @@ const Companies: React.FC = () => {
     fileInputRef.current?.click();
   };
 
+  // Función auxiliar para buscar usuario por nombre completo (más flexible)
+  const findUserByName = (fullName: string): number | null => {
+    if (!fullName || fullName.trim() === '' || fullName.toLowerCase() === 'sin asignar') {
+      return null;
+    }
+    
+    // Normalizar: eliminar espacios extra y convertir a minúsculas
+    const normalizedInput = fullName.trim().toLowerCase().replace(/\s+/g, ' ');
+    const nameParts = normalizedInput.split(' ');
+    
+    if (nameParts.length < 2) {
+      return null;
+    }
+    
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ');
+    
+    // Primero intentar coincidencia exacta (case-insensitive)
+    let foundUser = users.find(
+      (user) =>
+        user.firstName?.toLowerCase().trim() === firstName &&
+        user.lastName?.toLowerCase().trim() === lastName
+    );
+    
+    // Si no encuentra coincidencia exacta, buscar coincidencia parcial
+    // Esto maneja casos como "Jack Valdivia Faustino" vs "Jack Valdivia"
+    if (!foundUser) {
+      foundUser = users.find((user) => {
+        const userFirstName = user.firstName?.toLowerCase().trim() || '';
+        const userLastName = user.lastName?.toLowerCase().trim() || '';
+        
+        // Coincidencia exacta del nombre
+        if (userFirstName !== firstName) {
+          return false;
+        }
+        
+        // El lastName del usuario debe empezar con el lastName del input
+        // O el lastName del input debe empezar con el lastName del usuario
+        return userLastName.startsWith(lastName) || lastName.startsWith(userLastName);
+      });
+    }
+    
+    return foundUser ? foundUser.id : null;
+  };
+
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -379,6 +462,11 @@ const Companies: React.FC = () => {
     setImportProgress({ current: 0, total: 0, success: 0, errors: 0 });
     
     try {
+      // Asegurar que los usuarios estén cargados antes de procesar
+      if (users.length === 0) {
+        await fetchUsers();
+      }
+
       // Leer el archivo Excel
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: 'array' });
@@ -387,17 +475,23 @@ const Companies: React.FC = () => {
 
       // Procesar cada fila y crear empresas
       const companiesToCreate = jsonData.map((row) => {
+        const propietarioName = (row['Propietario'] || '').toString().trim();
+        const ownerId = propietarioName ? findUserByName(propietarioName) : null;
+
         return {
           name: (row['Nombre'] || '').toString().trim() || 'Sin nombre',
           domain: (row['Dominio'] || '').toString().trim() || undefined,
           companyname: (row['Razón social'] || '').toString().trim() || undefined,
           phone: (row['Teléfono'] || '').toString().trim() || undefined,
+          email: (row['Correo'] || '').toString().trim() || undefined,
+          leadSource: normalizeLeadSource((row['Origen de lead'] || '').toString()),
           ruc: (row['RUC'] || '').toString().trim() || undefined,
           address: (row['Dirección'] || '').toString().trim() || undefined,
           city: (row['Ciudad'] || '').toString().trim() || undefined,
           state: (row['Estado/Provincia'] || '').toString().trim() || undefined,
           country: (row['País'] || '').toString().trim() || undefined,
           lifecycleStage: (row['Etapa'] || 'lead').toString().trim() || 'lead',
+          ownerId: ownerId || undefined,
         };
       }).filter(company => company.name !== 'Sin nombre'); // Filtrar filas vacías
 
@@ -457,6 +551,8 @@ const Companies: React.FC = () => {
         phone: company.phone || '',
         phone2: (company as any).phone2 || '',
         phone3: (company as any).phone3 || '',
+        email: (company as any).email || '',
+        leadSource: (company as any).leadSource || '',
         lifecycleStage: company.lifecycleStage,
         ruc: company.ruc || '',
         address: company.address || '',
@@ -474,6 +570,8 @@ const Companies: React.FC = () => {
         phone: '',
         phone2: '',
         phone3: '',
+        email: '',
+        leadSource: '',
         lifecycleStage: 'lead',
         ruc: '',
         address: '',
@@ -1153,7 +1251,7 @@ const Companies: React.FC = () => {
               borderRadius: '8px 8px 0 0',
               overflow: 'hidden',
               display: 'grid',
-              gridTemplateColumns: { xs: 'repeat(7, minmax(0, 1fr))', md: '1.5fr 1fr 1fr 1fr 0.9fr 1.2fr 0.7fr' },
+              gridTemplateColumns: { xs: 'repeat(9, minmax(0, 1fr))', md: '1.5fr 1fr 1fr 1fr 0.9fr 1fr 1fr 1.2fr 0.7fr' },
               columnGap: { xs: 1, md: 1.5 },
               minWidth: { xs: 800, md: 'auto' },
             maxWidth: '100%',
@@ -1180,6 +1278,12 @@ const Companies: React.FC = () => {
                   Teléfono
             </Box>
             <Box sx={pageStyles.tableHeaderCell}>
+                  Correo
+            </Box>
+            <Box sx={pageStyles.tableHeaderCell}>
+                  Origen de lead
+            </Box>
+            <Box sx={pageStyles.tableHeaderCell}>
                   Etapa
             </Box>
             <Box sx={{ 
@@ -1203,7 +1307,7 @@ const Companies: React.FC = () => {
                     cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 display: 'grid',
-                gridTemplateColumns: { xs: 'repeat(7, minmax(0, 1fr))', md: '1.5fr 1fr 1fr 1fr 0.9fr 1.2fr 0.7fr' },
+                gridTemplateColumns: { xs: 'repeat(9, minmax(0, 1fr))', md: '1.5fr 1fr 1fr 1fr 0.9fr 1fr 1fr 1.2fr 0.7fr' },
                 columnGap: { xs: 1, md: 1.5 },
                 minWidth: { xs: 800, md: 'auto' },
                 maxWidth: '100%',
@@ -1391,6 +1495,40 @@ const Companies: React.FC = () => {
                       >
                     {company.phone || '--'}
                       </Typography>
+                </Box>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: theme.palette.text.primary,
+                      fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                      fontWeight: 400,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      maxWidth: { xs: '120px', md: '150px' },
+                    }}
+                    title={(company as any).email || '--'}
+                  >
+                    {(company as any).email || '--'}
+                  </Typography>
+                </Box>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: theme.palette.text.primary,
+                      fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                      fontWeight: 400,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      maxWidth: { xs: '120px', md: '150px' },
+                    }}
+                    title={getLeadSourceLabel((company as any).leadSource)}
+                  >
+                    {getLeadSourceLabel((company as any).leadSource)}
+                  </Typography>
                 </Box>
                 <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }} onClick={(e) => e.stopPropagation()}>
                     <Chip
@@ -2218,6 +2356,37 @@ const Companies: React.FC = () => {
                 }}
               />
             </Box>
+            <TextField
+              label="Correo"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            <TextField
+              select
+              label="Origen de lead"
+              value={formData.leadSource || ''}
+              onChange={(e) => setFormData({ ...formData, leadSource: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            >
+              <MenuItem value="">-- Seleccionar --</MenuItem>
+              <MenuItem value="referido">Referido</MenuItem>
+              <MenuItem value="base">Base</MenuItem>
+              <MenuItem value="entorno">Entorno</MenuItem>
+              <MenuItem value="feria">Feria</MenuItem>
+              <MenuItem value="masivo">Masivo</MenuItem>
+            </TextField>
             <TextField
               label="Dirección"
               value={formData.address}

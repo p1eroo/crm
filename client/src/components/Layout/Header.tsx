@@ -223,8 +223,12 @@ const Header: React.FC = () => {
         nextWeek.setDate(nextWeek.getDate() + 7); // 7 días desde hoy
         
         // Obtener tareas con fecha de vencimiento próxima
+        // Filtrar solo las tareas asignadas al usuario actual
         const tasksResponse = await api.get('/tasks', {
-          params: { limit: 100 },
+          params: { 
+            limit: 100,
+            assignedToId: user?.id, // Filtrar por usuario asignado
+          },
         });
         
         // Validar que la respuesta sea un array
@@ -840,7 +844,7 @@ const Header: React.FC = () => {
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, pb: 1 }}>
           <Alarm sx={{ color: taxiMonterricoColors.green, fontSize: 24 }} />
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
             Recordatorios
           </Typography>
         </DialogTitle>
@@ -871,27 +875,29 @@ const Header: React.FC = () => {
                         </Typography>
                       }
                       secondary={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                          <Chip
-                            label={reminder.type === 'task' ? 'Tarea' : 'Evento'}
-                            size="small"
-                            sx={{
-                              height: 20,
-                              fontSize: '0.7rem',
-                              bgcolor: reminder.type === 'task' ? taxiMonterricoColors.green : '#2196F3',
-                              color: 'white',
-                            }}
-                          />
-                          <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                            {new Date(reminder.dueDate).toLocaleString('es-ES', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </Typography>
-                        </Box>
+                        <Typography component="div" variant="body2" sx={{ mt: 0.5 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Chip
+                              label={reminder.type === 'task' ? 'Tarea' : 'Evento'}
+                              size="small"
+                              sx={{
+                                height: 20,
+                                fontSize: '0.7rem',
+                                bgcolor: reminder.type === 'task' ? taxiMonterricoColors.green : '#2196F3',
+                                color: 'white',
+                              }}
+                            />
+                            <Typography variant="caption" component="span" sx={{ color: theme.palette.text.secondary }}>
+                              {new Date(reminder.dueDate).toLocaleString('es-ES', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </Typography>
+                          </Box>
+                        </Typography>
                       }
                     />
                   </ListItem>

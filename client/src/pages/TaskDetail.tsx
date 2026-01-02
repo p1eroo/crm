@@ -300,7 +300,9 @@ const TaskDetail: React.FC = () => {
     status: 'not started',
     priority: 'medium',
     dueDate: '',
+    assignedToId: '',
   });
+  const [users, setUsers] = useState<any[]>([]);
 
   const fetchTask = useCallback(async () => {
     if (!id) return;
@@ -318,6 +320,7 @@ const TaskDetail: React.FC = () => {
           status: response.data.status || 'not started',
           priority: response.data.priority || 'medium',
           dueDate: response.data.dueDate ? response.data.dueDate.split('T')[0] : '',
+          assignedToId: response.data.assignedToId ? response.data.assignedToId.toString() : (user?.id ? user.id.toString() : ''),
         });
         
         // Obtener actividades relacionadas
@@ -387,6 +390,7 @@ const TaskDetail: React.FC = () => {
             status: 'not started',
             priority: 'medium',
             dueDate: activity.dueDate ? activity.dueDate.split('T')[0] : '',
+            assignedToId: activity.assignedToId ? activity.assignedToId.toString() : (user?.id ? user.id.toString() : ''),
           });
           
           // Obtener actividades relacionadas
@@ -425,9 +429,43 @@ const TaskDetail: React.FC = () => {
     }
   }, [id]);
 
+  const fetchUsers = useCallback(async () => {
+    try {
+      // Solo usuarios admin pueden ver la lista completa de usuarios
+      if (user?.role === 'admin') {
+        const response = await api.get('/users');
+        setUsers(response.data || []);
+      } else {
+        // Usuarios no admin solo pueden asignarse a sí mismos
+        if (user) {
+          setUsers([user]);
+        } else {
+          setUsers([]);
+        }
+      }
+    } catch (error: any) {
+      // Si es un error de permisos (403), solo asignar al usuario actual
+      if (error.response?.status === 403 || error.isPermissionError) {
+        if (user) {
+          setUsers([user]);
+        } else {
+          setUsers([]);
+        }
+        return;
+      }
+      console.error('Error fetching users:', error);
+      if (user) {
+        setUsers([user]);
+      } else {
+        setUsers([]);
+      }
+    }
+  }, [user]);
+
   useEffect(() => {
     fetchTask();
-  }, [fetchTask]);
+    fetchUsers();
+  }, [fetchTask, fetchUsers]);
 
   // Funciones helper para los logs
   const getActivityDescription = (activity: any) => {
@@ -513,6 +551,11 @@ const TaskDetail: React.FC = () => {
     
     setSaving(true);
     try {
+      const submitData = {
+        ...formData,
+        assignedToId: formData.assignedToId ? parseInt(formData.assignedToId) : (user?.id || undefined),
+      };
+      
       // Determinar si es una actividad o tarea basándose en el tipo
       if (task?.type && ['note', 'email', 'call', 'meeting'].includes(task.type)) {
         await api.put(`/activities/${id}`, {
@@ -522,7 +565,7 @@ const TaskDetail: React.FC = () => {
           dueDate: formData.dueDate || undefined,
         });
       } else {
-        await api.put(`/tasks/${id}`, formData);
+        await api.put(`/tasks/${id}`, submitData);
       }
       setEditDialogOpen(false);
       fetchTask();
@@ -4189,6 +4232,21 @@ const TaskDetail: React.FC = () => {
               <MenuItem value="high">Alta</MenuItem>
               <MenuItem value="urgent">Urgente</MenuItem>
             </TextField>
+            {users.length > 0 && (
+              <TextField
+                select
+                label="Asignado a"
+                value={formData.assignedToId}
+                onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
+                fullWidth
+              >
+                {users.map((userItem) => (
+                  <MenuItem key={userItem.id} value={userItem.id.toString()}>
+                    {userItem.firstName} {userItem.lastName}
+                  </MenuItem>
+                ))}
+              </TextField>
+            )}
             <TextField
               label="Fecha Límite"
               type="date"

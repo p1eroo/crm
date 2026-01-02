@@ -1329,9 +1329,7 @@ const Dashboard: React.FC = () => {
             color: theme.palette.text.primary,
             transition: 'all 0.2s ease',
             overflow: 'hidden',
-            border: theme.palette.mode === 'dark' 
-              ? '1px solid rgba(255, 255, 255, 0.15)' 
-              : 'none',
+            border: 'none',
             cursor: canEditBudget ? 'pointer' : 'default',
             '&:hover': canEditBudget ? {
               transform: { xs: 'none', md: 'translateY(-2px)' },
@@ -1407,9 +1405,7 @@ const Dashboard: React.FC = () => {
           color: theme.palette.text.primary,
           transition: 'all 0.2s ease',
           overflow: 'hidden',
-          border: theme.palette.mode === 'dark' 
-            ? '1px solid rgba(255, 255, 255, 0.15)' 
-            : 'none',
+          border: 'none',
           '&:hover': {
             transform: { xs: 'none', md: 'translateY(-2px)' },
             boxShadow: theme.palette.mode === 'dark'
@@ -1483,9 +1479,7 @@ const Dashboard: React.FC = () => {
           color: theme.palette.text.primary,
           transition: 'all 0.2s ease',
           overflow: 'hidden',
-          border: theme.palette.mode === 'dark' 
-            ? '1px solid rgba(255, 255, 255, 0.15)' 
-            : 'none',
+          border: 'none',
           '&:hover': {
             transform: { xs: 'none', md: 'translateY(-2px)' },
             boxShadow: theme.palette.mode === 'dark'
@@ -1560,9 +1554,7 @@ const Dashboard: React.FC = () => {
           transition: 'all 0.2s ease',
           overflow: 'hidden',
           position: 'relative',
-          border: theme.palette.mode === 'dark' 
-            ? '1px solid rgba(255, 255, 255, 0.15)' 
-            : 'none',
+          border: 'none',
           '&:hover': {
             transform: { xs: 'none', md: 'translateY(-2px)' },
             boxShadow: theme.palette.mode === 'dark'
@@ -1637,9 +1629,7 @@ const Dashboard: React.FC = () => {
           transition: 'all 0.2s ease',
           overflow: 'hidden',
           position: 'relative',
-          border: theme.palette.mode === 'dark' 
-            ? '1px solid rgba(255, 255, 255, 0.15)' 
-            : 'none',
+          border: 'none',
           '&:hover': {
             transform: { xs: 'none', md: 'translateY(-2px)' },
             boxShadow: theme.palette.mode === 'dark'
@@ -1761,7 +1751,7 @@ const Dashboard: React.FC = () => {
               ? '0 4px 12px rgba(0,0,0,0.3)' 
               : { xs: 1, md: 2 },
             bgcolor: theme.palette.background.paper,
-            border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : 'none',
+            border: 'none',
           }}
         >
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
@@ -1851,7 +1841,7 @@ const Dashboard: React.FC = () => {
               ? '0 4px 12px rgba(0,0,0,0.3)' 
               : { xs: 1, md: 2 },
             bgcolor: theme.palette.background.paper,
-            border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : 'none',
+            border: 'none',
           }}>
             <CardContent sx={{ p: { xs: 2, md: 3 } }}>
               <Box sx={{ 
@@ -2010,7 +2000,7 @@ const Dashboard: React.FC = () => {
               ? '0 4px 12px rgba(0,0,0,0.3)' 
               : { xs: 1, md: 2 },
             bgcolor: theme.palette.background.paper,
-            border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : 'none',
+            border: 'none',
           }}>
             <CardContent sx={{ p: { xs: 2, md: 3 } }}>
               <Box sx={{ 
@@ -2245,7 +2235,7 @@ const Dashboard: React.FC = () => {
             ? '0 4px 12px rgba(0,0,0,0.3)' 
             : { xs: 1, md: 2 },
           bgcolor: theme.palette.background.paper,
-          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : 'none',
+          border: 'none',
         }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
             <Box sx={{ 
@@ -2328,7 +2318,7 @@ const Dashboard: React.FC = () => {
             ? '0 4px 12px rgba(0,0,0,0.3)' 
             : { xs: 1, md: 2 },
           bgcolor: theme.palette.background.paper,
-          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : 'none',
+          border: 'none',
         }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
             <Box sx={{ 
@@ -2467,7 +2457,7 @@ const Dashboard: React.FC = () => {
             ? '0 4px 12px rgba(0,0,0,0.3)' 
             : { xs: 1, md: 2 },
           bgcolor: theme.palette.background.paper,
-          border: theme.palette.mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.15)' : 'none',
+          border: 'none',
         }}>
           <CardContent sx={{ p: { xs: 2, md: 3 }, pb: { xs: 1.5, md: 2 }, '&:last-child': { pb: { xs: 1.5, md: 2 } } }}>
             {/* Header */}

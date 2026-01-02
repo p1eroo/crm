@@ -7,57 +7,47 @@ interface CompanyAttributes {
   name: string;
   domain?: string;
   companyname?: string;
-  type?: string;
   phone?: string;
   phone2?: string;
   phone3?: string;
+  email?: string;
+  leadSource?: string;
   ruc?: string;
   idClienteEmpresa?: string;
   address?: string;
   city?: string;
   state?: string;
   country?: string;
-  postalCode?: string;
-  website?: string;
   linkedin?: string;
   numberOfEmployees?: number;
-  annualRevenue?: number;
-  description?: string;
   ownerId?: number | null;
   lifecycleStage: 'lead' | 'contacto' | 'reunion_agendada' | 'reunion_efectiva' | 'propuesta_economica' | 'negociacion' | 'licitacion' | 'licitacion_etapa_final' | 'cierre_ganado' | 'cierre_perdido' | 'firma_contrato' | 'activo' | 'cliente_perdido' | 'lead_inactivo';
-  tags?: string[];
-  notes?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-interface CompanyCreationAttributes extends Optional<CompanyAttributes, 'id' | 'domain' | 'companyname' | 'type' | 'phone' | 'phone2' | 'phone3' | 'ruc' | 'address' | 'city' | 'state' | 'country' | 'postalCode' | 'website' | 'linkedin' | 'numberOfEmployees' | 'annualRevenue' | 'description' | 'ownerId' | 'tags' | 'notes' | 'createdAt' | 'updatedAt'> {}
+interface CompanyCreationAttributes extends Optional<CompanyAttributes, 'id' | 'domain' | 'companyname' | 'phone' | 'phone2' | 'phone3' | 'email' | 'leadSource' | 'ruc' | 'address' | 'city' | 'state' | 'country' | 'linkedin' | 'numberOfEmployees' | 'ownerId' | 'createdAt' | 'updatedAt'> {}
 
 export class Company extends Model<CompanyAttributes, CompanyCreationAttributes> implements CompanyAttributes {
   public id!: number;
   public name!: string;
   public domain?: string;
   public companyname?: string;
-  public type?: string;
   public phone?: string;
   public phone2?: string;
   public phone3?: string;
+  public email?: string;
+  public leadSource?: string;
   public ruc?: string;
   public idClienteEmpresa?: string;
   public address?: string;
   public city?: string;
   public state?: string;
   public country?: string;
-  public postalCode?: string;
-  public website?: string;
   public linkedin?: string;
   public numberOfEmployees?: number;
-  public annualRevenue?: number;
-  public description?: string;
   public ownerId?: number | null;
   public lifecycleStage!: 'lead' | 'contacto' | 'reunion_agendada' | 'reunion_efectiva' | 'propuesta_economica' | 'negociacion' | 'licitacion' | 'licitacion_etapa_final' | 'cierre_ganado' | 'cierre_perdido' | 'firma_contrato' | 'activo' | 'cliente_perdido' | 'lead_inactivo';
-  public tags?: string[];
-  public notes?: string;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
@@ -83,10 +73,6 @@ Company.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
-    type: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
     phone: {
       type: DataTypes.STRING,
       allowNull: true,
@@ -96,6 +82,14 @@ Company.init(
       allowNull: true,
     },
     phone3: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    leadSource: {
       type: DataTypes.STRING,
       allowNull: true,
     },
@@ -123,28 +117,12 @@ Company.init(
       type: DataTypes.STRING,
       allowNull: true,
     },
-    postalCode: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
-    website: {
-      type: DataTypes.STRING,
-      allowNull: true,
-    },
     linkedin: {
       type: DataTypes.STRING,
       allowNull: true,
     },
     numberOfEmployees: {
       type: DataTypes.INTEGER,
-      allowNull: true,
-    },
-    annualRevenue: {
-      type: DataTypes.DECIMAL(15, 2),
-      allowNull: true,
-    },
-    description: {
-      type: DataTypes.TEXT,
       allowNull: true,
     },
     ownerId: {
@@ -158,14 +136,6 @@ Company.init(
     lifecycleStage: {
       type: DataTypes.ENUM('lead', 'contacto', 'reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion', 'licitacion', 'licitacion_etapa_final', 'cierre_ganado', 'cierre_perdido', 'firma_contrato', 'activo', 'cliente_perdido', 'lead_inactivo'),
       defaultValue: 'lead',
-    },
-    tags: {
-      type: DataTypes.ARRAY(DataTypes.STRING),
-      defaultValue: [],
-    },
-    notes: {
-      type: DataTypes.TEXT,
-      allowNull: true,
     },
   },
   {

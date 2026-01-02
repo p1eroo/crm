@@ -520,11 +520,11 @@ const Tickets: React.FC = () => {
                     px: 1, 
                     width: { xs: 100, md: 120 }, 
                     minWidth: { xs: 100, md: 120 },
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'flex-start'
+                    pr: { xs: 2, md: 3 }
                   }}>
-                    Acciones
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                      Acciones
+                    </Box>
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -642,7 +642,7 @@ const Tickets: React.FC = () => {
                         </Typography>
                       )}
                     </TableCell>
-                    <TableCell sx={{ px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
+                    <TableCell sx={{ px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 }, pr: { xs: 2, md: 3 } }}>
                       <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
                         <Tooltip title="Editar">
                           <IconButton

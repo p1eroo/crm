@@ -130,6 +130,8 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
           borderRadius: 0,
           border: `1px solid ${theme.palette.divider}`,
           backgroundColor: theme.palette.background.paper,
+          // Deshabilitar transiciones solo para propiedades relacionadas con el tema
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
         }),
       },
     },
@@ -143,6 +145,8 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
           boxShadow: theme.palette.mode === 'dark' 
             ? '0 2px 8px rgba(0, 0, 0, 0.3)' 
             : '0 2px 8px rgba(0, 0, 0, 0.1)',
+          // Deshabilitar transiciones solo para propiedades relacionadas con el tema
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
         }),
       },
     },
@@ -153,6 +157,8 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
           backgroundColor: theme.palette.background.paper,
           borderBottom: `1px solid ${theme.palette.divider}`,
           boxShadow: 'none',
+          // Sin transiciones para propiedades relacionadas con el tema
+          transition: 'none',
         }),
       },
     },
@@ -162,6 +168,8 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
         paper: ({ theme }: { theme: Theme }) => ({
           backgroundColor: theme.palette.background.default,
           borderRight: `1px solid ${theme.palette.divider}`,
+          // Sin transiciones para propiedades relacionadas con el tema
+          transition: 'none',
         }),
       },
     },
@@ -170,6 +178,8 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
       styleOverrides: {
         root: {
           textTransform: 'none',
+          // Mantener transiciones solo para efectos hover (transform, box-shadow)
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
         },
       },
     },
@@ -180,7 +190,6 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
           '& .MuiTabs-indicator': {
             height: 3,
             borderRadius: '3px 3px 0 0',
-            transition: 'all 0.3s ease',
           },
         }),
       },
@@ -205,7 +214,6 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
       styleOverrides: {
         body: ({ theme }: { theme: Theme }) => ({
           backgroundColor: theme.palette.background.default,
-          transition: 'background-color 0.3s ease',
         }),
       },
     },
