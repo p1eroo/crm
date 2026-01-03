@@ -1168,7 +1168,7 @@ const Dashboard: React.FC = () => {
                 >
                   <ChevronLeft />
                 </IconButton>
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
                   {selectedYear}
                 </Typography>
                 <IconButton
@@ -2286,12 +2286,59 @@ const Dashboard: React.FC = () => {
                 mx: { xs: -2, md: -3 },
               }} 
             />
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={weeklySalesData}>
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart 
+                data={weeklySalesData}
+                margin={{ top: 5, right: 5, bottom: 10, left: 0 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={true} vertical={false} />
                 <XAxis dataKey="week" stroke={theme.palette.text.secondary} />
-                <YAxis stroke={theme.palette.text.secondary} />
-                <RechartsTooltip />
+                <RechartsTooltip 
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length) {
+                      const value = payload[0].value as number;
+                      return (
+                        <Box
+                          sx={{
+                            backgroundColor: theme.palette.background.paper,
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: 2,
+                            padding: 1.5,
+                            boxShadow: theme.palette.mode === 'dark' 
+                              ? '0 4px 12px rgba(0, 0, 0, 0.4)' 
+                              : '0 2px 8px rgba(0, 0, 0, 0.15)',
+                            minWidth: 140,
+                          }}
+                        >
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              color: theme.palette.text.secondary,
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              mb: 0.5,
+                            }}
+                          >
+                            {label}
+                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
+                            <Typography 
+                              variant="h6" 
+                              sx={{ 
+                                color: '#8B5CF6',
+                                fontSize: '1.125rem',
+                                fontWeight: 700,
+                              }}
+                            >
+                              S/ {value.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      );
+                    }
+                    return null;
+                  }}
+                />
                 <Bar dataKey="value" fill="#8B5CF6" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -2809,7 +2856,7 @@ const Dashboard: React.FC = () => {
           alignItems: 'center',
           pb: 1,
         }}>
-          <Typography variant="h6" fontWeight={600}>
+          <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
             Editar Presupuesto {editingBudgetMonth !== null 
               ? monthNames[editingBudgetMonth]?.label.substring(0, 3) + '.' 
               : currentMonthAbbr}
@@ -2893,7 +2940,7 @@ const Dashboard: React.FC = () => {
           alignItems: 'center',
           pb: 1,
         }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
               Total de Ventas por Asesor
             </Typography>
           <IconButton
@@ -3497,11 +3544,58 @@ const Dashboard: React.FC = () => {
         </DialogTitle>
         <DialogContent sx={{ p: 4 }}>
           <ResponsiveContainer width="100%" height={600}>
-            <BarChart data={weeklySalesData}>
+            <BarChart 
+              data={weeklySalesData}
+              margin={{ top: 5, right: 5, bottom: 20, left: 0 }}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={true} vertical={false} />
               <XAxis dataKey="week" stroke={theme.palette.text.secondary} />
-              <YAxis stroke={theme.palette.text.secondary} />
-              <RechartsTooltip />
+              <RechartsTooltip 
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    const value = payload[0].value as number;
+                    return (
+                      <Box
+                        sx={{
+                          backgroundColor: theme.palette.background.paper,
+                          border: `1px solid ${theme.palette.divider}`,
+                          borderRadius: 2,
+                          padding: 2,
+                          boxShadow: theme.palette.mode === 'dark' 
+                            ? '0 4px 12px rgba(0, 0, 0, 0.4)' 
+                            : '0 2px 8px rgba(0, 0, 0, 0.15)',
+                          minWidth: 160,
+                        }}
+                      >
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: theme.palette.text.secondary,
+                            fontSize: '0.875rem',
+                            fontWeight: 500,
+                            mb: 0.75,
+                          }}
+                        >
+                          {label}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
+                          <Typography 
+                            variant="h6" 
+                            sx={{ 
+                              color: '#8B5CF6',
+                              fontSize: '1.25rem',
+                              fontWeight: 700,
+                            }}
+                          >
+                            S/ {value.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    );
+                  }
+                  return null;
+                }}
+              />
               <Bar dataKey="value" fill="#8B5CF6" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
