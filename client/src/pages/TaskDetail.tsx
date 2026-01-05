@@ -1183,7 +1183,6 @@ const TaskDetail: React.FC = () => {
       
       // Crear nota asociada a la tarea actual
       const activityData: any = {
-        type: 'note',
         subject: noteData.subject || `Nota para ${task?.title || 'Tarea'}`,
         description: noteData.description,
       };
@@ -1207,7 +1206,7 @@ const TaskDetail: React.FC = () => {
         activityData.dealId = task.dealId;
       }
       
-      await api.post('/activities', activityData);
+      await api.post('/activities/notes', activityData);
       
       setSuccessMessage('Nota creada exitosamente');
       setNoteOpen(false);
@@ -1235,8 +1234,7 @@ const TaskDetail: React.FC = () => {
     }
     setSaving(true);
     try {
-      await api.post('/activities', {
-        type: 'call',
+      await api.post('/activities/calls', {
         subject: callData.subject,
         description: callData.description,
         dealId: task?.dealId,
@@ -3571,18 +3569,18 @@ const TaskDetail: React.FC = () => {
         }}>
           {/* Copiloto IA */}
           <Box sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            border: `1px solid ${theme.palette.divider}`,
-            borderRadius: 2,
-            bgcolor: theme.palette.background.paper,
-            p: 2,
-            pb: 3,
-            boxSizing: 'border-box',
-            overflowY: 'auto',
-            height: 'fit-content',
-            maxHeight: 'calc(100vh - 80px)',
-          }}>
+          display: 'flex',
+          flexDirection: 'column',
+          border: `1px solid ${theme.palette.divider}`,
+          borderRadius: 2,
+          bgcolor: theme.palette.background.paper,
+          p: 2,
+          pb: 3,
+          boxSizing: 'border-box',
+          overflowY: 'auto',
+          height: 'fit-content',
+          maxHeight: 'calc(100vh - 80px)',
+        }}>
         {/* Header del Copilot */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -4593,20 +4591,20 @@ const TaskDetail: React.FC = () => {
                     }
                   }}
                 >
-                  <MenuItem value="lead_inactivo">-5% Lead Inactivo</MenuItem>
-                  <MenuItem value="cliente_perdido">-1% Cliente perdido</MenuItem>
-                  <MenuItem value="cierre_perdido">-1% Cierre Perdido</MenuItem>
-                  <MenuItem value="lead">0% Lead</MenuItem>
-                  <MenuItem value="contacto">10% Contacto</MenuItem>
-                  <MenuItem value="reunion_agendada">30% Reunión Agendada</MenuItem>
-                  <MenuItem value="reunion_efectiva">40% Reunión Efectiva</MenuItem>
-                  <MenuItem value="propuesta_economica">50% Propuesta Económica</MenuItem>
-                  <MenuItem value="negociacion">70% Negociación</MenuItem>
-                  <MenuItem value="licitacion">75% Licitación</MenuItem>
-                  <MenuItem value="licitacion_etapa_final">85% Licitación Etapa Final</MenuItem>
-                  <MenuItem value="cierre_ganado">90% Cierre Ganado</MenuItem>
-                  <MenuItem value="firma_contrato">95% Firma de Contrato</MenuItem>
-                  <MenuItem value="activo">100% Activo</MenuItem>
+                  <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
+                  <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
+                  <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+                  <MenuItem value="lead">Lead</MenuItem>
+                  <MenuItem value="contacto">Contacto</MenuItem>
+                  <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+                  <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+                  <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
+                  <MenuItem value="negociacion">Negociación</MenuItem>
+                  <MenuItem value="licitacion">Licitación</MenuItem>
+                  <MenuItem value="licitacion_etapa_final">Licitación Etapa Final</MenuItem>
+                  <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+                  <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
+                  <MenuItem value="activo">Activo</MenuItem>
                 </TextField>
               </Box>
             </Box>
@@ -4938,20 +4936,20 @@ const TaskDetail: React.FC = () => {
                   }
                 }}
               >
-                <MenuItem value="lead_inactivo">-5% Lead Inactivo</MenuItem>
-                <MenuItem value="cliente_perdido">-1% Cliente perdido</MenuItem>
-                <MenuItem value="cierre_perdido">-1% Cierre Perdido</MenuItem>
-                <MenuItem value="lead">0% Lead</MenuItem>
-                <MenuItem value="contacto">10% Contacto</MenuItem>
-                <MenuItem value="reunion_agendada">30% Reunión Agendada</MenuItem>
-                <MenuItem value="reunion_efectiva">40% Reunión Efectiva</MenuItem>
-                <MenuItem value="propuesta_economica">50% Propuesta Económica</MenuItem>
-                <MenuItem value="negociacion">70% Negociación</MenuItem>
-                <MenuItem value="licitacion">75% Licitación</MenuItem>
-                <MenuItem value="licitacion_etapa_final">85% Licitación Etapa Final</MenuItem>
-                <MenuItem value="cierre_ganado">90% Cierre Ganado</MenuItem>
-                <MenuItem value="firma_contrato">95% Firma de Contrato</MenuItem>
-                <MenuItem value="activo">100% Activo</MenuItem>
+                <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
+                <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
+                <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+                <MenuItem value="lead">Lead</MenuItem>
+                <MenuItem value="contacto">Contacto</MenuItem>
+                <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+                <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+                <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
+                <MenuItem value="negociacion">Negociación</MenuItem>
+                <MenuItem value="licitacion">Licitación</MenuItem>
+                <MenuItem value="licitacion_etapa_final">Licitación Etapa Final</MenuItem>
+                <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+                <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
+                <MenuItem value="activo">Activo</MenuItem>
               </TextField>
             </Box>
           ) : (

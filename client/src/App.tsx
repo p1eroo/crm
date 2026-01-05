@@ -35,6 +35,9 @@ const Reports = lazy(() => import('./pages/Reports'));
 const ReportDetail = lazy(() => import('./pages/ReportDetail'));
 const Calendar = lazy(() => import('./pages/Calendar'));
 const Settings = lazy(() => import('./pages/Settings'));
+const Privacy = lazy(() => import('./pages/Privacy'));
+const Terms = lazy(() => import('./pages/Terms'));
+const Landing = lazy(() => import('./pages/Landing'));
 
 const getTheme = (mode: 'light' | 'dark') => createTheme({
   palette: {
@@ -244,16 +247,6 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // Si no hay usuario, mostrar Login (sin Router para evitar problemas de navegación)
-  if (!user) {
-    return (
-      <MUIThemeProvider theme={theme}>
-        <CssBaseline />
-        <Login />
-      </MUIThemeProvider>
-    );
-  }
-
   // Componente de loading para las páginas lazy
   const PageLoader = () => (
     <Box sx={{ 
@@ -267,183 +260,251 @@ const AppContent: React.FC = () => {
     </Box>
   );
 
-  // Si hay usuario, mostrar la aplicación con Router
+  // Router siempre disponible para rutas públicas y protegidas
   return (
     <MUIThemeProvider theme={theme}>
       <CssBaseline />
-      <SidebarProvider>
-        <Router>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route
-                path="/"
-                element={
-                  <MainLayout>
-                    <Dashboard />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/dashboard"
-                element={
-                  <MainLayout>
-                    <Dashboard />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/contacts"
-                element={
-                  <MainLayout>
-                    <Contacts />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/contacts/:id"
-                element={
-                  <MainLayout>
-                    <ContactDetail />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/companies"
-                element={
-                  <MainLayout>
-                    <Companies />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/companies/:id"
-                element={
-                  <MainLayout>
-                    <CompanyDetail />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/deals"
-                element={
-                  <MainLayout>
-                    <Deals />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/deals/:id"
-                element={
-                  <MainLayout>
-                    <DealDetail />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/tasks"
-                element={
-                  <MainLayout>
-                    <Tasks />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/tasks/:id"
-                element={
-                  <MainLayout>
-                    <TaskDetail />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/tickets"
-                element={
-                  <MainLayout>
-                    <Tickets />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/calendar"
-                element={
-                  <MainLayout>
-                    <Calendar />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/pipeline"
-                element={
-                  <MainLayout>
-                    <Pipeline />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/profile"
-                element={
-                  <MainLayout>
-                    <Profile />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/users"
-                element={
-                  (() => {
-                    const userRole = user?.role;
-                    if (userRole === 'admin') {
-                      return (
-                        <MainLayout>
-                          <Users />
-                        </MainLayout>
-                      );
-                    }
-                    return <Navigate to="/" replace />;
-                  })()
-                }
-              />
-              <Route
-                path="/reports"
-                element={
-                  <MainLayout>
-                    <Reports />
-                  </MainLayout>
-                }
-              />
-              <Route
-                path="/reports/:id"
-                element={
-                  (() => {
-                    const userRole = user?.role;
-                    if (userRole === 'admin' || userRole === 'jefe_comercial') {
-                      return (
-                        <MainLayout>
-                          <ReportDetail />
-                        </MainLayout>
-                      );
-                    }
-                    return <Navigate to="/" replace />;
-                  })()
-                }
-              />
-              <Route
-                path="/settings"
-                element={
-                  <MainLayout>
-                    <Settings />
-                  </MainLayout>
-                }
-              />
-              <Route path="*" element={
-                <MainLayout>
-                  <Dashboard />
-                </MainLayout>
-              } />
+      <Router>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Rutas públicas - accesibles sin autenticación */}
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+
+            {/* Si no hay usuario */}
+            {!user ? (
+              <>
+                <Route path="/" element={<Landing />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/dashboard" element={<Navigate to="/login" replace />} />
+                <Route path="/contacts" element={<Navigate to="/login" replace />} />
+                <Route path="/companies" element={<Navigate to="/login" replace />} />
+                <Route path="/deals" element={<Navigate to="/login" replace />} />
+                <Route path="/tasks" element={<Navigate to="/login" replace />} />
+                <Route path="/tickets" element={<Navigate to="/login" replace />} />
+                <Route path="/calendar" element={<Navigate to="/login" replace />} />
+                <Route path="/pipeline" element={<Navigate to="/login" replace />} />
+                <Route path="/profile" element={<Navigate to="/login" replace />} />
+                <Route path="/users" element={<Navigate to="/login" replace />} />
+                <Route path="/reports" element={<Navigate to="/login" replace />} />
+                <Route path="/settings" element={<Navigate to="/login" replace />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </>
+            ) : (
+              <>
+                {/* Rutas protegidas - requieren autenticación */}
+                <Route
+                  path="/"
+                  element={<Navigate to="/dashboard" replace />}
+                />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <SidebarProvider>
+                      <MainLayout>
+                        <Dashboard />
+                      </MainLayout>
+                    </SidebarProvider>
+                  }
+                />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <SidebarProvider>
+                      <MainLayout>
+                        <Dashboard />
+                      </MainLayout>
+                    </SidebarProvider>
+                  }
+                />
+                <Route
+                  path="/contacts"
+                  element={
+                    <SidebarProvider>
+                      <MainLayout>
+                        <Contacts />
+                      </MainLayout>
+                    </SidebarProvider>
+                  }
+                />
+                <Route
+                  path="/contacts/:id"
+                  element={
+                    <SidebarProvider>
+                      <MainLayout>
+                        <ContactDetail />
+                      </MainLayout>
+                    </SidebarProvider>
+                  }
+                />
+                <Route
+                  path="/companies"
+                  element={
+                    <SidebarProvider>
+                      <MainLayout>
+                        <Companies />
+                      </MainLayout>
+                    </SidebarProvider>
+                  }
+                />
+                <Route
+                  path="/companies/:id"
+                  element={
+                    <SidebarProvider>
+                      <MainLayout>
+                        <CompanyDetail />
+                      </MainLayout>
+                    </SidebarProvider>
+                  }
+                />
+                <Route
+                  path="/deals"
+                  element={
+                    <SidebarProvider>
+                      <MainLayout>
+                        <Deals />
+                      </MainLayout>
+                    </SidebarProvider>
+                  }
+                />
+                <Route
+                  path="/deals/:id"
+                  element={
+                    <SidebarProvider>
+                      <MainLayout>
+                        <DealDetail />
+                      </MainLayout>
+                    </SidebarProvider>
+                  }
+                />
+                <Route
+                  path="/tasks"
+                  element={
+                    <SidebarProvider>
+                      <MainLayout>
+                        <Tasks />
+                      </MainLayout>
+                    </SidebarProvider>
+                  }
+                />
+                <Route
+                  path="/tasks/:id"
+                  element={
+                    <SidebarProvider>
+                      <MainLayout>
+                        <TaskDetail />
+                      </MainLayout>
+                    </SidebarProvider>
+                  }
+                />
+                <Route
+                  path="/tickets"
+                  element={
+                    <SidebarProvider>
+                      <MainLayout>
+                        <Tickets />
+                      </MainLayout>
+                    </SidebarProvider>
+                  }
+                />
+                <Route
+                  path="/calendar"
+                  element={
+                    <SidebarProvider>
+                      <MainLayout>
+                        <Calendar />
+                      </MainLayout>
+                    </SidebarProvider>
+                  }
+                />
+                <Route
+                  path="/pipeline"
+                  element={
+                    <SidebarProvider>
+                      <MainLayout>
+                        <Pipeline />
+                      </MainLayout>
+                    </SidebarProvider>
+                  }
+                />
+                <Route
+                  path="/profile"
+                  element={
+                    <SidebarProvider>
+                      <MainLayout>
+                        <Profile />
+                      </MainLayout>
+                    </SidebarProvider>
+                  }
+                />
+                <Route
+                  path="/users"
+                  element={
+                    (() => {
+                      const userRole = user?.role;
+                      if (userRole === 'admin') {
+                        return (
+                          <SidebarProvider>
+                            <MainLayout>
+                              <Users />
+                            </MainLayout>
+                          </SidebarProvider>
+                        );
+                      }
+                      return <Navigate to="/" replace />;
+                    })()
+                  }
+                />
+                <Route
+                  path="/reports"
+                  element={
+                    <SidebarProvider>
+                      <MainLayout>
+                        <Reports />
+                      </MainLayout>
+                    </SidebarProvider>
+                  }
+                />
+                <Route
+                  path="/reports/:id"
+                  element={
+                    (() => {
+                      const userRole = user?.role;
+                      if (userRole === 'admin' || userRole === 'jefe_comercial') {
+                        return (
+                          <SidebarProvider>
+                            <MainLayout>
+                              <ReportDetail />
+                            </MainLayout>
+                          </SidebarProvider>
+                        );
+                      }
+                      return <Navigate to="/" replace />;
+                    })()
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <SidebarProvider>
+                      <MainLayout>
+                        <Settings />
+                      </MainLayout>
+                    </SidebarProvider>
+                  }
+                />
+                <Route path="*" element={
+                  <SidebarProvider>
+                    <MainLayout>
+                      <Dashboard />
+                    </MainLayout>
+                  </SidebarProvider>
+                } />
+              </>
+            )}
             </Routes>
           </Suspense>
         </Router>
-      </SidebarProvider>
     </MUIThemeProvider>
   );
 };

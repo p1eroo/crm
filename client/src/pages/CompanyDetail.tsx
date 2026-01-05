@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -166,8 +166,6 @@ const CompanyDetail: React.FC = () => {
   const [associatedDeals, setAssociatedDeals] = useState<any[]>([]);
   const [associatedContacts, setAssociatedContacts] = useState<any[]>([]);
   const [associatedTickets, setAssociatedTickets] = useState<any[]>([]);
-  const [associatedSubscriptions, setAssociatedSubscriptions] = useState<any[]>([]);
-  const [associatedPayments, setAssociatedPayments] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
@@ -181,6 +179,10 @@ const CompanyDetail: React.FC = () => {
   const [timeRangeMenuAnchor, setTimeRangeMenuAnchor] = useState<null | HTMLElement>(null);
   const [timeRangeSearch, setTimeRangeSearch] = useState('');
   const [selectedTimeRange, setSelectedTimeRange] = useState<string>('Todo hasta ahora');
+  const [selectedActivityTypes, setSelectedActivityTypes] = useState<string[]>([]);
+  const [expandedActivity, setExpandedActivity] = useState<any | null>(null);
+  const [completedActivities, setCompletedActivities] = useState<{ [key: number]: boolean }>({});
+  const activityFilterChipRef = useRef<HTMLDivElement>(null);
   
   // Estados para los filtros de actividad
   const [communicationFilters, setCommunicationFilters] = useState({
@@ -215,8 +217,6 @@ const CompanyDetail: React.FC = () => {
   const [addContactOpen, setAddContactOpen] = useState(false);
   const [addDealOpen, setAddDealOpen] = useState(false);
   const [addTicketOpen, setAddTicketOpen] = useState(false);
-  const [addSubscriptionOpen, setAddSubscriptionOpen] = useState(false);
-  const [addPaymentOpen, setAddPaymentOpen] = useState(false);
   const [createActivityMenuAnchor, setCreateActivityMenuAnchor] = useState<null | HTMLElement>(null);
   const [contactFormData, setContactFormData] = useState({ 
     firstName: '', 
@@ -243,8 +243,6 @@ const CompanyDetail: React.FC = () => {
   const [dealFormData, setDealFormData] = useState({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'baja' as 'baja' | 'media' | 'alta', companyId: '', contactId: '' });
   const [allCompanies, setAllCompanies] = useState<any[]>([]);
   const [ticketFormData, setTicketFormData] = useState({ subject: '', description: '', status: 'new', priority: 'medium' });
-  const [subscriptionFormData, setSubscriptionFormData] = useState({ name: '', description: '', status: 'active', amount: '', currency: 'USD', billingCycle: 'monthly', startDate: '', endDate: '', renewalDate: '' });
-  const [paymentFormData, setPaymentFormData] = useState({ amount: '', currency: 'USD', status: 'pending', paymentDate: '', dueDate: '', paymentMethod: 'credit_card', reference: '', description: '' });
   
   // Estados para edición de campos del contacto
   
@@ -293,6 +291,10 @@ const CompanyDetail: React.FC = () => {
     city: '',
     state: '',
     country: '',
+    email: '',
+    leadSource: '',
+    estimatedRevenue: '',
+    isRecoveredClient: false,
   });
   const descriptionEditorRef = React.useRef<HTMLDivElement>(null);
   const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState<null | HTMLElement>(null);
@@ -311,6 +313,7 @@ const CompanyDetail: React.FC = () => {
   const [datePickerAnchorEl, setDatePickerAnchorEl] = useState<null | HTMLElement>(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [warningMessage, setWarningMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const [emailConnectModalOpen, setEmailConnectModalOpen] = useState(false);
   const [connectingEmail, setConnectingEmail] = useState(false);
   
@@ -394,17 +397,6 @@ const CompanyDetail: React.FC = () => {
       });
       setAssociatedTickets(ticketsResponse.data.tickets || ticketsResponse.data || []);
 
-      // Obtener suscripciones asociadas
-      const subscriptionsResponse = await api.get('/subscriptions', {
-        params: { companyId: id },
-      });
-      setAssociatedSubscriptions(subscriptionsResponse.data.subscriptions || subscriptionsResponse.data || []);
-
-      // Obtener pagos asociados
-      const paymentsResponse = await api.get('/payments', {
-        params: { companyId: id },
-      });
-      setAssociatedPayments(paymentsResponse.data.payments || paymentsResponse.data || []);
     } catch (error) {
       console.error('Error fetching associated records:', error);
     }
@@ -424,6 +416,52 @@ const CompanyDetail: React.FC = () => {
 
   const getActivityIconType = (type: string) => {
     return type; // Retornar el tipo para renderizar después
+  };
+
+  const getActivityTypeLabel = (type: string) => {
+    const typeMap: { [key: string]: string } = {
+      'note': 'Nota',
+      'email': 'Correo',
+      'call': 'Llamada',
+      'task': 'Tarea',
+      'meeting': 'Reunión',
+      'todo': 'Tarea',
+    };
+    return typeMap[type?.toLowerCase()] || 'Actividad';
+  };
+
+  const getActivityStatusColor = (activity: any) => {
+    if (!activity.dueDate) {
+      // Sin fecha de vencimiento - gris neutro
+      return {
+        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F5F5F5',
+      };
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dueDate = new Date(activity.dueDate);
+    dueDate.setHours(0, 0, 0, 0);
+    
+    const diffTime = dueDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      // Vencida - rojo claro
+      return {
+        bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.15)' : '#FFEBEE',
+      };
+    } else if (diffDays <= 3) {
+      // Por vencer (1-3 días) - amarillo/naranja claro
+      return {
+        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.15)' : '#FFF9C4',
+      };
+    } else {
+      // A tiempo - verde claro
+      return {
+        bgcolor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.15)' : '#E8F5E9',
+      };
+    }
   };
 
   const fetchActivityLogs = useCallback(async () => {
@@ -631,20 +669,20 @@ const CompanyDetail: React.FC = () => {
 
   const getStageLabel = (stage: string) => {
     const labels: { [key: string]: string } = {
-      'lead': '0% Lead',
-      'contacto': '10% Contacto',
-      'reunion_agendada': '30% Reunión Agendada',
-      'reunion_efectiva': '40% Reunión Efectiva',
-      'propuesta_economica': '50% Propuesta Económica',
-      'negociacion': '70% Negociación',
-      'licitacion': '75% Licitación',
-      'licitacion_etapa_final': '85% Licitación Etapa Final',
-      'cierre_ganado': '90% Cierre Ganado',
-      'cierre_perdido': '-1% Cierre Perdido',
-      'firma_contrato': '95% Firma de Contrato',
-      'activo': '100% Activo',
-      'cliente_perdido': '-1% Cliente perdido',
-      'lead_inactivo': '-5% Lead Inactivo',
+      'lead': 'Lead',
+      'contacto': 'Contacto',
+      'reunion_agendada': 'Reunión Agendada',
+      'reunion_efectiva': 'Reunión Efectiva',
+      'propuesta_economica': 'Propuesta Económica',
+      'negociacion': 'Negociación',
+      'licitacion': 'Licitación',
+      'licitacion_etapa_final': 'Licitación Etapa Final',
+      'cierre_ganado': 'Cierre Ganado',
+      'cierre_perdido': 'Cierre Perdido',
+      'firma_contrato': 'Firma de Contrato',
+      'activo': 'Activo',
+      'cliente_perdido': 'Cliente perdido',
+      'lead_inactivo': 'Lead Inactivo',
     };
     return labels[stage] || stage;
   };
@@ -673,8 +711,13 @@ const CompanyDetail: React.FC = () => {
         city: company.city || '',
         state: company.state || '',
         country: company.country || '',
+        email: (company as any).email || '',
+        leadSource: (company as any).leadSource || '',
+        estimatedRevenue: (company as any).estimatedRevenue || '',
+        isRecoveredClient: (company as any).isRecoveredClient || false,
       });
       setEditDialogOpen(true);
+      setErrorMessage('');
     }
     setAnchorEl(null);
   };
@@ -695,7 +738,12 @@ const CompanyDetail: React.FC = () => {
       city: '',
       state: '',
       country: '',
+      email: '',
+      leadSource: '',
+      estimatedRevenue: '',
+      isRecoveredClient: false,
     });
+    setErrorMessage('');
   };
 
   const handleSaveCompany = async () => {
@@ -705,14 +753,41 @@ const CompanyDetail: React.FC = () => {
 
     try {
       setSaving(true);
-      const response = await api.put(`/companies/${company.id}`, editFormData);
+      setErrorMessage('');
+      
+      // Preparar los datos para enviar, convirtiendo valores vacíos a null
+      const dataToSend: any = {
+        ...editFormData,
+      };
+      
+      // Manejar estimatedRevenue
+      if (editFormData.estimatedRevenue === '' || editFormData.estimatedRevenue === null || editFormData.estimatedRevenue === undefined) {
+        dataToSend.estimatedRevenue = null;
+      } else {
+        const parsed = parseFloat(editFormData.estimatedRevenue as string);
+        dataToSend.estimatedRevenue = isNaN(parsed) ? null : parsed;
+      }
+      
+      // Manejar leadSource
+      dataToSend.leadSource = editFormData.leadSource === '' ? null : editFormData.leadSource;
+      
+      // Manejar email
+      dataToSend.email = editFormData.email === '' ? null : editFormData.email;
+      
+      // Asegurarse de que isRecoveredClient sea boolean
+      dataToSend.isRecoveredClient = Boolean(editFormData.isRecoveredClient);
+      
+      console.log('Datos a enviar:', dataToSend);
+      
+      const response = await api.put(`/companies/${company.id}`, dataToSend);
       setCompany(response.data);
       handleCloseEditDialog();
       // Recargar los datos de la empresa
       await fetchCompany();
     } catch (error: any) {
       console.error('Error al actualizar la empresa:', error);
-      alert(error.response?.data?.error || 'Error al actualizar la empresa. Por favor, intenta nuevamente.');
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Error al guardar la empresa. Por favor, intenta nuevamente.';
+      setErrorMessage(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -851,8 +926,7 @@ const CompanyDetail: React.FC = () => {
       });
 
       // Registrar como actividad
-      await api.post('/activities', {
-        type: 'email',
+      await api.post('/activities/emails', {
         subject: emailData.subject,
         description: emailData.body.replace(/<[^>]*>/g, ''), // Remover HTML para la descripción
         companyId: id,
@@ -1069,8 +1143,7 @@ const CompanyDetail: React.FC = () => {
           // Crear una nota para cada combinación de empresa y contacto
           for (const contactId of contactsToAssociate) {
             activityPromises.push(
-              api.post('/activities', {
-                type: 'note',
+              api.post('/activities/notes', {
                 subject: noteData.subject || `Nota para ${companyName}`,
                 description: noteData.description,
                 companyId: companyId,
@@ -1081,8 +1154,7 @@ const CompanyDetail: React.FC = () => {
         } else {
           // Crear nota solo con la empresa (sin contacto)
           activityPromises.push(
-            api.post('/activities', {
-              type: 'note',
+            api.post('/activities/notes', {
               subject: noteData.subject || `Nota para ${companyName}`,
               description: noteData.description,
               companyId: companyId,
@@ -1155,8 +1227,7 @@ const CompanyDetail: React.FC = () => {
     }
     setSaving(true);
     try {
-      await api.post('/activities', {
-        type: 'call',
+      await api.post('/activities/calls', {
         subject: callData.subject,
         description: callData.description,
         companyId: id,
@@ -1516,39 +1587,6 @@ const CompanyDetail: React.FC = () => {
     }
   };
 
-  const handleAddSubscription = async () => {
-    try {
-      await api.post('/subscriptions', {
-        ...subscriptionFormData,
-        amount: parseFloat(subscriptionFormData.amount) || 0,
-        companyId: company?.id,
-      });
-      setSuccessMessage('Suscripción creada exitosamente');
-      setAddSubscriptionOpen(false);
-      setSubscriptionFormData({ name: '', description: '', status: 'active', amount: '', currency: 'USD', billingCycle: 'monthly', startDate: '', endDate: '', renewalDate: '' });
-      fetchAssociatedRecords();
-      setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (error) {
-      console.error('Error adding subscription:', error);
-    }
-  };
-
-  const handleAddPayment = async () => {
-    try {
-      await api.post('/payments', {
-        ...paymentFormData,
-        amount: parseFloat(paymentFormData.amount) || 0,
-        companyId: company?.id,
-      });
-      setSuccessMessage('Pago creado exitosamente');
-      setAddPaymentOpen(false);
-      setPaymentFormData({ amount: '', currency: 'USD', status: 'pending', paymentDate: '', dueDate: '', paymentMethod: 'credit_card', reference: '', description: '' });
-      fetchAssociatedRecords();
-      setTimeout(() => setSuccessMessage(''), 3000);
-    } catch (error) {
-      console.error('Error adding payment:', error);
-    }
-  };
 
   const handleCreateActivity = (type: string) => {
     setCreateActivityMenuAnchor(null);
@@ -2732,7 +2770,640 @@ const CompanyDetail: React.FC = () => {
             {/* Pestaña Información Avanzada */}
             {tabValue === 1 && (
               <Box>
-                {/* Contactos */}
+                {/* Card de Actividades Recientes - Versión completa */}
+                <Card sx={{ 
+                  borderRadius: 2,
+                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                  bgcolor: theme.palette.background.paper,
+                  px: 2,
+                  py: 2,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  mt: 2,
+                  mb: 2,
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                }}>
+                  <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
+                    Actividades Recientes
+                  </Typography>
+                  
+                  {/* Opciones de búsqueda y crear actividades */}
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: 2, 
+                    mb: 2,
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}>
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                      <TextField
+                        size="small"
+                        placeholder="Buscar actividades"
+                        value={activitySearch}
+                        onChange={(e) => setActivitySearch(e.target.value)}
+                        sx={{
+                          width: '250px',
+                          transition: 'all 0.3s ease',
+                          '& .MuiOutlinedInput-root': {
+                            height: '32px',
+                            fontSize: '0.875rem',
+                            '&:hover': {
+                              '& fieldset': {
+                                borderColor: taxiMonterricoColors.green,
+                              },
+                            },
+                            '&.Mui-focused': {
+                              '& fieldset': {
+                                borderColor: taxiMonterricoColors.green,
+                                borderWidth: 2,
+                              },
+                            },
+                          },
+                        }}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Search fontSize="small" />
+                            </InputAdornment>
+                          ),
+                        }}
+                      />
+                      <Button 
+                        size="small" 
+                        variant="outlined" 
+                        endIcon={<ExpandMore />}
+                        onClick={(e) => setCreateActivityMenuAnchor(e.currentTarget)}
+                        sx={{
+                          borderColor: taxiMonterricoColors.green,
+                          color: taxiMonterricoColors.green,
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            borderColor: taxiMonterricoColors.green,
+                            backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
+                          },
+                          '&:active': {
+                            transform: 'translateY(0)',
+                          },
+                        }}
+                      >
+                        Crear actividades
+                      </Button>
+                    </Box>
+                    
+                    {/* Filtros alineados a la derecha */}
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                      <Chip 
+                        label={selectedTimeRange}
+                        size="small" 
+                        deleteIcon={<KeyboardArrowDown fontSize="small" />}
+                        onDelete={(e) => {
+                          e.stopPropagation();
+                          setTimeRangeMenuAnchor(e.currentTarget);
+                        }}
+                        onClick={(e) => setTimeRangeMenuAnchor(e.currentTarget)}
+                        sx={{ 
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          color: taxiMonterricoColors.green,
+                          '&:hover': {
+                            backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                            transform: 'scale(1.05)',
+                            boxShadow: '0 2px 8px rgba(46, 125, 50, 0.2)',
+                          },
+                        }}
+                      />
+                      <Box 
+                        ref={activityFilterChipRef}
+                        sx={{ display: 'inline-flex' }}
+                      >
+                        {selectedActivityTypes.length > 0 ? (
+                          <Chip 
+                            label={`(${selectedActivityTypes.length}) Actividad`}
+                            size="small" 
+                            deleteIcon={<Close fontSize="small" />}
+                            onDelete={(e) => {
+                              e.stopPropagation();
+                              setSelectedActivityTypes([]);
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (activityFilterChipRef.current) {
+                                setActivityFilterMenuAnchor(activityFilterChipRef.current);
+                              }
+                            }}
+                            sx={{ 
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              bgcolor: 'rgba(46, 125, 50, 0.1)',
+                              color: taxiMonterricoColors.green,
+                              '&:hover': {
+                                backgroundColor: 'rgba(46, 125, 50, 0.15)',
+                                transform: 'scale(1.05)',
+                                boxShadow: '0 2px 8px rgba(46, 125, 50, 0.2)',
+                              },
+                            }}
+                          />
+                        ) : (
+                          <Chip 
+                            label="Actividad"
+                            size="small" 
+                            deleteIcon={<KeyboardArrowDown fontSize="small" />}
+                            onDelete={(e) => {
+                              e.stopPropagation();
+                              if (activityFilterChipRef.current) {
+                                setActivityFilterMenuAnchor(activityFilterChipRef.current);
+                              }
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (activityFilterChipRef.current) {
+                                setActivityFilterMenuAnchor(activityFilterChipRef.current);
+                              }
+                            }}
+                            sx={{ 
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              color: taxiMonterricoColors.green,
+                              '&:hover': {
+                                backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                                transform: 'scale(1.05)',
+                                boxShadow: '0 2px 8px rgba(46, 125, 50, 0.2)',
+                              },
+                            }}
+                          />
+                        )}
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  {/* Menú de crear actividades */}
+                  <Menu
+                    anchorEl={createActivityMenuAnchor}
+                    open={Boolean(createActivityMenuAnchor)}
+                    onClose={() => setCreateActivityMenuAnchor(null)}
+                    anchorOrigin={{
+                      vertical: 'bottom',
+                      horizontal: 'left',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'left',
+                    }}
+                    PaperProps={{
+                      sx: {
+                        mt: 1,
+                        minWidth: 320,
+                        maxWidth: 320,
+                        borderRadius: 2,
+                        boxShadow: theme.palette.mode === 'dark' 
+                          ? '0 4px 20px rgba(0,0,0,0.5)' 
+                          : '0 4px 20px rgba(0,0,0,0.15)',
+                        bgcolor: theme.palette.background.paper,
+                      },
+                    }}
+                  >
+                    <MenuItem 
+                      onClick={() => handleCreateActivity('note')}
+                      sx={{
+                        py: 1.5,
+                        px: 2,
+                        '&:hover': {
+                          backgroundColor: theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      <Edit sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
+                      <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
+                        Crear nota
+                      </Typography>
+                    </MenuItem>
+                    
+                    <MenuItem 
+                      onClick={() => handleCreateActivity('task')}
+                      sx={{
+                        py: 1.5,
+                        px: 2,
+                        '&:hover': {
+                          backgroundColor: theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      <Assignment sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
+                      <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
+                        Crear tarea
+                      </Typography>
+                    </MenuItem>
+                    
+                    <MenuItem 
+                      onClick={() => handleCreateActivity('email')}
+                      sx={{
+                        py: 1.5,
+                        px: 2,
+                        '&:hover': {
+                          backgroundColor: theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      <Email sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
+                      <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
+                        Crear correo
+                      </Typography>
+                    </MenuItem>
+                    
+                    <MenuItem 
+                      onClick={() => handleCreateActivity('call')}
+                      sx={{
+                        py: 1.5,
+                        px: 2,
+                        '&:hover': {
+                          backgroundColor: theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      <Phone sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
+                      <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
+                        Hacer llamada telefónica
+                      </Typography>
+                      <KeyboardArrowRight sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
+                    </MenuItem>
+                    
+                    <MenuItem 
+                      onClick={() => handleCreateActivity('meeting')}
+                      sx={{
+                        py: 1.5,
+                        px: 2,
+                        '&:hover': {
+                          backgroundColor: theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      <Event sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
+                      <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
+                        Programar reunión
+                      </Typography>
+                    </MenuItem>
+                  </Menu>
+
+                  {/* Menú de rango de tiempo */}
+                  <Menu
+                    anchorEl={timeRangeMenuAnchor}
+                    open={Boolean(timeRangeMenuAnchor)}
+                    onClose={() => setTimeRangeMenuAnchor(null)}
+                    anchorOrigin={{
+                      vertical: 'bottom',
+                      horizontal: 'right',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'right',
+                    }}
+                    PaperProps={{
+                      sx: {
+                        mt: 1,
+                        minWidth: 280,
+                        maxWidth: 280,
+                        borderRadius: 2,
+                        boxShadow: theme.palette.mode === 'dark' 
+                          ? '0 4px 20px rgba(0,0,0,0.5)' 
+                          : '0 4px 20px rgba(0,0,0,0.15)',
+                        bgcolor: theme.palette.background.paper,
+                      },
+                    }}
+                  >
+                    {['Todo', 'Hoy', 'Ayer', 'Esta semana', 'Semana pasada', 'Últimos 7 días'].map((option) => {
+                      const isSelected = selectedTimeRange === option || (option === 'Todo' && selectedTimeRange === 'Todo hasta ahora');
+                      return (
+                        <MenuItem
+                          key={option}
+                          onClick={() => {
+                            setSelectedTimeRange(option === 'Todo' ? 'Todo hasta ahora' : option);
+                            setTimeRangeMenuAnchor(null);
+                          }}
+                          sx={{
+                            py: 1.5,
+                            px: 2,
+                            color: theme.palette.text.primary,
+                            backgroundColor: isSelected 
+                              ? (theme.palette.mode === 'dark' 
+                                ? 'rgba(144, 202, 249, 0.16)' 
+                                : '#e3f2fd')
+                              : 'transparent',
+                            '&:hover': {
+                              backgroundColor: isSelected
+                                ? (theme.palette.mode === 'dark' 
+                                  ? 'rgba(144, 202, 249, 0.24)' 
+                                  : '#bbdefb')
+                                : theme.palette.action.hover,
+                            },
+                          }}
+                        >
+                          <Typography variant="body2" sx={{ color: 'inherit' }}>
+                            {option}
+                          </Typography>
+                        </MenuItem>
+                      );
+                    })}
+                  </Menu>
+
+                  {/* Menú de tipo de actividad */}
+                  <Menu
+                    anchorEl={activityFilterMenuAnchor}
+                    open={Boolean(activityFilterMenuAnchor)}
+                    onClose={() => setActivityFilterMenuAnchor(null)}
+                    anchorOrigin={{
+                      vertical: 'bottom',
+                      horizontal: 'right',
+                    }}
+                    transformOrigin={{
+                      vertical: 'top',
+                      horizontal: 'right',
+                    }}
+                    PaperProps={{
+                      sx: {
+                        mt: 1,
+                        minWidth: 280,
+                        maxWidth: 280,
+                        borderRadius: 2,
+                        boxShadow: theme.palette.mode === 'dark' 
+                          ? '0 4px 20px rgba(0,0,0,0.5)' 
+                          : '0 4px 20px rgba(0,0,0,0.15)',
+                        bgcolor: theme.palette.background.paper,
+                      },
+                    }}
+                  >
+                    <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
+                      <TextField
+                        size="small"
+                        placeholder="Buscar"
+                        fullWidth
+                        value={activityFilterSearch}
+                        onChange={(e) => setActivityFilterSearch(e.target.value)}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <Search fontSize="small" sx={{ color: theme.palette.text.secondary }} />
+                            </InputAdornment>
+                          ),
+                        }}
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            backgroundColor: theme.palette.mode === 'dark' 
+                              ? theme.palette.background.default 
+                              : '#f5f5f5',
+                            '& fieldset': {
+                              borderColor: theme.palette.divider,
+                            },
+                            '&:hover fieldset': {
+                              borderColor: theme.palette.text.secondary,
+                            },
+                            '&.Mui-focused fieldset': {
+                              borderColor: taxiMonterricoColors.green,
+                            },
+                          },
+                        }}
+                      />
+                    </Box>
+                    {(() => {
+                      // Filtrar tipos según el término de búsqueda
+                      const availableTypes = ['Nota', 'Correo', 'Llamada', 'Tarea', 'Reunión'];
+                      const filteredTypes = activityFilterSearch
+                        ? availableTypes.filter(type => 
+                            type.toLowerCase().includes(activityFilterSearch.toLowerCase())
+                          )
+                        : availableTypes;
+
+                      return filteredTypes.map((type) => {
+                        const isSelected = selectedActivityTypes.includes(type);
+                        return (
+                          <MenuItem
+                            key={type}
+                            onClick={() => {
+                              if (isSelected) {
+                                setSelectedActivityTypes(selectedActivityTypes.filter(t => t !== type));
+                              } else {
+                                setSelectedActivityTypes([...selectedActivityTypes, type]);
+                              }
+                            }}
+                            sx={{
+                              py: 1.5,
+                              px: 2,
+                              backgroundColor: isSelected 
+                                ? (theme.palette.mode === 'dark' 
+                                  ? 'rgba(46, 125, 50, 0.16)' 
+                                  : 'rgba(46, 125, 50, 0.08)')
+                                : 'transparent',
+                              '&:hover': {
+                                backgroundColor: isSelected
+                                  ? (theme.palette.mode === 'dark' 
+                                    ? 'rgba(46, 125, 50, 0.24)' 
+                                    : 'rgba(46, 125, 50, 0.12)')
+                                  : theme.palette.action.hover,
+                              },
+                            }}
+                          >
+                            <Checkbox
+                              checked={isSelected}
+                              size="small"
+                              sx={{
+                                color: taxiMonterricoColors.green,
+                                '&.Mui-checked': {
+                                  color: taxiMonterricoColors.green,
+                                },
+                              }}
+                            />
+                            <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
+                              {type}
+                            </Typography>
+                          </MenuItem>
+                        );
+                      });
+                    })()}
+                  </Menu>
+
+                  {(() => {
+                    // Filtrar actividades según el término de búsqueda
+                    let filteredActivities = activitySearch
+                      ? activities.filter((activity) => {
+                          const searchTerm = activitySearch.toLowerCase();
+                          const subject = (activity.subject || activity.title || '').toLowerCase();
+                          const description = (activity.description || '').toLowerCase();
+                          return subject.includes(searchTerm) || description.includes(searchTerm);
+                        })
+                      : activities;
+
+                    // Filtrar por tipo de actividad
+                    if (selectedActivityTypes.length > 0) {
+                      const typeMap: { [key: string]: string[] } = {
+                        'Nota': ['note'],
+                        'Correo': ['email'],
+                        'Llamada': ['call'],
+                        'Tarea': ['task'],
+                        'Reunión': ['meeting'],
+                      };
+                      filteredActivities = filteredActivities.filter((activity) => {
+                        // Obtener el tipo de actividad
+                        let activityType = activity.type?.toLowerCase() || '';
+                        
+                        // Si es una tarea (isTask), asegurarse de que el tipo sea 'task'
+                        if (activity.isTask && !activityType) {
+                          activityType = 'task';
+                        }
+                        
+                        // Verificar si el tipo de actividad coincide con alguno de los seleccionados
+                        return selectedActivityTypes.some(selectedType => {
+                          const mappedTypes = typeMap[selectedType] || [];
+                          return mappedTypes.includes(activityType);
+                        });
+                      });
+                    }
+
+                    // Filtrar por rango de tiempo
+                    if (selectedTimeRange !== 'Todo hasta ahora') {
+                      const now = new Date();
+                      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                      let startDate: Date;
+
+                      switch (selectedTimeRange) {
+                        case 'Hoy':
+                          startDate = today;
+                          break;
+                        case 'Ayer':
+                          startDate = new Date(today);
+                          startDate.setDate(startDate.getDate() - 1);
+                          break;
+                        case 'Esta semana':
+                          startDate = new Date(today);
+                          startDate.setDate(startDate.getDate() - today.getDay());
+                          break;
+                        case 'Semana pasada':
+                          startDate = new Date(today);
+                          startDate.setDate(startDate.getDate() - today.getDay() - 7);
+                          break;
+                        case 'Últimos 7 días':
+                          startDate = new Date(today);
+                          startDate.setDate(startDate.getDate() - 7);
+                          break;
+                        default:
+                          startDate = new Date(0);
+                      }
+
+                      filteredActivities = filteredActivities.filter((activity) => {
+                        const activityDate = new Date(activity.createdAt || activity.dueDate || 0);
+                        return activityDate >= startDate;
+                      });
+                    }
+
+                    if (filteredActivities.length === 0) {
+                      return (
+                        <Box sx={{ textAlign: 'center', py: 4 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            {activitySearch ? 'No se encontraron actividades' : 'No hay actividades registradas'}
+                          </Typography>
+                        </Box>
+                      );
+                    }
+
+                    return (
+                      <Box sx={{ 
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 2 
+                      }}>
+                        {filteredActivities.map((activity) => (
+                          <Paper
+                            key={activity.id}
+                            onClick={() => setExpandedActivity(activity)}
+                            sx={{
+                              p: 2,
+                              ...getActivityStatusColor(activity),
+                              borderRadius: 1.5,
+                              position: 'relative',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              border: `1px solid ${theme.palette.divider}`,
+                              '&:hover': {
+                                opacity: 0.9,
+                                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                              },
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                position: 'absolute',
+                                top: 8,
+                                right: 8,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'flex-end',
+                                gap: 0.5,
+                              }}
+                            >
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  color: taxiMonterricoColors.green,
+                                  fontWeight: 600,
+                                  fontSize: '0.7rem',
+                                  textTransform: 'uppercase',
+                                }}
+                              >
+                                {getActivityTypeLabel(activity.type)}
+                              </Typography>
+                              {activity.User && (
+                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                  Por {activity.User.firstName} {activity.User.lastName}
+                                  {activity.createdAt && (
+                                    <span> • {new Date(activity.createdAt).toLocaleDateString('es-ES', {
+                                      day: 'numeric',
+                                      month: 'short',
+                                      year: 'numeric',
+                                    })}</span>
+                                  )}
+                                </Typography>
+                              )}
+                            </Box>
+                            <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Checkbox
+                                checked={completedActivities[activity.id] || false}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  setCompletedActivities(prev => ({
+                                    ...prev,
+                                    [activity.id]: e.target.checked
+                                  }));
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                size="small"
+                                sx={{
+                                  p: 0.5,
+                                  '& .MuiSvgIcon-root': {
+                                    fontSize: 20,
+                                  },
+                                }}
+                              />
+                              <Typography 
+                                variant="subtitle2" 
+                                sx={{ 
+                                  fontWeight: 600, 
+                                  mb: 0.5, 
+                                  pr: 6,
+                                  flex: 1,
+                                  textDecoration: completedActivities[activity.id] ? 'line-through' : 'none',
+                                  opacity: completedActivities[activity.id] ? 0.6 : 1,
+                                }}
+                              >
+                                {activity.subject || activity.title}
+                              </Typography>
+                            </Box>
+                          </Paper>
+                        ))}
+                      </Box>
+                    );
+                  })()}
+                </Card>
 
                 {/* Contactos */}
                 <Card sx={{ 
@@ -3119,163 +3790,6 @@ const CompanyDetail: React.FC = () => {
                               <TableCell>
                                 {ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString('es-ES') : '-'}
                               </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  )}
-                </Card>
-
-                {/* Suscripciones */}
-                <Card sx={{ 
-                  mb: 4, 
-                  p: 3, 
-                  borderRadius: 2, 
-                  boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
-                  bgcolor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.divider}`,
-                }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                      Suscripciones ({associatedSubscriptions.length})
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Link 
-                        component="button" 
-                        sx={{ fontSize: '0.875rem', cursor: 'pointer', border: 'none', background: 'none', color: 'primary.main' }}
-                        onClick={() => setAddSubscriptionOpen(true)}
-                      >
-                        + Agregar
-                      </Link>
-                      {user?.role !== 'user' && (
-                        <IconButton size="small">
-                          <Settings fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                  </Box>
-                  {associatedSubscriptions.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-                      No existen objetos asociados de este tipo o no tienes permiso para verlos.
-                    </Typography>
-                  ) : (
-                    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }}>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Nombre</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Estado</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Monto</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Ciclo</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Fecha inicio</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Fecha renovación</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {associatedSubscriptions.map((subscription) => (
-                            <TableRow key={subscription.id} hover>
-                              <TableCell>{subscription.name}</TableCell>
-                              <TableCell>
-                                <Chip 
-                                  label={subscription.status} 
-                                  size="small" 
-                                  sx={{ 
-                                    bgcolor: subscription.status === 'active' ? '#c8e6c9' :
-                                            subscription.status === 'cancelled' ? '#ffcdd2' :
-                                            subscription.status === 'expired' ? '#e0e0e0' : '#fff9c4',
-                                    textTransform: 'capitalize'
-                                  }} 
-                                />
-                              </TableCell>
-                              <TableCell>
-                                {subscription.currency || 'USD'} ${parseFloat(subscription.amount || 0).toLocaleString()}
-                              </TableCell>
-                              <TableCell sx={{ textTransform: 'capitalize' }}>{subscription.billingCycle}</TableCell>
-                              <TableCell>
-                                {subscription.startDate ? new Date(subscription.startDate).toLocaleDateString('es-ES') : '-'}
-                              </TableCell>
-                              <TableCell>
-                                {subscription.renewalDate ? new Date(subscription.renewalDate).toLocaleDateString('es-ES') : '-'}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  )}
-                </Card>
-
-                {/* Pagos */}
-                <Card sx={{ 
-                  mb: 4, 
-                  p: 3, 
-                  borderRadius: 2, 
-                  boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
-                  bgcolor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.divider}`,
-                }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                      Pagos ({associatedPayments.length})
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Link 
-                        component="button" 
-                        sx={{ fontSize: '0.875rem', cursor: 'pointer', border: 'none', background: 'none', color: 'primary.main' }}
-                        onClick={() => setAddPaymentOpen(true)}
-                      >
-                        + Agregar
-                      </Link>
-                      {user?.role !== 'user' && (
-                        <IconButton size="small">
-                          <Settings fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                  </Box>
-                  {associatedPayments.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-                      No existen objetos asociados de este tipo o no tienes permiso para verlos.
-                    </Typography>
-                  ) : (
-                    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }}>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Monto</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Estado</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Método</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Fecha pago</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Referencia</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {associatedPayments.map((payment) => (
-                            <TableRow key={payment.id} hover>
-                              <TableCell>
-                                {payment.currency || 'USD'} ${parseFloat(payment.amount || 0).toLocaleString()}
-                              </TableCell>
-                              <TableCell>
-                                <Chip 
-                                  label={payment.status} 
-                                  size="small" 
-                                  sx={{ 
-                                    bgcolor: payment.status === 'completed' ? '#c8e6c9' :
-                                            payment.status === 'failed' ? '#ffcdd2' :
-                                            payment.status === 'refunded' ? '#e0e0e0' :
-                                            payment.status === 'cancelled' ? '#e0e0e0' : '#fff9c4',
-                                    textTransform: 'capitalize'
-                                  }} 
-                                />
-                              </TableCell>
-                              <TableCell sx={{ textTransform: 'capitalize' }}>
-                                {payment.paymentMethod?.replace('_', ' ')}
-                              </TableCell>
-                              <TableCell>
-                                {payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString('es-ES') : '-'}
-                              </TableCell>
-                              <TableCell>{payment.reference || '-'}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -4201,7 +4715,7 @@ const CompanyDetail: React.FC = () => {
 
         {/* Columna Copiloto IA y Registro de Cambios - Solo en desktop cuando está abierto */}
         {isDesktop && copilotOpen && (
-        <Box sx={{
+                  <Box sx={{ 
           width: 380,
           flexShrink: 0,
           display: 'flex',
@@ -4211,18 +4725,18 @@ const CompanyDetail: React.FC = () => {
         }}>
           {/* Copiloto IA */}
           <Box sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            border: `1px solid ${theme.palette.divider}`,
-            borderRadius: 2,
-            bgcolor: theme.palette.background.paper,
-            p: 2,
-            pb: 3,
-            boxSizing: 'border-box',
-            overflowY: 'auto',
-            height: 'fit-content',
-            maxHeight: 'calc(100vh - 80px)',
-          }}>
+                    display: 'flex', 
+          flexDirection: 'column',
+          border: `1px solid ${theme.palette.divider}`,
+          borderRadius: 2,
+          bgcolor: theme.palette.background.paper,
+          p: 2,
+          pb: 3,
+          boxSizing: 'border-box',
+          overflowY: 'auto',
+          height: 'fit-content',
+          maxHeight: 'calc(100vh - 80px)',
+        }}>
         {/* Header del Copilot */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -4344,9 +4858,7 @@ const CompanyDetail: React.FC = () => {
                 Próximas pérdidas
                             </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
-                {associatedPayments.length > 0 || associatedSubscriptions.length > 0
-                  ? 'Facturas pendientes o pagos atrasados detectados. Revisa el estado financiero.'
-                  : 'Sin datos suficientes para identificar riesgos financieros en este momento.'}
+                Sin datos suficientes para identificar riesgos financieros en este momento.
               </Typography>
             </Box>
           </Box>
@@ -4438,7 +4950,7 @@ const CompanyDetail: React.FC = () => {
             Crear tarea
           </Button>
         </Card>
-          </Box>
+                                      </Box>
 
           {/* Card Independiente: Registro de Cambios / Logs */}
           <Box sx={{
@@ -4784,7 +5296,7 @@ const CompanyDetail: React.FC = () => {
             </Box>
           </Card>
         </Box>
-        )}
+                                    )}
                                   </Box>
 
       {/* Drawer Copiloto IA - Solo para móviles */}
@@ -4924,9 +5436,7 @@ const CompanyDetail: React.FC = () => {
                 Próximas pérdidas
                             </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
-                {associatedPayments.length > 0 || associatedSubscriptions.length > 0
-                  ? 'Facturas pendientes o pagos atrasados detectados. Revisa el estado financiero.'
-                  : 'Sin datos suficientes para identificar riesgos financieros en este momento.'}
+                Sin datos suficientes para identificar riesgos financieros en este momento.
                             </Typography>
                           </Box>
                       </Box>
@@ -5818,9 +6328,21 @@ const CompanyDetail: React.FC = () => {
                                   sx={{ p: 0.5, mr: 1 }}
                                 />
                                 <ListItemText
-                                  primary={company.name}
-                                  secondary={company.domain}
-                                  primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                  primary={company.name && company.name.length > 12 ? company.name.substring(0, 12) + '...' : company.name}
+                                  secondary={company.domain || '--'}
+                                  sx={{
+                                    overflow: 'hidden',
+                                    '& .MuiListItemText-primary': {
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap',
+                                      maxWidth: '120px',
+                                      display: 'block',
+                                    }
+                                  }}
+                                  primaryTypographyProps={{ 
+                                    fontSize: '0.875rem',
+                                  }}
                                   secondaryTypographyProps={{ fontSize: '0.75rem' }}
                                 />
                               </ListItemButton>
@@ -6005,9 +6527,21 @@ const CompanyDetail: React.FC = () => {
                                   />
                                   <Business sx={{ fontSize: 18, mr: 1, color: theme.palette.text.secondary }} />
                                   <ListItemText
-                                    primary={company.name}
-                                    secondary={company.domain}
-                                    primaryTypographyProps={{ fontSize: '0.875rem' }}
+                                    primary={company.name && company.name.length > 12 ? company.name.substring(0, 12) + '...' : company.name}
+                                    secondary={company.domain || '--'}
+                                    sx={{
+                                      overflow: 'hidden',
+                                      '& .MuiListItemText-primary': {
+                                        overflow: 'hidden',
+                                        textOverflow: 'ellipsis',
+                                        whiteSpace: 'nowrap',
+                                        maxWidth: '120px',
+                                        display: 'block',
+                                      }
+                                    }}
+                                    primaryTypographyProps={{ 
+                                      fontSize: '0.875rem',
+                                    }}
                                     secondaryTypographyProps={{ fontSize: '0.75rem' }}
                                   />
                                 </ListItemButton>
@@ -8081,20 +8615,20 @@ const CompanyDetail: React.FC = () => {
                     }
                   }}
                 >
-                <MenuItem value="lead_inactivo">-5% Lead Inactivo</MenuItem>
-                <MenuItem value="cliente_perdido">-1% Cliente perdido</MenuItem>
-                <MenuItem value="cierre_perdido">-1% Cierre Perdido</MenuItem>
-                <MenuItem value="lead">0% Lead</MenuItem>
-                <MenuItem value="contacto">10% Contacto</MenuItem>
-                <MenuItem value="reunion_agendada">30% Reunión Agendada</MenuItem>
-                <MenuItem value="reunion_efectiva">40% Reunión Efectiva</MenuItem>
-                <MenuItem value="propuesta_economica">50% Propuesta Económica</MenuItem>
-                <MenuItem value="negociacion">70% Negociación</MenuItem>
-                <MenuItem value="licitacion">75% Licitación</MenuItem>
-                <MenuItem value="licitacion_etapa_final">85% Licitación Etapa Final</MenuItem>
-                <MenuItem value="cierre_ganado">90% Cierre Ganado</MenuItem>
-                <MenuItem value="firma_contrato">95% Firma de Contrato</MenuItem>
-                <MenuItem value="activo">100% Activo</MenuItem>
+                <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
+                <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
+                <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+                <MenuItem value="lead">Lead</MenuItem>
+                <MenuItem value="contacto">Contacto</MenuItem>
+                <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+                <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+                <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
+                <MenuItem value="negociacion">Negociación</MenuItem>
+                <MenuItem value="licitacion">Licitación</MenuItem>
+                <MenuItem value="licitacion_etapa_final">Licitación Etapa Final</MenuItem>
+                <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+                <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
+                <MenuItem value="activo">Activo</MenuItem>
                 </TextField>
               </Box>
             </Box>
@@ -8435,211 +8969,6 @@ const CompanyDetail: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Diálogo para agregar suscripción */}
-      <Dialog 
-        open={addSubscriptionOpen} 
-        onClose={() => setAddSubscriptionOpen(false)} 
-        maxWidth="sm" 
-        fullWidth
-        BackdropProps={{
-          sx: {
-            backdropFilter: 'blur(4px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          }
-        }}
-      >
-        <DialogTitle>Crear Suscripción</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField
-              label="Nombre"
-              value={subscriptionFormData.name}
-              onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, name: e.target.value })}
-              required
-              fullWidth
-            />
-            <TextField
-              label="Descripción"
-              value={subscriptionFormData.description}
-              onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, description: e.target.value })}
-              multiline
-              rows={3}
-              fullWidth
-            />
-            <TextField
-              select
-              label="Estado"
-              value={subscriptionFormData.status}
-              onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, status: e.target.value })}
-              fullWidth
-              SelectProps={{ native: true }}
-            >
-              <option value="active">Activa</option>
-              <option value="pending">Pendiente</option>
-              <option value="cancelled">Cancelada</option>
-              <option value="expired">Expirada</option>
-            </TextField>
-            <TextField
-              label="Monto"
-              type="number"
-              value={subscriptionFormData.amount}
-              onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, amount: e.target.value })}
-              required
-              fullWidth
-            />
-            <TextField
-              label="Moneda"
-              value={subscriptionFormData.currency}
-              onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, currency: e.target.value })}
-              fullWidth
-            />
-            <TextField
-              select
-              label="Ciclo de facturación"
-              value={subscriptionFormData.billingCycle}
-              onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, billingCycle: e.target.value })}
-              fullWidth
-              SelectProps={{ native: true }}
-            >
-              <option value="monthly">Mensual</option>
-              <option value="quarterly">Trimestral</option>
-              <option value="yearly">Anual</option>
-              <option value="one-time">Una vez</option>
-            </TextField>
-            <TextField
-              label="Fecha de inicio"
-              type="date"
-              value={subscriptionFormData.startDate}
-              onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, startDate: e.target.value })}
-              required
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              label="Fecha de fin"
-              type="date"
-              value={subscriptionFormData.endDate}
-              onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, endDate: e.target.value })}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              label="Fecha de renovación"
-              type="date"
-              value={subscriptionFormData.renewalDate}
-              onChange={(e) => setSubscriptionFormData({ ...subscriptionFormData, renewalDate: e.target.value })}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddSubscriptionOpen(false)}>Cancelar</Button>
-          <Button onClick={handleAddSubscription} variant="contained" disabled={!subscriptionFormData.name.trim() || !subscriptionFormData.startDate}>
-            Crear
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Diálogo para agregar pago */}
-      <Dialog 
-        open={addPaymentOpen} 
-        onClose={() => setAddPaymentOpen(false)} 
-        maxWidth="sm" 
-        fullWidth
-        BackdropProps={{
-          sx: {
-            backdropFilter: 'blur(4px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          }
-        }}
-      >
-        <DialogTitle>Crear Pago</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField
-              label="Monto"
-              type="number"
-              value={paymentFormData.amount}
-              onChange={(e) => setPaymentFormData({ ...paymentFormData, amount: e.target.value })}
-              required
-              fullWidth
-            />
-            <TextField
-              label="Moneda"
-              value={paymentFormData.currency}
-              onChange={(e) => setPaymentFormData({ ...paymentFormData, currency: e.target.value })}
-              fullWidth
-            />
-            <TextField
-              select
-              label="Estado"
-              value={paymentFormData.status}
-              onChange={(e) => setPaymentFormData({ ...paymentFormData, status: e.target.value })}
-              fullWidth
-              SelectProps={{ native: true }}
-            >
-              <option value="pending">Pendiente</option>
-              <option value="completed">Completado</option>
-              <option value="failed">Fallido</option>
-              <option value="refunded">Reembolsado</option>
-              <option value="cancelled">Cancelado</option>
-            </TextField>
-            <TextField
-              label="Fecha de pago"
-              type="date"
-              value={paymentFormData.paymentDate}
-              onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentDate: e.target.value })}
-              required
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              label="Fecha de vencimiento"
-              type="date"
-              value={paymentFormData.dueDate}
-              onChange={(e) => setPaymentFormData({ ...paymentFormData, dueDate: e.target.value })}
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              select
-              label="Método de pago"
-              value={paymentFormData.paymentMethod}
-              onChange={(e) => setPaymentFormData({ ...paymentFormData, paymentMethod: e.target.value })}
-              fullWidth
-              SelectProps={{ native: true }}
-            >
-              <option value="credit_card">Tarjeta de crédito</option>
-              <option value="debit_card">Tarjeta de débito</option>
-              <option value="bank_transfer">Transferencia bancaria</option>
-              <option value="cash">Efectivo</option>
-              <option value="check">Cheque</option>
-              <option value="other">Otro</option>
-            </TextField>
-            <TextField
-              label="Referencia"
-              value={paymentFormData.reference}
-              onChange={(e) => setPaymentFormData({ ...paymentFormData, reference: e.target.value })}
-              fullWidth
-            />
-            <TextField
-              label="Descripción"
-              value={paymentFormData.description}
-              onChange={(e) => setPaymentFormData({ ...paymentFormData, description: e.target.value })}
-              multiline
-              rows={3}
-              fullWidth
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddPaymentOpen(false)}>Cancelar</Button>
-          <Button onClick={handleAddPayment} variant="contained" disabled={!paymentFormData.amount.trim() || !paymentFormData.paymentDate}>
-            Crear
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Dialog de Edición de Empresa */}
       <Dialog 
@@ -8755,6 +9084,61 @@ const CompanyDetail: React.FC = () => {
               />
             </Box>
             <TextField
+              label="Correo"
+              type="email"
+              value={editFormData.email}
+              onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            <TextField
+              select
+              label="Origen de lead"
+              value={editFormData.leadSource}
+              onChange={(e) => setEditFormData({ ...editFormData, leadSource: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            >
+              <MenuItem value="">--</MenuItem>
+              <MenuItem value="referido">Referido</MenuItem>
+              <MenuItem value="base">Base</MenuItem>
+              <MenuItem value="entorno">Entorno</MenuItem>
+              <MenuItem value="feria">Feria</MenuItem>
+              <MenuItem value="masivo">Masivo</MenuItem>
+            </TextField>
+            <TextField
+              label="Potencial de Facturación Estimado"
+              type="number"
+              value={editFormData.estimatedRevenue}
+              onChange={(e) => setEditFormData({ ...editFormData, estimatedRevenue: e.target.value })}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">S/</InputAdornment>,
+              }}
+              InputLabelProps={{ shrink: true }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={editFormData.isRecoveredClient}
+                  onChange={(e) => setEditFormData({ ...editFormData, isRecoveredClient: e.target.checked })}
+                />
+              }
+              label="Cliente Recuperado"
+            />
+            <TextField
               label="Razón social"
               value={editFormData.companyname}
               onChange={(e) => setEditFormData({ ...editFormData, companyname: e.target.value })}
@@ -8829,23 +9213,28 @@ const CompanyDetail: React.FC = () => {
                   }
                 }}
               >
-                <MenuItem value="lead_inactivo">-5% Lead Inactivo</MenuItem>
-                <MenuItem value="cliente_perdido">-1% Cliente perdido</MenuItem>
-                <MenuItem value="cierre_perdido">-1% Cierre Perdido</MenuItem>
-                <MenuItem value="lead">0% Lead</MenuItem>
-                <MenuItem value="contacto">10% Contacto</MenuItem>
-                <MenuItem value="reunion_agendada">30% Reunión Agendada</MenuItem>
-                <MenuItem value="reunion_efectiva">40% Reunión Efectiva</MenuItem>
-                <MenuItem value="propuesta_economica">50% Propuesta Económica</MenuItem>
-                <MenuItem value="negociacion">70% Negociación</MenuItem>
-                <MenuItem value="licitacion">75% Licitación</MenuItem>
-                <MenuItem value="licitacion_etapa_final">85% Licitación Etapa Final</MenuItem>
-                <MenuItem value="cierre_ganado">90% Cierre Ganado</MenuItem>
-                <MenuItem value="firma_contrato">95% Firma de Contrato</MenuItem>
-                <MenuItem value="activo">100% Activo</MenuItem>
+                <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
+                <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
+                <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+                <MenuItem value="lead">Lead</MenuItem>
+                <MenuItem value="contacto">Contacto</MenuItem>
+                <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+                <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+                <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
+                <MenuItem value="negociacion">Negociación</MenuItem>
+                <MenuItem value="licitacion">Licitación</MenuItem>
+                <MenuItem value="licitacion_etapa_final">Licitación Etapa Final</MenuItem>
+                <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+                <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
+                <MenuItem value="activo">Activo</MenuItem>
               </TextField>
             </FormControl>
           </Box>
+          {errorMessage && (
+            <Alert severity="error" onClose={() => setErrorMessage('')} sx={{ mx: 2, mb: 2 }}>
+              {errorMessage}
+            </Alert>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseEditDialog} disabled={saving}>

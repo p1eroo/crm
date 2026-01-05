@@ -684,7 +684,7 @@ const Tasks: React.FC = () => {
                   pr: { xs: 2, md: 3 }
                 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
-                    Acciones
+                  Acciones
                   </Box>
                 </TableCell>
               </TableRow>

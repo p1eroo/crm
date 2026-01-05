@@ -58,6 +58,8 @@ import {
   Bolt,
   Remove,
   Edit,
+  ChevronLeft,
+  ChevronRight,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../config/api';
@@ -127,7 +129,7 @@ const Contacts: React.FC = () => {
   const [previewActivities, setPreviewActivities] = useState<any[]>([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 7;
+  const [itemsPerPage, setItemsPerPage] = useState(7);
   const [activeTab] = useState(0);
   const [sortBy, setSortBy] = useState('newest');
   const [formData, setFormData] = useState({
@@ -1042,20 +1044,20 @@ const Contacts: React.FC = () => {
 
   const getStageLabel = (stage: string) => {
     const labels: { [key: string]: string } = {
-      'lead': '0% Lead',
-      'contacto': '10% Contacto',
-      'reunion_agendada': '30% Reunión Agendada',
-      'reunion_efectiva': '40% Reunión Efectiva',
-      'propuesta_economica': '50% Propuesta Económica',
-      'negociacion': '70% Negociación',
-      'licitacion': '75% Licitación',
-      'licitacion_etapa_final': '85% Licitación Etapa Final',
-      'cierre_ganado': '90% Cierre Ganado',
-      'cierre_perdido': '-1% Cierre Perdido',
-      'firma_contrato': '95% Firma de Contrato',
-      'activo': '100% Activo',
-      'cliente_perdido': '-1% Cliente perdido',
-      'lead_inactivo': '-5% Lead Inactivo',
+      'lead': 'Lead',
+      'contacto': 'Contacto',
+      'reunion_agendada': 'Reunión Agendada',
+      'reunion_efectiva': 'Reunión Efectiva',
+      'propuesta_economica': 'Propuesta Económica',
+      'negociacion': 'Negociación',
+      'licitacion': 'Licitación',
+      'licitacion_etapa_final': 'Licitación Etapa Final',
+      'cierre_ganado': 'Cierre Ganado',
+      'cierre_perdido': 'Cierre Perdido',
+      'firma_contrato': 'Firma de Contrato',
+      'activo': 'Activo',
+      'cliente_perdido': 'Cliente perdido',
+      'lead_inactivo': 'Lead Inactivo',
     };
     return labels[stage] || stage;
   };
@@ -1209,16 +1211,29 @@ const Contacts: React.FC = () => {
     }}>
       {/* Header principal - fuera del contenedor */}
       <Box sx={{ pt: 0, pb: 2, mb: 2 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: { xs: 'flex-start', sm: 'flex-start' }, 
+          mb: 1.5,
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: { xs: 2, sm: 0 },
+        }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box>
-              <Typography variant="h4" sx={pageStyles.pageTitle}>
+              <Typography variant="h4" sx={{ ...pageStyles.pageTitle, fontSize: { xs: '1.5rem', sm: '2rem' } }}>
                 Contactos
               </Typography>
             </Box>
           </Box>
-          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-            <FormControl size="small" sx={{ minWidth: 130 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: { xs: 0.75, sm: 1.5 }, 
+            alignItems: 'center',
+            flexWrap: { xs: 'wrap', sm: 'nowrap' },
+            width: { xs: '100%', sm: 'auto' },
+          }}>
+            <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 130 }, order: { xs: 1, sm: 0 } }}>
               <Select
                 id="contacts-sort-select"
                 name="contacts-sort"
@@ -1228,7 +1243,7 @@ const Contacts: React.FC = () => {
                 sx={{
                   borderRadius: 1.5,
                   bgcolor: theme.palette.background.paper,
-                  fontSize: '0.8125rem',
+                  fontSize: { xs: '0.75rem', sm: '0.8125rem' },
                   '& .MuiOutlinedInput-notchedOutline': {
                     borderColor: theme.palette.divider,
                   },
@@ -1246,45 +1261,6 @@ const Contacts: React.FC = () => {
                 <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
               </Select>
             </FormControl>
-            <Tooltip title={importing ? 'Importando...' : 'Importar'}>
-              <IconButton
-                size="small"
-                onClick={handleImportFromExcel}
-                disabled={importing}
-                sx={pageStyles.outlinedIconButton}
-              >
-                <UploadFile sx={{ fontSize: 18 }} />
-              </IconButton>
-            </Tooltip>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
-            <Tooltip title="Exportar">
-              <IconButton
-                size="small"
-                onClick={handleExportToExcel}
-                sx={pageStyles.outlinedIconButton}
-              >
-                <FileDownload sx={{ fontSize: 18 }} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Filtros">
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<FilterList sx={{ fontSize: 16 }} />}
-                onClick={() => {
-                  if (!filterDrawerOpen) {
-                    // Al abrir el drawer, asegurar que todas las secciones estén colapsadas
-                    setStagesExpanded(false);
-                    setOwnerFilterExpanded(false);
-                    setCountryFilterExpanded(false);
-                  }
-                  setFilterDrawerOpen(!filterDrawerOpen);
-                }}
-                sx={pageStyles.filterButton}
-              >
-                Filter
-              </Button>
-            </Tooltip>
             <Tooltip title="Nuevo Contacto">
               <IconButton
                 size="small"
@@ -1296,12 +1272,58 @@ const Contacts: React.FC = () => {
                     bgcolor: taxiMonterricoColors.greenDark,
                   },
                   borderRadius: 1.5,
-                  p: 0.875,
+                  p: { xs: 0.75, sm: 0.875 },
                   boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
+                  order: { xs: 2, sm: 0 },
                 }}
               >
-                <Add sx={{ fontSize: 18 }} />
+                <Add sx={{ fontSize: { xs: 16, sm: 18 } }} />
               </IconButton>
+            </Tooltip>
+            <Box sx={{ display: 'flex', gap: { xs: 0.5, sm: 0.75 }, order: { xs: 3, sm: 0 } }}>
+              <Tooltip title={importing ? 'Importando...' : 'Importar'}>
+                <IconButton
+                  size="small"
+                  onClick={handleImportFromExcel}
+                  disabled={importing}
+                  sx={{ ...pageStyles.outlinedIconButton, p: { xs: 0.75, sm: 0.875 } }}
+                >
+                  <UploadFile sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                </IconButton>
+              </Tooltip>
+              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
+              <Tooltip title="Exportar">
+                <IconButton
+                  size="small"
+                  onClick={handleExportToExcel}
+                  sx={{ ...pageStyles.outlinedIconButton, p: { xs: 0.75, sm: 0.875 } }}
+                >
+                  <FileDownload sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                </IconButton>
+              </Tooltip>
+            </Box>
+            <Tooltip title="Filtros">
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<FilterList sx={{ fontSize: { xs: 14, sm: 16 } }} />}
+                onClick={() => {
+                  if (!filterDrawerOpen) {
+                    setStagesExpanded(false);
+                    setOwnerFilterExpanded(false);
+                    setCountryFilterExpanded(false);
+                  }
+                  setFilterDrawerOpen(!filterDrawerOpen);
+                }}
+                sx={{ 
+                  ...pageStyles.filterButton,
+                  fontSize: { xs: '0.75rem', sm: '0.8125rem' },
+                  px: { xs: 1, sm: 1.5 },
+                  order: { xs: 4, sm: 0 },
+                }}
+              >
+                Filter
+              </Button>
             </Tooltip>
           </Box>
         </Box>
@@ -1310,22 +1332,20 @@ const Contacts: React.FC = () => {
       {/* Contenedor principal con layout flex para tabla y panel de filtros */}
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', md: 'row' } }}>
         {/* Contenido principal (tabla completa con header y filas) */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, width: '100%', overflow: { xs: 'visible', md: 'visible' } }}>
           {/* Header de la tabla */}
           <Box
             component="div"
             sx={{
               bgcolor: theme.palette.mode === 'dark' ? '#152030' : theme.palette.background.paper,
-              borderRadius: '8px 8px 0 0',
-              overflow: 'hidden',
-              display: 'grid',
-              gridTemplateColumns: { xs: 'repeat(6, minmax(0, 1fr))', md: '1.5fr 1fr 0.9fr 0.7fr 1.2fr 0.7fr' },
-              columnGap: { xs: 1, md: 1.5 },
-              minWidth: { xs: 800, md: 'auto' },
-              maxWidth: '100%',
+              borderRadius: { xs: '8px', md: '8px 8px 0 0' },
+              overflow: { xs: 'visible', md: 'hidden' },
+              display: { xs: 'none', sm: 'grid' },
+              gridTemplateColumns: { sm: 'repeat(6, minmax(0, 1fr))', md: '1.5fr 1fr 0.9fr 0.7fr 1.2fr 0.7fr' },
+              columnGap: { sm: 1, md: 1.5 },
               width: '100%',
-              px: { xs: 1, md: 1.5 },
-              py: { xs: 1.5, md: 2 },
+              px: { sm: 1, md: 1.5 },
+              py: { sm: 1.5, md: 2 },
               mb: 2,
               boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
             }}
@@ -1365,33 +1385,152 @@ const Contacts: React.FC = () => {
                 bgcolor: theme.palette.mode === 'dark' ? '#152030' : theme.palette.background.paper,
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
-                display: 'grid',
-                gridTemplateColumns: { xs: 'repeat(6, minmax(0, 1fr))', md: '1.5fr 1fr 0.9fr 0.7fr 1.2fr 0.7fr' },
-                columnGap: { xs: 1, md: 1.5 },
-                minWidth: { xs: 800, md: 'auto' },
-                maxWidth: '100%',
+                // Vista móvil: card layout
+                display: { xs: 'flex', sm: 'grid' },
+                flexDirection: { xs: 'column', sm: 'row' },
+                gridTemplateColumns: { sm: 'repeat(6, minmax(0, 1fr))', md: '1.5fr 1fr 0.9fr 0.7fr 1.2fr 0.7fr' },
+                columnGap: { sm: 1, md: 1.5 },
                 width: '100%',
-                borderRadius: 0,
-                border: 'none',
-                boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
-                px: { xs: 1, md: 1.5 },
-                py: { xs: 1, md: 1.25 },
+                borderRadius: { xs: 2, sm: 0 },
+                border: { xs: `1px solid ${theme.palette.divider}`, sm: 'none' },
+                boxShadow: { 
+                  xs: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
+                  sm: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
+                },
+                px: { xs: 2, sm: 1, md: 1.5 },
+                py: { xs: 2, sm: 1, md: 1.25 },
+                gap: { xs: 1.5, sm: 0 },
                 '&:hover': {
                   bgcolor: theme.palette.mode === 'dark' ? '#1A2740' : theme.palette.background.paper,
                   boxShadow: theme.palette.mode === 'dark' ? '0 2px 6px rgba(0,0,0,0.3)' : '0 2px 6px rgba(0,0,0,0.1)',
-                  transform: 'translateY(-1px)',
+                  transform: { xs: 'none', sm: 'translateY(-1px)' },
                 },
               }}
             >
-                <Box sx={{ py: { xs: 1, md: 1.25 }, px: { xs: 0.75, md: 1 }, display: 'flex', alignItems: 'center' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1, md: 1.5 }, width: '100%' }}>
+                {/* Vista móvil: Card con información principal */}
+                <Box sx={{ display: { xs: 'flex', sm: 'none' }, flexDirection: 'column', width: '100%', gap: 1.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, width: '100%', pb: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
                     <Avatar
                       src={contactLogo}
                       sx={{
-                        width: { xs: 32, md: 40 },
-                        height: { xs: 32, md: 40 },
+                        width: 48,
+                        height: 48,
                         bgcolor: contactLogo ? 'transparent' : taxiMonterricoColors.green,
-                        fontSize: { xs: '0.75rem', md: '0.875rem' },
+                        fontSize: '1rem',
+                        fontWeight: 600,
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {!contactLogo && getInitials(contact.firstName, contact.lastName)}
+                    </Avatar>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography 
+                        variant="body1" 
+                        sx={{ 
+                          fontWeight: 600, 
+                          color: theme.palette.text.primary,
+                          fontSize: '0.9375rem',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          mb: 0.25,
+                        }}
+                      >
+                        {contact.firstName} {contact.lastName}
+                      </Typography>
+                      <Typography 
+                        variant="caption" 
+                        sx={{ 
+                          color: theme.palette.text.secondary,
+                          fontSize: '0.75rem',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          display: 'block',
+                        }}
+                      >
+                        {contact.jobTitle || '--'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpen(contact);
+                        }}
+                        sx={{ p: 0.75 }}
+                      >
+                        <Edit sx={{ fontSize: 18 }} />
+                      </IconButton>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePreview(contact);
+                        }}
+                        sx={{ p: 0.75 }}
+                      >
+                        <Visibility sx={{ fontSize: 18 }} />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, width: '100%' }}>
+                    {contact.Company?.name && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Business sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
+                        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontSize: '0.8125rem' }}>
+                          {contact.Company.name}
+                        </Typography>
+                      </Box>
+                    )}
+                    {(contact.phone || contact.mobile) && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Phone sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
+                        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontSize: '0.8125rem' }}>
+                          {contact.phone || contact.mobile}
+                        </Typography>
+                      </Box>
+                    )}
+                    {contact.country && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <LocationOn sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
+                        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontSize: '0.8125rem' }}>
+                          {contact.country}
+                        </Typography>
+                      </Box>
+                    )}
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Chip
+                        label={getStageLabel(contact.lifecycleStage || 'lead')}
+                        size="small"
+                        color={getStageColor(contact.lifecycleStage || 'lead')}
+                        sx={{ 
+                          fontWeight: 500,
+                          fontSize: '0.6875rem',
+                          height: 20,
+                        }}
+                      />
+                    </Box>
+                  </Box>
+                </Box>
+
+                {/* Vista desktop: Grid layout */}
+                <Box sx={{ 
+                  display: { xs: 'none', sm: 'flex' },
+                  py: { sm: 1, md: 1.25 }, 
+                  px: { sm: 0.75, md: 1 }, 
+                  alignItems: 'center' 
+                }}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { sm: 1, md: 1.5 }, width: '100%' }}>
+                    <Avatar
+                      src={contactLogo}
+                      sx={{
+                        width: { sm: 32, md: 40 },
+                        height: { sm: 32, md: 40 },
+                        bgcolor: contactLogo ? 'transparent' : taxiMonterricoColors.green,
+                        fontSize: { sm: '0.75rem', md: '0.875rem' },
                         fontWeight: 600,
                         boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
                         flexShrink: 0,
@@ -1405,7 +1544,7 @@ const Contacts: React.FC = () => {
                         sx={{ 
                           fontWeight: 500, 
                           color: theme.palette.text.primary,
-                          fontSize: { xs: '0.6875rem', md: '0.75rem' },
+                          fontSize: { sm: '0.6875rem', md: '0.75rem' },
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
@@ -1418,7 +1557,7 @@ const Contacts: React.FC = () => {
                         variant="caption" 
                         sx={{ 
                           color: theme.palette.text.secondary,
-                          fontSize: { xs: '0.5625rem', md: '0.625rem' },
+                          fontSize: { sm: '0.5625rem', md: '0.625rem' },
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
@@ -1430,13 +1569,21 @@ const Contacts: React.FC = () => {
                     </Box>
                   </Box>
                 </Box>
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                <Box sx={{ 
+                  display: { xs: 'none', sm: 'flex' },
+                  px: { sm: 0.75, md: 1 }, 
+                  py: { sm: 1, md: 1.25 }, 
+                  alignItems: 'center', 
+                  justifyContent: 'flex-start', 
+                  minWidth: 0, 
+                  overflow: 'hidden' 
+                }}>
                   {contact.Company?.name ? (
                     <Typography 
                       variant="body2" 
                       sx={{ 
                         color: theme.palette.text.primary,
-                        fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                        fontSize: { sm: '0.625rem', md: '0.6875rem' },
                         fontWeight: 400,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -1447,48 +1594,72 @@ const Contacts: React.FC = () => {
                       {contact.Company.name}
                     </Typography>
                   ) : (
-                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.625rem', md: '0.6875rem' }, fontWeight: 400 }}>
+                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { sm: '0.625rem', md: '0.6875rem' }, fontWeight: 400 }}>
                       --
                     </Typography>
                   )}
                 </Box>
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                <Box sx={{ 
+                  display: { xs: 'none', sm: 'flex' },
+                  px: { sm: 0.75, md: 1 }, 
+                  py: { sm: 1, md: 1.25 }, 
+                  alignItems: 'center', 
+                  justifyContent: 'flex-start' 
+                }}>
                   <Typography 
                     variant="body2" 
                     sx={{ 
                       color: theme.palette.text.primary,
-                      fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                      fontSize: { sm: '0.625rem', md: '0.6875rem' },
                       fontWeight: 400,
                     }}
                   >
                     {contact.phone || contact.mobile || '--'}
                   </Typography>
                 </Box>
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                <Box sx={{ 
+                  display: { xs: 'none', sm: 'flex' },
+                  px: { sm: 0.75, md: 1 }, 
+                  py: { sm: 1, md: 1.25 }, 
+                  alignItems: 'center', 
+                  justifyContent: 'flex-start' 
+                }}>
                   <Typography 
                     variant="body2" 
                     sx={{ 
                       color: theme.palette.text.primary,
-                      fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                      fontSize: { sm: '0.625rem', md: '0.6875rem' },
                       fontWeight: 400,
                     }}
                   >
                     {contact.country || '--'}
                   </Typography>
                 </Box>
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                <Box sx={{ 
+                  display: { xs: 'none', sm: 'flex' },
+                  px: { sm: 0.75, md: 1 }, 
+                  py: { sm: 1, md: 1.25 }, 
+                  alignItems: 'center', 
+                  justifyContent: 'flex-start' 
+                }}>
                   <Chip
                     label={getStageLabel(contact.lifecycleStage || 'lead')}
                     size="small"
                     color={getStageColor(contact.lifecycleStage || 'lead')}
                     sx={{ 
                       fontWeight: 500,
-                      fontSize: { xs: '0.5625rem', md: '0.625rem' },
-                      height: { xs: 16, md: 18 },
+                      fontSize: { sm: '0.5625rem', md: '0.625rem' },
+                      height: { sm: 16, md: 18 },
                     }}
                   />
                 </Box>
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                <Box sx={{ 
+                  display: { xs: 'none', sm: 'flex' },
+                  px: { sm: 0.75, md: 1 }, 
+                  py: { sm: 1, md: 1.25 }, 
+                  alignItems: 'center', 
+                  justifyContent: 'flex-start' 
+                }}>
                   <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
                     <Tooltip title="Editar">
                       <IconButton
@@ -1499,7 +1670,7 @@ const Contacts: React.FC = () => {
                         }}
                         sx={pageStyles.previewIconButton}
                       >
-                        <Edit sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                        <Edit sx={{ fontSize: { sm: '1rem', md: '1.25rem' } }} />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="Vista previa">
@@ -1511,7 +1682,7 @@ const Contacts: React.FC = () => {
                         }}
                         sx={pageStyles.previewIconButton}
                       >
-                        <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                        <Visibility sx={{ fontSize: { sm: '1rem', md: '1.25rem' } }} />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="Eliminar">
@@ -1523,7 +1694,7 @@ const Contacts: React.FC = () => {
                         }}
                         sx={pageStyles.deleteIcon}
                       >
-                        <Delete sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                        <Delete sx={{ fontSize: { sm: '1rem', md: '1.25rem' } }} />
                       </IconButton>
                     </Tooltip>
                   </Box>
@@ -1546,25 +1717,92 @@ const Contacts: React.FC = () => {
           </Box>
 
           {/* Paginación */}
-          {totalPages > 1 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, mb: 2 }}>
-              <Pagination
-                count={totalPages}
-                page={currentPage}
-                onChange={(event, value) => setCurrentPage(value)}
-                color="primary"
-                sx={pageStyles.pagination}
-              />
-            </Box>
-          )}
-
-          {/* Información de paginación */}
           {filteredContacts.length > 0 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 1, mb: 2 }}>
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem' }}>
-                Mostrando {startIndex + 1}-{Math.min(endIndex, filteredContacts.length)} de {filteredContacts.length} contactos
-              </Typography>
-          </Box>
+            <Box
+              sx={{
+                bgcolor: theme.palette.background.paper,
+                borderRadius: '0 0 8px 8px',
+                boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
+                px: { xs: 1, md: 2 },
+                py: { xs: 1, md: 1.5 },
+                mt: 2,
+                mb: 2,
+                display: 'flex',
+                flexDirection: { xs: 'column', md: 'row' },
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: { xs: 1.5, md: 2 },
+              }}
+            >
+              {/* Rows per page selector */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
+                  Filas por página:
+                </Typography>
+                <Select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  size="small"
+                  sx={{
+                    fontSize: '0.8125rem',
+                    height: '32px',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: theme.palette.divider,
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: theme.palette.text.secondary,
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: taxiMonterricoColors.green,
+                    },
+                  }}
+                >
+                  <MenuItem value={5}>5</MenuItem>
+                  <MenuItem value={7}>7</MenuItem>
+                  <MenuItem value={10}>10</MenuItem>
+                  <MenuItem value={20}>20</MenuItem>
+                  <MenuItem value={50}>50</MenuItem>
+                </Select>
+              </Box>
+
+              {/* Información de paginación y navegación */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
+                  {startIndex + 1}-{Math.min(endIndex, filteredContacts.length)} de {filteredContacts.length}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <IconButton
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    size="small"
+                    sx={{
+                      color: currentPage === 1 ? theme.palette.action.disabled : theme.palette.text.secondary,
+                      '&:hover': {
+                        bgcolor: currentPage === 1 ? 'transparent' : theme.palette.action.hover,
+                      },
+                    }}
+                  >
+                    <ChevronLeft />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    size="small"
+                    sx={{
+                      color: currentPage === totalPages ? theme.palette.action.disabled : theme.palette.text.secondary,
+                      '&:hover': {
+                        bgcolor: currentPage === totalPages ? 'transparent' : theme.palette.action.hover,
+                      },
+                    }}
+                  >
+                    <ChevronRight />
+                  </IconButton>
+                </Box>
+              </Box>
+            </Box>
           )}
         </Box>
 
@@ -2471,20 +2709,20 @@ const Contacts: React.FC = () => {
                   }
                 }}
               >
-                <MenuItem value="lead_inactivo">-5% Lead Inactivo</MenuItem>
-                <MenuItem value="cliente_perdido">-1% Cliente perdido</MenuItem>
-                <MenuItem value="cierre_perdido">-1% Cierre Perdido</MenuItem>
-                <MenuItem value="lead">0% Lead</MenuItem>
-                <MenuItem value="contacto">10% Contacto</MenuItem>
-                <MenuItem value="reunion_agendada">30% Reunión Agendada</MenuItem>
-                <MenuItem value="reunion_efectiva">40% Reunión Efectiva</MenuItem>
-                <MenuItem value="propuesta_economica">50% Propuesta Económica</MenuItem>
-                <MenuItem value="negociacion">70% Negociación</MenuItem>
-                <MenuItem value="licitacion">75% Licitación</MenuItem>
-                <MenuItem value="licitacion_etapa_final">85% Licitación Etapa Final</MenuItem>
-                <MenuItem value="cierre_ganado">90% Cierre Ganado</MenuItem>
-                <MenuItem value="firma_contrato">95% Firma de Contrato</MenuItem>
-                <MenuItem value="activo">100% Activo</MenuItem>
+                <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
+                <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
+                <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+                <MenuItem value="lead">Lead</MenuItem>
+                <MenuItem value="contacto">Contacto</MenuItem>
+                <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+                <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+                <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
+                <MenuItem value="negociacion">Negociación</MenuItem>
+                <MenuItem value="licitacion">Licitación</MenuItem>
+                <MenuItem value="licitacion_etapa_final">Licitación Etapa Final</MenuItem>
+                <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+                <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
+                <MenuItem value="activo">Activo</MenuItem>
               </TextField>
             </Box>
           </Box>
@@ -3489,20 +3727,20 @@ const Contacts: React.FC = () => {
               onChange={(e) => setCompanyFormData({ ...companyFormData, lifecycleStage: e.target.value })}
               InputLabelProps={{ shrink: true }}
             >
-              <MenuItem value="lead_inactivo">-5% Lead Inactivo</MenuItem>
-              <MenuItem value="cliente_perdido">-1% Cliente perdido</MenuItem>
-              <MenuItem value="cierre_perdido">-1% Cierre Perdido</MenuItem>
-              <MenuItem value="lead">0% Lead</MenuItem>
-              <MenuItem value="contacto">10% Contacto</MenuItem>
-              <MenuItem value="reunion_agendada">30% Reunión Agendada</MenuItem>
-              <MenuItem value="reunion_efectiva">40% Reunión Efectiva</MenuItem>
-              <MenuItem value="propuesta_economica">50% Propuesta Económica</MenuItem>
-              <MenuItem value="negociacion">70% Negociación</MenuItem>
-              <MenuItem value="licitacion">75% Licitación</MenuItem>
-              <MenuItem value="licitacion_etapa_final">85% Licitación Etapa Final</MenuItem>
-              <MenuItem value="cierre_ganado">90% Cierre Ganado</MenuItem>
-              <MenuItem value="firma_contrato">95% Firma de Contrato</MenuItem>
-              <MenuItem value="activo">100% Activo</MenuItem>
+              <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
+              <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
+              <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+              <MenuItem value="lead">Lead</MenuItem>
+              <MenuItem value="contacto">Contacto</MenuItem>
+              <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+              <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+              <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
+              <MenuItem value="negociacion">Negociación</MenuItem>
+              <MenuItem value="licitacion">Licitación</MenuItem>
+              <MenuItem value="licitacion_etapa_final">Licitación Etapa Final</MenuItem>
+              <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+              <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
+              <MenuItem value="activo">Activo</MenuItem>
             </TextField>
           </Box>
         </DialogContent>

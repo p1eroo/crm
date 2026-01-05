@@ -21,13 +21,15 @@ import {
   InputAdornment,
   Menu,
   useTheme,
+  useMediaQuery,
   Collapse,
   Pagination,
   Snackbar,
   Alert,
   LinearProgress,
+  Checkbox,
 } from '@mui/material';
-import { Add, Delete, Search, Visibility, UploadFile, FileDownload, Warning, CheckCircle, FilterList, Close, ExpandMore, Remove, Bolt, Edit, Business } from '@mui/icons-material';
+import { Add, Delete, Search, Visibility, UploadFile, FileDownload, Warning, CheckCircle, FilterList, Close, ExpandMore, Remove, Bolt, Edit, Business, ChevronLeft, ChevronRight, MoreVert } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
@@ -49,6 +51,8 @@ interface Company {
   city?: string;
   state?: string;
   country?: string;
+  estimatedRevenue?: number;
+  isRecoveredClient?: boolean;
   lifecycleStage: string;
   createdAt?: string;
   updatedAt?: string;
@@ -60,6 +64,7 @@ const Companies: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const theme = useTheme();
+  const isLargeScreen = useMediaQuery('(min-width: 1400px)');
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -77,11 +82,13 @@ const Companies: React.FC = () => {
     email: '',
     leadSource: '',
     lifecycleStage: 'lead',
+    estimatedRevenue: '',
     ruc: '',
     address: '',
     city: '',
     state: '',
     country: '',
+    isRecoveredClient: false,
   });
   const [loadingRuc, setLoadingRuc] = useState(false);
   const [rucError, setRucError] = useState('');
@@ -95,6 +102,8 @@ const Companies: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<{ [key: number]: HTMLElement | null }>({});
   const [updatingStatus, setUpdatingStatus] = useState<{ [key: number]: boolean }>({});
+  const [actionsMenuAnchor, setActionsMenuAnchor] = useState<{ [key: number]: HTMLElement | null }>({});
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [importing, setImporting] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [importProgressOpen, setImportProgressOpen] = useState(false);
@@ -115,7 +124,7 @@ const Companies: React.FC = () => {
   const [ownerFilterExpanded, setOwnerFilterExpanded] = useState(false);
   const [countryFilterExpanded, setCountryFilterExpanded] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 7;
+  const [itemsPerPage, setItemsPerPage] = useState(7);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Función para obtener iniciales
@@ -352,6 +361,7 @@ const Companies: React.FC = () => {
   const handleExportToExcel = () => {
     // Preparar los datos para exportar
     const exportData = companies.map((company) => ({
+      'C.R.': (company as any).isRecoveredClient ? 'Sí' : 'No',
       'Nombre': company.name || '--',
       'Dominio': company.domain || '--',
       'Razón social': company.companyname || '--',
@@ -365,6 +375,9 @@ const Companies: React.FC = () => {
       'Estado/Provincia': company.state || '--',
       'País': company.country || '--',
       'Etapa': company.lifecycleStage || '--',
+      'Potencial de Facturación Estimado': company.estimatedRevenue 
+        ? `S/ ${Number(company.estimatedRevenue).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+        : '--',
       'Estado': company.lifecycleStage === 'cierre_ganado' ? 'Activo' : 'Inactivo',
       'Fecha de Creación': (company as any).createdAt ? new Date((company as any).createdAt).toLocaleDateString('es-ES') : '--',
     }));
@@ -375,6 +388,7 @@ const Companies: React.FC = () => {
 
     // Ajustar el ancho de las columnas
     const colWidths = [
+      { wch: 8 }, // C.R.
       { wch: 30 }, // Nombre
       { wch: 25 }, // Dominio
       { wch: 20 }, // Razón social
@@ -388,6 +402,7 @@ const Companies: React.FC = () => {
       { wch: 18 }, // Estado/Provincia
       { wch: 15 }, // País
       { wch: 15 }, // Etapa
+      { wch: 30 }, // Potencial de Facturación Estimado
       { wch: 12 }, // Estado
       { wch: 18 }, // Fecha de Creación
     ];
@@ -478,6 +493,9 @@ const Companies: React.FC = () => {
         const propietarioName = (row['Propietario'] || '').toString().trim();
         const ownerId = propietarioName ? findUserByName(propietarioName) : null;
 
+        const crValue = (row['C.R.'] || row['Cliente Recuperado'] || '').toString().trim().toLowerCase();
+        const isRecoveredClient = crValue === 'sí' || crValue === 'si' || crValue === 'yes' || crValue === 'true' || crValue === '1' || crValue === 'x' || crValue === '✓';
+
         return {
           name: (row['Nombre'] || '').toString().trim() || 'Sin nombre',
           domain: (row['Dominio'] || '').toString().trim() || undefined,
@@ -491,6 +509,10 @@ const Companies: React.FC = () => {
           state: (row['Estado/Provincia'] || '').toString().trim() || undefined,
           country: (row['País'] || '').toString().trim() || undefined,
           lifecycleStage: (row['Etapa'] || 'lead').toString().trim() || 'lead',
+          estimatedRevenue: row['Potencial de Facturación Estimado'] 
+            ? parseFloat((row['Potencial de Facturación Estimado'] || '').toString().replace(/[^\d.-]/g, '')) || undefined
+            : undefined,
+          isRecoveredClient: isRecoveredClient,
           ownerId: ownerId || undefined,
         };
       }).filter(company => company.name !== 'Sin nombre'); // Filtrar filas vacías
@@ -554,11 +576,13 @@ const Companies: React.FC = () => {
         email: (company as any).email || '',
         leadSource: (company as any).leadSource || '',
         lifecycleStage: company.lifecycleStage,
+        estimatedRevenue: (company as any).estimatedRevenue || '',
         ruc: company.ruc || '',
         address: company.address || '',
         city: company.city || '',
         state: company.state || '',
         country: company.country || '',
+        isRecoveredClient: (company as any).isRecoveredClient || false,
       });
     } else {
       setEditingCompany(null);
@@ -573,17 +597,31 @@ const Companies: React.FC = () => {
         email: '',
         leadSource: '',
         lifecycleStage: 'lead',
+        estimatedRevenue: '',
         ruc: '',
         address: '',
         city: '',
         state: '',
         country: '',
+        isRecoveredClient: false,
       });
     }
     setRucError('');
     setRucInfo(null);
     setRucDebts(null);
     setOpen(true);
+  };
+
+  const handleToggleRecoveredClient = async (companyId: number, currentValue: boolean, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await api.put(`/companies/${companyId}`, {
+        isRecoveredClient: !currentValue,
+      });
+      fetchCompanies();
+    } catch (error) {
+      console.error('Error updating recovered client status:', error);
+    }
   };
 
   const handleSearchRuc = async () => {
@@ -948,6 +986,17 @@ const Companies: React.FC = () => {
     setStatusMenuAnchor({ ...statusMenuAnchor, [companyId]: null });
   };
 
+  const handleActionsMenuOpen = (event: React.MouseEvent<HTMLElement>, company: Company) => {
+    event.stopPropagation();
+    setActionsMenuAnchor({ ...actionsMenuAnchor, [company.id]: event.currentTarget });
+    setSelectedCompany(company);
+  };
+
+  const handleActionsMenuClose = (companyId: number) => {
+    setActionsMenuAnchor({ ...actionsMenuAnchor, [companyId]: null });
+    setSelectedCompany(null);
+  };
+
   const handleStatusChange = async (event: React.MouseEvent<HTMLElement>, companyId: number, newStage: string) => {
     event.stopPropagation();
     event.preventDefault();
@@ -991,20 +1040,20 @@ const Companies: React.FC = () => {
 
   const getStageLabel = (stage: string) => {
     const labels: { [key: string]: string } = {
-      'lead': '0% Lead',
-      'contacto': '10% Contacto',
-      'reunion_agendada': '30% Reunión Agendada',
-      'reunion_efectiva': '40% Reunión Efectiva',
-      'propuesta_economica': '50% Propuesta Económica',
-      'negociacion': '70% Negociación',
-      'licitacion': '75% Licitación',
-      'licitacion_etapa_final': '85% Licitación Etapa Final',
-      'cierre_ganado': '90% Cierre Ganado',
-      'cierre_perdido': '-1% Cierre Perdido',
-      'firma_contrato': '95% Firma de Contrato',
-      'activo': '100% Activo',
-      'cliente_perdido': '-1% Cliente perdido',
-      'lead_inactivo': '-5% Lead Inactivo',
+      'lead': 'Lead',
+      'contacto': 'Contacto',
+      'reunion_agendada': 'Reunión Agendada',
+      'reunion_efectiva': 'Reunión Efectiva',
+      'propuesta_economica': 'Propuesta Económica',
+      'negociacion': 'Negociación',
+      'licitacion': 'Licitación',
+      'licitacion_etapa_final': 'Licitación Etapa Final',
+      'cierre_ganado': 'Cierre Ganado',
+      'cierre_perdido': 'Cierre Perdido',
+      'firma_contrato': 'Firma de Contrato',
+      'activo': 'Activo',
+      'cliente_perdido': 'Cliente perdido',
+      'lead_inactivo': 'Lead Inactivo',
     };
     return labels[stage] || stage;
   };
@@ -1014,20 +1063,20 @@ const Companies: React.FC = () => {
   };
 
   const stageOptions = [
-    { value: 'lead_inactivo', label: '-5% Lead Inactivo' },
-    { value: 'cliente_perdido', label: '-1% Cliente perdido' },
-    { value: 'cierre_perdido', label: '-1% Cierre Perdido' },
-    { value: 'lead', label: '0% Lead' },
-    { value: 'contacto', label: '10% Contacto' },
-    { value: 'reunion_agendada', label: '30% Reunión Agendada' },
-    { value: 'reunion_efectiva', label: '40% Reunión Efectiva' },
-    { value: 'propuesta_economica', label: '50% Propuesta Económica' },
-    { value: 'negociacion', label: '70% Negociación' },
-    { value: 'licitacion', label: '75% Licitación' },
-    { value: 'licitacion_etapa_final', label: '85% Licitación Etapa Final' },
-    { value: 'cierre_ganado', label: '90% Cierre Ganado' },
-    { value: 'firma_contrato', label: '95% Firma de Contrato' },
-    { value: 'activo', label: '100% Activo' },
+    { value: 'lead_inactivo', label: 'Lead Inactivo' },
+    { value: 'cliente_perdido', label: 'Cliente perdido' },
+    { value: 'cierre_perdido', label: 'Cierre Perdido' },
+    { value: 'lead', label: 'Lead' },
+    { value: 'contacto', label: 'Contacto' },
+    { value: 'reunion_agendada', label: 'Reunión Agendada' },
+    { value: 'reunion_efectiva', label: 'Reunión Efectiva' },
+    { value: 'propuesta_economica', label: 'Propuesta Económica' },
+    { value: 'negociacion', label: 'Negociación' },
+    { value: 'licitacion', label: 'Licitación' },
+    { value: 'licitacion_etapa_final', label: 'Licitación Etapa Final' },
+    { value: 'cierre_ganado', label: 'Cierre Ganado' },
+    { value: 'firma_contrato', label: 'Firma de Contrato' },
+    { value: 'activo', label: 'Activo' },
   ];
 
   // Orden de las etapas según porcentaje
@@ -1247,12 +1296,12 @@ const Companies: React.FC = () => {
           <Box
             component="div"
           sx={{ 
-              bgcolor: theme.palette.background.paper,
+              bgcolor: theme.palette.mode === 'dark' ? '#1a1f2e' : '#f4f6f8',
               borderRadius: '8px 8px 0 0',
               overflow: 'hidden',
               display: 'grid',
-              gridTemplateColumns: { xs: 'repeat(9, minmax(0, 1fr))', md: '1.5fr 1fr 1fr 1fr 0.9fr 1fr 1fr 1.2fr 0.7fr' },
-              columnGap: { xs: 1, md: 1.5 },
+              gridTemplateColumns: { xs: 'repeat(11, minmax(0, 1fr))', md: '0.25fr 1.2fr 1.1fr 0.9fr 0.9fr 0.8fr 0.9fr 0.9fr 0.8fr 0.9fr 0.7fr' },
+              columnGap: { xs: 1, md: 2 },
               minWidth: { xs: 800, md: 'auto' },
             maxWidth: '100%',
               width: '100%',
@@ -1262,29 +1311,84 @@ const Companies: React.FC = () => {
               boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
             }}
           >
-            <Box sx={pageStyles.tableHeaderCell}>
+            <Box sx={{ 
+              ...pageStyles.tableHeaderCell, 
+              px: 0,
+              justifyContent: 'flex-start'
+            }}>
+                  C.R.
+            </Box>
+            <Box sx={{ 
+              ...pageStyles.tableHeaderCell, 
+              px: { xs: 0.75, md: 1 },
+              justifyContent: 'flex-start'
+            }}>
                   Nombre de Empresa
             </Box>
-            <Box sx={pageStyles.tableHeaderCell}>
+            <Box sx={{ 
+              ...pageStyles.tableHeaderCell, 
+              px: { xs: 0.75, md: 1 },
+              justifyContent: 'flex-start'
+            }}>
                   Última Actividad
             </Box>
-            <Box sx={pageStyles.tableHeaderCell}>
+            <Box sx={{ 
+              ...pageStyles.tableHeaderCell, 
+              px: { xs: 0.75, md: 1 },
+              justifyContent: 'flex-start'
+            }}>
                   Propietario
             </Box>
-            <Box sx={pageStyles.tableHeaderCell}>
+            <Box sx={{ 
+              ...pageStyles.tableHeaderCell, 
+              px: { xs: 0.75, md: 1 },
+              justifyContent: 'flex-start'
+            }}>
                   Razón Social
             </Box>
-            <Box sx={pageStyles.tableHeaderCell}>
+            <Box sx={{ 
+              ...pageStyles.tableHeaderCell, 
+              px: { xs: 0.75, md: 1 },
+              justifyContent: 'flex-start'
+            }}>
                   Teléfono
             </Box>
-            <Box sx={pageStyles.tableHeaderCell}>
-                  Correo
+            <Box sx={{ 
+              ...pageStyles.tableHeaderCell, 
+              px: { xs: 0.75, md: 1 },
+              justifyContent: 'flex-start'
+            }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontWeight: 600,
+                  color: theme.palette.text.primary,
+                  fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                }}
+              >
+                Correo
+              </Typography>
             </Box>
-            <Box sx={pageStyles.tableHeaderCell}>
+            <Box sx={{ 
+              ...pageStyles.tableHeaderCell, 
+              px: { xs: 0.75, md: 1 },
+              justifyContent: 'flex-start'
+            }}>
                   Origen de lead
             </Box>
-            <Box sx={pageStyles.tableHeaderCell}>
+            <Box sx={{ 
+              ...pageStyles.tableHeaderCell, 
+              px: { xs: 0.75, md: 1 },
+              justifyContent: 'flex-start'
+            }}>
                   Etapa
+            </Box>
+            <Box sx={{ 
+              ...pageStyles.tableHeaderCell, 
+              px: { xs: 0.75, md: 1 },
+              justifyContent: 'flex-start'
+            }}>
+                  Potencial de Facturación Estimado
             </Box>
             <Box sx={{ 
               ...pageStyles.tableHeaderCell, 
@@ -1307,16 +1411,17 @@ const Companies: React.FC = () => {
                     cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 display: 'grid',
-                gridTemplateColumns: { xs: 'repeat(9, minmax(0, 1fr))', md: '1.5fr 1fr 1fr 1fr 0.9fr 1fr 1fr 1.2fr 0.7fr' },
-                columnGap: { xs: 1, md: 1.5 },
+                gridTemplateColumns: { xs: 'repeat(11, minmax(0, 1fr))', md: '0.25fr 1.2fr 1.1fr 0.9fr 0.9fr 0.8fr 0.9fr 0.9fr 0.8fr 0.9fr 0.7fr' },
+                columnGap: { xs: 1, md: 2 },
                 minWidth: { xs: 800, md: 'auto' },
                 maxWidth: '100%',
                 width: '100%',
+                overflow: 'hidden',
                 borderRadius: 0,
                 border: 'none',
                 boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
                 px: { xs: 1, md: 1.5 },
-                py: { xs: 1, md: 1.25 },
+                py: { xs: 0.5, md: 0.75 },
                 '&:hover': {
                   bgcolor: theme.palette.background.paper,
                   boxShadow: theme.palette.mode === 'dark' ? '0 2px 6px rgba(0,0,0,0.3)' : '0 2px 6px rgba(0,0,0,0.1)',
@@ -1324,7 +1429,24 @@ const Companies: React.FC = () => {
                 },
               }}
             >
-                <Box sx={{ py: { xs: 1, md: 1.25 }, px: { xs: 0.75, md: 1 }, display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ px: 0, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    checked={(company as any).isRecoveredClient || false}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      handleToggleRecoveredClient(company.id, (company as any).isRecoveredClient || false, e as any);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    sx={{
+                      color: taxiMonterricoColors.green,
+                      '&.Mui-checked': {
+                        color: taxiMonterricoColors.green,
+                      },
+                      padding: { xs: 0.25, md: 0.5 },
+                    }}
+                  />
+                </Box>
+                <Box sx={{ py: { xs: 0.5, md: 0.75 }, px: { xs: 0.75, md: 1 }, display: 'flex', alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
                   <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1, md: 1.5 }, width: '100%' }}>
                       <Avatar
                         src={empresaLogo}
@@ -1346,16 +1468,16 @@ const Companies: React.FC = () => {
                         sx={{ 
                           fontWeight: 500, 
                           color: theme.palette.text.primary,
-                          fontSize: { xs: '0.6875rem', md: '0.75rem' },
+                          fontSize: { xs: '0.8125rem', md: '0.875rem' },
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
                           mb: 0.25,
-                          maxWidth: { xs: '150px', md: '200px' },
+                          maxWidth: { xs: '100px', md: '150px' },
                         }}
                         title={company.name}
                       >
-                        {company.name}
+                        {company.name && company.name.length > 12 ? company.name.substring(0, 12) + '...' : company.name}
                       </Typography>
                         {company.domain && company.domain !== '--' ? (
                           <Typography 
@@ -1369,7 +1491,7 @@ const Companies: React.FC = () => {
                             }}
                             sx={{ 
                               color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
-                            fontSize: { xs: '0.5625rem', md: '0.625rem' },
+                            fontSize: { xs: '0.6875rem', md: '0.75rem' },
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
@@ -1387,7 +1509,7 @@ const Companies: React.FC = () => {
                             variant="caption" 
                             sx={{ 
                               color: theme.palette.text.secondary,
-                            fontSize: { xs: '0.5625rem', md: '0.625rem' },
+                            fontSize: { xs: '0.6875rem', md: '0.75rem' },
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
@@ -1401,12 +1523,12 @@ const Companies: React.FC = () => {
                     </Box>
                 </Box>
                 {/* Nueva columna: Fecha de última actividad */}
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                   <Typography 
                     variant="body2" 
                     sx={{ 
                       color: theme.palette.text.secondary,
-                      fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                      fontSize: { xs: '0.75rem', md: '0.8125rem' },
                       fontWeight: 400,
                     }}
                   >
@@ -1420,41 +1542,29 @@ const Companies: React.FC = () => {
                   </Typography>
                 </Box>
                 {/* Nueva columna: Propietario */}
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                   {company.Owner ? (
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                      <Avatar
-                        sx={{
-                          width: { xs: 20, md: 24 },
-                          height: { xs: 20, md: 24 },
-                          fontSize: { xs: '0.5625rem', md: '0.625rem' },
-                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
-                        }}
-                      >
-                        {getInitialsFromNames(company.Owner.firstName || '', company.Owner.lastName || '')}
-                      </Avatar>
-                      <Typography
-                        variant="body2" 
-                        sx={{ 
-                          color: theme.palette.text.primary,
-                          fontSize: { xs: '0.625rem', md: '0.6875rem' },
-                          fontWeight: 400,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          maxWidth: { xs: '80px', md: '120px' },
-                        }}
-                        title={`${company.Owner.firstName} ${company.Owner.lastName}`}
-                      >
-                        {company.Owner.firstName} {company.Owner.lastName}
-                      </Typography>
-                    </Box>
+                    <Typography
+                      variant="body2" 
+                      sx={{ 
+                        color: theme.palette.text.primary,
+                        fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                        fontWeight: 400,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: { xs: '80px', md: '120px' },
+                      }}
+                      title={`${company.Owner.firstName} ${company.Owner.lastName}`}
+                    >
+                      {company.Owner.firstName} {company.Owner.lastName}
+                    </Typography>
                   ) : (
                     <Typography 
                       variant="body2" 
                       sx={{ 
                         color: theme.palette.text.disabled,
-                        fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                        fontSize: { xs: '0.75rem', md: '0.8125rem' },
                         fontWeight: 400,
                       }}
                     >
@@ -1462,13 +1572,13 @@ const Companies: React.FC = () => {
                     </Typography>
                   )}
                 </Box>
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                     {company.companyname ? (
                       <Typography 
                         variant="body2" 
                         sx={{ 
                           color: theme.palette.text.primary,
-                        fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                        fontSize: { xs: '0.75rem', md: '0.8125rem' },
                         fontWeight: 400,
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -1479,46 +1589,47 @@ const Companies: React.FC = () => {
                         {company.companyname}
                       </Typography>
                     ) : (
-                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.625rem', md: '0.6875rem' }, fontWeight: 400 }}>
+                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.8125rem' }, fontWeight: 400 }}>
                         --
                       </Typography>
                     )}
                 </Box>
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                       <Typography 
                         variant="body2" 
                         sx={{ 
                           color: theme.palette.text.primary,
-                      fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                      fontSize: { xs: '0.75rem', md: '0.8125rem' },
                       fontWeight: 400,
                         }}
                       >
                     {company.phone || '--'}
                       </Typography>
                 </Box>
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                   <Typography 
                     variant="body2" 
                     sx={{ 
                       color: theme.palette.text.primary,
-                      fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                      fontSize: { xs: '0.75rem', md: '0.8125rem' },
                       fontWeight: 400,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
                       maxWidth: { xs: '120px', md: '150px' },
+                      width: '100%',
                     }}
                     title={(company as any).email || '--'}
                   >
                     {(company as any).email || '--'}
                   </Typography>
                 </Box>
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                   <Typography 
                     variant="body2" 
                     sx={{ 
                       color: theme.palette.text.primary,
-                      fontSize: { xs: '0.625rem', md: '0.6875rem' },
+                      fontSize: { xs: '0.75rem', md: '0.8125rem' },
                       fontWeight: 400,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -1530,7 +1641,7 @@ const Companies: React.FC = () => {
                     {getLeadSourceLabel((company as any).leadSource)}
                   </Typography>
                 </Box>
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }} onClick={(e) => e.stopPropagation()}>
+                <Box sx={{ px: { xs: 1, md: 1.5 }, py: { xs: 0.75, md: 1 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
                     <Chip
                     label={getStageLabel(company.lifecycleStage || 'lead')}
                       size="small"
@@ -1543,8 +1654,8 @@ const Companies: React.FC = () => {
                     color={getStageColor(company.lifecycleStage || 'lead')}
                       sx={{ 
                         fontWeight: 500,
-                      fontSize: { xs: '0.5625rem', md: '0.625rem' },
-                      height: { xs: 16, md: 18 },
+                            fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                      height: { xs: 22, md: 24 },
                         cursor: 'pointer',
                         '&:hover': {
                           opacity: 0.8,
@@ -1600,7 +1711,26 @@ const Companies: React.FC = () => {
                     </Menu>
                 </Box>
                 
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: company.estimatedRevenue 
+                        ? (theme.palette.mode === 'dark' ? '#39ff14' : '#00a76f')
+                        : theme.palette.text.primary,
+                      fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                      fontWeight: 500,
+                    }}
+                  >
+                    {company.estimatedRevenue 
+                      ? `S/ ${Number(company.estimatedRevenue).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      : '--'}
+                  </Typography>
+                </Box>
+                
+                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                  {/* Vista desktop: mostrar todos los iconos */}
+                  {isLargeScreen ? (
                     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
                       <Tooltip title="Editar">
                         <IconButton
@@ -1611,14 +1741,14 @@ const Companies: React.FC = () => {
                           }}
                           sx={{
                             color: theme.palette.text.secondary,
-                            padding: { xs: 0.5, md: 1 },
+                            padding: 1,
                             '&:hover': {
                               color: taxiMonterricoColors.green,
                               bgcolor: `${taxiMonterricoColors.green}15`,
                             },
                           }}
                         >
-                          <Edit sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                          <Edit sx={{ fontSize: '1.25rem' }} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Vista previa">
@@ -1630,14 +1760,14 @@ const Companies: React.FC = () => {
                           }}
                           sx={{
                             color: theme.palette.text.secondary,
-                            padding: { xs: 0.5, md: 1 },
+                            padding: 1,
                             '&:hover': {
                               color: taxiMonterricoColors.green,
                               bgcolor: `${taxiMonterricoColors.green}15`,
                             },
                           }}
                         >
-                          <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                          <Visibility sx={{ fontSize: '1.25rem' }} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Eliminar">
@@ -1649,17 +1779,106 @@ const Companies: React.FC = () => {
                           }}
                           sx={{
                             color: theme.palette.text.secondary,
-                            padding: { xs: 0.5, md: 1 },
+                            padding: 1,
                             '&:hover': {
                               color: '#d32f2f',
                               bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.15)' : '#ffebee',
                             },
                           }}
                         >
-                          <Delete sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                          <Delete sx={{ fontSize: '1.25rem' }} />
                         </IconButton>
                       </Tooltip>
                     </Box>
+                  ) : (
+                    /* Vista mobile/tablet: mostrar menú de 3 puntos */
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => handleActionsMenuOpen(e, company)}
+                      sx={{
+                        color: theme.palette.text.secondary,
+                        padding: 0.5,
+                        '&:hover': {
+                          color: theme.palette.text.primary,
+                          bgcolor: theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      <MoreVert sx={{ fontSize: '1.25rem' }} />
+                    </IconButton>
+                    <Menu
+                      anchorEl={actionsMenuAnchor[company.id]}
+                      open={Boolean(actionsMenuAnchor[company.id])}
+                      onClose={() => handleActionsMenuClose(company.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      PaperProps={{
+                        sx: {
+                          minWidth: 150,
+                          mt: 0.5,
+                          borderRadius: 1.5,
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        }
+                      }}
+                      transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                      anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                    >
+                      <MenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpen(company);
+                          handleActionsMenuClose(company.id);
+                        }}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.5,
+                          py: 1.5,
+                        }}
+                      >
+                        <Edit sx={{ fontSize: '1.125rem', color: theme.palette.text.secondary }} />
+                        <Typography variant="body2">Editar</Typography>
+                      </MenuItem>
+                      <MenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePreview(company);
+                          handleActionsMenuClose(company.id);
+                        }}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.5,
+                          py: 1.5,
+                        }}
+                      >
+                        <Visibility sx={{ fontSize: '1.125rem', color: theme.palette.text.secondary }} />
+                        <Typography variant="body2">Ver</Typography>
+                      </MenuItem>
+                      <Divider />
+                      <MenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(company.id);
+                          handleActionsMenuClose(company.id);
+                        }}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.5,
+                          py: 1.5,
+                          color: '#d32f2f',
+                          '&:hover': {
+                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.15)' : '#ffebee',
+                          },
+                        }}
+                      >
+                        <Delete sx={{ fontSize: '1.125rem' }} />
+                        <Typography variant="body2">Eliminar</Typography>
+                      </MenuItem>
+                    </Menu>
+                  </Box>
+                  )}
                 </Box>
             </Box>
           ))}
@@ -1679,24 +1898,91 @@ const Companies: React.FC = () => {
           </Box>
 
           {/* Paginación */}
-          {totalPages > 1 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, mb: 2 }}>
-              <Pagination
-                count={totalPages}
-                page={currentPage}
-                onChange={(event, value) => setCurrentPage(value)}
-                color="primary"
-                sx={pageStyles.pagination}
-              />
-            </Box>
-          )}
-
-          {/* Información de paginación */}
           {filteredCompanies.length > 0 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 1, mb: 2 }}>
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem' }}>
-                Mostrando {startIndex + 1}-{Math.min(endIndex, filteredCompanies.length)} de {filteredCompanies.length} empresas
-              </Typography>
+            <Box
+              sx={{
+                bgcolor: theme.palette.background.paper,
+                borderRadius: '0 0 8px 8px',
+                boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
+                px: { xs: 1, md: 2 },
+                py: { xs: 1, md: 1.5 },
+                mt: 2,
+                mb: 2,
+                display: 'flex',
+                flexDirection: { xs: 'column', md: 'row' },
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: { xs: 1.5, md: 2 },
+              }}
+            >
+              {/* Rows per page selector */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
+                  Filas por página:
+                </Typography>
+                <Select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  size="small"
+                  sx={{
+                    fontSize: '0.8125rem',
+                    height: '32px',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: theme.palette.divider,
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: theme.palette.text.secondary,
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: taxiMonterricoColors.green,
+                    },
+                  }}
+                >
+                  <MenuItem value={5}>5</MenuItem>
+                  <MenuItem value={7}>7</MenuItem>
+                  <MenuItem value={10}>10</MenuItem>
+                  <MenuItem value={20}>20</MenuItem>
+                  <MenuItem value={50}>50</MenuItem>
+                </Select>
+              </Box>
+
+              {/* Información de paginación y navegación */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
+                  {startIndex + 1}-{Math.min(endIndex, filteredCompanies.length)} de {filteredCompanies.length}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <IconButton
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    size="small"
+                    sx={{
+                      color: currentPage === 1 ? theme.palette.action.disabled : theme.palette.text.secondary,
+                      '&:hover': {
+                        bgcolor: currentPage === 1 ? 'transparent' : theme.palette.action.hover,
+                      },
+                    }}
+                  >
+                    <ChevronLeft />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    size="small"
+                    sx={{
+                      color: currentPage === totalPages ? theme.palette.action.disabled : theme.palette.text.secondary,
+                      '&:hover': {
+                        bgcolor: currentPage === totalPages ? 'transparent' : theme.palette.action.hover,
+                      },
+                    }}
+                  >
+                    <ChevronRight />
+                  </IconButton>
+                </Box>
+              </Box>
             </Box>
           )}
         </Box>
@@ -2387,6 +2673,21 @@ const Companies: React.FC = () => {
               <MenuItem value="feria">Feria</MenuItem>
               <MenuItem value="masivo">Masivo</MenuItem>
             </TextField>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Checkbox
+                checked={formData.isRecoveredClient}
+                onChange={(e) => setFormData({ ...formData, isRecoveredClient: e.target.checked })}
+                sx={{
+                  color: taxiMonterricoColors.green,
+                  '&.Mui-checked': {
+                    color: taxiMonterricoColors.green,
+                  },
+                }}
+              />
+              <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
+                Cliente Recuperado
+              </Typography>
+            </Box>
             <TextField
               label="Dirección"
               value={formData.address}
@@ -2445,21 +2746,32 @@ const Companies: React.FC = () => {
               onChange={(e) => setFormData({ ...formData, lifecycleStage: e.target.value })}
               InputLabelProps={{ shrink: true }}
             >
-              <MenuItem value="lead_inactivo">-5% Lead Inactivo</MenuItem>
-              <MenuItem value="cliente_perdido">-1% Cliente perdido</MenuItem>
-              <MenuItem value="cierre_perdido">-1% Cierre Perdido</MenuItem>
-              <MenuItem value="lead">0% Lead</MenuItem>
-              <MenuItem value="contacto">10% Contacto</MenuItem>
-              <MenuItem value="reunion_agendada">30% Reunión Agendada</MenuItem>
-              <MenuItem value="reunion_efectiva">40% Reunión Efectiva</MenuItem>
-              <MenuItem value="propuesta_economica">50% Propuesta Económica</MenuItem>
-              <MenuItem value="negociacion">70% Negociación</MenuItem>
-              <MenuItem value="licitacion">75% Licitación</MenuItem>
-              <MenuItem value="licitacion_etapa_final">85% Licitación Etapa Final</MenuItem>
-              <MenuItem value="cierre_ganado">90% Cierre Ganado</MenuItem>
-              <MenuItem value="firma_contrato">95% Firma de Contrato</MenuItem>
-              <MenuItem value="activo">100% Activo</MenuItem>
+              <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
+              <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
+              <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+              <MenuItem value="lead">Lead</MenuItem>
+              <MenuItem value="contacto">Contacto</MenuItem>
+              <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+              <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+              <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
+              <MenuItem value="negociacion">Negociación</MenuItem>
+              <MenuItem value="licitacion">Licitación</MenuItem>
+              <MenuItem value="licitacion_etapa_final">Licitación Etapa Final</MenuItem>
+              <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+              <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
+              <MenuItem value="activo">Activo</MenuItem>
             </TextField>
+            <TextField
+              fullWidth
+              type="number"
+              label="Potencial de Facturación Estimado"
+              value={formData.estimatedRevenue}
+              onChange={(e) => setFormData({ ...formData, estimatedRevenue: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              InputProps={{
+                startAdornment: <InputAdornment position="start">S/</InputAdornment>,
+              }}
+            />
             
             {/* Mensaje de deuda SUNAT */}
             {rucDebts !== null && (

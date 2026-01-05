@@ -21,12 +21,14 @@ interface CompanyAttributes {
   linkedin?: string;
   numberOfEmployees?: number;
   ownerId?: number | null;
+  estimatedRevenue?: number;
+  isRecoveredClient?: boolean;
   lifecycleStage: 'lead' | 'contacto' | 'reunion_agendada' | 'reunion_efectiva' | 'propuesta_economica' | 'negociacion' | 'licitacion' | 'licitacion_etapa_final' | 'cierre_ganado' | 'cierre_perdido' | 'firma_contrato' | 'activo' | 'cliente_perdido' | 'lead_inactivo';
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-interface CompanyCreationAttributes extends Optional<CompanyAttributes, 'id' | 'domain' | 'companyname' | 'phone' | 'phone2' | 'phone3' | 'email' | 'leadSource' | 'ruc' | 'address' | 'city' | 'state' | 'country' | 'linkedin' | 'numberOfEmployees' | 'ownerId' | 'createdAt' | 'updatedAt'> {}
+interface CompanyCreationAttributes extends Optional<CompanyAttributes, 'id' | 'domain' | 'companyname' | 'phone' | 'phone2' | 'phone3' | 'email' | 'leadSource' | 'ruc' | 'address' | 'city' | 'state' | 'country' | 'linkedin' | 'numberOfEmployees' | 'ownerId' | 'estimatedRevenue' | 'isRecoveredClient' | 'createdAt' | 'updatedAt'> {}
 
 export class Company extends Model<CompanyAttributes, CompanyCreationAttributes> implements CompanyAttributes {
   public id!: number;
@@ -47,6 +49,8 @@ export class Company extends Model<CompanyAttributes, CompanyCreationAttributes>
   public linkedin?: string;
   public numberOfEmployees?: number;
   public ownerId?: number | null;
+  public estimatedRevenue?: number;
+  public isRecoveredClient?: boolean;
   public lifecycleStage!: 'lead' | 'contacto' | 'reunion_agendada' | 'reunion_efectiva' | 'propuesta_economica' | 'negociacion' | 'licitacion' | 'licitacion_etapa_final' | 'cierre_ganado' | 'cierre_perdido' | 'firma_contrato' | 'activo' | 'cliente_perdido' | 'lead_inactivo';
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
@@ -124,6 +128,15 @@ Company.init(
     numberOfEmployees: {
       type: DataTypes.INTEGER,
       allowNull: true,
+    },
+    estimatedRevenue: {
+      type: DataTypes.DECIMAL(15, 2),
+      allowNull: true,
+    },
+    isRecoveredClient: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: false,
     },
     ownerId: {
       type: DataTypes.INTEGER,

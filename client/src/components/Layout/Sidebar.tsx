@@ -24,10 +24,17 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useSidebar } from '../../context/SidebarContext';
 
-const drawerWidth = 260;
+const Sidebar: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
+  const theme = useTheme();
+  const { open, collapsed } = useSidebar();
+
+  const drawerWidth = collapsed ? 85 : 270;
 
 const mainMenuItems = [
-  { text: 'Dashboard', icon: <Dashboard />, path: '/', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Contactos', icon: <People />, path: '/contacts', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Empresas', icon: <Business />, path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Negocios', icon: <AttachMoney />, path: '/deals', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
@@ -39,12 +46,6 @@ const mainMenuItems = [
   // { text: 'Automatizaciones', icon: <Timeline />, path: '/automations' },
 ];
 
-const Sidebar: React.FC = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { user } = useAuth();
-  const theme = useTheme();
-  const { open } = useSidebar();
 
   if (!open) {
     return null;
@@ -77,7 +78,7 @@ const Sidebar: React.FC = () => {
       {/* Lista de items del menú */}
       <List sx={{ 
         width: '100%', 
-        px: 3, 
+        px: collapsed ? 1 : 3, 
         pt: 9.5, // Padding superior para que no quede oculto por el header (72px + espacio extra)
         pb: 0,
         display: 'flex',
@@ -95,10 +96,10 @@ const Sidebar: React.FC = () => {
             return true;
           })
           .map((item) => {
-            // Para Dashboard, solo coincidir exactamente con '/'
+            // Para Dashboard, detectar tanto '/' como '/dashboard'
             // Para otros, coincidir si el pathname comienza con el path del item
-            const isSelected = item.path === '/' 
-              ? location.pathname === '/' 
+            const isSelected = item.path === '/dashboard' 
+              ? (location.pathname === '/dashboard' || location.pathname === '/')
               : location.pathname === item.path || location.pathname.startsWith(item.path + '/');
             return (
             <ListItemButton
@@ -106,23 +107,33 @@ const Sidebar: React.FC = () => {
               selected={isSelected}
               onClick={() => navigate(item.path)}
               sx={{
-              minHeight: 44,
+              minHeight: collapsed ? 64 : 44,
               borderRadius: 1,
-              justifyContent: 'flex-start',
-              px: 2,
-              py: 0.875,
+              flexDirection: collapsed ? 'column' : 'row',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              alignItems: 'center',
+              px: collapsed ? 1 : 2,
+              py: collapsed ? 1 : 0.875,
               mb: 0,
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&.Mui-selected': {
-                  background: 'linear-gradient(14deg, #1db513 0%, rgb(95 215 37 / 60%))',
-                  color: '#FFFFFF',
+                  background: theme.palette.mode === 'dark' 
+                    ? '#1a2e2a' 
+                    : 'rgba(91, 228, 155, 0.1)',
+                  color: '#5be49b',
+                  boxShadow: 'none',
                   '&:hover': {
-                    background: 'linear-gradient(14deg, #1db513 0%, rgb(95 215 37 / 60%))',
+                    background: theme.palette.mode === 'dark' 
+                      ? '#1a2e2a' 
+                      : 'rgba(91, 228, 155, 0.1)',
+                    boxShadow: 'none',
                   },
                 },
                 '&:hover': {
                   ...(isSelected ? {
-                    background: 'linear-gradient(14deg, #1db513 0%, rgb(95 215 37 / 60%))',
+                    background: theme.palette.mode === 'dark' 
+                      ? '#1a2e2a' 
+                      : 'rgba(91, 228, 155, 0.1)',
                   } : {
                     backgroundColor: theme.palette.action.hover,
                   }),
@@ -135,9 +146,12 @@ const Sidebar: React.FC = () => {
             >
               <ListItemIcon
                 sx={{
-                  minWidth: 36,
+                  minWidth: collapsed ? 'auto' : 36,
                   justifyContent: 'center',
-                  color: isSelected ? '#FFFFFF' : '#a6aed4',
+                  margin: collapsed ? '0 0 4px 0' : 0,
+                  color: isSelected 
+                    ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
+                    : '#637381',
                   '& svg': {
                     fontSize: 20,
                   },
@@ -145,17 +159,37 @@ const Sidebar: React.FC = () => {
               >
                 {item.icon}
               </ListItemIcon>
-              <Typography
-                variant="body2"
-                sx={{
-                  fontSize: '0.875rem',
-                  fontWeight: 400,
-                  color: isSelected ? '#FFFFFF' : '#5a5c61',
-                  ml: 1,
-                }}
-              >
-                {item.text}
-              </Typography>
+              {!collapsed && (
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontSize: '0.875rem',
+                    fontWeight: isSelected ? 600 : 400,
+                    color: isSelected 
+                      ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
+                      : '#5a5c61',
+                    ml: 1,
+                  }}
+                >
+                  {item.text}
+                </Typography>
+              )}
+              {collapsed && (
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontSize: '0.625rem',
+                    fontWeight: isSelected ? 600 : 400,
+                    color: isSelected 
+                      ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
+                      : '#5a5c61',
+                    textAlign: 'center',
+                    mt: 0.25,
+                  }}
+                >
+                  {item.text}
+                </Typography>
+              )}
             </ListItemButton>
           );
         })}
@@ -170,24 +204,34 @@ const Sidebar: React.FC = () => {
             selected={location.pathname === '/users'}
             onClick={() => navigate('/users')}
             sx={{
-              minHeight: 44,
+              minHeight: collapsed ? 64 : 44,
               borderRadius: 1,
-              justifyContent: 'flex-start',
-              px: 2,
-              py: 0.875,
+              flexDirection: collapsed ? 'column' : 'row',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              alignItems: 'center',
+              px: collapsed ? 1 : 2,
+              py: collapsed ? 1 : 0.875,
               mb: 0,
               mt: 0,
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               '&.Mui-selected': {
-                background: 'linear-gradient(14deg, #1db513 0%, rgb(95 215 37 / 60%))',
-                color: '#FFFFFF',
+                background: theme.palette.mode === 'dark' 
+                  ? '#1a2e2a' 
+                  : 'rgba(91, 228, 155, 0.1)',
+                color: '#5be49b',
+                boxShadow: 'none',
                 '&:hover': {
-                  background: 'linear-gradient(14deg, #1db513 0%, rgb(95 215 37 / 60%))',
+                  background: theme.palette.mode === 'dark' 
+                    ? '#1a2e2a' 
+                    : 'rgba(91, 228, 155, 0.1)',
+                  boxShadow: 'none',
                 },
               },
               '&:hover': {
                 ...(location.pathname === '/users' ? {
-                  background: 'linear-gradient(14deg, #1db513 0%, rgb(95 215 37 / 60%))',
+                  background: theme.palette.mode === 'dark' 
+                    ? '#1a2e2a' 
+                    : 'rgba(91, 228, 155, 0.1)',
                 } : {
                   backgroundColor: theme.palette.action.hover,
                 }),
@@ -200,9 +244,12 @@ const Sidebar: React.FC = () => {
           >
             <ListItemIcon
               sx={{
-                minWidth: 36,
+                minWidth: collapsed ? 'auto' : 36,
                 justifyContent: 'center',
-                color: location.pathname === '/users' ? '#FFFFFF' : '#a6aed4',
+                margin: collapsed ? '0 0 4px 0' : 0,
+                color: location.pathname === '/users' 
+                  ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
+                  : '#637381',
                 '& svg': {
                   fontSize: 20,
                 },
@@ -210,17 +257,37 @@ const Sidebar: React.FC = () => {
             >
               <AdminPanelSettings />
             </ListItemIcon>
-            <Typography
-              variant="body2"
-              sx={{
-                fontSize: '0.875rem',
-                fontWeight: 400,
-                color: location.pathname === '/users' ? '#FFFFFF' : '#5a5c61',
-                ml: 1,
-              }}
-            >
-              Usuarios
-            </Typography>
+            {!collapsed && (
+              <Typography
+                variant="body2"
+                sx={{
+                  fontSize: '0.875rem',
+                  fontWeight: location.pathname === '/users' ? 600 : 400,
+                  color: location.pathname === '/users' 
+                    ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
+                    : '#5a5c61',
+                  ml: 1,
+                }}
+              >
+                Usuarios
+              </Typography>
+            )}
+            {collapsed && (
+              <Typography
+                variant="caption"
+                sx={{
+                  fontSize: '0.625rem',
+                  fontWeight: location.pathname === '/users' ? 600 : 400,
+                  color: location.pathname === '/users' 
+                    ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
+                    : '#5a5c61',
+                  textAlign: 'center',
+                  mt: 0.25,
+                }}
+              >
+                Usuarios
+              </Typography>
+            )}
           </ListItemButton>
         )}
       </List>
@@ -229,15 +296,17 @@ const Sidebar: React.FC = () => {
       <Box sx={{ flex: 1 }} />
       
       {/* Configuración */}
-      <Box sx={{ width: '100%', px: 3, mb: 1 }}>
+      <Box sx={{ width: '100%', px: collapsed ? 1 : 3, mb: 1 }}>
         <ListItemButton
           onClick={() => navigate('/settings')}
           sx={{
-            minHeight: 40,
+            minHeight: collapsed ? 64 : 40,
             borderRadius: 1,
-            justifyContent: 'flex-start',
-            px: 1,
-            py: 0.75,
+            flexDirection: collapsed ? 'column' : 'row',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            alignItems: 'center',
+            px: collapsed ? 1 : 1,
+            py: collapsed ? 1 : 0.75,
             transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
             '&:hover': {
               backgroundColor: theme.palette.action.hover,
@@ -246,9 +315,10 @@ const Sidebar: React.FC = () => {
         >
           <ListItemIcon
             sx={{
-              minWidth: 36,
+              minWidth: collapsed ? 'auto' : 36,
               justifyContent: 'center',
-              color: '#a6aed4',
+              margin: collapsed ? '0 0 4px 0' : 0,
+              color: '#637381',
               '& svg': {
                 fontSize: 20,
               },
@@ -256,17 +326,33 @@ const Sidebar: React.FC = () => {
           >
             <Settings />
           </ListItemIcon>
-          <Typography
-            variant="body2"
-            sx={{
-              fontSize: '0.875rem',
-              fontWeight: 400,
-              color: '#5a5c61',
-              ml: 1,
-            }}
-          >
-            Configuración
-          </Typography>
+          {!collapsed && (
+            <Typography
+              variant="body2"
+              sx={{
+                fontSize: '0.875rem',
+                fontWeight: 400,
+                color: '#5a5c61',
+                ml: 1,
+              }}
+            >
+              Configuración
+            </Typography>
+          )}
+          {collapsed && (
+            <Typography
+              variant="caption"
+              sx={{
+                fontSize: '0.625rem',
+                fontWeight: 400,
+                color: '#5a5c61',
+                textAlign: 'center',
+                mt: 0.25,
+              }}
+            >
+              Configuración
+            </Typography>
+          )}
         </ListItemButton>
       </Box>
       

@@ -8,11 +8,11 @@ interface MainLayoutProps {
   children: React.ReactNode;
 }
 
-const drawerWidth = 260;
-
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const theme = useTheme();
-  const { open } = useSidebar();
+  const { open, collapsed } = useSidebar();
+  
+  const drawerWidth = collapsed ? 85 : 270;
   
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: theme.palette.background.default }}>
@@ -41,9 +41,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             minWidth: 0, // Permite que el contenido se ajuste correctamente
             boxSizing: 'border-box',
             overflowY: 'auto', // Permitir scroll vertical en el contenido principal
+            paddingTop: { xs: '60px', sm: 0 }, // Compensar el header fijo en móviles
+            transition: 'margin-left 0.2s cubic-bezier(0.4, 0, 0.2, 1), width 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
-          <Box sx={{ flex: 1, bgcolor: theme.palette.background.default, px: 3, pt: 2.5, pb: 2 }}>
+          <Box sx={{ flex: 1, bgcolor: theme.palette.background.default, px: { xs: 1.5, sm: 3 }, pt: { xs: 1.5, sm: 2.5 }, pb: 2 }}>
             {children}
           </Box>
         </Box>

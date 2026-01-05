@@ -24,7 +24,7 @@ import {
   Collapse,
   Pagination,
 } from '@mui/material';
-import { Add, Delete, AttachMoney, Visibility, ViewList, AccountTree, CalendarToday, Close, FileDownload, UploadFile, FilterList, ExpandMore, Remove, Bolt, Business, Edit } from '@mui/icons-material';
+import { Add, Delete, AttachMoney, Visibility, ViewList, AccountTree, CalendarToday, Close, FileDownload, UploadFile, FilterList, ExpandMore, Remove, Bolt, Business, Edit, ChevronLeft, ChevronRight } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
@@ -82,7 +82,7 @@ const Deals: React.FC = () => {
   const [stagesExpanded, setStagesExpanded] = useState(false);
   const [ownerFilterExpanded, setOwnerFilterExpanded] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 7;
+  const [itemsPerPage, setItemsPerPage] = useState(7);
   const [importing, setImporting] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   
@@ -1087,24 +1087,91 @@ const Deals: React.FC = () => {
           </Box>
 
           {/* Paginación */}
-          {totalPages > 1 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 3, mb: 2 }}>
-              <Pagination
-                count={totalPages}
-                page={currentPage}
-                onChange={(event, value) => setCurrentPage(value)}
-                color="primary"
-                sx={pageStyles.pagination}
-              />
-            </Box>
-          )}
-
-          {/* Información de paginación */}
           {filteredDeals.length > 0 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', mt: 1, mb: 2 }}>
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem' }}>
-                Mostrando {startIndex + 1}-{Math.min(endIndex, filteredDeals.length)} de {filteredDeals.length} negocios
-            </Typography>
+            <Box
+              sx={{
+                bgcolor: theme.palette.background.paper,
+                borderRadius: '0 0 8px 8px',
+                boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
+                px: { xs: 1, md: 2 },
+                py: { xs: 1, md: 1.5 },
+                mt: 2,
+                mb: 2,
+                display: 'flex',
+                flexDirection: { xs: 'column', md: 'row' },
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: { xs: 1.5, md: 2 },
+              }}
+            >
+              {/* Rows per page selector */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
+                  Filas por página:
+                </Typography>
+                <Select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  size="small"
+                  sx={{
+                    fontSize: '0.8125rem',
+                    height: '32px',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: theme.palette.divider,
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: theme.palette.text.secondary,
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: taxiMonterricoColors.green,
+                    },
+                  }}
+                >
+                  <MenuItem value={5}>5</MenuItem>
+                  <MenuItem value={7}>7</MenuItem>
+                  <MenuItem value={10}>10</MenuItem>
+                  <MenuItem value={20}>20</MenuItem>
+                  <MenuItem value={50}>50</MenuItem>
+                </Select>
+              </Box>
+
+              {/* Información de paginación y navegación */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
+                  {startIndex + 1}-{Math.min(endIndex, filteredDeals.length)} de {filteredDeals.length}
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <IconButton
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    size="small"
+                    sx={{
+                      color: currentPage === 1 ? theme.palette.action.disabled : theme.palette.text.secondary,
+                      '&:hover': {
+                        bgcolor: currentPage === 1 ? 'transparent' : theme.palette.action.hover,
+                      },
+                    }}
+                  >
+                    <ChevronLeft />
+                  </IconButton>
+                  <IconButton
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                    size="small"
+                    sx={{
+                      color: currentPage === totalPages ? theme.palette.action.disabled : theme.palette.text.secondary,
+                      '&:hover': {
+                        bgcolor: currentPage === totalPages ? 'transparent' : theme.palette.action.hover,
+                      },
+                    }}
+                  >
+                    <ChevronRight />
+                  </IconButton>
+                </Box>
+              </Box>
             </Box>
           )}
         </Box>

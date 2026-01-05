@@ -2339,7 +2339,12 @@ const Dashboard: React.FC = () => {
                     return null;
                   }}
                 />
-                <Bar dataKey="value" fill="#8B5CF6" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="value" radius={0} barSize={30}>
+                  {weeklySalesData.map((entry, index) => {
+                    const colors = ['#14B8A6', '#EC4899', '#A78BFA', '#F97316', '#60A5FA', '#10B981', '#F59E0B'];
+                    return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                  })}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -3593,10 +3598,15 @@ const Dashboard: React.FC = () => {
                       </Box>
                     );
                   }
-                  return null;
+                    return null;
                 }}
               />
-              <Bar dataKey="value" fill="#8B5CF6" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="value" radius={0} barSize={30}>
+                {weeklySalesData.map((entry, index) => {
+                  const colors = ['#14B8A6', '#EC4899', '#A78BFA', '#F97316', '#60A5FA', '#10B981', '#F59E0B'];
+                  return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                })}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </DialogContent>

@@ -27,7 +27,6 @@ import {
 } from '@mui/material';
 import { 
   Search, 
-  KeyboardArrowDown,
   Notifications,
   Alarm,
   Person,
@@ -42,17 +41,17 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { taxiMonterricoColors } from '../../theme/colors';
 import ProfileModal from '../ProfileModal';
-import CreateMenuButton from '../CreateMenuButton';
 import api from '../../config/api';
 import { useTheme as useThemeContext } from '../../context/ThemeContext';
 import { useSidebar } from '../../context/SidebarContext';
 import logo from '../../assets/tm_logo.png';
+import logoMobile from '../../assets/logo.png';
 
 const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { mode, toggleTheme } = useThemeContext();
-  const { open: sidebarOpen, toggleSidebar } = useSidebar();
+  const { open: sidebarOpen, collapsed, toggleSidebar, toggleCollapsed } = useSidebar();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [reminderAnchorEl, setReminderAnchorEl] = useState<null | HTMLElement>(null);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
@@ -68,6 +67,7 @@ const Header: React.FC = () => {
   const [reminderCount, setReminderCount] = useState(0);
   const reminderButtonRef = useRef<HTMLButtonElement>(null);
   const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -77,49 +77,6 @@ const Header: React.FC = () => {
     setAnchorEl(null);
   };
 
-  const handleCreateItem = (type: string) => {
-    switch (type) {
-      case 'contact':
-        navigate('/contacts');
-        break;
-      case 'company':
-        navigate('/companies');
-        break;
-      case 'deal':
-      case 'opportunity':
-        navigate('/deals');
-        break;
-      case 'task':
-        navigate('/tasks');
-        break;
-      case 'ticket':
-        navigate('/tickets');
-        break;
-      case 'note':
-        // Para notas, podrías navegar a una página específica o abrir un modal
-        // Por ahora, navegamos a contacts donde se pueden crear notas
-        navigate('/contacts');
-        break;
-      case 'contract':
-        // Para contratos/suscripciones, podrías navegar a companies o crear una nueva página
-        navigate('/companies');
-        break;
-      case 'invoice':
-        // Para facturas, podrías crear una nueva página o navegar a deals
-        navigate('/deals');
-        break;
-      case 'payment':
-        // Para pagos, podrías crear una nueva página o navegar a deals
-        navigate('/deals');
-        break;
-      case 'incident':
-        // Para incidencias, podrías navegar a tickets
-        navigate('/tickets');
-        break;
-      default:
-        break;
-    }
-  };
 
   const handleReminderMenu = (event: React.MouseEvent<HTMLElement>) => {
     setReminderAnchorEl(event.currentTarget);
@@ -282,12 +239,17 @@ const Header: React.FC = () => {
         const allReminders = [
           ...upcomingTasks.map((task: any) => ({
             type: 'task',
+            id: task.id,
             title: task.title,
             dueDate: task.dueDate,
             priority: task.priority,
+            contactId: task.contactId || null,
+            companyId: task.companyId || null,
+            dealId: task.dealId || null,
           })),
           ...upcomingEvents.map((event: any) => ({
             type: 'event',
+            id: event.id,
             title: event.summary || 'Evento sin título',
             dueDate: event.start?.dateTime || event.start?.date,
           })),
@@ -330,39 +292,59 @@ const Header: React.FC = () => {
       sx={{
         width: '100vw',
         bgcolor: theme.palette.background.paper,
-        pl: 0,
-        pr: 2.5,
-        pt: 1.25,
-        pb: 1.25,
+        pl: { xs: 1, sm: 0 },
+        pr: { xs: 1, sm: 2.5 },
+        pt: { xs: 1, sm: 1.25 },
+        pb: { xs: 1, sm: 1.25 },
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'flex-start',
         gap: 0,
-        height: 72,
-        position: 'sticky',
+        height: { xs: 60, sm: 72 },
+        position: { xs: 'fixed', sm: 'sticky' },
         top: 0,
         left: 0,
-        zIndex: 1300,
+        zIndex: { xs: 1400, sm: 1300 },
         marginLeft: 0,
         marginRight: 0,
+        boxShadow: { 
+          xs: theme.palette.mode === 'dark' 
+            ? '0 2px 8px rgba(0, 0, 0, 0.4)' 
+            : '0 2px 4px rgba(0, 0, 0, 0.15)',
+          sm: 'none'
+        },
+        borderBottom: { xs: `1px solid ${theme.palette.divider}`, sm: 'none' },
       }}
     >
       {/* Logo y botón de menú - siempre en la misma posición */}
       <Box sx={{ 
         display: 'flex', 
         alignItems: 'center', 
-        gap: 0, 
+        gap: { xs: 1, sm: 1 }, 
         flexShrink: 0,
-        marginLeft: -6,
+        marginLeft: { xs: 0, sm: -6.5 },
       }}>
-        {/* Logo */}
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        {/* Logo - Desktop */}
+        <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', height: '100%' }}>
           <img
             src={logo}
             alt="Taxi Monterrico Logo"
             style={{
-              width: 350,
-              height: 115,
+              width: 360,
+              height: 'auto',
+              maxHeight: 115,
+              objectFit: 'contain',
+            }}
+          />
+        </Box>
+        {/* Logo - Mobile */}
+        <Box sx={{ display: { xs: 'flex', sm: 'none' }, alignItems: 'center', order: { xs: 0, sm: 0 } }}>
+          <img
+            src={logoMobile}
+            alt="Taxi Monterrico Logo"
+            style={{
+              width: 40,
+              height: 40,
               objectFit: 'contain',
             }}
           />
@@ -370,7 +352,13 @@ const Header: React.FC = () => {
         
         {/* Icono de menú para toggle del sidebar */}
         <IconButton
-          onClick={toggleSidebar}
+          onClick={() => {
+            if (sidebarOpen) {
+              toggleCollapsed();
+            } else {
+              toggleSidebar();
+            }
+          }}
           size="small"
           sx={{
             p: 0.75,
@@ -379,25 +367,25 @@ const Header: React.FC = () => {
             width: 36,
             height: 36,
             flexShrink: 0,
-            marginLeft: -4,
+            marginLeft: { xs: 0, sm: -5 },
+            order: { xs: 1, sm: 0 },
             '&:hover': {
               bgcolor: theme.palette.action.hover,
             },
           }}
         >
-          <MenuIcon sx={{ fontSize: 24, color: '#7081b9' }} />
+          <MenuIcon sx={{ fontSize: 24, color: '#637381' }} />
         </IconButton>
       </Box>
       
-      {/* Barra de búsqueda */}
+      {/* Barra de búsqueda - Desktop */}
       <Box
         sx={{
           flex: 1,
           position: 'relative',
-          maxWidth: sidebarOpen ? '350px' : '450px',
-          minWidth: sidebarOpen ? '250px' : '300px',
-          transition: 'max-width 0.3s ease, min-width 0.3s ease',
-          marginLeft: 3.5,
+          maxWidth: sidebarOpen ? '350px' : '350px',
+          marginLeft: 4,
+          display: { xs: 'none', sm: 'block' },
         }}
       >
         <Box
@@ -660,13 +648,27 @@ const Header: React.FC = () => {
         </Menu>
       </Box>
 
+      {/* Icono de búsqueda - Solo móviles */}
+      <Box sx={{ display: { xs: 'block', sm: 'none' }, marginLeft: 1 }}>
+        <IconButton
+          size="small"
+          onClick={() => setSearchModalOpen(true)}
+          sx={{
+            bgcolor: 'transparent',
+            borderRadius: 1,
+            width: 36,
+            height: 36,
+            '&:hover': {
+              bgcolor: theme.palette.action.hover,
+            },
+          }}
+        >
+          <Search sx={{ fontSize: 24, color: '#637381' }} />
+        </IconButton>
+      </Box>
+
       {/* Elementos del lado derecho */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, marginLeft: 'auto' }}>
-        {/* Botón Crear con menú desplegable */}
-        <CreateMenuButton onSelect={handleCreateItem} />
-
-        <Divider orientation="vertical" flexItem sx={{ ml: 0.5, mr: 0.5, height: 24, alignSelf: 'center' }} />
-
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, marginLeft: 'auto' }}>
         {/* Modo oscuro */}
         <Tooltip title={mode === 'light' ? 'Modo oscuro' : 'Modo claro'}>
           <IconButton 
@@ -675,22 +677,20 @@ const Header: React.FC = () => {
             sx={{ 
               bgcolor: 'transparent', 
               borderRadius: 1, 
-              width: 36,
-              height: 36,
+              width: 40,
+              height: 40,
               '&:hover': {
                 bgcolor: theme.palette.action.hover,
               },
             }}
           >
             {mode === 'light' ? (
-              <DarkMode sx={{ fontSize: 20, color: '#7081b9' }} />
+              <DarkMode sx={{ fontSize: 24, color: '#637381' }} />
             ) : (
-              <LightMode sx={{ fontSize: 20, color: '#7081b9' }} />
+              <LightMode sx={{ fontSize: 24, color: '#637381' }} />
             )}
           </IconButton>
         </Tooltip>
-
-        <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: 24, alignSelf: 'center' }} />
 
         {/* Recordatorios */}
         <Tooltip title="Recordatorios">
@@ -701,8 +701,8 @@ const Header: React.FC = () => {
             sx={{ 
               bgcolor: 'transparent', 
               borderRadius: 1, 
-              width: 36,
-              height: 36,
+              width: 40,
+              height: 40,
               '&:hover': {
                 bgcolor: theme.palette.action.hover,
               },
@@ -721,12 +721,10 @@ const Header: React.FC = () => {
                 },
               }}
             >
-              <Alarm sx={{ fontSize: 20, color: '#7081b9' }} />
+              <Alarm sx={{ fontSize: 24, color: '#637381' }} />
             </Badge>
           </IconButton>
         </Tooltip>
-
-        <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: 24, alignSelf: 'center' }} />
 
         {/* Notificaciones */}
         <IconButton 
@@ -754,28 +752,25 @@ const Header: React.FC = () => {
               },
             }}
           >
-            <Notifications sx={{ fontSize: 20, color: '#7081b9' }} />
+            <Notifications sx={{ fontSize: 24, color: '#637381' }} />
           </Badge>
         </IconButton>
 
-        <Divider orientation="vertical" flexItem sx={{ ml: 0.5, mr: 0.5, height: 24, alignSelf: 'center' }} />
-
         {/* Avatar con dropdown */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, cursor: 'pointer' }} onClick={handleMenu}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, cursor: 'pointer', ml: 1 }} onClick={handleMenu}>
           <Avatar
             src={user?.avatar}
             sx={{
-              width: 32,
-              height: 32,
+              width: 40,
+              height: 40,
               bgcolor: user?.avatar ? 'transparent' : taxiMonterricoColors.green,
-              fontSize: '0.7rem',
+              fontSize: '0.875rem',
               fontWeight: 600,
               border: `1px solid ${theme.palette.divider}`,
             }}
           >
             {!user?.avatar && getInitials(user?.firstName, user?.lastName)}
           </Avatar>
-          <KeyboardArrowDown sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
         </Box>
       </Box>
 
@@ -835,6 +830,9 @@ const Header: React.FC = () => {
         onClose={() => setReminderDialogOpen(false)}
         maxWidth="sm"
         fullWidth
+        disableAutoFocus={false}
+        disableEnforceFocus={false}
+        disableRestoreFocus={true}
         PaperProps={{
           sx: {
             borderRadius: 2,
@@ -845,7 +843,7 @@ const Header: React.FC = () => {
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, pb: 1 }}>
           <Alarm sx={{ color: taxiMonterricoColors.green, fontSize: 24 }} />
           <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
-            Recordatorios
+            Mis objetivos
           </Typography>
         </DialogTitle>
         <DialogContent sx={{ p: 0 }}>
@@ -860,11 +858,17 @@ const Header: React.FC = () => {
               {reminders.map((reminder, index) => (
                 <React.Fragment key={index}>
                   <ListItem
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setReminderDialogOpen(false);
+                    }}
                     sx={{
                       py: 2,
                       px: 3,
+                      cursor: reminder.id ? 'pointer' : 'default',
                       '&:hover': {
-                        bgcolor: theme.palette.action.hover,
+                        bgcolor: reminder.id ? theme.palette.action.hover : 'transparent',
                       },
                     }}
                   >
@@ -1031,6 +1035,247 @@ const Header: React.FC = () => {
           </Typography>
         </MenuItem>
       </Menu>
+
+      {/* Modal de búsqueda para móviles */}
+      <Dialog
+        open={searchModalOpen}
+        onClose={() => setSearchModalOpen(false)}
+        fullWidth
+        maxWidth="sm"
+        disableAutoFocus={false}
+        disableEnforceFocus={false}
+        disableRestoreFocus={true}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            mt: { xs: 8, sm: 0 },
+          },
+        }}
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, pb: 1 }}>
+          <Search sx={{ color: taxiMonterricoColors.green }} />
+          <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
+            Buscar
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Box
+            ref={searchInputRef}
+            sx={{
+              bgcolor: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.05)' 
+                : 'rgba(0, 0, 0, 0.02)',
+              borderRadius: '50px',
+              px: 1.5,
+              py: 0.5,
+              display: 'flex',
+              alignItems: 'center',
+              transition: 'all 0.2s ease',
+              border: `1px solid ${theme.palette.divider}`,
+              '&:focus-within': {
+                bgcolor: theme.palette.background.paper,
+                boxShadow: theme.palette.mode === 'dark' 
+                  ? '0 2px 8px rgba(0,0,0,0.3)' 
+                  : '0 2px 4px rgba(0,0,0,0.1)',
+                borderColor: taxiMonterricoColors.green,
+              },
+            }}
+          >
+            <Search 
+              sx={{ 
+                fontSize: 18,
+                color: '#7081b9',
+                mr: 1,
+              }} 
+            />
+            <InputBase
+              id="mobile-search-input"
+              name="mobile-search"
+              placeholder="Buscar..."
+              value={searchValue}
+              onChange={(e) => {
+                setSearchValue(e.target.value);
+              }}
+              inputRef={searchInputElementRef}
+              autoFocus
+              sx={{
+                flex: 1,
+                fontSize: '0.875rem',
+                color: theme.palette.text.primary,
+                '&::placeholder': {
+                  color: theme.palette.text.secondary,
+                  opacity: 0.7,
+                },
+              }}
+            />
+            {searchLoading && (
+              <CircularProgress size={16} sx={{ ml: 1 }} />
+            )}
+          </Box>
+          {/* Mostrar resultados de búsqueda en el modal */}
+          {searchResults && (
+            <Box sx={{ mt: 2, maxHeight: '60vh', overflowY: 'auto' }}>
+              {searchResults?.contacts && searchResults.contacts.length > 0 && (
+                <Box>
+                  <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
+                      Contactos
+                    </Typography>
+                  </Box>
+                  {searchResults.contacts.map((result: any) => (
+                    <MenuItem
+                      key={`contact-${result.id}`}
+                      onClick={() => {
+                        handleSearchResultClick(result.url);
+                        setSearchModalOpen(false);
+                      }}
+                      sx={{
+                        py: 1.5,
+                        px: 2,
+                        '&:hover': {
+                          bgcolor: theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      <Person sx={{ fontSize: 20, color: theme.palette.primary.main, mr: 1.5 }} />
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {result.title}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {result.subtitle}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Box>
+              )}
+
+              {searchResults?.companies && searchResults.companies.length > 0 && (
+                <Box>
+                  {(searchResults.contacts?.length > 0) && <Divider />}
+                  <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
+                      Empresas
+                    </Typography>
+                  </Box>
+                  {searchResults.companies.map((result: any) => (
+                    <MenuItem
+                      key={`company-${result.id}`}
+                      onClick={() => {
+                        handleSearchResultClick(result.url);
+                        setSearchModalOpen(false);
+                      }}
+                      sx={{
+                        py: 1.5,
+                        px: 2,
+                        '&:hover': {
+                          bgcolor: theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      <Business sx={{ fontSize: 20, color: theme.palette.info.main, mr: 1.5 }} />
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {result.title}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {result.subtitle}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Box>
+              )}
+
+              {searchResults?.deals && searchResults.deals.length > 0 && (
+                <Box>
+                  {((searchResults.contacts?.length > 0) || (searchResults.companies?.length > 0)) && <Divider />}
+                  <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
+                      Negocios
+                    </Typography>
+                  </Box>
+                  {searchResults.deals.map((result: any) => (
+                    <MenuItem
+                      key={`deal-${result.id}`}
+                      onClick={() => {
+                        handleSearchResultClick(result.url);
+                        setSearchModalOpen(false);
+                      }}
+                      sx={{
+                        py: 1.5,
+                        px: 2,
+                        '&:hover': {
+                          bgcolor: theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      <AttachMoney sx={{ fontSize: 20, color: theme.palette.success.main, mr: 1.5 }} />
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {result.title}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {result.subtitle} {result.amount && `• ${new Intl.NumberFormat('es-PE', { style: 'currency', currency: 'PEN' }).format(result.amount)}`}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Box>
+              )}
+
+              {searchResults?.tasks && searchResults.tasks.length > 0 && (
+                <Box>
+                  {((searchResults.contacts?.length > 0) || (searchResults.companies?.length > 0) || (searchResults.deals?.length > 0)) && <Divider />}
+                  <Box sx={{ px: 2, py: 1, bgcolor: theme.palette.action.hover }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: theme.palette.text.secondary, textTransform: 'uppercase', fontSize: '0.6875rem' }}>
+                      Tareas
+                    </Typography>
+                  </Box>
+                  {searchResults.tasks.map((result: any) => (
+                    <MenuItem
+                      key={`task-${result.id}`}
+                      onClick={() => {
+                        handleSearchResultClick(result.url);
+                        setSearchModalOpen(false);
+                      }}
+                      sx={{
+                        py: 1.5,
+                        px: 2,
+                        '&:hover': {
+                          bgcolor: theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      <Assignment sx={{ fontSize: 20, color: theme.palette.warning.main, mr: 1.5 }} />
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {result.title}
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {result.subtitle}
+                        </Typography>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Box>
+              )}
+
+              {(!searchResults?.contacts || searchResults.contacts.length === 0) &&
+               (!searchResults?.companies || searchResults.companies.length === 0) &&
+               (!searchResults?.deals || searchResults.deals.length === 0) &&
+               (!searchResults?.tasks || searchResults.tasks.length === 0) && (
+                    <Box sx={{ py: 3, textAlign: 'center' }}>
+                      <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                        No se encontraron resultados
+                      </Typography>
+                    </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <ProfileModal 
         open={profileModalOpen} 

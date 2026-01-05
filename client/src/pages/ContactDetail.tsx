@@ -157,7 +157,7 @@ const ContactDetail: React.FC = () => {
   const [contact, setContact] = useState<ContactDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
-  const [copilotOpen, setCopilotOpen] = useState(true);
+  const [copilotOpen, setCopilotOpen] = useState(false);
   const [,] = useState<null | HTMLElement>(null);
   const [associatedDeals, setAssociatedDeals] = useState<any[]>([]);
   const [associatedCompanies, setAssociatedCompanies] = useState<any[]>([]);
@@ -801,20 +801,20 @@ const ContactDetail: React.FC = () => {
 
   const getStageLabel = (stage: string) => {
     const labels: { [key: string]: string } = {
-      'lead': '0% Lead',
-      'contacto': '10% Contacto',
-      'reunion_agendada': '30% Reunión Agendada',
-      'reunion_efectiva': '40% Reunión Efectiva',
-      'propuesta_economica': '50% Propuesta Económica',
-      'negociacion': '70% Negociación',
-      'licitacion': '75% Licitación',
-      'licitacion_etapa_final': '85% Licitación Etapa Final',
-      'cierre_ganado': '90% Cierre Ganado',
-      'cierre_perdido': '-1% Cierre Perdido',
-      'firma_contrato': '95% Firma de Contrato',
-      'activo': '100% Activo',
-      'cliente_perdido': '-1% Cliente perdido',
-      'lead_inactivo': '-5% Lead Inactivo',
+      'lead': 'Lead',
+      'contacto': 'Contacto',
+      'reunion_agendada': 'Reunión Agendada',
+      'reunion_efectiva': 'Reunión Efectiva',
+      'propuesta_economica': 'Propuesta Económica',
+      'negociacion': 'Negociación',
+      'licitacion': 'Licitación',
+      'licitacion_etapa_final': 'Licitación Etapa Final',
+      'cierre_ganado': 'Cierre Ganado',
+      'cierre_perdido': 'Cierre Perdido',
+      'firma_contrato': 'Firma de Contrato',
+      'activo': 'Activo',
+      'cliente_perdido': 'Cliente perdido',
+      'lead_inactivo': 'Lead Inactivo',
     };
     return labels[stage] || stage;
   };
@@ -905,8 +905,7 @@ const ContactDetail: React.FC = () => {
 
       if (companies.length > 0) {
         const activityPromises = companies.map((company: any) =>
-          api.post('/activities', {
-            type: 'email',
+          api.post('/activities/emails', {
             subject: emailData.subject,
             description: emailData.body.replace(/<[^>]*>/g, ''), // Remover HTML para la descripción
             contactId: id,
@@ -915,8 +914,7 @@ const ContactDetail: React.FC = () => {
         );
         await Promise.all(activityPromises);
       } else {
-        await api.post('/activities', {
-          type: 'email',
+        await api.post('/activities/emails', {
           subject: emailData.subject,
           description: emailData.body.replace(/<[^>]*>/g, ''),
           contactId: id,
@@ -1093,8 +1091,7 @@ const ContactDetail: React.FC = () => {
           // Crear una nota para cada combinación de contacto y empresa
           for (const companyId of companiesToAssociate) {
             activityPromises.push(
-              api.post('/activities', {
-                type: 'note',
+              api.post('/activities/notes', {
                 subject: noteData.subject || `Nota para ${contactName}`,
                 description: noteData.description,
                 contactId: contactId,
@@ -1105,8 +1102,7 @@ const ContactDetail: React.FC = () => {
         } else {
           // Crear nota solo con el contacto (sin empresa)
           activityPromises.push(
-            api.post('/activities', {
-              type: 'note',
+            api.post('/activities/notes', {
               subject: noteData.subject || `Nota para ${contactName}`,
               description: noteData.description,
               contactId: contactId,
@@ -1233,8 +1229,7 @@ const ContactDetail: React.FC = () => {
       if (companies.length > 0) {
         // Crear actividad para cada empresa asociada
         const activityPromises = companies.map((company: any) =>
-          api.post('/activities', {
-            type: 'call',
+          api.post('/activities/calls', {
             subject: callData.subject,
             description: callData.description,
             contactId: id,
@@ -1244,8 +1239,7 @@ const ContactDetail: React.FC = () => {
         await Promise.all(activityPromises);
       } else {
         // Si no hay empresas asociadas, crear solo con contactId
-        await api.post('/activities', {
-          type: 'call',
+        await api.post('/activities/calls', {
           subject: callData.subject,
           description: callData.description,
           contactId: id,
@@ -5758,7 +5752,9 @@ const ContactDetail: React.FC = () => {
             backgroundImage: theme.palette.mode === 'dark' 
               ? 'none' 
               : 'linear-gradient(180deg, rgba(249, 250, 251, 0.5) 0%, rgba(255, 255, 255, 1) 100%)',
-            p: 2,
+            pt: { xs: '76px', sm: 2 },
+            px: 2,
+            pb: 2,
             boxSizing: 'border-box',
           },
         }}
@@ -8740,20 +8736,20 @@ const ContactDetail: React.FC = () => {
                   }
                 }}
               >
-                  <MenuItem value="lead_inactivo">-5% Lead Inactivo</MenuItem>
-                  <MenuItem value="cliente_perdido">-1% Cliente perdido</MenuItem>
-                  <MenuItem value="cierre_perdido">-1% Cierre Perdido</MenuItem>
-                  <MenuItem value="lead">0% Lead</MenuItem>
-                  <MenuItem value="contacto">10% Contacto</MenuItem>
-                  <MenuItem value="reunion_agendada">30% Reunión Agendada</MenuItem>
-                  <MenuItem value="reunion_efectiva">40% Reunión Efectiva</MenuItem>
-                  <MenuItem value="propuesta_economica">50% Propuesta Económica</MenuItem>
-                  <MenuItem value="negociacion">70% Negociación</MenuItem>
-                  <MenuItem value="licitacion">75% Licitación</MenuItem>
-                  <MenuItem value="licitacion_etapa_final">85% Licitación Etapa Final</MenuItem>
-                  <MenuItem value="cierre_ganado">90% Cierre Ganado</MenuItem>
-                  <MenuItem value="firma_contrato">95% Firma de Contrato</MenuItem>
-                  <MenuItem value="activo">100% Activo</MenuItem>
+                  <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
+                  <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
+                  <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+                  <MenuItem value="lead">Lead</MenuItem>
+                  <MenuItem value="contacto">Contacto</MenuItem>
+                  <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+                  <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+                  <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
+                  <MenuItem value="negociacion">Negociación</MenuItem>
+                  <MenuItem value="licitacion">Licitación</MenuItem>
+                  <MenuItem value="licitacion_etapa_final">Licitación Etapa Final</MenuItem>
+                  <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+                  <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
+                  <MenuItem value="activo">Activo</MenuItem>
               </TextField>
             </Box>
           )}
