@@ -427,7 +427,7 @@ const TaskDetail: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [id, user?.id]);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -1458,6 +1458,78 @@ const TaskDetail: React.FC = () => {
       minHeight: '100vh',
       pb: { xs: 2, sm: 3, md: 4 },
     }}>
+      {/* Título de la página */}
+      <Box sx={{ 
+        pt: { xs: 2, sm: 3 }, 
+        pb: 2, 
+        px: { xs: 2, sm: 3, md: 4 },
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 1.5,
+      }}>
+        {/* Lado izquierdo: Botón de regresar y título */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <IconButton
+            onClick={() => navigate('/tasks')}
+            sx={{
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+                color: theme.palette.text.primary,
+              },
+            }}
+          >
+            <ChevronLeft />
+          </IconButton>
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 500,
+              color: theme.palette.text.primary,
+              fontSize: { xs: '1.125rem', sm: '1.25rem', md: '1.5rem' },
+            }}
+          >
+            Información de la tarea
+          </Typography>
+        </Box>
+
+        {/* Lado derecho: Breadcrumb */}
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 0.5,
+          color: theme.palette.text.secondary,
+        }}>
+          <Typography
+            component="span"
+            onClick={() => navigate('/tasks')}
+            sx={{
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              cursor: 'pointer',
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                color: theme.palette.text.primary,
+                textDecoration: 'underline',
+              },
+            }}
+          >
+            Tareas
+          </Typography>
+          <KeyboardArrowRight sx={{ fontSize: { xs: 16, sm: 18 }, color: theme.palette.text.disabled }} />
+          <Typography
+            component="span"
+            sx={{
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              color: theme.palette.text.primary,
+              fontWeight: 500,
+            }}
+          >
+            {task?.title}
+          </Typography>
+        </Box>
+      </Box>
+
       {/* Contenido principal */}
       <Box sx={{ 
         display: 'flex',
@@ -1466,6 +1538,7 @@ const TaskDetail: React.FC = () => {
         overflow: { xs: 'visible', md: 'hidden' },
         minHeight: { xs: 'auto', md: 0 },
         gap: 2,
+        px: { xs: 2, sm: 3, md: 4 },
       }}>
         {/* Columna Principal - Descripción y Actividades */}
         <Box sx={{ 

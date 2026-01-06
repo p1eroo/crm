@@ -1919,6 +1919,77 @@ const ContactDetail: React.FC = () => {
         flexDirection: 'column',
         overflow: 'visible',
       }}>
+      {/* Título de la página */}
+      <Box sx={{ 
+        pt: { xs: 2, sm: 3 }, 
+        pb: 2, 
+        px: { xs: 2, sm: 3, md: 4 },
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 1.5,
+      }}>
+        {/* Lado izquierdo: Botón de regresar y título */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <IconButton
+            onClick={() => navigate('/contacts')}
+            sx={{
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+                color: theme.palette.text.primary,
+              },
+            }}
+          >
+            <ChevronLeft />
+          </IconButton>
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 500,
+              color: theme.palette.text.primary,
+              fontSize: { xs: '1.125rem', sm: '1.25rem', md: '1.5rem' },
+            }}
+          >
+            Información del contacto
+          </Typography>
+        </Box>
+
+        {/* Lado derecho: Breadcrumb */}
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 0.5,
+          color: theme.palette.text.secondary,
+        }}>
+          <Typography
+            component="span"
+            onClick={() => navigate('/contacts')}
+            sx={{
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              cursor: 'pointer',
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                color: theme.palette.text.primary,
+                textDecoration: 'underline',
+              },
+            }}
+          >
+            Contactos
+          </Typography>
+          <KeyboardArrowRight sx={{ fontSize: { xs: 16, sm: 18 }, color: theme.palette.text.disabled }} />
+          <Typography
+            component="span"
+            sx={{
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              color: theme.palette.text.primary,
+              fontWeight: 500,
+            }}
+          >
+            {contact?.firstName} {contact?.lastName}
+          </Typography>
+        </Box>
+      </Box>
 
       {/* Contenido principal - Separado en 2 partes */}
       <Box sx={{ 
@@ -1932,6 +2003,7 @@ const ContactDetail: React.FC = () => {
         maxHeight: { xs: 'none', md: 'none' },
         alignItems: { xs: 'stretch', md: 'flex-start' },
         alignContent: 'flex-start',
+        px: { xs: 2, sm: 3, md: 4 },
       }}>
         {/* Columna Principal - Tabs y Contenido */}
         <Box sx={{ 

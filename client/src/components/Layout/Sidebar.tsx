@@ -8,6 +8,7 @@ import {
   Box,
   useTheme,
   Typography,
+  useMediaQuery,
 } from '@mui/material';
 import {
   Dashboard,
@@ -30,8 +31,11 @@ const Sidebar: React.FC = () => {
   const { user } = useAuth();
   const theme = useTheme();
   const { open, collapsed } = useSidebar();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
-  const drawerWidth = collapsed ? 85 : 270;
+  const drawerWidth = collapsed 
+    ? (isMobile ? 0 : 85) 
+    : 270;
 
 const mainMenuItems = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },

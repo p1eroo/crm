@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, useTheme } from '@mui/material';
+import { Box, useTheme, useMediaQuery } from '@mui/material';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useSidebar } from '../../context/SidebarContext';
@@ -11,8 +11,11 @@ interface MainLayoutProps {
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const theme = useTheme();
   const { open, collapsed } = useSidebar();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
-  const drawerWidth = collapsed ? 85 : 270;
+  const drawerWidth = collapsed 
+    ? (isMobile ? 0 : 85) 
+    : 270;
   
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', bgcolor: theme.palette.background.default }}>
@@ -33,8 +36,14 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           component="main"
           sx={{
             flexGrow: 1,
-            width: { sm: open ? `calc(100% - ${drawerWidth}px)` : '100%' },
-            marginLeft: { sm: open ? `${drawerWidth}px` : 0 },
+            width: { 
+              xs: '100%', // En móviles siempre ocupa el 100%, especialmente cuando está colapsado
+              sm: open ? `calc(100% - ${drawerWidth}px)` : '100%' 
+            },
+            marginLeft: { 
+              xs: 0, // En móviles no hay margen, especialmente cuando está colapsado
+              sm: open ? `${drawerWidth}px` : 0 
+            },
             display: 'flex',
             flexDirection: 'column',
             bgcolor: theme.palette.background.default,

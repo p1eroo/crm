@@ -28,7 +28,6 @@ import {
 import { 
   Search, 
   Notifications,
-  Alarm,
   Person,
   Business,
   AttachMoney,
@@ -51,9 +50,9 @@ const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { mode, toggleTheme } = useThemeContext();
-  const { open: sidebarOpen, collapsed, toggleSidebar, toggleCollapsed } = useSidebar();
+  const { open: sidebarOpen, toggleSidebar, toggleCollapsed } = useSidebar();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [reminderAnchorEl, setReminderAnchorEl] = useState<null | HTMLElement>(null);
+  const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState('');
@@ -63,10 +62,10 @@ const Header: React.FC = () => {
   const searchInputRef = useRef<HTMLElement>(null);
   const searchInputElementRef = useRef<HTMLInputElement>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [reminders, setReminders] = useState<any[]>([]);
-  const [reminderCount, setReminderCount] = useState(0);
-  const reminderButtonRef = useRef<HTMLButtonElement>(null);
-  const [reminderDialogOpen, setReminderDialogOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const notificationButtonRef = useRef<HTMLButtonElement>(null);
+  const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -78,12 +77,12 @@ const Header: React.FC = () => {
   };
 
 
-  const handleReminderMenu = (event: React.MouseEvent<HTMLElement>) => {
-    setReminderAnchorEl(event.currentTarget);
+  const handleNotificationMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setNotificationAnchorEl(event.currentTarget);
   };
 
-  const handleReminderClose = () => {
-    setReminderAnchorEl(null);
+  const handleNotificationClose = () => {
+    setNotificationAnchorEl(null);
   };
 
   const handleProfileClick = () => {
@@ -163,13 +162,13 @@ const Header: React.FC = () => {
     setSearchAnchorEl(null);
   };
 
-  // Obtener recordatorios de tareas y eventos
+  // Obtener notificaciones de tareas y eventos
   useEffect(() => {
-    const fetchReminders = async (autoOpen: boolean = false) => {
+    const fetchNotifications = async (autoOpen: boolean = false) => {
       // Verificar autenticación antes de hacer requests
       const token = localStorage.getItem('token');
       if (!user || !token) {
-        console.log('⚠️ Usuario no autenticado, omitiendo fetchReminders');
+        console.log('⚠️ Usuario no autenticado, omitiendo fetchNotifications');
         return;
       }
 
@@ -262,26 +261,26 @@ const Header: React.FC = () => {
           return dateA - dateB;
         });
 
-        setReminders(allReminders);
-        setReminderCount(allReminders.length);
+        setNotifications(allReminders);
+        setNotificationCount(allReminders.length);
 
-        // Abrir el diálogo automáticamente si hay recordatorios y autoOpen es true
+        // Abrir el diálogo automáticamente si hay notificaciones y autoOpen es true
         if (autoOpen && allReminders.length > 0) {
-          setReminderDialogOpen(true);
+          setNotificationDialogOpen(true);
         }
       } catch (error) {
-        console.error('Error fetching reminders:', error);
-        setReminders([]);
-        setReminderCount(0);
+        console.error('Error fetching notifications:', error);
+        setNotifications([]);
+        setNotificationCount(0);
       }
     };
 
-    // Cargar recordatorios inicialmente
-    fetchReminders(false);
+    // Cargar notificaciones inicialmente
+    fetchNotifications(false);
     
-    // Actualizar cada 5 minutos y abrir automáticamente si hay recordatorios
+    // Actualizar cada 5 minutos (sin abrir automáticamente)
     const interval = setInterval(() => {
-      fetchReminders(true);
+      fetchNotifications(false);
     }, 5 * 60 * 1000);
     
     return () => clearInterval(interval);
@@ -692,12 +691,12 @@ const Header: React.FC = () => {
           </IconButton>
         </Tooltip>
 
-        {/* Recordatorios */}
-        <Tooltip title="Recordatorios">
+        {/* Notificaciones */}
+        <Tooltip title="Notificaciones">
           <IconButton 
-            ref={reminderButtonRef}
+            ref={notificationButtonRef}
             size="small"
-            onClick={handleReminderMenu}
+            onClick={handleNotificationMenu}
             sx={{ 
               bgcolor: 'transparent', 
               borderRadius: 1, 
@@ -709,7 +708,7 @@ const Header: React.FC = () => {
             }}
           >
             <Badge 
-              badgeContent={reminderCount > 0 ? reminderCount : undefined} 
+              badgeContent={notificationCount > 0 ? notificationCount : undefined} 
               sx={{
                 '& .MuiBadge-badge': {
                   backgroundColor: '#ef4444',
@@ -721,40 +720,11 @@ const Header: React.FC = () => {
                 },
               }}
             >
-              <Alarm sx={{ fontSize: 24, color: '#637381' }} />
+              <Notifications sx={{ fontSize: 24, color: '#637381' }} />
             </Badge>
           </IconButton>
         </Tooltip>
 
-        {/* Notificaciones */}
-        <IconButton 
-          size="small"
-          sx={{ 
-            bgcolor: 'transparent', 
-            borderRadius: 1, 
-            width: 36,
-            height: 36,
-            '&:hover': {
-              bgcolor: theme.palette.action.hover,
-            },
-          }}
-        >
-          <Badge 
-            badgeContent={3} 
-            sx={{
-              '& .MuiBadge-badge': {
-                backgroundColor: '#ef4444',
-                color: '#ffffff',
-                fontSize: '0.625rem',
-                minWidth: 16,
-                height: 16,
-                padding: '0 4px',
-              },
-            }}
-          >
-            <Notifications sx={{ fontSize: 24, color: '#637381' }} />
-          </Badge>
-        </IconButton>
 
         {/* Avatar con dropdown */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, cursor: 'pointer', ml: 1 }} onClick={handleMenu}>
@@ -774,11 +744,11 @@ const Header: React.FC = () => {
         </Box>
       </Box>
 
-      {/* Menu dropdown de recordatorios (cuando se hace clic manualmente) */}
+      {/* Menu dropdown de notificaciones (cuando se hace clic manualmente) */}
       <Menu
-        anchorEl={reminderAnchorEl}
-        open={Boolean(reminderAnchorEl) && !reminderDialogOpen}
-        onClose={handleReminderClose}
+        anchorEl={notificationAnchorEl}
+        open={Boolean(notificationAnchorEl) && !notificationDialogOpen}
+        onClose={handleNotificationClose}
         PaperProps={{
           sx: {
             bgcolor: theme.palette.background.paper,
@@ -797,21 +767,21 @@ const Header: React.FC = () => {
           },
         }}
       >
-        {reminders.length === 0 ? (
+        {notifications.length === 0 ? (
           <MenuItem disabled>
             <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-              No hay recordatorios próximos
+              No hay notificaciones próximas
             </Typography>
           </MenuItem>
         ) : (
-          reminders.map((reminder, index) => (
-            <MenuItem key={index} onClick={handleReminderClose}>
+          notifications.map((notification, index) => (
+            <MenuItem key={index} onClick={handleNotificationClose}>
               <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
                 <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  {reminder.title}
+                  {notification.title}
                 </Typography>
                 <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                  {reminder.type === 'task' ? 'Tarea' : 'Evento'} • {new Date(reminder.dueDate).toLocaleString('es-ES', {
+                  {notification.type === 'task' ? 'Tarea' : 'Evento'} • {new Date(notification.dueDate).toLocaleString('es-ES', {
                     day: 'numeric',
                     month: 'short',
                     hour: '2-digit',
@@ -824,10 +794,10 @@ const Header: React.FC = () => {
         )}
       </Menu>
 
-      {/* Dialog de recordatorios (cuando se abre automáticamente) */}
+      {/* Dialog de notificaciones */}
       <Dialog
-        open={reminderDialogOpen}
-        onClose={() => setReminderDialogOpen(false)}
+        open={notificationDialogOpen}
+        onClose={() => setNotificationDialogOpen(false)}
         maxWidth="sm"
         fullWidth
         disableAutoFocus={false}
@@ -841,58 +811,58 @@ const Header: React.FC = () => {
         }}
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, pb: 1 }}>
-          <Alarm sx={{ color: taxiMonterricoColors.green, fontSize: 24 }} />
+          <Notifications sx={{ color: taxiMonterricoColors.green, fontSize: 24 }} />
           <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
-            Mis objetivos
+            Notificaciones
           </Typography>
         </DialogTitle>
         <DialogContent sx={{ p: 0 }}>
-          {reminders.length === 0 ? (
+          {notifications.length === 0 ? (
             <Box sx={{ p: 3, textAlign: 'center' }}>
               <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                No hay recordatorios próximos
+                No hay notificaciones próximas
               </Typography>
             </Box>
           ) : (
             <List sx={{ p: 0 }}>
-              {reminders.map((reminder, index) => (
+              {notifications.map((notification, index) => (
                 <React.Fragment key={index}>
                   <ListItem
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      setReminderDialogOpen(false);
+                      setNotificationDialogOpen(false);
                     }}
                     sx={{
                       py: 2,
                       px: 3,
-                      cursor: reminder.id ? 'pointer' : 'default',
+                      cursor: notification.id ? 'pointer' : 'default',
                       '&:hover': {
-                        bgcolor: reminder.id ? theme.palette.action.hover : 'transparent',
+                        bgcolor: notification.id ? theme.palette.action.hover : 'transparent',
                       },
                     }}
                   >
                     <ListItemText
                       primary={
                         <Typography variant="body1" sx={{ fontWeight: 500, mb: 0.5 }}>
-                          {reminder.title}
+                          {notification.title}
                         </Typography>
                       }
                       secondary={
                         <Typography component="div" variant="body2" sx={{ mt: 0.5 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <Chip
-                              label={reminder.type === 'task' ? 'Tarea' : 'Evento'}
+                              label={notification.type === 'task' ? 'Tarea' : 'Evento'}
                               size="small"
                               sx={{
                                 height: 20,
                                 fontSize: '0.7rem',
-                                bgcolor: reminder.type === 'task' ? taxiMonterricoColors.green : '#2196F3',
+                                bgcolor: notification.type === 'task' ? taxiMonterricoColors.green : '#2196F3',
                                 color: 'white',
                               }}
                             />
                             <Typography variant="caption" component="span" sx={{ color: theme.palette.text.secondary }}>
-                              {new Date(reminder.dueDate).toLocaleString('es-ES', {
+                              {new Date(notification.dueDate).toLocaleString('es-ES', {
                                 day: 'numeric',
                                 month: 'short',
                                 year: 'numeric',
@@ -905,7 +875,7 @@ const Header: React.FC = () => {
                       }
                     />
                   </ListItem>
-                  {index < reminders.length - 1 && <Divider />}
+                  {index < notifications.length - 1 && <Divider />}
                 </React.Fragment>
               ))}
             </List>
@@ -913,7 +883,7 @@ const Header: React.FC = () => {
         </DialogContent>
         <DialogActions sx={{ px: 3, py: 2 }}>
           <Button
-            onClick={() => setReminderDialogOpen(false)}
+            onClick={() => setNotificationDialogOpen(false)}
             variant="contained"
             sx={{
               bgcolor: taxiMonterricoColors.green,

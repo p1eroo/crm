@@ -180,7 +180,8 @@ const CompanyDetail: React.FC = () => {
   const [timeRangeSearch, setTimeRangeSearch] = useState('');
   const [selectedTimeRange, setSelectedTimeRange] = useState<string>('Todo hasta ahora');
   const [selectedActivityTypes, setSelectedActivityTypes] = useState<string[]>([]);
-  const [expandedActivity, setExpandedActivity] = useState<any | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_expandedActivity, setExpandedActivity] = useState<any | null>(null);
   const [completedActivities, setCompletedActivities] = useState<{ [key: number]: boolean }>({});
   const activityFilterChipRef = useRef<HTMLDivElement>(null);
   
@@ -1920,6 +1921,77 @@ const CompanyDetail: React.FC = () => {
       display: 'flex', 
       flexDirection: 'column',
     }}>
+      {/* Título de la página */}
+      <Box sx={{ 
+        pt: { xs: 2, sm: 3 }, 
+        pb: 2, 
+        px: { xs: 2, sm: 3, md: 4 },
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 1.5,
+      }}>
+        {/* Lado izquierdo: Botón de regresar y título */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <IconButton
+            onClick={() => navigate('/companies')}
+            sx={{
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+                color: theme.palette.text.primary,
+              },
+            }}
+          >
+            <ChevronLeft />
+          </IconButton>
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 500,
+              color: theme.palette.text.primary,
+              fontSize: { xs: '1.125rem', sm: '1.25rem', md: '1.5rem' },
+            }}
+          >
+            Información de la empresa
+          </Typography>
+        </Box>
+
+        {/* Lado derecho: Breadcrumb */}
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 0.5,
+          color: theme.palette.text.secondary,
+        }}>
+          <Typography
+            component="span"
+            onClick={() => navigate('/companies')}
+            sx={{
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              cursor: 'pointer',
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                color: theme.palette.text.primary,
+                textDecoration: 'underline',
+              },
+            }}
+          >
+            Empresas
+          </Typography>
+          <KeyboardArrowRight sx={{ fontSize: { xs: 16, sm: 18 }, color: theme.palette.text.disabled }} />
+          <Typography
+            component="span"
+            sx={{
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              color: theme.palette.text.primary,
+              fontWeight: 500,
+            }}
+          >
+            {company?.name}
+          </Typography>
+        </Box>
+      </Box>
 
       {/* Contenido principal */}
       <Box sx={{ 
@@ -1928,8 +2000,9 @@ const CompanyDetail: React.FC = () => {
         flex: 1,
         overflow: { xs: 'visible', md: 'hidden' },
         minHeight: { xs: 'auto', md: 0 },
-          gap: 2,
-        }}>
+        gap: 2,
+        px: { xs: 2, sm: 3, md: 4 },
+      }}>
             <Menu 
               anchorEl={anchorEl} 
               open={Boolean(anchorEl)} 

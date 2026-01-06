@@ -38,6 +38,8 @@ import {
   Visibility,
   Delete,
   Edit,
+  ChevronLeft,
+  ChevronRight,
 } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
@@ -80,6 +82,8 @@ const Tickets: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [ticketToDelete, setTicketToDelete] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(7);
 
   // Calcular estadísticas
   const totalTickets = tickets.length;
@@ -170,6 +174,43 @@ const Tickets: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Filtrar tickets según búsqueda
+  const filteredTickets = tickets.filter((ticket) => {
+    const matchesSearch = search === '' || 
+      ticket.subject.toLowerCase().includes(search.toLowerCase()) ||
+      (ticket.Contact && `${ticket.Contact.firstName} ${ticket.Contact.lastName}`.toLowerCase().includes(search.toLowerCase())) ||
+      (ticket.AssignedTo && `${ticket.AssignedTo.firstName} ${ticket.AssignedTo.lastName}`.toLowerCase().includes(search.toLowerCase()));
+    return matchesSearch;
+  }).sort((a, b) => {
+    switch (sortBy) {
+      case 'newest':
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+      case 'oldest':
+        const dateAOld = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateBOld = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateAOld - dateBOld;
+      case 'name':
+        return a.subject.localeCompare(b.subject);
+      case 'nameDesc':
+        return b.subject.localeCompare(a.subject);
+      default:
+        return 0;
+    }
+  });
+
+  // Calcular paginación
+  const totalPages = Math.ceil(filteredTickets.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedTickets = filteredTickets.slice(startIndex, endIndex);
+
+  // Resetear página cuando cambien los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, sortBy]);
 
 
 
@@ -418,7 +459,7 @@ const Tickets: React.FC = () => {
           </Box>
         </Box>
         {/* Contenido principal */}
-        {tickets.length === 0 ? (
+        {filteredTickets.length === 0 ? (
         <Paper
           sx={{
             flex: 1,
@@ -470,7 +511,8 @@ const Tickets: React.FC = () => {
           </Box>
         </Paper>
       ) : (
-        <TableContainer 
+        <>
+          <TableContainer 
             component={Paper}
             sx={{ 
               overflowX: 'auto',
@@ -529,7 +571,7 @@ const Tickets: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {tickets.map((ticket) => (
+                {paginatedTickets.map((ticket) => (
                   <TableRow 
                     key={ticket.id} 
                     hover
@@ -708,7 +750,96 @@ const Tickets: React.FC = () => {
               </TableBody>
             </Table>
           </TableContainer>
-        )}
+
+          {/* Paginación */}
+          {filteredTickets.length > 0 && (
+            <Box
+              sx={{
+                bgcolor: theme.palette.background.paper,
+                borderRadius: '0 0 6px 6px',
+                boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
+                px: { xs: 2, md: 3 },
+                py: { xs: 1, md: 1.5 },
+                display: 'flex',
+                flexDirection: { xs: 'column', md: 'row' },
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: { xs: 1.5, md: 2 },
+              }}
+            >
+              {/* Rows per page selector */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                  Filas por página:
+                </Typography>
+                <FormControl size="small" sx={{ minWidth: 80 }}>
+                  <Select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    sx={{
+                      fontSize: '0.875rem',
+                      '& .MuiSelect-select': {
+                        py: 0.75,
+                      },
+                    }}
+                  >
+                    <MenuItem value={5}>5</MenuItem>
+                    <MenuItem value={7}>7</MenuItem>
+                    <MenuItem value={10}>10</MenuItem>
+                    <MenuItem value={15}>15</MenuItem>
+                    <MenuItem value={20}>20</MenuItem>
+                  </Select>
+                </FormControl>
+              </Box>
+
+              {/* Pagination info */}
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                {startIndex + 1}-{Math.min(endIndex, filteredTickets.length)} de {filteredTickets.length}
+              </Typography>
+
+              {/* Pagination controls */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <IconButton
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  sx={{
+                    color: theme.palette.text.secondary,
+                    '&:hover': {
+                      bgcolor: theme.palette.action.hover,
+                    },
+                    '&.Mui-disabled': {
+                      color: theme.palette.text.disabled,
+                    },
+                  }}
+                >
+                  <ChevronLeft />
+                </IconButton>
+                <Typography variant="body2" sx={{ color: theme.palette.text.primary, minWidth: 60, textAlign: 'center' }}>
+                  Página {currentPage} de {totalPages}
+                </Typography>
+                <IconButton
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  sx={{
+                    color: theme.palette.text.secondary,
+                    '&:hover': {
+                      bgcolor: theme.palette.action.hover,
+                    },
+                    '&.Mui-disabled': {
+                      color: theme.palette.text.disabled,
+                    },
+                  }}
+                >
+                  <ChevronRight />
+                </IconButton>
+              </Box>
+            </Box>
+          )}
+        </>
+      )}
       </Card>
       {/* Modal de Confirmación de Eliminación */}
       <Dialog

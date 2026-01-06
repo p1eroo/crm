@@ -23,7 +23,6 @@ import {
   useTheme,
   useMediaQuery,
   Collapse,
-  Pagination,
   Snackbar,
   Alert,
   LinearProgress,
@@ -103,7 +102,8 @@ const Companies: React.FC = () => {
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<{ [key: number]: HTMLElement | null }>({});
   const [updatingStatus, setUpdatingStatus] = useState<{ [key: number]: boolean }>({});
   const [actionsMenuAnchor, setActionsMenuAnchor] = useState<{ [key: number]: HTMLElement | null }>({});
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [_selectedCompany, setSelectedCompany] = useState<Company | null>(null);
   const [importing, setImporting] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [importProgressOpen, setImportProgressOpen] = useState(false);
@@ -136,13 +136,6 @@ const Companies: React.FC = () => {
     }
     return name.substring(0, 2).toUpperCase();
   };
-  // Función para obtener iniciales de nombre y apellido separados
-  const getInitialsFromNames = (firstName?: string, lastName?: string) => {
-    const first = firstName?.[0]?.toUpperCase() || '';
-    const last = lastName?.[0]?.toUpperCase() || '';
-    return first && last ? `${first}${last}` : first || last || '--';
-  };
-
   // Función para obtener el label del origen de lead
   const getLeadSourceLabel = (source?: string) => {
     const labels: { [key: string]: string } = {
@@ -1019,23 +1012,32 @@ const Companies: React.FC = () => {
   };
 
   const getStageColor = (stage: string) => {
-    const colors: { [key: string]: 'default' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning' } = {
-      'lead': 'error', // Rojo para 0%
-      'contacto': 'warning', // Naranja para 10%
-      'reunion_agendada': 'warning', // Naranja para 30%
-      'reunion_efectiva': 'warning', // Amarillo para 40%
-      'propuesta_economica': 'info', // Verde claro para 50%
-      'negociacion': 'success', // Verde para 70%
-      'licitacion': 'success', // Verde para 75%
-      'licitacion_etapa_final': 'success', // Verde oscuro para 85%
-      'cierre_ganado': 'success', // Verde oscuro para 90%
-      'cierre_perdido': 'error', // Rojo para -1%
-      'firma_contrato': 'success', // Verde oscuro para 95%
-      'activo': 'success', // Verde más oscuro para 100%
-      'cliente_perdido': 'error', // Rojo para -1%
-      'lead_inactivo': 'error', // Rojo para -5%
-    };
-    return colors[stage] || 'default';
+    // Cierre ganado y etapas finales exitosas
+    if (['cierre_ganado', 'firma_contrato', 'activo'].includes(stage)) {
+      return { bg: '#E8F5E9', color: '#2E7D32' };
+    }
+    // Cierre perdido y clientes perdidos
+    else if (stage === 'cierre_perdido' || stage === 'cliente_perdido') {
+      return { bg: '#FFEBEE', color: '#C62828' };
+    }
+    // Negociación y reuniones
+    else if (['reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion'].includes(stage)) {
+      return { bg: '#FFF3E0', color: '#E65100' };
+    }
+    // Licitación - Color de texto púrpura oscuro
+    else if (stage === 'licitacion_etapa_final' || stage === 'licitacion') {
+      return { bg: '#F3E5F5', color: '#7B1FA2' };
+    }
+    // Lead y Contacto - Azul oscuro
+    else if (['lead', 'contacto'].includes(stage)) {
+      return { bg: '#E3F2FD', color: '#1976D2' };
+    }
+    // Lead inactivo - Gris oscuro
+    else if (stage === 'lead_inactivo') {
+      return { bg: theme.palette.action.hover, color: theme.palette.text.secondary };
+    }
+    // Por defecto
+    return { bg: '#E3F2FD', color: '#1976D2' };
   };
 
   const getStageLabel = (stage: string) => {
@@ -1300,7 +1302,7 @@ const Companies: React.FC = () => {
               borderRadius: '8px 8px 0 0',
               overflow: 'hidden',
               display: 'grid',
-              gridTemplateColumns: { xs: 'repeat(11, minmax(0, 1fr))', md: '0.25fr 1.2fr 1.1fr 0.9fr 0.9fr 0.8fr 0.9fr 0.9fr 0.8fr 0.9fr 0.7fr' },
+              gridTemplateColumns: { xs: 'repeat(11, minmax(0, 2fr))', md: '0.2fr 0.8fr 0.55fr 0.5fr 0.45fr 0.4fr 0.6fr 0.4fr 0.4fr 0.6fr 0.4fr' },
               columnGap: { xs: 1, md: 2 },
               minWidth: { xs: 800, md: 'auto' },
             maxWidth: '100%',
@@ -1411,7 +1413,7 @@ const Companies: React.FC = () => {
                     cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 display: 'grid',
-                gridTemplateColumns: { xs: 'repeat(11, minmax(0, 1fr))', md: '0.25fr 1.2fr 1.1fr 0.9fr 0.9fr 0.8fr 0.9fr 0.9fr 0.8fr 0.9fr 0.7fr' },
+                gridTemplateColumns: { xs: 'repeat(11, minmax(0, 2fr))', md: '0.3fr 1.5fr 0.9fr 0.9fr 0.8fr 0.7fr 1fr 0.6fr 1fr 0.7fr 0.8fr' },
                 columnGap: { xs: 1, md: 2 },
                 minWidth: { xs: 800, md: 'auto' },
                 maxWidth: '100%',
@@ -1651,12 +1653,13 @@ const Companies: React.FC = () => {
                         handleStatusMenuOpen(e, company.id);
                       }}
                       disabled={updatingStatus[company.id]}
-                    color={getStageColor(company.lifecycleStage || 'lead')}
                       sx={{ 
                         fontWeight: 500,
-                            fontSize: { xs: '0.75rem', md: '0.8125rem' },
-                      height: { xs: 22, md: 24 },
+                        fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                        height: { xs: 22, md: 24 },
                         cursor: 'pointer',
+                        bgcolor: getStageColor(company.lifecycleStage || 'lead').bg,
+                        color: getStageColor(company.lifecycleStage || 'lead').color,
                         '&:hover': {
                           opacity: 0.8,
                         },
@@ -2105,7 +2108,7 @@ const Companies: React.FC = () => {
                 <Box sx={{ px: 2, pb: 2, pt: 1 }}>
                   <Box sx={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: 1, alignItems: 'flex-start' }}>
                     {stageOrder.map((stage) => {
-                      const stageColor = getStageColor(stage);
+                      const stageColorObj = getStageColor(stage);
                       const isSelected = selectedStages.includes(stage);
                       
                       return (
@@ -2113,7 +2116,6 @@ const Companies: React.FC = () => {
                           key={stage}
                           label={getStageLabelWithoutPercentage(stage)}
                           size="small"
-                          color={isSelected ? stageColor : undefined}
                           variant={isSelected ? 'filled' : 'outlined'}
                           onClick={() => {
                             setSelectedStages((prev) =>
@@ -2130,6 +2132,9 @@ const Companies: React.FC = () => {
                             py: 0.25,
                             px: 1,
                             opacity: isSelected ? 1 : 0.8,
+                            bgcolor: isSelected ? stageColorObj.bg : 'transparent',
+                            color: isSelected ? stageColorObj.color : theme.palette.text.primary,
+                            borderColor: isSelected ? stageColorObj.bg : stageColorObj.color,
                             '&:hover': {
                               opacity: 1,
                               transform: 'scale(1.02)',
@@ -2139,16 +2144,6 @@ const Companies: React.FC = () => {
                               padding: '0 4px',
                             },
                             ...(!isSelected && {
-                              borderColor: stageColor === 'error' 
-                                ? theme.palette.error.main 
-                                : stageColor === 'warning'
-                                ? theme.palette.warning.main
-                                : stageColor === 'info'
-                                ? theme.palette.info.main
-                                : stageColor === 'success'
-                                ? theme.palette.success.main
-                                : theme.palette.divider,
-                              color: theme.palette.text.primary,
                               bgcolor: theme.palette.mode === 'dark'
                                 ? 'rgba(255, 255, 255, 0.08)'
                                 : 'rgba(0, 0, 0, 0.04)',

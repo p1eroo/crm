@@ -12,6 +12,7 @@ import {
   IconButton,
   CircularProgress,
   Card,
+  CardContent,
   useTheme,
   Dialog,
   DialogTitle,
@@ -178,6 +179,7 @@ const DealDetail: React.FC = () => {
   const [actionsMenuAnchorEl, setActionsMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [moreOptionsMenuAnchorEl, setMoreOptionsMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [copilotOpen, setCopilotOpen] = useState(true);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
@@ -1253,8 +1255,80 @@ const DealDetail: React.FC = () => {
       minHeight: '100vh',
       pb: { xs: 2, sm: 3, md: 4 },
     }}>
+      {/* Título de la página */}
+      <Box sx={{ 
+        pt: { xs: 2, sm: 3 }, 
+        pb: 2, 
+        px: { xs: 2, sm: 3, md: 4 },
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 1.5,
+      }}>
+        {/* Lado izquierdo: Botón de regresar y título */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <IconButton
+            onClick={() => navigate('/deals')}
+            sx={{
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+                color: theme.palette.text.primary,
+              },
+            }}
+          >
+            <ChevronLeft />
+          </IconButton>
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 500,
+              color: theme.palette.text.primary,
+              fontSize: { xs: '1.125rem', sm: '1.25rem', md: '1.5rem' },
+            }}
+          >
+            Información del negocio
+          </Typography>
+        </Box>
+
+        {/* Lado derecho: Breadcrumb */}
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 0.5,
+          color: theme.palette.text.secondary,
+        }}>
+          <Typography
+            component="span"
+            onClick={() => navigate('/deals')}
+            sx={{
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              cursor: 'pointer',
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                color: theme.palette.text.primary,
+                textDecoration: 'underline',
+              },
+            }}
+          >
+            Negocios
+          </Typography>
+          <KeyboardArrowRight sx={{ fontSize: { xs: 16, sm: 18 }, color: theme.palette.text.disabled }} />
+          <Typography
+            component="span"
+            sx={{
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              color: theme.palette.text.primary,
+              fontWeight: 500,
+            }}
+          >
+            {deal?.name}
+          </Typography>
+        </Box>
+      </Box>
+
           {successMessage && (
-            <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSuccessMessage('')}>
+            <Alert severity="success" sx={{ mb: 2, mx: { xs: 2, sm: 3, md: 4 } }} onClose={() => setSuccessMessage('')}>
               {successMessage}
             </Alert>
           )}
@@ -1267,6 +1341,7 @@ const DealDetail: React.FC = () => {
         overflow: { xs: 'visible', md: 'hidden' },
         minHeight: { xs: 'auto', md: 0 },
         gap: 2,
+        px: { xs: 2, sm: 3, md: 4 },
       }}>
         {/* Columna Principal - Descripción y Actividades */}
         <Box sx={{ 
@@ -1641,7 +1716,22 @@ const DealDetail: React.FC = () => {
                 ml: 1,
                 pl: 1,
                 borderLeft: `1px solid ${theme.palette.divider}`,
+                gap: 0.5,
               }}>
+                <Tooltip title="Registro de Cambios">
+                  <IconButton
+                    onClick={() => setHistoryOpen(!historyOpen)}
+                    size="small"
+                    sx={{
+                      color: historyOpen ? '#2196F3' : theme.palette.text.secondary,
+                      '&:hover': {
+                        bgcolor: 'transparent',
+                      },
+                    }}
+                  >
+                    <History />
+                  </IconButton>
+                </Tooltip>
                 <Tooltip title="Copiloto IA">
                   <IconButton
                     onClick={() => setCopilotOpen(!copilotOpen)}
@@ -1789,25 +1879,24 @@ const DealDetail: React.FC = () => {
                 </Card>
               </Box>
 
-              {/* Card de Actividades Recientes */}
-              <Card sx={{ 
-                borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 2,
-                display: 'flex',
-                flexDirection: 'column',
-                mt: 2,
-                height: 'fit-content',
-                minHeight: 'auto',
-                overflow: 'visible',
-                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+              {/* Grid 2x2 para Actividades Recientes, Contactos, Empresas y Negocios */}
+              <Box sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
+                gap: 2,
                 mb: 2,
               }}>
-                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
-                  Actividades Recientes
-                </Typography>
+                {/* Card de Actividades Recientes */}
+                <Card sx={{ 
+                  borderRadius: 2,
+                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                }}>
+                  <CardContent>
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
+                      Actividades Recientes
+                    </Typography>
                 
                 {activities && activities.length > 0 ? (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -1916,30 +2005,23 @@ const DealDetail: React.FC = () => {
                     No hay actividades recientes
                   </Typography>
                 )}
-              </Card>
+                  </CardContent>
+                </Card>
 
-              {/* Card de Contactos Vinculados */}
-              <Card sx={{ 
-                borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 2,
-                display: 'flex',
-                flexDirection: 'column',
-                mt: 2,
-                height: 'fit-content',
-                minHeight: 'auto',
-                overflow: 'visible',
-                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                mb: 2,
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <Person sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                    Contactos vinculados
-                  </Typography>
-                </Box>
+                {/* Card de Contactos Vinculados */}
+                <Card sx={{ 
+                  borderRadius: 2,
+                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                      <Person sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+                        Contactos vinculados
+                      </Typography>
+                    </Box>
                 {dealContacts && dealContacts.length > 0 ? (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {dealContacts.slice(0, 5).map((contact: any) => (
@@ -1981,30 +2063,23 @@ const DealDetail: React.FC = () => {
                     No hay contactos vinculados
                   </Typography>
                 )}
-              </Card>
+                  </CardContent>
+                </Card>
 
-              {/* Card de Empresas Vinculadas */}
-              <Card sx={{ 
-                borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 2,
-                display: 'flex',
-                flexDirection: 'column',
-                mt: 2,
-                height: 'fit-content',
-                minHeight: 'auto',
-                overflow: 'visible',
-                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                mb: 2,
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <Business sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                    Empresas vinculadas
-                  </Typography>
-                </Box>
+                {/* Card de Empresas Vinculadas */}
+                <Card sx={{ 
+                  borderRadius: 2,
+                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                      <Business sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+                        Empresas vinculadas
+                      </Typography>
+                    </Box>
                 {dealCompanies && dealCompanies.length > 0 ? (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {dealCompanies.slice(0, 5).map((company: any) => (
@@ -2044,30 +2119,23 @@ const DealDetail: React.FC = () => {
                     No hay empresas vinculadas
                   </Typography>
                 )}
-              </Card>
+                  </CardContent>
+                </Card>
 
-              {/* Card de Negocios Vinculados */}
-              <Card sx={{ 
-                borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 2,
-                display: 'flex',
-                flexDirection: 'column',
-                mt: 2,
-                height: 'fit-content',
-                minHeight: 'auto',
-                overflow: 'visible',
-                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                mb: 2,
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <AttachMoney sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                    Negocios vinculados
-                  </Typography>
-                </Box>
+                {/* Card de Negocios Vinculados */}
+                <Card sx={{ 
+                  borderRadius: 2,
+                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                      <AttachMoney sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+                        Negocios vinculados
+                      </Typography>
+                    </Box>
                 {dealDeals && dealDeals.length > 0 ? (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {dealDeals.slice(0, 5).map((dealItem: any) => (
@@ -2110,7 +2178,9 @@ const DealDetail: React.FC = () => {
                     No hay negocios vinculados
                   </Typography>
                 )}
-              </Card>
+                  </CardContent>
+                </Card>
+              </Box>
             </>
           )}
 
@@ -4459,19 +4529,20 @@ const DealDetail: React.FC = () => {
         </Box>
 
           {/* Card Independiente: Registro de Cambios / Logs */}
-          <Box sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-            borderRadius: 2,
-            bgcolor: theme.palette.background.paper,
-            p: 2,
-            pb: 3,
-            boxSizing: 'border-box',
-            overflowY: 'auto',
-            height: 'fit-content',
-            maxHeight: 'calc(100vh - 80px)',
-          }}>
+          {historyOpen && (
+            <Box sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+              borderRadius: 2,
+              bgcolor: theme.palette.background.paper,
+              p: 2,
+              pb: 3,
+              boxSizing: 'border-box',
+              overflowY: 'auto',
+              height: 'fit-content',
+              maxHeight: 'calc(100vh - 80px)',
+            }}>
             {/* Card: Registro de Cambios */}
             <Card 
               sx={{ 
@@ -4625,12 +4696,13 @@ const DealDetail: React.FC = () => {
                 )}
               </Box>
             </Card>
-          </Box>
+            </Box>
+          )}
         </Box>
         )}
 
         {/* Card Independiente: Registro de Cambios / Logs - Solo cuando Copiloto IA está cerrado */}
-        {isDesktop && !copilotOpen && (
+        {isDesktop && !copilotOpen && historyOpen && (
         <Box sx={{
           width: 380,
           flexShrink: 0,

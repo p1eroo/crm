@@ -22,7 +22,6 @@ import {
   Menu,
   useTheme,
   Collapse,
-  Pagination,
 } from '@mui/material';
 import { Add, Delete, AttachMoney, Visibility, ViewList, AccountTree, CalendarToday, Close, FileDownload, UploadFile, FilterList, ExpandMore, Remove, Bolt, Business, Edit, ChevronLeft, ChevronRight } from '@mui/icons-material';
 import api from '../config/api';
@@ -768,7 +767,9 @@ const Deals: React.FC = () => {
           <Box
             component="div"
           sx={{ 
-              bgcolor: theme.palette.background.paper,
+              bgcolor: theme.palette.mode === "dark" 
+              ? "rgba(255, 255, 255, 0.05)" 
+              : "#f4f6f8",
               borderRadius: '8px 8px 0 0',
               overflow: 'hidden',
               display: 'grid',
