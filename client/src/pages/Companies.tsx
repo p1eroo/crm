@@ -27,8 +27,10 @@ import {
   Alert,
   LinearProgress,
   Checkbox,
+  Popover,
+  Card,
 } from '@mui/material';
-import { Add, Delete, Search, Visibility, UploadFile, FileDownload, Warning, CheckCircle, FilterList, Close, ExpandMore, Remove, Bolt, Edit, Business, ChevronLeft, ChevronRight, MoreVert } from '@mui/icons-material';
+import { Add, Delete, Search, Visibility, UploadFile, FileDownload, Warning, CheckCircle, FilterList, Close, ExpandMore, Remove, Bolt, Edit, Business, ChevronLeft, ChevronRight, MoreVert, ViewColumn, Email, Phone, LocationOn, Link as LinkIcon, Note, Assignment, Event, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
@@ -36,6 +38,7 @@ import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import empresaLogo from '../assets/empresa.png';
+import RichTextEditor from '../components/RichTextEditor';
 
 interface Company {
   id: number;
@@ -64,6 +67,7 @@ const Companies: React.FC = () => {
   const { user } = useAuth();
   const theme = useTheme();
   const isLargeScreen = useMediaQuery('(min-width: 1400px)');
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -126,6 +130,59 @@ const Companies: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(7);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [expandedCompanyId, setExpandedCompanyId] = useState<number | null>(null);
+  
+  // Estados para modales de actividades
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [callOpen, setCallOpen] = useState(false);
+  const [taskOpen, setTaskOpen] = useState(false);
+  const [activityCompanyId, setActivityCompanyId] = useState<number | null>(null);
+  const [noteData, setNoteData] = useState({ subject: '', description: '' });
+  const [callData, setCallData] = useState({ subject: '', description: '', duration: '' });
+  const [taskData, setTaskData] = useState({ title: '', description: '', priority: 'medium' as 'low' | 'medium' | 'high' | 'urgent', dueDate: '', type: 'todo' as string });
+  const [savingActivity, setSavingActivity] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  
+  // Estados adicionales para el modal de tarea
+  const descriptionEditorRef = React.useRef<HTMLDivElement>(null);
+  const [activeFormats, setActiveFormats] = useState({
+    bold: false,
+    italic: false,
+    underline: false,
+    strikeThrough: false,
+    unorderedList: false,
+    orderedList: false,
+  });
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [datePickerAnchorEl, setDatePickerAnchorEl] = useState<null | HTMLElement>(null);
+  
+  // Estados para filtros avanzados
+  const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
+  const [filterRules, setFilterRules] = useState<Array<{
+    id: string;
+    column: string;
+    operator: string;
+    value: string;
+  }>>([]);
+
+  // Estados para filtros por columna
+  const [columnFilters, setColumnFilters] = useState<{
+    nombre: string;
+    propietario: string;
+    telefono: string;
+    correo: string;
+    origenLead: string;
+    etapa: string;
+  }>({
+    nombre: '',
+    propietario: '',
+    telefono: '',
+    correo: '',
+    origenLead: '',
+    etapa: '',
+  });
+  const [showColumnFilters, setShowColumnFilters] = useState(false);
 
   // Función para obtener iniciales
   const getInitials = (name: string) => {
@@ -301,9 +358,235 @@ const Companies: React.FC = () => {
   };
 
   // Función para vista previa
-  const handlePreview = (company: Company) => {
-    navigate(`/companies/${company.id}`);
+  const handlePreview = (company: Company, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
+    // Toggle: si ya está expandido, colapsar; si no, expandir
+    setExpandedCompanyId(expandedCompanyId === company.id ? null : company.id);
   };
+
+  // Funciones para abrir modales de actividades
+  const handleOpenNote = (companyId: number) => {
+    setActivityCompanyId(companyId);
+    setNoteData({ subject: '', description: '' });
+    setNoteOpen(true);
+  };
+
+  const handleOpenCall = (companyId: number) => {
+    setActivityCompanyId(companyId);
+    setCallData({ subject: '', description: '', duration: '' });
+    setCallOpen(true);
+  };
+
+  const handleOpenTask = (companyId: number) => {
+    setActivityCompanyId(companyId);
+    setTaskData({ title: '', description: '', priority: 'medium', dueDate: '', type: 'todo' });
+    setTaskOpen(true);
+  };
+
+  const handleOpenMeeting = (companyId: number) => {
+    setActivityCompanyId(companyId);
+    setTaskData({ title: '', description: '', priority: 'medium', dueDate: '', type: 'meeting' });
+    setTaskOpen(true);
+  };
+
+  // Funciones para guardar actividades
+  const handleSaveNote = async () => {
+    if (!noteData.description.trim() || !activityCompanyId) {
+      return;
+    }
+    setSavingActivity(true);
+    try {
+      await api.post('/activities/notes', {
+        subject: noteData.subject || `Nota para ${companies.find(c => c.id === activityCompanyId)?.name || 'Empresa'}`,
+        description: noteData.description,
+        companyId: activityCompanyId,
+      });
+      setSuccessMessage('Nota creada exitosamente');
+      setNoteOpen(false);
+      setNoteData({ subject: '', description: '' });
+      setActivityCompanyId(null);
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error: any) {
+      console.error('Error saving note:', error);
+      setSuccessMessage('Error al crear la nota');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } finally {
+      setSavingActivity(false);
+    }
+  };
+
+  const handleSaveCall = async () => {
+    if (!callData.subject.trim() || !activityCompanyId) {
+      return;
+    }
+    setSavingActivity(true);
+    try {
+      await api.post('/activities/calls', {
+        subject: callData.subject,
+        description: callData.description,
+        companyId: activityCompanyId,
+      });
+      setSuccessMessage('Llamada registrada exitosamente');
+      setCallOpen(false);
+      setCallData({ subject: '', description: '', duration: '' });
+      setActivityCompanyId(null);
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error: any) {
+      console.error('Error saving call:', error);
+      setSuccessMessage('Error al registrar la llamada');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } finally {
+      setSavingActivity(false);
+    }
+  };
+
+  const handleSaveTask = async () => {
+    if (!taskData.title.trim() || !activityCompanyId) {
+      return;
+    }
+    setSavingActivity(true);
+    try {
+      await api.post('/tasks', {
+        title: taskData.title,
+        description: taskData.description,
+        type: taskData.type || 'todo',
+        status: 'not started',
+        priority: taskData.priority || 'medium',
+        dueDate: taskData.dueDate || undefined,
+        companyId: activityCompanyId,
+      });
+      setSuccessMessage((taskData.type === 'meeting' ? 'Reunión' : 'Tarea') + ' creada exitosamente');
+      setTaskOpen(false);
+      setTaskData({ title: '', description: '', priority: 'medium', dueDate: '', type: 'todo' });
+      setActivityCompanyId(null);
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } catch (error: any) {
+      console.error('Error saving task:', error);
+      setSuccessMessage('Error al crear la ' + (taskData.type === 'meeting' ? 'reunión' : 'tarea'));
+      setTimeout(() => setSuccessMessage(''), 3000);
+    } finally {
+      setSavingActivity(false);
+    }
+  };
+
+  // Funciones auxiliares para el editor de texto enriquecido
+  const updateActiveFormats = useCallback(() => {
+    if (descriptionEditorRef.current) {
+      setActiveFormats({
+        bold: document.queryCommandState('bold'),
+        italic: document.queryCommandState('italic'),
+        underline: document.queryCommandState('underline'),
+        strikeThrough: document.queryCommandState('strikeThrough'),
+        unorderedList: document.queryCommandState('insertUnorderedList'),
+        orderedList: document.queryCommandState('insertOrderedList'),
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (descriptionEditorRef.current && taskOpen) {
+      if (taskData.description !== descriptionEditorRef.current.innerHTML) {
+        descriptionEditorRef.current.innerHTML = taskData.description || '';
+      }
+    }
+
+    const handleSelectionChange = () => {
+      updateActiveFormats();
+    };
+
+    const handleMouseUp = () => {
+      updateActiveFormats();
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        updateActiveFormats();
+      }
+    };
+
+    document.addEventListener('selectionchange', handleSelectionChange);
+    const editorElement = descriptionEditorRef.current;
+    if (editorElement) {
+      editorElement.addEventListener('mouseup', handleMouseUp);
+      editorElement.addEventListener('keyup', handleKeyUp as any);
+    }
+
+    return () => {
+      document.removeEventListener('selectionchange', handleSelectionChange);
+      if (editorElement) {
+        editorElement.removeEventListener('mouseup', handleMouseUp);
+        editorElement.removeEventListener('keyup', handleKeyUp as any);
+      }
+    };
+  }, [updateActiveFormats, taskOpen, taskData.description]);
+
+  const handleOpenDatePicker = (event: React.MouseEvent<HTMLElement>) => {
+    if (taskData.dueDate) {
+      const dateMatch = taskData.dueDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (dateMatch) {
+        const year = parseInt(dateMatch[1]);
+        const month = parseInt(dateMatch[2]) - 1;
+        const day = parseInt(dateMatch[3]);
+        setCurrentMonth(new Date(year, month, day));
+        setSelectedDate(new Date(year, month, day));
+      }
+    }
+    setDatePickerAnchorEl(event.currentTarget);
+  };
+
+  const handleDateSelect = (year: number, month: number, day: number) => {
+    const selected = new Date(year, month, day);
+    setSelectedDate(selected);
+    const formattedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    setTaskData({ ...taskData, dueDate: formattedDate });
+    setDatePickerAnchorEl(null);
+  };
+
+  const handleClearDate = () => {
+    setSelectedDate(null);
+    setTaskData({ ...taskData, dueDate: '' });
+  };
+
+  const handleToday = () => {
+    const today = new Date();
+    setSelectedDate(today);
+    const formattedDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    setTaskData({ ...taskData, dueDate: formattedDate });
+    setDatePickerAnchorEl(null);
+  };
+
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDayOfWeek = firstDay.getDay();
+    
+    const days: (number | null)[] = [];
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null);
+    }
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(i);
+    }
+    return days;
+  };
+
+  const formatDateDisplay = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
   const fetchCompanies = useCallback(async () => {
     try {
@@ -355,14 +638,14 @@ const Companies: React.FC = () => {
     // Preparar los datos para exportar
     const exportData = companies.map((company) => ({
       'C.R.': (company as any).isRecoveredClient ? 'Sí' : 'No',
-      'Nombre': company.name || '--',
+      'Contacto': company.name || '--',
       'Dominio': company.domain || '--',
       'Razón social': company.companyname || '--',
       'Teléfono': company.phone || '--',
       'Correo': (company as any).email || '--',
       'Origen de lead': getLeadSourceLabel((company as any).leadSource),
       'RUC': company.ruc || '--',
-      'Propietario': company.Owner ? `${company.Owner.firstName} ${company.Owner.lastName}` : 'Sin asignar',
+      'Asesor': company.Owner ? `${company.Owner.firstName} ${company.Owner.lastName}` : 'Sin asignar',
       'Dirección': company.address || '--',
       'Ciudad': company.city || '--',
       'Estado/Provincia': company.state || '--',
@@ -1099,6 +1382,47 @@ const Companies: React.FC = () => {
     'activo', // 100%
   ];
 
+  // Opciones de columnas disponibles
+  const columnOptions = [
+    { value: 'name', label: 'Nombre' },
+    { value: 'companyname', label: 'Razón Social' },
+    { value: 'phone', label: 'Teléfono' },
+    { value: 'email', label: 'Correo' },
+    { value: 'leadSource', label: 'Origen de Lead' },
+    { value: 'country', label: 'País' },
+    { value: 'lifecycleStage', label: 'Etapa' },
+    { value: 'owner', label: 'Propietario' },
+  ];
+
+  // Operadores disponibles
+  const operatorOptions = [
+    { value: 'contains', label: 'contiene' },
+    { value: 'equals', label: 'es igual a' },
+    { value: 'notEquals', label: 'no es igual a' },
+    { value: 'startsWith', label: 'empieza con' },
+    { value: 'endsWith', label: 'termina con' },
+  ];
+
+  // Función auxiliar para aplicar operadores
+  const applyOperator = (fieldValue: string, operator: string, filterValue: string): boolean => {
+    const fieldLower = fieldValue.toLowerCase();
+    const filterLower = filterValue.toLowerCase();
+    switch (operator) {
+      case 'contains':
+        return fieldLower.includes(filterLower);
+      case 'equals':
+        return fieldLower === filterLower;
+      case 'notEquals':
+        return fieldLower !== filterLower;
+      case 'startsWith':
+        return fieldLower.startsWith(filterLower);
+      case 'endsWith':
+        return fieldLower.endsWith(filterLower);
+      default:
+        return true;
+    }
+  };
+
   // Filtrar y ordenar empresas
   const filteredCompanies = companies
     .filter((company) => {
@@ -1139,6 +1463,71 @@ const Companies: React.FC = () => {
         }
         if (!matches) return false;
       }
+
+      // Aplicar filtros de reglas avanzadas
+      for (const rule of filterRules) {
+        if (!rule.value) continue; // Saltar reglas sin valor
+
+        let matches = false;
+        const ruleValue = rule.value.toLowerCase();
+
+        switch (rule.column) {
+          case 'name':
+            matches = applyOperator(company.name || '', rule.operator, ruleValue);
+            break;
+          case 'companyname':
+            matches = applyOperator(company.companyname || '', rule.operator, ruleValue);
+            break;
+          case 'phone':
+            matches = applyOperator(company.phone || '', rule.operator, ruleValue);
+            break;
+          case 'email':
+            matches = applyOperator(company.email || '', rule.operator, ruleValue);
+            break;
+          case 'leadSource':
+            const leadSourceLabel = getLeadSourceLabel(company.leadSource);
+            matches = applyOperator(leadSourceLabel, rule.operator, ruleValue);
+            break;
+          case 'country':
+            matches = applyOperator(company.country || '', rule.operator, ruleValue);
+            break;
+          case 'lifecycleStage':
+            const stageLabel = getStageLabel(company.lifecycleStage || 'lead');
+            matches = applyOperator(stageLabel, rule.operator, ruleValue);
+            break;
+          case 'owner':
+            const ownerName = company.Owner ? `${company.Owner.firstName} ${company.Owner.lastName}` : '';
+            matches = applyOperator(ownerName, rule.operator, ruleValue);
+            break;
+          default:
+            matches = true;
+        }
+
+        if (!matches) return false;
+      }
+
+      // Aplicar filtros por columna
+      if (columnFilters.nombre) {
+        if (!company.name.toLowerCase().includes(columnFilters.nombre.toLowerCase())) return false;
+      }
+      if (columnFilters.propietario) {
+        const ownerName = company.Owner ? `${company.Owner.firstName} ${company.Owner.lastName}` : '';
+        if (!ownerName.toLowerCase().includes(columnFilters.propietario.toLowerCase())) return false;
+      }
+      if (columnFilters.telefono) {
+        if (!company.phone?.toLowerCase().includes(columnFilters.telefono.toLowerCase())) return false;
+      }
+      if (columnFilters.correo) {
+        if (!company.email?.toLowerCase().includes(columnFilters.correo.toLowerCase())) return false;
+      }
+      if (columnFilters.origenLead) {
+        const leadSourceLabel = getLeadSourceLabel(company.leadSource);
+        if (!leadSourceLabel.toLowerCase().includes(columnFilters.origenLead.toLowerCase())) return false;
+      }
+      if (columnFilters.etapa) {
+        const stageLabel = getStageLabel(company.lifecycleStage || 'lead');
+        if (!stageLabel.toLowerCase().includes(columnFilters.etapa.toLowerCase())) return false;
+      }
       
       // Filtro por búsqueda
       if (!search) return true;
@@ -1174,7 +1563,7 @@ const Companies: React.FC = () => {
   // Resetear a la página 1 cuando cambien los filtros
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [selectedStages, selectedCountries, selectedOwnerFilters, search, sortBy]);
+  }, [selectedStages, selectedCountries, selectedOwnerFilters, search, sortBy, filterRules, columnFilters]);
 
   if (loading) {
     return (
@@ -1249,25 +1638,62 @@ const Companies: React.FC = () => {
                 <FileDownload sx={{ fontSize: 18 }} />
                 </IconButton>
               </Tooltip>
-              <Tooltip title="Filtros">
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<FilterList sx={{ fontSize: 16 }} />}
-                  onClick={() => {
-                    if (!filterDrawerOpen) {
-                      // Al abrir el drawer, asegurar que todas las secciones estén colapsadas
-                      setStagesExpanded(false);
-                      setOwnerFilterExpanded(false);
-                      setCountryFilterExpanded(false);
-                    }
-                    setFilterDrawerOpen(!filterDrawerOpen);
-                  }}
-                  sx={pageStyles.filterButton}
+            <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"}>
+              <IconButton
+                size="small"
+                onClick={() => setShowColumnFilters(!showColumnFilters)}
+                sx={{
+                  border: `1px solid ${showColumnFilters ? theme.palette.primary.main : theme.palette.divider}`,
+                  borderRadius: 1,
+                  bgcolor: showColumnFilters 
+                    ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
+                    : 'transparent',
+                  color: showColumnFilters ? theme.palette.primary.main : theme.palette.text.secondary,
+                  p: { xs: 0.75, sm: 0.875 },
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? 'rgba(25, 118, 210, 0.3)' 
+                      : 'rgba(25, 118, 210, 0.15)',
+                  },
+                }}
               >
-                Filter
-              </Button>
-              </Tooltip>
+                <ViewColumn sx={{ fontSize: { xs: 18, sm: 20 } }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Filtros avanzados">
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  setFilterAnchorEl(e.currentTarget);
+                  // Si no hay reglas, agregar una inicial
+                  if (filterRules.length === 0) {
+                    setFilterRules([{
+                      id: `filter-${Date.now()}`,
+                      column: 'name',
+                      operator: 'contains',
+                      value: '',
+                    }]);
+                  }
+                }}
+                sx={{
+                  border: `1px solid ${filterRules.length > 0 ? theme.palette.primary.main : theme.palette.divider}`,
+                  borderRadius: 1,
+                  bgcolor: filterRules.length > 0 
+                    ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
+                    : 'transparent',
+                  color: filterRules.length > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
+                  p: { xs: 0.75, sm: 0.875 },
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? 'rgba(25, 118, 210, 0.3)' 
+                      : 'rgba(25, 118, 210, 0.15)',
+                    borderColor: theme.palette.primary.main,
+                  },
+                }}
+              >
+                <FilterList sx={{ fontSize: { xs: 18, sm: 20 } }} />
+              </IconButton>
+            </Tooltip>
               <Tooltip title="Nueva Empresa">
                 <IconButton
                   size="small"
@@ -1290,6 +1716,83 @@ const Companies: React.FC = () => {
           </Box>
         </Box>
 
+      {/* Indicador de filtros por columna activos */}
+      {Object.values(columnFilters).some(v => v) && (
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 1, 
+          flexWrap: 'wrap', 
+          mb: 1.5,
+          alignItems: 'center',
+          px: { xs: 1, sm: 2 },
+        }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>
+            Filtros por columna:
+          </Typography>
+          {columnFilters.nombre && (
+            <Chip
+              size="small"
+              label={`Nombre: "${columnFilters.nombre}"`}
+              onDelete={() => setColumnFilters(prev => ({ ...prev, nombre: '' }))}
+              sx={{ height: 24, fontSize: '0.7rem' }}
+            />
+          )}
+          {columnFilters.propietario && (
+            <Chip
+              size="small"
+              label={`Propietario: "${columnFilters.propietario}"`}
+              onDelete={() => setColumnFilters(prev => ({ ...prev, propietario: '' }))}
+              sx={{ height: 24, fontSize: '0.7rem' }}
+            />
+          )}
+          {columnFilters.telefono && (
+            <Chip
+              size="small"
+              label={`Teléfono: "${columnFilters.telefono}"`}
+              onDelete={() => setColumnFilters(prev => ({ ...prev, telefono: '' }))}
+              sx={{ height: 24, fontSize: '0.7rem' }}
+            />
+          )}
+          {columnFilters.correo && (
+            <Chip
+              size="small"
+              label={`Correo: "${columnFilters.correo}"`}
+              onDelete={() => setColumnFilters(prev => ({ ...prev, correo: '' }))}
+              sx={{ height: 24, fontSize: '0.7rem' }}
+            />
+          )}
+          {columnFilters.origenLead && (
+            <Chip
+              size="small"
+              label={`Origen Lead: "${columnFilters.origenLead}"`}
+              onDelete={() => setColumnFilters(prev => ({ ...prev, origenLead: '' }))}
+              sx={{ height: 24, fontSize: '0.7rem' }}
+            />
+          )}
+          {columnFilters.etapa && (
+            <Chip
+              size="small"
+              label={`Etapa: "${columnFilters.etapa}"`}
+              onDelete={() => setColumnFilters(prev => ({ ...prev, etapa: '' }))}
+              sx={{ height: 24, fontSize: '0.7rem' }}
+            />
+          )}
+          <Button
+            size="small"
+            onClick={() => setColumnFilters({ nombre: '', propietario: '', telefono: '', correo: '', origenLead: '', etapa: '' })}
+            sx={{ 
+              fontSize: '0.7rem', 
+              textTransform: 'none',
+              color: theme.palette.error.main,
+              minWidth: 'auto',
+              p: 0.5,
+            }}
+          >
+            Limpiar todos
+          </Button>
+        </Box>
+      )}
+
       {/* Contenedor principal con layout flex para tabla y panel de filtros */}
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', md: 'row' } }}>
         {/* Contenido principal (tabla completa con header y filas) */}
@@ -1302,7 +1805,7 @@ const Companies: React.FC = () => {
               borderRadius: '8px 8px 0 0',
               overflow: 'hidden',
               display: 'grid',
-              gridTemplateColumns: { xs: 'repeat(11, minmax(0, 2fr))', md: '0.2fr 0.8fr 0.55fr 0.5fr 0.45fr 0.4fr 0.6fr 0.4fr 0.4fr 0.6fr 0.4fr' },
+              gridTemplateColumns: { xs: 'repeat(10, minmax(0, 2fr))', md: '0.2fr 0.8fr 0.55fr 0.5fr 0.4fr 0.6fr 0.4fr 0.4fr 0.6fr 0.4fr' },
               columnGap: { xs: 1, md: 2 },
               minWidth: { xs: 800, md: 'auto' },
             maxWidth: '100%',
@@ -1320,12 +1823,31 @@ const Companies: React.FC = () => {
             }}>
                   C.R.
             </Box>
-            <Box sx={{ 
-              ...pageStyles.tableHeaderCell, 
-              px: { xs: 0.75, md: 1 },
-              justifyContent: 'flex-start'
-            }}>
-                  Nombre de Empresa
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Nombre de Empresa</Typography>
+                {showColumnFilters && (
+                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, nombre: '' }))} sx={{ p: 0.25, opacity: columnFilters.nombre ? 1 : 0.3 }}>
+                    <FilterList sx={{ fontSize: 14 }} />
+                  </IconButton>
+                )}
+              </Box>
+              {showColumnFilters && (
+                <TextField
+                  size="small"
+                  placeholder="Filtrar..."
+                  value={columnFilters.nombre}
+                  onChange={(e) => setColumnFilters(prev => ({ ...prev, nombre: e.target.value }))}
+                  sx={{ 
+                    width: '100%',
+                    '& .MuiOutlinedInput-root': { 
+                      height: 28, 
+                      fontSize: '0.75rem',
+                      bgcolor: theme.palette.background.paper,
+                    },
+                  }}
+                />
+              )}
             </Box>
             <Box sx={{ 
               ...pageStyles.tableHeaderCell, 
@@ -1334,56 +1856,135 @@ const Companies: React.FC = () => {
             }}>
                   Última Actividad
             </Box>
-            <Box sx={{ 
-              ...pageStyles.tableHeaderCell, 
-              px: { xs: 0.75, md: 1 },
-              justifyContent: 'flex-start'
-            }}>
-                  Propietario
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Propietario</Typography>
+                {showColumnFilters && (
+                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, propietario: '' }))} sx={{ p: 0.25, opacity: columnFilters.propietario ? 1 : 0.3 }}>
+                    <FilterList sx={{ fontSize: 14 }} />
+                  </IconButton>
+                )}
+              </Box>
+              {showColumnFilters && (
+                <TextField
+                  size="small"
+                  placeholder="Filtrar..."
+                  value={columnFilters.propietario}
+                  onChange={(e) => setColumnFilters(prev => ({ ...prev, propietario: e.target.value }))}
+                  sx={{ 
+                    width: '100%',
+                    '& .MuiOutlinedInput-root': { 
+                      height: 28, 
+                      fontSize: '0.75rem',
+                      bgcolor: theme.palette.background.paper,
+                    },
+                  }}
+                />
+              )}
             </Box>
-            <Box sx={{ 
-              ...pageStyles.tableHeaderCell, 
-              px: { xs: 0.75, md: 1 },
-              justifyContent: 'flex-start'
-            }}>
-                  Razón Social
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Teléfono</Typography>
+                {showColumnFilters && (
+                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, telefono: '' }))} sx={{ p: 0.25, opacity: columnFilters.telefono ? 1 : 0.3 }}>
+                    <FilterList sx={{ fontSize: 14 }} />
+                  </IconButton>
+                )}
+              </Box>
+              {showColumnFilters && (
+                <TextField
+                  size="small"
+                  placeholder="Filtrar..."
+                  value={columnFilters.telefono}
+                  onChange={(e) => setColumnFilters(prev => ({ ...prev, telefono: e.target.value }))}
+                  sx={{ 
+                    width: '100%',
+                    '& .MuiOutlinedInput-root': { 
+                      height: 28, 
+                      fontSize: '0.75rem',
+                      bgcolor: theme.palette.background.paper,
+                    },
+                  }}
+                />
+              )}
             </Box>
-            <Box sx={{ 
-              ...pageStyles.tableHeaderCell, 
-              px: { xs: 0.75, md: 1 },
-              justifyContent: 'flex-start'
-            }}>
-                  Teléfono
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Correo</Typography>
+                {showColumnFilters && (
+                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, correo: '' }))} sx={{ p: 0.25, opacity: columnFilters.correo ? 1 : 0.3 }}>
+                    <FilterList sx={{ fontSize: 14 }} />
+                  </IconButton>
+                )}
+              </Box>
+              {showColumnFilters && (
+                <TextField
+                  size="small"
+                  placeholder="Filtrar..."
+                  value={columnFilters.correo}
+                  onChange={(e) => setColumnFilters(prev => ({ ...prev, correo: e.target.value }))}
+                  sx={{ 
+                    width: '100%',
+                    '& .MuiOutlinedInput-root': { 
+                      height: 28, 
+                      fontSize: '0.75rem',
+                      bgcolor: theme.palette.background.paper,
+                    },
+                  }}
+                />
+              )}
             </Box>
-            <Box sx={{ 
-              ...pageStyles.tableHeaderCell, 
-              px: { xs: 0.75, md: 1 },
-              justifyContent: 'flex-start'
-            }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  fontWeight: 600,
-                  color: theme.palette.text.primary,
-                  fontSize: { xs: '0.75rem', md: '0.8125rem' },
-                }}
-              >
-                Correo
-              </Typography>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Origen de lead</Typography>
+                {showColumnFilters && (
+                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, origenLead: '' }))} sx={{ p: 0.25, opacity: columnFilters.origenLead ? 1 : 0.3 }}>
+                    <FilterList sx={{ fontSize: 14 }} />
+                  </IconButton>
+                )}
+              </Box>
+              {showColumnFilters && (
+                <TextField
+                  size="small"
+                  placeholder="Filtrar..."
+                  value={columnFilters.origenLead}
+                  onChange={(e) => setColumnFilters(prev => ({ ...prev, origenLead: e.target.value }))}
+                  sx={{ 
+                    width: '100%',
+                    '& .MuiOutlinedInput-root': { 
+                      height: 28, 
+                      fontSize: '0.75rem',
+                      bgcolor: theme.palette.background.paper,
+                    },
+                  }}
+                />
+              )}
             </Box>
-            <Box sx={{ 
-              ...pageStyles.tableHeaderCell, 
-              px: { xs: 0.75, md: 1 },
-              justifyContent: 'flex-start'
-            }}>
-                  Origen de lead
-            </Box>
-            <Box sx={{ 
-              ...pageStyles.tableHeaderCell, 
-              px: { xs: 0.75, md: 1 },
-              justifyContent: 'flex-start'
-            }}>
-                  Etapa
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Etapa</Typography>
+                {showColumnFilters && (
+                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, etapa: '' }))} sx={{ p: 0.25, opacity: columnFilters.etapa ? 1 : 0.3 }}>
+                    <FilterList sx={{ fontSize: 14 }} />
+                  </IconButton>
+                )}
+              </Box>
+              {showColumnFilters && (
+                <TextField
+                  size="small"
+                  placeholder="Filtrar..."
+                  value={columnFilters.etapa}
+                  onChange={(e) => setColumnFilters(prev => ({ ...prev, etapa: e.target.value }))}
+                  sx={{ 
+                    width: '100%',
+                    '& .MuiOutlinedInput-root': { 
+                      height: 28, 
+                      fontSize: '0.75rem',
+                      bgcolor: theme.palette.background.paper,
+                    },
+                  }}
+                />
+              )}
             </Box>
             <Box sx={{ 
               ...pageStyles.tableHeaderCell, 
@@ -1404,8 +2005,8 @@ const Companies: React.FC = () => {
           {/* Filas de empresas */}
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {paginatedCompanies.map((company) => (
+            <React.Fragment key={company.id}>
             <Box
-                  key={company.id}
               component="div"
               onClick={() => navigate(`/companies/${company.id}`)}
                   sx={{ 
@@ -1413,13 +2014,13 @@ const Companies: React.FC = () => {
                     cursor: 'pointer',
                 transition: 'all 0.2s ease',
                 display: 'grid',
-                gridTemplateColumns: { xs: 'repeat(11, minmax(0, 2fr))', md: '0.3fr 1.5fr 0.9fr 0.9fr 0.8fr 0.7fr 1fr 0.6fr 1fr 0.7fr 0.8fr' },
+                gridTemplateColumns: { xs: 'repeat(10, minmax(0, 2fr))', md: '0.3fr 1.5fr 0.9fr 0.9fr 0.7fr 1fr 0.6fr 1fr 0.7fr 0.8fr' },
                 columnGap: { xs: 1, md: 2 },
                 minWidth: { xs: 800, md: 'auto' },
                 maxWidth: '100%',
                 width: '100%',
                 overflow: 'hidden',
-                borderRadius: 0,
+                borderRadius: expandedCompanyId === company.id ? '8px 8px 0 0' : '8px',
                 border: 'none',
                 boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
                 px: { xs: 1, md: 1.5 },
@@ -1573,28 +2174,6 @@ const Companies: React.FC = () => {
                       Sin asignar
                     </Typography>
                   )}
-                </Box>
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
-                    {company.companyname ? (
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: theme.palette.text.primary,
-                        fontSize: { xs: '0.75rem', md: '0.8125rem' },
-                        fontWeight: 400,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        maxWidth: '100%',
-                        }}
-                      >
-                        {company.companyname}
-                      </Typography>
-                    ) : (
-                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.8125rem' }, fontWeight: 400 }}>
-                        --
-                      </Typography>
-                    )}
                 </Box>
                 <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                       <Typography 
@@ -1757,13 +2336,13 @@ const Companies: React.FC = () => {
                       <Tooltip title="Vista previa">
                         <IconButton
                           size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handlePreview(company);
-                          }}
+                          onClick={(e) => handlePreview(company, e)}
                           sx={{
                             color: theme.palette.text.secondary,
                             padding: 1,
+                            bgcolor: expandedCompanyId === company.id 
+                              ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.3)' : 'rgba(25, 118, 210, 0.15)')
+                              : 'transparent',
                             '&:hover': {
                               color: taxiMonterricoColors.green,
                               bgcolor: `${taxiMonterricoColors.green}15`,
@@ -1845,7 +2424,7 @@ const Companies: React.FC = () => {
                       <MenuItem
                         onClick={(e) => {
                           e.stopPropagation();
-                          handlePreview(company);
+                          handlePreview(company, e);
                           handleActionsMenuClose(company.id);
                         }}
                         sx={{
@@ -1884,6 +2463,202 @@ const Companies: React.FC = () => {
                   )}
                 </Box>
             </Box>
+
+            {/* Vista expandida */}
+            {expandedCompanyId === company.id && (
+              <Box
+                sx={{
+                  bgcolor: theme.palette.background.paper,
+                  borderRadius: '0 0 8px 8px',
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderTop: 'none',
+                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                  p: 3,
+                  mb: 2,
+                  display: 'flex',
+                  flexDirection: { xs: 'column', md: 'row' },
+                  gap: 3,
+                  overflow: 'visible',
+                }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Columna Izquierda - Card con información principal */}
+                <Box sx={{ flex: { xs: '1', md: '0 0 300px' }, display: 'flex', flexDirection: 'column', alignSelf: 'flex-start' }}>
+                  <Card
+                    sx={{
+                      bgcolor: theme.palette.background.paper,
+                      border: `1px solid ${theme.palette.divider}`,
+                      borderRadius: 2,
+                      p: 3,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: 2,
+                      width: '100%',
+                      minHeight: 'fit-content',
+                      overflow: 'visible',
+                    }}
+                  >
+                    {/* Avatar/Logo */}
+                    <Avatar
+                      src={empresaLogo}
+                      sx={{
+                        width: 60,
+                        height: 60,
+                        bgcolor: empresaLogo ? 'transparent' : taxiMonterricoColors.green,
+                        fontSize: '1.25rem',
+                        fontWeight: 600,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                      }}
+                    >
+                      {!empresaLogo && getInitials(company.name)}
+                    </Avatar>
+
+                    {/* Nombre */}
+                    <Box sx={{ textAlign: 'center', width: '100%' }}>
+                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 1.5, fontSize: '1.125rem' }}>
+                        {company.name}
+                      </Typography>
+                      
+                      {/* Botones de actividades */}
+                      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mt: 1 }}>
+                        <Tooltip title="Crear nota">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenNote(company.id);
+                            }}
+                            sx={{
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
+                              color: theme.palette.text.secondary,
+                              '&:hover': {
+                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+                              },
+                            }}
+                          >
+                            <Note sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Hacer llamada">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenCall(company.id);
+                            }}
+                            sx={{
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
+                              color: theme.palette.text.secondary,
+                              '&:hover': {
+                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+                              },
+                            }}
+                          >
+                            <Phone sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Crear tarea">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenTask(company.id);
+                            }}
+                            sx={{
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
+                              color: theme.palette.text.secondary,
+                              '&:hover': {
+                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+                              },
+                            }}
+                          >
+                            <Assignment sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Programar reunión">
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenMeeting(company.id);
+                            }}
+                            sx={{
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
+                              color: theme.palette.text.secondary,
+                              '&:hover': {
+                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+                              },
+                            }}
+                          >
+                            <Event sx={{ fontSize: 18 }} />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </Box>
+
+                    {/* Divider */}
+                    <Divider sx={{ width: '100%', my: 1 }} />
+
+                    {/* Información de contacto */}
+                    <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      {(company as any).email && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Email sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                            {(company as any).email}
+                          </Typography>
+                        </Box>
+                      )}
+                      {company.phone && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Phone sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                            {company.phone}
+                          </Typography>
+                        </Box>
+                      )}
+                      {(company.address || company.city || company.country) && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <LocationOn sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                            {[company.address, company.city, company.country].filter(Boolean).join(', ') || '--'}
+                          </Typography>
+                        </Box>
+                      )}
+                      {company.domain && (
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <LinkIcon sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
+                              cursor: 'pointer',
+                              '&:hover': {
+                                textDecoration: 'underline',
+                              },
+                            }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const domainUrl = company.domain?.startsWith('http') ? company.domain : `https://${company.domain}`;
+                              window.open(domainUrl, '_blank');
+                            }}
+                          >
+                            {company.domain}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  </Card>
+                </Box>
+
+                {/* Columna Derecha - Contenido adicional (por ahora vacío) */}
+                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  {/* Contenido adicional se agregará después */}
+                </Box>
+              </Box>
+            )}
+          </React.Fragment>
           ))}
           {paginatedCompanies.length === 0 && (
             <Box sx={pageStyles.emptyState}>
@@ -2969,6 +3744,1406 @@ const Companies: React.FC = () => {
           )}
         </DialogActions>
       </Dialog>
+
+      {/* Popover de Filtros - Diseño tipo Tags */}
+      <Popover
+        open={Boolean(filterAnchorEl)}
+        anchorEl={filterAnchorEl}
+        onClose={() => setFilterAnchorEl(null)}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: isMobile ? 'center' : 'right',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: isMobile ? 'center' : 'right',
+        }}
+        PaperProps={{
+          sx: {
+            mt: 1,
+            minWidth: isMobile ? 'calc(100vw - 32px)' : 420,
+            maxWidth: isMobile ? 'calc(100vw - 32px)' : 500,
+            bgcolor: theme.palette.background.paper,
+            borderRadius: 2,
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 8px 24px rgba(0,0,0,0.5)'
+              : '0 8px 24px rgba(0,0,0,0.15)',
+            border: `1px solid ${theme.palette.divider}`,
+          },
+        }}
+      >
+        <Box sx={{ p: 2 }}>
+          {/* Header */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography sx={{ fontWeight: 600, fontSize: '0.9375rem', color: theme.palette.text.primary }}>
+              Filtros
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              {filterRules.length > 0 && (
+                <Button
+                  size="small"
+                  onClick={() => {
+                    setFilterRules([]);
+                    setSelectedStages([]);
+                    setSelectedOwnerFilters([]);
+                    setSelectedCountries([]);
+                  }}
+                  sx={{
+                    textTransform: 'none',
+                    fontSize: '0.75rem',
+                    px: 1.5,
+                    color: theme.palette.error.main,
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(211, 47, 47, 0.1)' 
+                        : 'rgba(211, 47, 47, 0.05)',
+                    },
+                  }}
+                >
+                  Limpiar todo
+                </Button>
+              )}
+              <IconButton
+                size="small"
+                onClick={() => setFilterAnchorEl(null)}
+                sx={{ color: theme.palette.text.secondary }}
+              >
+                <Close sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Box>
+          </Box>
+
+          {/* Filtros activos como Tags/Chips */}
+          {filterRules.length > 0 && (
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+              {filterRules.map((rule) => {
+                const columnLabel = columnOptions.find(c => c.value === rule.column)?.label || rule.column;
+                const operatorLabel = operatorOptions.find(o => o.value === rule.operator)?.label || rule.operator;
+                return (
+                  <Chip
+                    key={rule.id}
+                    label={
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                        <Typography component="span" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>
+                          {columnLabel}
+                        </Typography>
+                        <Typography component="span" sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary }}>
+                          {operatorLabel.toLowerCase()}
+                        </Typography>
+                        <Typography component="span" sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
+                          "{rule.value || '...'}"
+                        </Typography>
+                      </Box>
+                    }
+                    onDelete={() => {
+                      setFilterRules(filterRules.filter(r => r.id !== rule.id));
+                    }}
+                    sx={{
+                      height: 'auto',
+                      py: 0.5,
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(25, 118, 210, 0.2)' 
+                        : 'rgba(25, 118, 210, 0.1)',
+                      border: `1px solid ${theme.palette.primary.main}`,
+                      '& .MuiChip-label': {
+                        px: 1,
+                      },
+                      '& .MuiChip-deleteIcon': {
+                        fontSize: 16,
+                        color: theme.palette.text.secondary,
+                        '&:hover': {
+                          color: theme.palette.error.main,
+                        },
+                      },
+                    }}
+                  />
+                );
+              })}
+            </Box>
+          )}
+
+          {/* Formulario para agregar nuevo filtro */}
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 1, 
+            alignItems: { xs: 'stretch', sm: 'flex-end' },
+            p: 1.5,
+            borderRadius: 1.5,
+            bgcolor: theme.palette.mode === 'dark' 
+              ? 'rgba(255, 255, 255, 0.03)' 
+              : 'rgba(0, 0, 0, 0.02)',
+            border: `1px dashed ${theme.palette.divider}`,
+          }}>
+            {/* Columna */}
+            <FormControl size="small" sx={{ minWidth: 100, flex: 1 }}>
+              <Select
+                value={filterRules.length > 0 ? filterRules[filterRules.length - 1]?.column || 'name' : 'name'}
+                onChange={(e) => {
+                  if (filterRules.length === 0) {
+                    setFilterRules([{
+                      id: `filter-${Date.now()}`,
+                      column: e.target.value,
+                      operator: 'contains',
+                      value: '',
+                    }]);
+                  } else {
+                    const newRules = [...filterRules];
+                    newRules[newRules.length - 1].column = e.target.value;
+                    setFilterRules(newRules);
+                  }
+                }}
+                displayEmpty
+                sx={{
+                  fontSize: '0.8125rem',
+                  bgcolor: theme.palette.background.paper,
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: theme.palette.divider,
+                  },
+                }}
+              >
+                {columnOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.8125rem' }}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {/* Operador */}
+            <FormControl size="small" sx={{ minWidth: 100, flex: 1 }}>
+              <Select
+                value={filterRules.length > 0 ? filterRules[filterRules.length - 1]?.operator || 'contains' : 'contains'}
+                onChange={(e) => {
+                  if (filterRules.length === 0) {
+                    setFilterRules([{
+                      id: `filter-${Date.now()}`,
+                      column: 'name',
+                      operator: e.target.value,
+                      value: '',
+                    }]);
+                  } else {
+                    const newRules = [...filterRules];
+                    newRules[newRules.length - 1].operator = e.target.value;
+                    setFilterRules(newRules);
+                  }
+                }}
+                displayEmpty
+                sx={{
+                  fontSize: '0.8125rem',
+                  bgcolor: theme.palette.background.paper,
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderColor: theme.palette.divider,
+                  },
+                }}
+              >
+                {operatorOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.8125rem' }}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
+            {/* Valor */}
+            <TextField
+              size="small"
+              placeholder="Valor..."
+              value={filterRules.length > 0 ? filterRules[filterRules.length - 1]?.value || '' : ''}
+              onChange={(e) => {
+                if (filterRules.length === 0) {
+                  setFilterRules([{
+                    id: `filter-${Date.now()}`,
+                    column: 'name',
+                    operator: 'contains',
+                    value: e.target.value,
+                  }]);
+                } else {
+                  const newRules = [...filterRules];
+                  newRules[newRules.length - 1].value = e.target.value;
+                  setFilterRules(newRules);
+                }
+              }}
+              sx={{
+                flex: 1.5,
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: theme.palette.background.paper,
+                  fontSize: '0.8125rem',
+                  '& fieldset': {
+                    borderColor: theme.palette.divider,
+                  },
+                },
+                '& .MuiInputBase-input::placeholder': {
+                  fontSize: '0.8125rem',
+                },
+              }}
+            />
+
+            {/* Botón Agregar */}
+            <IconButton
+              size="small"
+              onClick={() => {
+                setFilterRules([
+                  ...filterRules,
+                  {
+                    id: `filter-${Date.now()}`,
+                    column: 'name',
+                    operator: 'contains',
+                    value: '',
+                  },
+                ]);
+              }}
+              sx={{
+                bgcolor: theme.palette.primary.main,
+                color: 'white',
+                '&:hover': {
+                  bgcolor: theme.palette.primary.dark,
+                },
+              }}
+            >
+              <Add sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Box>
+
+          {/* Texto de ayuda */}
+          {filterRules.length === 0 && (
+            <Typography variant="caption" sx={{ display: 'block', mt: 1.5, color: theme.palette.text.secondary, textAlign: 'center' }}>
+              Configura los campos y haz clic en + para agregar un filtro
+            </Typography>
+          )}
+        </Box>
+      </Popover>
+
+      {/* Snackbar para mensajes de éxito */}
+      <Snackbar
+        open={!!successMessage}
+        autoHideDuration={3000}
+        onClose={() => setSuccessMessage('')}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        <Alert onClose={() => setSuccessMessage('')} severity="success" sx={{ width: '100%' }}>
+          {successMessage}
+        </Alert>
+      </Snackbar>
+
+      {/* Modal de Nota - Diseño exacto de CompanyDetail */}
+      {noteOpen && (
+        <>
+          <Box
+            sx={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: { xs: '95vw', sm: '700px' },
+              maxWidth: { xs: '95vw', sm: '90vw' },
+              height: '85vh',
+              backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
+              boxShadow: theme.palette.mode === 'dark' 
+                ? '0 20px 60px rgba(0,0,0,0.5)' 
+                : '0 20px 60px rgba(0,0,0,0.12)',
+              zIndex: 1500,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              borderRadius: 4,
+              animation: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '@keyframes fadeInScale': {
+                '0%': {
+                  opacity: 0,
+                  transform: 'translate(-50%, -50%) scale(0.95)',
+                },
+                '100%': {
+                  opacity: 1,
+                  transform: 'translate(-50%, -50%) scale(1)',
+                },
+              },
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Box
+              sx={{
+                px: 3,
+                py: 2,
+                backgroundColor: 'transparent',
+                color: theme.palette.text.primary,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="h6" sx={{ 
+                  color: theme.palette.text.primary, 
+                  fontWeight: 600, 
+                  fontSize: '1.25rem',
+                  letterSpacing: '-0.02em',
+                }}>
+                  Nota
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                <IconButton 
+                  sx={{ 
+                    color: theme.palette.text.secondary,
+                    '&:hover': { 
+                      backgroundColor: theme.palette.error.main + '15',
+                      color: theme.palette.error.main,
+                    },
+                    transition: 'all 0.2s ease',
+                  }} 
+                  size="small" 
+                  onClick={() => setNoteOpen(false)}
+                >
+                  <Close fontSize="small" />
+                </IconButton>
+              </Box>
+            </Box>
+
+            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'row', p: 3, overflow: 'hidden', gap: 3 }}>
+              <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <Box sx={{ 
+                  flexGrow: 1, 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`, 
+                  borderRadius: 2,
+                  overflow: 'hidden',
+                  minHeight: '300px',
+                  backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:focus-within': {
+                    boxShadow: 'none',
+                    borderColor: theme.palette.divider,
+                    transform: 'none',
+                  },
+                }}>
+                  <RichTextEditor
+                    value={noteData.description}
+                    onChange={(value: string) => setNoteData({ ...noteData, description: value })}
+                    placeholder="Empieza a escribir para dejar una nota..."
+                  />
+                </Box>
+              </Box>
+            </Box>
+
+            <Box sx={{ 
+              px: 3,
+              py: 2.5, 
+              borderTop: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`, 
+              backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper, 
+              display: 'flex', 
+              justifyContent: 'flex-end', 
+              gap: 2,
+            }}>
+              <Button 
+                onClick={() => setNoteOpen(false)} 
+                sx={{ 
+                  textTransform: 'none',
+                  px: 3.5,
+                  py: 1.25,
+                  color: theme.palette.text.secondary,
+                  fontWeight: 500,
+                  borderRadius: 2,
+                  '&:hover': {
+                    backgroundColor: theme.palette.action.hover,
+                  },
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleSaveNote} 
+                variant="contained" 
+                disabled={savingActivity || !noteData.description.trim()}
+                sx={{ 
+                  textTransform: 'none',
+                  px: 4,
+                  py: 1.25,
+                  backgroundColor: savingActivity ? theme.palette.action.disabledBackground : taxiMonterricoColors.orange,
+                  fontWeight: 600,
+                  borderRadius: 2,
+                  boxShadow: savingActivity ? 'none' : `0 4px 12px ${taxiMonterricoColors.orange}40`,
+                  '&:hover': {
+                    backgroundColor: savingActivity ? theme.palette.action.disabledBackground : taxiMonterricoColors.orangeDark,
+                    boxShadow: savingActivity ? 'none' : `0 6px 16px ${taxiMonterricoColors.orange}50`,
+                    transform: 'translateY(-1px)',
+                  },
+                  '&:active': {
+                    transform: 'translateY(0)',
+                  },
+                  '&:disabled': {
+                    backgroundColor: theme.palette.action.disabledBackground,
+                    color: theme.palette.action.disabled,
+                    boxShadow: 'none',
+                  },
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+              >
+                {savingActivity ? 'Guardando...' : 'Crear nota'}
+              </Button>
+            </Box>
+          </Box>
+          <Box
+            sx={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+              zIndex: 1499,
+              animation: 'fadeIn 0.3s ease-out',
+              '@keyframes fadeIn': {
+                '0%': {
+                  opacity: 0,
+                },
+                '100%': {
+                  opacity: 1,
+                },
+              },
+            }}
+            onClick={() => setNoteOpen(false)}
+          />
+        </>
+      )}
+
+      {/* Modal de Llamada - Diseño exacto de CompanyDetail */}
+      {callOpen && (
+        <>
+          <Box
+            sx={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '600px',
+              maxWidth: '95vw',
+              maxHeight: '90vh',
+              backgroundColor: theme.palette.background.paper,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              borderRadius: 4,
+              zIndex: 1500,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              animation: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '@keyframes fadeInScale': {
+                '0%': {
+                  opacity: 0,
+                  transform: 'translate(-50%, -50%) scale(0.9)',
+                },
+                '100%': {
+                  opacity: 1,
+                  transform: 'translate(-50%, -50%) scale(1)',
+                },
+              },
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Box
+              sx={{
+                backgroundColor: 'transparent',
+                color: theme.palette.text.primary,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                minHeight: { xs: '64px', md: '72px' },
+                px: { xs: 3, md: 4 },
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    backgroundColor: `${taxiMonterricoColors.green}15`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Phone sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+                </Box>
+                <Typography variant="h5" sx={{ color: theme.palette.text.primary, fontWeight: 700, fontSize: { xs: '1.1rem', md: '1.25rem' }, letterSpacing: '-0.02em' }}>
+                  Llamada
+                </Typography>
+              </Box>
+              <IconButton 
+                sx={{ 
+                  color: theme.palette.text.secondary,
+                  transition: 'all 0.2s ease',
+                  '&:hover': { 
+                    backgroundColor: theme.palette.action.hover,
+                    color: theme.palette.text.primary,
+                    transform: 'rotate(90deg)',
+                  }
+                }} 
+                size="medium" 
+                onClick={() => setCallOpen(false)}
+              >
+                <Close />
+              </IconButton>
+            </Box>
+
+            <Box sx={{ 
+              flexGrow: 1, 
+              display: 'flex', 
+              flexDirection: 'column', 
+              p: { xs: 3, md: 4 }, 
+              overflow: 'hidden', 
+              overflowY: 'auto',
+              gap: 3,
+              '&::-webkit-scrollbar': {
+                width: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                backgroundColor: 'transparent',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: theme.palette.mode === 'dark' 
+                  ? 'rgba(255,255,255,0.2)' 
+                  : 'rgba(0,0,0,0.2)',
+                borderRadius: '4px',
+                '&:hover': {
+                  backgroundColor: theme.palette.mode === 'dark' 
+                    ? 'rgba(255,255,255,0.3)' 
+                    : 'rgba(0,0,0,0.3)',
+                },
+                transition: 'background-color 0.2s ease',
+              },
+            }}>
+              <TextField
+                label="Asunto"
+                value={callData.subject}
+                onChange={(e) => setCallData({ ...callData, subject: e.target.value })}
+                required
+                fullWidth
+                sx={{ 
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '& fieldset': {
+                      borderWidth: '2px',
+                      borderColor: theme.palette.divider,
+                    },
+                    '&:hover fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                      borderWidth: '2px',
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    fontWeight: 500,
+                    '&.Mui-focused': {
+                      color: taxiMonterricoColors.green,
+                    },
+                  },
+                }}
+              />
+              <TextField
+                label="Duración (minutos)"
+                type="number"
+                value={callData.duration}
+                onChange={(e) => setCallData({ ...callData, duration: e.target.value })}
+                fullWidth
+                sx={{ 
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '& fieldset': {
+                      borderWidth: '2px',
+                      borderColor: theme.palette.divider,
+                    },
+                    '&:hover fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                      borderWidth: '2px',
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    fontWeight: 500,
+                    '&.Mui-focused': {
+                      color: taxiMonterricoColors.green,
+                    },
+                  },
+                }}
+              />
+              <TextField
+                label="Notas de la llamada"
+                multiline
+                rows={8}
+                value={callData.description}
+                onChange={(e) => setCallData({ ...callData, description: e.target.value })}
+                fullWidth
+                sx={{ 
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '& fieldset': {
+                      borderWidth: '2px',
+                      borderColor: theme.palette.divider,
+                    },
+                    '&:hover fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                      borderWidth: '2px',
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    fontWeight: 500,
+                    '&.Mui-focused': {
+                      color: taxiMonterricoColors.green,
+                    },
+                  },
+                }}
+              />
+            </Box>
+
+            <Box sx={{ 
+              p: 3, 
+              borderTop: `1px solid ${theme.palette.divider}`, 
+              backgroundColor: theme.palette.background.paper, 
+              display: 'flex', 
+              justifyContent: 'flex-end', 
+              gap: 2 
+            }}>
+              <Button 
+                onClick={() => setCallOpen(false)} 
+                variant="outlined"
+                sx={{ 
+                  textTransform: 'none',
+                  color: theme.palette.text.secondary,
+                  borderColor: theme.palette.divider,
+                  fontWeight: 600,
+                  px: 3,
+                  py: 1,
+                  borderRadius: 2,
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    bgcolor: theme.palette.action.hover,
+                    borderColor: theme.palette.text.secondary,
+                    transform: 'translateY(-1px)',
+                  },
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleSaveCall} 
+                variant="contained" 
+                disabled={savingActivity || !callData.subject.trim()}
+                sx={{ 
+                  textTransform: 'none',
+                  bgcolor: savingActivity ? theme.palette.action.disabledBackground : taxiMonterricoColors.green,
+                  color: 'white',
+                  fontWeight: 600,
+                  px: 4,
+                  py: 1,
+                  borderRadius: 2,
+                  boxShadow: savingActivity ? 'none' : `0 4px 12px ${taxiMonterricoColors.green}40`,
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    bgcolor: savingActivity ? theme.palette.action.disabledBackground : taxiMonterricoColors.greenDark,
+                    boxShadow: savingActivity ? 'none' : `0 6px 16px ${taxiMonterricoColors.green}50`,
+                    transform: 'translateY(-2px)',
+                  },
+                  '&:active': {
+                    transform: 'translateY(0)',
+                  },
+                  '&.Mui-disabled': {
+                    bgcolor: theme.palette.action.disabledBackground,
+                    color: theme.palette.action.disabled,
+                    boxShadow: 'none',
+                  },
+                }}
+              >
+                {savingActivity ? 'Guardando...' : 'Guardar'}
+              </Button>
+            </Box>
+          </Box>
+          <Box
+            sx={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 1499,
+              animation: 'fadeIn 0.3s ease-out',
+            }}
+            onClick={() => setCallOpen(false)}
+          />
+        </>
+      )}
+
+      {/* Modal de Tarea/Reunión - Diseño exacto de CompanyDetail */}
+      {taskOpen && (
+        <>
+          <Dialog
+            open={taskOpen} 
+            onClose={() => setTaskOpen(false)} 
+            maxWidth={false}
+            fullWidth={false}
+            PaperProps={{
+              sx: {
+                borderRadius: 2,
+                maxHeight: '90vh',
+                width: '560px',
+                maxWidth: '90vw',
+              },
+            }}
+          >
+            <Box
+              sx={{
+                backgroundColor: 'transparent',
+                color: theme.palette.text.primary,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                minHeight: 48,
+                px: 2,
+                pt: 1.5,
+                pb: 0.5,
+              }}
+            >
+              <Typography variant="h5" sx={{ color: theme.palette.text.primary, fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.02em' }}>
+                {taskData.type === 'meeting' ? 'Reunión' : 'Tarea'}
+              </Typography>
+              <IconButton 
+                sx={{ 
+                  color: theme.palette.text.secondary,
+                  transition: 'all 0.2s ease',
+                  '&:hover': { 
+                    backgroundColor: theme.palette.action.hover,
+                    color: theme.palette.text.primary,
+                    transform: 'rotate(90deg)',
+                  }
+                }} 
+                size="medium" 
+                onClick={() => setTaskOpen(false)}
+              >
+                <Close />
+              </IconButton>
+            </Box>
+
+            <DialogContent sx={{ px: 2, pb: 1, pt: 0.5 }}>
+              <TextField
+                label="Título"
+                value={taskData.title}
+                onChange={(e) => setTaskData({ ...taskData, title: e.target.value })}
+                fullWidth
+                InputLabelProps={{
+                  shrink: !!taskData.title,
+                }}
+                sx={{ 
+                  mb: 1.5,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 0.5,
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    fontSize: '0.75rem',
+                    '& fieldset': {
+                      borderWidth: 0,
+                      border: 'none',
+                      top: 0,
+                    },
+                    '&:hover fieldset': {
+                      border: 'none',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderWidth: '2px !important',
+                      borderColor: `${taxiMonterricoColors.orange} !important`,
+                      borderStyle: 'solid !important',
+                      top: 0,
+                    },
+                  },
+                  '& .MuiOutlinedInput-notchedOutline': {
+                    borderWidth: '0px !important',
+                    '& legend': {
+                      width: 0,
+                      display: 'none',
+                    },
+                  },
+                  '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                    borderWidth: '2px !important',
+                    borderColor: `${taxiMonterricoColors.green} !important`,
+                    borderStyle: 'solid !important',
+                    '& legend': {
+                      width: 0,
+                      display: 'none',
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    fontWeight: 500,
+                    position: 'absolute',
+                    left: 12,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    pointerEvents: 'none',
+                    zIndex: 0,
+                    backgroundColor: 'transparent',
+                    padding: 0,
+                    margin: 0,
+                    fontSize: '0.75rem',
+                    '&.Mui-focused': {
+                      color: taxiMonterricoColors.orange,
+                      transform: 'translateY(-50%)',
+                      backgroundColor: 'transparent',
+                    },
+                    '&.MuiInputLabel-shrink': {
+                      display: 'none',
+                    },
+                  },
+                  '& .MuiInputBase-input': {
+                    position: 'relative',
+                    zIndex: 1,
+                    fontSize: '0.75rem',
+                    py: 1,
+                  },
+                }}
+              />
+              <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+                <Box sx={{ flex: 1 }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      mb: 0.75, 
+                      color: theme.palette.text.secondary,
+                      fontWeight: 500,
+                      fontSize: '0.75rem',
+                    }}
+                  >
+                    Prioridad
+                  </Typography>
+                  <TextField
+                    select
+                    value={taskData.priority}
+                    onChange={(e) => setTaskData({ ...taskData, priority: e.target.value as any })}
+                    fullWidth
+                    SelectProps={{
+                      MenuProps: {
+                        PaperProps: {
+                          sx: {
+                            borderRadius: 2,
+                            mt: 1,
+                          },
+                        },
+                      },
+                    }}
+                    sx={{ 
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 0.5,
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        fontSize: '0.75rem',
+                        '& fieldset': {
+                          borderWidth: '2px',
+                          borderColor: theme.palette.divider,
+                        },
+                        '&:hover fieldset': {
+                          borderColor: taxiMonterricoColors.orange,
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: taxiMonterricoColors.orange,
+                          borderWidth: '2px',
+                        },
+                      },
+                      '& .MuiInputBase-input': {
+                        fontSize: '0.75rem',
+                        py: 1,
+                      },
+                      '& .MuiInputLabel-root': {
+                        fontWeight: 500,
+                        fontSize: '0.75rem',
+                        '&.Mui-focused': {
+                          color: taxiMonterricoColors.orange,
+                        },
+                      },
+                    }}
+                  >
+                    <MenuItem value="low" sx={{ fontSize: '0.75rem', py: 0.75 }}>Baja</MenuItem>
+                    <MenuItem value="medium" sx={{ fontSize: '0.75rem', py: 0.75 }}>Media</MenuItem>
+                    <MenuItem value="high" sx={{ fontSize: '0.75rem', py: 0.75 }}>Alta</MenuItem>
+                    <MenuItem value="urgent" sx={{ fontSize: '0.75rem', py: 0.75 }}>Urgente</MenuItem>
+                  </TextField>
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      mb: 0.75, 
+                      color: theme.palette.text.secondary,
+                      fontWeight: 500,
+                      fontSize: '0.75rem',
+                    }}
+                  >
+                    Fecha límite
+                  </Typography>
+                  <TextField
+                    value={formatDateDisplay(taskData.dueDate)}
+                    onClick={handleOpenDatePicker}
+                    fullWidth
+                    InputProps={{
+                      readOnly: true,
+                      endAdornment: (
+                        <IconButton
+                          size="small"
+                          onClick={handleOpenDatePicker}
+                          sx={{ 
+                            color: theme.palette.text.secondary,
+                            mr: 0.5,
+                            '&:hover': {
+                              backgroundColor: 'transparent',
+                              color: taxiMonterricoColors.orange,
+                            }
+                          }}
+                        >
+                          <CalendarToday sx={{ fontSize: 18 }} />
+                        </IconButton>
+                      ),
+                    }}
+                    sx={{ 
+                      cursor: 'pointer',
+                      '& .MuiOutlinedInput-root': {
+                        borderRadius: 0.5,
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        fontSize: '0.75rem',
+                        '& fieldset': {
+                          borderWidth: '2px',
+                          borderColor: theme.palette.divider,
+                        },
+                        '&:hover fieldset': {
+                          borderColor: taxiMonterricoColors.orange,
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: taxiMonterricoColors.orange,
+                          borderWidth: '2px',
+                        },
+                      },
+                      '& .MuiInputBase-input': {
+                        fontSize: '0.75rem',
+                        py: 1,
+                        cursor: 'pointer',
+                      },
+                      '& .MuiInputLabel-root': {
+                        fontWeight: 500,
+                        fontSize: '0.75rem',
+                        '&.Mui-focused': {
+                          color: taxiMonterricoColors.orange,
+                        },
+                      },
+                    }}
+                  />
+                </Box>
+              </Box>
+              <Divider sx={{ my: 1.5 }} />
+              <Box sx={{ position: 'relative' }}>
+                <Box
+                  ref={descriptionEditorRef}
+                  contentEditable
+                  suppressContentEditableWarning
+                  onInput={(e) => {
+                    const html = (e.target as HTMLElement).innerHTML;
+                    if (html !== taskData.description) {
+                      setTaskData({ ...taskData, description: html });
+                    }
+                  }}
+                  sx={{
+                    minHeight: '150px',
+                    maxHeight: '250px',
+                    overflowY: 'auto',
+                    pt: 0,
+                    pb: 1.5,
+                    px: 1,
+                    borderRadius: 0.5,
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: '0.75rem',
+                    lineHeight: 1.5,
+                    color: theme.palette.text.primary,
+                    '&:empty:before': {
+                      content: '"Descripción"',
+                      color: theme.palette.text.disabled,
+                    },
+                    '&::-webkit-scrollbar': {
+                      width: '6px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                      backgroundColor: 'transparent',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                      borderRadius: '3px',
+                    },
+                  }}
+                />
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    bottom: 0.5,
+                    left: 4,
+                    right: 4,
+                    display: 'flex', 
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 0.5,
+                    backgroundColor: 'transparent',
+                    borderRadius: 1,
+                    p: 0.5,
+                    border: 'none',
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'nowrap' }}>
+                    <IconButton
+                      size="small"
+                      sx={{ 
+                        p: 0.25, 
+                        minWidth: 28, 
+                        height: 28,
+                        backgroundColor: activeFormats.bold ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                        '&:hover': {
+                          backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                        }
+                      }}
+                      onClick={() => {
+                        document.execCommand('bold');
+                        updateActiveFormats();
+                      }}
+                      title="Negrita"
+                    >
+                      <FormatBold sx={{ fontSize: 16 }} />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      sx={{ 
+                        p: 0.25, 
+                        minWidth: 28, 
+                        height: 28,
+                        backgroundColor: activeFormats.italic ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                        '&:hover': {
+                          backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                        }
+                      }}
+                      onClick={() => {
+                        document.execCommand('italic');
+                        updateActiveFormats();
+                      }}
+                      title="Cursiva"
+                    >
+                      <FormatItalic sx={{ fontSize: 16 }} />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      sx={{ 
+                        p: 0.25, 
+                        minWidth: 28, 
+                        height: 28,
+                        backgroundColor: activeFormats.underline ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                        '&:hover': {
+                          backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                        }
+                      }}
+                      onClick={() => {
+                        document.execCommand('underline');
+                        updateActiveFormats();
+                      }}
+                      title="Subrayado"
+                    >
+                      <FormatUnderlined sx={{ fontSize: 16 }} />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      sx={{ 
+                        p: 0.25, 
+                        minWidth: 28, 
+                        height: 28,
+                        backgroundColor: activeFormats.strikeThrough ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                        '&:hover': {
+                          backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                        }
+                      }}
+                      onClick={() => {
+                        document.execCommand('strikeThrough');
+                        updateActiveFormats();
+                      }}
+                      title="Tachado"
+                    >
+                      <StrikethroughS sx={{ fontSize: 16 }} />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      sx={{ 
+                        p: 0.25, 
+                        minWidth: 28, 
+                        height: 28,
+                        backgroundColor: activeFormats.unorderedList ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                        '&:hover': {
+                          backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                        }
+                      }}
+                      onClick={() => {
+                        document.execCommand('insertUnorderedList');
+                        updateActiveFormats();
+                      }}
+                      title="Lista con viñetas"
+                    >
+                      <FormatListBulleted sx={{ fontSize: 16 }} />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      sx={{ 
+                        p: 0.25, 
+                        minWidth: 28, 
+                        height: 28,
+                        backgroundColor: activeFormats.orderedList ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                        '&:hover': {
+                          backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                        }
+                      }}
+                      onClick={() => {
+                        document.execCommand('insertOrderedList');
+                        updateActiveFormats();
+                      }}
+                      title="Lista numerada"
+                    >
+                      <FormatListNumbered sx={{ fontSize: 16 }} />
+                    </IconButton>
+                  </Box>
+                </Box>
+              </Box>
+            </DialogContent>
+            <Box sx={{ px: 2 }}>
+              <Divider sx={{ mt: 0.25, mb: 1.5 }} />
+            </Box>
+            <DialogActions sx={{ px: 2, pb: 1.5, pt: 0.5, gap: 0.75 }}>
+              <Button 
+                onClick={() => setTaskOpen(false)} 
+                size="small"
+                sx={{ 
+                  textTransform: 'none',
+                  color: theme.palette.text.secondary,
+                  fontWeight: 500,
+                  px: 2,
+                  py: 0.5,
+                  fontSize: '0.75rem',
+                  '&:hover': {
+                    bgcolor: theme.palette.action.hover,
+                  }
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleSaveTask} 
+                variant="contained" 
+                size="small"
+                disabled={savingActivity || !taskData.title.trim()}
+                sx={{ 
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  px: 2,
+                  py: 0.5,
+                  fontSize: '0.75rem',
+                  bgcolor: taskData.title.trim() ? taxiMonterricoColors.green : theme.palette.action.disabledBackground,
+                  color: 'white',
+                  '&:hover': {
+                    bgcolor: taskData.title.trim() ? taxiMonterricoColors.green : theme.palette.action.disabledBackground,
+                    opacity: 0.9,
+                  },
+                  '&:disabled': {
+                    bgcolor: theme.palette.action.disabledBackground,
+                    color: theme.palette.action.disabled,
+                    boxShadow: 'none',
+                  }
+                }}
+              >
+                {savingActivity ? 'Guardando...' : 'Guardar'}
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Date Picker Popover */}
+          <Popover
+            open={Boolean(datePickerAnchorEl)}
+            anchorEl={datePickerAnchorEl}
+            onClose={() => setDatePickerAnchorEl(null)}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'left',
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'left',
+            }}
+            PaperProps={{
+              sx: {
+                borderRadius: 2,
+                overflow: 'hidden',
+                boxShadow: theme.palette.mode === 'dark' 
+                  ? '0 8px 32px rgba(0,0,0,0.4)' 
+                  : '0 8px 32px rgba(0,0,0,0.12)',
+                mt: 0.5,
+                maxWidth: 280,
+              },
+            }}
+          >
+            <Box sx={{ p: 2, bgcolor: theme.palette.background.paper }}>
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between', 
+                mb: 3,
+                pb: 2,
+                borderBottom: `1px solid ${theme.palette.divider}`,
+              }}>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    const newDate = new Date(currentMonth);
+                    newDate.setMonth(newDate.getMonth() - 1);
+                    setCurrentMonth(newDate);
+                  }}
+                  sx={{
+                    color: theme.palette.text.secondary,
+                    border: `1px solid ${theme.palette.divider}`,
+                    '&:hover': {
+                      bgcolor: theme.palette.action.hover,
+                      borderColor: taxiMonterricoColors.green,
+                      color: taxiMonterricoColors.green,
+                    },
+                  }}
+                >
+                  <ChevronLeft />
+                </IconButton>
+                <Typography variant="h6" sx={{ 
+                  fontWeight: 600, 
+                  fontSize: '0.95rem',
+                  color: theme.palette.text.primary,
+                  letterSpacing: '-0.01em',
+                }}>
+                  {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+                </Typography>
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    const newDate = new Date(currentMonth);
+                    newDate.setMonth(newDate.getMonth() + 1);
+                    setCurrentMonth(newDate);
+                  }}
+                  sx={{
+                    color: theme.palette.text.secondary,
+                    border: `1px solid ${theme.palette.divider}`,
+                    '&:hover': {
+                      bgcolor: theme.palette.action.hover,
+                      borderColor: taxiMonterricoColors.green,
+                      color: taxiMonterricoColors.green,
+                    },
+                  }}
+                >
+                  <ChevronRight />
+                </IconButton>
+              </Box>
+
+              <Box sx={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(7, 1fr)', 
+                gap: 0.5,
+                mb: 2,
+              }}>
+                {dayNames.map((day) => (
+                  <Typography
+                    key={day}
+                    sx={{
+                      textAlign: 'center',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      color: theme.palette.text.secondary,
+                      py: 0.5,
+                    }}
+                  >
+                    {day}
+                  </Typography>
+                ))}
+                {getDaysInMonth(currentMonth).map((day, index) => {
+                  if (day === null) {
+                    return <Box key={`empty-${index}`} />;
+                  }
+                  const isSelected = selectedDate && 
+                    selectedDate.getDate() === day &&
+                    selectedDate.getMonth() === currentMonth.getMonth() &&
+                    selectedDate.getFullYear() === currentMonth.getFullYear();
+                  const isToday = new Date().getDate() === day &&
+                    new Date().getMonth() === currentMonth.getMonth() &&
+                    new Date().getFullYear() === currentMonth.getFullYear();
+                  
+                  return (
+                    <IconButton
+                      key={day}
+                      onClick={() => handleDateSelect(currentMonth.getFullYear(), currentMonth.getMonth(), day)}
+                      sx={{
+                        minWidth: 32,
+                        height: 32,
+                        p: 0,
+                        fontSize: '0.75rem',
+                        fontWeight: isSelected ? 600 : 400,
+                        color: isSelected 
+                          ? 'white' 
+                          : isToday 
+                            ? taxiMonterricoColors.green 
+                            : theme.palette.text.primary,
+                        bgcolor: isSelected ? taxiMonterricoColors.green : 'transparent',
+                        '&:hover': {
+                          bgcolor: isSelected ? taxiMonterricoColors.greenDark : theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      {day}
+                    </IconButton>
+                  );
+                })}
+              </Box>
+
+              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                <Button
+                  size="small"
+                  onClick={handleClearDate}
+                  sx={{
+                    textTransform: 'none',
+                    fontSize: '0.75rem',
+                    color: theme.palette.text.secondary,
+                  }}
+                >
+                  Limpiar
+                </Button>
+                <Button
+                  size="small"
+                  onClick={handleToday}
+                  variant="contained"
+                  sx={{
+                    textTransform: 'none',
+                    fontSize: '0.75rem',
+                    bgcolor: taxiMonterricoColors.green,
+                    '&:hover': {
+                      bgcolor: taxiMonterricoColors.greenDark,
+                    },
+                  }}
+                >
+                  Hoy
+                </Button>
+              </Box>
+            </Box>
+          </Popover>
+        </>
+      )}
     </Box>
   );
 };

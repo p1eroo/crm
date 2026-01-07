@@ -50,7 +50,7 @@ const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { mode, toggleTheme } = useThemeContext();
-  const { open: sidebarOpen, toggleSidebar, toggleCollapsed } = useSidebar();
+  const { open: sidebarOpen, toggleSidebar, toggleCollapsed, collapsed } = useSidebar();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
@@ -324,14 +324,19 @@ const Header: React.FC = () => {
         marginLeft: { xs: 0, sm: -6.5 },
       }}>
         {/* Logo - Desktop */}
-        <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', height: '100%' }}>
+        <Box sx={{ 
+          display: { xs: 'none', sm: 'flex' }, 
+          alignItems: 'center', 
+          height: '100%',
+          ml: collapsed ? '72px' : -7,
+        }}>
           <img
-            src={logo}
+            src={collapsed ? logoMobile : logo}
             alt="Taxi Monterrico Logo"
             style={{
-              width: 360,
-              height: 'auto',
-              maxHeight: 115,
+              width: collapsed ? 45 : 360,
+              height: collapsed ? 45 : 'auto',
+              maxHeight: collapsed ? 45 : 115,
               objectFit: 'contain',
             }}
           />
@@ -366,7 +371,7 @@ const Header: React.FC = () => {
             width: 36,
             height: 36,
             flexShrink: 0,
-            marginLeft: { xs: 0, sm: -5 },
+            marginLeft: { xs: 0, sm: collapsed ? 2 : 1 },
             order: { xs: 1, sm: 0 },
             '&:hover': {
               bgcolor: theme.palette.action.hover,

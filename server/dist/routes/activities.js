@@ -68,22 +68,109 @@ router.get('/', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-// Crear actividad
-router.post('/', async (req, res) => {
+// Helper function para crear actividad con includes
+const createActivityWithIncludes = async (activity) => {
+    return await Activity_1.Activity.findByPk(activity.id, {
+        include: [
+            { model: User_1.User, as: 'User', attributes: ['id', 'firstName', 'lastName', 'email'] },
+            { model: Contact_1.Contact, as: 'Contact' },
+            { model: Company_1.Company, as: 'Company' },
+            { model: Deal_1.Deal, as: 'Deal' },
+        ],
+    });
+};
+// Crear nota
+router.post('/notes', async (req, res) => {
     try {
         const activityData = {
             ...req.body,
             userId: req.userId,
+            type: 'note', // Tipo fijo para notas
         };
         const activity = await Activity_1.Activity.create(activityData);
-        const newActivity = await Activity_1.Activity.findByPk(activity.id, {
-            include: [
-                { model: User_1.User, as: 'User', attributes: ['id', 'firstName', 'lastName', 'email'] },
-                { model: Contact_1.Contact, as: 'Contact' },
-                { model: Company_1.Company, as: 'Company' },
-                { model: Deal_1.Deal, as: 'Deal' },
-            ],
-        });
+        const newActivity = await createActivityWithIncludes(activity);
+        res.status(201).json(newActivity);
+    }
+    catch (error) {
+        console.error('❌ Error al crear nota:', error);
+        console.error('Stack:', error.stack);
+        if (error.message && (error.message.includes('no existe la columna') || error.message.includes('does not exist') || error.message.includes('column'))) {
+            console.error('⚠️  Error de schema detectado. Ejecuta: npm run create-activity-columns');
+            return res.status(500).json({
+                error: 'Error de configuración de base de datos. Por favor, contacta al administrador.',
+                details: error.message
+            });
+        }
+        res.status(500).json({ error: error.message });
+    }
+});
+// Crear email
+router.post('/emails', async (req, res) => {
+    try {
+        const activityData = {
+            ...req.body,
+            userId: req.userId,
+            type: 'email', // Tipo fijo para emails
+        };
+        const activity = await Activity_1.Activity.create(activityData);
+        const newActivity = await createActivityWithIncludes(activity);
+        res.status(201).json(newActivity);
+    }
+    catch (error) {
+        console.error('❌ Error al crear email:', error);
+        console.error('Stack:', error.stack);
+        if (error.message && (error.message.includes('no existe la columna') || error.message.includes('does not exist') || error.message.includes('column'))) {
+            console.error('⚠️  Error de schema detectado. Ejecuta: npm run create-activity-columns');
+            return res.status(500).json({
+                error: 'Error de configuración de base de datos. Por favor, contacta al administrador.',
+                details: error.message
+            });
+        }
+        res.status(500).json({ error: error.message });
+    }
+});
+// Crear llamada
+router.post('/calls', async (req, res) => {
+    try {
+        const activityData = {
+            ...req.body,
+            userId: req.userId,
+            type: 'call', // Tipo fijo para llamadas
+        };
+        const activity = await Activity_1.Activity.create(activityData);
+        const newActivity = await createActivityWithIncludes(activity);
+        res.status(201).json(newActivity);
+    }
+    catch (error) {
+        console.error('❌ Error al crear llamada:', error);
+        console.error('Stack:', error.stack);
+        if (error.message && (error.message.includes('no existe la columna') || error.message.includes('does not exist') || error.message.includes('column'))) {
+            console.error('⚠️  Error de schema detectado. Ejecuta: npm run create-activity-columns');
+            return res.status(500).json({
+                error: 'Error de configuración de base de datos. Por favor, contacta al administrador.',
+                details: error.message
+            });
+        }
+        res.status(500).json({ error: error.message });
+    }
+});
+// Crear actividad (endpoint genérico - mantener para compatibilidad pero con validación)
+router.post('/', async (req, res) => {
+    try {
+        // Validar que el tipo esté presente y sea válido
+        const validTypes = ['call', 'email', 'meeting', 'note', 'task', 'deal', 'contact', 'company'];
+        if (!req.body.type || !validTypes.includes(req.body.type)) {
+            return res.status(400).json({
+                error: 'El campo "type" es requerido y debe ser uno de: ' + validTypes.join(', ')
+            });
+        }
+        const activityData = {
+            ...req.body,
+            userId: req.userId,
+            type: req.body.type,
+        };
+        const activity = await Activity_1.Activity.create(activityData);
+        const newActivity = await createActivityWithIncludes(activity);
         res.status(201).json(newActivity);
     }
     catch (error) {

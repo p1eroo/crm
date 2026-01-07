@@ -82,7 +82,7 @@ const mainMenuItems = [
       {/* Lista de items del menú */}
       <List sx={{ 
         width: '100%', 
-        px: collapsed ? 1 : 3, 
+        px: collapsed ? 1 : 0.8, 
         pt: 9.5, // Padding superior para que no quede oculto por el header (72px + espacio extra)
         pb: 0,
         display: 'flex',

@@ -31,6 +31,7 @@ import {
   TableRow,
   Tooltip,
   Card,
+  CardContent,
   useTheme,
   Popover,
   Drawer,
@@ -158,6 +159,7 @@ const ContactDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [copilotOpen, setCopilotOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [,] = useState<null | HTMLElement>(null);
   const [associatedDeals, setAssociatedDeals] = useState<any[]>([]);
   const [associatedCompanies, setAssociatedCompanies] = useState<any[]>([]);
@@ -177,7 +179,7 @@ const ContactDetail: React.FC = () => {
   const [activityFilterSearch, setActivityFilterSearch] = useState('');
   const [timeRangeMenuAnchor, setTimeRangeMenuAnchor] = useState<null | HTMLElement>(null);
   const [timeRangeSearch, setTimeRangeSearch] = useState('');
-  const [selectedTimeRange, setSelectedTimeRange] = useState<string>('Hoy');
+  const [selectedTimeRange, setSelectedTimeRange] = useState<string>('Todo hasta ahora');
   
   // Estados para los filtros de actividad
   const [communicationFilters, setCommunicationFilters] = useState({
@@ -201,6 +203,9 @@ const ContactDetail: React.FC = () => {
   const [expandedNotes, setExpandedNotes] = useState<Set<number>>(new Set());
   const [expandedActivities, setExpandedActivities] = useState<Set<number>>(new Set());
   const [noteActionMenus, setNoteActionMenus] = useState<{ [key: number]: HTMLElement | null }>({});
+  const [completedActivities, setCompletedActivities] = useState<{ [key: number]: boolean }>({});
+  const [selectedActivityTypes, setSelectedActivityTypes] = useState<string[]>([]);
+  const [expandedActivity, setExpandedActivity] = useState<any>(null);
   // const [dealSortOrder] = useState<'asc' | 'desc'>('asc');
   // const [dealSortField] = useState<string>('');
   // const [companySortOrder] = useState<'asc' | 'desc'>('asc');
@@ -328,7 +333,7 @@ const ContactDetail: React.FC = () => {
   const [noteData, setNoteData] = useState({ subject: '', description: '' });
   const [,] = useState({ subject: '', description: '', to: '' });
   const [callData, setCallData] = useState({ subject: '', description: '', duration: '' });
-  const [taskData, setTaskData] = useState({ title: '', description: '', priority: 'medium', dueDate: '' });
+  const [taskData, setTaskData] = useState({ title: '', description: '', priority: 'medium', dueDate: '', type: 'todo' as string });
   const descriptionEditorRef = React.useRef<HTMLDivElement>(null);
   const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [actionsMenuAnchorEl, setActionsMenuAnchorEl] = useState<null | HTMLElement>(null);
@@ -938,7 +943,7 @@ const ContactDetail: React.FC = () => {
   };
 
   const handleOpenTask = () => {
-    setTaskData({ title: '', description: '', priority: 'medium', dueDate: '' });
+    setTaskData({ title: '', description: '', priority: 'medium', dueDate: '', type: 'todo' });
     setSelectedDate(null);
     setCurrentMonth(new Date());
     setTaskOpen(true);
@@ -1295,7 +1300,7 @@ const ContactDetail: React.FC = () => {
       }
       setSuccessMessage('Tarea creada exitosamente' + (taskData.dueDate ? ' y sincronizada con Google Calendar' : ''));
       setTaskOpen(false);
-      setTaskData({ title: '', description: '', priority: 'medium', dueDate: '' });
+      setTaskData({ title: '', description: '', priority: 'medium', dueDate: '', type: 'todo' });
       fetchAssociatedRecords(); // Actualizar actividades
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
@@ -2339,7 +2344,22 @@ const ContactDetail: React.FC = () => {
                 ml: 1,
                 pl: 1,
                 borderLeft: `1px solid ${theme.palette.divider}`,
+                gap: 0.5,
               }}>
+                <Tooltip title="Registro de Cambios">
+                  <IconButton
+                    onClick={() => setHistoryOpen(!historyOpen)}
+                    size="small"
+                    sx={{
+                      color: historyOpen ? '#2196F3' : theme.palette.text.secondary,
+                      '&:hover': {
+                        bgcolor: 'transparent',
+                      },
+                    }}
+                  >
+                    <History />
+                  </IconButton>
+                </Tooltip>
                 <Tooltip title="Copiloto IA">
                   <IconButton
                     onClick={() => setCopilotOpen(!copilotOpen)}
@@ -2487,50 +2507,70 @@ const ContactDetail: React.FC = () => {
               </Card>
               </Box>
 
-              {/* Card de Actividades Recientes */}
-              <Card sx={{ 
-                borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 2,
-                display: 'flex',
-                flexDirection: 'column',
+              {/* Grid 2x2 para Actividades Recientes, Empresas, Negocios y Tickets */}
+              <Box sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
+                gap: 2,
                 mt: 2,
-                height: 'fit-content',
-                minHeight: 'auto',
-                overflow: 'visible',
-                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                mb: 2,
               }}>
-                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
-                  Actividades Recientes
-                </Typography>
+                {/* Card de Actividades Recientes */}
+                <Card sx={{ 
+                  borderRadius: 2,
+                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                }}>
+                  <CardContent>
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
+                      Actividades Recientes
+                    </Typography>
                 
                 {activities && activities.length > 0 ? (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: 1.5, 
+                    overflowX: 'auto',
+                    pb: 1,
+                    '&::-webkit-scrollbar': {
+                      height: 6,
+                    },
+                    '&::-webkit-scrollbar-track': {
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                      borderRadius: 3,
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                      borderRadius: 3,
+                      '&:hover': {
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+                      },
+                    },
+                  }}>
                     {activities
                       .sort((a, b) => {
                         const dateA = new Date(a.createdAt || 0).getTime();
                         const dateB = new Date(b.createdAt || 0).getTime();
                         return dateB - dateA;
                       })
-                      .slice(0, 5)
+                      .slice(0, 6)
                       .map((activity) => {
                         const getActivityIcon = () => {
                           switch (activity.type) {
                             case 'note':
-                              return <Note sx={{ fontSize: 18, color: '#9E9E9E' }} />;
+                              return <Note sx={{ fontSize: 20, color: '#9E9E9E' }} />;
                             case 'email':
-                              return <Email sx={{ fontSize: 18, color: '#1976D2' }} />;
+                              return <Email sx={{ fontSize: 20, color: '#1976D2' }} />;
                             case 'call':
-                              return <Phone sx={{ fontSize: 18, color: '#2E7D32' }} />;
+                              return <Phone sx={{ fontSize: 20, color: '#2E7D32' }} />;
                             case 'task':
                             case 'todo':
-                              return <Assignment sx={{ fontSize: 18, color: '#F57C00' }} />;
+                              return <Assignment sx={{ fontSize: 20, color: '#F57C00' }} />;
                             case 'meeting':
-                              return <Event sx={{ fontSize: 18, color: '#7B1FA2' }} />;
+                              return <Event sx={{ fontSize: 20, color: '#7B1FA2' }} />;
                             default:
-                              return <Comment sx={{ fontSize: 18, color: theme.palette.text.secondary }} />;
+                              return <Comment sx={{ fontSize: 20, color: theme.palette.text.secondary }} />;
                           }
                         };
 
@@ -2552,59 +2592,97 @@ const ContactDetail: React.FC = () => {
                           }
                         };
 
+                        const getActivityColor = () => {
+                          switch (activity.type) {
+                            case 'note':
+                              return { bg: 'rgba(158, 158, 158, 0.1)', border: 'rgba(158, 158, 158, 0.3)' };
+                            case 'email':
+                              return { bg: 'rgba(25, 118, 210, 0.1)', border: 'rgba(25, 118, 210, 0.3)' };
+                            case 'call':
+                              return { bg: 'rgba(46, 125, 50, 0.1)', border: 'rgba(46, 125, 50, 0.3)' };
+                            case 'task':
+                            case 'todo':
+                              return { bg: 'rgba(245, 124, 0, 0.1)', border: 'rgba(245, 124, 0, 0.3)' };
+                            case 'meeting':
+                              return { bg: 'rgba(123, 31, 162, 0.1)', border: 'rgba(123, 31, 162, 0.3)' };
+                            default:
+                              return { bg: theme.palette.action.hover, border: theme.palette.divider };
+                          }
+                        };
+
+                        const colors = getActivityColor();
+                        const activityTitle = activity.subject || activity.title || getActivityTypeLabel();
+
                         return (
-                          <Box
-                            key={activity.id}
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'flex-start',
-                              gap: 1.5,
-                              p: 1.5,
-                              borderRadius: 1,
-                              border: `1px solid ${theme.palette.divider}`,
-                              transition: 'all 0.2s ease',
-                              '&:hover': {
-                                borderColor: taxiMonterricoColors.green,
-                                backgroundColor: theme.palette.mode === 'dark' 
-                                  ? 'rgba(46, 125, 50, 0.1)' 
-                                  : 'rgba(46, 125, 50, 0.05)',
-                              },
-                            }}
+                          <Tooltip 
+                            key={activity.id} 
+                            title={activityTitle}
+                            arrow
+                            placement="top"
                           >
-                            <Box sx={{ pt: 0.5 }}>
-                              {getActivityIcon()}
-                            </Box>
-                            <Box sx={{ flex: 1, minWidth: 0 }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.875rem', color: theme.palette.text.primary }}>
-                                  {activity.subject || getActivityTypeLabel()}
-                                </Typography>
-                                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary, whiteSpace: 'nowrap', ml: 1 }}>
-                                  {activity.createdAt && new Date(activity.createdAt).toLocaleDateString('es-ES', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                  })}
-                                </Typography>
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: 100,
+                                maxWidth: 100,
+                                p: 1.5,
+                                borderRadius: 2,
+                                border: `1px solid ${colors.border}`,
+                                bgcolor: colors.bg,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                flexShrink: 0,
+                                '&:hover': {
+                                  transform: 'translateY(-2px)',
+                                  boxShadow: theme.palette.mode === 'dark' 
+                                    ? '0 4px 12px rgba(0,0,0,0.4)' 
+                                    : '0 4px 12px rgba(0,0,0,0.15)',
+                                },
+                              }}
+                            >
+                              <Box sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                width: 36,
+                                height: 36,
+                                borderRadius: '50%',
+                                bgcolor: theme.palette.background.paper,
+                                mb: 1,
+                              }}>
+                                {getActivityIcon()}
                               </Box>
-                              {activity.description && (
-                                <Typography 
-                                  variant="body2" 
-                                  sx={{ 
-                                    fontSize: '0.75rem', 
-                                    color: theme.palette.text.secondary,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: 'vertical',
-                                  }}
-                                >
-                                  {activity.description.replace(/<[^>]*>/g, '').substring(0, 100)}
-                                  {activity.description.replace(/<[^>]*>/g, '').length > 100 ? '...' : ''}
-                                </Typography>
-                              )}
+                              <Typography 
+                                variant="caption" 
+                                sx={{ 
+                                  fontWeight: 600, 
+                                  fontSize: '0.7rem', 
+                                  color: theme.palette.text.primary,
+                                  textAlign: 'center',
+                                  lineHeight: 1.2,
+                                  mb: 0.5,
+                                }}
+                              >
+                                {getActivityTypeLabel()}
+                              </Typography>
+                              <Typography 
+                                variant="caption" 
+                                sx={{ 
+                                  fontSize: '0.65rem', 
+                                  color: theme.palette.text.secondary,
+                                  textAlign: 'center',
+                                }}
+                              >
+                                {activity.createdAt && new Date(activity.createdAt).toLocaleDateString('es-ES', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                })}
+                              </Typography>
                             </Box>
-                          </Box>
+                          </Tooltip>
                         );
                       })}
                   </Box>
@@ -2613,29 +2691,23 @@ const ContactDetail: React.FC = () => {
                     No hay actividades recientes
                   </Typography>
                 )}
-              </Card>
+                  </CardContent>
+                </Card>
 
-              {/* Card de Empresas Vinculadas */}
-              <Card sx={{ 
-                borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 2,
-                display: 'flex',
-                flexDirection: 'column',
-                mt: 2,
-                height: 'fit-content',
-                minHeight: 'auto',
-                overflow: 'visible',
-                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <Business sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                    Empresas vinculadas
-                  </Typography>
-                </Box>
+                {/* Card de Empresas Vinculadas */}
+                <Card sx={{ 
+                  borderRadius: 2,
+                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                      <Business sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+                        Empresas vinculadas
+                      </Typography>
+                    </Box>
                 {associatedCompanies.length > 0 ? (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {associatedCompanies.slice(0, 5).map((company: any) => (
@@ -2675,29 +2747,23 @@ const ContactDetail: React.FC = () => {
                     No hay empresas vinculadas
                   </Typography>
                 )}
-              </Card>
+                  </CardContent>
+                </Card>
 
-              {/* Card de Negocios Vinculados */}
-              <Card sx={{ 
-                borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 2,
-                display: 'flex',
-                flexDirection: 'column',
-                mt: 2,
-                height: 'fit-content',
-                minHeight: 'auto',
-                overflow: 'visible',
-                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <AttachMoney sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                    Negocios vinculados
-                  </Typography>
-                </Box>
+                {/* Card de Negocios Vinculados */}
+                <Card sx={{ 
+                  borderRadius: 2,
+                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                      <AttachMoney sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+                        Negocios vinculados
+                      </Typography>
+                    </Box>
                 {associatedDeals.length > 0 ? (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {associatedDeals.slice(0, 5).map((deal: any) => (
@@ -2742,29 +2808,23 @@ const ContactDetail: React.FC = () => {
                     No hay negocios vinculados
                   </Typography>
                 )}
-              </Card>
+                  </CardContent>
+                </Card>
 
-              {/* Card de Tickets Vinculados */}
-              <Card sx={{ 
-                borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 2,
-                display: 'flex',
-                flexDirection: 'column',
-                mt: 2,
-                height: 'fit-content',
-                minHeight: 'auto',
-                overflow: 'visible',
-                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <Support sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                    Tickets vinculados
-                  </Typography>
-                </Box>
+                {/* Card de Tickets Vinculados */}
+                <Card sx={{ 
+                  borderRadius: 2,
+                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                      <Support sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+                        Tickets vinculados
+                      </Typography>
+                    </Box>
                 {associatedTickets.length > 0 ? (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {associatedTickets.slice(0, 5).map((ticket: any) => (
@@ -2807,13 +2867,435 @@ const ContactDetail: React.FC = () => {
                     No hay tickets vinculados
                   </Typography>
                 )}
-              </Card>
+                  </CardContent>
+                </Card>
+              </Box>
             </>
           )}
 
           {/* Tab Información Avanzada - Vista de Actividades completa */}
           {activeTab === 1 && (
             <>
+              {/* Card de Actividades Recientes */}
+              <Card sx={{ 
+                borderRadius: 2,
+                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                bgcolor: theme.palette.background.paper,
+                px: 2,
+                py: 2,
+                display: 'flex',
+                flexDirection: 'column',
+                mt: 2,
+                mb: 2,
+                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+              }}>
+                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
+                  Actividades Recientes
+                </Typography>
+                
+                {/* Opciones de búsqueda y crear actividades */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: 2, 
+                  mb: 2,
+                  flexWrap: 'wrap',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}>
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    <TextField
+                      size="small"
+                      placeholder="Buscar actividades"
+                      value={activitySearch}
+                      onChange={(e) => setActivitySearch(e.target.value)}
+                      sx={{
+                        width: '250px',
+                        transition: 'all 0.3s ease',
+                        '& .MuiOutlinedInput-root': {
+                          height: '32px',
+                          fontSize: '0.875rem',
+                          '&:hover': {
+                            '& fieldset': {
+                              borderColor: taxiMonterricoColors.green,
+                            },
+                          },
+                          '&.Mui-focused': {
+                            '& fieldset': {
+                              borderColor: taxiMonterricoColors.green,
+                              borderWidth: 2,
+                            },
+                          },
+                        },
+                      }}
+                      InputProps={{
+                        startAdornment: (
+                          <InputAdornment position="start">
+                            <Search fontSize="small" />
+                          </InputAdornment>
+                        ),
+                      }}
+                    />
+                    <Button 
+                      size="small" 
+                      variant="outlined" 
+                      endIcon={<ExpandMore />}
+                      onClick={(e) => setCreateActivityMenuAnchor(e.currentTarget)}
+                      sx={{
+                        borderColor: taxiMonterricoColors.green,
+                        color: taxiMonterricoColors.green,
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          borderColor: taxiMonterricoColors.green,
+                          backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                          transform: 'translateY(-2px)',
+                          boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
+                        },
+                      }}
+                    >
+                      Crear actividades
+                    </Button>
+                  </Box>
+                  
+                  {/* Filtros */}
+                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <Chip 
+                      label={selectedTimeRange}
+                      size="small" 
+                      deleteIcon={<KeyboardArrowDown fontSize="small" />}
+                      onDelete={(e) => {
+                        e.stopPropagation();
+                        setTimeRangeMenuAnchor(e.currentTarget);
+                      }}
+                      onClick={(e) => setTimeRangeMenuAnchor(e.currentTarget)}
+                      sx={{ 
+                        cursor: 'pointer',
+                        color: taxiMonterricoColors.green,
+                      }}
+                    />
+                    {selectedActivityTypes.length > 0 ? (
+                      <Chip 
+                        label={`(${selectedActivityTypes.length}) Actividad`}
+                        size="small" 
+                        deleteIcon={<Close fontSize="small" />}
+                        onDelete={() => setSelectedActivityTypes([])}
+                        onClick={(e) => setActivityFilterMenuAnchor(e.currentTarget)}
+                        sx={{ 
+                          cursor: 'pointer',
+                          bgcolor: 'rgba(46, 125, 50, 0.1)',
+                          color: taxiMonterricoColors.green,
+                        }}
+                      />
+                    ) : (
+                      <Chip 
+                        label="Actividad"
+                        size="small" 
+                        deleteIcon={<KeyboardArrowDown fontSize="small" />}
+                        onDelete={(e) => {
+                          e.stopPropagation();
+                          setActivityFilterMenuAnchor(e.currentTarget);
+                        }}
+                        onClick={(e) => setActivityFilterMenuAnchor(e.currentTarget)}
+                        sx={{ 
+                          cursor: 'pointer',
+                          color: taxiMonterricoColors.green,
+                        }}
+                      />
+                    )}
+                    <Menu
+                      anchorEl={timeRangeMenuAnchor}
+                      open={Boolean(timeRangeMenuAnchor)}
+                      onClose={() => setTimeRangeMenuAnchor(null)}
+                      PaperProps={{
+                        sx: {
+                          mt: 1,
+                          minWidth: 200,
+                          borderRadius: 2,
+                        },
+                      }}
+                    >
+                      {['Todo', 'Hoy', 'Ayer', 'Esta semana', 'Semana pasada', 'Últimos 7 días'].map((option) => (
+                        <MenuItem 
+                          key={option}
+                          onClick={() => { 
+                            setSelectedTimeRange(option === 'Todo' ? 'Todo hasta ahora' : option); 
+                            setTimeRangeMenuAnchor(null); 
+                          }}
+                          sx={{
+                            backgroundColor: (selectedTimeRange === option || (option === 'Todo' && selectedTimeRange === 'Todo hasta ahora')) 
+                              ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)') 
+                              : 'transparent',
+                          }}
+                        >
+                          {option}
+                        </MenuItem>
+                      ))}
+                    </Menu>
+                    <Menu
+                      anchorEl={activityFilterMenuAnchor}
+                      open={Boolean(activityFilterMenuAnchor)}
+                      onClose={() => setActivityFilterMenuAnchor(null)}
+                      PaperProps={{
+                        sx: {
+                          mt: 1,
+                          minWidth: 200,
+                          borderRadius: 2,
+                        },
+                      }}
+                    >
+                      {['Nota', 'Correo', 'Llamada', 'Tarea', 'Reunión'].map((type) => {
+                        const isSelected = selectedActivityTypes.includes(type);
+                        return (
+                          <MenuItem
+                            key={type}
+                            onClick={() => {
+                              if (isSelected) {
+                                setSelectedActivityTypes(selectedActivityTypes.filter(t => t !== type));
+                              } else {
+                                setSelectedActivityTypes([...selectedActivityTypes, type]);
+                              }
+                            }}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1,
+                            }}
+                          >
+                            <Checkbox checked={isSelected} size="small" sx={{ color: taxiMonterricoColors.green, '&.Mui-checked': { color: taxiMonterricoColors.green } }} />
+                            <Typography variant="body2">{type}</Typography>
+                          </MenuItem>
+                        );
+                      })}
+                    </Menu>
+                  </Box>
+                </Box>
+
+                {/* Lista de actividades */}
+                {(() => {
+                  let filteredActivities = activitySearch
+                    ? activities.filter((activity) => {
+                        const searchTerm = activitySearch.toLowerCase();
+                        const subject = (activity.subject || activity.title || '').toLowerCase();
+                        const description = (activity.description || '').toLowerCase();
+                        return subject.includes(searchTerm) || description.includes(searchTerm);
+                      })
+                    : activities;
+
+                  if (selectedActivityTypes.length > 0) {
+                    const typeMap: { [key: string]: string[] } = {
+                      'Nota': ['note'],
+                      'Correo': ['email'],
+                      'Llamada': ['call'],
+                      'Tarea': ['task'],
+                      'Reunión': ['meeting'],
+                    };
+                    filteredActivities = filteredActivities.filter((activity) => {
+                      const activityType = activity.type?.toLowerCase() || '';
+                      return selectedActivityTypes.some(selectedType => {
+                        const mappedTypes = typeMap[selectedType] || [];
+                        return mappedTypes.includes(activityType);
+                      });
+                    });
+                  }
+
+                  // Filtrar por rango de tiempo
+                  if (selectedTimeRange !== 'Todo hasta ahora') {
+                    const now = new Date();
+                    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    const yesterday = new Date(today);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    const startOfWeek = new Date(today);
+                    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+                    const startOfLastWeek = new Date(startOfWeek);
+                    startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
+                    const endOfLastWeek = new Date(startOfWeek);
+                    endOfLastWeek.setDate(endOfLastWeek.getDate() - 1);
+                    const sevenDaysAgo = new Date(today);
+                    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+                    filteredActivities = filteredActivities.filter((activity) => {
+                      const activityDate = new Date(activity.createdAt);
+                      const activityDay = new Date(activityDate.getFullYear(), activityDate.getMonth(), activityDate.getDate());
+                      
+                      switch (selectedTimeRange) {
+                        case 'Hoy':
+                          return activityDay.getTime() === today.getTime();
+                        case 'Ayer':
+                          return activityDay.getTime() === yesterday.getTime();
+                        case 'Esta semana':
+                          return activityDay >= startOfWeek && activityDay <= today;
+                        case 'Semana pasada':
+                          return activityDay >= startOfLastWeek && activityDay <= endOfLastWeek;
+                        case 'Últimos 7 días':
+                          return activityDay >= sevenDaysAgo && activityDay <= today;
+                        default:
+                          return true;
+                      }
+                    });
+                  }
+
+                  if (filteredActivities.length === 0) {
+                    return (
+                      <Box sx={{ textAlign: 'center', py: 4 }}>
+                        <Typography variant="body2" color="text.secondary">
+                          {activitySearch ? 'No se encontraron actividades' : 'No hay actividades registradas'}
+                        </Typography>
+                      </Box>
+                    );
+                  }
+
+                  const getActivityTypeLabel = (type: string) => {
+                    switch (type) {
+                      case 'note': return 'Nota';
+                      case 'email': return 'Correo';
+                      case 'call': return 'Llamada';
+                      case 'task': case 'todo': return 'Tarea';
+                      case 'meeting': return 'Reunión';
+                      default: return 'Actividad';
+                    }
+                  };
+
+                  return (
+                    <Box sx={{ 
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 0.5,
+                    }}>
+                      {filteredActivities.map((activity) => {
+                        const getActivityIconCompact = () => {
+                          switch (activity.type) {
+                            case 'note':
+                              return <Note sx={{ fontSize: 18, color: '#9E9E9E' }} />;
+                            case 'email':
+                              return <Email sx={{ fontSize: 18, color: '#1976D2' }} />;
+                            case 'call':
+                              return <Phone sx={{ fontSize: 18, color: '#2E7D32' }} />;
+                            case 'task':
+                            case 'todo':
+                              return <Assignment sx={{ fontSize: 18, color: '#F57C00' }} />;
+                            case 'meeting':
+                              return <Event sx={{ fontSize: 18, color: '#7B1FA2' }} />;
+                            default:
+                              return <Comment sx={{ fontSize: 18, color: theme.palette.text.secondary }} />;
+                          }
+                        };
+
+                        const getTypeColor = () => {
+                          switch (activity.type) {
+                            case 'note': return '#9E9E9E';
+                            case 'email': return '#1976D2';
+                            case 'call': return '#2E7D32';
+                            case 'task': case 'todo': return '#F57C00';
+                            case 'meeting': return '#7B1FA2';
+                            default: return theme.palette.text.secondary;
+                          }
+                        };
+
+                        return (
+                          <Box
+                            key={activity.id}
+                            onClick={() => setExpandedActivity(activity)}
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 1.5,
+                              py: 1,
+                              px: 1.5,
+                              borderRadius: 1,
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                              borderBottom: `1px solid ${theme.palette.divider}`,
+                              '&:hover': {
+                                bgcolor: theme.palette.action.hover,
+                              },
+                              '&:last-child': {
+                                borderBottom: 'none',
+                              },
+                            }}
+                          >
+                            <Checkbox
+                              checked={completedActivities[activity.id] || false}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                setCompletedActivities(prev => ({
+                                  ...prev,
+                                  [activity.id]: e.target.checked
+                                }));
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              size="small"
+                              sx={{ p: 0, '& .MuiSvgIcon-root': { fontSize: 20 } }}
+                            />
+                            <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                              {getActivityIconCompact()}
+                            </Box>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                flex: 1,
+                                fontWeight: 500,
+                                fontSize: '0.875rem',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                textDecoration: completedActivities[activity.id] ? 'line-through' : 'none',
+                                opacity: completedActivities[activity.id] ? 0.6 : 1,
+                                color: theme.palette.text.primary,
+                              }}
+                            >
+                              {activity.subject || activity.title || 'Sin título'}
+                            </Typography>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                color: theme.palette.text.secondary,
+                                fontSize: '0.813rem',
+                                whiteSpace: 'nowrap',
+                                minWidth: 100,
+                                textAlign: 'center',
+                              }}
+                            >
+                              {activity.User ? `${activity.User.firstName} ${activity.User.lastName}` : '-'}
+                            </Typography>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                color: theme.palette.text.secondary,
+                                fontSize: '0.813rem',
+                                whiteSpace: 'nowrap',
+                                minWidth: 85,
+                                textAlign: 'center',
+                              }}
+                            >
+                              {activity.createdAt 
+                                ? new Date(activity.createdAt).toLocaleDateString('es-ES', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric',
+                                  })
+                                : '-'}
+                            </Typography>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: getTypeColor(),
+                                fontWeight: 600,
+                                fontSize: '0.75rem',
+                                textTransform: 'uppercase',
+                                minWidth: 60,
+                                textAlign: 'right',
+                              }}
+                            >
+                              {getActivityTypeLabel(activity.type)}
+                            </Typography>
+                          </Box>
+                        );
+                      })}
+                    </Box>
+                  );
+                })()}
+              </Card>
+
+              {/* Card de Empresas */}
               <Card sx={{ 
                 borderRadius: 2,
                 boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
@@ -3132,7 +3614,7 @@ const ContactDetail: React.FC = () => {
                               </Box>
                             </TableCell>
                             <TableCell>
-                              {deal.value ? `$${parseFloat(deal.value).toLocaleString()}` : '-'}
+                              {deal.amount ? `S/ ${parseFloat(deal.amount).toLocaleString('es-ES')}` : '-'}
                             </TableCell>
                             <TableCell>
                               {deal.closeDate 
@@ -3469,22 +3951,6 @@ const ContactDetail: React.FC = () => {
                         <Edit sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
                         <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
                           Crear nota
-                        </Typography>
-                      </MenuItem>
-                      
-                      <MenuItem 
-                        onClick={() => handleCreateActivity('email')}
-                        sx={{
-                          py: 1.5,
-                          px: 2,
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                          },
-                        }}
-                      >
-                        <Email sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
-                        <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
-                          Crear correo
                         </Typography>
                       </MenuItem>
                       
@@ -5462,6 +5928,7 @@ const ContactDetail: React.FC = () => {
           </Box>
 
           {/* Card Independiente: Registro de Cambios / Logs */}
+          {historyOpen && (
           <Box sx={{
             display: 'flex',
             flexDirection: 'column',
@@ -5629,11 +6096,12 @@ const ContactDetail: React.FC = () => {
             </Box>
           </Card>
           </Box>
+          )}
         </Box>
         )}
 
         {/* Card Independiente: Registro de Cambios / Logs - Solo cuando Copiloto IA está cerrado */}
-        {isDesktop && !copilotOpen && (
+        {isDesktop && !copilotOpen && historyOpen && (
         <Box sx={{
           width: 380,
           flexShrink: 0,
@@ -6205,11 +6673,11 @@ const ContactDetail: React.FC = () => {
             width: { xs: '95vw', sm: '700px' },
             maxWidth: { xs: '95vw', sm: '90vw' },
             height: '85vh',
-            backgroundColor: theme.palette.background.paper,
+            backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
             boxShadow: theme.palette.mode === 'dark' 
-              ? '0 20px 60px rgba(0,0,0,0.3)' 
+              ? '0 20px 60px rgba(0,0,0,0.5)' 
               : '0 20px 60px rgba(0,0,0,0.12)',
-            zIndex: 1401,
+            zIndex: 1500,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -6277,15 +6745,15 @@ const ContactDetail: React.FC = () => {
               display: 'flex', 
               flexDirection: 'column', 
               border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`, 
-              borderRadius: 3,
+              borderRadius: 2,
               overflow: 'hidden',
               minHeight: '300px',
-              backgroundColor: theme.palette.background.paper,
+              backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:focus-within': {
-                boxShadow: `0 4px 16px ${taxiMonterricoColors.orange}40`,
-                borderColor: taxiMonterricoColors.orange,
-                transform: 'translateY(-1px)',
+                boxShadow: 'none',
+                borderColor: theme.palette.divider,
+                transform: 'none',
               },
             }}>
               <RichTextEditor
@@ -6314,8 +6782,8 @@ const ContactDetail: React.FC = () => {
           <Box sx={{ 
             px: 3,
             py: 2.5, 
-            borderTop: `1px solid ${theme.palette.divider}`, 
-            backgroundColor: theme.palette.background.paper, 
+            borderTop: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`, 
+            backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper, 
             display: 'flex', 
             justifyContent: 'flex-end', 
             gap: 2,
@@ -6381,7 +6849,7 @@ const ContactDetail: React.FC = () => {
             right: 0,
             bottom: 0,
             backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
-            zIndex: 1400,
+            zIndex: 1499,
             animation: 'fadeIn 0.3s ease-out',
             '@keyframes fadeIn': {
               '0%': {
@@ -6402,6 +6870,7 @@ const ContactDetail: React.FC = () => {
         onClose={() => setNoteAssociateModalOpen(false)}
         maxWidth="sm"
         fullWidth={false}
+        sx={{ zIndex: 1600 }}
         PaperProps={{
           sx: {
             borderRadius: 2,
@@ -6758,7 +7227,7 @@ const ContactDetail: React.FC = () => {
                                 />
                                 <ListItemText
                                   primary={deal.name}
-                                  secondary={`${deal.amount ? `$${deal.amount.toLocaleString()}` : ''} ${deal.stage || ''}`}
+                                  secondary={`${deal.amount ? `S/ ${deal.amount.toLocaleString('es-ES')}` : ''} ${deal.stage || ''}`}
                                   primaryTypographyProps={{ fontSize: '0.875rem' }}
                                   secondaryTypographyProps={{ fontSize: '0.75rem' }}
                                 />
@@ -6908,7 +7377,7 @@ const ContactDetail: React.FC = () => {
                                   />
                                   <ListItemText
                                     primary={deal.name}
-                                    secondary={`${deal.amount ? `$${deal.amount.toLocaleString()}` : ''} ${deal.stage || ''}`}
+                                    secondary={`${deal.amount ? `S/ ${deal.amount.toLocaleString('es-ES')}` : ''} ${deal.stage || ''}`}
                                     primaryTypographyProps={{ fontSize: '0.875rem' }}
                                     secondaryTypographyProps={{ fontSize: '0.75rem' }}
                                   />
@@ -7010,7 +7479,7 @@ const ContactDetail: React.FC = () => {
               backgroundColor: theme.palette.background.paper,
               boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
               borderRadius: 4,
-              zIndex: 1300,
+              zIndex: 1500,
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
@@ -7264,8 +7733,8 @@ const ContactDetail: React.FC = () => {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.1)',
-              zIndex: 1299,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 1499,
               animation: 'fadeIn 0.3s ease-out',
             }}
             onClick={() => setCallOpen(false)}
@@ -8309,7 +8778,7 @@ const ContactDetail: React.FC = () => {
               backgroundColor: theme.palette.background.paper,
               boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
               borderRadius: 4,
-              zIndex: 1300,
+              zIndex: 1500,
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
@@ -8597,8 +9066,8 @@ const ContactDetail: React.FC = () => {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.1)',
-              zIndex: 1299,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 1499,
               animation: 'fadeIn 0.3s ease-out',
             }}
             onClick={() => setMeetingOpen(false)}
@@ -9198,6 +9667,187 @@ const ContactDetail: React.FC = () => {
             Crear
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Dialog para ver detalles de actividad expandida */}
+      <Dialog
+        open={!!expandedActivity}
+        onClose={() => setExpandedActivity(null)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            maxHeight: '90vh',
+          },
+        }}
+      >
+        {expandedActivity && (
+          <>
+            <Box
+              sx={{
+                backgroundColor: 'transparent',
+                color: theme.palette.text.primary,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                minHeight: 48,
+                px: 2,
+                pt: 1.5,
+                pb: 0.5,
+              }}
+            >
+              <Typography variant="h6" sx={{ color: theme.palette.text.primary, fontWeight: 700, fontSize: '1rem' }}>
+                {(() => {
+                  switch (expandedActivity.type) {
+                    case 'note': return 'Nota';
+                    case 'email': return 'Correo';
+                    case 'call': return 'Llamada';
+                    case 'task': case 'todo': return 'Tarea';
+                    case 'meeting': return 'Reunión';
+                    default: return 'Actividad';
+                  }
+                })()}
+              </Typography>
+              <IconButton
+                sx={{
+                  color: theme.palette.text.secondary,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    backgroundColor: theme.palette.action.hover,
+                    color: theme.palette.text.primary,
+                  },
+                }}
+                size="medium"
+                onClick={() => setExpandedActivity(null)}
+              >
+                <Close />
+              </IconButton>
+            </Box>
+
+            <DialogContent sx={{ px: 2, pb: 1, pt: 0.5 }}>
+              {/* Título */}
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
+                  Título
+                </Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                  {expandedActivity.subject || expandedActivity.title}
+                </Typography>
+              </Box>
+
+              {/* Descripción */}
+              {expandedActivity.description && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
+                    Descripción
+                  </Typography>
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 1,
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
+                      border: `1px solid ${theme.palette.divider}`,
+                      fontSize: '0.875rem',
+                      lineHeight: 1.6,
+                      '& *': {
+                        margin: 0,
+                      },
+                    }}
+                    dangerouslySetInnerHTML={{ __html: expandedActivity.description }}
+                  />
+                </Box>
+              )}
+
+              <Divider sx={{ my: 2 }} />
+
+              {/* Campos adicionales en grid */}
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
+                {/* Fecha de vencimiento */}
+                {expandedActivity.dueDate && (
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
+                      Fecha de vencimiento
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                      {new Date(expandedActivity.dueDate).toLocaleDateString('es-ES', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Prioridad */}
+                {expandedActivity.priority && (
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
+                      Prioridad
+                    </Typography>
+                    <Chip
+                      label={expandedActivity.priority === 'low' ? 'Baja' : expandedActivity.priority === 'medium' ? 'Media' : expandedActivity.priority === 'high' ? 'Alta' : expandedActivity.priority === 'urgent' ? 'Urgente' : expandedActivity.priority}
+                      size="small"
+                      sx={{
+                        bgcolor: expandedActivity.priority === 'urgent' ? '#f44336' : expandedActivity.priority === 'high' ? '#ff9800' : expandedActivity.priority === 'medium' ? '#ffc107' : '#4caf50',
+                        color: 'white',
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
+                      }}
+                    />
+                  </Box>
+                )}
+
+                {/* Estado */}
+                {expandedActivity.status && (
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
+                      Estado
+                    </Typography>
+                    <Chip
+                      label={expandedActivity.status === 'pending' ? 'Pendiente' : expandedActivity.status === 'in_progress' ? 'En progreso' : expandedActivity.status === 'completed' ? 'Completada' : expandedActivity.status}
+                      size="small"
+                      sx={{
+                        bgcolor: expandedActivity.status === 'completed' ? '#4caf50' : expandedActivity.status === 'in_progress' ? '#2196f3' : theme.palette.action.disabledBackground,
+                        color: expandedActivity.status === 'completed' ? 'white' : theme.palette.text.primary,
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
+                      }}
+                    />
+                  </Box>
+                )}
+
+                {/* Usuario asignado */}
+                {expandedActivity.User && (
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
+                      Asignado a
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                      {expandedActivity.User.firstName} {expandedActivity.User.lastName}
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Fecha de creación */}
+                {expandedActivity.createdAt && (
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
+                      Creado
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                      {new Date(expandedActivity.createdAt).toLocaleDateString('es-ES', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </DialogContent>
+          </>
+        )}
       </Dialog>
     </Box>
   );

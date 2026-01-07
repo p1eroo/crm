@@ -9,6 +9,7 @@ import {
   IconButton,
   CircularProgress,
   Card,
+  CardContent,
   useTheme,
   Dialog,
   DialogTitle,
@@ -57,6 +58,7 @@ import {
   AutoAwesome,
   Close,
   Business,
+  AttachMoney,
   AccessTime,
   DonutSmall,
   KeyboardArrowRight,
@@ -151,7 +153,8 @@ const TaskDetail: React.FC = () => {
   const [actionsMenuAnchorEl, setActionsMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [moreOptionsMenuAnchorEl, setMoreOptionsMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [activeTab, setActiveTab] = useState(0);
-  const [copilotOpen, setCopilotOpen] = useState(true);
+  const [copilotOpen, setCopilotOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [activities, setActivities] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
@@ -1881,7 +1884,22 @@ const TaskDetail: React.FC = () => {
                 ml: 1,
                 pl: 1,
                 borderLeft: `1px solid ${theme.palette.divider}`,
+                gap: 0.5,
               }}>
+                <Tooltip title="Registro de Cambios">
+                  <IconButton
+                    onClick={() => setHistoryOpen(!historyOpen)}
+                    size="small"
+                    sx={{
+                      color: historyOpen ? '#2196F3' : theme.palette.text.secondary,
+                      '&:hover': {
+                        bgcolor: 'transparent',
+                      },
+                    }}
+                  >
+                    <History />
+                  </IconButton>
+                </Tooltip>
                 <Tooltip title="Copiloto IA">
                   <IconButton
                     onClick={() => setCopilotOpen(!copilotOpen)}
@@ -2039,157 +2057,142 @@ const TaskDetail: React.FC = () => {
                 </Card>
               </Box>
 
-              {/* Card de Actividades Recientes */}
-              <Card sx={{ 
-                borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 2,
-                display: 'flex',
-                flexDirection: 'column',
+              {/* Grid 2x2 para Actividades Recientes, Contactos, Empresas y Negocios */}
+              <Box sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
+                gap: 2,
                 mt: 2,
-                height: 'fit-content',
-                minHeight: 'auto',
-                overflow: 'visible',
-                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
                 mb: 2,
               }}>
-                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
-                  Actividades Recientes
-                </Typography>
-                
-                {activities && activities.length > 0 ? (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                    {activities
-                      .sort((a, b) => {
-                        const dateA = new Date(a.createdAt || 0).getTime();
-                        const dateB = new Date(b.createdAt || 0).getTime();
-                        return dateB - dateA;
-                      })
-                      .slice(0, 5)
-                      .map((activity) => {
-                        const getActivityIcon = () => {
-                          switch (activity.type) {
-                            case 'note':
-                              return <Note sx={{ fontSize: 18, color: '#9E9E9E' }} />;
-                            case 'email':
-                              return <Email sx={{ fontSize: 18, color: '#1976D2' }} />;
-                            case 'call':
-                              return <Phone sx={{ fontSize: 18, color: '#2E7D32' }} />;
-                            case 'task':
-                            case 'todo':
-                              return <Assignment sx={{ fontSize: 18, color: '#F57C00' }} />;
-                            case 'meeting':
-                              return <Event sx={{ fontSize: 18, color: '#7B1FA2' }} />;
-                            default:
-                              return <Comment sx={{ fontSize: 18, color: theme.palette.text.secondary }} />;
-                          }
-                        };
-
-                        const getActivityTypeLabel = () => {
-                          switch (activity.type) {
-                            case 'note':
-                              return 'Nota';
-                            case 'email':
-                              return 'Correo';
-                            case 'call':
-                              return 'Llamada';
-                            case 'task':
-                            case 'todo':
-                              return 'Tarea';
-                            case 'meeting':
-                              return 'Reunión';
-                            default:
-                              return 'Actividad';
-                          }
-                        };
-
-                        return (
-                          <Box
-                            key={activity.id}
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'flex-start',
-                              gap: 1.5,
-                              p: 1.5,
-                              borderRadius: 1,
-                              border: `1px solid ${theme.palette.divider}`,
-                              transition: 'all 0.2s ease',
-                              '&:hover': {
-                                borderColor: taxiMonterricoColors.green,
-                                backgroundColor: theme.palette.mode === 'dark' 
-                                  ? 'rgba(46, 125, 50, 0.1)' 
-                                  : 'rgba(46, 125, 50, 0.05)',
-                              },
-                            }}
-                          >
-                            <Box sx={{ pt: 0.5 }}>
-                              {getActivityIcon()}
-                            </Box>
-                            <Box sx={{ flex: 1, minWidth: 0 }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.875rem', color: theme.palette.text.primary }}>
-                                  {activity.subject || getActivityTypeLabel()}
-                                </Typography>
-                                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary, whiteSpace: 'nowrap', ml: 1 }}>
-                                  {activity.createdAt && new Date(activity.createdAt).toLocaleDateString('es-ES', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                  })}
-                                </Typography>
-                              </Box>
-                              {activity.description && (
-                                <Typography 
-                                  variant="body2" 
-                                  sx={{ 
-                                    fontSize: '0.75rem', 
-                                    color: theme.palette.text.secondary,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: 'vertical',
-                                  }}
-                                >
-                                  {activity.description.replace(/<[^>]*>/g, '').substring(0, 100)}
-                                  {activity.description.replace(/<[^>]*>/g, '').length > 100 ? '...' : ''}
-                                </Typography>
-                              )}
-                            </Box>
-                          </Box>
-                        );
-                      })}
-                  </Box>
-                ) : (
-                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
-                    No hay actividades recientes
-                  </Typography>
-                )}
-              </Card>
-
-              {/* Card de Contactos Vinculados */}
-              <Card sx={{ 
+                {/* Card de Actividades Recientes */}
+                <Card sx={{ 
                   borderRadius: 2,
                   boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
                   bgcolor: theme.palette.background.paper,
-                  px: 2,
-                  py: 2,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  mt: 2,
-                  height: 'fit-content',
-                  minHeight: 'auto',
-                  overflow: 'visible',
                   border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                  mb: 2,
                 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                    <Person sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                      Contactos vinculados
+                  <CardContent>
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
+                      Actividades Recientes
                     </Typography>
-                  </Box>
+                
+                    {activities && activities.length > 0 ? (
+                      <Box sx={{
+                        display: 'flex',
+                        gap: 1.5,
+                        overflowX: 'auto',
+                        pb: 1,
+                        '&::-webkit-scrollbar': { height: 6 },
+                        '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
+                        '&::-webkit-scrollbar-thumb': {
+                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                          borderRadius: 3,
+                        },
+                      }}>
+                        {activities
+                          .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+                          .slice(0, 8)
+                          .map((activity) => {
+                            const getActivityIcon = () => {
+                              switch (activity.type) {
+                                case 'note': return <Note sx={{ fontSize: 20, color: '#9E9E9E' }} />;
+                                case 'email': return <Email sx={{ fontSize: 20, color: '#1976D2' }} />;
+                                case 'call': return <Phone sx={{ fontSize: 20, color: '#2E7D32' }} />;
+                                case 'task': case 'todo': return <Assignment sx={{ fontSize: 20, color: '#F57C00' }} />;
+                                case 'meeting': return <Event sx={{ fontSize: 20, color: '#7B1FA2' }} />;
+                                default: return <Comment sx={{ fontSize: 20, color: theme.palette.text.secondary }} />;
+                              }
+                            };
+                            const getActivityTypeLabel = () => {
+                              switch (activity.type) {
+                                case 'note': return 'Nota';
+                                case 'email': return 'Correo';
+                                case 'call': return 'Llamada';
+                                case 'task': case 'todo': return 'Tarea';
+                                case 'meeting': return 'Reunión';
+                                default: return 'Actividad';
+                              }
+                            };
+                            const getActivityColor = () => {
+                              switch (activity.type) {
+                                case 'note': return { bg: 'rgba(158, 158, 158, 0.1)', border: 'rgba(158, 158, 158, 0.3)' };
+                                case 'email': return { bg: 'rgba(25, 118, 210, 0.1)', border: 'rgba(25, 118, 210, 0.3)' };
+                                case 'call': return { bg: 'rgba(46, 125, 50, 0.1)', border: 'rgba(46, 125, 50, 0.3)' };
+                                case 'task': case 'todo': return { bg: 'rgba(245, 124, 0, 0.1)', border: 'rgba(245, 124, 0, 0.3)' };
+                                case 'meeting': return { bg: 'rgba(123, 31, 162, 0.1)', border: 'rgba(123, 31, 162, 0.3)' };
+                                default: return { bg: theme.palette.action.hover, border: theme.palette.divider };
+                              }
+                            };
+                            const colors = getActivityColor();
+                            const activityTitle = activity.subject || activity.title || getActivityTypeLabel();
+
+                            return (
+                              <Tooltip key={activity.id} title={activityTitle} arrow placement="top">
+                                <Box sx={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  minWidth: 100,
+                                  maxWidth: 100,
+                                  p: 1.5,
+                                  borderRadius: 2,
+                                  border: `1px solid ${colors.border}`,
+                                  bgcolor: colors.bg,
+                                  cursor: 'pointer',
+                                  transition: 'all 0.2s ease',
+                                  flexShrink: 0,
+                                  '&:hover': {
+                                    transform: 'translateY(-2px)',
+                                    boxShadow: theme.palette.mode === 'dark' ? '0 4px 12px rgba(0,0,0,0.4)' : '0 4px 12px rgba(0,0,0,0.15)',
+                                  },
+                                }}>
+                                  <Box sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: 36,
+                                    height: 36,
+                                    borderRadius: '50%',
+                                    bgcolor: theme.palette.background.paper,
+                                    mb: 1,
+                                  }}>
+                                    {getActivityIcon()}
+                                  </Box>
+                                  <Typography variant="caption" sx={{ fontWeight: 600, fontSize: '0.7rem', color: theme.palette.text.primary, textAlign: 'center', lineHeight: 1.2, mb: 0.5 }}>
+                                    {getActivityTypeLabel()}
+                                  </Typography>
+                                  <Typography variant="caption" sx={{ fontSize: '0.65rem', color: theme.palette.text.secondary, textAlign: 'center' }}>
+                                    {activity.createdAt && new Date(activity.createdAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                                  </Typography>
+                                </Box>
+                              </Tooltip>
+                            );
+                          })}
+                      </Box>
+                    ) : (
+                      <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
+                        No hay actividades recientes
+                      </Typography>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Card de Contactos Vinculados */}
+                <Card sx={{ 
+                  borderRadius: 2,
+                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                      <Person sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+                        Contactos vinculados
+                      </Typography>
+                    </Box>
                   {(task.Contact || taskContacts.length > 0) ? (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                       {task.Contact && (
@@ -2248,35 +2251,28 @@ const TaskDetail: React.FC = () => {
                         </Box>
                       ))}
                     </Box>
-                  ) : (
-                    <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
-                      No hay contactos vinculados
-                    </Typography>
-                  )}
+                    ) : (
+                      <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
+                        No hay contactos vinculados
+                      </Typography>
+                    )}
+                  </CardContent>
                 </Card>
 
-              {/* Card de Empresas Vinculadas */}
-              <Card sx={{ 
+                {/* Card de Empresas Vinculadas */}
+                <Card sx={{ 
                   borderRadius: 2,
                   boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
                   bgcolor: theme.palette.background.paper,
-                  px: 2,
-                  py: 2,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  mt: 2,
-                  height: 'fit-content',
-                  minHeight: 'auto',
-                  overflow: 'visible',
                   border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                  mb: 2,
                 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                    <Business sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                      Empresas vinculadas
-                    </Typography>
-                  </Box>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                      <Business sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+                        Empresas vinculadas
+                      </Typography>
+                    </Box>
                   {(task.Company || taskCompanies.length > 0) ? (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                       {task.Company && (
@@ -2332,36 +2328,28 @@ const TaskDetail: React.FC = () => {
                         </Box>
                       ))}
                     </Box>
-                  ) : (
-                    <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
-                      No hay empresas vinculadas
-                    </Typography>
-                  )}
+                    ) : (
+                      <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
+                        No hay empresas vinculadas
+                      </Typography>
+                    )}
+                  </CardContent>
                 </Card>
 
-              {/* Card de Negocios Vinculados */}
-              {(task.Deal || taskDeals.length > 0) && (
+                {/* Card de Negocios Vinculados */}
                 <Card sx={{ 
                   borderRadius: 2,
                   boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
                   bgcolor: theme.palette.background.paper,
-                  px: 2,
-                  py: 2,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  mt: 2,
-                  height: 'fit-content',
-                  minHeight: 'auto',
-                  overflow: 'visible',
                   border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                  mb: 2,
                 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                    <Assignment sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                      Negocios vinculados
-                    </Typography>
-                  </Box>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                      <AttachMoney sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+                        Negocios vinculados
+                      </Typography>
+                    </Box>
                   {(task.Deal || taskDeals.length > 0) ? (
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                       {task.Deal && (
@@ -2417,13 +2405,14 @@ const TaskDetail: React.FC = () => {
                         </Box>
                       ))}
                     </Box>
-                  ) : (
-                    <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
-                      No hay negocios vinculados
-                    </Typography>
-                  )}
+                    ) : (
+                      <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
+                        No hay negocios vinculados
+                      </Typography>
+                    )}
+                  </CardContent>
                 </Card>
-              )}
+              </Box>
             </>
           )}
 
@@ -3867,6 +3856,7 @@ const TaskDetail: React.FC = () => {
           </Box>
 
           {/* Card Independiente: Registro de Cambios / Logs */}
+          {historyOpen && (
           <Box sx={{
             display: 'flex',
             flexDirection: 'column',
@@ -4032,11 +4022,12 @@ const TaskDetail: React.FC = () => {
               </Box>
             </Card>
           </Box>
+          )}
         </Box>
         )}
 
         {/* Card Independiente: Registro de Cambios / Logs - Solo cuando Copiloto IA está cerrado */}
-        {isDesktop && !copilotOpen && (
+        {isDesktop && !copilotOpen && historyOpen && (
         <Box sx={{
           width: 380,
           flexShrink: 0,
@@ -5532,11 +5523,11 @@ const TaskDetail: React.FC = () => {
             width: { xs: '95vw', sm: '700px' },
             maxWidth: { xs: '95vw', sm: '90vw' },
             height: '85vh',
-            backgroundColor: theme.palette.background.paper,
+            backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
             boxShadow: theme.palette.mode === 'dark' 
-              ? '0 20px 60px rgba(0,0,0,0.3)' 
+              ? '0 20px 60px rgba(0,0,0,0.5)' 
               : '0 20px 60px rgba(0,0,0,0.12)',
-            zIndex: 1401,
+            zIndex: 1500,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -5604,16 +5595,13 @@ const TaskDetail: React.FC = () => {
               display: 'flex', 
               flexDirection: 'column', 
               border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`, 
-              borderRadius: 3,
+              borderRadius: 2,
               overflow: 'hidden',
               minHeight: '300px',
-              backgroundColor: theme.palette.background.paper,
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              '&:focus-within': {
-                boxShadow: `0 4px 16px ${taxiMonterricoColors.orange}40`,
-                borderColor: taxiMonterricoColors.orange,
-                transform: 'translateY(-1px)',
-              },
+              backgroundColor: theme.palette.mode === 'dark' 
+                ? '#1F2937' 
+                : theme.palette.background.paper,
+              transition: 'all 0.2s ease',
             }}>
               <RichTextEditor
                 value={noteData.description}
@@ -5640,25 +5628,29 @@ const TaskDetail: React.FC = () => {
           <Box sx={{ 
             px: 3,
             py: 2.5, 
-            borderTop: `1px solid ${theme.palette.divider}`, 
-            backgroundColor: theme.palette.background.paper, 
+            borderTop: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`, 
+            backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper, 
             display: 'flex', 
             justifyContent: 'flex-end', 
             gap: 2,
           }}>
             <Button 
               onClick={() => setNoteOpen(false)} 
+              variant="outlined"
               sx={{ 
                 textTransform: 'none',
-                px: 3.5,
-                py: 1.25,
+                px: 3,
+                py: 1,
                 color: theme.palette.text.secondary,
-                fontWeight: 500,
+                borderColor: theme.palette.divider,
+                fontWeight: 600,
                 borderRadius: 2,
                 '&:hover': {
                   backgroundColor: theme.palette.action.hover,
+                  borderColor: theme.palette.text.secondary,
+                  transform: 'translateY(-1px)',
                 },
-                transition: 'all 0.2s ease',
+                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             >
               Cancelar
@@ -5671,19 +5663,20 @@ const TaskDetail: React.FC = () => {
                 textTransform: 'none',
                 px: 4,
                 py: 1.25,
-                backgroundColor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.orange,
+                backgroundColor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.green,
+                color: 'white',
                 fontWeight: 600,
                 borderRadius: 2,
-                boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.orange}40`,
+                boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.green}40`,
                 '&:hover': {
-                  backgroundColor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.orangeDark,
-                  boxShadow: saving ? 'none' : `0 6px 16px ${taxiMonterricoColors.orange}50`,
-                  transform: 'translateY(-1px)',
+                  backgroundColor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.greenDark,
+                  boxShadow: saving ? 'none' : `0 6px 16px ${taxiMonterricoColors.green}50`,
+                  transform: 'translateY(-2px)',
                 },
                 '&:active': {
                   transform: 'translateY(0)',
                 },
-                '&:disabled': {
+                '&.Mui-disabled': {
                   backgroundColor: theme.palette.action.disabledBackground,
                   color: theme.palette.action.disabled,
                   boxShadow: 'none',
@@ -5707,7 +5700,7 @@ const TaskDetail: React.FC = () => {
             right: 0,
             bottom: 0,
             backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
-            zIndex: 1400,
+            zIndex: 1499,
             animation: 'fadeIn 0.3s ease-out',
             '@keyframes fadeIn': {
               '0%': {
@@ -5728,6 +5721,7 @@ const TaskDetail: React.FC = () => {
         onClose={() => setNoteAssociateModalOpen(false)}
         maxWidth="sm"
         fullWidth={false}
+        sx={{ zIndex: 1600 }}
         PaperProps={{
           sx: {
             borderRadius: 2,
@@ -6312,42 +6306,283 @@ const TaskDetail: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Dialog para registrar llamada */}
-      <Dialog open={callOpen} onClose={() => setCallOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Registrar Llamada</DialogTitle>
-        <DialogContent>
-          <TextField
-            fullWidth
-            label="Asunto"
-            value={callData.subject}
-            onChange={(e) => setCallData({ ...callData, subject: e.target.value })}
-            required
-            sx={{ mb: 2, mt: 1 }}
+      {/* Ventana flotante de Llamada */}
+      {callOpen && (
+        <>
+          <Box
+            sx={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '600px',
+              maxWidth: '95vw',
+              maxHeight: '90vh',
+              backgroundColor: theme.palette.background.paper,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              borderRadius: 4,
+              zIndex: 1500,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              animation: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '@keyframes fadeInScale': {
+                '0%': {
+                  opacity: 0,
+                  transform: 'translate(-50%, -50%) scale(0.9)',
+                },
+                '100%': {
+                  opacity: 1,
+                  transform: 'translate(-50%, -50%) scale(1)',
+                },
+              },
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Box
+              sx={{
+                backgroundColor: 'transparent',
+                color: theme.palette.text.primary,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                minHeight: { xs: '64px', md: '72px' },
+                px: { xs: 3, md: 4 },
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    backgroundColor: `${taxiMonterricoColors.green}15`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Phone sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+                </Box>
+                <Typography variant="h5" sx={{ color: theme.palette.text.primary, fontWeight: 700, fontSize: { xs: '1.1rem', md: '1.25rem' }, letterSpacing: '-0.02em' }}>
+                  Llamada
+                </Typography>
+              </Box>
+              <IconButton 
+                sx={{ 
+                  color: theme.palette.text.secondary,
+                  transition: 'all 0.2s ease',
+                  '&:hover': { 
+                    backgroundColor: theme.palette.action.hover,
+                    color: theme.palette.text.primary,
+                    transform: 'rotate(90deg)',
+                  }
+                }} 
+                size="medium" 
+                onClick={() => setCallOpen(false)}
+              >
+                <Close />
+              </IconButton>
+            </Box>
+
+            <Box sx={{ 
+              flexGrow: 1, 
+              display: 'flex', 
+              flexDirection: 'column', 
+              p: { xs: 3, md: 4 }, 
+              overflow: 'hidden', 
+              overflowY: 'auto',
+              gap: 3,
+              '&::-webkit-scrollbar': {
+                width: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                backgroundColor: 'transparent',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: theme.palette.mode === 'dark' 
+                  ? 'rgba(255,255,255,0.2)' 
+                  : 'rgba(0,0,0,0.2)',
+                borderRadius: '4px',
+                '&:hover': {
+                  backgroundColor: theme.palette.mode === 'dark' 
+                    ? 'rgba(255,255,255,0.3)' 
+                    : 'rgba(0,0,0,0.3)',
+                },
+                transition: 'background-color 0.2s ease',
+              },
+            }}>
+              <TextField
+                label="Asunto"
+                value={callData.subject}
+                onChange={(e) => setCallData({ ...callData, subject: e.target.value })}
+                required
+                fullWidth
+                sx={{ 
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '& fieldset': {
+                      borderWidth: '2px',
+                      borderColor: theme.palette.divider,
+                    },
+                    '&:hover fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                      borderWidth: '2px',
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    fontWeight: 500,
+                    '&.Mui-focused': {
+                      color: taxiMonterricoColors.green,
+                    },
+                  },
+                }}
+              />
+              <TextField
+                label="Duración (minutos)"
+                type="number"
+                value={callData.duration}
+                onChange={(e) => setCallData({ ...callData, duration: e.target.value })}
+                fullWidth
+                sx={{ 
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '& fieldset': {
+                      borderWidth: '2px',
+                      borderColor: theme.palette.divider,
+                    },
+                    '&:hover fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                      borderWidth: '2px',
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    fontWeight: 500,
+                    '&.Mui-focused': {
+                      color: taxiMonterricoColors.green,
+                    },
+                  },
+                }}
+              />
+              <TextField
+                label="Notas de la llamada"
+                multiline
+                rows={8}
+                value={callData.description}
+                onChange={(e) => setCallData({ ...callData, description: e.target.value })}
+                fullWidth
+                sx={{ 
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '& fieldset': {
+                      borderWidth: '2px',
+                      borderColor: theme.palette.divider,
+                    },
+                    '&:hover fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                      borderWidth: '2px',
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    fontWeight: 500,
+                    '&.Mui-focused': {
+                      color: taxiMonterricoColors.green,
+                    },
+                  },
+                }}
+              />
+            </Box>
+
+            <Box sx={{ 
+              p: 3, 
+              borderTop: `1px solid ${theme.palette.divider}`, 
+              backgroundColor: theme.palette.background.paper, 
+              display: 'flex', 
+              justifyContent: 'flex-end', 
+              gap: 2 
+            }}>
+              <Button 
+                onClick={() => setCallOpen(false)} 
+                variant="outlined"
+                sx={{ 
+                  textTransform: 'none',
+                  color: theme.palette.text.secondary,
+                  borderColor: theme.palette.divider,
+                  fontWeight: 600,
+                  px: 3,
+                  py: 1,
+                  borderRadius: 2,
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    bgcolor: theme.palette.action.hover,
+                    borderColor: theme.palette.text.secondary,
+                    transform: 'translateY(-1px)',
+                  },
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleSaveCall} 
+                variant="contained" 
+                disabled={saving || !callData.subject.trim()}
+                sx={{ 
+                  textTransform: 'none',
+                  bgcolor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.green,
+                  color: 'white',
+                  fontWeight: 600,
+                  px: 4,
+                  py: 1,
+                  borderRadius: 2,
+                  boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.green}40`,
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    bgcolor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.greenDark,
+                    boxShadow: saving ? 'none' : `0 6px 16px ${taxiMonterricoColors.green}50`,
+                    transform: 'translateY(-2px)',
+                  },
+                  '&:active': {
+                    transform: 'translateY(0)',
+                  },
+                  '&.Mui-disabled': {
+                    bgcolor: theme.palette.action.disabledBackground,
+                    color: theme.palette.action.disabled,
+                    boxShadow: 'none',
+                  },
+                }}
+              >
+                {saving ? 'Guardando...' : 'Guardar'}
+              </Button>
+            </Box>
+          </Box>
+          <Box
+            sx={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 1499,
+              animation: 'fadeIn 0.3s ease-out',
+            }}
+            onClick={() => setCallOpen(false)}
           />
-          <TextField
-            fullWidth
-            label="Duración (minutos)"
-            type="number"
-            value={callData.duration}
-            onChange={(e) => setCallData({ ...callData, duration: e.target.value })}
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            fullWidth
-            multiline
-            rows={6}
-            label="Notas de la llamada"
-            value={callData.description}
-            onChange={(e) => setCallData({ ...callData, description: e.target.value })}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCallOpen(false)}>Cancelar</Button>
-          <Button onClick={handleSaveCall} variant="contained" disabled={saving || !callData.subject.trim()}>
-            {saving ? 'Guardando...' : 'Guardar'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </>
+      )}
 
       {/* Dialog para crear tarea */}
       <Dialog 

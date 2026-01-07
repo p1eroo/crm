@@ -490,6 +490,17 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
   };
 
   const handleOpenTableDialog = () => {
+    // Guardar la selección actual antes de abrir el dialog
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      savedSelectionRef.current = selection.getRangeAt(0).cloneRange();
+    } else if (editorRef.current) {
+      // Si no hay selección, colocar el cursor al final del contenido
+      const range = document.createRange();
+      range.selectNodeContents(editorRef.current);
+      range.collapse(false);
+      savedSelectionRef.current = range;
+    }
     setTableRows('3');
     setTableCols('3');
     setTableDialogOpen(true);
@@ -526,11 +537,30 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
         table.appendChild(tr);
       }
       
+      // Restaurar la selección guardada
       const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
+      let range: Range | null = null;
+      
+      if (savedSelectionRef.current && selection) {
+        try {
+          selection.removeAllRanges();
+          selection.addRange(savedSelectionRef.current);
+          range = selection.getRangeAt(0);
+        } catch (e) {
+          console.error('Error restoring selection for table:', e);
+        }
+      }
+      
+      if (range) {
         range.deleteContents();
         range.insertNode(table);
+        
+        // Mover el cursor después de la tabla
+        range.setStartAfter(table);
+        range.collapse(true);
+        selection?.removeAllRanges();
+        selection?.addRange(range);
+        
         onChange(editorRef.current?.innerHTML || '');
       } else if (editorRef.current) {
         // Si no hay selección, insertar al final
@@ -564,9 +594,9 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
           display: 'flex',
           alignItems: 'center',
           p: 0.5,
-          borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0'}`,
+          borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0'}`,
           flexWrap: 'wrap',
-          backgroundColor: theme.palette.mode === 'dark' ? '#1e1e1e' : '#fafafa',
+          backgroundColor: theme.palette.mode === 'dark' ? '#374151' : '#fafafa',
           position: 'relative',
         }}
       >
@@ -1022,6 +1052,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
         onClose={handleCloseTableDialog}
         maxWidth="xs"
         fullWidth
+        sx={{ zIndex: 1700 }}
         PaperProps={{
           sx: {
             borderRadius: 2,

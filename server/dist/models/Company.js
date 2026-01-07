@@ -25,10 +25,6 @@ Company.init({
         type: sequelize_1.DataTypes.STRING,
         allowNull: true,
     },
-    type: {
-        type: sequelize_1.DataTypes.STRING,
-        allowNull: true,
-    },
     phone: {
         type: sequelize_1.DataTypes.STRING,
         allowNull: true,
@@ -38,6 +34,14 @@ Company.init({
         allowNull: true,
     },
     phone3: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: true,
+    },
+    email: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: true,
+    },
+    leadSource: {
         type: sequelize_1.DataTypes.STRING,
         allowNull: true,
     },
@@ -65,14 +69,6 @@ Company.init({
         type: sequelize_1.DataTypes.STRING,
         allowNull: true,
     },
-    postalCode: {
-        type: sequelize_1.DataTypes.STRING,
-        allowNull: true,
-    },
-    website: {
-        type: sequelize_1.DataTypes.STRING,
-        allowNull: true,
-    },
     linkedin: {
         type: sequelize_1.DataTypes.STRING,
         allowNull: true,
@@ -81,13 +77,14 @@ Company.init({
         type: sequelize_1.DataTypes.INTEGER,
         allowNull: true,
     },
-    annualRevenue: {
+    estimatedRevenue: {
         type: sequelize_1.DataTypes.DECIMAL(15, 2),
         allowNull: true,
     },
-    description: {
-        type: sequelize_1.DataTypes.TEXT,
+    isRecoveredClient: {
+        type: sequelize_1.DataTypes.BOOLEAN,
         allowNull: true,
+        defaultValue: false,
     },
     ownerId: {
         type: sequelize_1.DataTypes.INTEGER,
@@ -100,14 +97,6 @@ Company.init({
     lifecycleStage: {
         type: sequelize_1.DataTypes.ENUM('lead', 'contacto', 'reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion', 'licitacion', 'licitacion_etapa_final', 'cierre_ganado', 'cierre_perdido', 'firma_contrato', 'activo', 'cliente_perdido', 'lead_inactivo'),
         defaultValue: 'lead',
-    },
-    tags: {
-        type: sequelize_1.DataTypes.ARRAY(sequelize_1.DataTypes.STRING),
-        defaultValue: [],
-    },
-    notes: {
-        type: sequelize_1.DataTypes.TEXT,
-        allowNull: true,
     },
 }, {
     sequelize: database_1.sequelize,

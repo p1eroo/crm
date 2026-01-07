@@ -134,3 +134,4 @@ const Privacy: React.FC = () => {
 export default Privacy;
 
 
+

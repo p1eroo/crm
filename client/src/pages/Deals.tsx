@@ -22,8 +22,9 @@ import {
   Menu,
   useTheme,
   Collapse,
+  Popover,
 } from '@mui/material';
-import { Add, Delete, AttachMoney, Visibility, ViewList, AccountTree, CalendarToday, Close, FileDownload, UploadFile, FilterList, ExpandMore, Remove, Bolt, Business, Edit, ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { Add, Delete, AttachMoney, Visibility, ViewList, AccountTree, CalendarToday, Close, FileDownload, UploadFile, FilterList, ExpandMore, Remove, Bolt, Business, Edit, ChevronLeft, ChevronRight, ViewColumn } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
@@ -74,7 +75,7 @@ const Deals: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [stageMenuAnchor, setStageMenuAnchor] = useState<{ [key: number]: HTMLElement | null }>({});
   const [updatingStage, setUpdatingStage] = useState<{ [key: number]: boolean }>({});
-  const [viewMode, setViewMode] = useState<'list' | 'funnel'>('list'); // Modo de vista: lista o funnel
+  const [viewMode, setViewMode] = useState<'list' | 'funnel'>('funnel'); // Modo de vista: lista o funnel
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [selectedStages, setSelectedStages] = useState<string[]>([]);
   const [selectedOwnerFilters, setSelectedOwnerFilters] = useState<(string | number)[]>([]);
@@ -89,6 +90,31 @@ const Deals: React.FC = () => {
   const [draggedDeal, setDraggedDeal] = useState<Deal | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+  
+  // Estados para filtros avanzados
+  const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
+  const [filterRules, setFilterRules] = useState<Array<{
+    id: string;
+    column: string;
+    operator: string;
+    value: string;
+  }>>([]);
+
+  // Estados para filtros por columna
+  const [columnFilters, setColumnFilters] = useState<{
+    nombre: string;
+    monto: string;
+    etapa: string;
+    contacto: string;
+    empresa: string;
+  }>({
+    nombre: '',
+    monto: '',
+    etapa: '',
+    contacto: '',
+    empresa: '',
+  });
+  const [showColumnFilters, setShowColumnFilters] = useState(false);
   
   // Etapas del pipeline
   const stages = [
@@ -161,6 +187,63 @@ const Deals: React.FC = () => {
         if (!matches) return false;
       }
 
+      // Aplicar filtros de reglas avanzadas
+      for (const rule of filterRules) {
+        if (!rule.value) continue; // Saltar reglas sin valor
+
+        let matches = false;
+        const ruleValue = rule.value.toLowerCase();
+
+        switch (rule.column) {
+          case 'name':
+            matches = applyOperator(deal.name || '', rule.operator, ruleValue);
+            break;
+          case 'amount':
+            const amountStr = deal.amount?.toString() || '0';
+            matches = applyOperator(amountStr, rule.operator, ruleValue);
+            break;
+          case 'stage':
+            const stageLabel = getStageLabel(deal.stage || 'lead');
+            matches = applyOperator(stageLabel, rule.operator, ruleValue);
+            break;
+          case 'contact':
+            const contactName = deal.Contact ? `${deal.Contact.firstName} ${deal.Contact.lastName}` : '';
+            matches = applyOperator(contactName, rule.operator, ruleValue);
+            break;
+          case 'company':
+            matches = applyOperator(deal.Company?.name || '', rule.operator, ruleValue);
+            break;
+          case 'owner':
+            const ownerName = deal.Owner ? `${deal.Owner.firstName} ${deal.Owner.lastName}` : '';
+            matches = applyOperator(ownerName, rule.operator, ruleValue);
+            break;
+          default:
+            matches = true;
+        }
+
+        if (!matches) return false;
+      }
+
+      // Aplicar filtros por columna
+      if (columnFilters.nombre) {
+        if (!deal.name.toLowerCase().includes(columnFilters.nombre.toLowerCase())) return false;
+      }
+      if (columnFilters.monto) {
+        const amountStr = deal.amount?.toString() || '0';
+        if (!amountStr.toLowerCase().includes(columnFilters.monto.toLowerCase())) return false;
+      }
+      if (columnFilters.etapa) {
+        const stageLabel = getStageLabel(deal.stage || 'lead');
+        if (!stageLabel.toLowerCase().includes(columnFilters.etapa.toLowerCase())) return false;
+      }
+      if (columnFilters.contacto) {
+        const contactName = deal.Contact ? `${deal.Contact.firstName} ${deal.Contact.lastName}` : '';
+        if (!contactName.toLowerCase().includes(columnFilters.contacto.toLowerCase())) return false;
+      }
+      if (columnFilters.empresa) {
+        if (!deal.Company?.name?.toLowerCase().includes(columnFilters.empresa.toLowerCase())) return false;
+      }
+
       // Filtro por búsqueda
       if (!search) return true;
       const searchLower = search.toLowerCase();
@@ -195,7 +278,7 @@ const Deals: React.FC = () => {
   // Resetear a la página 1 cuando cambien los filtros
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedStages, selectedOwnerFilters, search, sortBy]);
+  }, [selectedStages, selectedOwnerFilters, search, sortBy, filterRules, columnFilters]);
 
 
   // Función para obtener iniciales
@@ -245,6 +328,45 @@ const Deals: React.FC = () => {
   const getStageLabel = (stage: string) => {
     const option = stageOptions.find(opt => opt.value === stage);
     return option ? option.label : stage;
+  };
+
+  // Opciones de columnas disponibles
+  const columnOptions = [
+    { value: 'name', label: 'Nombre' },
+    { value: 'amount', label: 'Monto' },
+    { value: 'stage', label: 'Etapa' },
+    { value: 'contact', label: 'Contacto' },
+    { value: 'company', label: 'Empresa' },
+    { value: 'owner', label: 'Propietario' },
+  ];
+
+  // Operadores disponibles
+  const operatorOptions = [
+    { value: 'contains', label: 'contiene' },
+    { value: 'equals', label: 'es igual a' },
+    { value: 'notEquals', label: 'no es igual a' },
+    { value: 'startsWith', label: 'empieza con' },
+    { value: 'endsWith', label: 'termina con' },
+  ];
+
+  // Función auxiliar para aplicar operadores
+  const applyOperator = (fieldValue: string, operator: string, filterValue: string): boolean => {
+    const fieldLower = fieldValue.toLowerCase();
+    const filterLower = filterValue.toLowerCase();
+    switch (operator) {
+      case 'contains':
+        return fieldLower.includes(filterLower);
+      case 'equals':
+        return fieldLower === filterLower;
+      case 'notEquals':
+        return fieldLower !== filterLower;
+      case 'startsWith':
+        return fieldLower.startsWith(filterLower);
+      case 'endsWith':
+        return fieldLower.endsWith(filterLower);
+      default:
+        return true;
+    }
   };
 
   // Función para obtener el color de la etapa (para el texto del chip)
@@ -672,23 +794,61 @@ const Deals: React.FC = () => {
                 <FileDownload sx={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Filtros">
-              <Button 
-                variant="outlined"
+            <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"}>
+              <IconButton
                 size="small"
-                startIcon={<FilterList sx={{ fontSize: 16 }} />}
-                onClick={() => {
-                  if (!filterDrawerOpen) {
-                    // Al abrir el drawer, asegurar que todas las secciones estén colapsadas
-                    setStagesExpanded(false);
-                    setOwnerFilterExpanded(false);
-                  }
-                  setFilterDrawerOpen(!filterDrawerOpen);
+                onClick={() => setShowColumnFilters(!showColumnFilters)}
+                sx={{
+                  border: `1px solid ${showColumnFilters ? theme.palette.primary.main : theme.palette.divider}`,
+                  borderRadius: 1,
+                  bgcolor: showColumnFilters 
+                    ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
+                    : 'transparent',
+                  color: showColumnFilters ? theme.palette.primary.main : theme.palette.text.secondary,
+                  p: { xs: 0.75, sm: 0.875 },
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? 'rgba(25, 118, 210, 0.3)' 
+                      : 'rgba(25, 118, 210, 0.15)',
+                  },
                 }}
-                sx={pageStyles.filterButton}
               >
-                Filter
-              </Button>
+                <ViewColumn sx={{ fontSize: { xs: 18, sm: 20 } }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Filtros avanzados">
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  setFilterAnchorEl(e.currentTarget);
+                  // Si no hay reglas, agregar una inicial
+                  if (filterRules.length === 0) {
+                    setFilterRules([{
+                      id: `filter-${Date.now()}`,
+                      column: 'name',
+                      operator: 'contains',
+                      value: '',
+                    }]);
+                  }
+                }}
+                sx={{
+                  border: `1px solid ${filterRules.length > 0 ? theme.palette.primary.main : theme.palette.divider}`,
+                  borderRadius: 1,
+                  bgcolor: filterRules.length > 0 
+                    ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
+                    : 'transparent',
+                  color: filterRules.length > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
+                  p: { xs: 0.75, sm: 0.875 },
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? 'rgba(25, 118, 210, 0.3)' 
+                      : 'rgba(25, 118, 210, 0.15)',
+                    borderColor: theme.palette.primary.main,
+                  },
+                }}
+              >
+                <FilterList sx={{ fontSize: { xs: 18, sm: 20 } }} />
+              </IconButton>
             </Tooltip>
             <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mr: 1 }}>
               <Tooltip title="Ver lista" arrow>
@@ -758,6 +918,75 @@ const Deals: React.FC = () => {
           </Box>
         </Box>
 
+      {/* Indicador de filtros por columna activos */}
+      {Object.values(columnFilters).some(v => v) && (
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 1, 
+          flexWrap: 'wrap', 
+          mb: 1.5,
+          alignItems: 'center',
+          px: { xs: 1, sm: 2 },
+        }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>
+            Filtros por columna:
+          </Typography>
+          {columnFilters.nombre && (
+            <Chip
+              size="small"
+              label={`Nombre: "${columnFilters.nombre}"`}
+              onDelete={() => setColumnFilters(prev => ({ ...prev, nombre: '' }))}
+              sx={{ height: 24, fontSize: '0.7rem' }}
+            />
+          )}
+          {columnFilters.monto && (
+            <Chip
+              size="small"
+              label={`Monto: "${columnFilters.monto}"`}
+              onDelete={() => setColumnFilters(prev => ({ ...prev, monto: '' }))}
+              sx={{ height: 24, fontSize: '0.7rem' }}
+            />
+          )}
+          {columnFilters.etapa && (
+            <Chip
+              size="small"
+              label={`Etapa: "${columnFilters.etapa}"`}
+              onDelete={() => setColumnFilters(prev => ({ ...prev, etapa: '' }))}
+              sx={{ height: 24, fontSize: '0.7rem' }}
+            />
+          )}
+          {columnFilters.contacto && (
+            <Chip
+              size="small"
+              label={`Contacto: "${columnFilters.contacto}"`}
+              onDelete={() => setColumnFilters(prev => ({ ...prev, contacto: '' }))}
+              sx={{ height: 24, fontSize: '0.7rem' }}
+            />
+          )}
+          {columnFilters.empresa && (
+            <Chip
+              size="small"
+              label={`Empresa: "${columnFilters.empresa}"`}
+              onDelete={() => setColumnFilters(prev => ({ ...prev, empresa: '' }))}
+              sx={{ height: 24, fontSize: '0.7rem' }}
+            />
+          )}
+          <Button
+            size="small"
+            onClick={() => setColumnFilters({ nombre: '', monto: '', etapa: '', contacto: '', empresa: '' })}
+            sx={{ 
+              fontSize: '0.7rem', 
+              textTransform: 'none',
+              color: theme.palette.error.main,
+              minWidth: 'auto',
+              p: 0.5,
+            }}
+          >
+            Limpiar todos
+          </Button>
+        </Box>
+      )}
+
       {/* Contenedor principal con layout flex para tabla y panel de filtros */}
       {viewMode === 'list' && (
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', md: 'row' } }}>
@@ -784,20 +1013,135 @@ const Deals: React.FC = () => {
               boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
             }}
           >
-            <Box sx={pageStyles.tableHeaderCell}>
-                  Nombre del Negocio
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Nombre del Negocio</Typography>
+                {showColumnFilters && (
+                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, nombre: '' }))} sx={{ p: 0.25, opacity: columnFilters.nombre ? 1 : 0.3 }}>
+                    <FilterList sx={{ fontSize: 14 }} />
+                  </IconButton>
+                )}
+              </Box>
+              {showColumnFilters && (
+                <TextField
+                  size="small"
+                  placeholder="Filtrar..."
+                  value={columnFilters.nombre}
+                  onChange={(e) => setColumnFilters(prev => ({ ...prev, nombre: e.target.value }))}
+                  sx={{ 
+                    width: '100%',
+                    '& .MuiOutlinedInput-root': { 
+                      height: 28, 
+                      fontSize: '0.75rem',
+                      bgcolor: theme.palette.background.paper,
+                    },
+                  }}
+                />
+              )}
             </Box>
-            <Box sx={pageStyles.tableHeaderCell}>
-                  Monto
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Monto</Typography>
+                {showColumnFilters && (
+                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, monto: '' }))} sx={{ p: 0.25, opacity: columnFilters.monto ? 1 : 0.3 }}>
+                    <FilterList sx={{ fontSize: 14 }} />
+                  </IconButton>
+                )}
+              </Box>
+              {showColumnFilters && (
+                <TextField
+                  size="small"
+                  placeholder="Filtrar..."
+                  value={columnFilters.monto}
+                  onChange={(e) => setColumnFilters(prev => ({ ...prev, monto: e.target.value }))}
+                  sx={{ 
+                    width: '100%',
+                    '& .MuiOutlinedInput-root': { 
+                      height: 28, 
+                      fontSize: '0.75rem',
+                      bgcolor: theme.palette.background.paper,
+                    },
+                  }}
+                />
+              )}
             </Box>
-            <Box sx={pageStyles.tableHeaderCell}>
-                  Etapa
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Etapa</Typography>
+                {showColumnFilters && (
+                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, etapa: '' }))} sx={{ p: 0.25, opacity: columnFilters.etapa ? 1 : 0.3 }}>
+                    <FilterList sx={{ fontSize: 14 }} />
+                  </IconButton>
+                )}
+              </Box>
+              {showColumnFilters && (
+                <TextField
+                  size="small"
+                  placeholder="Filtrar..."
+                  value={columnFilters.etapa}
+                  onChange={(e) => setColumnFilters(prev => ({ ...prev, etapa: e.target.value }))}
+                  sx={{ 
+                    width: '100%',
+                    '& .MuiOutlinedInput-root': { 
+                      height: 28, 
+                      fontSize: '0.75rem',
+                      bgcolor: theme.palette.background.paper,
+                    },
+                  }}
+                />
+              )}
             </Box>
-            <Box sx={pageStyles.tableHeaderCell}>
-                  Contacto
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Contacto</Typography>
+                {showColumnFilters && (
+                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, contacto: '' }))} sx={{ p: 0.25, opacity: columnFilters.contacto ? 1 : 0.3 }}>
+                    <FilterList sx={{ fontSize: 14 }} />
+                  </IconButton>
+                )}
+              </Box>
+              {showColumnFilters && (
+                <TextField
+                  size="small"
+                  placeholder="Filtrar..."
+                  value={columnFilters.contacto}
+                  onChange={(e) => setColumnFilters(prev => ({ ...prev, contacto: e.target.value }))}
+                  sx={{ 
+                    width: '100%',
+                    '& .MuiOutlinedInput-root': { 
+                      height: 28, 
+                      fontSize: '0.75rem',
+                      bgcolor: theme.palette.background.paper,
+                    },
+                  }}
+                />
+              )}
             </Box>
-            <Box sx={pageStyles.tableHeaderCell}>
-                  Empresa
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Empresa</Typography>
+                {showColumnFilters && (
+                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, empresa: '' }))} sx={{ p: 0.25, opacity: columnFilters.empresa ? 1 : 0.3 }}>
+                    <FilterList sx={{ fontSize: 14 }} />
+                  </IconButton>
+                )}
+              </Box>
+              {showColumnFilters && (
+                <TextField
+                  size="small"
+                  placeholder="Filtrar..."
+                  value={columnFilters.empresa}
+                  onChange={(e) => setColumnFilters(prev => ({ ...prev, empresa: e.target.value }))}
+                  sx={{ 
+                    width: '100%',
+                    '& .MuiOutlinedInput-root': { 
+                      height: 28, 
+                      fontSize: '0.75rem',
+                      bgcolor: theme.palette.background.paper,
+                    },
+                  }}
+                />
+              )}
             </Box>
             <Box sx={{ 
               ...pageStyles.tableHeaderCell, 
@@ -1966,6 +2310,176 @@ const Deals: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Popover de Filtros Avanzados */}
+      <Popover
+        open={Boolean(filterAnchorEl)}
+        anchorEl={filterAnchorEl}
+        onClose={() => setFilterAnchorEl(null)}
+        anchorOrigin={{
+          vertical: 'bottom',
+          horizontal: 'left',
+        }}
+        transformOrigin={{
+          vertical: 'top',
+          horizontal: 'left',
+        }}
+        PaperProps={{
+          sx: {
+            width: { xs: '90vw', sm: 500 },
+            maxWidth: 500,
+            maxHeight: '80vh',
+            overflow: 'auto',
+            mt: 1,
+            p: 2,
+            borderRadius: 2,
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 8px 24px rgba(0,0,0,0.4)'
+              : '0 8px 24px rgba(0,0,0,0.15)',
+          },
+        }}
+      >
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600 }}>
+            Filtros Avanzados
+          </Typography>
+          <IconButton
+            size="small"
+            onClick={() => setFilterAnchorEl(null)}
+            sx={{ p: 0.5 }}
+          >
+            <Close sx={{ fontSize: 18 }} />
+          </IconButton>
+        </Box>
+
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {filterRules.map((rule, index) => (
+            <Box key={rule.id} sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+              <FormControl size="small" sx={{ minWidth: 120, flex: 1 }}>
+                <Select
+                  value={rule.column}
+                  onChange={(e) => {
+                    const newRules = [...filterRules];
+                    newRules[index].column = e.target.value;
+                    setFilterRules(newRules);
+                  }}
+                  sx={{ fontSize: '0.875rem' }}
+                >
+                  {columnOptions.map((col) => (
+                    <MenuItem key={col.value} value={col.value}>
+                      {col.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <FormControl size="small" sx={{ minWidth: 120, flex: 1 }}>
+                <Select
+                  value={rule.operator}
+                  onChange={(e) => {
+                    const newRules = [...filterRules];
+                    newRules[index].operator = e.target.value;
+                    setFilterRules(newRules);
+                  }}
+                  sx={{ fontSize: '0.875rem' }}
+                >
+                  {operatorOptions.map((op) => (
+                    <MenuItem key={op.value} value={op.value}>
+                      {op.label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
+              <TextField
+                size="small"
+                placeholder="Valor..."
+                value={rule.value}
+                onChange={(e) => {
+                  const newRules = [...filterRules];
+                  newRules[index].value = e.target.value;
+                  setFilterRules(newRules);
+                }}
+                sx={{ flex: 1, minWidth: 150 }}
+              />
+
+              <IconButton
+                size="small"
+                onClick={() => {
+                  setFilterRules(filterRules.filter((_, i) => i !== index));
+                }}
+                sx={{ color: theme.palette.error.main }}
+              >
+                <Delete sx={{ fontSize: 18 }} />
+              </IconButton>
+            </Box>
+          ))}
+
+          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between', mt: 1 }}>
+            <Button
+              size="small"
+              onClick={() => {
+                setFilterRules([...filterRules, {
+                  id: `filter-${Date.now()}-${Math.random()}`,
+                  column: 'name',
+                  operator: 'contains',
+                  value: '',
+                }]);
+              }}
+              sx={{ textTransform: 'none' }}
+            >
+              + Agregar filtro
+            </Button>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                size="small"
+                onClick={() => {
+                  setFilterRules([]);
+                }}
+                sx={{ textTransform: 'none', color: theme.palette.error.main }}
+              >
+                Limpiar
+              </Button>
+              <Button
+                size="small"
+                variant="contained"
+                onClick={() => setFilterAnchorEl(null)}
+                sx={{ textTransform: 'none' }}
+              >
+                Aplicar
+              </Button>
+            </Box>
+          </Box>
+
+          {/* Mostrar filtros activos como chips */}
+          {filterRules.filter(r => r.value).length > 0 && (
+            <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
+              <Typography variant="caption" sx={{ color: theme.palette.text.secondary, mb: 1, display: 'block' }}>
+                Filtros activos:
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {filterRules
+                  .filter(rule => rule.value)
+                  .map((rule) => {
+                    const columnLabel = columnOptions.find(c => c.value === rule.column)?.label || rule.column;
+                    const operatorLabel = operatorOptions.find(o => o.value === rule.operator)?.label || rule.operator;
+                    return (
+                      <Chip
+                        key={rule.id}
+                        size="small"
+                        label={`${columnLabel} ${operatorLabel} "${rule.value}"`}
+                        onDelete={() => {
+                          setFilterRules(filterRules.filter(r => r.id !== rule.id));
+                        }}
+                        sx={{ height: 24, fontSize: '0.7rem' }}
+                      />
+                    );
+                  })}
+              </Box>
+            </Box>
+          )}
+        </Box>
+      </Popover>
 
       {/* Modal de Confirmación de Eliminación */}
       <Dialog

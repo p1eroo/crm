@@ -35,6 +35,7 @@ import {
   TableRow,
   Tooltip,
   Card,
+  CardContent,
   useTheme,
   Drawer,
   useMediaQuery,
@@ -64,7 +65,6 @@ import {
   OpenInNew,
   ContentCopy,
   KeyboardArrowRight,
-  Lock,
   Edit,
   LocationOn,
   CalendarToday,
@@ -160,7 +160,8 @@ const CompanyDetail: React.FC = () => {
   const [company, setCompany] = useState<CompanyDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
-  const [copilotOpen, setCopilotOpen] = useState(true);
+  const [copilotOpen, setCopilotOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [actionsMenuAnchorEl, setActionsMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [associatedDeals, setAssociatedDeals] = useState<any[]>([]);
@@ -177,35 +178,36 @@ const CompanyDetail: React.FC = () => {
   const [activityFilterMenuAnchor, setActivityFilterMenuAnchor] = useState<null | HTMLElement>(null);
   const [activityFilterSearch, setActivityFilterSearch] = useState('');
   const [timeRangeMenuAnchor, setTimeRangeMenuAnchor] = useState<null | HTMLElement>(null);
-  const [timeRangeSearch, setTimeRangeSearch] = useState('');
   const [selectedTimeRange, setSelectedTimeRange] = useState<string>('Todo hasta ahora');
   const [selectedActivityTypes, setSelectedActivityTypes] = useState<string[]>([]);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [_expandedActivity, setExpandedActivity] = useState<any | null>(null);
+  const [selectedActivityType, setSelectedActivityType] = useState('all');
+  const [expandedActivity, setExpandedActivity] = useState<any | null>(null);
   const [completedActivities, setCompletedActivities] = useState<{ [key: number]: boolean }>({});
   const activityFilterChipRef = useRef<HTMLDivElement>(null);
   
   // Estados para los filtros de actividad
-  const [communicationFilters, setCommunicationFilters] = useState({
-    all: true,
-    postal: true,
-    email: true,
-    linkedin: true,
-    calls: true,
-    sms: true,
-    whatsapp: true,
-  });
+  // Nota: communicationFilters y teamActivityFilters están comentados porque no se usan actualmente
+  // const [communicationFilters] = useState({
+  //   all: true,
+  //   postal: true,
+  //   email: true,
+  //   linkedin: true,
+  //   calls: true,
+  //   sms: true,
+  //   whatsapp: true,
+  // });
   
-  const [teamActivityFilters, setTeamActivityFilters] = useState({
-    all: true,
-    notes: true,
-    meetings: true,
-    tasks: true,
-  });
+  // const [teamActivityFilters] = useState({
+  //   all: true,
+  //   notes: true,
+  //   meetings: true,
+  //   tasks: true,
+  // });
   
   // Estados para funcionalidades de notas y actividades
-  const [expandedNotes, setExpandedNotes] = useState<Set<number>>(new Set());
-  const [expandedActivities, setExpandedActivities] = useState<Set<number>>(new Set());
+  // Nota: expandedNotes y expandedActivities están comentados porque no se usan actualmente
+  // const [expandedNotes, setExpandedNotes] = useState<Set<number>>(new Set());
+  // const [expandedActivities, setExpandedActivities] = useState<Set<number>>(new Set());
   // const [noteActionMenus, setNoteActionMenus] = useState<{ [key: number]: HTMLElement | null }>({});
   const [summaryExpanded, setSummaryExpanded] = useState<boolean>(false);
   const [timePeriod, setTimePeriod] = useState<'day' | 'week' | 'month'>('week');
@@ -321,7 +323,7 @@ const CompanyDetail: React.FC = () => {
   // Estados para formularios
   const [noteData, setNoteData] = useState({ subject: '', description: '' });
   const [callData, setCallData] = useState({ subject: '', description: '', duration: '' });
-  const [taskData, setTaskData] = useState({ title: '', description: '', priority: 'medium', dueDate: '' });
+  const [taskData, setTaskData] = useState({ title: '', description: '', priority: 'medium', dueDate: '', type: 'todo' as string });
   const [meetingData, setMeetingData] = useState({ subject: '', description: '', date: '', time: '' });
   const [createFollowUpTask, setCreateFollowUpTask] = useState(false);
 
@@ -950,7 +952,7 @@ const CompanyDetail: React.FC = () => {
   };
 
   const handleOpenTask = () => {
-    setTaskData({ title: '', description: '', priority: 'medium', dueDate: '' });
+    setTaskData({ title: '', description: '', priority: 'medium', dueDate: '', type: 'todo' });
     setSelectedDate(null);
     setCurrentMonth(new Date());
     setTaskOpen(true);
@@ -1254,15 +1256,15 @@ const CompanyDetail: React.FC = () => {
       await api.post('/tasks', {
         title: taskData.title,
         description: taskData.description,
-        type: 'todo',
+        type: taskData.type || 'todo',
         status: 'not started',
         priority: taskData.priority || 'medium',
         dueDate: taskData.dueDate || undefined,
         companyId: id,
       });
-      setSuccessMessage('Tarea creada exitosamente' + (taskData.dueDate ? ' y sincronizada con Google Calendar' : ''));
+      setSuccessMessage((taskData.type === 'meeting' ? 'Reunión' : 'Tarea') + ' creada exitosamente' + (taskData.dueDate ? ' y sincronizada con Google Calendar' : ''));
       setTaskOpen(false);
-      setTaskData({ title: '', description: '', priority: 'medium', dueDate: '' });
+      setTaskData({ title: '', description: '', priority: 'medium', dueDate: '', type: 'todo' });
       fetchAssociatedRecords(); // Actualizar actividades
       setTimeout(() => setSuccessMessage(''), 3000);
     } catch (error) {
@@ -1595,14 +1597,16 @@ const CompanyDetail: React.FC = () => {
       case 'note':
         handleOpenNote();
         break;
-      case 'email':
-        handleOpenEmail();
-        break;
       case 'call':
         handleOpenCall();
         break;
       case 'task':
-        handleOpenTask();
+        setTaskData({ title: '', description: '', priority: 'medium', dueDate: '', type: 'todo' });
+        setTaskOpen(true);
+        break;
+      case 'meeting':
+        setTaskData({ title: '', description: '', priority: 'medium', dueDate: '', type: 'meeting' });
+        setTaskOpen(true);
         break;
     }
   };
@@ -1665,49 +1669,50 @@ const CompanyDetail: React.FC = () => {
     return 0;
   });
 
-  const filteredActivities = activities.filter((activity) => {
-    // Filtro por búsqueda de texto
-    if (activitySearch && !activity.subject?.toLowerCase().includes(activitySearch.toLowerCase()) &&
-        !activity.description?.toLowerCase().includes(activitySearch.toLowerCase())) {
-      return false;
-    }
-    
-    // Filtro por tipo de actividad según los filtros de comunicación y actividad del equipo
-    const activityType = activity.type?.toLowerCase();
-    
-    // Si es una nota, verificar filtro de "Actividad del equipo" -> "Notas"
-    if (activityType === 'note') {
-      if (!teamActivityFilters.notes) {
-        return false;
-      }
-    }
-    // Si es una reunión, verificar filtro de "Actividad del equipo" -> "Reuniones"
-    else if (activityType === 'meeting') {
-      if (!teamActivityFilters.meetings) {
-        return false;
-      }
-    }
-    // Si es una tarea, verificar filtro de "Actividad del equipo" -> "Tareas"
-    else if (activityType === 'task') {
-      if (!teamActivityFilters.tasks) {
-        return false;
-      }
-    }
-    // Si es un correo, verificar filtro de "Comunicación" -> "Correos"
-    else if (activityType === 'email') {
-      if (!communicationFilters.email) {
-        return false;
-      }
-    }
-    // Si es una llamada, verificar filtro de "Comunicación" -> "Llamadas"
-    else if (activityType === 'call') {
-      if (!communicationFilters.calls) {
-        return false;
-      }
-    }
-    
-    return true;
-  });
+  // Nota: filteredActivities está comentado porque no se usa actualmente
+  // const filteredActivities = activities.filter((activity) => {
+  //   // Filtro por búsqueda de texto
+  //   if (activitySearch && !activity.subject?.toLowerCase().includes(activitySearch.toLowerCase()) &&
+  //       !activity.description?.toLowerCase().includes(activitySearch.toLowerCase())) {
+  //     return false;
+  //   }
+  //   
+  //   // Filtro por tipo de actividad según los filtros de comunicación y actividad del equipo
+  //   const activityType = activity.type?.toLowerCase();
+  //   
+  //   // Si es una nota, verificar filtro de "Actividad del equipo" -> "Notas"
+  //   if (activityType === 'note') {
+  //     if (!teamActivityFilters.notes) {
+  //       return false;
+  //     }
+  //   }
+  //   // Si es una reunión, verificar filtro de "Actividad del equipo" -> "Reuniones"
+  //   else if (activityType === 'meeting') {
+  //     if (!teamActivityFilters.meetings) {
+  //       return false;
+  //     }
+  //   }
+  //   // Si es una tarea, verificar filtro de "Actividad del equipo" -> "Tareas"
+  //   else if (activityType === 'task') {
+  //     if (!teamActivityFilters.tasks) {
+  //       return false;
+  //     }
+  //   }
+  //   // Si es un correo, verificar filtro de "Comunicación" -> "Correos"
+  //   else if (activityType === 'email') {
+  //     if (!communicationFilters.email) {
+  //       return false;
+  //     }
+  //   }
+  //   // Si es una llamada, verificar filtro de "Comunicación" -> "Llamadas"
+  //   else if (activityType === 'call') {
+  //     if (!communicationFilters.calls) {
+  //       return false;
+  //     }
+  //   }
+  //   
+  //   return true;
+  // });
 
   const filteredContacts = sortedContacts.filter((contact) => {
     if (contactSearch && !contact.firstName?.toLowerCase().includes(contactSearch.toLowerCase()) &&
@@ -1726,115 +1731,117 @@ const CompanyDetail: React.FC = () => {
   });
 
   // Función para obtener el rango de fechas según la opción seleccionada
-  const getDateRange = (range: string): { start: Date | null; end: Date | null } => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    switch (range) {
-      case 'Todo hasta ahora':
-      case 'Todo':
-        return { start: null, end: null };
-      
-      case 'Hoy':
-        return {
-          start: today,
-          end: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1),
-        };
-      
-      case 'Ayer':
-        const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-        return {
-          start: yesterday,
-          end: new Date(yesterday.getTime() + 24 * 60 * 60 * 1000 - 1),
-        };
-      
-      case 'Esta semana':
-        const dayOfWeek = today.getDay();
-        const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        const weekStart = new Date(today.getTime() - daysFromMonday * 24 * 60 * 60 * 1000);
-        return {
-          start: weekStart,
-          end: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1),
-        };
-      
-      case 'Semana pasada':
-        const lastWeekDayOfWeek = today.getDay();
-        const lastWeekDaysFromMonday = lastWeekDayOfWeek === 0 ? 6 : lastWeekDayOfWeek - 1;
-        const lastWeekStart = new Date(today.getTime() - (lastWeekDaysFromMonday + 7) * 24 * 60 * 60 * 1000);
-        const lastWeekEnd = new Date(today.getTime() - (lastWeekDaysFromMonday + 1) * 24 * 60 * 60 * 1000);
-        return {
-          start: lastWeekStart,
-          end: new Date(lastWeekEnd.getTime() + 24 * 60 * 60 * 1000 - 1),
-        };
-      
-      case 'Últimos 7 días':
-        return {
-          start: new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000),
-          end: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1),
-        };
-      
-      default:
-        return { start: null, end: null };
-    }
-  };
+  // Nota: getDateRange está comentado porque no se usa actualmente
+  // const getDateRange = (range: string): { start: Date | null; end: Date | null } => {
+  //   const now = new Date();
+  //   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  //   
+  //   switch (range) {
+  //     case 'Todo hasta ahora':
+  //     case 'Todo':
+  //       return { start: null, end: null };
+  //     
+  //     case 'Hoy':
+  //       return {
+  //         start: today,
+  //         end: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1),
+  //       };
+  //     
+  //     case 'Ayer':
+  //       const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+  //       return {
+  //         start: yesterday,
+  //         end: new Date(yesterday.getTime() + 24 * 60 * 60 * 1000 - 1),
+  //       };
+  //     
+  //     case 'Esta semana':
+  //       const dayOfWeek = today.getDay();
+  //       const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  //       const weekStart = new Date(today.getTime() - daysFromMonday * 24 * 60 * 60 * 1000);
+  //       return {
+  //         start: weekStart,
+  //         end: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1),
+  //       };
+  //     
+  //     case 'Semana pasada':
+  //       const lastWeekDayOfWeek = today.getDay();
+  //       const lastWeekDaysFromMonday = lastWeekDayOfWeek === 0 ? 6 : lastWeekDayOfWeek - 1;
+  //       const lastWeekStart = new Date(today.getTime() - (lastWeekDaysFromMonday + 7) * 24 * 60 * 60 * 1000);
+  //       const lastWeekEnd = new Date(today.getTime() - (lastWeekDaysFromMonday + 1) * 24 * 60 * 60 * 1000);
+  //       return {
+  //         start: lastWeekStart,
+  //         end: new Date(lastWeekEnd.getTime() + 24 * 60 * 60 * 1000 - 1),
+  //       };
+  //     
+  //     case 'Últimos 7 días':
+  //       return {
+  //         start: new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000),
+  //         end: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1),
+  //       };
+  //     
+  //     default:
+  //       return { start: null, end: null };
+  //   }
+  // };
 
   // Filtrar actividades por rango de tiempo
-  const timeFilteredActivities = filteredActivities.filter((activity) => {
-    if (!activity.createdAt) return false;
-    
-    const dateRange = getDateRange(selectedTimeRange);
-    if (!dateRange.start && !dateRange.end) return true; // "Todo hasta ahora"
-    
-    const activityDate = new Date(activity.createdAt);
-    activityDate.setHours(0, 0, 0, 0);
-    
-    if (dateRange.start) {
-      const startDate = new Date(dateRange.start);
-      startDate.setHours(0, 0, 0, 0);
-      if (activityDate < startDate) return false;
-    }
-    
-    if (dateRange.end) {
-      const endDate = new Date(dateRange.end);
-      endDate.setHours(23, 59, 59, 999);
-      if (activityDate > endDate) return false;
-    }
-    
-    return true;
-  });
-
-  // Agrupar actividades por mes/año
-  const groupedActivities = timeFilteredActivities.reduce((acc: { [key: string]: any[] }, activity) => {
-    if (!activity.createdAt) return acc;
-    const date = new Date(activity.createdAt);
-    const monthKey = date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long' });
-    if (!acc[monthKey]) {
-      acc[monthKey] = [];
-    }
-    acc[monthKey].push(activity);
-    return acc;
-  }, {});
+  // Nota: timeFilteredActivities está comentado porque no se usa actualmente
+  // const timeFilteredActivities = filteredActivities.filter((activity) => {
+  //   if (!activity.createdAt) return false;
+  //   
+  //   const dateRange = getDateRange(selectedTimeRange);
+  //   if (!dateRange.start && !dateRange.end) return true; // "Todo hasta ahora"
+  //   
+  //   const activityDate = new Date(activity.createdAt);
+  //   activityDate.setHours(0, 0, 0, 0);
+  //   
+  //   if (dateRange.start) {
+  //     const startDate = new Date(dateRange.start);
+  //     startDate.setHours(0, 0, 0, 0);
+  //     if (activityDate < startDate) return false;
+  //   }
+  //   
+  //   if (dateRange.end) {
+  //     const endDate = new Date(dateRange.end);
+  //     endDate.setHours(23, 59, 59, 999);
+  //     if (activityDate > endDate) return false;
+  //   }
+  //   
+  //   return true;
+  // });
 
   // Funciones para manejar notas y actividades
-  const toggleNoteExpand = (noteId: number) => {
-    const newExpanded = new Set(expandedNotes);
-    if (newExpanded.has(noteId)) {
-      newExpanded.delete(noteId);
-    } else {
-      newExpanded.add(noteId);
-    }
-    setExpandedNotes(newExpanded);
-  };
+  // Nota: groupedActivities, toggleNoteExpand y toggleActivityExpand están comentados porque no se usan actualmente
+  // const groupedActivities = timeFilteredActivities.reduce((acc: { [key: string]: any[] }, activity) => {
+  //   if (!activity.createdAt) return acc;
+  //   const date = new Date(activity.createdAt);
+  //   const monthKey = date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long' });
+  //   if (!acc[monthKey]) {
+  //     acc[monthKey] = [];
+  //   }
+  //   acc[monthKey].push(activity);
+  //   return acc;
+  // }, {});
 
-  const toggleActivityExpand = (activityId: number) => {
-    const newExpanded = new Set(expandedActivities);
-    if (newExpanded.has(activityId)) {
-      newExpanded.delete(activityId);
-    } else {
-      newExpanded.add(activityId);
-    }
-    setExpandedActivities(newExpanded);
-  };
+  // const toggleNoteExpand = (noteId: number) => {
+  //   const newExpanded = new Set(expandedNotes);
+  //   if (newExpanded.has(noteId)) {
+  //     newExpanded.delete(noteId);
+  //   } else {
+  //     newExpanded.add(noteId);
+  //   }
+  //   setExpandedNotes(newExpanded);
+  // };
+
+  // const toggleActivityExpand = (activityId: number) => {
+  //   const newExpanded = new Set(expandedActivities);
+  //   if (newExpanded.has(activityId)) {
+  //     newExpanded.delete(activityId);
+  //   } else {
+  //     newExpanded.add(activityId);
+  //   }
+  //   setExpandedActivities(newExpanded);
+  // };
 
   // const handleNoteActionMenuOpen = (event: React.MouseEvent<HTMLElement>, noteId: number) => {
   //   event.stopPropagation();
@@ -2215,6 +2222,24 @@ const CompanyDetail: React.FC = () => {
             {/* Parte inferior: Chips */}
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+                {/* Email de la empresa */}
+                {(company as any).email && (
+                  <Chip
+                    icon={<Email sx={{ fontSize: 14 }} />}
+                    label={(company as any).email}
+                    size="small"
+                    sx={{
+                      height: 24,
+                      fontSize: '0.75rem',
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+                      border: `1px solid ${theme.palette.divider}`,
+                      '& .MuiChip-icon': {
+                        color: theme.palette.text.secondary,
+                      },
+                    }}
+                  />
+                )}
+                {/* Ubicación */}
                 {(company.city || company.address) && (
                   <Chip
                     icon={<LocationOn sx={{ fontSize: 14 }} />}
@@ -2360,7 +2385,22 @@ const CompanyDetail: React.FC = () => {
                 ml: 1,
                 pl: 1,
                 borderLeft: `1px solid ${theme.palette.divider}`,
+                gap: 0.5,
               }}>
+                <Tooltip title="Registro de Cambios">
+                  <IconButton
+                    onClick={() => setHistoryOpen(!historyOpen)}
+                    size="small"
+                    sx={{
+                      color: historyOpen ? '#2196F3' : theme.palette.text.secondary,
+                      '&:hover': {
+                        bgcolor: 'transparent',
+                      },
+                    }}
+                  >
+                    <History />
+                  </IconButton>
+                </Tooltip>
                 <Tooltip title="Copiloto IA">
                   <IconButton
                     onClick={() => setCopilotOpen(!copilotOpen)}
@@ -2508,51 +2548,70 @@ const CompanyDetail: React.FC = () => {
                 </Card>
                       </Box>
                       
-              {/* Card de Actividades Recientes */}
-              <Card sx={{ 
-                          borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                          bgcolor: theme.palette.background.paper,
-                          px: 2,
-                py: 2,
-                display: 'flex',
-                flexDirection: 'column',
+              {/* Grid 2x2 para Actividades Recientes, Contactos, Negocios y Tickets */}
+              <Box sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
+                gap: 2,
                 mt: 2,
-                height: 'fit-content',
-                minHeight: 'auto',
-                overflow: 'visible',
-                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                              mb: 2,
+                mb: 2,
               }}>
-                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
-                  Actividades Recientes
-                          </Typography>
+                {/* Card de Actividades Recientes */}
+                <Card sx={{ 
+                  borderRadius: 2,
+                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                }}>
+                  <CardContent>
+                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
+                      Actividades Recientes
+                    </Typography>
                           
                 {activities && activities.length > 0 ? (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: 1.5, 
+                    overflowX: 'auto',
+                    pb: 1,
+                    '&::-webkit-scrollbar': {
+                      height: 6,
+                    },
+                    '&::-webkit-scrollbar-track': {
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+                      borderRadius: 3,
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                      borderRadius: 3,
+                      '&:hover': {
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
+                      },
+                    },
+                  }}>
                     {activities
                       .sort((a, b) => {
                         const dateA = new Date(a.createdAt || 0).getTime();
                         const dateB = new Date(b.createdAt || 0).getTime();
                         return dateB - dateA;
                       })
-                      .slice(0, 5)
+                      .slice(0, 6)
                       .map((activity) => {
                         const getActivityIcon = () => {
                           switch (activity.type) {
                             case 'note':
-                              return <Note sx={{ fontSize: 18, color: '#9E9E9E' }} />;
+                              return <Note sx={{ fontSize: 20, color: '#9E9E9E' }} />;
                             case 'email':
-                              return <Email sx={{ fontSize: 18, color: '#1976D2' }} />;
+                              return <Email sx={{ fontSize: 20, color: '#1976D2' }} />;
                             case 'call':
-                              return <Phone sx={{ fontSize: 18, color: '#2E7D32' }} />;
+                              return <Phone sx={{ fontSize: 20, color: '#2E7D32' }} />;
                             case 'task':
                             case 'todo':
-                              return <Assignment sx={{ fontSize: 18, color: '#F57C00' }} />;
+                              return <Assignment sx={{ fontSize: 20, color: '#F57C00' }} />;
                             case 'meeting':
-                              return <Event sx={{ fontSize: 18, color: '#7B1FA2' }} />;
+                              return <Event sx={{ fontSize: 20, color: '#7B1FA2' }} />;
                             default:
-                              return <Comment sx={{ fontSize: 18, color: theme.palette.text.secondary }} />;
+                              return <Comment sx={{ fontSize: 20, color: theme.palette.text.secondary }} />;
                           }
                         };
 
@@ -2573,92 +2632,123 @@ const CompanyDetail: React.FC = () => {
                               return 'Actividad';
                           }
                         };
-                              
-                              return (
-                                <Box 
-                                  key={activity.id} 
-                                  sx={{ 
-                              display: 'flex',
-                              alignItems: 'flex-start',
-                              gap: 1.5,
-                                        p: 1.5,
-                                        borderRadius: 1,
-                              border: `1px solid ${theme.palette.divider}`,
-                                        transition: 'all 0.2s ease',
-                                        '&:hover': {
-                                borderColor: taxiMonterricoColors.green,
-                                backgroundColor: theme.palette.mode === 'dark' 
-                                  ? 'rgba(46, 125, 50, 0.1)' 
-                                  : 'rgba(46, 125, 50, 0.05)',
-                              },
-                            }}
+
+                        const getActivityColor = () => {
+                          switch (activity.type) {
+                            case 'note':
+                              return { bg: 'rgba(158, 158, 158, 0.1)', border: 'rgba(158, 158, 158, 0.3)' };
+                            case 'email':
+                              return { bg: 'rgba(25, 118, 210, 0.1)', border: 'rgba(25, 118, 210, 0.3)' };
+                            case 'call':
+                              return { bg: 'rgba(46, 125, 50, 0.1)', border: 'rgba(46, 125, 50, 0.3)' };
+                            case 'task':
+                            case 'todo':
+                              return { bg: 'rgba(245, 124, 0, 0.1)', border: 'rgba(245, 124, 0, 0.3)' };
+                            case 'meeting':
+                              return { bg: 'rgba(123, 31, 162, 0.1)', border: 'rgba(123, 31, 162, 0.3)' };
+                            default:
+                              return { bg: theme.palette.action.hover, border: theme.palette.divider };
+                          }
+                        };
+
+                        const colors = getActivityColor();
+                        const activityTitle = activity.subject || activity.title || getActivityTypeLabel();
+
+                        return (
+                          <Tooltip 
+                            key={activity.id} 
+                            title={activityTitle}
+                            arrow
+                            placement="top"
                           >
-                            <Box sx={{ pt: 0.5 }}>
-                              {getActivityIcon()}
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: 100,
+                                maxWidth: 100,
+                                p: 1.5,
+                                borderRadius: 2,
+                                border: `1px solid ${colors.border}`,
+                                bgcolor: colors.bg,
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                flexShrink: 0,
+                                '&:hover': {
+                                  transform: 'translateY(-2px)',
+                                  boxShadow: theme.palette.mode === 'dark' 
+                                    ? '0 4px 12px rgba(0,0,0,0.4)' 
+                                    : '0 4px 12px rgba(0,0,0,0.15)',
+                                },
+                              }}
+                            >
+                              <Box sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center',
+                                width: 36,
+                                height: 36,
+                                borderRadius: '50%',
+                                bgcolor: theme.palette.background.paper,
+                                mb: 1,
+                              }}>
+                                {getActivityIcon()}
+                              </Box>
+                              <Typography 
+                                variant="caption" 
+                                sx={{ 
+                                  fontWeight: 600, 
+                                  fontSize: '0.7rem', 
+                                  color: theme.palette.text.primary,
+                                  textAlign: 'center',
+                                  lineHeight: 1.2,
+                                  mb: 0.5,
+                                }}
+                              >
+                                {getActivityTypeLabel()}
+                              </Typography>
+                              <Typography 
+                                variant="caption" 
+                                sx={{ 
+                                  fontSize: '0.65rem', 
+                                  color: theme.palette.text.secondary,
+                                  textAlign: 'center',
+                                }}
+                              >
+                                {activity.createdAt && new Date(activity.createdAt).toLocaleDateString('es-ES', {
+                                  day: 'numeric',
+                                  month: 'short',
+                                })}
+                              </Typography>
                             </Box>
-                                          <Box sx={{ flex: 1, minWidth: 0 }}>
-                              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: '0.875rem', color: theme.palette.text.primary }}>
-                                  {activity.subject || getActivityTypeLabel()}
-                                            </Typography>
-                                <Typography variant="caption" sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary, whiteSpace: 'nowrap', ml: 1 }}>
-                                  {activity.createdAt && new Date(activity.createdAt).toLocaleDateString('es-ES', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                  })}
-                                            </Typography>
-                                          </Box>
-                              {activity.description && (
-                                          <Typography 
-                                  variant="body2" 
-                                            sx={{ 
-                                              fontSize: '0.75rem',
-                                    color: theme.palette.text.secondary,
-                                    overflow: 'hidden',
-                                    textOverflow: 'ellipsis',
-                                    display: '-webkit-box',
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: 'vertical',
-                                  }}
-                                >
-                                  {activity.description.replace(/<[^>]*>/g, '').substring(0, 100)}
-                                  {activity.description.replace(/<[^>]*>/g, '').length > 100 ? '...' : ''}
-                                          </Typography>
-                              )}
-                                        </Box>
-                          </Box>
+                          </Tooltip>
                         );
                       })}
                   </Box>
                 ) : (
                   <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
                     No hay actividades recientes
-                                                </Typography>
-                                              )}
-              </Card>
-
-              {/* Card de Contactos Vinculados */}
-              <Card sx={{ 
-                borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 2,
-                                                      display: 'flex',
-                                                      flexDirection: 'column',
-                mt: 2,
-                height: 'fit-content',
-                minHeight: 'auto',
-                overflow: 'visible',
-                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                mb: 2,
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <Person sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                    Contactos vinculados
                   </Typography>
-                </Box>
+                )}
+                  </CardContent>
+                </Card>
+
+                {/* Card de Contactos Vinculados */}
+                <Card sx={{ 
+                  borderRadius: 2,
+                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                      <Person sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+                        Contactos vinculados
+                      </Typography>
+                    </Box>
                 {associatedContacts && associatedContacts.length > 0 ? (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {associatedContacts.slice(0, 5).map((contact: any) => (
@@ -2698,32 +2788,25 @@ const CompanyDetail: React.FC = () => {
                 ) : (
                   <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
                     No hay contactos vinculados
-                                                                      </Typography>
-                                                                    )}
-              </Card>
+                  </Typography>
+                )}
+                  </CardContent>
+                </Card>
 
-              {/* Card de Negocios Vinculados */}
-              <Card sx={{ 
-                borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 2,
-                display: 'flex',
-                flexDirection: 'column',
-                mt: 2,
-                height: 'fit-content',
-                minHeight: 'auto',
-                overflow: 'visible',
-                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                mb: 2,
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <AttachMoney sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                    Negocios vinculados
-                                                                  </Typography>
-                                                              </Box>
+                {/* Card de Negocios Vinculados */}
+                <Card sx={{ 
+                  borderRadius: 2,
+                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                      <AttachMoney sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+                        Negocios vinculados
+                      </Typography>
+                    </Box>
                 {associatedDeals && associatedDeals.length > 0 ? (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {associatedDeals.slice(0, 5).map((deal: any) => (
@@ -2766,32 +2849,25 @@ const CompanyDetail: React.FC = () => {
                 ) : (
                   <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
                     No hay negocios vinculados
-                                                            </Typography>
-                                                          )}
-              </Card>
-
-              {/* Card de Tickets Vinculados */}
-              <Card sx={{ 
-                borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 2,
-                display: 'flex',
-                flexDirection: 'column',
-                mt: 2,
-                height: 'fit-content',
-                minHeight: 'auto',
-                overflow: 'visible',
-                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                mb: 2,
-              }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                  <Support sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                    Tickets vinculados
                   </Typography>
-                                                      </Box>
+                )}
+                  </CardContent>
+                </Card>
+
+                {/* Card de Tickets Vinculados */}
+                <Card sx={{ 
+                  borderRadius: 2,
+                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                }}>
+                  <CardContent>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                      <Support sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
+                      <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+                        Tickets vinculados
+                      </Typography>
+                    </Box>
                 {associatedTickets && associatedTickets.length > 0 ? (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {associatedTickets.slice(0, 5).map((ticket: any) => (
@@ -2832,9 +2908,11 @@ const CompanyDetail: React.FC = () => {
                   ) : (
                   <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
                     No hay tickets vinculados
-                      </Typography>
-                  )}
+                  </Typography>
+                )}
+                  </CardContent>
                 </Card>
+              </Box>
             </>
           )}
 
@@ -3067,22 +3145,6 @@ const CompanyDetail: React.FC = () => {
                       <Assignment sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
                       <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
                         Crear tarea
-                      </Typography>
-                    </MenuItem>
-                    
-                    <MenuItem 
-                      onClick={() => handleCreateActivity('email')}
-                      sx={{
-                        py: 1.5,
-                        px: 2,
-                        '&:hover': {
-                          backgroundColor: theme.palette.action.hover,
-                        },
-                      }}
-                    >
-                      <Email sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
-                      <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
-                        Crear correo
                       </Typography>
                     </MenuItem>
                     
@@ -3383,62 +3445,68 @@ const CompanyDetail: React.FC = () => {
                       <Box sx={{ 
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: 2 
+                        gap: 0.5,
                       }}>
-                        {filteredActivities.map((activity) => (
-                          <Paper
-                            key={activity.id}
-                            onClick={() => setExpandedActivity(activity)}
-                            sx={{
-                              p: 2,
-                              ...getActivityStatusColor(activity),
-                              borderRadius: 1.5,
-                              position: 'relative',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              border: `1px solid ${theme.palette.divider}`,
-                              '&:hover': {
-                                opacity: 0.9,
-                                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                              },
-                            }}
-                          >
+                        {filteredActivities.map((activity) => {
+                          const getActivityIconCompact = () => {
+                            switch (activity.type) {
+                              case 'note':
+                                return <Note sx={{ fontSize: 18, color: '#9E9E9E' }} />;
+                              case 'email':
+                                return <Email sx={{ fontSize: 18, color: '#1976D2' }} />;
+                              case 'call':
+                                return <Phone sx={{ fontSize: 18, color: '#2E7D32' }} />;
+                              case 'task':
+                              case 'todo':
+                                return <Assignment sx={{ fontSize: 18, color: '#F57C00' }} />;
+                              case 'meeting':
+                                return <Event sx={{ fontSize: 18, color: '#7B1FA2' }} />;
+                              default:
+                                return <Comment sx={{ fontSize: 18, color: theme.palette.text.secondary }} />;
+                            }
+                          };
+
+                          const getTypeColor = () => {
+                            switch (activity.type) {
+                              case 'note':
+                                return '#9E9E9E';
+                              case 'email':
+                                return '#1976D2';
+                              case 'call':
+                                return '#2E7D32';
+                              case 'task':
+                              case 'todo':
+                                return '#F57C00';
+                              case 'meeting':
+                                return '#7B1FA2';
+                              default:
+                                return theme.palette.text.secondary;
+                            }
+                          };
+
+                          return (
                             <Box
+                              key={activity.id}
+                              onClick={() => setExpandedActivity(activity)}
                               sx={{
-                                position: 'absolute',
-                                top: 8,
-                                right: 8,
                                 display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'flex-end',
-                                gap: 0.5,
+                                alignItems: 'center',
+                                gap: 1.5,
+                                py: 1,
+                                px: 1.5,
+                                borderRadius: 1,
+                                cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                                borderBottom: `1px solid ${theme.palette.divider}`,
+                                '&:hover': {
+                                  bgcolor: theme.palette.action.hover,
+                                },
+                                '&:last-child': {
+                                  borderBottom: 'none',
+                                },
                               }}
                             >
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  color: taxiMonterricoColors.green,
-                                  fontWeight: 600,
-                                  fontSize: '0.7rem',
-                                  textTransform: 'uppercase',
-                                }}
-                              >
-                                {getActivityTypeLabel(activity.type)}
-                              </Typography>
-                              {activity.User && (
-                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                                  Por {activity.User.firstName} {activity.User.lastName}
-                                  {activity.createdAt && (
-                                    <span> • {new Date(activity.createdAt).toLocaleDateString('es-ES', {
-                                      day: 'numeric',
-                                      month: 'short',
-                                      year: 'numeric',
-                                    })}</span>
-                                  )}
-                                </Typography>
-                              )}
-                            </Box>
-                            <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                              {/* Checkbox */}
                               <Checkbox
                                 checked={completedActivities[activity.id] || false}
                                 onChange={(e) => {
@@ -3451,28 +3519,87 @@ const CompanyDetail: React.FC = () => {
                                 onClick={(e) => e.stopPropagation()}
                                 size="small"
                                 sx={{
-                                  p: 0.5,
+                                  p: 0,
                                   '& .MuiSvgIcon-root': {
                                     fontSize: 20,
                                   },
                                 }}
                               />
+
+                              {/* Icono */}
+                              <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                                {getActivityIconCompact()}
+                              </Box>
+
+                              {/* Título */}
                               <Typography 
-                                variant="subtitle2" 
+                                variant="body2" 
                                 sx={{ 
-                                  fontWeight: 600, 
-                                  mb: 0.5, 
-                                  pr: 6,
                                   flex: 1,
+                                  fontWeight: 500,
+                                  fontSize: '0.875rem',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
                                   textDecoration: completedActivities[activity.id] ? 'line-through' : 'none',
                                   opacity: completedActivities[activity.id] ? 0.6 : 1,
+                                  color: theme.palette.text.primary,
                                 }}
                               >
-                                {activity.subject || activity.title}
+                                {activity.subject || activity.title || 'Sin título'}
+                              </Typography>
+
+                              {/* Usuario */}
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  color: theme.palette.text.secondary,
+                                  fontSize: '0.813rem',
+                                  whiteSpace: 'nowrap',
+                                  minWidth: 100,
+                                  textAlign: 'center',
+                                }}
+                              >
+                                {activity.User ? `${activity.User.firstName} ${activity.User.lastName}` : '-'}
+                              </Typography>
+
+                              {/* Fecha */}
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  color: theme.palette.text.secondary,
+                                  fontSize: '0.813rem',
+                                  whiteSpace: 'nowrap',
+                                  minWidth: 85,
+                                  textAlign: 'center',
+                                }}
+                              >
+                                {activity.createdAt 
+                                  ? new Date(activity.createdAt).toLocaleDateString('es-ES', {
+                                      day: 'numeric',
+                                      month: 'short',
+                                      year: 'numeric',
+                                    })
+                                  : '-'}
+                              </Typography>
+
+                              {/* Tipo como chip */}
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  color: getTypeColor(),
+                                  fontWeight: 600,
+                                  fontSize: '0.75rem',
+                                  textTransform: 'uppercase',
+                                  minWidth: 60,
+                                  textAlign: 'right',
+                                }}
+                              >
+                                {getActivityTypeLabel(activity.type)}
                               </Typography>
                             </Box>
-                          </Paper>
-                        ))}
+                          );
+                        })}
                       </Box>
                     );
                   })()}
@@ -3761,7 +3888,7 @@ const CompanyDetail: React.FC = () => {
                             >
                               <TableCell>{deal.name}</TableCell>
                               <TableCell>
-                                {deal.amount ? `$${deal.amount.toLocaleString()} US$` : '--'}
+                                {deal.amount ? `S/ ${deal.amount.toLocaleString('es-ES')}` : '--'}
                               </TableCell>
                               <TableCell>
                                 {deal.closeDate 
@@ -3875,43 +4002,106 @@ const CompanyDetail: React.FC = () => {
 
             {/* Pestaña Actividades */}
             {tabValue === 2 && (
-              <>
-                {/* Card de Actividades */}
-                <Card sx={{ 
-                  borderRadius: 2,
-                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                  bgcolor: theme.palette.background.paper,
-                  px: 2,
-                  py: 2,
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}>
-                  {/* Barra de búsqueda y filtros */}
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 3, flexWrap: 'wrap' }}>
-                    <TextField
-                      size="small"
-                      placeholder="Buscar actividades"
-                      value={activitySearch}
-                      onChange={(e) => setActivitySearch(e.target.value)}
-                      sx={{
-                        width: '300px',
-                        transition: 'all 0.3s ease',
-                        '& .MuiOutlinedInput-root': {
-                          height: '32px',
-                          fontSize: '0.875rem',
-                          '&:hover': {
-                            '& fieldset': {
-                              borderColor: '#2E7D32',
-                            },
-                          },
-                          '&.Mui-focused': {
-                            '& fieldset': {
-                              borderColor: '#2E7D32',
-                              borderWidth: 2,
-                            },
+              <Card sx={{ 
+                borderRadius: 2,
+                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                bgcolor: theme.palette.background.paper,
+                px: 2,
+                py: 2,
+                display: 'flex',
+                flexDirection: 'column',
+              }}>
+                {/* Barra de búsqueda y filtros */}
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 3, flexWrap: 'wrap' }}>
+                  <TextField
+                    size="small"
+                    placeholder="Buscar actividad"
+                    value={activitySearch}
+                    onChange={(e) => setActivitySearch(e.target.value)}
+                    sx={{
+                      flex: 1,
+                      minWidth: '250px',
+                      '& .MuiOutlinedInput-root': {
+                        height: '36px',
+                        fontSize: '0.875rem',
+                        '&:hover': {
+                          '& fieldset': {
+                            borderColor: taxiMonterricoColors.green,
                           },
                         },
-                      }}
+                        '&.Mui-focused': {
+                          '& fieldset': {
+                            borderColor: taxiMonterricoColors.green,
+                            borderWidth: 2,
+                          },
+                        },
+                      },
+                    }}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Search fontSize="small" />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    endIcon={<ExpandMore />}
+                    onClick={(e) => setActivityFilterMenuAnchor(e.currentTarget)}
+                    sx={{
+                      borderColor: taxiMonterricoColors.green,
+                      color: taxiMonterricoColors.green,
+                      textTransform: 'none',
+                      '&:hover': {
+                        borderColor: taxiMonterricoColors.green,
+                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                      },
+                    }}
+                  >
+                    Filtrar actividad ({activities.length}/{activities.length})
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    endIcon={<ExpandMore />}
+                    onClick={(e) => setTimeRangeMenuAnchor(e.currentTarget)}
+                    sx={{
+                      borderColor: taxiMonterricoColors.green,
+                      color: taxiMonterricoColors.green,
+                      textTransform: 'none',
+                      '&:hover': {
+                        borderColor: taxiMonterricoColors.green,
+                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                      },
+                    }}
+                  >
+                    {selectedTimeRange}
+                  </Button>
+                </Box>
+
+                {/* Menú de filtro de actividad */}
+                <Menu
+                  anchorEl={activityFilterMenuAnchor}
+                  open={Boolean(activityFilterMenuAnchor)}
+                  onClose={() => setActivityFilterMenuAnchor(null)}
+                  PaperProps={{
+                    sx: {
+                      mt: 1,
+                      minWidth: 280,
+                      borderRadius: 2,
+                      boxShadow: theme.palette.mode === 'dark' ? '0 4px 20px rgba(0,0,0,0.5)' : '0 4px 20px rgba(0,0,0,0.15)',
+                    },
+                  }}
+                >
+                  <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
+                    <TextField
+                      size="small"
+                      placeholder="Buscar"
+                      fullWidth
+                      value={activityFilterSearch}
+                      onChange={(e) => setActivityFilterSearch(e.target.value)}
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
@@ -3920,867 +4110,339 @@ const CompanyDetail: React.FC = () => {
                         ),
                       }}
                     />
-                    <Button 
-                      size="small" 
-                      variant="outlined" 
-                      endIcon={<ExpandMore />}
-                      onClick={(e) => setCreateActivityMenuAnchor(e.currentTarget)}
-                      sx={{
-                        borderColor: '#2E7D32',
-                        color: '#2E7D32',
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          borderColor: '#1B5E20',
-                          backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
-                        },
-                        '&:active': {
-                          transform: 'translateY(0)',
-                        },
-                      }}
-                    >
-                      Crear actividades
-                    </Button>
-                    <Menu
-                      anchorEl={createActivityMenuAnchor}
-                      open={Boolean(createActivityMenuAnchor)}
-                      onClose={() => setCreateActivityMenuAnchor(null)}
-                      anchorOrigin={{
-                        vertical: 'bottom',
-                        horizontal: 'left',
-                      }}
-                      transformOrigin={{
-                        vertical: 'top',
-                        horizontal: 'left',
-                      }}
-                      PaperProps={{
-                        sx: {
-                          mt: 1,
-                          minWidth: 320,
-                          maxWidth: 320,
-                          borderRadius: 2,
-                          boxShadow: theme.palette.mode === 'dark' 
-                            ? '0 4px 20px rgba(0,0,0,0.5)' 
-                            : '0 4px 20px rgba(0,0,0,0.15)',
-                          bgcolor: theme.palette.background.paper,
-                        },
-                      }}
-                    >
-                      <MenuItem 
-                        onClick={() => handleCreateActivity('note')}
-                        sx={{
-                          py: 1.5,
-                          px: 2,
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                          },
-                        }}
-                      >
-                        <Edit sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
-                        <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
-                          Crear nota
-                        </Typography>
-                      </MenuItem>
-                      
-                      <MenuItem 
-                        onClick={() => handleCreateActivity('email')}
-                        sx={{
-                          py: 1.5,
-                          px: 2,
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                          },
-                        }}
-                      >
-                        <Email sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
-                        <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
-                          Crear correo
-                        </Typography>
-                      </MenuItem>
-                      
-                      <MenuItem 
-                        onClick={() => handleCreateActivity('call')}
-                        sx={{
-                          py: 1.5,
-                          px: 2,
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                          },
-                        }}
-                      >
-                        <Phone sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
-                        <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
-                          Hacer llamada telefónica
-                        </Typography>
-                        <KeyboardArrowRight sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-                      </MenuItem>
-                      
-                      <MenuItem 
-                        onClick={() => handleCreateActivity('task')}
-                        sx={{
-                          py: 1.5,
-                          px: 2,
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                          },
-                        }}
-                      >
-                        <Assignment sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
-                        <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
-                          Crear tarea
-                        </Typography>
-                      </MenuItem>
-                      
-                      <MenuItem 
-                        onClick={() => handleCreateActivity('meeting')}
-                        sx={{
-                          py: 1.5,
-                          px: 2,
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                          },
-                        }}
-                      >
-                        <Event sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
-                        <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
-                          Programar reunión
-                        </Typography>
-                      </MenuItem>
-                      
-                      <MenuItem 
-                        sx={{
-                          py: 1.5,
-                          px: 2,
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                          },
-                        }}
-                      >
-                        <LinkIcon sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
-                        <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
-                          Inscribir en una secuencia
-                        </Typography>
-                        <Lock sx={{ fontSize: 16, color: theme.palette.text.secondary, ml: 1 }} />
-                      </MenuItem>
-                    </Menu>
                   </Box>
-                  <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-                    <Chip 
-                      label={selectedTimeRange}
-                      size="small" 
-                      deleteIcon={<KeyboardArrowDown fontSize="small" />}
-                      onDelete={(e) => {
-                        e.stopPropagation();
-                        setTimeRangeMenuAnchor(e.currentTarget);
-                      }}
-                      onClick={(e) => setTimeRangeMenuAnchor(e.currentTarget)}
-                      sx={{ 
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                          transform: 'scale(1.05)',
-                          boxShadow: '0 2px 8px rgba(46, 125, 50, 0.2)',
-                        },
-                      }}
-                    />
-                    <Menu
-                      anchorEl={timeRangeMenuAnchor}
-                      open={Boolean(timeRangeMenuAnchor)}
-                      onClose={() => setTimeRangeMenuAnchor(null)}
-                      anchorOrigin={{
-                        vertical: 'bottom',
-                        horizontal: 'left',
-                      }}
-                      transformOrigin={{
-                        vertical: 'top',
-                        horizontal: 'left',
-                      }}
-                      PaperProps={{
-                        sx: {
-                          mt: 1,
-                          minWidth: 240,
-                          maxWidth: 240,
-                          borderRadius: 2,
-                          boxShadow: theme.palette.mode === 'dark' 
-                            ? '0 4px 20px rgba(0,0,0,0.5)' 
-                            : '0 4px 20px rgba(0,0,0,0.15)',
-                          bgcolor: theme.palette.background.paper,
-                          border: theme.palette.mode === 'dark' 
-                            ? `1px solid ${theme.palette.divider}` 
-                            : 'none',
-                          maxHeight: 400,
-                          overflow: 'auto',
-                        },
-                      }}
-                    >
-                      <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
-                        <TextField
-                          size="small"
-                          placeholder="Buscar"
-                          fullWidth
-                          value={timeRangeSearch}
-                          onChange={(e) => setTimeRangeSearch(e.target.value)}
-                          autoFocus
-                          InputProps={{
-                            endAdornment: (
-                              <InputAdornment position="end">
-                                <Search fontSize="small" sx={{ color: 'text.secondary' }} />
-                              </InputAdornment>
-                            ),
-                          }}
-                          sx={{
-                            '& .MuiOutlinedInput-root': {
-                              backgroundColor: theme.palette.mode === 'dark' 
-                                ? theme.palette.background.default 
-                                : 'white',
-                              '& fieldset': {
-                                borderColor: theme.palette.mode === 'dark' 
-                                  ? theme.palette.divider 
-                                  : '#4fc3f7',
-                                borderWidth: 1.5,
-                              },
-                              '&:hover fieldset': {
-                                borderColor: theme.palette.mode === 'dark' 
-                                  ? theme.palette.action.hover 
-                                  : '#4fc3f7',
-                              },
-                              '&.Mui-focused fieldset': {
-                                borderColor: '#4fc3f7',
-                              },
-                            },
-                            '& .MuiInputBase-input': {
-                              color: theme.palette.text.primary,
-                            },
-                            '& .MuiInputBase-input::placeholder': {
-                              color: theme.palette.text.secondary,
-                              opacity: 1,
-                            },
-                          }}
-                        />
-                      </Box>
-                      
-                      {['Todo', 'Hoy', 'Ayer', 'Esta semana', 'Semana pasada', 'Últimos 7 días'].map((option) => {
-                        const isSelected = selectedTimeRange === option || (option === 'Todo' && selectedTimeRange === 'Todo hasta ahora');
-                        return (
-                          <MenuItem
-                            key={option}
-                            onClick={() => {
-                              setSelectedTimeRange(option === 'Todo' ? 'Todo hasta ahora' : option);
-                              setTimeRangeMenuAnchor(null);
-                            }}
-                            sx={{
-                              py: 1.5,
-                              px: 2,
-                              color: theme.palette.text.primary,
-                              backgroundColor: isSelected 
-                                ? (theme.palette.mode === 'dark' 
-                                  ? 'rgba(144, 202, 249, 0.16)' 
-                                  : '#e3f2fd')
-                                : 'transparent',
-                              '&:hover': {
-                                backgroundColor: isSelected
-                                  ? (theme.palette.mode === 'dark' 
-                                    ? 'rgba(144, 202, 249, 0.24)' 
-                                    : '#bbdefb')
-                                  : theme.palette.action.hover,
-                              },
-                            }}
-                          >
-                            <Typography variant="body2" sx={{ color: 'inherit' }}>
-                              {option}
-                            </Typography>
-                          </MenuItem>
-                        );
-                      })}
-                      
-                      <Divider sx={{ my: 0.5, borderColor: theme.palette.divider }} />
-                      
+                  {['Nota', 'Correo', 'Llamada', 'Tarea', 'Reunión'].map((type) => {
+                    const isSelected = selectedActivityTypes.includes(type);
+                    return (
                       <MenuItem
+                        key={type}
                         onClick={() => {
-                          console.log('Período personalizado');
-                          setTimeRangeMenuAnchor(null);
+                          if (isSelected) {
+                            setSelectedActivityTypes(selectedActivityTypes.filter(t => t !== type));
+                          } else {
+                            setSelectedActivityTypes([...selectedActivityTypes, type]);
+                          }
                         }}
                         sx={{
                           py: 1.5,
-                          px: 2,
-                          color: theme.palette.text.secondary,
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                            color: theme.palette.text.primary,
-                          },
+                          backgroundColor: isSelected ? 'rgba(46, 125, 50, 0.08)' : 'transparent',
                         }}
                       >
-                        <Typography variant="body2" sx={{ color: 'inherit', flexGrow: 1 }}>
-                          Período personalizado
-                        </Typography>
-                        <KeyboardArrowRight sx={{ fontSize: 18, color: 'inherit' }} />
+                        <Checkbox checked={isSelected} size="small" sx={{ color: taxiMonterricoColors.green, '&.Mui-checked': { color: taxiMonterricoColors.green } }} />
+                        <Typography variant="body2">{type}</Typography>
                       </MenuItem>
-                    </Menu>
-                    <Chip 
-                      label="Actividad" 
-                      size="small" 
-                      deleteIcon={<KeyboardArrowDown fontSize="small" />}
-                      onDelete={(e) => setActivityFilterMenuAnchor(e.currentTarget)}
-                      onClick={(e) => setActivityFilterMenuAnchor(e.currentTarget)}
-                      sx={{ 
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
+                    );
+                  })}
+                </Menu>
+
+                {/* Menú de rango de tiempo */}
+                <Menu
+                  anchorEl={timeRangeMenuAnchor}
+                  open={Boolean(timeRangeMenuAnchor)}
+                  onClose={() => setTimeRangeMenuAnchor(null)}
+                  PaperProps={{
+                    sx: {
+                      mt: 1,
+                      minWidth: 200,
+                      borderRadius: 2,
+                    },
+                  }}
+                >
+                  {[
+                    'Todo',
+                    'Hoy',
+                    'Ayer',
+                    'Esta semana',
+                    'Semana pasada',
+                    'Últimos 7 días',
+                  ].map((option) => (
+                    <MenuItem 
+                      key={option}
+                      onClick={() => { 
+                        setSelectedTimeRange(option === 'Todo' ? 'Todo hasta ahora' : option); 
+                        setTimeRangeMenuAnchor(null); 
+                      }}
+                      sx={{
+                        backgroundColor: (selectedTimeRange === option || (option === 'Todo' && selectedTimeRange === 'Todo hasta ahora')) 
+                          ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)') 
+                          : 'transparent',
+                      }}
+                    >
+                      {option}
+                    </MenuItem>
+                  ))}
+                </Menu>
+
+                {/* Tabs secundarios de tipo de actividad */}
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: 0.5, 
+                  mb: 3, 
+                  borderBottom: `2px solid ${theme.palette.divider}`,
+                  overflowX: 'auto',
+                }}>
+                  {[
+                    { value: 'all', label: 'Actividad' },
+                    { value: 'note', label: 'Notas' },
+                    { value: 'email', label: 'Correos' },
+                    { value: 'call', label: 'Llamadas' },
+                    { value: 'task', label: 'Tareas' },
+                    { value: 'meeting', label: 'Reuniones' },
+                  ].map((tab) => (
+                    <Button
+                      key={tab.value}
+                      size="small"
+                      onClick={() => setSelectedActivityType(tab.value)}
+                      sx={{
+                        color: selectedActivityType === tab.value ? taxiMonterricoColors.green : theme.palette.text.secondary,
+                        textTransform: 'none',
+                        fontWeight: selectedActivityType === tab.value ? 600 : 500,
+                        borderBottom: selectedActivityType === tab.value ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
+                        borderRadius: 0,
+                        minWidth: 'auto',
+                        px: 2.5,
+                        py: 1.5,
                         '&:hover': {
-                          backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                          transform: 'scale(1.05)',
-                          boxShadow: '0 2px 8px rgba(46, 125, 50, 0.2)',
-                        },
-                      }}
-                    />
-                    <Menu
-                      anchorEl={activityFilterMenuAnchor}
-                      open={Boolean(activityFilterMenuAnchor)}
-                      onClose={() => setActivityFilterMenuAnchor(null)}
-                      anchorOrigin={{
-                        vertical: 'bottom',
-                        horizontal: 'left',
-                      }}
-                      transformOrigin={{
-                        vertical: 'top',
-                        horizontal: 'left',
-                      }}
-                      PaperProps={{
-                        sx: {
-                          mt: 1,
-                          minWidth: 280,
-                          maxWidth: 280,
-                          borderRadius: 2,
-                          boxShadow: theme.palette.mode === 'dark' 
-                            ? '0 4px 20px rgba(0,0,0,0.5)' 
-                            : '0 4px 20px rgba(0,0,0,0.15)',
-                          bgcolor: theme.palette.background.paper,
-                          border: theme.palette.mode === 'dark' 
-                            ? `1px solid ${theme.palette.divider}` 
-                            : 'none',
-                          maxHeight: 400,
-                          overflow: 'auto',
+                          color: taxiMonterricoColors.green,
+                          bgcolor: 'transparent',
                         },
                       }}
                     >
-                      <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
-                        <TextField
-                          size="small"
-                          placeholder="Buscar"
-                          fullWidth
-                          value={activityFilterSearch}
-                          onChange={(e) => setActivityFilterSearch(e.target.value)}
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <Search fontSize="small" sx={{ color: 'text.secondary' }} />
-                              </InputAdornment>
-                            ),
-                          }}
+                      {tab.label}
+                    </Button>
+                  ))}
+                </Box>
+
+                {/* Contenido de actividades */}
+                {(() => {
+                  // Filtrar por búsqueda
+                  let filteredActivities = activitySearch
+                    ? activities.filter((activity) => {
+                        const searchTerm = activitySearch.toLowerCase();
+                        const subject = (activity.subject || activity.title || '').toLowerCase();
+                        const description = (activity.description || '').toLowerCase();
+                        return subject.includes(searchTerm) || description.includes(searchTerm);
+                      })
+                    : activities;
+
+                  // Filtrar por tipo de actividad (tab seleccionado)
+                  if (selectedActivityType !== 'all') {
+                    const typeMap: { [key: string]: string } = {
+                      'note': 'note',
+                      'email': 'email',
+                      'call': 'call',
+                      'task': 'task',
+                      'meeting': 'meeting',
+                    };
+                    filteredActivities = filteredActivities.filter((activity) => {
+                      let activityType = activity.type?.toLowerCase() || '';
+                      if (activity.isTask && !activityType) {
+                        activityType = 'task';
+                      }
+                      return activityType === typeMap[selectedActivityType];
+                    });
+                  }
+
+                  // Filtrar por tipos seleccionados en el menú de filtro
+                  if (selectedActivityTypes.length > 0) {
+                    const typeMap: { [key: string]: string[] } = {
+                      'Nota': ['note'],
+                      'Correo': ['email'],
+                      'Llamada': ['call'],
+                      'Tarea': ['task'],
+                      'Reunión': ['meeting'],
+                    };
+                    filteredActivities = filteredActivities.filter((activity) => {
+                      let activityType = activity.type?.toLowerCase() || '';
+                      if (activity.isTask && !activityType) {
+                        activityType = 'task';
+                      }
+                      return selectedActivityTypes.some(selectedType => {
+                        const mappedTypes = typeMap[selectedType] || [];
+                        return mappedTypes.includes(activityType);
+                      });
+                    });
+                  }
+
+                  // Filtrar por rango de tiempo
+                  if (selectedTimeRange !== 'Todo hasta ahora') {
+                    const now = new Date();
+                    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    const yesterday = new Date(today);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    const startOfWeek = new Date(today);
+                    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
+                    const startOfLastWeek = new Date(startOfWeek);
+                    startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
+                    const endOfLastWeek = new Date(startOfWeek);
+                    endOfLastWeek.setDate(endOfLastWeek.getDate() - 1);
+                    const sevenDaysAgo = new Date(today);
+                    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+                    filteredActivities = filteredActivities.filter((activity) => {
+                      const activityDate = new Date(activity.createdAt);
+                      const activityDay = new Date(activityDate.getFullYear(), activityDate.getMonth(), activityDate.getDate());
+                      
+                      switch (selectedTimeRange) {
+                        case 'Hoy':
+                          return activityDay.getTime() === today.getTime();
+                        case 'Ayer':
+                          return activityDay.getTime() === yesterday.getTime();
+                        case 'Esta semana':
+                          return activityDay >= startOfWeek && activityDay <= today;
+                        case 'Semana pasada':
+                          return activityDay >= startOfLastWeek && activityDay <= endOfLastWeek;
+                        case 'Últimos 7 días':
+                          return activityDay >= sevenDaysAgo && activityDay <= today;
+                        default:
+                          return true;
+                      }
+                    });
+                  }
+
+                  if (filteredActivities.length === 0) {
+                    return (
+                      <Box sx={{ textAlign: 'center', py: 8 }}>
+                        <Box
                           sx={{
-                            '& .MuiOutlinedInput-root': {
-                              backgroundColor: theme.palette.mode === 'dark' 
-                                ? theme.palette.background.default 
-                                : '#f5f5f5',
-                              '& fieldset': {
-                                borderColor: theme.palette.divider,
-                              },
-                              '&:hover fieldset': {
-                                borderColor: theme.palette.mode === 'dark' 
-                                  ? theme.palette.action.hover 
-                                  : theme.palette.text.secondary,
-                              },
-                              '&.Mui-focused fieldset': {
-                                borderColor: '#2E7D32',
-                              },
-                            },
-                            '& .MuiInputBase-input': {
-                              color: theme.palette.text.primary,
-                            },
-                            '& .MuiInputBase-input::placeholder': {
-                              color: theme.palette.text.secondary,
-                              opacity: 1,
-                            },
+                            width: 120,
+                            height: 120,
+                            borderRadius: '50%',
+                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F3F4F6',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mx: 'auto',
+                            mb: 2,
                           }}
-                        />
+                        >
+                          <Assignment sx={{ fontSize: 48, color: theme.palette.text.secondary }} />
+                        </Box>
+                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: theme.palette.text.primary }}>
+                          No hay actividades registradas
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          No hay actividades registradas para esta empresa. Crea una nueva actividad para comenzar.
+                        </Typography>
                       </Box>
-                      
-                      <MenuItem
-                        sx={{
-                          py: 1,
-                          px: 2,
-                          backgroundColor: 'transparent',
-                          '&:hover': {
-                            backgroundColor: 'transparent',
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const newValue = !communicationFilters.all;
-                          setCommunicationFilters({
-                            all: newValue,
-                            postal: newValue,
-                            email: newValue,
-                            linkedin: newValue,
-                            calls: newValue,
-                            sms: newValue,
-                            whatsapp: newValue,
-                          });
-                        }}
-                      >
-                        <Checkbox
-                          checked={communicationFilters.all}
+                    );
+                  }
+
+                  return (
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {filteredActivities.map((activity) => (
+                        <Paper
+                          key={activity.id}
+                          onClick={() => setExpandedActivity(activity)}
                           sx={{
-                            color: '#2E7D32',
-                            '&.Mui-checked': {
-                              color: '#2E7D32',
+                            p: 2,
+                            ...getActivityStatusColor(activity),
+                            borderRadius: 1.5,
+                            position: 'relative',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              opacity: 0.9,
+                              boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
                             },
                           }}
-                        />
-                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                          Comunicación
-                        </Typography>
-                      </MenuItem>
-                      
-                      <MenuItem
-                        sx={{
-                          py: 0.75,
-                          px: 2,
-                          pl: 6,
-                          transition: 'all 0.15s ease',
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                            transform: 'translateX(4px)',
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCommunicationFilters({
-                            ...communicationFilters,
-                            email: !communicationFilters.email,
-                          });
-                        }}
-                      >
-                        <Checkbox
-                          checked={communicationFilters.email}
-                          sx={{
-                            color: '#2E7D32',
-                            '&.Mui-checked': {
-                              color: '#2E7D32',
-                            },
-                          }}
-                        />
-                        <Typography variant="body2">Correos</Typography>
-                      </MenuItem>
-                      
-                      <MenuItem
-                        sx={{
-                          py: 0.75,
-                          px: 2,
-                          pl: 6,
-                          transition: 'all 0.15s ease',
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                            transform: 'translateX(4px)',
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCommunicationFilters({
-                            ...communicationFilters,
-                            calls: !communicationFilters.calls,
-                          });
-                        }}
-                      >
-                        <Checkbox
-                          checked={communicationFilters.calls}
-                          sx={{
-                            color: '#2E7D32',
-                            '&.Mui-checked': {
-                              color: '#2E7D32',
-                            },
-                          }}
-                        />
-                        <Typography variant="body2">Llamadas</Typography>
-                      </MenuItem>
-                      
-                      <MenuItem
-                        sx={{
-                          py: 1,
-                          px: 2,
-                          mt: 0.5,
-                          backgroundColor: 'transparent',
-                          '&:hover': {
-                            backgroundColor: 'transparent',
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const newValue = !teamActivityFilters.all;
-                          setTeamActivityFilters({
-                            all: newValue,
-                            notes: newValue,
-                            meetings: newValue,
-                            tasks: newValue,
-                          });
-                        }}
-                      >
-                        <Checkbox
-                          checked={teamActivityFilters.all}
-                          sx={{
-                            color: '#2E7D32',
-                            '&.Mui-checked': {
-                              color: '#2E7D32',
-                            },
-                          }}
-                        />
-                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                          Actividad del equipo
-                        </Typography>
-                      </MenuItem>
-                      
-                      <MenuItem
-                        sx={{
-                          py: 0.75,
-                          px: 2,
-                          pl: 6,
-                          transition: 'all 0.15s ease',
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                            transform: 'translateX(4px)',
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setTeamActivityFilters({
-                            ...teamActivityFilters,
-                            notes: !teamActivityFilters.notes,
-                          });
-                        }}
-                      >
-                        <Checkbox
-                          checked={teamActivityFilters.notes}
-                          sx={{
-                            color: '#2E7D32',
-                            '&.Mui-checked': {
-                              color: '#2E7D32',
-                            },
-                          }}
-                        />
-                        <Typography variant="body2">Notas</Typography>
-                      </MenuItem>
-                      
-                      <MenuItem
-                        sx={{
-                          py: 0.75,
-                          px: 2,
-                          pl: 6,
-                          transition: 'all 0.15s ease',
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                            transform: 'translateX(4px)',
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setTeamActivityFilters({
-                            ...teamActivityFilters,
-                            meetings: !teamActivityFilters.meetings,
-                          });
-                        }}
-                      >
-                        <Checkbox
-                          checked={teamActivityFilters.meetings}
-                          sx={{
-                            color: '#2E7D32',
-                            '&.Mui-checked': {
-                              color: '#2E7D32',
-                            },
-                          }}
-                        />
-                        <Typography variant="body2">Reuniones</Typography>
-                      </MenuItem>
-                      
-                      <MenuItem
-                        sx={{
-                          py: 0.75,
-                          px: 2,
-                          pl: 6,
-                          transition: 'all 0.15s ease',
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                            transform: 'translateX(4px)',
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setTeamActivityFilters({
-                            ...teamActivityFilters,
-                            tasks: !teamActivityFilters.tasks,
-                          });
-                        }}
-                      >
-                        <Checkbox
-                          checked={teamActivityFilters.tasks}
-                          sx={{
-                            color: '#2E7D32',
-                            '&.Mui-checked': {
-                              color: '#2E7D32',
-                            },
-                          }}
-                        />
-                        <Typography variant="body2">Tareas</Typography>
-                      </MenuItem>
-                    </Menu>
-                    <Box sx={{ flexGrow: 1 }} />
-                  </Box>
-                  {timeFilteredActivities.length > 0 ? (
-                    <Box>
-                      {Object.entries(groupedActivities).map(([monthKey, monthActivities]) => (
-                        <Box key={monthKey} sx={{ mb: 4 }}>
-                          <Typography 
-                            variant="subtitle2" 
-                            sx={{ 
-                              textAlign: 'center',
-                              mb: 2,
-                              color: 'text.secondary',
-                              textTransform: 'capitalize',
-                              fontWeight: 'bold',
+                        >
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              top: 8,
+                              right: 8,
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'flex-end',
+                              gap: 0.5,
                             }}
                           >
-                            {monthKey}
-                          </Typography>
-                          
-                          <Box>
-                            {monthActivities.map((activity, index) => {
-                              const isNote = activity.type === 'note';
-                              const isExpanded = isNote ? expandedNotes.has(activity.id) : expandedActivities.has(activity.id);
-                              
-                              return (
-                                <Box 
-                                  key={activity.id} 
-                                  sx={{ 
-                                    mb: 1.5,
-                                    animation: 'slideInRight 0.3s ease',
-                                    animationDelay: `${index * 0.05}s`,
-                                    '@keyframes slideInRight': {
-                                      '0%': {
-                                        opacity: 0,
-                                        transform: 'translateX(-20px)',
-                                      },
-                                      '100%': {
-                                        opacity: 1,
-                                        transform: 'translateX(0)',
-                                      },
-                                    },
-                                  }}
-                                >
-                                  {isNote ? (
-                                    <Paper
-                                      elevation={0}
-                                      sx={{
-                                        p: isExpanded ? 2 : 1.5,
-                                        border: `1px solid ${theme.palette.divider}`,
-                                        borderRadius: 2,
-                                        bgcolor: theme.palette.background.paper,
-                                        color: theme.palette.text.primary,
-                                        transition: 'all 0.3s ease',
-                                        cursor: 'pointer',
-                                        '&:hover': {
-                                          borderColor: '#2E7D32',
-                                          boxShadow: theme.palette.mode === 'dark' 
-                                            ? '0 2px 8px rgba(46, 125, 50, 0.2)' 
-                                            : '0 2px 8px rgba(46, 125, 50, 0.08)',
-                                        },
-                                      }}
-                                      onClick={() => toggleNoteExpand(activity.id)}
-                                    >
-                                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5, pt: 0.5 }}>
-                                          <Edit sx={{ fontSize: 18, color: '#9E9E9E' }} />
-                                        </Box>
-                                        
-                                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                                            <Typography 
-                                              variant="body2" 
-                                              sx={{ 
-                                                fontWeight: 'bold',
-                                                color: '#2E7D32',
-                                                fontSize: '0.875rem',
-                                              }}
-                                            >
-                                              Nota creada por {activity.User ? `${activity.User.firstName} ${activity.User.lastName}`.toUpperCase() : 'Usuario'}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', whiteSpace: 'nowrap', ml: 1 }}>
-                                              {activity.createdAt && new Date(activity.createdAt).toLocaleDateString('es-ES', {
-                                                day: 'numeric',
-                                                month: 'short',
-                                                year: 'numeric',
-                                              })} a la(s) {activity.createdAt && new Date(activity.createdAt).toLocaleTimeString('es-ES', {
-                                                hour: '2-digit',
-                                                minute: '2-digit',
-                                              })} GMT-5
-                                            </Typography>
-                                          </Box>
-                                          
-                                          {!isExpanded && (
-                                            <Box sx={{ mt: 1 }}>
-                                              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                                                {activity.description ? (
-                                                  <Box
-                                                    dangerouslySetInnerHTML={{ __html: activity.description.replace(/<[^>]*>/g, '').substring(0, 50) + (activity.description.replace(/<[^>]*>/g, '').length > 50 ? '...' : '') }}
-                                                  />
-                                                ) : (
-                                                  'Sin descripción'
-                                                )}
-                                              </Typography>
-                                            </Box>
-                                          )}
-                                          
-                                          {isExpanded && (
-                                            <>
-                                              <Box sx={{ mb: 2, mt: 1.5 }}>
-                                                {activity.description ? (
-                                                  <Box
-                                                    dangerouslySetInnerHTML={{ __html: activity.description }}
-                                                    sx={{
-                                                      '& p': { margin: 0, mb: 1 },
-                                                      '& *': { fontSize: '0.875rem', color: 'text.primary' },
-                                                    }}
-                                                  />
-                                                ) : (
-                                                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                                                    Agregar descripción
-                                                  </Typography>
-                                                )}
-                                              </Box>
-                                              
-                                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 1, borderTop: `1px solid ${theme.palette.divider}` }}>
-                                                <Link
-                                                  component="button"
-                                                  onClick={(e) => e.stopPropagation()}
-                                                  sx={{
-                                                    color: '#2E7D32',
-                                                    textDecoration: 'none',
-                                                    fontSize: '0.875rem',
-                                                    cursor: 'pointer',
-                                                    border: 'none',
-                                                    background: 'none',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: 0.5,
-                                                    '&:hover': {
-                                                      textDecoration: 'underline',
-                                                    },
-                                                  }}
-                                                >
-                                                  <Comment fontSize="small" />
-                                                  Agregar comentario
-                                                </Link>
-                                              </Box>
-                                            </>
-                                          )}
-                                        </Box>
-                                      </Box>
-                                    </Paper>
-                                  ) : (
-                                    <Paper
-                                      elevation={0}
-                                      sx={{
-                                        p: isExpanded ? 2 : 1.5,
-                                        border: `1px solid ${theme.palette.divider}`,
-                                        borderRadius: 2,
-                                        bgcolor: theme.palette.background.paper,
-                                        color: theme.palette.text.primary,
-                                        transition: 'all 0.3s ease',
-                                        cursor: 'pointer',
-                                        '&:hover': {
-                                          borderColor: '#2E7D32',
-                                          boxShadow: theme.palette.mode === 'dark' 
-                                            ? '0 2px 8px rgba(46, 125, 50, 0.2)' 
-                                            : '0 2px 8px rgba(46, 125, 50, 0.08)',
-                                        },
-                                      }}
-                                      onClick={() => toggleActivityExpand(activity.id)}
-                                    >
-                                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                                        <Avatar sx={{ 
-                                          bgcolor: activity.type === 'email' ? '#2E7D32' :
-                                                   activity.type === 'call' ? '#4CAF50' :
-                                                   activity.type === 'meeting' ? '#FF9800' :
-                                                   activity.type === 'task' ? '#9C27B0' : '#757575',
-                                          width: 40,
-                                          height: 40,
-                                        }}>
-                                          {activity.type === 'email' ? <Email sx={{ fontSize: 20, color: 'white' }} /> :
-                                           activity.type === 'call' ? <Phone sx={{ fontSize: 20, color: 'white' }} /> :
-                                           activity.type === 'meeting' ? <Event sx={{ fontSize: 20, color: 'white' }} /> :
-                                           activity.type === 'task' ? <Assignment sx={{ fontSize: 20, color: 'white' }} /> : <Comment sx={{ fontSize: 20, color: 'white' }} />}
-                                        </Avatar>
-                                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                                            <Typography 
-                                              variant="body2" 
-                                              sx={{ 
-                                                fontWeight: 'bold',
-                                                color: 'text.primary',
-                                                fontSize: '0.875rem',
-                                              }}
-                                            >
-                                              {activity.subject || 'Sin título'}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', whiteSpace: 'nowrap', ml: 1 }}>
-                                              {activity.createdAt && new Date(activity.createdAt).toLocaleDateString('es-ES', {
-                                                day: 'numeric',
-                                                month: 'short',
-                                                year: 'numeric',
-                                              })}, {activity.createdAt && new Date(activity.createdAt).toLocaleTimeString('es-ES', {
-                                                hour: '2-digit',
-                                                minute: '2-digit',
-                                              })}
-                                            </Typography>
-                                          </Box>
-                                          
-                                          {activity.description && (
-                                            <Box
-                                              sx={{
-                                                mt: 1,
-                                                p: 1.5,
-                                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'grey.100',
-                                                borderRadius: 1,
-                                                border: `1px solid ${theme.palette.divider}`,
-                                                wordBreak: 'break-word',
-                                                whiteSpace: 'pre-wrap',
-                                                fontSize: '0.875rem',
-                                                color: theme.palette.text.secondary,
-                                              }}
-                                            >
-                                              {activity.description}
-                                            </Box>
-                                          )}
-                                        </Box>
-                                      </Box>
-                                    </Paper>
-                                  )}
-                                </Box>
-                              );
-                            })}
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: taxiMonterricoColors.green,
+                                fontWeight: 600,
+                                fontSize: '0.7rem',
+                                textTransform: 'uppercase',
+                              }}
+                            >
+                              {getActivityTypeLabel(activity.type)}
+                            </Typography>
+                            {activity.User && (
+                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                Por {activity.User.firstName} {activity.User.lastName}
+                                {activity.createdAt && (
+                                  <span> • {new Date(activity.createdAt).toLocaleDateString('es-ES', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric',
+                                  })}</span>
+                                )}
+                              </Typography>
+                            )}
                           </Box>
-                        </Box>
+                          <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Checkbox
+                              checked={completedActivities[activity.id] || false}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                setCompletedActivities(prev => ({
+                                  ...prev,
+                                  [activity.id]: e.target.checked
+                                }));
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              size="small"
+                              sx={{
+                                p: 0.5,
+                                '& .MuiSvgIcon-root': {
+                                  fontSize: 20,
+                                },
+                              }}
+                            />
+                            <Typography 
+                              variant="subtitle2" 
+                              sx={{ 
+                                fontWeight: 600, 
+                                mb: 0.5, 
+                                pr: 6,
+                                flex: 1,
+                                textDecoration: completedActivities[activity.id] ? 'line-through' : 'none',
+                                opacity: completedActivities[activity.id] ? 0.6 : 1,
+                              }}
+                            >
+                              {activity.subject || activity.title}
+                            </Typography>
+                          </Box>
+                          {activity.description && (
+                            <Box
+                              sx={{
+                                mt: 2,
+                                p: 1.5,
+                                borderRadius: 1,
+                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
+                                border: `1px solid ${theme.palette.divider}`,
+                              }}
+                            >
+                              <Typography 
+                                variant="body2" 
+                                sx={{ 
+                                  color: theme.palette.text.secondary,
+                                  whiteSpace: 'pre-wrap',
+                                  fontSize: '0.875rem',
+                                }}
+                              >
+                                {activity.description.replace(/<[^>]*>/g, '').substring(0, 200)}{activity.description.length > 200 ? '...' : ''}
+                              </Typography>
+                            </Box>
+                          )}
+                        </Paper>
                       ))}
                     </Box>
-                  ) : (
-                    <Box sx={{ textAlign: 'center', py: 4 }}>
-                      <Search sx={{ fontSize: 48, color: '#e0e0e0', mb: 1 }} />
-                      <Typography variant="body2" color="text.secondary">
-                        Ninguna actividad coincide con los filtros actuales. Cambia los filtros para ampliar tu búsqueda.
-                      </Typography>
-                    </Box>
-                  )}
-                </Card>
-              </>
+                  );
+                })()}
+              </Card>
             )}
 
           </Box>
@@ -5026,6 +4688,7 @@ const CompanyDetail: React.FC = () => {
                                       </Box>
 
           {/* Card Independiente: Registro de Cambios / Logs */}
+          {historyOpen && (
           <Box sx={{
             display: 'flex',
             flexDirection: 'column',
@@ -5193,11 +4856,12 @@ const CompanyDetail: React.FC = () => {
               </Box>
             </Card>
           </Box>
+          )}
         </Box>
         )}
 
         {/* Card Independiente: Registro de Cambios / Logs - Solo cuando Copiloto IA está cerrado */}
-        {isDesktop && !copilotOpen && (
+        {isDesktop && !copilotOpen && historyOpen && (
         <Box sx={{
           width: 380,
           flexShrink: 0,
@@ -5945,11 +5609,11 @@ const CompanyDetail: React.FC = () => {
             width: { xs: '95vw', sm: '700px' },
             maxWidth: { xs: '95vw', sm: '90vw' },
             height: '85vh',
-            backgroundColor: theme.palette.background.paper,
+            backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
             boxShadow: theme.palette.mode === 'dark' 
-              ? '0 20px 60px rgba(0,0,0,0.3)' 
+              ? '0 20px 60px rgba(0,0,0,0.5)' 
               : '0 20px 60px rgba(0,0,0,0.12)',
-            zIndex: 1401,
+            zIndex: 1500,
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
@@ -6017,15 +5681,15 @@ const CompanyDetail: React.FC = () => {
               display: 'flex', 
               flexDirection: 'column', 
               border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`, 
-              borderRadius: 3,
+              borderRadius: 2,
               overflow: 'hidden',
               minHeight: '300px',
-              backgroundColor: theme.palette.background.paper,
+              backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               '&:focus-within': {
-                boxShadow: `0 4px 16px ${taxiMonterricoColors.orange}40`,
-                borderColor: taxiMonterricoColors.orange,
-                transform: 'translateY(-1px)',
+                boxShadow: 'none',
+                borderColor: theme.palette.divider,
+                transform: 'none',
               },
             }}>
               <RichTextEditor
@@ -6054,8 +5718,8 @@ const CompanyDetail: React.FC = () => {
           <Box sx={{ 
             px: 3,
             py: 2.5, 
-            borderTop: `1px solid ${theme.palette.divider}`, 
-            backgroundColor: theme.palette.background.paper, 
+            borderTop: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`, 
+            backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper, 
             display: 'flex', 
             justifyContent: 'flex-end', 
             gap: 2,
@@ -6121,7 +5785,7 @@ const CompanyDetail: React.FC = () => {
             right: 0,
             bottom: 0,
             backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
-            zIndex: 1400,
+            zIndex: 1499,
             animation: 'fadeIn 0.3s ease-out',
             '@keyframes fadeIn': {
               '0%': {
@@ -6142,6 +5806,7 @@ const CompanyDetail: React.FC = () => {
         onClose={() => setNoteAssociateModalOpen(false)}
         maxWidth="sm"
         fullWidth={false}
+        sx={{ zIndex: 1600 }}
         PaperProps={{
           sx: {
             borderRadius: 2,
@@ -6510,7 +6175,7 @@ const CompanyDetail: React.FC = () => {
                                 />
                                 <ListItemText
                                   primary={deal.name}
-                                  secondary={`${deal.amount ? `$${deal.amount.toLocaleString()}` : ''} ${deal.stage || ''}`}
+                                  secondary={`${deal.amount ? `S/ ${deal.amount.toLocaleString('es-ES')}` : ''} ${deal.stage || ''}`}
                                   primaryTypographyProps={{ fontSize: '0.875rem' }}
                                   secondaryTypographyProps={{ fontSize: '0.75rem' }}
                                 />
@@ -6672,7 +6337,7 @@ const CompanyDetail: React.FC = () => {
                                   />
                                   <ListItemText
                                     primary={deal.name}
-                                    secondary={`${deal.amount ? `$${deal.amount.toLocaleString()}` : ''} ${deal.stage || ''}`}
+                                    secondary={`${deal.amount ? `S/ ${deal.amount.toLocaleString('es-ES')}` : ''} ${deal.stage || ''}`}
                                     primaryTypographyProps={{ fontSize: '0.875rem' }}
                                     secondaryTypographyProps={{ fontSize: '0.75rem' }}
                                   />
@@ -6889,8 +6554,8 @@ const CompanyDetail: React.FC = () => {
       <EmailComposer
         open={emailOpen}
         onClose={() => setEmailOpen(false)}
-        recipientEmail={associatedContacts && associatedContacts.length > 0 ? associatedContacts[0].email || '' : ''}
-        recipientName={associatedContacts && associatedContacts.length > 0 ? `${associatedContacts[0].firstName || ''} ${associatedContacts[0].lastName || ''}`.trim() : company?.name}
+        recipientEmail={(company as any)?.email || ''}
+        recipientName={company?.name || ''}
         onSend={handleSendEmail}
       />
 
@@ -6901,52 +6566,107 @@ const CompanyDetail: React.FC = () => {
           <Box
             sx={{
               position: 'fixed',
-              top: 0,
-              right: 0,
-              width: '500px',
-              maxWidth: '90vw',
-              height: '100vh',
-              backgroundColor: 'white',
-              boxShadow: '-4px 0 20px rgba(0,0,0,0.15)',
-              zIndex: 1300,
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '600px',
+              maxWidth: '95vw',
+              maxHeight: '90vh',
+              backgroundColor: theme.palette.background.paper,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              borderRadius: 4,
+              zIndex: 1500,
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              animation: 'slideInRight 0.3s ease-out',
+              animation: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '@keyframes fadeInScale': {
+                '0%': {
+                  opacity: 0,
+                  transform: 'translate(-50%, -50%) scale(0.9)',
+                },
+                '100%': {
+                  opacity: 1,
+                  transform: 'translate(-50%, -50%) scale(1)',
+                },
+              },
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <Box
               sx={{
-                background: `linear-gradient(135deg, ${taxiMonterricoColors.orange} 0%, ${taxiMonterricoColors.orangeDark} 100%)`,
-                color: 'white',
+                backgroundColor: 'transparent',
+                color: theme.palette.text.primary,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                minHeight: { xs: '48px', md: '56px' },
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                px: { xs: 2, md: 2.5 },
+                minHeight: { xs: '64px', md: '72px' },
+                px: { xs: 3, md: 4 },
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <Phone sx={{ fontSize: { xs: 18, md: 22 } }} />
-                <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, fontSize: { xs: '1rem', md: '1.1rem' } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: '50%',
+                    backgroundColor: `${taxiMonterricoColors.green}15`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Phone sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+                </Box>
+                <Typography variant="h5" sx={{ color: theme.palette.text.primary, fontWeight: 700, fontSize: { xs: '1.1rem', md: '1.25rem' }, letterSpacing: '-0.02em' }}>
                   Llamada
                 </Typography>
               </Box>
               <IconButton 
                 sx={{ 
-                  color: 'white',
-                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.15)' }
+                  color: theme.palette.text.secondary,
+                  transition: 'all 0.2s ease',
+                  '&:hover': { 
+                    backgroundColor: theme.palette.action.hover,
+                    color: theme.palette.text.primary,
+                    transform: 'rotate(90deg)',
+                  }
                 }} 
-                size="small" 
+                size="medium" 
                 onClick={() => setCallOpen(false)}
               >
-                <Close fontSize="small" />
+                <Close />
               </IconButton>
             </Box>
 
-            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: { xs: 2, md: 3 }, overflow: 'hidden', overflowY: 'auto', bgcolor: '#fafafa' }}>
+            <Box sx={{ 
+              flexGrow: 1, 
+              display: 'flex', 
+              flexDirection: 'column', 
+              p: { xs: 3, md: 4 }, 
+              overflow: 'hidden', 
+              overflowY: 'auto',
+              gap: 3,
+              '&::-webkit-scrollbar': {
+                width: '8px',
+              },
+              '&::-webkit-scrollbar-track': {
+                backgroundColor: 'transparent',
+                borderRadius: '4px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                backgroundColor: theme.palette.mode === 'dark' 
+                  ? 'rgba(255,255,255,0.2)' 
+                  : 'rgba(0,0,0,0.2)',
+                borderRadius: '4px',
+                '&:hover': {
+                  backgroundColor: theme.palette.mode === 'dark' 
+                    ? 'rgba(255,255,255,0.3)' 
+                    : 'rgba(0,0,0,0.3)',
+                },
+                transition: 'background-color 0.2s ease',
+              },
+            }}>
               <TextField
                 label="Asunto"
                 value={callData.subject}
@@ -6954,12 +6674,25 @@ const CompanyDetail: React.FC = () => {
                 required
                 fullWidth
                 sx={{ 
-                  mb: 2.5,
-                  bgcolor: 'white',
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
+                    borderRadius: 2,
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '& fieldset': {
+                      borderWidth: '2px',
+                      borderColor: theme.palette.divider,
+                    },
+                    '&:hover fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                    },
                     '&.Mui-focused fieldset': {
-                      borderColor: taxiMonterricoColors.orange,
+                      borderColor: taxiMonterricoColors.green,
+                      borderWidth: '2px',
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    fontWeight: 500,
+                    '&.Mui-focused': {
+                      color: taxiMonterricoColors.green,
                     },
                   },
                 }}
@@ -6971,12 +6704,25 @@ const CompanyDetail: React.FC = () => {
                 onChange={(e) => setCallData({ ...callData, duration: e.target.value })}
                 fullWidth
                 sx={{ 
-                  mb: 2.5,
-                  bgcolor: 'white',
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
+                    borderRadius: 2,
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '& fieldset': {
+                      borderWidth: '2px',
+                      borderColor: theme.palette.divider,
+                    },
+                    '&:hover fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                    },
                     '&.Mui-focused fieldset': {
-                      borderColor: taxiMonterricoColors.orange,
+                      borderColor: taxiMonterricoColors.green,
+                      borderWidth: '2px',
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    fontWeight: 500,
+                    '&.Mui-focused': {
+                      color: taxiMonterricoColors.green,
                     },
                   },
                 }}
@@ -6984,33 +6730,60 @@ const CompanyDetail: React.FC = () => {
               <TextField
                 label="Notas de la llamada"
                 multiline
-                rows={10}
+                rows={8}
                 value={callData.description}
                 onChange={(e) => setCallData({ ...callData, description: e.target.value })}
                 fullWidth
                 sx={{ 
-                  mb: 2,
-                  bgcolor: 'white',
                   '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
+                    borderRadius: 2,
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '& fieldset': {
+                      borderWidth: '2px',
+                      borderColor: theme.palette.divider,
+                    },
+                    '&:hover fieldset': {
+                      borderColor: taxiMonterricoColors.green,
+                    },
                     '&.Mui-focused fieldset': {
-                      borderColor: taxiMonterricoColors.orange,
+                      borderColor: taxiMonterricoColors.green,
+                      borderWidth: '2px',
+                    },
+                  },
+                  '& .MuiInputLabel-root': {
+                    fontWeight: 500,
+                    '&.Mui-focused': {
+                      color: taxiMonterricoColors.green,
                     },
                   },
                 }}
               />
             </Box>
 
-            <Box sx={{ p: 2.5, borderTop: '1px solid #e0e0e0', backgroundColor: 'white', display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
+            <Box sx={{ 
+              p: 3, 
+              borderTop: `1px solid ${theme.palette.divider}`, 
+              backgroundColor: theme.palette.background.paper, 
+              display: 'flex', 
+              justifyContent: 'flex-end', 
+              gap: 2 
+            }}>
               <Button 
                 onClick={() => setCallOpen(false)} 
+                variant="outlined"
                 sx={{ 
                   textTransform: 'none',
-                  color: '#757575',
-                  fontWeight: 500,
-                  px: 2.5,
+                  color: theme.palette.text.secondary,
+                  borderColor: theme.palette.divider,
+                  fontWeight: 600,
+                  px: 3,
+                  py: 1,
+                  borderRadius: 2,
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:hover': {
-                    bgcolor: '#f5f5f5',
+                    bgcolor: theme.palette.action.hover,
+                    borderColor: theme.palette.text.secondary,
+                    transform: 'translateY(-1px)',
                   },
                 }}
               >
@@ -7022,17 +6795,26 @@ const CompanyDetail: React.FC = () => {
                 disabled={saving || !callData.subject.trim()}
                 sx={{ 
                   textTransform: 'none',
-                  bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.orange,
-                  fontWeight: 500,
-                  px: 3,
-                  boxShadow: saving ? 'none' : `0 2px 8px ${taxiMonterricoColors.orange}30`,
+                  bgcolor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.green,
+                  color: 'white',
+                  fontWeight: 600,
+                  px: 4,
+                  py: 1,
+                  borderRadius: 2,
+                  boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.green}40`,
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:hover': {
-                    bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.orangeDark,
-                    boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.orange}40`,
+                    bgcolor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.greenDark,
+                    boxShadow: saving ? 'none' : `0 6px 16px ${taxiMonterricoColors.green}50`,
+                    transform: 'translateY(-2px)',
+                  },
+                  '&:active': {
+                    transform: 'translateY(0)',
                   },
                   '&.Mui-disabled': {
-                    bgcolor: '#bdbdbd',
-                    color: 'white',
+                    bgcolor: theme.palette.action.disabledBackground,
+                    color: theme.palette.action.disabled,
+                    boxShadow: 'none',
                   },
                 }}
               >
@@ -7047,8 +6829,8 @@ const CompanyDetail: React.FC = () => {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.1)',
-              zIndex: 1299,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 1499,
               animation: 'fadeIn 0.3s ease-out',
             }}
             onClick={() => setCallOpen(false)}
@@ -7085,7 +6867,7 @@ const CompanyDetail: React.FC = () => {
           }}
         >
           <Typography variant="h5" sx={{ color: theme.palette.text.primary, fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.02em' }}>
-            Tarea
+            {taskData.type === 'meeting' ? 'Reunión' : 'Tarea'}
           </Typography>
           <IconButton 
             sx={{ 
@@ -9327,6 +9109,178 @@ const CompanyDetail: React.FC = () => {
             {saving ? 'Guardando...' : 'Guardar'}
           </Button>
         </DialogActions>
+      </Dialog>
+
+      {/* Dialog para ver detalles de actividad expandida */}
+      <Dialog
+        open={!!expandedActivity}
+        onClose={() => setExpandedActivity(null)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            maxHeight: '90vh',
+          },
+        }}
+      >
+        {expandedActivity && (
+          <>
+            <Box
+              sx={{
+                backgroundColor: 'transparent',
+                color: theme.palette.text.primary,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                minHeight: 48,
+                px: 2,
+                pt: 1.5,
+                pb: 0.5,
+              }}
+            >
+              <Typography variant="h6" sx={{ color: theme.palette.text.primary, fontWeight: 700, fontSize: '1rem' }}>
+                {getActivityTypeLabel(expandedActivity.type)}
+              </Typography>
+              <IconButton
+                sx={{
+                  color: theme.palette.text.secondary,
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    backgroundColor: theme.palette.action.hover,
+                    color: theme.palette.text.primary,
+                  },
+                }}
+                size="medium"
+                onClick={() => setExpandedActivity(null)}
+              >
+                <Close />
+              </IconButton>
+            </Box>
+
+            <DialogContent sx={{ px: 2, pb: 1, pt: 0.5 }}>
+              {/* Título */}
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
+                  Título
+                </Typography>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                  {expandedActivity.subject || expandedActivity.title}
+                </Typography>
+              </Box>
+
+              {/* Descripción */}
+              {expandedActivity.description && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
+                    Descripción
+                  </Typography>
+                  <Box
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 1,
+                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
+                      border: `1px solid ${theme.palette.divider}`,
+                      fontSize: '0.875rem',
+                      lineHeight: 1.6,
+                      '& *': {
+                        margin: 0,
+                      },
+                    }}
+                    dangerouslySetInnerHTML={{ __html: expandedActivity.description }}
+                  />
+                </Box>
+              )}
+
+              <Divider sx={{ my: 2 }} />
+
+              {/* Campos adicionales en grid */}
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
+                {/* Fecha de vencimiento */}
+                {expandedActivity.dueDate && (
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
+                      Fecha de vencimiento
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                      {new Date(expandedActivity.dueDate).toLocaleDateString('es-ES', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Prioridad */}
+                {expandedActivity.priority && (
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
+                      Prioridad
+                    </Typography>
+                    <Chip
+                      label={expandedActivity.priority === 'low' ? 'Baja' : expandedActivity.priority === 'medium' ? 'Media' : expandedActivity.priority === 'high' ? 'Alta' : expandedActivity.priority === 'urgent' ? 'Urgente' : expandedActivity.priority}
+                      size="small"
+                      sx={{
+                        bgcolor: expandedActivity.priority === 'urgent' ? '#f44336' : expandedActivity.priority === 'high' ? '#ff9800' : expandedActivity.priority === 'medium' ? '#ffc107' : '#4caf50',
+                        color: 'white',
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
+                      }}
+                    />
+                  </Box>
+                )}
+
+                {/* Estado */}
+                {expandedActivity.status && (
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
+                      Estado
+                    </Typography>
+                    <Chip
+                      label={expandedActivity.status === 'pending' ? 'Pendiente' : expandedActivity.status === 'in_progress' ? 'En progreso' : expandedActivity.status === 'completed' ? 'Completada' : expandedActivity.status}
+                      size="small"
+                      sx={{
+                        bgcolor: expandedActivity.status === 'completed' ? taxiMonterricoColors.green : expandedActivity.status === 'in_progress' ? '#2196f3' : theme.palette.action.disabledBackground,
+                        color: expandedActivity.status === 'completed' ? 'white' : theme.palette.text.primary,
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
+                      }}
+                    />
+                  </Box>
+                )}
+
+                {/* Usuario asignado */}
+                {expandedActivity.User && (
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
+                      Asignado a
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                      {expandedActivity.User.firstName} {expandedActivity.User.lastName}
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* Fecha de creación */}
+                {expandedActivity.createdAt && (
+                  <Box>
+                    <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
+                      Creado
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
+                      {new Date(expandedActivity.createdAt).toLocaleDateString('es-ES', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric',
+                      })}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </DialogContent>
+          </>
+        )}
       </Dialog>
     </Box>
   );

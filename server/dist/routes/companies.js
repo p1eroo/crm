@@ -188,7 +188,27 @@ router.put('/:id', async (req, res) => {
         if (!company) {
             return res.status(404).json({ error: 'Empresa no encontrada' });
         }
-        await company.update(req.body);
+        // Preparar los datos para actualizar, manejando campos especiales
+        const updateData = { ...req.body };
+        // Si leadSource viene, asegurarse de que se mapee correctamente
+        if (updateData.leadSource !== undefined) {
+            updateData.leadSource = updateData.leadSource || null;
+        }
+        // Si estimatedRevenue viene como string vacío o null, convertirlo a null
+        if (updateData.estimatedRevenue !== undefined) {
+            if (updateData.estimatedRevenue === '' || updateData.estimatedRevenue === null) {
+                updateData.estimatedRevenue = null;
+            }
+            else if (typeof updateData.estimatedRevenue === 'string') {
+                const parsed = parseFloat(updateData.estimatedRevenue);
+                updateData.estimatedRevenue = isNaN(parsed) ? null : parsed;
+            }
+        }
+        // Si email viene como string vacío, convertirlo a null
+        if (updateData.email !== undefined && updateData.email === '') {
+            updateData.email = null;
+        }
+        await company.update(updateData);
         const updatedCompany = await Company_1.Company.findByPk(company.id, {
             include: [
                 { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
@@ -197,6 +217,9 @@ router.put('/:id', async (req, res) => {
         res.json(updatedCompany);
     }
     catch (error) {
+        console.error('Error updating company:', error);
+        console.error('Error stack:', error.stack);
+        console.error('Request body:', req.body);
         res.status(500).json({ error: error.message });
     }
 });
