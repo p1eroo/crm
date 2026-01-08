@@ -175,6 +175,7 @@ const Companies: React.FC = () => {
     correo: string;
     origenLead: string;
     etapa: string;
+    cr: string;
   }>({
     nombre: '',
     propietario: '',
@@ -182,6 +183,7 @@ const Companies: React.FC = () => {
     correo: '',
     origenLead: '',
     etapa: '',
+    cr: '',
   });
   const [showColumnFilters, setShowColumnFilters] = useState(false);
 
@@ -1650,6 +1652,21 @@ const Companies: React.FC = () => {
         const stageLabel = getStageLabel(company.lifecycleStage || 'lead');
         if (!stageLabel.toLowerCase().includes(columnFilters.etapa.toLowerCase())) return false;
       }
+      if (columnFilters.cr) {
+        const filterValue = columnFilters.cr.toLowerCase().trim();
+        const isRecoveredClient = (company as any).isRecoveredClient || false;
+        
+        // Verificar si el filtro busca "sí" o "no"
+        const buscaSi = ['sí', 'si', 'yes', 's', '1', 'x', '✓', 'true'].includes(filterValue);
+        const buscaNo = ['no', 'not', '0', 'false', 'n'].includes(filterValue);
+        
+        if (buscaSi && !isRecoveredClient) return false;
+        if (buscaNo && isRecoveredClient) return false;
+        if (!buscaSi && !buscaNo) {
+          // Si no coincide con ningún patrón conocido, no filtrar
+          return true;
+        }
+      }
       
       // Filtro por búsqueda
       if (!search) return true;
@@ -1899,9 +1916,17 @@ const Companies: React.FC = () => {
               sx={{ height: 24, fontSize: '0.7rem' }}
             />
           )}
+          {columnFilters.cr && (
+            <Chip
+              size="small"
+              label={`C.R.: "${columnFilters.cr}"`}
+              onDelete={() => setColumnFilters(prev => ({ ...prev, cr: '' }))}
+              sx={{ height: 24, fontSize: '0.7rem' }}
+            />
+          )}
           <Button
             size="small"
-            onClick={() => setColumnFilters({ nombre: '', propietario: '', telefono: '', correo: '', origenLead: '', etapa: '' })}
+            onClick={() => setColumnFilters({ nombre: '', propietario: '', telefono: '', correo: '', origenLead: '', etapa: '', cr: '' })}
             sx={{ 
               fontSize: '0.7rem', 
               textTransform: 'none',
@@ -1938,12 +1963,31 @@ const Companies: React.FC = () => {
               boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
             }}
           >
-            <Box sx={{ 
-              ...pageStyles.tableHeaderCell, 
-              px: 0,
-              justifyContent: 'flex-start'
-            }}>
-                  C.R.
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>C.R.</Typography>
+                {showColumnFilters && (
+                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, cr: '' }))} sx={{ p: 0.25, opacity: columnFilters.cr ? 1 : 0.3 }}>
+                    <FilterList sx={{ fontSize: 14 }} />
+                  </IconButton>
+                )}
+              </Box>
+              {showColumnFilters && (
+                <TextField
+                  size="small"
+                  placeholder="Filtrar... (Sí/No)"
+                  value={columnFilters.cr}
+                  onChange={(e) => setColumnFilters(prev => ({ ...prev, cr: e.target.value }))}
+                  sx={{ 
+                    width: '100%',
+                    '& .MuiOutlinedInput-root': { 
+                      height: 28, 
+                      fontSize: '0.75rem',
+                      bgcolor: theme.palette.background.paper,
+                    },
+                  }}
+                />
+              )}
             </Box>
             <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
