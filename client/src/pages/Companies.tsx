@@ -116,6 +116,7 @@ const Companies: React.FC = () => {
     total: 0,
     success: 0,
     errors: 0,
+    errorList: [] as Array<{ name: string; error: string }>,
   });
   const nameValidationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const rucValidationTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -590,7 +591,18 @@ const Companies: React.FC = () => {
 
   const fetchCompanies = useCallback(async () => {
     try {
-      const params = search ? { search } : {};
+      setLoading(true);
+      const params: any = {};
+      
+      if (search) {
+        // Con búsqueda: usar límite normal del servidor
+        params.search = search;
+        params.limit = 50;
+      } else {
+        // Sin búsqueda: cargar todas las empresas (hasta 40,000)
+        params.limit = 40000;
+      }
+      
       const response = await api.get('/companies', { params });
       setCompanies(response.data.companies || response.data);
     } catch (error) {
@@ -744,13 +756,89 @@ const Companies: React.FC = () => {
     return foundUser ? foundUser.id : null;
   };
 
+  // Función para traducir mensajes de error al español
+  const translateError = (errorMessage: string): string => {
+    const errorLower = errorMessage.toLowerCase();
+    
+    // Errores de validación de lifecycleStage
+    if (errorLower.includes('lifecyclestage') || errorLower.includes('lifecycle stage')) {
+      if (errorLower.includes('must be one of')) {
+        return 'Etapa de ciclo de vida no válida. Debe ser una de: lead, contacto, reunión agendada, reunión efectiva, propuesta económica, negociación, licitación, licitación etapa final, cierre ganado, cierre perdido, firma contrato, activo, cliente perdido, lead inactivo';
+      }
+      return 'Etapa de ciclo de vida no válida';
+    }
+    
+    // Errores de ownerId
+    if (errorLower.includes('ownerid') || errorLower.includes('owner id')) {
+      if (errorLower.includes('must be a valid integer') || errorLower.includes('invalid integer')) {
+        return 'El propietario debe ser un número válido';
+      }
+      if (errorLower.includes('foreign key') || errorLower.includes('constraint')) {
+        return 'El propietario especificado no existe';
+      }
+      return 'Error en el campo propietario';
+    }
+    
+    // Errores de estimatedRevenue
+    if (errorLower.includes('estimatedrevenue') || errorLower.includes('estimated revenue')) {
+      if (errorLower.includes('invalid value') || errorLower.includes('cannot convert')) {
+        return 'El valor del potencial de facturación estimado no es válido. Debe ser un número';
+      }
+      return 'Error en el potencial de facturación estimado';
+    }
+    
+    // Errores de nombre
+    if (errorLower.includes('name') && errorLower.includes('cannot be null')) {
+      return 'El nombre de la empresa es requerido';
+    }
+    
+    // Errores de RUC
+    if (errorLower.includes('ruc')) {
+      if (errorLower.includes('duplicate') || errorLower.includes('ya existe')) {
+        return 'Ya existe una empresa con este RUC';
+      }
+      return 'Error en el campo RUC';
+    }
+    
+    // Errores de email
+    if (errorLower.includes('email') || errorLower.includes('correo')) {
+      if (errorLower.includes('invalid') || errorLower.includes('no válido')) {
+        return 'El formato del correo electrónico no es válido';
+      }
+      return 'Error en el campo correo electrónico';
+    }
+    
+    // Errores de foreign key
+    if (errorLower.includes('foreign key') || errorLower.includes('constraint')) {
+      return 'Error de referencia: uno de los valores relacionados no existe';
+    }
+    
+    // Errores de validación general
+    if (errorLower.includes('validation error')) {
+      return 'Error de validación en los datos proporcionados';
+    }
+    
+    // Errores de tipo de dato
+    if (errorLower.includes('cannot convert') || errorLower.includes('invalid value')) {
+      return 'El valor proporcionado no es del tipo correcto';
+    }
+    
+    // Errores de conexión
+    if (errorLower.includes('network') || errorLower.includes('timeout') || errorLower.includes('connection')) {
+      return 'Error de conexión con el servidor. Por favor, intenta nuevamente';
+    }
+    
+    // Si el mensaje ya está en español o no coincide con ningún patrón, devolverlo tal cual
+    return errorMessage;
+  };
+
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     setImporting(true);
     setImportProgressOpen(true);
-    setImportProgress({ current: 0, total: 0, success: 0, errors: 0 });
+    setImportProgress({ current: 0, total: 0, success: 0, errors: 0, errorList: [] });
     
     try {
       // Asegurar que los usuarios estén cargados antes de procesar
@@ -805,21 +893,45 @@ const Companies: React.FC = () => {
         try {
           await api.post('/companies', companyData);
           successCount++;
-          setImportProgress({
+          setImportProgress(prev => ({
+            ...prev,
             current: i + 1,
             total: companiesToCreate.length,
             success: successCount,
             errors: errorCount,
-          });
-        } catch (error) {
+          }));
+        } catch (error: any) {
           console.error('Error creating company:', error);
           errorCount++;
-          setImportProgress({
+          
+          // Capturar el mensaje de error de diferentes fuentes
+          let errorMessage = 'Error desconocido';
+          
+          if (error.response?.data?.error) {
+            // Error del backend (ya viene en español normalmente)
+            errorMessage = error.response.data.error;
+          } else if (error.errors && Array.isArray(error.errors) && error.errors.length > 0) {
+            // Errores de validación de Sequelize (múltiples errores)
+            errorMessage = error.errors.map((e: any) => translateError(e.message)).join(', ');
+          } else if (error.message) {
+            // Mensaje de error general - traducir
+            errorMessage = translateError(error.message);
+          } else if (error.original?.message) {
+            // Error original de la base de datos - traducir
+            errorMessage = translateError(error.original.message);
+          }
+          
+          setImportProgress(prev => ({
+            ...prev,
             current: i + 1,
             total: companiesToCreate.length,
             success: successCount,
             errors: errorCount,
-          });
+            errorList: [...prev.errorList, { 
+              name: companyData.name, 
+              error: errorMessage 
+            }],
+          }));
         }
       }
 
@@ -3664,7 +3776,7 @@ const Companies: React.FC = () => {
         onClose={() => {
           if (!importing && importProgress.current === importProgress.total) {
             setImportProgressOpen(false);
-            setImportProgress({ current: 0, total: 0, success: 0, errors: 0 });
+            setImportProgress({ current: 0, total: 0, success: 0, errors: 0, errorList: [] });
           }
         }}
         maxWidth="sm"
@@ -3715,9 +3827,34 @@ const Companies: React.FC = () => {
                     ✓ {importProgress.success} empresas creadas exitosamente
                   </Typography>
                   {importProgress.errors > 0 && (
-                    <Typography variant="body2" sx={{ color: theme.palette.error.main }}>
-                      ✗ {importProgress.errors} empresas con errores
-                    </Typography>
+                    <Box sx={{ mt: 2 }}>
+                      <Typography variant="body2" sx={{ color: theme.palette.error.main, mb: 1 }}>
+                        ✗ {importProgress.errors} empresas con errores:
+                      </Typography>
+                      <Box sx={{ 
+                        maxHeight: 200, 
+                        overflowY: 'auto', 
+                        pl: 2,
+                        border: `1px solid ${theme.palette.error.light}`,
+                        borderRadius: 1,
+                        p: 1,
+                        bgcolor: theme.palette.error.light + '10'
+                      }}>
+                        {importProgress.errorList.map((err, index) => (
+                          <Typography 
+                            key={index} 
+                            variant="caption" 
+                            sx={{ 
+                              color: theme.palette.error.main, 
+                              display: 'block',
+                              mb: 0.5
+                            }}
+                          >
+                            • <strong>{err.name}</strong>: {err.error}
+                          </Typography>
+                        ))}
+                      </Box>
+                    </Box>
                   )}
                 </Box>
               </Box>
@@ -3729,7 +3866,7 @@ const Companies: React.FC = () => {
             <Button 
               onClick={() => {
                 setImportProgressOpen(false);
-                setImportProgress({ current: 0, total: 0, success: 0, errors: 0 });
+                setImportProgress({ current: 0, total: 0, success: 0, errors: 0, errorList: [] });
               }}
               variant="contained"
               sx={{
