@@ -766,14 +766,14 @@ const Companies: React.FC = () => {
 
       // Procesar cada fila y crear empresas
       const companiesToCreate = jsonData.map((row) => {
-        const propietarioName = (row['Propietario'] || '').toString().trim();
+        const propietarioName = (row['Propietario'] || row['Asesor'] || '').toString().trim();
         const ownerId = propietarioName ? findUserByName(propietarioName) : null;
 
         const crValue = (row['C.R.'] || row['Cliente Recuperado'] || '').toString().trim().toLowerCase();
         const isRecoveredClient = crValue === 'sí' || crValue === 'si' || crValue === 'yes' || crValue === 'true' || crValue === '1' || crValue === 'x' || crValue === '✓';
 
         return {
-          name: (row['Nombre'] || '').toString().trim() || 'Sin nombre',
+          name: (row['Nombre'] || row['Contacto'] || '').toString().trim() || 'Sin nombre',
           domain: (row['Dominio'] || '').toString().trim() || undefined,
           companyname: (row['Razón social'] || '').toString().trim() || undefined,
           phone: (row['Teléfono'] || '').toString().trim() || undefined,

@@ -7996,7 +7996,7 @@ const ContactDetail: React.FC = () => {
                     },
                   }}
                 />
-              </Box>
+              </Box> 
             </Box>
           <Divider sx={{ my: 1.5 }} />
           <Box sx={{ position: 'relative' }}>
