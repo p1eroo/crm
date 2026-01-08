@@ -893,12 +893,16 @@ const Companies: React.FC = () => {
         try {
           await api.post('/companies', companyData);
           successCount++;
+          // Capturar valores actuales para evitar problemas de closure
+          const currentSuccess = successCount;
+          const currentErrors = errorCount;
+          const currentIndex = i + 1;
           setImportProgress(prev => ({
             ...prev,
-            current: i + 1,
+            current: currentIndex,
             total: companiesToCreate.length,
-            success: successCount,
-            errors: errorCount,
+            success: currentSuccess,
+            errors: currentErrors,
           }));
         } catch (error: any) {
           console.error('Error creating company:', error);
@@ -921,14 +925,20 @@ const Companies: React.FC = () => {
             errorMessage = translateError(error.original.message);
           }
           
+          // Capturar valores actuales para evitar problemas de closure
+          const currentSuccess = successCount;
+          const currentErrors = errorCount;
+          const currentIndex = i + 1;
+          const companyName = companyData.name || companyData.companyname || 'Empresa sin nombre';
+          
           setImportProgress(prev => ({
             ...prev,
-            current: i + 1,
+            current: currentIndex,
             total: companiesToCreate.length,
-            success: successCount,
-            errors: errorCount,
+            success: currentSuccess,
+            errors: currentErrors,
             errorList: [...prev.errorList, { 
-              name: companyData.name, 
+              name: companyName, 
               error: errorMessage 
             }],
           }));
