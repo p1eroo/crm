@@ -14,6 +14,7 @@ export { Payment } from './Payment';
 export { ContactCompany } from './ContactCompany';
 export { DealContact } from './DealContact';
 export { DealCompany } from './DealCompany';
+export { DealDeal } from './DealDeal';
 export { MonthlyBudget } from './MonthlyBudget';
 export { UserGoogleToken } from './UserGoogleToken';
 
@@ -27,6 +28,7 @@ import './Contact';
 import './ContactCompany';
 import './DealContact';
 import './DealCompany';
+import './DealDeal';
 // Luego los demás modelos
 import './Deal';
 import './Task';
@@ -43,6 +45,7 @@ import './UserGoogleToken';
 import { Contact } from './Contact';
 import { Company } from './Company';
 import { Deal } from './Deal';
+import { DealDeal } from './DealDeal';
 
 // Inicializar relaciones muchos-a-muchos
 Contact.belongsToMany(Company, { 
@@ -85,6 +88,22 @@ Company.belongsToMany(Deal, {
   foreignKey: 'companyId',
   otherKey: 'dealId',
   as: 'Deals'
+});
+
+// Relación muchos-a-muchos entre Deal y Deal
+Deal.belongsToMany(Deal, {
+  through: DealDeal,
+  foreignKey: 'dealId',
+  otherKey: 'relatedDealId',
+  as: 'Deals'
+});
+
+// Relación inversa para obtener negocios que están vinculados CON este deal
+Deal.belongsToMany(Deal, {
+  through: DealDeal,
+  foreignKey: 'relatedDealId',
+  otherKey: 'dealId',
+  as: 'RelatedDeals'
 });
 
 

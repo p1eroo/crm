@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -23,15 +23,8 @@ import {
   Alert,
   Checkbox,
   InputAdornment,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Tooltip,
   Card,
-  CardContent,
   useTheme,
   Popover,
   Drawer,
@@ -41,7 +34,7 @@ import {
   ListItemButton,
   ListItemText,
   InputBase,
-} from '@mui/material';
+} from "@mui/material";
 import {
   MoreVert,
   Note,
@@ -49,22 +42,12 @@ import {
   Phone,
   Assignment,
   Event,
-  Comment,
   Link as LinkIcon,
-  ExpandMore,
   Close,
   KeyboardArrowDown,
   Search,
-  ContentCopy,
   KeyboardArrowRight,
-  Lock,
-  Edit,
-  PushPin,
   History,
-  Delete,
-  CheckCircle,
-  Support,
-  AttachMoney,
   CalendarToday,
   ChevronLeft,
   ChevronRight,
@@ -91,16 +74,27 @@ import {
   DonutSmall,
   Person,
   Business,
-} from '@mui/icons-material';
-import api from '../config/api';
-import RichTextEditor from '../components/RichTextEditor';
-import EmailComposer from '../components/EmailComposer';
-import { taxiMonterricoColors } from '../theme/colors';
-import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
-import contactLogo from '../assets/contact.png';
-import { formatDatePeru } from '../utils/dateUtils';
-import empresaLogo from '../assets/empresa.png';
+} from "@mui/icons-material";
+import api from "../config/api";
+import RichTextEditor from "../components/RichTextEditor";
+import EmailComposer from "../components/EmailComposer";
+import { taxiMonterricoColors } from "../theme/colors";
+import {
+  RecentActivitiesCard,
+  LinkedCompaniesCard,
+  LinkedDealsCard,
+  LinkedTicketsCard,
+  FullCompaniesTableCard,
+  FullDealsTableCard,
+  FullTicketsTableCard,
+  FullActivitiesTableCard,
+  ActivityDetailDialog,
+  ActivitiesTabContent,
+} from "../components/DetailCards";
+import { useAuth } from "../context/AuthContext";
+import axios from "axios";
+import { formatDatePeru } from "../utils/dateUtils";
+import contactLogo from "../assets/contact.png";
 
 interface ContactDetailData {
   id: number;
@@ -148,13 +142,12 @@ interface ContactDetailData {
   };
 }
 
-
 const ContactDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const [contact, setContact] = useState<ContactDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
@@ -167,102 +160,91 @@ const ContactDetail: React.FC = () => {
   const [activities, setActivities] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
-  
+
   // Estados para búsquedas y filtros
-  const [activitySearch, setActivitySearch] = useState('');
-  const [companySearch, setCompanySearch] = useState('');
-  const [dealSearch, setDealSearch] = useState('');
-  const [ticketSearch, setTicketSearch] = useState('');
-  const [companyActionsMenu, setCompanyActionsMenu] = useState<{ [key: number]: HTMLElement | null }>({});
+  const [activitySearch, setActivitySearch] = useState("");
+  const [companySearch, setCompanySearch] = useState("");
+  const [dealSearch, setDealSearch] = useState("");
+  const [ticketSearch, setTicketSearch] = useState("");
   const [isRemovingCompany] = useState(false);
-  const [activityFilterMenuAnchor, setActivityFilterMenuAnchor] = useState<null | HTMLElement>(null);
-  const [activityFilterSearch, setActivityFilterSearch] = useState('');
-  const [timeRangeMenuAnchor, setTimeRangeMenuAnchor] = useState<null | HTMLElement>(null);
-  const [timeRangeSearch, setTimeRangeSearch] = useState('');
-  const [selectedTimeRange, setSelectedTimeRange] = useState<string>('Todo hasta ahora');
-  
-  // Estados para los filtros de actividad
-  const [communicationFilters, setCommunicationFilters] = useState({
-    all: true,
-    postal: true,
-    email: true,
-    linkedin: true,
-    calls: true,
-    sms: true,
-    whatsapp: true,
-  });
-  
-  const [teamActivityFilters, setTeamActivityFilters] = useState({
-    all: true,
-    notes: true,
-    meetings: true,
-    tasks: true,
-  });
-  
+
   // Estados para funcionalidades de notas y actividades
-  const [expandedNotes, setExpandedNotes] = useState<Set<number>>(new Set());
-  const [expandedActivities, setExpandedActivities] = useState<Set<number>>(new Set());
-  const [noteActionMenus, setNoteActionMenus] = useState<{ [key: number]: HTMLElement | null }>({});
-  const [completedActivities, setCompletedActivities] = useState<{ [key: number]: boolean }>({});
-  const [selectedActivityTypes, setSelectedActivityTypes] = useState<string[]>([]);
+  const [completedActivities, setCompletedActivities] = useState<{
+    [key: number]: boolean;
+  }>({});
   const [expandedActivity, setExpandedActivity] = useState<any>(null);
-  // const [dealSortOrder] = useState<'asc' | 'desc'>('asc');
-  // const [dealSortField] = useState<string>('');
-  // const [companySortOrder] = useState<'asc' | 'desc'>('asc');
-  // const [companySortField] = useState<string>('');
+  const [dealSortOrder, setDealSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [dealSortField, setDealSortField] = useState<'name' | 'amount' | 'closeDate' | 'stage' | undefined>(undefined);
+  const [companySortOrder, setCompanySortOrder] = useState<'asc' | 'desc'>('asc');
+  const [companySortField, setCompanySortField] = useState<'name' | 'domain' | 'phone' | undefined>(undefined);
   
+  // Estados para diálogos de eliminación
+  const [removeCompanyDialogOpen, setRemoveCompanyDialogOpen] = useState(false);
+  const [removeDealDialogOpen, setRemoveDealDialogOpen] = useState(false);
+  const [removeTicketDialogOpen, setRemoveTicketDialogOpen] = useState(false);
+  const [companyToRemove, setCompanyToRemove] = useState<{ id: number; name: string } | null>(null);
+  const [dealToRemove, setDealToRemove] = useState<{ id: number; name: string } | null>(null);
+  const [ticketToRemove, setTicketToRemove] = useState<{ id: number; name: string } | null>(null);
+
   // Estados para diálogos
   const [addCompanyOpen, setAddCompanyOpen] = useState(false);
   const [addDealOpen, setAddDealOpen] = useState(false);
   const [addTicketOpen, setAddTicketOpen] = useState(false);
-  const [createActivityMenuAnchor, setCreateActivityMenuAnchor] = useState<null | HTMLElement>(null);
-  const [companyFormData, setCompanyFormData] = useState({ 
-    name: '', 
-    domain: '', 
-    phone: '', 
-    companyname: '', 
-    lifecycleStage: 'lead',
-    ruc: '',
-    address: '',
-    city: '',
-    state: '',
-    country: '',
+  const [, setCreateActivityMenuAnchor] =
+    useState<null | HTMLElement>(null);
+  const [companyFormData, setCompanyFormData] = useState({
+    name: "",
+    domain: "",
+    phone: "",
+    companyname: "",
+    lifecycleStage: "lead",
+    ruc: "",
+    address: "",
+    city: "",
+    state: "",
+    country: "",
   });
-  const [companyDialogTab, setCompanyDialogTab] = useState<'create' | 'existing'>('create');
-  const [existingCompaniesSearch, setExistingCompaniesSearch] = useState('');
-  const [selectedExistingCompanies, setSelectedExistingCompanies] = useState<number[]>([]);
+  const [companyDialogTab, setCompanyDialogTab] = useState<
+    "create" | "existing"
+  >("create");
+  const [existingCompaniesSearch, setExistingCompaniesSearch] = useState("");
+  const [selectedExistingCompanies, setSelectedExistingCompanies] = useState<
+    number[]
+  >([]);
   const [loadingRuc, setLoadingRuc] = useState(false);
-  const [rucError, setRucError] = useState('');
-  const [dealFormData, setDealFormData] = useState({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'baja' as 'baja' | 'media' | 'alta', companyId: '', contactId: '' });
-  const [ticketFormData, setTicketFormData] = useState({ subject: '', description: '', status: 'new', priority: 'medium' });
-  
+  const [rucError, setRucError] = useState("");
+  const [dealFormData, setDealFormData] = useState({
+    name: "",
+    amount: "",
+    stage: "lead",
+    closeDate: "",
+    priority: "baja" as "baja" | "media" | "alta",
+    companyId: "",
+    contactId: "",
+  });
+  const [ticketFormData, setTicketFormData] = useState({
+    subject: "",
+    description: "",
+    status: "new",
+    priority: "medium",
+  });
+
   // Estados para asociaciones en nota
-  const [selectedAssociations, setSelectedAssociations] = useState<number[]>([]);
+  const [selectedAssociations, setSelectedAssociations] = useState<number[]>(
+    []
+  );
   const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
   const [selectedCompanies, setSelectedCompanies] = useState<number[]>([]);
   const [allCompanies, setAllCompanies] = useState<any[]>([]);
   const [allContacts, setAllContacts] = useState<any[]>([]);
-  const [, setEmailValue] = useState('');
-  const [, setPhoneValue] = useState('');
-  const [, setCompanyValue] = useState('');
+  const [, setEmailValue] = useState("");
+  const [, setPhoneValue] = useState("");
+  const [, setCompanyValue] = useState("");
   // Estados para elementos excluidos (desmarcados manualmente aunque estén asociados)
   const [excludedCompanies, setExcludedCompanies] = useState<number[]>([]);
   const [excludedContacts, setExcludedContacts] = useState<number[]>([]);
-  
-  // Estados para asociaciones en actividades de Descripción (por actividad)
-  const [activityAssociationsExpanded, setActivityAssociationsExpanded] = useState<{ [key: number]: boolean }>({});
-  const [activitySelectedCategory, setActivitySelectedCategory] = useState<{ [key: number]: string }>({});
-  const [activityAssociationSearch, setActivityAssociationSearch] = useState<{ [key: number]: string }>({});
-  const [activitySelectedAssociations, setActivitySelectedAssociations] = useState<{ [key: number]: number[] }>({});
-  const [activitySelectedContacts, setActivitySelectedContacts] = useState<{ [key: number]: number[] }>({});
-  const [activitySelectedCompanies, setActivitySelectedCompanies] = useState<{ [key: number]: number[] }>({});
-  const [activitySelectedLeads] = useState<{ [key: number]: number[] }>({});
-  // Estados para elementos excluidos por actividad
-  const [activityExcludedCompanies, setActivityExcludedCompanies] = useState<{ [key: number]: number[] }>({});
-  const [activityExcludedDeals, setActivityExcludedDeals] = useState<{ [key: number]: number[] }>({});
-  const [activityExcludedTickets, setActivityExcludedTickets] = useState<{ [key: number]: number[] }>({});
-  const [activityExcludedContacts, setActivityExcludedContacts] = useState<{ [key: number]: number[] }>({});
-  
+
+
   // Estados para diálogos de acciones
   const [noteOpen, setNoteOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
@@ -270,13 +252,15 @@ const ContactDetail: React.FC = () => {
   const [taskOpen, setTaskOpen] = useState(false);
   const [meetingOpen, setMeetingOpen] = useState(false);
   const [noteAssociateModalOpen, setNoteAssociateModalOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('empresas');
-  const [associateSearch, setAssociateSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState("empresas");
+  const [associateSearch, setAssociateSearch] = useState("");
   const [noteModalCompanies, setNoteModalCompanies] = useState<any[]>([]);
   const [noteModalContacts, setNoteModalContacts] = useState<any[]>([]);
   const [noteModalDeals, setNoteModalDeals] = useState<any[]>([]);
   const [noteModalTickets, setNoteModalTickets] = useState<any[]>([]);
-  const [noteSelectedAssociations, setNoteSelectedAssociations] = useState<{ [key: string]: number[] }>({
+  const [noteSelectedAssociations, setNoteSelectedAssociations] = useState<{
+    [key: string]: number[];
+  }>({
     companies: [],
     contacts: [],
     deals: [],
@@ -284,59 +268,32 @@ const ContactDetail: React.FC = () => {
   });
   const [loadingAssociations, setLoadingAssociations] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [warningMessage, setWarningMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState("");
+  const [warningMessage, setWarningMessage] = useState("");
   const [emailConnectModalOpen, setEmailConnectModalOpen] = useState(false);
   const [connectingEmail, setConnectingEmail] = useState(false);
-  
-  // Función para calcular total de asociaciones por actividad (basado en selecciones y asociaciones automáticas)
-  const getActivityTotalAssociations = (activityId: number) => {
-    // Contactos seleccionados manualmente o el contacto actual si existe (excluyendo los desmarcados)
-    const contacts = activitySelectedContacts[activityId] || [];
-    const excludedContactsForActivity = activityExcludedContacts[activityId] || [];
-    const contactsCount = contacts.length > 0 ? contacts.length : ((contact?.id && !excludedContactsForActivity.includes(contact.id)) ? 1 : 0);
-    
-    // Empresas: seleccionadas manualmente + empresas asociadas automáticamente (excluyendo las desmarcadas)
-    const selectedCompaniesForActivity = activitySelectedCompanies[activityId] || [];
-    const excludedCompaniesForActivity = activityExcludedCompanies[activityId] || [];
-    const associatedCompanyIds = (associatedCompanies || [])
-      .map((c: any) => c && c.id)
-      .filter((id: any) => id !== undefined && id !== null && !excludedCompaniesForActivity.includes(id));
-    const allCompanyIdsForActivity = [...selectedCompaniesForActivity, ...associatedCompanyIds];
-    const companiesCount = allCompanyIdsForActivity.filter((id, index) => allCompanyIdsForActivity.indexOf(id) === index).length;
-    
-    // Leads seleccionados manualmente
-    const leads = activitySelectedLeads[activityId] || [];
-    
-    // Negocios: seleccionados manualmente + negocios asociados automáticamente (excluyendo los desmarcados)
-    const selectedDealIdsForActivity = (activitySelectedAssociations[activityId] || []).filter((id: number) => id > 1000 && id < 2000).map(id => id - 1000);
-    const excludedDealsForActivity = activityExcludedDeals[activityId] || [];
-    const associatedDealIds = (associatedDeals || [])
-      .map((d: any) => d && d.id)
-      .filter((id: any) => id !== undefined && id !== null && !excludedDealsForActivity.includes(id));
-    const allDealIdsForActivity = [...selectedDealIdsForActivity, ...associatedDealIds];
-    const dealsCount = allDealIdsForActivity.filter((id, index) => allDealIdsForActivity.indexOf(id) === index).length;
-    
-    // Tickets: seleccionados manualmente + tickets asociados automáticamente (excluyendo los desmarcados)
-    const selectedTicketIdsForActivity = (activitySelectedAssociations[activityId] || []).filter((id: number) => id > 2000).map(id => id - 2000);
-    const excludedTicketsForActivity = activityExcludedTickets[activityId] || [];
-    const associatedTicketIds = (associatedTickets || [])
-      .map((t: any) => t && t.id)
-      .filter((id: any) => id !== undefined && id !== null && !excludedTicketsForActivity.includes(id));
-    const allTicketIdsForActivity = [...selectedTicketIdsForActivity, ...associatedTicketIds];
-    const ticketsCount = allTicketIdsForActivity.filter((id, index) => allTicketIdsForActivity.indexOf(id) === index).length;
-    
-    return contactsCount + companiesCount + leads.length + dealsCount + ticketsCount;
-  };
-  
+
   // Estados para formularios
-  const [noteData, setNoteData] = useState({ subject: '', description: '' });
-  const [,] = useState({ subject: '', description: '', to: '' });
-  const [callData, setCallData] = useState({ subject: '', description: '', duration: '' });
-  const [taskData, setTaskData] = useState({ title: '', description: '', priority: 'medium', dueDate: '', type: 'todo' as string });
+  const [noteData, setNoteData] = useState({ subject: "", description: "" });
+  const [,] = useState({ subject: "", description: "", to: "" });
+  const [callData, setCallData] = useState({
+    subject: "",
+    description: "",
+    duration: "",
+  });
+  const [taskData, setTaskData] = useState({
+    title: "",
+    description: "",
+    priority: "medium",
+    dueDate: "",
+    type: "todo" as string,
+  });
   const descriptionEditorRef = React.useRef<HTMLDivElement>(null);
-  const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState<null | HTMLElement>(null);
-  const [actionsMenuAnchorEl, setActionsMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState<null | HTMLElement>(
+    null
+  );
+  const [actionsMenuAnchorEl, setActionsMenuAnchorEl] =
+    useState<null | HTMLElement>(null);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const imageInputRef = React.useRef<HTMLInputElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -348,10 +305,16 @@ const ContactDetail: React.FC = () => {
     unorderedList: false,
     orderedList: false,
   });
-  const [datePickerAnchorEl, setDatePickerAnchorEl] = useState<HTMLElement | null>(null);
+  const [datePickerAnchorEl, setDatePickerAnchorEl] =
+    useState<HTMLElement | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [meetingData, setMeetingData] = useState({ subject: '', description: '', date: '', time: '' });
+  const [meetingData, setMeetingData] = useState({
+    subject: "",
+    description: "",
+    date: "",
+    time: "",
+  });
   const [createFollowUpTask, setCreateFollowUpTask] = useState(false);
 
   // Ya no se necesitan estados de OAuth individual - se usa el token guardado desde Perfil
@@ -360,17 +323,20 @@ const ContactDetail: React.FC = () => {
     try {
       const response = await api.get(`/contacts/${id}`);
       setContact(response.data);
-      setEmailValue(response.data.email || '');
-      setPhoneValue(response.data.phone || '');
+      setEmailValue(response.data.email || "");
+      setPhoneValue(response.data.phone || "");
       // Usar Companies si está disponible, sino Company (compatibilidad)
-      const companies = (response.data.Companies && Array.isArray(response.data.Companies)) 
-        ? response.data.Companies 
-        : (response.data.Company ? [response.data.Company] : []);
-      setCompanyValue(companies.length > 0 ? companies[0].name : '');
+      const companies =
+        response.data.Companies && Array.isArray(response.data.Companies)
+          ? response.data.Companies
+          : response.data.Company
+          ? [response.data.Company]
+          : [];
+      setCompanyValue(companies.length > 0 ? companies[0].name : "");
       // Actualizar associatedCompanies también
       setAssociatedCompanies(companies);
     } catch (error) {
-      console.error('Error fetching contact:', error);
+      console.error("Error fetching contact:", error);
     } finally {
       setLoading(false);
     }
@@ -379,7 +345,7 @@ const ContactDetail: React.FC = () => {
   const fetchAssociatedRecords = useCallback(async () => {
     try {
       // Obtener deals asociados
-      const dealsResponse = await api.get('/deals', {
+      const dealsResponse = await api.get("/deals", {
         params: { contactId: id },
       });
       setAssociatedDeals(dealsResponse.data.deals || dealsResponse.data || []);
@@ -387,25 +353,29 @@ const ContactDetail: React.FC = () => {
       // Obtener empresas asociadas desde el contacto
       const contactResponse = await api.get(`/contacts/${id}`);
       const updatedContact = contactResponse.data;
-      
+
       // Si estamos removiendo una empresa, no actualizar el estado desde la base de datos
       // para evitar perder las empresas que están en el estado local
       if (!isRemovingCompany) {
         // Usar Companies (muchos-a-muchos) si está disponible, sino usar Company (compatibilidad)
-        const companies = (updatedContact?.Companies && Array.isArray(updatedContact.Companies))
-          ? updatedContact.Companies
-          : (updatedContact?.Company ? [updatedContact.Company] : []);
+        const companies =
+          updatedContact?.Companies && Array.isArray(updatedContact.Companies)
+            ? updatedContact.Companies
+            : updatedContact?.Company
+            ? [updatedContact.Company]
+            : [];
         setAssociatedCompanies(companies);
       }
 
       // Obtener actividades
-      const activitiesResponse = await api.get('/activities', {
+      const activitiesResponse = await api.get("/activities", {
         params: { contactId: id },
       });
-      const activitiesData = activitiesResponse.data.activities || activitiesResponse.data || [];
+      const activitiesData =
+        activitiesResponse.data.activities || activitiesResponse.data || [];
 
       // Obtener tareas asociadas al contacto
-      const tasksResponse = await api.get('/tasks', {
+      const tasksResponse = await api.get("/tasks", {
         params: { contactId: id },
       });
       const tasksData = tasksResponse.data.tasks || tasksResponse.data || [];
@@ -413,7 +383,7 @@ const ContactDetail: React.FC = () => {
       // Convertir tareas a formato de actividad para mostrarlas en la lista
       const tasksAsActivities = tasksData.map((task: any) => ({
         id: task.id,
-        type: task.type || 'task',
+        type: task.type || "task",
         subject: task.title,
         description: task.description,
         dueDate: task.dueDate,
@@ -426,34 +396,38 @@ const ContactDetail: React.FC = () => {
       }));
 
       // Combinar actividades y tareas, ordenadas por fecha de creación (más recientes primero)
-      const allActivities = [...activitiesData, ...tasksAsActivities].sort((a: any, b: any) => {
-        const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
-        const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
-        return dateB - dateA;
-      });
+      const allActivities = [...activitiesData, ...tasksAsActivities].sort(
+        (a: any, b: any) => {
+          const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
+          const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
+          return dateB - dateA;
+        }
+      );
 
       setActivities(allActivities);
 
       // Obtener tickets asociados
-      const ticketsResponse = await api.get('/tickets', {
+      const ticketsResponse = await api.get("/tickets", {
         params: { contactId: id },
       });
-      setAssociatedTickets(ticketsResponse.data.tickets || ticketsResponse.data || []);
+      setAssociatedTickets(
+        ticketsResponse.data.tickets || ticketsResponse.data || []
+      );
     } catch (error) {
-      console.error('Error fetching associated records:', error);
+      console.error("Error fetching associated records:", error);
     }
   }, [id, isRemovingCompany]);
 
   // Funciones helper para los logs
   const getActivityDescription = (activity: any) => {
     const typeMap: { [key: string]: string } = {
-      'note': 'Nota creada',
-      'email': 'Email enviado',
-      'call': 'Llamada registrada',
-      'meeting': 'Reunión agendada',
-      'task': 'Tarea creada',
+      note: "Nota creada",
+      email: "Email enviado",
+      call: "Llamada registrada",
+      meeting: "Reunión agendada",
+      task: "Tarea creada",
     };
-    return typeMap[activity.type] || 'Actividad creada';
+    return typeMap[activity.type] || "Actividad creada";
   };
 
   const getActivityIconType = (type: string) => {
@@ -466,52 +440,56 @@ const ContactDetail: React.FC = () => {
     try {
       // Obtener actividades y cambios del contacto
       const [activitiesResponse, contactResponse] = await Promise.all([
-        api.get('/activities', { params: { contactId: id } }),
-        api.get(`/contacts/${id}`)
+        api.get("/activities", { params: { contactId: id } }),
+        api.get(`/contacts/${id}`),
       ]);
-      
-      const activities = activitiesResponse.data.activities || activitiesResponse.data || [];
+
+      const activities =
+        activitiesResponse.data.activities || activitiesResponse.data || [];
       const contactData = contactResponse.data;
-      
+
       // Crear logs a partir de actividades y cambios
       const logs: any[] = [];
-      
+
       // Agregar actividades como logs
       activities.forEach((activity: any) => {
         logs.push({
           id: `activity-${activity.id}`,
           type: activity.type,
-          action: 'created',
+          action: "created",
           description: getActivityDescription(activity),
           user: activity.User,
           timestamp: activity.createdAt,
           iconType: getActivityIconType(activity.type),
         });
       });
-      
+
       // Agregar cambios en el contacto si hay updatedAt
-      if (contactData.updatedAt && contactData.createdAt !== contactData.updatedAt) {
+      if (
+        contactData.updatedAt &&
+        contactData.createdAt !== contactData.updatedAt
+      ) {
         logs.push({
           id: `contact-update-${contactData.id}`,
-          type: 'contact',
-          action: 'updated',
-          description: 'Información del contacto actualizada',
+          type: "contact",
+          action: "updated",
+          description: "Información del contacto actualizada",
           user: contactData.Owner,
           timestamp: contactData.updatedAt,
-          iconType: 'contact',
+          iconType: "contact",
         });
       }
-      
+
       // Ordenar por fecha (más recientes primero)
       logs.sort((a, b) => {
         const dateA = new Date(a.timestamp || 0).getTime();
         const dateB = new Date(b.timestamp || 0).getTime();
         return dateB - dateA;
       });
-      
+
       setActivityLogs(logs.slice(0, 10)); // Mostrar solo los últimos 10
     } catch (error) {
-      console.error('Error fetching activity logs:', error);
+      console.error("Error fetching activity logs:", error);
     } finally {
       setLoadingLogs(false);
     }
@@ -542,54 +520,71 @@ const ContactDetail: React.FC = () => {
   useEffect(() => {
     // Inicializar empresas seleccionadas con las empresas asociadas
     if (associatedCompanies.length > 0) {
-      const companyIds = associatedCompanies.map((c: any) => c && c.id).filter((id: any) => id !== undefined && id !== null);
+      const companyIds = associatedCompanies
+        .map((c: any) => c && c.id)
+        .filter((id: any) => id !== undefined && id !== null);
       if (companyIds.length > 0) {
-        setSelectedCompanies(prev => {
+        setSelectedCompanies((prev) => {
           // Combinar con las existentes para no perder selecciones manuales, eliminando duplicados
           const combined = [...prev, ...companyIds];
-          const unique = combined.filter((id, index) => combined.indexOf(id) === index);
+          const unique = combined.filter(
+            (id, index) => combined.indexOf(id) === index
+          );
           // Solo actualizar si hay cambios para evitar loops infinitos
-          if (unique.length !== prev.length || unique.some(id => !prev.includes(id))) {
+          if (
+            unique.length !== prev.length ||
+            unique.some((id) => !prev.includes(id))
+          ) {
             return unique;
           }
           return prev;
         });
       }
     }
-    
+
     // Inicializar negocios seleccionados con los negocios asociados
     if (associatedDeals.length > 0) {
       const dealIds = associatedDeals.map((d: any) => 1000 + d.id);
-      setSelectedAssociations(prev => {
+      setSelectedAssociations((prev) => {
         // Combinar con las existentes para no perder selecciones manuales, eliminando duplicados
         const combined = [...prev, ...dealIds];
-        const unique = combined.filter((id, index) => combined.indexOf(id) === index);
+        const unique = combined.filter(
+          (id, index) => combined.indexOf(id) === index
+        );
         // Solo actualizar si hay cambios para evitar loops infinitos
-        if (unique.length !== prev.length || unique.some(id => !prev.includes(id))) {
+        if (
+          unique.length !== prev.length ||
+          unique.some((id) => !prev.includes(id))
+        ) {
           return unique;
         }
         return prev;
       });
     }
-    
+
     // Inicializar tickets seleccionados con los tickets asociados
     if (associatedTickets.length > 0) {
       const ticketIds = associatedTickets.map((t: any) => 2000 + t.id);
-      setSelectedAssociations(prev => {
+      setSelectedAssociations((prev) => {
         // Combinar con las existentes para no perder selecciones manuales, eliminando duplicados
         const combined = [...prev, ...ticketIds];
-        const unique = combined.filter((id, index) => combined.indexOf(id) === index);
+        const unique = combined.filter(
+          (id, index) => combined.indexOf(id) === index
+        );
         // Solo actualizar si hay cambios para evitar loops infinitos
-        if (unique.length !== prev.length || unique.some(id => !prev.includes(id))) {
+        if (
+          unique.length !== prev.length ||
+          unique.some((id) => !prev.includes(id))
+        ) {
           return unique;
         }
         return prev;
       });
     }
-    
+
     // Inicializar contacto seleccionado
     if (contact?.id) {
-      setSelectedContacts(prev => {
+      setSelectedContacts((prev) => {
         if (!prev.includes(contact.id)) {
           return [...prev, contact.id];
         }
@@ -600,19 +595,19 @@ const ContactDetail: React.FC = () => {
 
   const fetchAllCompanies = async () => {
     try {
-      const response = await api.get('/companies', { params: { limit: 1000 } });
+      const response = await api.get("/companies", { params: { limit: 1000 } });
       setAllCompanies(response.data.companies || response.data || []);
     } catch (error) {
-      console.error('Error fetching all companies:', error);
+      console.error("Error fetching all companies:", error);
     }
   };
 
   const fetchAllContacts = async () => {
     try {
-      const response = await api.get('/contacts', { params: { limit: 1000 } });
+      const response = await api.get("/contacts", { params: { limit: 1000 } });
       setAllContacts(response.data.contacts || response.data || []);
     } catch (error) {
-      console.error('Error fetching all contacts:', error);
+      console.error("Error fetching all contacts:", error);
     }
   };
 
@@ -621,19 +616,35 @@ const ContactDetail: React.FC = () => {
     try {
       // Si hay búsqueda, cargar todos los resultados
       if (searchTerm && searchTerm.trim().length > 0) {
-        const [companiesRes, contactsRes, dealsRes, ticketsRes] = await Promise.all([
-          api.get('/companies', { params: { limit: 1000, search: searchTerm } }),
-          api.get('/contacts', { params: { limit: 1000, search: searchTerm } }),
-          api.get('/deals', { params: { limit: 1000, search: searchTerm } }),
-          api.get('/tickets', { params: { limit: 1000, search: searchTerm } }),
-        ]);
-        setNoteModalCompanies(companiesRes.data.companies || companiesRes.data || []);
-        setNoteModalContacts(contactsRes.data.contacts || contactsRes.data || []);
+        const [companiesRes, contactsRes, dealsRes, ticketsRes] =
+          await Promise.all([
+            api.get("/companies", {
+              params: { limit: 1000, search: searchTerm },
+            }),
+            api.get("/contacts", {
+              params: { limit: 1000, search: searchTerm },
+            }),
+            api.get("/deals", { params: { limit: 1000, search: searchTerm } }),
+            api.get("/tickets", {
+              params: { limit: 1000, search: searchTerm },
+            }),
+          ]);
+        setNoteModalCompanies(
+          companiesRes.data.companies || companiesRes.data || []
+        );
+        setNoteModalContacts(
+          contactsRes.data.contacts || contactsRes.data || []
+        );
         setNoteModalDeals(dealsRes.data.deals || dealsRes.data || []);
         setNoteModalTickets(ticketsRes.data.tickets || ticketsRes.data || []);
       } else {
         // Si no hay búsqueda, solo cargar los vinculados al contacto actual
-        const associatedItems: { companies: any[]; contacts: any[]; deals: any[]; tickets: any[] } = {
+        const associatedItems: {
+          companies: any[];
+          contacts: any[];
+          deals: any[];
+          tickets: any[];
+        } = {
           companies: [],
           contacts: [],
           deals: [],
@@ -666,7 +677,7 @@ const ContactDetail: React.FC = () => {
         setNoteModalTickets(associatedItems.tickets);
       }
     } catch (error) {
-      console.error('Error fetching associations:', error);
+      console.error("Error fetching associations:", error);
     } finally {
       setLoadingAssociations(false);
     }
@@ -674,26 +685,26 @@ const ContactDetail: React.FC = () => {
 
   // Opciones de etapa según las imágenes proporcionadas
   const stageOptions = [
-    { value: 'lead_inactivo', label: 'Lead Inactivo' },
-    { value: 'cliente_perdido', label: 'Cliente perdido' },
-    { value: 'cierre_perdido', label: 'Cierre Perdido' },
-    { value: 'lead', label: 'Lead' },
-    { value: 'contacto', label: 'Contacto' },
-    { value: 'reunion_agendada', label: 'Reunión Agendada' },
-    { value: 'reunion_efectiva', label: 'Reunión Efectiva' },
-    { value: 'propuesta_economica', label: 'Propuesta Económica' },
-    { value: 'negociacion', label: 'Negociación' },
-    { value: 'licitacion', label: 'Licitación' },
-    { value: 'licitacion_etapa_final', label: 'Licitación Etapa Final' },
-    { value: 'cierre_ganado', label: 'Cierre Ganado' },
-    { value: 'firma_contrato', label: 'Firma de Contrato' },
-    { value: 'activo', label: 'Activo' },
+    { value: "lead_inactivo", label: "Lead Inactivo" },
+    { value: "cliente_perdido", label: "Cliente perdido" },
+    { value: "cierre_perdido", label: "Cierre Perdido" },
+    { value: "lead", label: "Lead" },
+    { value: "contacto", label: "Contacto" },
+    { value: "reunion_agendada", label: "Reunión Agendada" },
+    { value: "reunion_efectiva", label: "Reunión Efectiva" },
+    { value: "propuesta_economica", label: "Propuesta Económica" },
+    { value: "negociacion", label: "Negociación" },
+    { value: "licitacion", label: "Licitación" },
+    { value: "licitacion_etapa_final", label: "Licitación Etapa Final" },
+    { value: "cierre_ganado", label: "Cierre Ganado" },
+    { value: "firma_contrato", label: "Firma de Contrato" },
+    { value: "activo", label: "Activo" },
   ];
 
   // Manejar tecla ESC para cerrar paneles
   useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         if (noteOpen) setNoteOpen(false);
         if (emailOpen) setEmailOpen(false);
         if (callOpen) setCallOpen(false);
@@ -702,21 +713,21 @@ const ContactDetail: React.FC = () => {
       }
     };
 
-    window.addEventListener('keydown', handleEscKey);
+    window.addEventListener("keydown", handleEscKey);
     return () => {
-      window.removeEventListener('keydown', handleEscKey);
+      window.removeEventListener("keydown", handleEscKey);
     };
   }, [noteOpen, emailOpen, callOpen, taskOpen, meetingOpen]);
 
   const updateActiveFormats = useCallback(() => {
     if (descriptionEditorRef.current) {
       setActiveFormats({
-        bold: document.queryCommandState('bold'),
-        italic: document.queryCommandState('italic'),
-        underline: document.queryCommandState('underline'),
-        strikeThrough: document.queryCommandState('strikeThrough'),
-        unorderedList: document.queryCommandState('insertUnorderedList'),
-        orderedList: document.queryCommandState('insertOrderedList'),
+        bold: document.queryCommandState("bold"),
+        italic: document.queryCommandState("italic"),
+        underline: document.queryCommandState("underline"),
+        strikeThrough: document.queryCommandState("strikeThrough"),
+        unorderedList: document.queryCommandState("insertUnorderedList"),
+        orderedList: document.queryCommandState("insertOrderedList"),
       });
     }
   }, []);
@@ -724,7 +735,7 @@ const ContactDetail: React.FC = () => {
   useEffect(() => {
     if (descriptionEditorRef.current && taskOpen) {
       if (taskData.description !== descriptionEditorRef.current.innerHTML) {
-        descriptionEditorRef.current.innerHTML = taskData.description || '';
+        descriptionEditorRef.current.innerHTML = taskData.description || "";
       }
     }
   }, [taskData.description, taskOpen]);
@@ -742,23 +753,30 @@ const ContactDetail: React.FC = () => {
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'Shift' || e.key === 'Control' || e.key === 'Meta')) {
+      if (
+        e.key &&
+        (e.key === "ArrowLeft" ||
+          e.key === "ArrowRight" ||
+          e.key === "ArrowUp" ||
+          e.key === "ArrowDown" ||
+          e.key === "Shift" ||
+          e.key === "Control" ||
+          e.key === "Meta")
+      ) {
         updateActiveFormats();
       }
     };
 
-    document.addEventListener('selectionchange', handleSelectionChange);
-    editor.addEventListener('mouseup', handleMouseUp);
-    editor.addEventListener('keyup', handleKeyUp as EventListener);
+    document.addEventListener("selectionchange", handleSelectionChange);
+    editor.addEventListener("mouseup", handleMouseUp);
+    editor.addEventListener("keyup", handleKeyUp as EventListener);
 
     return () => {
-      document.removeEventListener('selectionchange', handleSelectionChange);
-      editor.removeEventListener('mouseup', handleMouseUp);
-      editor.removeEventListener('keyup', handleKeyUp as EventListener);
+      document.removeEventListener("selectionchange", handleSelectionChange);
+      editor.removeEventListener("mouseup", handleMouseUp);
+      editor.removeEventListener("keyup", handleKeyUp as EventListener);
     };
   }, [updateActiveFormats, taskOpen]);
-
-
 
   const getInitials = (firstName?: string, lastName?: string) => {
     if (firstName && lastName) {
@@ -772,12 +790,15 @@ const ContactDetail: React.FC = () => {
       }
       return name[0].toUpperCase();
     }
-    return '?';
+    return "?";
   };
 
   const getCompanyInitials = (companyName: string) => {
-    if (!companyName) return '--';
-    const words = companyName.trim().split(' ').filter(word => word.length > 0);
+    if (!companyName) return "--";
+    const words = companyName
+      .trim()
+      .split(" ")
+      .filter((word) => word.length > 0);
     if (words.length >= 2) {
       return `${words[0].charAt(0)}${words[1].charAt(0)}`.toUpperCase();
     }
@@ -806,20 +827,20 @@ const ContactDetail: React.FC = () => {
 
   const getStageLabel = (stage: string) => {
     const labels: { [key: string]: string } = {
-      'lead': 'Lead',
-      'contacto': 'Contacto',
-      'reunion_agendada': 'Reunión Agendada',
-      'reunion_efectiva': 'Reunión Efectiva',
-      'propuesta_economica': 'Propuesta Económica',
-      'negociacion': 'Negociación',
-      'licitacion': 'Licitación',
-      'licitacion_etapa_final': 'Licitación Etapa Final',
-      'cierre_ganado': 'Cierre Ganado',
-      'cierre_perdido': 'Cierre Perdido',
-      'firma_contrato': 'Firma de Contrato',
-      'activo': 'Activo',
-      'cliente_perdido': 'Cliente perdido',
-      'lead_inactivo': 'Lead Inactivo',
+      lead: "Lead",
+      contacto: "Contacto",
+      reunion_agendada: "Reunión Agendada",
+      reunion_efectiva: "Reunión Efectiva",
+      propuesta_economica: "Propuesta Económica",
+      negociacion: "Negociación",
+      licitacion: "Licitación",
+      licitacion_etapa_final: "Licitación Etapa Final",
+      cierre_ganado: "Cierre Ganado",
+      cierre_perdido: "Cierre Perdido",
+      firma_contrato: "Firma de Contrato",
+      activo: "Activo",
+      cliente_perdido: "Cliente perdido",
+      lead_inactivo: "Lead Inactivo",
     };
     return labels[stage] || stage;
   };
@@ -834,7 +855,7 @@ const ContactDetail: React.FC = () => {
 
   // Funciones para abrir diálogos
   const handleOpenNote = () => {
-    setNoteData({ subject: '', description: '' });
+    setNoteData({ subject: "", description: "" });
     setCreateFollowUpTask(false);
     setNoteOpen(true);
   };
@@ -843,16 +864,16 @@ const ContactDetail: React.FC = () => {
 
   const handleOpenEmail = async () => {
     if (!contact?.email) {
-      setWarningMessage('El contacto no tiene un email registrado');
-      setTimeout(() => setWarningMessage(''), 3000);
+      setWarningMessage("El contacto no tiene un email registrado");
+      setTimeout(() => setWarningMessage(""), 3000);
       return;
     }
 
     // Verificar si hay token guardado en el backend
     try {
-      const response = await api.get('/google/token');
+      const response = await api.get("/google/token");
       const hasToken = response.data.hasToken && !response.data.isExpired;
-      
+
       if (hasToken) {
         // Ya está conectado, abrir el modal directamente
         setEmailOpen(true);
@@ -872,56 +893,65 @@ const ContactDetail: React.FC = () => {
 
   const handleEmailConnect = async () => {
     if (!user?.id) {
-      setWarningMessage('Usuario no identificado');
-      setTimeout(() => setWarningMessage(''), 3000);
+      setWarningMessage("Usuario no identificado");
+      setTimeout(() => setWarningMessage(""), 3000);
       return;
     }
 
     setConnectingEmail(true);
     try {
-      const response = await api.get('/google/auth');
+      const response = await api.get("/google/auth");
       if (response.data.authUrl) {
         window.location.href = response.data.authUrl;
       } else {
-        throw new Error('No se pudo obtener la URL de autorización');
+        throw new Error("No se pudo obtener la URL de autorización");
       }
     } catch (error: any) {
-      console.error('Error iniciando conexión con Google:', error);
-      const errorMessage = error.response?.data?.message || 'Error al conectar con Google. Por favor, intenta nuevamente.';
+      console.error("Error iniciando conexión con Google:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        "Error al conectar con Google. Por favor, intenta nuevamente.";
       setWarningMessage(errorMessage);
-      setTimeout(() => setWarningMessage(''), 5000);
+      setTimeout(() => setWarningMessage(""), 5000);
       setConnectingEmail(false);
     }
   };
 
-  const handleSendEmail = async (emailData: { to: string; subject: string; body: string }) => {
+  const handleSendEmail = async (emailData: {
+    to: string;
+    subject: string;
+    body: string;
+  }) => {
     try {
       // Enviar email a través del backend (el backend obtendrá el token automáticamente)
-      await api.post('/emails/send', {
+      await api.post("/emails/send", {
         to: emailData.to,
         subject: emailData.subject,
         body: emailData.body,
       });
 
       // Registrar como actividad
-      const companies = (contact?.Companies && Array.isArray(contact.Companies))
-        ? contact.Companies
-        : (contact?.Company ? [contact.Company] : []);
+      const companies =
+        contact?.Companies && Array.isArray(contact.Companies)
+          ? contact.Companies
+          : contact?.Company
+          ? [contact.Company]
+          : [];
 
       if (companies.length > 0) {
         const activityPromises = companies.map((company: any) =>
-          api.post('/activities/emails', {
+          api.post("/activities/emails", {
             subject: emailData.subject,
-            description: emailData.body.replace(/<[^>]*>/g, ''), // Remover HTML para la descripción
+            description: emailData.body.replace(/<[^>]*>/g, ""), // Remover HTML para la descripción
             contactId: id,
             companyId: company.id,
           })
         );
         await Promise.all(activityPromises);
       } else {
-        await api.post('/activities/emails', {
+        await api.post("/activities/emails", {
           subject: emailData.subject,
-          description: emailData.body.replace(/<[^>]*>/g, ''),
+          description: emailData.body.replace(/<[^>]*>/g, ""),
           contactId: id,
         });
       }
@@ -931,19 +961,27 @@ const ContactDetail: React.FC = () => {
     } catch (error: any) {
       // Si el token expiró o no hay token, mostrar mensaje
       if (error.response?.status === 401) {
-        throw new Error('Por favor, conecta tu correo desde Configuración > Perfil > Correo');
+        throw new Error(
+          "Por favor, conecta tu correo desde Configuración > Perfil > Correo"
+        );
       }
       throw error;
     }
   };
 
   const handleOpenCall = () => {
-    setCallData({ subject: '', description: '', duration: '' });
+    setCallData({ subject: "", description: "", duration: "" });
     setCallOpen(true);
   };
 
   const handleOpenTask = () => {
-    setTaskData({ title: '', description: '', priority: 'medium', dueDate: '', type: 'todo' });
+    setTaskData({
+      title: "",
+      description: "",
+      priority: "medium",
+      dueDate: "",
+      type: "todo",
+    });
     setSelectedDate(null);
     setCurrentMonth(new Date());
     setTaskOpen(true);
@@ -978,21 +1016,25 @@ const ContactDetail: React.FC = () => {
     const date = new Date(year, month - 1, day);
     setSelectedDate(date);
     // Formatear directamente como YYYY-MM-DD sin conversiones de zona horaria
-    const formattedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const formattedDate = `${year}-${String(month).padStart(2, "0")}-${String(
+      day
+    ).padStart(2, "0")}`;
     setTaskData({ ...taskData, dueDate: formattedDate });
     setDatePickerAnchorEl(null);
   };
 
   const handleClearDate = () => {
     setSelectedDate(null);
-    setTaskData({ ...taskData, dueDate: '' });
+    setTaskData({ ...taskData, dueDate: "" });
     setDatePickerAnchorEl(null);
   };
 
   const handleToday = () => {
     // Obtener la fecha actual en hora de Perú
     const today = new Date();
-    const peruToday = new Date(today.toLocaleString('en-US', { timeZone: 'America/Lima' }));
+    const peruToday = new Date(
+      today.toLocaleString("en-US", { timeZone: "America/Lima" })
+    );
     const year = peruToday.getFullYear();
     const month = peruToday.getMonth() + 1; // getMonth() devuelve 0-11, necesitamos 1-12
     const day = peruToday.getDate();
@@ -1007,28 +1049,28 @@ const ContactDetail: React.FC = () => {
     const lastDay = new Date(year, month + 1, 0);
     const daysInMonth = lastDay.getDate();
     const startingDayOfWeek = firstDay.getDay();
-    
+
     const prevMonthLastDay = new Date(year, month, 0).getDate();
-    
+
     const days: Array<{ day: number; isCurrentMonth: boolean }> = [];
-    
+
     // Días del mes anterior
     for (let i = 0; i < startingDayOfWeek; i++) {
       const dayNumber = prevMonthLastDay - startingDayOfWeek + i + 1;
       days.push({ day: dayNumber, isCurrentMonth: false });
     }
-    
+
     // Días del mes actual
     for (let i = 1; i <= daysInMonth; i++) {
       days.push({ day: i, isCurrentMonth: true });
     }
-    
+
     // Completar hasta 42 días (6 semanas) con días del siguiente mes
     const remainingDays = 42 - days.length;
     for (let i = 1; i <= remainingDays; i++) {
       days.push({ day: i, isCurrentMonth: false });
     }
-    
+
     return days;
   };
 
@@ -1037,57 +1079,79 @@ const ContactDetail: React.FC = () => {
   };
 
   const monthNames = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
   ];
 
-  const weekDays = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'];
+  const weekDays = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"];
 
   const handleOpenMeeting = () => {
-    setMeetingData({ subject: '', description: '', date: '', time: '' });
+    setMeetingData({ subject: "", description: "", date: "", time: "" });
     setMeetingOpen(true);
   };
 
   // Funciones para guardar
   const handleSaveNote = async () => {
     if (!noteData.description.trim()) {
-      setSuccessMessage('');
+      setSuccessMessage("");
       return;
     }
     setSaving(true);
-    
+
     // Variables para debugging
     let contactsToCreateNote: number[] = [];
     let finalContactIds: number[] = [];
     let companiesToAssociate: number[] = [];
-    
+
     try {
       // Obtener contactos seleccionados (incluyendo el contacto actual si no está excluido)
-      contactsToCreateNote = selectedContacts.filter(contactId => !excludedContacts.includes(contactId));
-      
+      contactsToCreateNote = selectedContacts.filter(
+        (contactId) => !excludedContacts.includes(contactId)
+      );
+
       // Si no hay contactos seleccionados, usar el contacto actual
-      finalContactIds = contactsToCreateNote.length > 0 ? contactsToCreateNote : (contact?.id ? [contact.id] : []);
-      
+      finalContactIds =
+        contactsToCreateNote.length > 0
+          ? contactsToCreateNote
+          : contact?.id
+          ? [contact.id]
+          : [];
+
       if (finalContactIds.length === 0) {
-        setSuccessMessage('Error: No hay contactos seleccionados');
-        setTimeout(() => setSuccessMessage(''), 3000);
+        setSuccessMessage("Error: No hay contactos seleccionados");
+        setTimeout(() => setSuccessMessage(""), 3000);
         setSaving(false);
         return;
       }
 
       // Obtener empresas seleccionadas
-      companiesToAssociate = selectedCompanies.filter(companyId => !excludedCompanies.includes(companyId));
-      
+      companiesToAssociate = selectedCompanies.filter(
+        (companyId) => !excludedCompanies.includes(companyId)
+      );
+
       // Crear notas para cada contacto seleccionado
       const activityPromises: Promise<any>[] = [];
-      
+
       for (const contactId of finalContactIds) {
         // Obtener información del contacto para el subject
         let contactName = `Contacto ${contactId}`;
         try {
           const contactResponse = await api.get(`/contacts/${contactId}`);
           const contactData = contactResponse.data;
-          contactName = `${contactData.firstName || ''} ${contactData.lastName || ''}`.trim() || contactName;
+          contactName =
+            `${contactData.firstName || ""} ${
+              contactData.lastName || ""
+            }`.trim() || contactName;
         } catch (e) {
           console.error(`Error fetching contact ${contactId}:`, e);
         }
@@ -1096,7 +1160,7 @@ const ContactDetail: React.FC = () => {
           // Crear una nota para cada combinación de contacto y empresa
           for (const companyId of companiesToAssociate) {
             activityPromises.push(
-              api.post('/activities/notes', {
+              api.post("/activities/notes", {
                 subject: noteData.subject || `Nota para ${contactName}`,
                 description: noteData.description,
                 contactId: contactId,
@@ -1107,7 +1171,7 @@ const ContactDetail: React.FC = () => {
         } else {
           // Crear nota solo con el contacto (sin empresa)
           activityPromises.push(
-            api.post('/activities/notes', {
+            api.post("/activities/notes", {
               subject: noteData.subject || `Nota para ${contactName}`,
               description: noteData.description,
               contactId: contactId,
@@ -1115,60 +1179,82 @@ const ContactDetail: React.FC = () => {
           );
         }
       }
-      
+
       // Ejecutar todas las creaciones en paralelo
       await Promise.all(activityPromises);
-      
+
       // Crear tarea de seguimiento si está marcada (solo para el primer contacto)
       if (createFollowUpTask && finalContactIds.length > 0) {
         const followUpDate = new Date();
         followUpDate.setDate(followUpDate.getDate() + 3); // 3 días laborables
-        
+
         // Obtener nombre del primer contacto
         let firstContactName = `Contacto ${finalContactIds[0]}`;
         try {
-          const contactResponse = await api.get(`/contacts/${finalContactIds[0]}`);
+          const contactResponse = await api.get(
+            `/contacts/${finalContactIds[0]}`
+          );
           const contactData = contactResponse.data;
-          firstContactName = `${contactData.firstName || ''} ${contactData.lastName || ''}`.trim() || firstContactName;
+          firstContactName =
+            `${contactData.firstName || ""} ${
+              contactData.lastName || ""
+            }`.trim() || firstContactName;
         } catch (e) {
           console.error(`Error fetching contact ${finalContactIds[0]}:`, e);
         }
-        
-        await api.post('/tasks', {
-          title: `Seguimiento de nota: ${noteData.subject || `Nota para ${firstContactName}`}`,
+
+        await api.post("/tasks", {
+          title: `Seguimiento de nota: ${
+            noteData.subject || `Nota para ${firstContactName}`
+          }`,
           description: `Tarea de seguimiento generada automáticamente por la nota: ${noteData.description}`,
-          type: 'todo',
-          status: 'not started',
-          priority: 'medium',
-          dueDate: followUpDate.toISOString().split('T')[0],
+          type: "todo",
+          status: "not started",
+          priority: "medium",
+          dueDate: followUpDate.toISOString().split("T")[0],
           contactId: finalContactIds[0],
         });
       }
-      
+
       const noteCount = activityPromises.length;
-      setSuccessMessage(`Nota${noteCount > 1 ? 's' : ''} creada${noteCount > 1 ? 's' : ''} exitosamente${createFollowUpTask ? ' y tarea de seguimiento creada' : ''}`);
+      setSuccessMessage(
+        `Nota${noteCount > 1 ? "s" : ""} creada${
+          noteCount > 1 ? "s" : ""
+        } exitosamente${
+          createFollowUpTask ? " y tarea de seguimiento creada" : ""
+        }`
+      );
       setNoteOpen(false);
-      setNoteData({ subject: '', description: '' });
+      setNoteData({ subject: "", description: "" });
       setCreateFollowUpTask(false);
       setSelectedContacts([]);
       setSelectedCompanies([]);
       setExcludedContacts([]);
       setExcludedCompanies([]);
       fetchAssociatedRecords(); // Actualizar actividades
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error: any) {
-      console.error('Error saving note:', error);
-      console.error('Error details:', {
+      console.error("Error saving note:", error);
+      console.error("Error details:", {
         message: error.message,
         response: error.response?.data,
         status: error.response?.status,
         selectedContacts,
-        finalContactIds: contactsToCreateNote.length > 0 ? contactsToCreateNote : (contact?.id ? [contact.id] : []),
+        finalContactIds:
+          contactsToCreateNote.length > 0
+            ? contactsToCreateNote
+            : contact?.id
+            ? [contact.id]
+            : [],
         companiesToAssociate,
       });
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Error desconocido';
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Error desconocido";
       setSuccessMessage(`Error al crear la nota: ${errorMessage}`);
-      setTimeout(() => setSuccessMessage(''), 5000);
+      setTimeout(() => setSuccessMessage(""), 5000);
     } finally {
       setSaving(false);
     }
@@ -1226,15 +1312,18 @@ const ContactDetail: React.FC = () => {
     setSaving(true);
     try {
       // Obtener empresas asociadas al contacto
-      const companies = (contact?.Companies && Array.isArray(contact.Companies))
-        ? contact.Companies
-        : (contact?.Company ? [contact.Company] : []);
+      const companies =
+        contact?.Companies && Array.isArray(contact.Companies)
+          ? contact.Companies
+          : contact?.Company
+          ? [contact.Company]
+          : [];
 
       // Crear una actividad para cada empresa asociada, o solo con contactId si no hay empresas
       if (companies.length > 0) {
         // Crear actividad para cada empresa asociada
         const activityPromises = companies.map((company: any) =>
-          api.post('/activities/calls', {
+          api.post("/activities/calls", {
             subject: callData.subject,
             description: callData.description,
             contactId: id,
@@ -1244,19 +1333,19 @@ const ContactDetail: React.FC = () => {
         await Promise.all(activityPromises);
       } else {
         // Si no hay empresas asociadas, crear solo con contactId
-        await api.post('/activities/calls', {
+        await api.post("/activities/calls", {
           subject: callData.subject,
           description: callData.description,
           contactId: id,
         });
       }
-      setSuccessMessage('Llamada registrada exitosamente');
+      setSuccessMessage("Llamada registrada exitosamente");
       setCallOpen(false);
-      setCallData({ subject: '', description: '', duration: '' });
+      setCallData({ subject: "", description: "", duration: "" });
       fetchAssociatedRecords(); // Actualizar actividades
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
-      console.error('Error saving call:', error);
+      console.error("Error saving call:", error);
     } finally {
       setSaving(false);
     }
@@ -1269,17 +1358,20 @@ const ContactDetail: React.FC = () => {
     setSaving(true);
     try {
       // Obtener empresas asociadas al contacto
-      const companies = (contact?.Companies && Array.isArray(contact.Companies))
-        ? contact.Companies
-        : (contact?.Company ? [contact.Company] : []);
+      const companies =
+        contact?.Companies && Array.isArray(contact.Companies)
+          ? contact.Companies
+          : contact?.Company
+          ? [contact.Company]
+          : [];
 
       // Preparar datos de la tarea
       const taskPayload = {
         title: taskData.title,
         description: taskData.description,
-        type: 'todo',
-        status: 'not started',
-        priority: taskData.priority || 'medium',
+        type: "todo",
+        status: "not started",
+        priority: taskData.priority || "medium",
         dueDate: taskData.dueDate || undefined,
         contactId: id,
       };
@@ -1288,7 +1380,7 @@ const ContactDetail: React.FC = () => {
       if (companies.length > 0) {
         // Crear tarea para cada empresa asociada
         const taskPromises = companies.map((company: any) =>
-          api.post('/tasks', {
+          api.post("/tasks", {
             ...taskPayload,
             companyId: company.id,
           })
@@ -1296,17 +1388,26 @@ const ContactDetail: React.FC = () => {
         await Promise.all(taskPromises);
       } else {
         // Si no hay empresas asociadas, crear solo con contactId
-        await api.post('/tasks', taskPayload);
+        await api.post("/tasks", taskPayload);
       }
-      setSuccessMessage('Tarea creada exitosamente' + (taskData.dueDate ? ' y sincronizada con Google Calendar' : ''));
+      setSuccessMessage(
+        "Tarea creada exitosamente" +
+          (taskData.dueDate ? " y sincronizada con Google Calendar" : "")
+      );
       setTaskOpen(false);
-      setTaskData({ title: '', description: '', priority: 'medium', dueDate: '', type: 'todo' });
+      setTaskData({
+        title: "",
+        description: "",
+        priority: "medium",
+        dueDate: "",
+        type: "todo",
+      });
       fetchAssociatedRecords(); // Actualizar actividades
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
-      console.error('Error saving task:', error);
-      setSuccessMessage('Error al crear la tarea');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      console.error("Error saving task:", error);
+      setSuccessMessage("Error al crear la tarea");
+      setTimeout(() => setSuccessMessage(""), 3000);
     } finally {
       setSaving(false);
     }
@@ -1318,26 +1419,30 @@ const ContactDetail: React.FC = () => {
     }
     setSaving(true);
     try {
-      const dueDate = meetingData.date && meetingData.time 
-        ? new Date(`${meetingData.date}T${meetingData.time}`).toISOString()
-        : undefined;
+      const dueDate =
+        meetingData.date && meetingData.time
+          ? new Date(`${meetingData.date}T${meetingData.time}`).toISOString()
+          : undefined;
 
-      await api.post('/tasks', {
+      await api.post("/tasks", {
         title: meetingData.subject,
         description: meetingData.description,
-        type: 'meeting',
-        status: 'not started',
-        priority: 'medium',
+        type: "meeting",
+        status: "not started",
+        priority: "medium",
         dueDate: dueDate,
         contactId: id,
       });
-      setSuccessMessage('Reunión creada exitosamente' + (dueDate ? ' y sincronizada con Google Calendar' : ''));
+      setSuccessMessage(
+        "Reunión creada exitosamente" +
+          (dueDate ? " y sincronizada con Google Calendar" : "")
+      );
       setMeetingOpen(false);
-      setMeetingData({ subject: '', description: '', date: '', time: '' });
+      setMeetingData({ subject: "", description: "", date: "", time: "" });
       fetchAssociatedRecords(); // Actualizar actividades
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
-      console.error('Error saving meeting:', error);
+      console.error("Error saving meeting:", error);
     } finally {
       setSaving(false);
     }
@@ -1346,19 +1451,21 @@ const ContactDetail: React.FC = () => {
   // Funciones para la pestaña Descripción
   const handleSearchRuc = async () => {
     if (!companyFormData.ruc || companyFormData.ruc.length < 11) {
-      setRucError('El RUC debe tener 11 dígitos');
+      setRucError("El RUC debe tener 11 dígitos");
       return;
     }
 
     setLoadingRuc(true);
-    setRucError('');
+    setRucError("");
 
     try {
       // Obtener el token de la API de Factiliza desde variables de entorno
-      const factilizaToken = process.env.REACT_APP_FACTILIZA_TOKEN || '';
-      
+      const factilizaToken = process.env.REACT_APP_FACTILIZA_TOKEN || "";
+
       if (!factilizaToken) {
-        setRucError('Token de API no configurado. Por favor, configure REACT_APP_FACTILIZA_TOKEN');
+        setRucError(
+          "Token de API no configurado. Por favor, configure REACT_APP_FACTILIZA_TOKEN"
+        );
         setLoadingRuc(false);
         return;
       }
@@ -1367,35 +1474,35 @@ const ContactDetail: React.FC = () => {
         `https://api.factiliza.com/v1/ruc/info/${companyFormData.ruc}`,
         {
           headers: {
-            'Authorization': `Bearer ${factilizaToken}`,
+            Authorization: `Bearer ${factilizaToken}`,
           },
         }
       );
 
       if (response.data.success && response.data.data) {
         const data = response.data.data;
-        
+
         // Actualizar el formulario con los datos obtenidos
         setCompanyFormData({
           ...companyFormData,
-          name: data.nombre_o_razon_social || '',
-          companyname: data.tipo_contribuyente || '',
-          address: data.direccion_completa || data.direccion || '',
-          city: data.distrito || '',
-          state: data.provincia || '',
-          country: data.departamento || 'Perú',
+          name: data.nombre_o_razon_social || "",
+          companyname: data.tipo_contribuyente || "",
+          address: data.direccion_completa || data.direccion || "",
+          city: data.distrito || "",
+          state: data.provincia || "",
+          country: data.departamento || "Perú",
         });
       } else {
-        setRucError('No se encontró información para este RUC');
+        setRucError("No se encontró información para este RUC");
       }
     } catch (error: any) {
-      console.error('Error al buscar RUC:', error);
+      console.error("Error al buscar RUC:", error);
       if (error.response?.status === 400) {
-        setRucError('RUC no válido o no encontrado');
+        setRucError("RUC no válido o no encontrado");
       } else if (error.response?.status === 401) {
-        setRucError('Error de autenticación con la API');
+        setRucError("Error de autenticación con la API");
       } else {
-        setRucError('Error al buscar RUC. Por favor, intente nuevamente');
+        setRucError("Error al buscar RUC. Por favor, intente nuevamente");
       }
     } finally {
       setLoadingRuc(false);
@@ -1404,30 +1511,30 @@ const ContactDetail: React.FC = () => {
 
   const handleAddCompany = async () => {
     try {
-      await api.post('/companies', {
+      await api.post("/companies", {
         ...companyFormData,
         // No asociar automáticamente con el contacto - el usuario debe agregarla manualmente
       });
-      setSuccessMessage('Empresa creada exitosamente');
+      setSuccessMessage("Empresa creada exitosamente");
       setAddCompanyOpen(false);
-      setCompanyFormData({ 
-        name: '', 
-        domain: '', 
-        phone: '', 
-        companyname: '', 
-        lifecycleStage: 'lead',
-        ruc: '',
-        address: '',
-        city: '',
-        state: '',
-        country: '',
+      setCompanyFormData({
+        name: "",
+        domain: "",
+        phone: "",
+        companyname: "",
+        lifecycleStage: "lead",
+        ruc: "",
+        address: "",
+        city: "",
+        state: "",
+        country: "",
       });
-      setRucError('');
-      setCompanyDialogTab('create');
+      setRucError("");
+      setCompanyDialogTab("create");
       fetchAssociatedRecords();
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
-      console.error('Error adding company:', error);
+      console.error("Error adding company:", error);
     }
   };
 
@@ -1441,33 +1548,41 @@ const ContactDetail: React.FC = () => {
       const response = await api.post(`/contacts/${id}/companies`, {
         companyIds: selectedExistingCompanies,
       });
-      
+
       // Actualizar el contacto y las empresas asociadas
       setContact(response.data);
-      const companies = (response.data.Companies && Array.isArray(response.data.Companies))
-        ? response.data.Companies
-        : (response.data.Company ? [response.data.Company] : []);
+      const companies =
+        response.data.Companies && Array.isArray(response.data.Companies)
+          ? response.data.Companies
+          : response.data.Company
+          ? [response.data.Company]
+          : [];
       setAssociatedCompanies(companies);
-      
+
       // También agregar a selectedCompanies para que se cuenten en las asociaciones
-      const newCompanyIds = selectedExistingCompanies.filter((id: number) => 
-        !selectedCompanies.includes(id)
+      const newCompanyIds = selectedExistingCompanies.filter(
+        (id: number) => !selectedCompanies.includes(id)
       );
       setSelectedCompanies([...selectedCompanies, ...newCompanyIds]);
-      
-      setSuccessMessage(`${selectedExistingCompanies.length} empresa(s) agregada(s) exitosamente`);
-      
+
+      setSuccessMessage(
+        `${selectedExistingCompanies.length} empresa(s) agregada(s) exitosamente`
+      );
+
       setAddCompanyOpen(false);
       setSelectedExistingCompanies([]);
-      setExistingCompaniesSearch('');
-      setCompanyDialogTab('create');
-      
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setExistingCompaniesSearch("");
+      setCompanyDialogTab("create");
+
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error: any) {
-      console.error('Error associating companies:', error);
-      const errorMessage = error.response?.data?.error || error.message || 'Error al asociar las empresas';
+      console.error("Error associating companies:", error);
+      const errorMessage =
+        error.response?.data?.error ||
+        error.message ||
+        "Error al asociar las empresas";
       setSuccessMessage(errorMessage);
-      setTimeout(() => setSuccessMessage(''), 5000);
+      setTimeout(() => setSuccessMessage(""), 5000);
     }
   };
 
@@ -1475,17 +1590,17 @@ const ContactDetail: React.FC = () => {
   //   setCompanyDialogTab('create');
   //   setSelectedExistingCompanies([]);
   //   setExistingCompaniesSearch('');
-  //   setCompanyFormData({ 
-  //     name: '', 
-  //     domain: '', 
-  //     phone: '', 
-  //     industry: '', 
+  //   setCompanyFormData({
+  //     name: '',
+  //     domain: '',
+  //     phone: '',
+  //     industry: '',
   //     lifecycleStage: 'lead',
-  //     ruc: '', 
-  //     address: '', 
-  //     city: '', 
-  //     state: '', 
-  //     country: '', 
+  //     ruc: '',
+  //     address: '',
+  //     city: '',
+  //     state: '',
+  //     country: '',
   //   });
   //   setRucError('');
   //   setAddCompanyOpen(true);
@@ -1498,10 +1613,10 @@ const ContactDetail: React.FC = () => {
   // const handleRemoveCompanyAssociation = async (companyId: number) => {
   //   try {
   //     setIsRemovingCompany(true);
-  //     
+  //
   //     // Verificar si esta empresa está asociada al contacto
   //     const isAssociated = associatedCompanies.some((c: any) => c && c.id === companyId);
-  //     
+  //
   //     if (!isAssociated) {
   //       setSuccessMessage('Esta empresa no está asociada con este contacto');
   //       setTimeout(() => setSuccessMessage(''), 3000);
@@ -1511,20 +1626,20 @@ const ContactDetail: React.FC = () => {
 
   //     // Eliminar la asociación usando el nuevo endpoint
   //     const response = await api.delete(`/contacts/${id}/companies/${companyId}`);
-  //     
+  //
   //     // Actualizar el contacto y las empresas asociadas
   //     setContact(response.data);
   //     const companies = response.data.Companies || [];
   //     setAssociatedCompanies(companies);
-  //     
+  //
   //     // También remover de selectedCompanies y excludedCompanies
   //     setSelectedCompanies(selectedCompanies.filter(id => id !== companyId));
   //     setExcludedCompanies(excludedCompanies.filter(id => id !== companyId));
-  //     
+  //
   //     setSuccessMessage('Asociación eliminada exitosamente');
   //     setCompanyActionsMenu({});
   //     setIsRemovingCompany(false);
-  //     
+  //
   //     setTimeout(() => setSuccessMessage(''), 3000);
   //   } catch (error) {
   //     console.error('Error removing company association:', error);
@@ -1553,58 +1668,77 @@ const ContactDetail: React.FC = () => {
 
   const handleAddDeal = async () => {
     try {
-      await api.post('/deals', {
+      await api.post("/deals", {
         ...dealFormData,
         amount: parseFloat(dealFormData.amount) || 0,
-        contactId: dealFormData.contactId ? parseInt(dealFormData.contactId) : id,
-        companyId: dealFormData.companyId ? parseInt(dealFormData.companyId) : contact?.Company?.id || contact?.Companies?.[0]?.id,
+        contactId: dealFormData.contactId
+          ? parseInt(dealFormData.contactId)
+          : id,
+        companyId: dealFormData.companyId
+          ? parseInt(dealFormData.companyId)
+          : contact?.Company?.id || contact?.Companies?.[0]?.id,
       });
-      setSuccessMessage('Negocio agregado exitosamente');
+      setSuccessMessage("Negocio agregado exitosamente");
       setAddDealOpen(false);
-      setDealFormData({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'baja' as 'baja' | 'media' | 'alta', companyId: '', contactId: '' });
+      setDealFormData({
+        name: "",
+        amount: "",
+        stage: "lead",
+        closeDate: "",
+        priority: "baja" as "baja" | "media" | "alta",
+        companyId: "",
+        contactId: "",
+      });
       fetchAssociatedRecords();
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
-      console.error('Error adding deal:', error);
+      console.error("Error adding deal:", error);
     }
   };
 
   const handleAddTicket = async () => {
     try {
-      await api.post('/tickets', {
+      await api.post("/tickets", {
         ...ticketFormData,
         contactId: id,
         // No asociar automáticamente con la empresa - el usuario debe agregarla manualmente si lo desea
       });
-      setSuccessMessage('Ticket creado exitosamente');
+      setSuccessMessage("Ticket creado exitosamente");
       setAddTicketOpen(false);
-      setTicketFormData({ subject: '', description: '', status: 'new', priority: 'medium' });
+      setTicketFormData({
+        subject: "",
+        description: "",
+        status: "new",
+        priority: "medium",
+      });
       fetchAssociatedRecords();
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
-      console.error('Error adding ticket:', error);
+      console.error("Error adding ticket:", error);
     }
   };
 
   const handleCreateActivity = (type: string) => {
     setCreateActivityMenuAnchor(null);
     switch (type) {
-      case 'note':
+      case "note":
         handleOpenNote();
         break;
-      case 'email':
+      case "email":
         // Abrir Gmail con el correo del contacto prellenado
-        const email = contact?.email || '';
-        const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(email)}`;
-        window.open(gmailUrl, '_blank');
+        const email = contact?.email || "";
+        const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(
+          email
+        )}`;
+        window.open(gmailUrl, "_blank");
         break;
-      case 'call':
+      case "call":
         handleOpenCall();
         break;
-      case 'task':
+      case "task":
         handleOpenTask();
         break;
-      case 'meeting':
+      case "meeting":
         handleOpenMeeting();
         break;
     }
@@ -1616,29 +1750,157 @@ const ContactDetail: React.FC = () => {
   //   setTimeout(() => setSuccessMessage(''), 2000);
   // };
 
-  // const handleSortDeals = (field: string) => {
-  //   if (dealSortField === field) {
-  //     setDealSortOrder(dealSortOrder === 'asc' ? 'desc' : 'asc');
-  //   } else {
-  //     setDealSortField(field);
-  //     setDealSortOrder('asc');
-  //   }
-  // };
+  const handleSortDeals = (field: "name" | "amount" | "closeDate" | "stage") => {
+    const isAsc = dealSortField === field && dealSortOrder === "asc";
+    setDealSortOrder(isAsc ? "desc" : "asc");
+    setDealSortField(field);
+  };
 
-  // const handleSortCompanies = (field: string) => {
-  //   if (companySortField === field) {
-  //     setCompanySortOrder(companySortOrder === 'asc' ? 'desc' : 'asc');
-  //   } else {
-  //     setCompanySortField(field);
-  //     setCompanySortOrder('asc');
-  //   }
-  // };
+  const handleSortCompanies = (field: "name" | "domain" | "phone") => {
+    const isAsc = companySortField === field && companySortOrder === "asc";
+    setCompanySortOrder(isAsc ? "desc" : "asc");
+    setCompanySortField(field);
+  };
+
+  const getActivityTypeLabel = (type: string) => {
+    switch (type) {
+      case "note":
+        return "Nota";
+      case "email":
+        return "Correo";
+      case "call":
+        return "Llamada";
+      case "task":
+      case "todo":
+        return "Tarea";
+      case "meeting":
+        return "Reunión";
+      default:
+        return "Actividad";
+    }
+  };
+
+  const getActivityStatusColor = (activity: any) => {
+    if (!activity.dueDate) {
+      // Sin fecha de vencimiento - gris neutro
+      return {
+        bgcolor:
+          theme.palette.mode === "dark"
+            ? "rgba(255, 255, 255, 0.05)"
+            : "#F5F5F5",
+      };
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dueDate = new Date(activity.dueDate);
+    dueDate.setHours(0, 0, 0, 0);
+    
+    const diffTime = dueDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      // Vencida - rojo claro
+      return {
+        bgcolor:
+          theme.palette.mode === "dark" ? "rgba(244, 67, 54, 0.15)" : "#FFEBEE",
+      };
+    } else if (diffDays <= 3) {
+      // Por vencer (1-3 días) - amarillo/naranja claro
+      return {
+        bgcolor:
+          theme.palette.mode === "dark" ? "rgba(255, 152, 0, 0.15)" : "#FFF9C4",
+      };
+    } else {
+      // A tiempo - verde claro
+      return {
+        bgcolor:
+          theme.palette.mode === "dark" ? "rgba(76, 175, 80, 0.15)" : "#E8F5E9",
+      };
+    }
+  };
+
+  const handleRemoveCompanyClick = (companyId: number, companyName?: string) => {
+    setCompanyToRemove({ id: companyId, name: companyName || "" });
+    setRemoveCompanyDialogOpen(true);
+  };
+
+  const handleConfirmRemoveCompany = async () => {
+    if (!id || !companyToRemove) return;
+    try {
+      await api.delete(`/contacts/${id}/companies/${companyToRemove.id}`);
+      setAssociatedCompanies((prevCompanies) =>
+        prevCompanies.filter((company: any) => company.id !== companyToRemove.id)
+      );
+      await fetchContact();
+      setRemoveCompanyDialogOpen(false);
+      setCompanyToRemove(null);
+    } catch (error: any) {
+      console.error("Error removing company:", error);
+      const errorMessage =
+        error.response?.data?.error ||
+        error.message ||
+        "Error al eliminar la empresa";
+      alert(errorMessage);
+    }
+  };
+
+  const handleRemoveDealClick = (dealId: number, dealName?: string) => {
+    setDealToRemove({ id: dealId, name: dealName || "" });
+    setRemoveDealDialogOpen(true);
+  };
+
+  const handleConfirmRemoveDeal = async () => {
+    if (!id || !dealToRemove) return;
+    try {
+      await api.delete(`/contacts/${id}/deals/${dealToRemove.id}`);
+      setAssociatedDeals((prevDeals) =>
+        prevDeals.filter((deal: any) => deal.id !== dealToRemove.id)
+      );
+      await fetchContact();
+      setRemoveDealDialogOpen(false);
+      setDealToRemove(null);
+    } catch (error: any) {
+      console.error("Error removing deal:", error);
+      const errorMessage =
+        error.response?.data?.error ||
+        error.message ||
+        "Error al eliminar el negocio";
+      alert(errorMessage);
+    }
+  };
+
+  const handleRemoveTicketClick = (ticketId: number, ticketName: string) => {
+    setTicketToRemove({ id: ticketId, name: ticketName });
+    setRemoveTicketDialogOpen(true);
+  };
+
+  const handleConfirmRemoveTicket = async () => {
+    if (!id || !ticketToRemove) return;
+    try {
+      await api.delete(`/contacts/${id}/tickets/${ticketToRemove.id}`);
+      setAssociatedTickets((prevTickets) =>
+        prevTickets.filter((ticket: any) => ticket.id !== ticketToRemove.id)
+      );
+      await fetchContact();
+      setRemoveTicketDialogOpen(false);
+      setTicketToRemove(null);
+    } catch (error: any) {
+      console.error("Error removing ticket:", error);
+      const errorMessage =
+        error.response?.data?.error ||
+        error.message ||
+        "Error al eliminar el ticket";
+      alert(errorMessage);
+    }
+  };
+
 
   // const sortedDeals = [...associatedDeals].sort((a, b) => {
   //   if (!dealSortField) return 0;
   //   let aVal: any = a[dealSortField];
   //   let bVal: any = b[dealSortField];
-  //   
+  //
   //   if (dealSortField === 'amount') {
   //     aVal = aVal || 0;
   //     bVal = bVal || 0;
@@ -1649,7 +1911,7 @@ const ContactDetail: React.FC = () => {
   //     aVal = String(aVal || '').toLowerCase();
   //     bVal = String(bVal || '').toLowerCase();
   //   }
-  //   
+  //
   //   if (aVal < bVal) return dealSortOrder === 'asc' ? -1 : 1;
   //   if (aVal > bVal) return dealSortOrder === 'asc' ? 1 : -1;
   //   return 0;
@@ -1659,58 +1921,14 @@ const ContactDetail: React.FC = () => {
   //   if (!companySortField) return 0;
   //   let aVal: any = a[companySortField];
   //   let bVal: any = b[companySortField];
-  //   
+  //
   //   aVal = String(aVal || '').toLowerCase();
   //   bVal = String(bVal || '').toLowerCase();
-  //   
+  //
   //   if (aVal < bVal) return companySortOrder === 'asc' ? -1 : 1;
   //   if (aVal > bVal) return companySortOrder === 'asc' ? 1 : -1;
   //   return 0;
   // });
-
-  const filteredActivities = activities.filter((activity) => {
-    // Filtro por búsqueda de texto
-    if (activitySearch && !activity.subject?.toLowerCase().includes(activitySearch.toLowerCase()) &&
-        !activity.description?.toLowerCase().includes(activitySearch.toLowerCase())) {
-      return false;
-    }
-    
-    // Filtro por tipo de actividad según los filtros de comunicación y actividad del equipo
-    const activityType = activity.type?.toLowerCase();
-    
-    // Si es una nota, verificar filtro de "Actividad del equipo" -> "Notas"
-    if (activityType === 'note') {
-      if (!teamActivityFilters.notes) {
-        return false;
-      }
-    }
-    // Si es una reunión, verificar filtro de "Actividad del equipo" -> "Reuniones"
-    else if (activityType === 'meeting') {
-      if (!teamActivityFilters.meetings) {
-        return false;
-      }
-    }
-    // Si es una tarea, verificar filtro de "Actividad del equipo" -> "Tareas"
-    else if (activityType === 'task') {
-      if (!teamActivityFilters.tasks) {
-        return false;
-      }
-    }
-    // Si es un correo, verificar filtro de "Comunicación" -> "Correos"
-    else if (activityType === 'email') {
-      if (!communicationFilters.email) {
-        return false;
-      }
-    }
-    // Si es una llamada, verificar filtro de "Comunicación" -> "Llamadas"
-    else if (activityType === 'call') {
-      if (!communicationFilters.calls) {
-        return false;
-      }
-    }
-    
-    return true;
-  });
 
   // const filteredCompanies = sortedCompanies.filter((company) => {
   //   if (companySearch && !company.name?.toLowerCase().includes(companySearch.toLowerCase()) &&
@@ -1727,180 +1945,14 @@ const ContactDetail: React.FC = () => {
   //   return true;
   // });
 
-  // Función para obtener el rango de fechas según la opción seleccionada
-  const getDateRange = (range: string): { start: Date | null; end: Date | null } => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    
-    switch (range) {
-      case 'Todo hasta ahora':
-      case 'Todo':
-        return { start: null, end: null };
-      
-      case 'Hoy':
-        return {
-          start: today,
-          end: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1),
-        };
-      
-      case 'Ayer':
-        const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-        return {
-          start: yesterday,
-          end: new Date(yesterday.getTime() + 24 * 60 * 60 * 1000 - 1),
-        };
-      
-      case 'Esta semana':
-        const dayOfWeek = today.getDay();
-        const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        const weekStart = new Date(today.getTime() - daysFromMonday * 24 * 60 * 60 * 1000);
-        return {
-          start: weekStart,
-          end: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1),
-        };
-      
-      case 'Semana pasada':
-        const lastWeekDayOfWeek = today.getDay();
-        const lastWeekDaysFromMonday = lastWeekDayOfWeek === 0 ? 6 : lastWeekDayOfWeek - 1;
-        const lastWeekStart = new Date(today.getTime() - (lastWeekDaysFromMonday + 7) * 24 * 60 * 60 * 1000);
-        const lastWeekEnd = new Date(today.getTime() - (lastWeekDaysFromMonday + 1) * 24 * 60 * 60 * 1000);
-        return {
-          start: lastWeekStart,
-          end: new Date(lastWeekEnd.getTime() + 24 * 60 * 60 * 1000 - 1),
-        };
-      
-      case 'Últimos 7 días':
-        return {
-          start: new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000),
-          end: new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1),
-        };
-      
-      default:
-        return { start: null, end: null };
-    }
-  };
-
-  // Filtrar actividades por rango de tiempo
-  const timeFilteredActivities = filteredActivities.filter((activity) => {
-    if (!activity.createdAt) return false;
-    
-    const dateRange = getDateRange(selectedTimeRange);
-    if (!dateRange.start && !dateRange.end) return true; // "Todo hasta ahora"
-    
-    const activityDate = new Date(activity.createdAt);
-    activityDate.setHours(0, 0, 0, 0);
-    
-    if (dateRange.start) {
-      const startDate = new Date(dateRange.start);
-      startDate.setHours(0, 0, 0, 0);
-      if (activityDate < startDate) return false;
-    }
-    
-    if (dateRange.end) {
-      const endDate = new Date(dateRange.end);
-      endDate.setHours(23, 59, 59, 999);
-      if (activityDate > endDate) return false;
-    }
-    
-    return true;
-  });
-
-  // Agrupar actividades por mes/año
-  const groupedActivities = timeFilteredActivities.reduce((acc: { [key: string]: any[] }, activity) => {
-    if (!activity.createdAt) return acc;
-    const date = new Date(activity.createdAt);
-    const monthKey = date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long' });
-    if (!acc[monthKey]) {
-      acc[monthKey] = [];
-    }
-    acc[monthKey].push(activity);
-    return acc;
-  }, {});
-
-  // Funciones para manejar notas y actividades
-  const toggleNoteExpand = (noteId: number) => {
-    const newExpanded = new Set(expandedNotes);
-    if (newExpanded.has(noteId)) {
-      newExpanded.delete(noteId);
-    } else {
-      newExpanded.add(noteId);
-    }
-    setExpandedNotes(newExpanded);
-  };
-
-  const toggleActivityExpand = (activityId: number) => {
-    const newExpanded = new Set(expandedActivities);
-    if (newExpanded.has(activityId)) {
-      newExpanded.delete(activityId);
-    } else {
-      newExpanded.add(activityId);
-    }
-    setExpandedActivities(newExpanded);
-  };
-
-  const handleNoteActionMenuOpen = (event: React.MouseEvent<HTMLElement>, noteId: number) => {
-    event.stopPropagation();
-    setNoteActionMenus({ ...noteActionMenus, [noteId]: event.currentTarget });
-  };
-
-  const handleNoteActionMenuClose = (noteId: number) => {
-    setNoteActionMenus({ ...noteActionMenus, [noteId]: null });
-  };
-
-  const handlePinNote = async (noteId: number) => {
-    // TODO: Implementar funcionalidad de anclar
-    console.log('Anclar nota:', noteId);
-    handleNoteActionMenuClose(noteId);
-  };
-
-  const handleViewHistory = (noteId: number) => {
-    // TODO: Implementar historial
-    console.log('Ver historial:', noteId);
-    handleNoteActionMenuClose(noteId);
-  };
-
-  const handleCopyLink = async (noteId: number) => {
-    try {
-      const noteUrl = `${window.location.origin}/contacts/${id}?activity=${noteId}`;
-      await navigator.clipboard.writeText(noteUrl);
-      setSuccessMessage('Enlace copiado al portapapeles');
-      setTimeout(() => setSuccessMessage(''), 3000);
-      handleNoteActionMenuClose(noteId);
-    } catch (error) {
-      console.error('Error al copiar enlace:', error);
-      setSuccessMessage('Error al copiar enlace');
-      setTimeout(() => setSuccessMessage(''), 3000);
-    }
-  };
-
-  const handleDeleteNote = async (noteId: number) => {
-    if (!window.confirm('¿Estás seguro de que deseas eliminar esta nota?')) {
-      handleNoteActionMenuClose(noteId);
-      return;
-    }
-    
-    try {
-      await api.delete(`/activities/${noteId}`);
-      setSuccessMessage('Nota eliminada exitosamente');
-      setTimeout(() => setSuccessMessage(''), 3000);
-      handleNoteActionMenuClose(noteId);
-      
-      // Eliminar la nota del estado local inmediatamente
-      setActivities(activities.filter(activity => activity.id !== noteId));
-      
-      // También actualizar desde el servidor para asegurar consistencia
-      fetchAssociatedRecords();
-    } catch (error: any) {
-      console.error('Error al eliminar nota:', error);
-      const errorMessage = error.response?.data?.error || error.message || 'Error al eliminar la nota';
-      setSuccessMessage(errorMessage);
-      setTimeout(() => setSuccessMessage(''), 3000);
-    }
-  };
-
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
         <CircularProgress />
       </Box>
     );
@@ -1910,37 +1962,43 @@ const ContactDetail: React.FC = () => {
     return (
       <Box>
         <Typography>Contacto no encontrado</Typography>
-        <Button onClick={() => navigate('/contacts')}>Volver a Contactos</Button>
+        <Button onClick={() => navigate("/contacts")}>
+          Volver a Contactos
+        </Button>
       </Box>
     );
   }
 
   return (
-      <Box sx={{ 
+    <Box
+      sx={{
         bgcolor: theme.palette.background.default,
-        minHeight: { xs: '100vh', md: '100vh' },
+        minHeight: { xs: "100vh", md: "100vh" },
         pb: { xs: 2, sm: 3, md: 4 },
-        display: 'flex', 
-        flexDirection: 'column',
-        overflow: 'visible',
-      }}>
+        display: "flex",
+        flexDirection: "column",
+        overflow: "visible",
+      }}
+    >
       {/* Título de la página */}
-      <Box sx={{ 
-        pt: { xs: 2, sm: 3 }, 
-        pb: 2, 
-        px: { xs: 2, sm: 3, md: 4 },
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 1.5,
-      }}>
+      <Box
+        sx={{
+          pt: { xs: 2, sm: 3 },
+          pb: 2,
+          px: { xs: 2, sm: 3, md: 4 },
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 1.5,
+        }}
+      >
         {/* Lado izquierdo: Botón de regresar y título */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
           <IconButton
-            onClick={() => navigate('/contacts')}
+            onClick={() => navigate("/contacts")}
             sx={{
               color: theme.palette.text.secondary,
-              '&:hover': {
+              "&:hover": {
                 bgcolor: theme.palette.action.hover,
                 color: theme.palette.text.primary,
               },
@@ -1953,7 +2011,7 @@ const ContactDetail: React.FC = () => {
             sx={{
               fontWeight: 500,
               color: theme.palette.text.primary,
-              fontSize: { xs: '1.125rem', sm: '1.25rem', md: '1.5rem' },
+              fontSize: { xs: "1.125rem", sm: "1.25rem", md: "1.5rem" },
             }}
           >
             Información del contacto
@@ -1961,32 +2019,39 @@ const ContactDetail: React.FC = () => {
         </Box>
 
         {/* Lado derecho: Breadcrumb */}
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: 0.5,
-          color: theme.palette.text.secondary,
-        }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 0.5,
+            color: theme.palette.text.secondary,
+          }}
+        >
           <Typography
             component="span"
-            onClick={() => navigate('/contacts')}
+            onClick={() => navigate("/contacts")}
             sx={{
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              cursor: 'pointer',
+              fontSize: { xs: "0.75rem", sm: "0.875rem" },
+              cursor: "pointer",
               color: theme.palette.text.secondary,
-              '&:hover': {
+              "&:hover": {
                 color: theme.palette.text.primary,
-                textDecoration: 'underline',
+                textDecoration: "underline",
               },
             }}
           >
             Contactos
           </Typography>
-          <KeyboardArrowRight sx={{ fontSize: { xs: 16, sm: 18 }, color: theme.palette.text.disabled }} />
+          <KeyboardArrowRight
+            sx={{
+              fontSize: { xs: 16, sm: 18 },
+              color: theme.palette.text.disabled,
+            }}
+          />
           <Typography
             component="span"
             sx={{
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              fontSize: { xs: "0.75rem", sm: "0.875rem" },
               color: theme.palette.text.primary,
               fontWeight: 500,
             }}
@@ -1997,77 +2062,113 @@ const ContactDetail: React.FC = () => {
       </Box>
 
       {/* Contenido principal - Separado en 2 partes */}
-      <Box sx={{ 
-        display: 'flex',
-        flexDirection: { xs: 'column', md: 'row' },
-        gap: { xs: 2, md: 3 },
-        flex: 1,
-        overflow: 'visible',
-        minHeight: { xs: 'auto', md: 0 },
-        height: { xs: 'auto', md: 'auto' },
-        maxHeight: { xs: 'none', md: 'none' },
-        alignItems: { xs: 'stretch', md: 'flex-start' },
-        alignContent: 'flex-start',
-        px: { xs: 2, sm: 3, md: 4 },
-      }}>
-        {/* Columna Principal - Tabs y Contenido */}
-        <Box sx={{ 
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", md: "row" },
+          gap: { xs: 2, md: 3 },
           flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'visible',
-          minHeight: 0,
-          width: { xs: '100%', md: 'auto' },
-        }}>
+          overflow: "visible",
+          minHeight: { xs: "auto", md: 0 },
+          height: { xs: "auto", md: "auto" },
+          maxHeight: { xs: "none", md: "none" },
+          alignItems: { xs: "stretch", md: "flex-start" },
+          alignContent: "flex-start",
+          px: { xs: 2, sm: 3, md: 4 },
+        }}
+      >
+        {/* Columna Principal - Tabs y Contenido */}
+        <Box
+          sx={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "visible",
+            minHeight: 0,
+            width: { xs: "100%", md: "auto" },
+          }}
+        >
           {/* ContactHeader */}
           <Paper
             elevation={0}
-              sx={{
+            sx={{
               borderRadius: 3,
               p: 2.5,
               mb: 2,
-            bgcolor: theme.palette.background.paper,
-            border: `1px solid ${theme.palette.divider}`,
-                      display: 'flex',
-              flexDirection: 'column',
+              bgcolor: theme.palette.background.paper,
+              border: `1px solid ${theme.palette.divider}`,
+              display: "flex",
+              flexDirection: "column",
               gap: 1.5,
-                    }}
-                  >
+            }}
+          >
             {/* Parte superior: Avatar + Info a la izquierda, Botones a la derecha */}
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 2,
+              }}
+            >
               {/* Izquierda: Avatar + Nombre + Subtítulo */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
-                    <Avatar
-                      src={contact.avatar || contactLogo}
-                      sx={{
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 2,
+                  flex: 1,
+                  minWidth: 0,
+                }}
+              >
+                <Avatar
+                  src={contact.avatar || contactLogo}
+                  sx={{
                     width: 56,
                     height: 56,
-                        bgcolor: (contact.avatar || contactLogo) ? 'transparent' : taxiMonterricoColors.green,
-                    fontSize: '1.25rem',
+                    bgcolor:
+                      contact.avatar || contactLogo
+                        ? "transparent"
+                        : taxiMonterricoColors.green,
+                    fontSize: "1.25rem",
                     fontWeight: 600,
-                      }}
-                    >
-                      {!contact.avatar && !contactLogo && getInitials(contact.firstName, contact.lastName)}
-                    </Avatar>
+                  }}
+                >
+                  {!contact.avatar &&
+                    !contactLogo &&
+                    getInitials(contact.firstName, contact.lastName)}
+                </Avatar>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.25rem', mb: 0.5 }}>
+                  <Typography
+                    variant="h6"
+                    sx={{ fontWeight: 600, fontSize: "1.25rem", mb: 0.5 }}
+                  >
                     {contact.firstName} {contact.lastName}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                    {contact.jobTitle || contact.email || 'Sin información adicional'}
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ fontSize: "0.875rem" }}
+                  >
+                    {contact.jobTitle ||
+                      contact.email ||
+                      "Sin información adicional"}
                   </Typography>
                 </Box>
               </Box>
 
               {/* Derecha: Etapa + Menú desplegable de acciones */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                 <Chip
                   label={getStageLabel(contact.lifecycleStage)}
                   size="small"
                   sx={{
                     height: 24,
-                    fontSize: '0.75rem',
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(46, 125, 50, 0.2)' : 'rgba(46, 125, 50, 0.1)',
+                    fontSize: "0.75rem",
+                    bgcolor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(46, 125, 50, 0.2)"
+                        : "rgba(46, 125, 50, 0.1)",
                     color: taxiMonterricoColors.green,
                     fontWeight: 500,
                   }}
@@ -2075,28 +2176,28 @@ const ContactDetail: React.FC = () => {
                 <Tooltip title="Acciones">
                   <IconButton
                     onClick={(e) => setActionsMenuAnchorEl(e.currentTarget)}
-                  sx={{
-                    color: theme.palette.text.secondary,
-                      '&:hover': {
+                    sx={{
+                      color: theme.palette.text.secondary,
+                      "&:hover": {
                         bgcolor: theme.palette.action.hover,
                         color: theme.palette.text.primary,
                       },
-                  }}
-                >
+                    }}
+                  >
                     <KeyboardArrowDown />
-                </IconButton>
+                  </IconButton>
                 </Tooltip>
                 <Menu
                   anchorEl={actionsMenuAnchorEl}
                   open={Boolean(actionsMenuAnchorEl)}
                   onClose={() => setActionsMenuAnchorEl(null)}
                   anchorOrigin={{
-                    vertical: 'bottom',
-                    horizontal: 'right',
+                    vertical: "bottom",
+                    horizontal: "right",
                   }}
                   transformOrigin={{
-                    vertical: 'top',
-                    horizontal: 'right',
+                    vertical: "top",
+                    horizontal: "right",
                   }}
                 >
                   <MenuItem
@@ -2108,7 +2209,7 @@ const ContactDetail: React.FC = () => {
                     <Note sx={{ fontSize: 20, mr: 1.5 }} />
                     Crear nota
                   </MenuItem>
-                {contact.email && (
+                  {contact.email && (
                     <MenuItem
                       onClick={() => {
                         handleOpenEmail();
@@ -2138,9 +2239,9 @@ const ContactDetail: React.FC = () => {
                     Crear tarea
                   </MenuItem>
                 </Menu>
-                <Menu 
-                  anchorEl={anchorEl} 
-                  open={Boolean(anchorEl)} 
+                <Menu
+                  anchorEl={anchorEl}
+                  open={Boolean(anchorEl)}
                   onClose={handleMenuClose}
                   TransitionProps={{
                     timeout: 200,
@@ -2149,52 +2250,52 @@ const ContactDetail: React.FC = () => {
                     sx: {
                       mt: 1,
                       borderRadius: 2,
-                      boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-                      animation: 'slideDown 0.2s ease',
-                      '@keyframes slideDown': {
-                        '0%': {
+                      boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+                      animation: "slideDown 0.2s ease",
+                      "@keyframes slideDown": {
+                        "0%": {
                           opacity: 0,
-                          transform: 'translateY(-10px)',
+                          transform: "translateY(-10px)",
                         },
-                        '100%': {
+                        "100%": {
                           opacity: 1,
-                          transform: 'translateY(0)',
+                          transform: "translateY(0)",
                         },
                       },
                     },
                   }}
                 >
-                  <MenuItem 
+                  <MenuItem
                     onClick={handleMenuClose}
                     sx={{
-                      transition: 'all 0.15s ease',
-                      '&:hover': {
-                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                        transform: 'translateX(4px)',
+                      transition: "all 0.15s ease",
+                      "&:hover": {
+                        backgroundColor: "rgba(46, 125, 50, 0.08)",
+                        transform: "translateX(4px)",
                       },
                     }}
                   >
                     Editar
                   </MenuItem>
-                  <MenuItem 
+                  <MenuItem
                     onClick={handleMenuClose}
                     sx={{
-                      transition: 'all 0.15s ease',
-                      '&:hover': {
-                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                        transform: 'translateX(4px)',
+                      transition: "all 0.15s ease",
+                      "&:hover": {
+                        backgroundColor: "rgba(46, 125, 50, 0.08)",
+                        transform: "translateX(4px)",
                       },
                     }}
                   >
                     Eliminar
                   </MenuItem>
-                  <MenuItem 
+                  <MenuItem
                     onClick={handleMenuClose}
                     sx={{
-                      transition: 'all 0.15s ease',
-                      '&:hover': {
-                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                        transform: 'translateX(4px)',
+                      transition: "all 0.15s ease",
+                      "&:hover": {
+                        backgroundColor: "rgba(46, 125, 50, 0.08)",
+                        transform: "translateX(4px)",
                       },
                     }}
                   >
@@ -2204,36 +2305,53 @@ const ContactDetail: React.FC = () => {
                 <Tooltip title="Más opciones">
                   <IconButton
                     onClick={handleMenuOpen}
-                sx={{ 
+                    sx={{
                       color: theme.palette.text.secondary,
-                  '&:hover': {
+                      "&:hover": {
                         bgcolor: theme.palette.action.hover,
                         color: theme.palette.text.primary,
-                  },
-                }}
-              >
+                      },
+                    }}
+                  >
                     <MoreVert />
                   </IconButton>
                 </Tooltip>
               </Box>
-              </Box>
-              
+            </Box>
+
             {/* Línea separadora */}
-            <Divider sx={{ borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)' }} />
+            <Divider
+              sx={{
+                borderColor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(255, 255, 255, 0.08)"
+                    : "rgba(0, 0, 0, 0.08)",
+              }}
+            />
 
             {/* Parte inferior: Chips */}
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                flexWrap: "wrap",
+                alignItems: "center",
+              }}
+            >
               {contact.email && (
                 <Chip
                   icon={<Email sx={{ fontSize: 14 }} />}
                   label={contact.email}
                   size="small"
-                sx={{ 
+                  sx={{
                     height: 24,
-                    fontSize: '0.75rem',
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+                    fontSize: "0.75rem",
+                    bgcolor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(255, 255, 255, 0.05)"
+                        : "#FFFFFF",
                     border: `1px solid ${theme.palette.divider}`,
-                    '& .MuiChip-icon': {
+                    "& .MuiChip-icon": {
                       color: theme.palette.text.secondary,
                     },
                   }}
@@ -2244,12 +2362,15 @@ const ContactDetail: React.FC = () => {
                   icon={<Phone sx={{ fontSize: 14 }} />}
                   label={contact.phone}
                   size="small"
-                sx={{ 
+                  sx={{
                     height: 24,
-                    fontSize: '0.75rem',
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+                    fontSize: "0.75rem",
+                    bgcolor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(255, 255, 255, 0.05)"
+                        : "#FFFFFF",
                     border: `1px solid ${theme.palette.divider}`,
-                    '& .MuiChip-icon': {
+                    "& .MuiChip-icon": {
                       color: theme.palette.text.secondary,
                     },
                   }}
@@ -2258,102 +2379,118 @@ const ContactDetail: React.FC = () => {
               {(contact.city || contact.address) && (
                 <Chip
                   icon={<LocationOn sx={{ fontSize: 14 }} />}
-                  label={contact.city || contact.address || '--'}
+                  label={contact.city || contact.address || "--"}
                   size="small"
-                sx={{ 
+                  sx={{
                     height: 24,
-                    fontSize: '0.75rem',
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+                    fontSize: "0.75rem",
+                    bgcolor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(255, 255, 255, 0.05)"
+                        : "#FFFFFF",
                     border: `1px solid ${theme.palette.divider}`,
-                    '& .MuiChip-icon': {
+                    "& .MuiChip-icon": {
                       color: theme.palette.text.secondary,
                     },
                   }}
                 />
               )}
-              </Box>
+            </Box>
           </Paper>
 
           {/* Tabs estilo barra de filtros */}
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          <Card sx={{ 
-            borderRadius: 2,
-            boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-            bgcolor: theme.palette.background.paper,
-            px: 2,
-              py: 0.5,
-          display: 'flex',
-              alignItems: 'center',
-              flex: 1,
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-        }}>
-          <Tabs
-            value={activeTab}
-            onChange={(e, newValue) => setActiveTab(newValue)}
-            sx={{
-              minHeight: 'auto',
+          <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+            <Card
+              sx={{
+                borderRadius: 2,
+                boxShadow:
+                  theme.palette.mode === "dark"
+                    ? "0 2px 8px rgba(0,0,0,0.3)"
+                    : "0 2px 8px rgba(0,0,0,0.1)",
+                bgcolor: theme.palette.background.paper,
+                px: 2,
+                py: 0.5,
+                display: "flex",
+                alignItems: "center",
+                flex: 1,
+                border: `1px solid ${
+                  theme.palette.mode === "dark"
+                    ? "rgba(255,255,255,0.15)"
+                    : "rgba(0,0,0,0.15)"
+                }`,
+              }}
+            >
+              <Tabs
+                value={activeTab}
+                onChange={(e, newValue) => setActiveTab(newValue)}
+                sx={{
+                  minHeight: "auto",
                   flex: 1,
-              '& .MuiTabs-flexContainer': {
+                  "& .MuiTabs-flexContainer": {
                     gap: 0,
-                    justifyContent: 'flex-start',
+                    justifyContent: "flex-start",
                   },
-                  '& .MuiTabs-indicator': {
+                  "& .MuiTabs-indicator": {
                     backgroundColor: taxiMonterricoColors.green,
                     height: 2,
-              },
-              '& .MuiTab-root': {
-                textTransform: 'none',
-                fontSize: '0.875rem',
-                fontWeight: 500,
+                  },
+                  "& .MuiTab-root": {
+                    textTransform: "none",
+                    fontSize: "0.875rem",
+                    fontWeight: 500,
                     minHeight: 40,
                     height: 40,
                     paddingX: 3,
-                    bgcolor: 'transparent',
+                    bgcolor: "transparent",
                     color: theme.palette.text.secondary,
-                    transition: 'all 0.2s ease',
-                    position: 'relative',
-                    '&.Mui-selected': {
-                      bgcolor: 'transparent',
+                    transition: "all 0.2s ease",
+                    position: "relative",
+                    "&.Mui-selected": {
+                      bgcolor: "transparent",
                       color: theme.palette.text.primary,
                       fontWeight: 700,
                     },
-                    '&:hover': {
-                      bgcolor: 'transparent',
+                    "&:hover": {
+                      bgcolor: "transparent",
                       color: theme.palette.text.primary,
                     },
-                    '&:not(:last-child)::after': {
+                    "&:not(:last-child)::after": {
                       content: '""',
-                      position: 'absolute',
+                      position: "absolute",
                       right: 0,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      width: '1px',
-                      height: '60%',
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      width: "1px",
+                      height: "60%",
                       backgroundColor: theme.palette.divider,
                     },
-              },
-            }}
-          >
+                  },
+                }}
+              >
                 <Tab label="Resumen" />
                 <Tab label="Información Avanzada" />
-            <Tab label="Actividades" />
-          </Tabs>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                ml: 1,
-                pl: 1,
-                borderLeft: `1px solid ${theme.palette.divider}`,
-                gap: 0.5,
-              }}>
+                <Tab label="Actividades" />
+              </Tabs>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  ml: 1,
+                  pl: 1,
+                  borderLeft: `1px solid ${theme.palette.divider}`,
+                  gap: 0.5,
+                }}
+              >
                 <Tooltip title="Registro de Cambios">
                   <IconButton
                     onClick={() => setHistoryOpen(!historyOpen)}
                     size="small"
                     sx={{
-                      color: historyOpen ? '#2196F3' : theme.palette.text.secondary,
-                      '&:hover': {
-                        bgcolor: 'transparent',
+                      color: historyOpen
+                        ? "#2196F3"
+                        : theme.palette.text.secondary,
+                      "&:hover": {
+                        bgcolor: "transparent",
                       },
                     }}
                   >
@@ -2365,9 +2502,11 @@ const ContactDetail: React.FC = () => {
                     onClick={() => setCopilotOpen(!copilotOpen)}
                     size="small"
                     sx={{
-                      color: copilotOpen ? taxiMonterricoColors.green : theme.palette.text.secondary,
-                      '&:hover': {
-                        bgcolor: 'transparent',
+                      color: copilotOpen
+                        ? taxiMonterricoColors.green
+                        : theme.palette.text.secondary,
+                      "&:hover": {
+                        bgcolor: "transparent",
                       },
                     }}
                   >
@@ -2382,493 +2521,258 @@ const ContactDetail: React.FC = () => {
           {activeTab === 0 && (
             <>
               {/* Cards de Fecha de Creación, Etapa del Ciclo de Vida y Última Actividad */}
-              <Box sx={{ 
-                display: 'grid', 
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
-                gap: 2, 
-                mb: 2 
-              }}>
-              <Card
+              <Box
                 sx={{
-                  width: '100%',
-                  p: 2,
-                  bgcolor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                  borderRadius: 1.5,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-start',
-                  textAlign: 'left',
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    sm: "repeat(2, 1fr)",
+                    md: "repeat(4, 1fr)",
+                  },
+                  gap: 2,
+                  mb: 2,
                 }}
               >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                  <CalendarToday sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                  Fecha de creación
-                </Typography>
-                </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                  {contact.createdAt
-                    ? `${new Date(contact.createdAt).toLocaleDateString('es-ES', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                      })} ${new Date(contact.createdAt).toLocaleTimeString('es-ES', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}`
-                    : 'No disponible'}
-                </Typography>
-              </Card>
-
-              <Card
-                sx={{
-                  width: '100%',
-                  p: 2,
-                  bgcolor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                  borderRadius: 1.5,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-start',
-                  textAlign: 'left',
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                  <DonutSmall sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                  Etapa del ciclo de vida
-                </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <KeyboardArrowRight sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                  {contact.lifecycleStage ? getStageLabel(contact.lifecycleStage) : 'No disponible'}
-                </Typography>
-                </Box>
-              </Card>
-
-              <Card
-                sx={{
-                  width: '100%',
-                  p: 2,
-                  bgcolor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                  borderRadius: 1.5,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-start',
-                  textAlign: 'left',
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                  <AccessTime sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                  Última actividad
-                </Typography>
-                </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                  {activities.length > 0 && activities[0].createdAt
-                    ? new Date(activities[0].createdAt).toLocaleDateString('es-ES', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                      })
-                    : 'No hay actividades'}
-                </Typography>
-              </Card>
-
-              <Card
-                sx={{
-                  width: '100%',
-                  p: 2,
-                  bgcolor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                  borderRadius: 1.5,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'flex-start',
-                  textAlign: 'left',
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                  <Person sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                    Propietario del registro
+                <Card
+                  sx={{
+                    width: "100%",
+                    p: 2,
+                    bgcolor: theme.palette.background.paper,
+                    border: `1px solid ${
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.15)"
+                        : "rgba(0,0,0,0.15)"
+                    }`,
+                    borderRadius: 1.5,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    textAlign: "left",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 1,
+                    }}
+                  >
+                    <CalendarToday
+                      sx={{ fontSize: 18, color: theme.palette.text.secondary }}
+                    />
+                    <Typography
+                      variant="subtitle2"
+                      sx={{
+                        fontWeight: 600,
+                        color: theme.palette.text.primary,
+                      }}
+                    >
+                      Fecha de creación
+                    </Typography>
+                  </Box>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ fontSize: "0.875rem" }}
+                  >
+                    {contact.createdAt
+                      ? `${new Date(contact.createdAt).toLocaleDateString(
+                          "es-ES",
+                          {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                          }
+                        )} ${new Date(contact.createdAt).toLocaleTimeString(
+                          "es-ES",
+                          {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }
+                        )}`
+                      : "No disponible"}
                   </Typography>
-            </Box>
-                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                  {contact.Owner 
-                    ? (contact.Owner.firstName || contact.Owner.lastName
-                        ? `${contact.Owner.firstName || ''} ${contact.Owner.lastName || ''}`.trim()
-                        : contact.Owner.email || 'Sin nombre')
-                    : 'No asignado'}
-                </Typography>
-              </Card>
+                </Card>
+
+                <Card
+                  sx={{
+                    width: "100%",
+                    p: 2,
+                    bgcolor: theme.palette.background.paper,
+                    border: `1px solid ${
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.15)"
+                        : "rgba(0,0,0,0.15)"
+                    }`,
+                    borderRadius: 1.5,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    textAlign: "left",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 1,
+                    }}
+                  >
+                    <DonutSmall
+                      sx={{ fontSize: 18, color: theme.palette.text.secondary }}
+                    />
+                    <Typography
+                      variant="subtitle2"
+                      sx={{
+                        fontWeight: 600,
+                        color: theme.palette.text.primary,
+                      }}
+                    >
+                      Etapa del ciclo de vida
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <KeyboardArrowRight
+                      sx={{ fontSize: 16, color: theme.palette.text.secondary }}
+                    />
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ fontSize: "0.875rem" }}
+                    >
+                      {contact.lifecycleStage
+                        ? getStageLabel(contact.lifecycleStage)
+                        : "No disponible"}
+                    </Typography>
+                  </Box>
+                </Card>
+
+                <Card
+                  sx={{
+                    width: "100%",
+                    p: 2,
+                    bgcolor: theme.palette.background.paper,
+                    border: `1px solid ${
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.15)"
+                        : "rgba(0,0,0,0.15)"
+                    }`,
+                    borderRadius: 1.5,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    textAlign: "left",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 1,
+                    }}
+                  >
+                    <AccessTime
+                      sx={{ fontSize: 18, color: theme.palette.text.secondary }}
+                    />
+                    <Typography
+                      variant="subtitle2"
+                      sx={{
+                        fontWeight: 600,
+                        color: theme.palette.text.primary,
+                      }}
+                    >
+                      Última actividad
+                    </Typography>
+                  </Box>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ fontSize: "0.875rem" }}
+                  >
+                    {activities.length > 0 && activities[0].createdAt
+                      ? new Date(activities[0].createdAt).toLocaleDateString(
+                          "es-ES",
+                          {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                          }
+                        )
+                      : "No hay actividades"}
+                  </Typography>
+                </Card>
+
+                <Card
+                  sx={{
+                    width: "100%",
+                    p: 2,
+                    bgcolor: theme.palette.background.paper,
+                    border: `1px solid ${
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.15)"
+                        : "rgba(0,0,0,0.15)"
+                    }`,
+                    borderRadius: 1.5,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    textAlign: "left",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 1,
+                    }}
+                  >
+                    <Person
+                      sx={{ fontSize: 18, color: theme.palette.text.secondary }}
+                    />
+                    <Typography
+                      variant="subtitle2"
+                      sx={{
+                        fontWeight: 600,
+                        color: theme.palette.text.primary,
+                      }}
+                    >
+                      Propietario del registro
+                    </Typography>
+                  </Box>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ fontSize: "0.875rem" }}
+                  >
+                    {contact.Owner
+                      ? contact.Owner.firstName || contact.Owner.lastName
+                        ? `${contact.Owner.firstName || ""} ${
+                            contact.Owner.lastName || ""
+                          }`.trim()
+                        : contact.Owner.email || "Sin nombre"
+                      : "No asignado"}
+                  </Typography>
+                </Card>
               </Box>
 
               {/* Grid 2x2 para Actividades Recientes, Empresas, Negocios y Tickets */}
-              <Box sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
-                gap: 2,
-                mt: 2,
-                mb: 2,
-              }}>
-                {/* Card de Actividades Recientes */}
-                <Card sx={{ 
-                  borderRadius: 2,
-                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                  bgcolor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                }}>
-                  <CardContent>
-                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
-                      Actividades Recientes
-                    </Typography>
-                
-                {activities && activities.length > 0 ? (
-                  <Box sx={{ 
-                    display: 'flex', 
-                    gap: 1.5, 
-                    overflowX: 'auto',
-                    pb: 1,
-                    '&::-webkit-scrollbar': {
-                      height: 6,
-                    },
-                    '&::-webkit-scrollbar-track': {
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-                      borderRadius: 3,
-                    },
-                    '&::-webkit-scrollbar-thumb': {
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
-                      borderRadius: 3,
-                      '&:hover': {
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
-                      },
-                    },
-                  }}>
-                    {activities
-                      .sort((a, b) => {
-                        const dateA = new Date(a.createdAt || 0).getTime();
-                        const dateB = new Date(b.createdAt || 0).getTime();
-                        return dateB - dateA;
-                      })
-                      .slice(0, 6)
-                      .map((activity) => {
-                        const getActivityIcon = () => {
-                          switch (activity.type) {
-                            case 'note':
-                              return <Note sx={{ fontSize: 20, color: '#9E9E9E' }} />;
-                            case 'email':
-                              return <Email sx={{ fontSize: 20, color: '#1976D2' }} />;
-                            case 'call':
-                              return <Phone sx={{ fontSize: 20, color: '#2E7D32' }} />;
-                            case 'task':
-                            case 'todo':
-                              return <Assignment sx={{ fontSize: 20, color: '#F57C00' }} />;
-                            case 'meeting':
-                              return <Event sx={{ fontSize: 20, color: '#7B1FA2' }} />;
-                            default:
-                              return <Comment sx={{ fontSize: 20, color: theme.palette.text.secondary }} />;
-                          }
-                        };
-
-                        const getActivityTypeLabel = () => {
-                          switch (activity.type) {
-                            case 'note':
-                              return 'Nota';
-                            case 'email':
-                              return 'Correo';
-                            case 'call':
-                              return 'Llamada';
-                            case 'task':
-                            case 'todo':
-                              return 'Tarea';
-                            case 'meeting':
-                              return 'Reunión';
-                            default:
-                              return 'Actividad';
-                          }
-                        };
-
-                        const getActivityColor = () => {
-                          switch (activity.type) {
-                            case 'note':
-                              return { bg: 'rgba(158, 158, 158, 0.1)', border: 'rgba(158, 158, 158, 0.3)' };
-                            case 'email':
-                              return { bg: 'rgba(25, 118, 210, 0.1)', border: 'rgba(25, 118, 210, 0.3)' };
-                            case 'call':
-                              return { bg: 'rgba(46, 125, 50, 0.1)', border: 'rgba(46, 125, 50, 0.3)' };
-                            case 'task':
-                            case 'todo':
-                              return { bg: 'rgba(245, 124, 0, 0.1)', border: 'rgba(245, 124, 0, 0.3)' };
-                            case 'meeting':
-                              return { bg: 'rgba(123, 31, 162, 0.1)', border: 'rgba(123, 31, 162, 0.3)' };
-                            default:
-                              return { bg: theme.palette.action.hover, border: theme.palette.divider };
-                          }
-                        };
-
-                        const colors = getActivityColor();
-                        const activityTitle = activity.subject || activity.title || getActivityTypeLabel();
-
-                        return (
-                          <Tooltip 
-                            key={activity.id} 
-                            title={activityTitle}
-                            arrow
-                            placement="top"
-                          >
-                            <Box
-                              sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                minWidth: 100,
-                                maxWidth: 100,
-                                p: 1.5,
-                                borderRadius: 2,
-                                border: `1px solid ${colors.border}`,
-                                bgcolor: colors.bg,
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                flexShrink: 0,
-                                '&:hover': {
-                                  transform: 'translateY(-2px)',
-                                  boxShadow: theme.palette.mode === 'dark' 
-                                    ? '0 4px 12px rgba(0,0,0,0.4)' 
-                                    : '0 4px 12px rgba(0,0,0,0.15)',
-                                },
-                              }}
-                            >
-                              <Box sx={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center',
-                                width: 36,
-                                height: 36,
-                                borderRadius: '50%',
-                                bgcolor: theme.palette.background.paper,
-                                mb: 1,
-                              }}>
-                                {getActivityIcon()}
-                              </Box>
-                              <Typography 
-                                variant="caption" 
-                                sx={{ 
-                                  fontWeight: 600, 
-                                  fontSize: '0.7rem', 
-                                  color: theme.palette.text.primary,
-                                  textAlign: 'center',
-                                  lineHeight: 1.2,
-                                  mb: 0.5,
-                                }}
-                              >
-                                {getActivityTypeLabel()}
-                              </Typography>
-                              <Typography 
-                                variant="caption" 
-                                sx={{ 
-                                  fontSize: '0.65rem', 
-                                  color: theme.palette.text.secondary,
-                                  textAlign: 'center',
-                                }}
-                              >
-                                {activity.createdAt && new Date(activity.createdAt).toLocaleDateString('es-ES', {
-                                  day: 'numeric',
-                                  month: 'short',
-                                })}
-                              </Typography>
-                            </Box>
-                          </Tooltip>
-                        );
-                      })}
-                  </Box>
-                ) : (
-                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
-                    No hay actividades recientes
-                  </Typography>
-                )}
-                  </CardContent>
-                </Card>
-
-                {/* Card de Empresas Vinculadas */}
-                <Card sx={{ 
-                  borderRadius: 2,
-                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                  bgcolor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                      <Business sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
-                      <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                        Empresas vinculadas
-                      </Typography>
-                    </Box>
-                {associatedCompanies.length > 0 ? (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    {associatedCompanies.slice(0, 5).map((company: any) => (
-                      <Box
-                        key={company.id}
-                        onClick={() => navigate(`/companies/${company.id}`)}
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          p: 1.5,
-                          borderRadius: 1,
-                          border: `1px solid ${theme.palette.divider}`,
-                          transition: 'all 0.2s ease',
-                          cursor: 'pointer',
-                          '&:hover': {
-                            borderColor: taxiMonterricoColors.green,
-                            backgroundColor: theme.palette.mode === 'dark' 
-                              ? 'rgba(46, 125, 50, 0.1)' 
-                              : 'rgba(46, 125, 50, 0.05)',
-                          },
-                        }}
-                      >
-                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.875rem', color: theme.palette.text.primary }}>
-                          {company.name || 'Sin nombre'}
-                        </Typography>
-                      </Box>
-                    ))}
-                    {associatedCompanies.length > 5 && (
-                      <Typography variant="caption" sx={{ color: theme.palette.text.secondary, textAlign: 'center', mt: 1 }}>
-                        Y {associatedCompanies.length - 5} más...
-                      </Typography>
-                    )}
-                  </Box>
-                ) : (
-                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
-                    No hay empresas vinculadas
-                  </Typography>
-                )}
-                  </CardContent>
-                </Card>
-
-                {/* Card de Negocios Vinculados */}
-                <Card sx={{ 
-                  borderRadius: 2,
-                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                  bgcolor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                      <AttachMoney sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
-                      <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                        Negocios vinculados
-                      </Typography>
-                    </Box>
-                {associatedDeals.length > 0 ? (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    {associatedDeals.slice(0, 5).map((deal: any) => (
-                      <Box
-                        key={deal.id}
-                        onClick={() => navigate(`/deals/${deal.id}`)}
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          p: 1.5,
-                          borderRadius: 1,
-                          border: `1px solid ${theme.palette.divider}`,
-                          transition: 'all 0.2s ease',
-                          cursor: 'pointer',
-                          '&:hover': {
-                            borderColor: taxiMonterricoColors.green,
-                            backgroundColor: theme.palette.mode === 'dark' 
-                              ? 'rgba(46, 125, 50, 0.1)' 
-                              : 'rgba(46, 125, 50, 0.05)',
-                          },
-                        }}
-                      >
-                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.875rem', color: theme.palette.text.primary }}>
-                          {deal.name || 'Sin nombre'}
-                        </Typography>
-                        {deal.amount && (
-                          <Typography variant="body2" sx={{ fontSize: '0.875rem', color: theme.palette.text.secondary }}>
-                            S/ {deal.amount.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                          </Typography>
-                        )}
-                      </Box>
-                    ))}
-                    {associatedDeals.length > 5 && (
-                      <Typography variant="caption" sx={{ color: theme.palette.text.secondary, textAlign: 'center', mt: 1 }}>
-                        Y {associatedDeals.length - 5} más...
-                      </Typography>
-                    )}
-                  </Box>
-                ) : (
-                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
-                    No hay negocios vinculados
-                  </Typography>
-                )}
-                  </CardContent>
-                </Card>
-
-                {/* Card de Tickets Vinculados */}
-                <Card sx={{ 
-                  borderRadius: 2,
-                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                  bgcolor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                      <Support sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
-                      <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                        Tickets vinculados
-                      </Typography>
-                    </Box>
-                {associatedTickets.length > 0 ? (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    {associatedTickets.slice(0, 5).map((ticket: any) => (
-                      <Box
-                        key={ticket.id}
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          p: 1.5,
-                          borderRadius: 1,
-                          border: `1px solid ${theme.palette.divider}`,
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            borderColor: taxiMonterricoColors.green,
-                            backgroundColor: theme.palette.mode === 'dark' 
-                              ? 'rgba(46, 125, 50, 0.1)' 
-                              : 'rgba(46, 125, 50, 0.05)',
-                          },
-                        }}
-                      >
-                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.875rem', color: theme.palette.text.primary }}>
-                          {ticket.subject || ticket.title || 'Sin asunto'}
-                        </Typography>
-                        {ticket.status && (
-                          <Typography variant="caption" sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary }}>
-                            {ticket.status}
-                          </Typography>
-                        )}
-                      </Box>
-                    ))}
-                    {associatedTickets.length > 5 && (
-                      <Typography variant="caption" sx={{ color: theme.palette.text.secondary, textAlign: 'center', mt: 1 }}>
-                        Y {associatedTickets.length - 5} más...
-                      </Typography>
-                    )}
-                  </Box>
-                ) : (
-                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
-                    No hay tickets vinculados
-                  </Typography>
-                )}
-                  </CardContent>
-                </Card>
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" },
+                  gap: 2,
+                  mt: 2,
+                  mb: 2,
+                }}
+              >
+                <RecentActivitiesCard activities={activities} />
+                <LinkedCompaniesCard companies={associatedCompanies} />
+                <LinkedDealsCard deals={associatedDeals} />
+                <LinkedTicketsCard tickets={associatedTickets} />
               </Box>
             </>
           )}
@@ -2877,3402 +2781,975 @@ const ContactDetail: React.FC = () => {
           {activeTab === 1 && (
             <>
               {/* Card de Actividades Recientes */}
-              <Card sx={{ 
-                borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 2,
-                display: 'flex',
-                flexDirection: 'column',
-                mt: 2,
-                mb: 2,
-                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-              }}>
-                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
-                  Actividades Recientes
-                </Typography>
-                
-                {/* Opciones de búsqueda y crear actividades */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  gap: 2, 
-                  mb: 2,
-                  flexWrap: 'wrap',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}>
-                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                    <TextField
-                      size="small"
-                      placeholder="Buscar actividades"
-                      value={activitySearch}
-                      onChange={(e) => setActivitySearch(e.target.value)}
-                      sx={{
-                        width: '250px',
-                        transition: 'all 0.3s ease',
-                        '& .MuiOutlinedInput-root': {
-                          height: '32px',
-                          fontSize: '0.875rem',
-                          '&:hover': {
-                            '& fieldset': {
-                              borderColor: taxiMonterricoColors.green,
-                            },
-                          },
-                          '&.Mui-focused': {
-                            '& fieldset': {
-                              borderColor: taxiMonterricoColors.green,
-                              borderWidth: 2,
-                            },
-                          },
-                        },
-                      }}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <Search fontSize="small" />
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                    <Button 
-                      size="small" 
-                      variant="outlined" 
-                      endIcon={<ExpandMore />}
-                      onClick={(e) => setCreateActivityMenuAnchor(e.currentTarget)}
-                      sx={{
-                        borderColor: taxiMonterricoColors.green,
-                        color: taxiMonterricoColors.green,
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          borderColor: taxiMonterricoColors.green,
-                          backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
-                        },
-                      }}
-                    >
-                      Crear actividades
-                    </Button>
-                  </Box>
-                  
-                  {/* Filtros */}
-                  <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                    <Chip 
-                      label={selectedTimeRange}
-                      size="small" 
-                      deleteIcon={<KeyboardArrowDown fontSize="small" />}
-                      onDelete={(e) => {
-                        e.stopPropagation();
-                        setTimeRangeMenuAnchor(e.currentTarget);
-                      }}
-                      onClick={(e) => setTimeRangeMenuAnchor(e.currentTarget)}
-                      sx={{ 
-                        cursor: 'pointer',
-                        color: taxiMonterricoColors.green,
-                      }}
-                    />
-                    {selectedActivityTypes.length > 0 ? (
-                      <Chip 
-                        label={`(${selectedActivityTypes.length}) Actividad`}
-                        size="small" 
-                        deleteIcon={<Close fontSize="small" />}
-                        onDelete={() => setSelectedActivityTypes([])}
-                        onClick={(e) => setActivityFilterMenuAnchor(e.currentTarget)}
-                        sx={{ 
-                          cursor: 'pointer',
-                          bgcolor: 'rgba(46, 125, 50, 0.1)',
-                          color: taxiMonterricoColors.green,
-                        }}
-                      />
-                    ) : (
-                      <Chip 
-                        label="Actividad"
-                        size="small" 
-                        deleteIcon={<KeyboardArrowDown fontSize="small" />}
-                        onDelete={(e) => {
-                          e.stopPropagation();
-                          setActivityFilterMenuAnchor(e.currentTarget);
-                        }}
-                        onClick={(e) => setActivityFilterMenuAnchor(e.currentTarget)}
-                        sx={{ 
-                          cursor: 'pointer',
-                          color: taxiMonterricoColors.green,
-                        }}
-                      />
-                    )}
-                    <Menu
-                      anchorEl={timeRangeMenuAnchor}
-                      open={Boolean(timeRangeMenuAnchor)}
-                      onClose={() => setTimeRangeMenuAnchor(null)}
-                      PaperProps={{
-                        sx: {
-                          mt: 1,
-                          minWidth: 200,
-                          borderRadius: 2,
-                        },
-                      }}
-                    >
-                      {['Todo', 'Hoy', 'Ayer', 'Esta semana', 'Semana pasada', 'Últimos 7 días'].map((option) => (
-                        <MenuItem 
-                          key={option}
-                          onClick={() => { 
-                            setSelectedTimeRange(option === 'Todo' ? 'Todo hasta ahora' : option); 
-                            setTimeRangeMenuAnchor(null); 
-                          }}
-                          sx={{
-                            backgroundColor: (selectedTimeRange === option || (option === 'Todo' && selectedTimeRange === 'Todo hasta ahora')) 
-                              ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)') 
-                              : 'transparent',
-                          }}
-                        >
-                          {option}
-                        </MenuItem>
-                      ))}
-                    </Menu>
-                    <Menu
-                      anchorEl={activityFilterMenuAnchor}
-                      open={Boolean(activityFilterMenuAnchor)}
-                      onClose={() => setActivityFilterMenuAnchor(null)}
-                      PaperProps={{
-                        sx: {
-                          mt: 1,
-                          minWidth: 200,
-                          borderRadius: 2,
-                        },
-                      }}
-                    >
-                      {['Nota', 'Correo', 'Llamada', 'Tarea', 'Reunión'].map((type) => {
-                        const isSelected = selectedActivityTypes.includes(type);
-                        return (
-                          <MenuItem
-                            key={type}
-                            onClick={() => {
-                              if (isSelected) {
-                                setSelectedActivityTypes(selectedActivityTypes.filter(t => t !== type));
-                              } else {
-                                setSelectedActivityTypes([...selectedActivityTypes, type]);
-                              }
-                            }}
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 1,
-                            }}
-                          >
-                            <Checkbox checked={isSelected} size="small" sx={{ color: taxiMonterricoColors.green, '&.Mui-checked': { color: taxiMonterricoColors.green } }} />
-                            <Typography variant="body2">{type}</Typography>
-                          </MenuItem>
-                        );
-                      })}
-                    </Menu>
-                  </Box>
-                </Box>
+              <FullActivitiesTableCard
+                activities={activities}
+                searchValue={activitySearch}
+                onSearchChange={setActivitySearch}
+                onCreateActivity={(type) => handleCreateActivity(type as string)}
+                onActivityClick={setExpandedActivity}
+                onToggleComplete={(activityId, completed) => {
+                  setCompletedActivities((prev) => ({
+                    ...prev,
+                    [activityId]: completed,
+                  }));
+                }}
+                completedActivities={completedActivities}
+                getActivityTypeLabel={getActivityTypeLabel}
+              />
 
-                {/* Lista de actividades */}
-                {(() => {
-                  let filteredActivities = activitySearch
-                    ? activities.filter((activity) => {
-                        const searchTerm = activitySearch.toLowerCase();
-                        const subject = (activity.subject || activity.title || '').toLowerCase();
-                        const description = (activity.description || '').toLowerCase();
-                        return subject.includes(searchTerm) || description.includes(searchTerm);
-                      })
-                    : activities;
+              {/* Empresas */}
+              <FullCompaniesTableCard
+                companies={associatedCompanies || []}
+                searchValue={companySearch}
+                onSearchChange={setCompanySearch}
+                onAddExisting={() => {
+                  setCompanyDialogTab("existing");
+                  setAddCompanyOpen(true);
+                }}
+                onAddNew={() => {
+                  setCompanyDialogTab("create");
+                  setAddCompanyOpen(true);
+                }}
+                showActions={true}
+                onRemove={(companyId, companyName) =>
+                  handleRemoveCompanyClick(companyId, companyName || "")
+                }
+                getCompanyInitials={getCompanyInitials}
+                sortField={companySortField}
+                sortOrder={companySortOrder}
+                onSort={handleSortCompanies}
+              />
 
-                  if (selectedActivityTypes.length > 0) {
-                    const typeMap: { [key: string]: string[] } = {
-                      'Nota': ['note'],
-                      'Correo': ['email'],
-                      'Llamada': ['call'],
-                      'Tarea': ['task'],
-                      'Reunión': ['meeting'],
-                    };
-                    filteredActivities = filteredActivities.filter((activity) => {
-                      const activityType = activity.type?.toLowerCase() || '';
-                      return selectedActivityTypes.some(selectedType => {
-                        const mappedTypes = typeMap[selectedType] || [];
-                        return mappedTypes.includes(activityType);
-                      });
-                    });
+              {/* Negocios */}
+              <FullDealsTableCard
+                deals={associatedDeals || []}
+                searchValue={dealSearch}
+                onSearchChange={setDealSearch}
+                onAddExisting={() => {
+                  setDealFormData({
+                    name: "",
+                    amount: "",
+                    stage: "lead",
+                    closeDate: "",
+                    priority: "baja" as "baja" | "media" | "alta",
+                    companyId:
+                      contact?.Company?.id?.toString() ||
+                      contact?.Companies?.[0]?.id?.toString() ||
+                      "",
+                    contactId: id?.toString() || "",
+                  });
+                  if (allCompanies.length === 0) {
+                    fetchAllCompanies();
                   }
-
-                  // Filtrar por rango de tiempo
-                  if (selectedTimeRange !== 'Todo hasta ahora') {
-                    const now = new Date();
-                    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    const yesterday = new Date(today);
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    const startOfWeek = new Date(today);
-                    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-                    const startOfLastWeek = new Date(startOfWeek);
-                    startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
-                    const endOfLastWeek = new Date(startOfWeek);
-                    endOfLastWeek.setDate(endOfLastWeek.getDate() - 1);
-                    const sevenDaysAgo = new Date(today);
-                    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-                    filteredActivities = filteredActivities.filter((activity) => {
-                      const activityDate = new Date(activity.createdAt);
-                      const activityDay = new Date(activityDate.getFullYear(), activityDate.getMonth(), activityDate.getDate());
-                      
-                      switch (selectedTimeRange) {
-                        case 'Hoy':
-                          return activityDay.getTime() === today.getTime();
-                        case 'Ayer':
-                          return activityDay.getTime() === yesterday.getTime();
-                        case 'Esta semana':
-                          return activityDay >= startOfWeek && activityDay <= today;
-                        case 'Semana pasada':
-                          return activityDay >= startOfLastWeek && activityDay <= endOfLastWeek;
-                        case 'Últimos 7 días':
-                          return activityDay >= sevenDaysAgo && activityDay <= today;
-                        default:
-                          return true;
-                      }
-                    });
+                  if (allContacts.length === 0) {
+                    fetchAllContacts();
                   }
-
-                  if (filteredActivities.length === 0) {
-                    return (
-                      <Box sx={{ textAlign: 'center', py: 4 }}>
-                        <Typography variant="body2" color="text.secondary">
-                          {activitySearch ? 'No se encontraron actividades' : 'No hay actividades registradas'}
-                        </Typography>
-                      </Box>
-                    );
+                  setAddDealOpen(true);
+                }}
+                onAddNew={() => {
+                  setDealFormData({
+                    name: "",
+                    amount: "",
+                    stage: "lead",
+                    closeDate: "",
+                    priority: "baja" as "baja" | "media" | "alta",
+                    companyId:
+                      contact?.Company?.id?.toString() ||
+                      contact?.Companies?.[0]?.id?.toString() ||
+                      "",
+                    contactId: id?.toString() || "",
+                  });
+                  if (allCompanies.length === 0) {
+                    fetchAllCompanies();
                   }
+                  if (allContacts.length === 0) {
+                    fetchAllContacts();
+                  }
+                  setAddDealOpen(true);
+                }}
+                showActions={true}
+                onRemove={(dealId, dealName) =>
+                  handleRemoveDealClick(dealId, dealName || "")
+                }
+                getInitials={(name: string) => {
+                  return name
+                    ? name.split(" ").length >= 2
+                      ? `${name.split(" ")[0][0]}${name.split(" ")[1][0]}`.toUpperCase()
+                      : name.substring(0, 2).toUpperCase()
+                    : "--";
+                }}
+                getStageLabel={getStageLabel}
+                sortField={dealSortField}
+                sortOrder={dealSortOrder}
+                onSort={handleSortDeals}
+              />
 
-                  const getActivityTypeLabel = (type: string) => {
-                    switch (type) {
-                      case 'note': return 'Nota';
-                      case 'email': return 'Correo';
-                      case 'call': return 'Llamada';
-                      case 'task': case 'todo': return 'Tarea';
-                      case 'meeting': return 'Reunión';
-                      default: return 'Actividad';
-                    }
-                  };
-
-                  return (
-                    <Box sx={{ 
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 0.5,
-                    }}>
-                      {filteredActivities.map((activity) => {
-                        const getActivityIconCompact = () => {
-                          switch (activity.type) {
-                            case 'note':
-                              return <Note sx={{ fontSize: 18, color: '#9E9E9E' }} />;
-                            case 'email':
-                              return <Email sx={{ fontSize: 18, color: '#1976D2' }} />;
-                            case 'call':
-                              return <Phone sx={{ fontSize: 18, color: '#2E7D32' }} />;
-                            case 'task':
-                            case 'todo':
-                              return <Assignment sx={{ fontSize: 18, color: '#F57C00' }} />;
-                            case 'meeting':
-                              return <Event sx={{ fontSize: 18, color: '#7B1FA2' }} />;
-                            default:
-                              return <Comment sx={{ fontSize: 18, color: theme.palette.text.secondary }} />;
-                          }
-                        };
-
-                        const getTypeColor = () => {
-                          switch (activity.type) {
-                            case 'note': return '#9E9E9E';
-                            case 'email': return '#1976D2';
-                            case 'call': return '#2E7D32';
-                            case 'task': case 'todo': return '#F57C00';
-                            case 'meeting': return '#7B1FA2';
-                            default: return theme.palette.text.secondary;
-                          }
-                        };
-
-                        return (
-                          <Box
-                            key={activity.id}
-                            onClick={() => setExpandedActivity(activity)}
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 1.5,
-                              py: 1,
-                              px: 1.5,
-                              borderRadius: 1,
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease',
-                              borderBottom: `1px solid ${theme.palette.divider}`,
-                              '&:hover': {
-                                bgcolor: theme.palette.action.hover,
-                              },
-                              '&:last-child': {
-                                borderBottom: 'none',
-                              },
-                            }}
-                          >
-                            <Checkbox
-                              checked={completedActivities[activity.id] || false}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                setCompletedActivities(prev => ({
-                                  ...prev,
-                                  [activity.id]: e.target.checked
-                                }));
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              size="small"
-                              sx={{ p: 0, '& .MuiSvgIcon-root': { fontSize: 20 } }}
-                            />
-                            <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                              {getActivityIconCompact()}
-                            </Box>
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
-                                flex: 1,
-                                fontWeight: 500,
-                                fontSize: '0.875rem',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
-                                textDecoration: completedActivities[activity.id] ? 'line-through' : 'none',
-                                opacity: completedActivities[activity.id] ? 0.6 : 1,
-                                color: theme.palette.text.primary,
-                              }}
-                            >
-                              {activity.subject || activity.title || 'Sin título'}
-                            </Typography>
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
-                                color: theme.palette.text.secondary,
-                                fontSize: '0.813rem',
-                                whiteSpace: 'nowrap',
-                                minWidth: 100,
-                                textAlign: 'center',
-                              }}
-                            >
-                              {activity.User ? `${activity.User.firstName} ${activity.User.lastName}` : '-'}
-                            </Typography>
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
-                                color: theme.palette.text.secondary,
-                                fontSize: '0.813rem',
-                                whiteSpace: 'nowrap',
-                                minWidth: 85,
-                                textAlign: 'center',
-                              }}
-                            >
-                              {activity.createdAt 
-                                ? new Date(activity.createdAt).toLocaleDateString('es-ES', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: 'numeric',
-                                  })
-                                : '-'}
-                            </Typography>
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                color: getTypeColor(),
-                                fontWeight: 600,
-                                fontSize: '0.75rem',
-                                textTransform: 'uppercase',
-                                minWidth: 60,
-                                textAlign: 'right',
-                              }}
-                            >
-                              {getActivityTypeLabel(activity.type)}
-                            </Typography>
-                          </Box>
-                        );
-                      })}
-                    </Box>
-                  );
-                })()}
-              </Card>
-
-              {/* Card de Empresas */}
-              <Card sx={{ 
-                borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 2,
-                display: 'flex',
-                flexDirection: 'column',
-                mt: 0.1,
-                height: 'fit-content',
-                minHeight: 'auto',
-                overflow: 'visible',
-              }}>
-                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
-                  Empresas
-                </Typography>
-                
-                {/* Cuadro de búsqueda y botón agregar */}
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
-                  <TextField
-                    size="small"
-                    placeholder="Buscar empresas"
-                    value={companySearch}
-                    onChange={(e) => setCompanySearch(e.target.value)}
-                    sx={{
-                      width: '250px',
-                      transition: 'all 0.3s ease',
-                      '& .MuiOutlinedInput-root': {
-                        height: '32px',
-                        fontSize: '0.875rem',
-                        '&:hover': {
-                          '& fieldset': {
-                            borderColor: taxiMonterricoColors.green,
-                          },
-                        },
-                        '&.Mui-focused': {
-                          '& fieldset': {
-                            borderColor: taxiMonterricoColors.green,
-                            borderWidth: 2,
-                          },
-                        },
-                      },
-                    }}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Search fontSize="small" />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    endIcon={<ExpandMore />}
-                    onClick={(e) => {
-                      if (companyActionsMenu[0]) {
-                        setCompanyActionsMenu({});
-                      } else {
-                        setCompanyActionsMenu({ 0: e.currentTarget });
-                      }
-                    }}
-                    sx={{
-                      borderColor: taxiMonterricoColors.green,
-                      color: taxiMonterricoColors.green,
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        borderColor: taxiMonterricoColors.green,
-                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
-                      },
-                      '&:active': {
-                        transform: 'translateY(0)',
-                      },
-                    }}
-                  >
-                    Agregar
-                  </Button>
-                  <Menu
-                    anchorEl={companyActionsMenu[0] || null}
-                    open={Boolean(companyActionsMenu[0])}
-                    onClose={() => setCompanyActionsMenu({})}
-                    anchorOrigin={{
-                      vertical: 'bottom',
-                      horizontal: 'left',
-                    }}
-                    transformOrigin={{
-                      vertical: 'top',
-                      horizontal: 'left',
-                    }}
-                  >
-                    <MenuItem onClick={() => {
-                      setCompanyActionsMenu({});
-                      setCompanyDialogTab('existing');
-                      setAddCompanyOpen(true);
-                    }}>
-                      Agregar empresa existente
-                    </MenuItem>
-                    <MenuItem onClick={() => {
-                      setCompanyActionsMenu({});
-                      setCompanyDialogTab('create');
-                      setAddCompanyOpen(true);
-                    }}>
-                      Crear nueva empresa
-                    </MenuItem>
-                  </Menu>
-                </Box>
-                
-                {/* Tabla de empresas */}
-                <TableContainer sx={{ maxHeight: 'none', height: 'auto', overflow: 'visible' }}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 600 }}>Nombre</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Dominio</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Industria</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Teléfono</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {associatedCompanies
-                        .filter((company: any) => 
-                          companySearch === '' || 
-                          company.name?.toLowerCase().includes(companySearch.toLowerCase())
-                        )
-                        .map((company: any) => (
-                          <TableRow 
-                            key={company.id} 
-                            hover
-                            onClick={() => navigate(`/companies/${company.id}`)}
-                            sx={{
-                              cursor: 'pointer',
-                            }}
-                          >
-                            <TableCell>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Avatar 
-                                  src={empresaLogo}
-                                  sx={{ 
-                                    width: 32, 
-                                    height: 32, 
-                                    bgcolor: empresaLogo ? 'transparent' : taxiMonterricoColors.green 
-                                  }}
-                                >
-                                  {!empresaLogo && getCompanyInitials(company.name || '')}
-                                </Avatar>
-                                <Typography variant="body2">
-                                  {company.name || 'Sin nombre'}
-                                </Typography>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              {company.domain && company.domain !== '--' ? (
-                                <Link
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (company.domain && company.domain !== '--') {
-                                      const domainUrl = company.domain.startsWith('http') ? company.domain : `https://${company.domain}`;
-                                      window.open(domainUrl, '_blank');
-                                    }
-                                  }}
-                                  sx={{
-                                    color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
-                                    cursor: 'pointer',
-                                    '&:hover': {
-                                      textDecoration: 'underline',
-                                    },
-                                  }}
-                                >
-                                  {company.domain}
-                                </Link>
-                              ) : (
-                                '-'
-                              )}
-                            </TableCell>
-                            <TableCell>{company.companyname || '-'}</TableCell>
-                            <TableCell>{company.phone || '-'}</TableCell>
-                          </TableRow>
-                        ))}
-                      {associatedCompanies.filter((company: any) => 
-                        companySearch === '' || 
-                        company.name?.toLowerCase().includes(companySearch.toLowerCase())
-                      ).length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              No hay empresas asociadas
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Card>
-
-              {/* Card de Negocios */}
-              <Card sx={{ 
-                borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 2,
-                display: 'flex',
-                flexDirection: 'column',
-                mt: 2,
-                height: 'fit-content',
-                minHeight: 'auto',
-                overflow: 'visible',
-              }}>
-                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
-                  Negocios
-                </Typography>
-                
-                {/* Cuadro de búsqueda y botón agregar */}
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
-                  <TextField
-                    size="small"
-                    placeholder="Buscar negocios"
-                    value={dealSearch}
-                    onChange={(e) => setDealSearch(e.target.value)}
-                    sx={{
-                      width: '250px',
-                      transition: 'all 0.3s ease',
-                      '& .MuiOutlinedInput-root': {
-                        height: '32px',
-                        fontSize: '0.875rem',
-                        '&:hover': {
-                          '& fieldset': {
-                            borderColor: taxiMonterricoColors.green,
-                          },
-                        },
-                        '&.Mui-focused': {
-                          '& fieldset': {
-                            borderColor: taxiMonterricoColors.green,
-                            borderWidth: 2,
-                          },
-                        },
-                      },
-                    }}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Search fontSize="small" />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={() => {
-                      setDealFormData({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'baja' as 'baja' | 'media' | 'alta', companyId: contact?.Company?.id?.toString() || contact?.Companies?.[0]?.id?.toString() || '', contactId: id?.toString() || '' });
-                      if (allCompanies.length === 0) {
-                        fetchAllCompanies();
-                      }
-                      if (allContacts.length === 0) {
-                        fetchAllContacts();
-                      }
-                      setAddDealOpen(true);
-                    }}
-                    sx={{
-                      borderColor: taxiMonterricoColors.green,
-                      color: taxiMonterricoColors.green,
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        borderColor: taxiMonterricoColors.green,
-                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
-                      },
-                      '&:active': {
-                        transform: 'translateY(0)',
-                      },
-                    }}
-                  >
-                    Agregar
-                  </Button>
-                </Box>
-                
-                {/* Tabla de negocios */}
-                <TableContainer sx={{ maxHeight: 'none', height: 'auto', overflow: 'visible' }}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 600 }}>Nombre del Negocio</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Valor</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Fecha de Cierre</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Etapa del Negocio</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {associatedDeals
-                        .filter((deal: any) => 
-                          dealSearch === '' || 
-                          deal.name?.toLowerCase().includes(dealSearch.toLowerCase())
-                        )
-                        .map((deal: any) => (
-                          <TableRow 
-                            key={deal.id} 
-                            hover
-                            onClick={() => navigate(`/deals/${deal.id}`)}
-                            sx={{
-                              cursor: 'pointer',
-                            }}
-                          >
-                            <TableCell>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Avatar sx={{ width: 32, height: 32, bgcolor: taxiMonterricoColors.green }}>
-                                  {getInitials(deal.name || '')}
-                                </Avatar>
-                                <Typography variant="body2">
-                                  {deal.name || 'Sin nombre'}
-                                </Typography>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              {deal.amount ? `S/ ${parseFloat(deal.amount).toLocaleString('es-ES')}` : '-'}
-                            </TableCell>
-                            <TableCell>
-                              {deal.closeDate 
-                                ? new Date(deal.closeDate).toLocaleDateString('es-ES')
-                                : '-'}
-                            </TableCell>
-                            <TableCell>
-                              {deal.stage ? (
-                                <Chip 
-                                  label={deal.stage} 
-                                  size="small"
-                                  sx={{ 
-                                    bgcolor: taxiMonterricoColors.greenLight + '40',
-                                    color: taxiMonterricoColors.greenDark,
-                                  }}
-                                />
-                              ) : '-'}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      {associatedDeals.filter((deal: any) => 
-                        dealSearch === '' || 
-                        deal.name?.toLowerCase().includes(dealSearch.toLowerCase())
-                      ).length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              No hay negocios asociados
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Card>
-
-              {/* Card de Tickets */}
-              <Card sx={{ 
-                borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 2,
-                display: 'flex',
-                flexDirection: 'column',
-                mt: 2,
-                height: 'fit-content',
-                minHeight: 'auto',
-                overflow: 'visible',
-              }}>
-                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
-                  Tickets
-                </Typography>
-                
-                {/* Cuadro de búsqueda y botón agregar */}
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
-                  <TextField
-                    size="small"
-                    placeholder="Buscar tickets"
-                    value={ticketSearch}
-                    onChange={(e) => setTicketSearch(e.target.value)}
-                    sx={{
-                      width: '250px',
-                      transition: 'all 0.3s ease',
-                      '& .MuiOutlinedInput-root': {
-                        height: '32px',
-                        fontSize: '0.875rem',
-                        '&:hover': {
-                          '& fieldset': {
-                            borderColor: taxiMonterricoColors.green,
-                          },
-                        },
-                        '&.Mui-focused': {
-                          '& fieldset': {
-                            borderColor: taxiMonterricoColors.green,
-                            borderWidth: 2,
-                          },
-                        },
-                      },
-                    }}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Search fontSize="small" />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    onClick={() => setAddTicketOpen(true)}
-                    sx={{
-                      borderColor: taxiMonterricoColors.green,
-                      color: taxiMonterricoColors.green,
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        borderColor: taxiMonterricoColors.green,
-                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
-                      },
-                      '&:active': {
-                        transform: 'translateY(0)',
-                      },
-                    }}
-                  >
-                    Agregar
-                  </Button>
-                </Box>
-                
-                {/* Tabla de tickets */}
-                <TableContainer sx={{ maxHeight: 'none', height: 'auto', overflow: 'visible' }}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: 600 }}>Asunto</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Estado</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Prioridad</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Fecha</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {associatedTickets
-                        .filter((ticket: any) => 
-                          ticketSearch === '' || 
-                          ticket.subject?.toLowerCase().includes(ticketSearch.toLowerCase())
-                        )
-                        .map((ticket: any) => (
-                          <TableRow key={ticket.id} hover>
-                            <TableCell>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Support sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
-                                <Typography variant="body2">
-                                  {ticket.subject || 'Sin asunto'}
-                                </Typography>
-                              </Box>
-                            </TableCell>
-                            <TableCell>
-                              {ticket.status ? (
-                                <Chip 
-                                  label={ticket.status} 
-                                  size="small"
-                                  sx={{ 
-                                    bgcolor: ticket.status === 'closed' ? taxiMonterricoColors.greenLight + '40' : taxiMonterricoColors.orangeLight + '40',
-                                    color: ticket.status === 'closed' ? taxiMonterricoColors.greenDark : taxiMonterricoColors.orangeDark,
-                                  }}
-                                />
-                              ) : '-'}
-                            </TableCell>
-                            <TableCell>
-                              {ticket.priority ? (
-                                <Chip 
-                                  label={ticket.priority} 
-                                  size="small"
-                                  sx={{ 
-                                    bgcolor: ticket.priority === 'high' ? '#ef444440' : taxiMonterricoColors.grayLight,
-                                    color: ticket.priority === 'high' ? '#ef4444' : theme.palette.text.secondary,
-                                  }}
-                                />
-                              ) : '-'}
-                            </TableCell>
-                            <TableCell>
-                              {ticket.createdAt 
-                                ? new Date(ticket.createdAt).toLocaleDateString('es-ES')
-                                : '-'}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      {associatedTickets.filter((ticket: any) => 
-                        ticketSearch === '' || 
-                        ticket.subject?.toLowerCase().includes(ticketSearch.toLowerCase())
-                      ).length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={4} align="center" sx={{ py: 3 }}>
-                            <Typography variant="body2" color="text.secondary">
-                              No hay tickets asociados
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Card>
+              {/* Tickets */}
+              <FullTicketsTableCard
+                tickets={associatedTickets || []}
+                searchValue={ticketSearch}
+                onSearchChange={setTicketSearch}
+                onAdd={() => setAddTicketOpen(true)}
+                showActions={true}
+                onRemove={(ticketId: number, ticketName?: string) =>
+                  handleRemoveTicketClick(ticketId, ticketName || "")
+                }
+              />
             </>
           )}
 
-          {/* Tab Actividades - Cards grandes de Empresas, Negocios y Tickets */}
+          {/* Tab Actividades */}
           {activeTab === 2 && (
             <>
-              {/* Card de Empresas */}
-            <Card sx={{ 
-              borderRadius: 2,
-              boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-              bgcolor: theme.palette.background.paper,
-              px: 2,
-              py: 2,
-              display: 'flex',
-              flexDirection: 'column',
-            }}>
-              {/* Barra de búsqueda y filtros */}
-              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 3, flexWrap: 'wrap' }}>
-                <TextField
-                      size="small"
-                      placeholder="Buscar actividades"
-                      value={activitySearch}
-                      onChange={(e) => setActivitySearch(e.target.value)}
-                      sx={{
-                        width: '300px',
-                        transition: 'all 0.3s ease',
-                        '& .MuiOutlinedInput-root': {
-                          height: '32px',
-                          fontSize: '0.875rem',
-                          '&:hover': {
-                            '& fieldset': {
-                              borderColor: '#2E7D32',
-                            },
-                          },
-                          '&.Mui-focused': {
-                            '& fieldset': {
-                              borderColor: '#2E7D32',
-                              borderWidth: 2,
-                            },
-                          },
-                        },
-                      }}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <Search fontSize="small" />
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                    <Button 
-                      size="small" 
-                      variant="outlined" 
-                      endIcon={<ExpandMore />}
-                      onClick={(e) => setCreateActivityMenuAnchor(e.currentTarget)}
-                      sx={{
-                        borderColor: '#2E7D32',
-                        color: '#2E7D32',
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          borderColor: '#1B5E20',
-                          backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                          transform: 'translateY(-2px)',
-                          boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
-                        },
-                        '&:active': {
-                          transform: 'translateY(0)',
-                        },
-                      }}
-                    >
-                      Crear actividades
-                    </Button>
-                    <Menu
-                      anchorEl={createActivityMenuAnchor}
-                      open={Boolean(createActivityMenuAnchor)}
-                      onClose={() => setCreateActivityMenuAnchor(null)}
-                      anchorOrigin={{
-                        vertical: 'bottom',
-                        horizontal: 'left',
-                      }}
-                      transformOrigin={{
-                        vertical: 'top',
-                        horizontal: 'left',
-                      }}
-                      PaperProps={{
-                        sx: {
-                          mt: 1,
-                          minWidth: 320,
-                          maxWidth: 320,
-                          borderRadius: 2,
-                          boxShadow: theme.palette.mode === 'dark' 
-                            ? '0 4px 20px rgba(0,0,0,0.5)' 
-                            : '0 4px 20px rgba(0,0,0,0.15)',
-                          bgcolor: theme.palette.background.paper,
-                        },
-                      }}
-                    >
-                      {/* Campo de búsqueda */}
-                      <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
-                        <TextField
-                          size="small"
-                          placeholder="Buscar"
-                          fullWidth
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <Search fontSize="small" sx={{ color: theme.palette.text.secondary }} />
-                              </InputAdornment>
-                            ),
-                          }}
-                          sx={{
-                            '& .MuiOutlinedInput-root': {
-                              backgroundColor: theme.palette.mode === 'dark' 
-                                ? theme.palette.background.default 
-                                : '#f5f5f5',
-                              '& fieldset': {
-                                borderColor: theme.palette.divider,
-                              },
-                              '&:hover fieldset': {
-                                borderColor: theme.palette.text.secondary,
-                              },
-                              '&.Mui-focused fieldset': {
-                                borderColor: taxiMonterricoColors.green,
-                              },
-                            },
-                            '& .MuiInputBase-input': {
-                              color: theme.palette.text.primary,
-                            },
-                            '& .MuiInputBase-input::placeholder': {
-                              color: theme.palette.text.secondary,
-                              opacity: 1,
-                            },
-                          }}
-                        />
-                      </Box>
-                      
-                      {/* Opciones del menú */}
-                      <MenuItem 
-                        onClick={() => handleCreateActivity('note')}
-                        sx={{
-                          py: 1.5,
-                          px: 2,
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                          },
-                        }}
-                      >
-                        <Edit sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
-                        <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
-                          Crear nota
-                        </Typography>
-                      </MenuItem>
-                      
-                      <MenuItem 
-                        onClick={() => handleCreateActivity('call')}
-                        sx={{
-                          py: 1.5,
-                          px: 2,
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                          },
-                        }}
-                      >
-                        <Phone sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
-                        <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
-                          Hacer llamada telefónica
-                        </Typography>
-                        <KeyboardArrowRight sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-                      </MenuItem>
-                      
-                      <MenuItem 
-                        onClick={() => handleCreateActivity('task')}
-                        sx={{
-                          py: 1.5,
-                          px: 2,
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                          },
-                        }}
-                      >
-                        <Assignment sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
-                        <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
-                          Crear tarea
-                        </Typography>
-                      </MenuItem>
-                      
-                      <MenuItem 
-                        onClick={() => handleCreateActivity('meeting')}
-                        sx={{
-                          py: 1.5,
-                          px: 2,
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                          },
-                        }}
-                      >
-                        <Event sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
-                        <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
-                          Programar reunión
-                        </Typography>
-                      </MenuItem>
-                      
-                      <MenuItem 
-                        sx={{
-                          py: 1.5,
-                          px: 2,
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                          },
-                        }}
-                      >
-                        <LinkIcon sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
-                        <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
-                          Inscribir en una secuencia
-                        </Typography>
-                        <Lock sx={{ fontSize: 16, color: theme.palette.text.secondary, ml: 1 }} />
-                      </MenuItem>
-                    </Menu>
-                  </Box>
-                  <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-                    <Chip 
-                      label={selectedTimeRange}
-                      size="small" 
-                      deleteIcon={<KeyboardArrowDown fontSize="small" />}
-                      onDelete={(e) => {
-                        e.stopPropagation();
-                        setTimeRangeMenuAnchor(e.currentTarget);
-                      }}
-                      onClick={(e) => setTimeRangeMenuAnchor(e.currentTarget)}
-                      sx={{ 
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                          transform: 'scale(1.05)',
-                          boxShadow: '0 2px 8px rgba(46, 125, 50, 0.2)',
-                        },
-                      }}
-                    />
-                    <Menu
-                      anchorEl={timeRangeMenuAnchor}
-                      open={Boolean(timeRangeMenuAnchor)}
-                      onClose={() => setTimeRangeMenuAnchor(null)}
-                      anchorOrigin={{
-                        vertical: 'bottom',
-                        horizontal: 'left',
-                      }}
-                      transformOrigin={{
-                        vertical: 'top',
-                        horizontal: 'left',
-                      }}
-                      PaperProps={{
-                        sx: {
-                          mt: 1,
-                          minWidth: 240,
-                          maxWidth: 240,
-                          borderRadius: 2,
-                          boxShadow: theme.palette.mode === 'dark' 
-                            ? '0 4px 20px rgba(0,0,0,0.5)' 
-                            : '0 4px 20px rgba(0,0,0,0.15)',
-                          bgcolor: theme.palette.background.paper,
-                          border: theme.palette.mode === 'dark' 
-                            ? `1px solid ${theme.palette.divider}` 
-                            : 'none',
-                          maxHeight: 400,
-                          overflow: 'auto',
-                          // Estilos de scrollbar adaptados al modo nocturno
-                          '&::-webkit-scrollbar': {
-                            width: '8px',
-                          },
-                          '&::-webkit-scrollbar-track': {
-                            background: theme.palette.mode === 'dark' 
-                              ? 'rgba(255, 255, 255, 0.05)' 
-                              : 'rgba(0, 0, 0, 0.05)',
-                            borderRadius: '4px',
-                          },
-                          '&::-webkit-scrollbar-thumb': {
-                            background: theme.palette.mode === 'dark' 
-                              ? 'rgba(255, 255, 255, 0.2)' 
-                              : 'rgba(0, 0, 0, 0.2)',
-                            borderRadius: '4px',
-                            border: theme.palette.mode === 'dark' 
-                              ? '1px solid rgba(255, 255, 255, 0.1)' 
-                              : '1px solid rgba(0, 0, 0, 0.1)',
-                            '&:hover': {
-                              background: theme.palette.mode === 'dark' 
-                                ? 'rgba(255, 255, 255, 0.3)' 
-                                : 'rgba(0, 0, 0, 0.3)',
-                            },
-                          },
-                          // Para Firefox
-                          scrollbarWidth: 'thin',
-                          scrollbarColor: theme.palette.mode === 'dark' 
-                            ? 'rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05)' 
-                            : 'rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05)',
-                        },
-                      }}
-                    >
-                      {/* Campo de búsqueda */}
-                      <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
-                        <TextField
-                          size="small"
-                          placeholder="Buscar"
-                          fullWidth
-                          value={timeRangeSearch}
-                          onChange={(e) => setTimeRangeSearch(e.target.value)}
-                          autoFocus
-                          InputProps={{
-                            endAdornment: (
-                              <InputAdornment position="end">
-                                <Search fontSize="small" sx={{ color: 'text.secondary' }} />
-                              </InputAdornment>
-                            ),
-                          }}
-                          sx={{
-                            '& .MuiOutlinedInput-root': {
-                              backgroundColor: theme.palette.mode === 'dark' 
-                                ? theme.palette.background.default 
-                                : 'white',
-                              '& fieldset': {
-                                borderColor: theme.palette.mode === 'dark' 
-                                  ? theme.palette.divider 
-                                  : '#4fc3f7',
-                                borderWidth: 1.5,
-                              },
-                              '&:hover fieldset': {
-                                borderColor: theme.palette.mode === 'dark' 
-                                  ? theme.palette.action.hover 
-                                  : '#4fc3f7',
-                              },
-                              '&.Mui-focused fieldset': {
-                                borderColor: '#4fc3f7',
-                              },
-                            },
-                            '& .MuiInputBase-input': {
-                              color: theme.palette.text.primary,
-                            },
-                            '& .MuiInputBase-input::placeholder': {
-                              color: theme.palette.text.secondary,
-                              opacity: 1,
-                            },
-                          }}
-                        />
-                      </Box>
-                      
-                      {/* Opciones de rango de tiempo */}
-                      {['Todo', 'Hoy', 'Ayer', 'Esta semana', 'Semana pasada', 'Últimos 7 días'].map((option) => {
-                        const isSelected = selectedTimeRange === option || (option === 'Todo' && selectedTimeRange === 'Todo hasta ahora');
-                        return (
-                          <MenuItem
-                            key={option}
-                            onClick={() => {
-                              setSelectedTimeRange(option === 'Todo' ? 'Todo hasta ahora' : option);
-                              setTimeRangeMenuAnchor(null);
-                            }}
-                            sx={{
-                              py: 1.5,
-                              px: 2,
-                              color: theme.palette.text.primary,
-                              backgroundColor: isSelected 
-                                ? (theme.palette.mode === 'dark' 
-                                  ? 'rgba(144, 202, 249, 0.16)' 
-                                  : '#e3f2fd')
-                                : 'transparent',
-                              '&:hover': {
-                                backgroundColor: isSelected
-                                  ? (theme.palette.mode === 'dark' 
-                                    ? 'rgba(144, 202, 249, 0.24)' 
-                                    : '#bbdefb')
-                                  : theme.palette.action.hover,
-                              },
-                            }}
-                          >
-                            <Typography variant="body2" sx={{ color: 'inherit' }}>
-                              {option}
-                            </Typography>
-                          </MenuItem>
-                        );
-                      })}
-                      
-                      {/* Separador */}
-                      <Divider sx={{ my: 0.5, borderColor: theme.palette.divider }} />
-                      
-                      {/* Período personalizado */}
-                      <MenuItem
-                        onClick={() => {
-                          // TODO: Implementar selector de período personalizado
-                          console.log('Período personalizado');
-                          setTimeRangeMenuAnchor(null);
-                        }}
-                        sx={{
-                          py: 1.5,
-                          px: 2,
-                          color: theme.palette.text.secondary,
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                            color: theme.palette.text.primary,
-                          },
-                        }}
-                      >
-                        <Typography variant="body2" sx={{ color: 'inherit', flexGrow: 1 }}>
-                          Período personalizado
-                        </Typography>
-                        <KeyboardArrowRight sx={{ fontSize: 18, color: 'inherit' }} />
-                      </MenuItem>
-                    </Menu>
-                    <Chip 
-                      label="Actividad" 
-                      size="small" 
-                      deleteIcon={<KeyboardArrowDown fontSize="small" />}
-                      onDelete={(e) => setActivityFilterMenuAnchor(e.currentTarget)}
-                      onClick={(e) => setActivityFilterMenuAnchor(e.currentTarget)}
-                      sx={{ 
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                          transform: 'scale(1.05)',
-                          boxShadow: '0 2px 8px rgba(46, 125, 50, 0.2)',
-                        },
-                      }}
-                    />
-                    <Menu
-                      anchorEl={activityFilterMenuAnchor}
-                      open={Boolean(activityFilterMenuAnchor)}
-                      onClose={() => setActivityFilterMenuAnchor(null)}
-                      anchorOrigin={{
-                        vertical: 'bottom',
-                        horizontal: 'left',
-                      }}
-                      transformOrigin={{
-                        vertical: 'top',
-                        horizontal: 'left',
-                      }}
-                      PaperProps={{
-                        sx: {
-                          mt: 1,
-                          minWidth: 280,
-                          maxWidth: 280,
-                          borderRadius: 2,
-                          boxShadow: theme.palette.mode === 'dark' 
-                            ? '0 4px 20px rgba(0,0,0,0.5)' 
-                            : '0 4px 20px rgba(0,0,0,0.15)',
-                          bgcolor: theme.palette.background.paper,
-                          border: theme.palette.mode === 'dark' 
-                            ? `1px solid ${theme.palette.divider}` 
-                            : 'none',
-                          maxHeight: 400,
-                          overflow: 'auto',
-                          animation: 'slideDown 0.2s ease',
-                          '@keyframes slideDown': {
-                            '0%': {
-                              opacity: 0,
-                              transform: 'translateY(-10px)',
-                            },
-                            '100%': {
-                              opacity: 1,
-                              transform: 'translateY(0)',
-                            },
-                          },
-                          // Estilos de scrollbar adaptados al modo nocturno
-                          '&::-webkit-scrollbar': {
-                            width: '8px',
-                          },
-                          '&::-webkit-scrollbar-track': {
-                            background: theme.palette.mode === 'dark' 
-                              ? 'rgba(255, 255, 255, 0.05)' 
-                              : 'rgba(0, 0, 0, 0.05)',
-                            borderRadius: '4px',
-                          },
-                          '&::-webkit-scrollbar-thumb': {
-                            background: theme.palette.mode === 'dark' 
-                              ? 'rgba(255, 255, 255, 0.2)' 
-                              : 'rgba(0, 0, 0, 0.2)',
-                            borderRadius: '4px',
-                            border: theme.palette.mode === 'dark' 
-                              ? '1px solid rgba(255, 255, 255, 0.1)' 
-                              : '1px solid rgba(0, 0, 0, 0.1)',
-                            '&:hover': {
-                              background: theme.palette.mode === 'dark' 
-                                ? 'rgba(255, 255, 255, 0.3)' 
-                                : 'rgba(0, 0, 0, 0.3)',
-                            },
-                          },
-                          // Para Firefox
-                          scrollbarWidth: 'thin',
-                          scrollbarColor: theme.palette.mode === 'dark' 
-                            ? 'rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05)' 
-                            : 'rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05)',
-                        },
-                      }}
-                    >
-                      {/* Campo de búsqueda */}
-                      <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
-                        <TextField
-                          size="small"
-                          placeholder="Buscar"
-                          fullWidth
-                          value={activityFilterSearch}
-                          onChange={(e) => setActivityFilterSearch(e.target.value)}
-                          InputProps={{
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <Search fontSize="small" sx={{ color: 'text.secondary' }} />
-                              </InputAdornment>
-                            ),
-                          }}
-                          sx={{
-                            '& .MuiOutlinedInput-root': {
-                              backgroundColor: theme.palette.mode === 'dark' 
-                                ? theme.palette.background.default 
-                                : '#f5f5f5',
-                              '& fieldset': {
-                                borderColor: theme.palette.divider,
-                              },
-                              '&:hover fieldset': {
-                                borderColor: theme.palette.mode === 'dark' 
-                                  ? theme.palette.action.hover 
-                                  : theme.palette.text.secondary,
-                              },
-                              '&.Mui-focused fieldset': {
-                                borderColor: '#2E7D32',
-                              },
-                            },
-                            '& .MuiInputBase-input': {
-                              color: theme.palette.text.primary,
-                            },
-                            '& .MuiInputBase-input::placeholder': {
-                              color: theme.palette.text.secondary,
-                              opacity: 1,
-                            },
-                          }}
-                        />
-                      </Box>
-                      
-                      {/* Categoría Comunicación */}
-                      <MenuItem
-                        sx={{
-                          py: 1,
-                          px: 2,
-                          backgroundColor: 'transparent',
-                          '&:hover': {
-                            backgroundColor: 'transparent',
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const newValue = !communicationFilters.all;
-                          setCommunicationFilters({
-                            all: newValue,
-                            postal: newValue,
-                            email: newValue,
-                            linkedin: newValue,
-                            calls: newValue,
-                            sms: newValue,
-                            whatsapp: newValue,
-                          });
-                        }}
-                      >
-                        <Checkbox
-                          checked={communicationFilters.all}
-                          sx={{
-                            color: '#2E7D32',
-                            '&.Mui-checked': {
-                              color: '#2E7D32',
-                            },
-                          }}
-                        />
-                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                          Comunicación
-                        </Typography>
-                      </MenuItem>
-                      
-                      {/* Sub-opciones de Comunicación */}
-                      <MenuItem
-                        sx={{
-                          py: 0.75,
-                          px: 2,
-                          pl: 6,
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCommunicationFilters({
-                            ...communicationFilters,
-                            postal: !communicationFilters.postal,
-                          });
-                        }}
-                      >
-                        <Checkbox
-                          checked={communicationFilters.postal}
-                          sx={{
-                            color: '#2E7D32',
-                            '&.Mui-checked': {
-                              color: '#2E7D32',
-                            },
-                          }}
-                        />
-                        <Typography variant="body2">Correo postal</Typography>
-                      </MenuItem>
-                      
-                      <MenuItem
-                        sx={{
-                          py: 0.75,
-                          px: 2,
-                          pl: 6,
-                          transition: 'all 0.15s ease',
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                            transform: 'translateX(4px)',
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCommunicationFilters({
-                            ...communicationFilters,
-                            email: !communicationFilters.email,
-                          });
-                        }}
-                      >
-                        <Checkbox
-                          checked={communicationFilters.email}
-                          sx={{
-                            color: '#2E7D32',
-                            '&.Mui-checked': {
-                              color: '#2E7D32',
-                            },
-                          }}
-                        />
-                        <Typography variant="body2">Correos</Typography>
-                      </MenuItem>
-                      
-                      <MenuItem
-                        sx={{
-                          py: 0.75,
-                          px: 2,
-                          pl: 6,
-                          transition: 'all 0.15s ease',
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                            transform: 'translateX(4px)',
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCommunicationFilters({
-                            ...communicationFilters,
-                            linkedin: !communicationFilters.linkedin,
-                          });
-                        }}
-                      >
-                        <Checkbox
-                          checked={communicationFilters.linkedin}
-                          sx={{
-                            color: '#2E7D32',
-                            '&.Mui-checked': {
-                              color: '#2E7D32',
-                            },
-                          }}
-                        />
-                        <Typography variant="body2">LinkedIn</Typography>
-                      </MenuItem>
-                      
-                      <MenuItem
-                        sx={{
-                          py: 0.75,
-                          px: 2,
-                          pl: 6,
-                          transition: 'all 0.15s ease',
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                            transform: 'translateX(4px)',
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCommunicationFilters({
-                            ...communicationFilters,
-                            calls: !communicationFilters.calls,
-                          });
-                        }}
-                      >
-                        <Checkbox
-                          checked={communicationFilters.calls}
-                          sx={{
-                            color: '#2E7D32',
-                            '&.Mui-checked': {
-                              color: '#2E7D32',
-                            },
-                          }}
-                        />
-                        <Typography variant="body2">Llamadas</Typography>
-                      </MenuItem>
-                      
-                      <                      MenuItem
-                        sx={{
-                          py: 0.75,
-                          px: 2,
-                          pl: 6,
-                          transition: 'all 0.15s ease',
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                            transform: 'translateX(4px)',
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCommunicationFilters({
-                            ...communicationFilters,
-                            sms: !communicationFilters.sms,
-                          });
-                        }}
-                      >
-                        <Checkbox
-                          checked={communicationFilters.sms}
-                          sx={{
-                            color: '#2E7D32',
-                            '&.Mui-checked': {
-                              color: '#2E7D32',
-                            },
-                          }}
-                        />
-                        <Typography variant="body2">SMS</Typography>
-                      </MenuItem>
-                      
-                      <                      MenuItem
-                        sx={{
-                          py: 0.75,
-                          px: 2,
-                          pl: 6,
-                          transition: 'all 0.15s ease',
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                            transform: 'translateX(4px)',
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setCommunicationFilters({
-                            ...communicationFilters,
-                            whatsapp: !communicationFilters.whatsapp,
-                          });
-                        }}
-                      >
-                        <Checkbox
-                          checked={communicationFilters.whatsapp}
-                          sx={{
-                            color: '#2E7D32',
-                            '&.Mui-checked': {
-                              color: '#2E7D32',
-                            },
-                          }}
-                        />
-                        <Typography variant="body2">WhatsApp</Typography>
-                      </MenuItem>
-                      
-                      {/* Categoría Actividad del equipo */}
-                      <MenuItem
-                        sx={{
-                          py: 1,
-                          px: 2,
-                          mt: 0.5,
-                          backgroundColor: 'transparent',
-                          '&:hover': {
-                            backgroundColor: 'transparent',
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const newValue = !teamActivityFilters.all;
-                          setTeamActivityFilters({
-                            all: newValue,
-                            notes: newValue,
-                            meetings: newValue,
-                            tasks: newValue,
-                          });
-                        }}
-                      >
-                        <Checkbox
-                          checked={teamActivityFilters.all}
-                          sx={{
-                            color: '#2E7D32',
-                            '&.Mui-checked': {
-                              color: '#2E7D32',
-                            },
-                          }}
-                        />
-                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                          Actividad del equipo
-                        </Typography>
-                      </MenuItem>
-                      
-                      {/* Sub-opciones de Actividad del equipo */}
-                      <                      MenuItem
-                        sx={{
-                          py: 0.75,
-                          px: 2,
-                          pl: 6,
-                          transition: 'all 0.15s ease',
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                            transform: 'translateX(4px)',
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setTeamActivityFilters({
-                            ...teamActivityFilters,
-                            notes: !teamActivityFilters.notes,
-                          });
-                        }}
-                      >
-                        <Checkbox
-                          checked={teamActivityFilters.notes}
-                          sx={{
-                            color: '#2E7D32',
-                            '&.Mui-checked': {
-                              color: '#2E7D32',
-                            },
-                          }}
-                        />
-                        <Typography variant="body2">Notas</Typography>
-                      </MenuItem>
-                      
-                      <                      MenuItem
-                        sx={{
-                          py: 0.75,
-                          px: 2,
-                          pl: 6,
-                          transition: 'all 0.15s ease',
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                            transform: 'translateX(4px)',
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setTeamActivityFilters({
-                            ...teamActivityFilters,
-                            meetings: !teamActivityFilters.meetings,
-                          });
-                        }}
-                      >
-                        <Checkbox
-                          checked={teamActivityFilters.meetings}
-                          sx={{
-                            color: '#2E7D32',
-                            '&.Mui-checked': {
-                              color: '#2E7D32',
-                            },
-                          }}
-                        />
-                        <Typography variant="body2">Reuniones</Typography>
-                      </MenuItem>
-                      
-                      <MenuItem
-                        sx={{
-                          py: 0.75,
-                          px: 2,
-                          pl: 6,
-                          transition: 'all 0.15s ease',
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover,
-                            transform: 'translateX(4px)',
-                          },
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setTeamActivityFilters({
-                            ...teamActivityFilters,
-                            tasks: !teamActivityFilters.tasks,
-                          });
-                        }}
-                      >
-                        <Checkbox
-                          checked={teamActivityFilters.tasks}
-                          sx={{
-                            color: '#2E7D32',
-                            '&.Mui-checked': {
-                              color: '#2E7D32',
-                            },
-                          }}
-                        />
-                        <Typography variant="body2">Tareas</Typography>
-                      </MenuItem>
-                    </Menu>
-                    <Box sx={{ flexGrow: 1 }} />
-                  </Box>
-                  {timeFilteredActivities.length > 0 ? (
-                    <Box>
-                      {Object.entries(groupedActivities).map(([monthKey, monthActivities]) => (
-                        <Box key={monthKey} sx={{ mb: 4 }}>
-                          {/* Encabezado del mes */}
-                          <Typography 
-                            variant="subtitle2" 
-                            sx={{ 
-                              textAlign: 'center',
-                              mb: 2,
-                              color: 'text.secondary',
-                              textTransform: 'capitalize',
-                              fontWeight: 'bold',
-                            }}
-                          >
-                            {monthKey}
-                          </Typography>
-                          
-                          {/* Actividades */}
-                          <Box>
-                            {monthActivities.map((activity, index) => {
-                              const isNote = activity.type === 'note';
-                              const isExpanded = isNote ? expandedNotes.has(activity.id) : expandedActivities.has(activity.id);
-                              const actionMenuAnchor = noteActionMenus[activity.id];
-                              
-                              return (
-                                <Box 
-                                  key={activity.id} 
-                                  sx={{ 
-                                    mb: 1.5,
-                                    animation: 'slideInRight 0.3s ease',
-                                    animationDelay: `${index * 0.05}s`,
-                                    '@keyframes slideInRight': {
-                                      '0%': {
-                                        opacity: 0,
-                                        transform: 'translateX(-20px)',
-                                      },
-                                      '100%': {
-                                        opacity: 1,
-                                        transform: 'translateX(0)',
-                                      },
-                                    },
-                                  }}
-                                >
-                                  {isNote ? (
-                                    /* Nota estilo mejorado - Versión resumida/expandida */
-                                    <Paper
-                                      elevation={0}
-                                      sx={{
-                                        p: isExpanded ? 2 : 1.5,
-                                        border: `1px solid ${theme.palette.divider}`,
-                                        borderRadius: 2,
-                                        bgcolor: theme.palette.background.paper,
-                                        color: theme.palette.text.primary,
-                                        transition: 'all 0.3s ease',
-                                        cursor: 'pointer',
-                                        '&:hover': {
-                                          borderColor: '#2E7D32',
-                                          boxShadow: theme.palette.mode === 'dark' 
-                                            ? '0 2px 8px rgba(46, 125, 50, 0.2)' 
-                                            : '0 2px 8px rgba(46, 125, 50, 0.08)',
-                                        },
-                                      }}
-                                      onClick={() => toggleNoteExpand(activity.id)}
-                                    >
-                                      {/* Header de la nota - Siempre visible */}
-                                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                                        {/* Iconos a la izquierda */}
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5, pt: 0.5 }}>
-                                          <Edit sx={{ fontSize: 18, color: '#9E9E9E' }} />
-                                          <CheckCircle sx={{ fontSize: 18, color: '#2E7D32' }} />
-                                        </Box>
-                                        
-                                        {/* Contenido principal */}
-                                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flex: 1 }}>
-                                              <Typography 
-                                                variant="body2" 
-                                                sx={{ 
-                                                  fontWeight: 'bold',
-                                                  color: '#2E7D32',
-                                                  fontSize: '0.875rem',
-                                                }}
-                                              >
-                                                Nota creada por {activity.User ? `${activity.User.firstName} ${activity.User.lastName}`.toUpperCase() : 'Usuario'}
-                                              </Typography>
-                                            </Box>
-                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', whiteSpace: 'nowrap', ml: 1 }}>
-                                              {activity.createdAt && new Date(activity.createdAt).toLocaleDateString('es-ES', {
-                                                day: 'numeric',
-                                                month: 'short',
-                                                year: 'numeric',
-                                              })} a la(s) {activity.createdAt && new Date(activity.createdAt).toLocaleTimeString('es-ES', {
-                                                hour: '2-digit',
-                                                minute: '2-digit',
-                                              })} GMT-5
-                                            </Typography>
-                                          </Box>
-                                          
-                                          {isExpanded && (
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                                              <Link
-                                                component="button"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  handleNoteActionMenuOpen(e, activity.id);
-                                                }}
-                                                sx={{
-                                                  color: '#2E7D32',
-                                                  textDecoration: 'none',
-                                                  fontSize: '0.875rem',
-                                                  cursor: 'pointer',
-                                                  border: 'none',
-                                                  background: 'none',
-                                                  display: 'flex',
-                                                  alignItems: 'center',
-                                                  gap: 0.5,
-                                                  transition: 'all 0.2s ease',
-                                                  borderRadius: 1,
-                                                  px: 1,
-                                                  '&:hover': {
-                                                    textDecoration: 'underline',
-                                                    backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                                                  },
-                                                }}
-                                              >
-                                                Acciones
-                                                <KeyboardArrowDown fontSize="small" />
-                                              </Link>
-                                              <Menu
-                                                anchorEl={actionMenuAnchor}
-                                                open={Boolean(actionMenuAnchor)}
-                                                onClose={() => handleNoteActionMenuClose(activity.id)}
-                                                anchorOrigin={{
-                                                  vertical: 'bottom',
-                                                  horizontal: 'right',
-                                                }}
-                                                transformOrigin={{
-                                                  vertical: 'top',
-                                                  horizontal: 'right',
-                                                }}
-                                                PaperProps={{
-                                                  sx: {
-                                                    minWidth: 180,
-                                                    borderRadius: 1,
-                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                                  },
-                                                }}
-                                              >
-                                                <MenuItem 
-                                                  onClick={() => handlePinNote(activity.id)}
-                                                  sx={{
-                                                    '&:hover': {
-                                                      backgroundColor: '#e3f2fd',
-                                                    },
-                                                  }}
-                                                >
-                                                  <PushPin sx={{ mr: 1.5, fontSize: 18 }} />
-                                                  Anclar
-                                                </MenuItem>
-                                                <MenuItem 
-                                                  onClick={() => handleViewHistory(activity.id)}
-                                                  sx={{
-                                                    '&:hover': {
-                                                      backgroundColor: '#e3f2fd',
-                                                    },
-                                                  }}
-                                                >
-                                                  <History sx={{ mr: 1.5, fontSize: 18 }} />
-                                                  Historial
-                                                </MenuItem>
-                                                <MenuItem 
-                                                  onClick={() => handleCopyLink(activity.id)}
-                                                  sx={{
-                                                    '&:hover': {
-                                                      backgroundColor: '#e3f2fd',
-                                                    },
-                                                  }}
-                                                >
-                                                  <ContentCopy sx={{ mr: 1.5, fontSize: 18 }} />
-                                                  Copiar enlace
-                                                </MenuItem>
-                                                <MenuItem 
-                                                  onClick={() => handleDeleteNote(activity.id)}
-                                                  sx={{
-                                                    '&:hover': {
-                                                      backgroundColor: '#ffebee',
-                                                    },
-                                                    color: '#d32f2f',
-                                                  }}
-                                                >
-                                                  <Delete sx={{ mr: 1.5, fontSize: 18 }} />
-                                                  Eliminar
-                                                </MenuItem>
-                                              </Menu>
-                                            </Box>
-                                          )}
-                                          
-                                          {/* Contenido resumido cuando está colapsado */}
-                                          {!isExpanded && (
-                                            <Box sx={{ mt: 1 }}>
-                                              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                                                {activity.description ? (
-                                                  <Box
-                                                    dangerouslySetInnerHTML={{ __html: activity.description.replace(/<[^>]*>/g, '').substring(0, 50) + (activity.description.replace(/<[^>]*>/g, '').length > 50 ? '...' : '') }}
-                                                  />
-                                                ) : (
-                                                  'Sin descripción'
-                                                )}
-                                              </Typography>
-                                            </Box>
-                                          )}
-                                          
-                                          {/* Contenido expandido */}
-                                          {isExpanded && (
-                                            <>
-                                              {/* Descripción de la nota */}
-                                              <Box sx={{ mb: 2, mt: 1.5 }}>
-                                                {activity.description ? (
-                                                  <Box
-                                                    dangerouslySetInnerHTML={{ __html: activity.description }}
-                                                    sx={{
-                                                      '& p': { margin: 0, mb: 1 },
-                                                      '& *': { fontSize: '0.875rem', color: 'text.primary' },
-                                                    }}
-                                                  />
-                                                ) : (
-                                                  <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-                                                    Agregar descripción
-                                                  </Typography>
-                                                )}
-                                              </Box>
-                                          
-                                              {/* Footer de la nota */}
-                                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pt: 1, borderTop: `1px solid ${theme.palette.divider}` }}>
-                                            <Link
-                                              component="button"
-                                              onClick={(e) => e.stopPropagation()}
-                                              sx={{
-                                                color: '#2E7D32',
-                                                textDecoration: 'none',
-                                                fontSize: '0.875rem',
-                                                cursor: 'pointer',
-                                                border: 'none',
-                                                background: 'none',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 0.5,
-                                                '&:hover': {
-                                                  textDecoration: 'underline',
-                                                },
-                                              }}
-                                            >
-                                              <Comment fontSize="small" />
-                                              Agregar comentario
-                                            </Link>
-                                            <Box sx={{ position: 'relative' }}>
-                                              <Link
-                                                component="button"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  setActivityAssociationsExpanded({
-                                                    ...activityAssociationsExpanded,
-                                                    [activity.id]: !activityAssociationsExpanded[activity.id],
-                                                  });
-                                                }}
-                                                sx={{
-                                                  color: '#2E7D32',
-                                                  textDecoration: 'none',
-                                                  fontSize: '0.875rem',
-                                                  cursor: 'pointer',
-                                                  border: 'none',
-                                                  background: 'none',
-                                                  display: 'flex',
-                                                  alignItems: 'center',
-                                                  gap: 0.5,
-                                                  '&:hover': {
-                                                    textDecoration: 'underline',
-                                                  },
-                                                }}
-                                              >
-                                                {getActivityTotalAssociations(activity.id)} asociaciones
-                                                <KeyboardArrowDown 
-                                                  fontSize="small" 
-                                                  sx={{
-                                                    transform: activityAssociationsExpanded[activity.id] ? 'rotate(180deg)' : 'rotate(0deg)',
-                                                    transition: 'transform 0.3s ease',
-                                                  }}
-                                                />
-                                              </Link>
-                                              
-                                              {/* Panel de asociaciones - Expandible/Colapsable */}
-                                              {activityAssociationsExpanded[activity.id] && (
-                                                <Box
-                                                  onClick={(e) => e.stopPropagation()}
-                                                  sx={{
-                                                    position: 'absolute',
-                                                    bottom: '100%',
-                                                    right: 0,
-                                                    mb: 1,
-                                                    width: '600px',
-                                                    height: '400px',
-                                                    border: `1px solid ${theme.palette.divider}`,
-                                                    borderRadius: 1,
-                                                    p: 2,
-                                                    backgroundColor: theme.palette.background.paper,
-                                                    boxShadow: theme.palette.mode === 'dark' 
-                                                      ? '0 4px 12px rgba(0,0,0,0.5)' 
-                                                      : '0 4px 12px rgba(0,0,0,0.15)',
-                                                    zIndex: 1000,
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    overflow: 'hidden',
-                                                    animation: 'slideDown 0.3s ease-out',
-                                                    '@keyframes slideDown': {
-                                                      '0%': {
-                                                        opacity: 0,
-                                                        transform: 'translateY(-10px)',
-                                                      },
-                                                      '100%': {
-                                                        opacity: 1,
-                                                        transform: 'translateY(0)',
-                                                      },
-                                                    },
-                                                  }}
-                                                >
-                                                {/* Contenedor principal con scroll */}
-                                                <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                                                  {/* Lista de categorías en el lado izquierdo */}
-                                                  <Box sx={{ 
-                                                    width: '200px', 
-                                                    flexShrink: 0,
-                                                    borderRight: `1px solid ${theme.palette.divider}`,
-                                                    pr: 2,
-                                                    height: '100%',
-                                                    overflowY: 'auto',
-                                                    overflowX: 'hidden',
-                                                  }}>
-                                                  {/* Lista de categorías siempre visible */}
-                                                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                                    {['Seleccionados', 'Alertas', 'Carritos', 'Clientes', 'Contactos', 'Empresas', 'Leads', 'Negocios', 'Tickets'].map((category) => {
-                                                      const currentCategory = activitySelectedCategory[activity.id] || 'Contactos';
-                                                      const isSelected = currentCategory === category;
-                                                      
-                                                      // Calcular el conteo para cada categoría
-                                                      const getCategoryCount = () => {
-                                                        if (category === 'Seleccionados') return getActivityTotalAssociations(activity.id);
-                                                        if (category === 'Contactos') {
-                                                          const contacts = activitySelectedContacts[activity.id] || [];
-                                                          const excludedContactsForActivity = activityExcludedContacts[activity.id] || [];
-                                                          return contacts.length > 0 ? contacts.length : ((contact?.id && !excludedContactsForActivity.includes(contact.id)) ? 1 : 0);
-                                                        }
-                                                        if (category === 'Empresas') {
-                                                          const selectedCompaniesForActivity = activitySelectedCompanies[activity.id] || [];
-                                                          const excludedCompaniesForActivity = activityExcludedCompanies[activity.id] || [];
-                                                          const associatedCompanyIds = (associatedCompanies || [])
-                                                            .map((c: any) => c && c.id)
-                                                            .filter((id: any) => id !== undefined && id !== null && !excludedCompaniesForActivity.includes(id));
-                                                          const allCompanyIds = [...selectedCompaniesForActivity, ...associatedCompanyIds];
-                                                          return allCompanyIds.filter((id, index) => allCompanyIds.indexOf(id) === index).length;
-                                                        }
-                                                        if (category === 'Negocios') {
-                                                          const selectedDealIds = (activitySelectedAssociations[activity.id] || []).filter((id: number) => id > 1000 && id < 2000).map(id => id - 1000);
-                                                          const excludedDealsForActivity = activityExcludedDeals[activity.id] || [];
-                                                          const associatedDealIds = (associatedDeals || [])
-                                                            .map((d: any) => d && d.id)
-                                                            .filter((id: any) => id !== undefined && id !== null && !excludedDealsForActivity.includes(id));
-                                                          const allDealIds = [...selectedDealIds, ...associatedDealIds];
-                                                          return allDealIds.filter((id, index) => allDealIds.indexOf(id) === index).length;
-                                                        }
-                                                        if (category === 'Tickets') {
-                                                          const selectedTicketIds = (activitySelectedAssociations[activity.id] || []).filter((id: number) => id > 2000).map(id => id - 2000);
-                                                          const excludedTicketsForActivity = activityExcludedTickets[activity.id] || [];
-                                                          const associatedTicketIds = (associatedTickets || [])
-                                                            .map((t: any) => t && t.id)
-                                                            .filter((id: any) => id !== undefined && id !== null && !excludedTicketsForActivity.includes(id));
-                                                          const allTicketIds = [...selectedTicketIds, ...associatedTicketIds];
-                                                          return allTicketIds.filter((id, index) => allTicketIds.indexOf(id) === index).length;
-                                                        }
-                                                        if (category === 'Leads') return (activitySelectedLeads[activity.id] || []).length;
-                                                        return 0;
-                                                      };
-                                                      
-                                                      return (
-                                                        <Box
-                                                          key={category}
-                                                          onClick={() => {
-                                                            setActivitySelectedCategory({
-                                                              ...activitySelectedCategory,
-                                                              [activity.id]: category,
-                                                            });
-                                                          }}
-                                                          sx={{
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'space-between',
-                                                            p: 1.5,
-                                                            borderRadius: 1,
-                                                            cursor: 'pointer',
-                                                            backgroundColor: isSelected 
-                                                              ? (theme.palette.mode === 'dark' ? 'rgba(0, 188, 212, 0.2)' : '#E3F2FD') 
-                                                              : 'transparent',
-                                                            borderLeft: isSelected ? '3px solid #00bcd4' : '3px solid transparent',
-                                                            '&:hover': {
-                                                              backgroundColor: theme.palette.action.hover,
-                                                            },
-                                                          }}
-                                                        >
-                                                          <Typography variant="body2" sx={{ fontSize: '0.875rem', color: isSelected ? '#00bcd4' : '#666' }}>
-                                                            {category === 'Alertas' ? 'Alertas del esp...' : category === 'Clientes' ? 'Clientes de par...' : category}
-                                                          </Typography>
-                                                          <Typography variant="body2" sx={{ fontSize: '0.875rem', color: theme.palette.text.secondary }}>
-                                                            {getCategoryCount()}
-                                                          </Typography>
-                                                        </Box>
-                                                      );
-                                                    })}
-                                                  </Box>
-                                                </Box>
-
-                                                  {/* Área de búsqueda y resultados - Siempre visible */}
-                                                  <Box sx={{ flex: 1, pl: 2, minWidth: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%' }}>
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, flexShrink: 0 }}>
-                                                      <Typography variant="body2" sx={{ color: '#00bcd4', fontWeight: 500, fontSize: '0.875rem' }}>
-                                                        {(activitySelectedCategory[activity.id] || 'Contactos')} ({
-                                                          (() => {
-                                                            const category = activitySelectedCategory[activity.id] || 'Contactos';
-                                                            if (category === 'Contactos') {
-                                                              const contacts = activitySelectedContacts[activity.id] || [];
-                                                              const excludedContactsForActivity = activityExcludedContacts[activity.id] || [];
-                                                              return contacts.length > 0 ? contacts.length : ((contact?.id && !excludedContactsForActivity.includes(contact.id)) ? 1 : 0);
-                                                            } else if (category === 'Empresas') {
-                                                              const selectedCompanies = activitySelectedCompanies[activity.id] || [];
-                                                              const excludedCompaniesForActivity = activityExcludedCompanies[activity.id] || [];
-                                                              const associatedCompanyIds = (associatedCompanies || [])
-                                                                .map((c: any) => c && c.id)
-                                                                .filter((id: any) => id !== undefined && id !== null && !excludedCompaniesForActivity.includes(id));
-                                                              const allCompanyIds = [...selectedCompanies, ...associatedCompanyIds];
-                                                              return allCompanyIds.filter((id, index) => allCompanyIds.indexOf(id) === index).length;
-                                                            } else if (category === 'Negocios') {
-                                                              const selectedDealIds = (activitySelectedAssociations[activity.id] || []).filter((id: number) => id > 1000 && id < 2000).map(id => id - 1000);
-                                                              const excludedDealsForActivity = activityExcludedDeals[activity.id] || [];
-                                                              const associatedDealIds = (associatedDeals || [])
-                                                                .map((d: any) => d && d.id)
-                                                                .filter((id: any) => id !== undefined && id !== null && !excludedDealsForActivity.includes(id));
-                                                              const allDealIds = [...selectedDealIds, ...associatedDealIds];
-                                                              return allDealIds.filter((id, index) => allDealIds.indexOf(id) === index).length;
-                                                            } else if (category === 'Tickets') {
-                                                              const selectedTicketIds = (activitySelectedAssociations[activity.id] || []).filter((id: number) => id > 2000).map(id => id - 2000);
-                                                              const excludedTicketsForActivity = activityExcludedTickets[activity.id] || [];
-                                                              const associatedTicketIds = (associatedTickets || [])
-                                                                .map((t: any) => t && t.id)
-                                                                .filter((id: any) => id !== undefined && id !== null && !excludedTicketsForActivity.includes(id));
-                                                              const allTicketIds = [...selectedTicketIds, ...associatedTicketIds];
-                                                              return allTicketIds.filter((id, index) => allTicketIds.indexOf(id) === index).length;
-                                                            } else if (category === 'Leads') {
-                                                              return (activitySelectedLeads[activity.id] || []).length;
-                                                            }
-                                                            return 0;
-                                                          })()
-                                                        })
-                                                      </Typography>
-                                                      <KeyboardArrowDown sx={{ color: '#00bcd4', fontSize: 18 }} />
-                                                    </Box>
-                                                    <TextField
-                                                      size="small"
-                                                      placeholder={`Buscar ${(activitySelectedCategory[activity.id] || 'Contactos') === 'Empresas' ? 'Empresas' : (activitySelectedCategory[activity.id] || 'Contactos') === 'Contactos' ? 'Contactos' : (activitySelectedCategory[activity.id] || 'Contactos') === 'Negocios' ? 'Negocios' : (activitySelectedCategory[activity.id] || 'Contactos') === 'Tickets' ? 'Tickets' : (activitySelectedCategory[activity.id] || 'Contactos') === 'Leads' ? 'Leads' : (activitySelectedCategory[activity.id] || 'Contactos')}`}
-                                                      value={activityAssociationSearch[activity.id] || ''}
-                                                      onChange={(e) => {
-                                                        setActivityAssociationSearch({
-                                                          ...activityAssociationSearch,
-                                                          [activity.id]: e.target.value,
-                                                        });
-                                                      }}
-                                                      fullWidth
-                                                      InputProps={{
-                                                        endAdornment: (
-                                                          <InputAdornment position="end">
-                                                            <Search sx={{ color: '#00bcd4' }} />
-                                                          </InputAdornment>
-                                                        ),
-                                                      }}
-                                                      sx={{
-                                                        mb: 1.5,
-                                                        flexShrink: 0,
-                                                        '& .MuiOutlinedInput-root': {
-                                                          '& fieldset': {
-                                                            borderColor: '#00bcd4',
-                                                          },
-                                                          '&:hover fieldset': {
-                                                            borderColor: '#00bcd4',
-                                                          },
-                                                          '&.Mui-focused fieldset': {
-                                                            borderColor: '#00bcd4',
-                                                          },
-                                                        },
-                                                      }}
-                                                    />
-                                                    
-                                                    {/* Resultados de búsqueda con scroll */}
-                                                    <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', minHeight: 0 }}>
-                                                    {(activitySelectedCategory[activity.id] || 'Contactos') === 'Empresas' && (
-                                                      <>
-                                                        {associatedCompanies.filter((company: any) => 
-                                                            !activityAssociationSearch[activity.id] || company.name.toLowerCase().includes((activityAssociationSearch[activity.id] || '').toLowerCase()) || 
-                                                            (company.domain && company.domain.toLowerCase().includes((activityAssociationSearch[activity.id] || '').toLowerCase()))
-                                                        ).map((company: any) => {
-                                                          // Verificar si la empresa está asociada automáticamente o seleccionada manualmente
-                                                          const isAssociated = associatedCompanies.some((ac: any) => ac && ac.id === company.id);
-                                                          const isSelected = (activitySelectedCompanies[activity.id] || []).includes(company.id);
-                                                          const excludedCompaniesForActivity = activityExcludedCompanies[activity.id] || [];
-                                                          const isExcluded = excludedCompaniesForActivity.includes(company.id);
-                                                          // Está marcada si está seleccionada o asociada, pero no si fue excluida
-                                                          const shouldBeChecked = (isSelected || isAssociated) && !isExcluded;
-                                                          
-                                                          return (
-                                                            <Box key={company.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : '#f5f5f5' } }}>
-                                                              <Checkbox
-                                                                checked={shouldBeChecked}
-                                                                onChange={(e) => {
-                                                                  const currentCompanies = activitySelectedCompanies[activity.id] || [];
-                                                                  const currentExcluded = activityExcludedCompanies[activity.id] || [];
-                                                                  if (e.target.checked) {
-                                                                    // Si está asociada y estaba excluida, removerla de excluidas
-                                                                    if (isExcluded) {
-                                                                      setActivityExcludedCompanies({
-                                                                        ...activityExcludedCompanies,
-                                                                        [activity.id]: currentExcluded.filter(id => id !== company.id),
-                                                                      });
-                                                                    }
-                                                                    // Si no está en selectedCompanies, agregarla
-                                                                    if (!currentCompanies.includes(company.id)) {
-                                                                      setActivitySelectedCompanies({
-                                                                        ...activitySelectedCompanies,
-                                                                        [activity.id]: [...currentCompanies, company.id],
-                                                                      });
-                                                                    }
-                                                                  } else {
-                                                                    // Si se desmarca, remover de selectedCompanies y agregar a excluidas si está asociada
-                                                                    setActivitySelectedCompanies({
-                                                                      ...activitySelectedCompanies,
-                                                                      [activity.id]: currentCompanies.filter(id => id !== company.id),
-                                                                    });
-                                                                    if (isAssociated && !currentExcluded.includes(company.id)) {
-                                                                      setActivityExcludedCompanies({
-                                                                        ...activityExcludedCompanies,
-                                                                        [activity.id]: [...currentExcluded, company.id],
-                                                                      });
-                                                                    }
-                                                                  }
-                                                                }}
-                                                                sx={{
-                                                                  color: '#00bcd4',
-                                                                  '&.Mui-checked': {
-                                                                    color: '#00bcd4',
-                                                                  },
-                                                                }}
-                                                              />
-                                                              <Tooltip 
-                                                                title={
-                                                                  <Box>
-                                                                    <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                                                                      {company.name}
-                                                                    </Typography>
-                                                                    {company.domain && (
-                                                                      <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                                                                        {company.domain}
-                                                                      </Typography>
-                                                                    )}
-                                                                  </Box>
-                                                                }
-                                                                arrow
-                                                                placement="top"
-                                                              >
-                                                                <Typography 
-                                                                  variant="body2" 
-                                                                  sx={{ 
-                                                                    fontSize: '0.875rem', 
-                                                                    flex: 1,
-                                                                    overflow: 'hidden',
-                                                                    textOverflow: 'ellipsis',
-                                                                    whiteSpace: 'nowrap',
-                                                                    cursor: 'pointer',
-                                                                  }}
-                                                                >
-                                                                  {company.name}
-                                                                  {company.domain && (
-                                                                    <Typography component="span" variant="body2" sx={{ color: 'text.secondary', ml: 0.5, fontSize: '0.875rem' }}>
-                                                                      ({company.domain})
-                                                                    </Typography>
-                                                                  )}
-                                                                </Typography>
-                                                              </Tooltip>
-                                                            </Box>
-                                                          );
-                                                        })}
-                                                        {associatedCompanies.length === 0 && (
-                                                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', p: 1 }}>
-                                                            No hay empresas asociadas
-                                                          </Typography>
-                                                        )}
-                                                      </>
-                                                    )}
-                                                    {(activitySelectedCategory[activity.id] || 'Contactos') === 'Contactos' && contact && (
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: '#f5f5f5' } }}>
-                                                          <Checkbox
-                                                            checked={(() => {
-                                                              const currentContacts = activitySelectedContacts[activity.id] || [];
-                                                              const excludedContactsForActivity = activityExcludedContacts[activity.id] || [];
-                                                              return ((currentContacts.includes(contact.id) || contact?.id !== undefined) && !excludedContactsForActivity.includes(contact.id));
-                                                            })()}
-                                                            onChange={(e) => {
-                                                              const contactId = contact.id;
-                                                              const currentContacts = activitySelectedContacts[activity.id] || [];
-                                                              const currentExcluded = activityExcludedContacts[activity.id] || [];
-                                                              if (e.target.checked) {
-                                                                // Si estaba excluido, removerlo de excluidos
-                                                                if (currentExcluded.includes(contactId)) {
-                                                                  setActivityExcludedContacts({
-                                                                    ...activityExcludedContacts,
-                                                                    [activity.id]: currentExcluded.filter(id => id !== contactId),
-                                                                  });
-                                                                }
-                                                                // Si no está en selectedContacts, agregarlo
-                                                                if (!currentContacts.includes(contactId)) {
-                                                                  setActivitySelectedContacts({
-                                                                    ...activitySelectedContacts,
-                                                                    [activity.id]: [...currentContacts, contactId],
-                                                                  });
-                                                                }
-                                                              } else {
-                                                                // Si se desmarca, remover de selectedContacts y agregar a excluidos
-                                                                setActivitySelectedContacts({
-                                                                  ...activitySelectedContacts,
-                                                                  [activity.id]: currentContacts.filter(id => id !== contactId),
-                                                                });
-                                                                if (!currentExcluded.includes(contactId)) {
-                                                                  setActivityExcludedContacts({
-                                                                    ...activityExcludedContacts,
-                                                                    [activity.id]: [...currentExcluded, contactId],
-                                                                  });
-                                                                }
-                                                              }
-                                                            }}
-                                                            sx={{
-                                                              color: '#00bcd4',
-                                                              '&.Mui-checked': {
-                                                                color: '#00bcd4',
-                                                              },
-                                                            }}
-                                                          />
-                                                          <Tooltip
-                                                            title={
-                                                              <Box>
-                                                                <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                                                                  {contact.firstName} {contact.lastName}
-                                                                </Typography>
-                                                                {contact.email && (
-                                                                  <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                                                                    {contact.email}
-                                                                  </Typography>
-                                                                )}
-                                                              </Box>
-                                                            }
-                                                            arrow
-                                                            placement="top"
-                                                          >
-                                                            <Typography 
-                                                              variant="body2" 
-                                                              sx={{ 
-                                                                fontSize: '0.875rem', 
-                                                                flex: 1,
-                                                                overflow: 'hidden',
-                                                                textOverflow: 'ellipsis',
-                                                                whiteSpace: 'nowrap',
-                                                                cursor: 'pointer',
-                                                              }}
-                                                            >
-                                                              {contact.firstName} {contact.lastName}
-                                                              <Typography component="span" variant="body2" sx={{ color: 'text.secondary', ml: 0.5, fontSize: '0.875rem' }}>
-                                                                ({contact.email})
-                                                              </Typography>
-                                                            </Typography>
-                                                          </Tooltip>
-                                                        </Box>
-                                                    )}
-                                                    {(activitySelectedCategory[activity.id] || 'Contactos') === 'Negocios' && (
-                                                      <>
-                                                        {associatedDeals.filter((deal: any) => 
-                                                          !activityAssociationSearch[activity.id] || deal.name.toLowerCase().includes((activityAssociationSearch[activity.id] || '').toLowerCase())
-                                                        ).map((deal: any) => {
-                                                            const dealId = 1000 + deal.id; // Usar IDs > 1000 para negocios
-                                                            // Verificar si el negocio está asociado automáticamente o seleccionado manualmente
-                                                            const isAssociated = associatedDeals.some((ad: any) => ad && ad.id === deal.id);
-                                                            const isSelected = (activitySelectedAssociations[activity.id] || []).includes(dealId);
-                                                            const excludedDealsForActivity = activityExcludedDeals[activity.id] || [];
-                                                            const isExcluded = excludedDealsForActivity.includes(deal.id);
-                                                            // Está marcado si está seleccionado o asociado, pero no si fue excluido
-                                                            const shouldBeChecked = (isSelected || isAssociated) && !isExcluded;
-                                                            
-                                                            return (
-                                                              <Box key={deal.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: '#f5f5f5' } }}>
-                                                                <Checkbox
-                                                                  checked={shouldBeChecked}
-                                                                  onChange={(e) => {
-                                                                    const currentAssociations = activitySelectedAssociations[activity.id] || [];
-                                                                    const currentExcluded = activityExcludedDeals[activity.id] || [];
-                                                                    if (e.target.checked) {
-                                                                      // Si está asociado y estaba excluido, removerlo de excluidos
-                                                                      if (isExcluded) {
-                                                                        setActivityExcludedDeals({
-                                                                          ...activityExcludedDeals,
-                                                                          [activity.id]: currentExcluded.filter(id => id !== deal.id),
-                                                                        });
-                                                                      }
-                                                                      // Si no está en selectedAssociations, agregarlo
-                                                                      if (!currentAssociations.includes(dealId)) {
-                                                                        setActivitySelectedAssociations({
-                                                                          ...activitySelectedAssociations,
-                                                                          [activity.id]: [...currentAssociations, dealId],
-                                                                        });
-                                                                      }
-                                                                    } else {
-                                                                      // Si se desmarca, remover de selectedAssociations y agregar a excluidos si está asociado
-                                                                      setActivitySelectedAssociations({
-                                                                        ...activitySelectedAssociations,
-                                                                        [activity.id]: currentAssociations.filter(id => id !== dealId),
-                                                                      });
-                                                                      if (isAssociated && !currentExcluded.includes(deal.id)) {
-                                                                        setActivityExcludedDeals({
-                                                                          ...activityExcludedDeals,
-                                                                          [activity.id]: [...currentExcluded, deal.id],
-                                                                        });
-                                                                      }
-                                                                    }
-                                                                  }}
-                                                                  sx={{
-                                                                    color: '#00bcd4',
-                                                                    '&.Mui-checked': {
-                                                                      color: '#00bcd4',
-                                                                    },
-                                                                  }}
-                                                                />
-                                                                <Tooltip
-                                                                  title={
-                                                                    <Box>
-                                                                      <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                                                                        {deal.name}
-                                                                      </Typography>
-                                                                    </Box>
-                                                                  }
-                                                                  arrow
-                                                                  placement="top"
-                                                                >
-                                                                  <Typography 
-                                                                    variant="body2" 
-                                                                    sx={{ 
-                                                                      fontSize: '0.875rem', 
-                                                                      flex: 1,
-                                                                      overflow: 'hidden',
-                                                                      textOverflow: 'ellipsis',
-                                                                      whiteSpace: 'nowrap',
-                                                                      cursor: 'pointer',
-                                                                    }}
-                                                                  >
-                                                                    {deal.name}
-                                                                  </Typography>
-                                                                </Tooltip>
-                                                              </Box>
-                                                            );
-                                                        })}
-                                                        {associatedDeals.length === 0 && (
-                                                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', p: 1 }}>
-                                                            No hay negocios asociados
-                                                          </Typography>
-                                                        )}
-                                                      </>
-                                                    )}
-                                                    {(activitySelectedCategory[activity.id] || 'Contactos') === 'Tickets' && (
-                                                      <>
-                                                        {associatedTickets.filter((ticket: any) => 
-                                                          !activityAssociationSearch[activity.id] || ticket.subject.toLowerCase().includes((activityAssociationSearch[activity.id] || '').toLowerCase())
-                                                        ).map((ticket: any) => {
-                                                            const ticketId = 2000 + ticket.id; // Usar IDs > 2000 para tickets
-                                                            // Verificar si el ticket está asociado automáticamente o seleccionado manualmente
-                                                            const isAssociated = associatedTickets.some((at: any) => at && at.id === ticket.id);
-                                                            const isSelected = (activitySelectedAssociations[activity.id] || []).includes(ticketId);
-                                                            const excludedTicketsForActivity = activityExcludedTickets[activity.id] || [];
-                                                            const isExcluded = excludedTicketsForActivity.includes(ticket.id);
-                                                            // Está marcado si está seleccionado o asociado, pero no si fue excluido
-                                                            const shouldBeChecked = (isSelected || isAssociated) && !isExcluded;
-                                                            
-                                                            return (
-                                                              <Box key={ticket.id} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: '#f5f5f5' } }}>
-                                                                <Checkbox
-                                                                  checked={shouldBeChecked}
-                                                                  onChange={(e) => {
-                                                                    const currentAssociations = activitySelectedAssociations[activity.id] || [];
-                                                                    const currentExcluded = activityExcludedTickets[activity.id] || [];
-                                                                    if (e.target.checked) {
-                                                                      // Si está asociado y estaba excluido, removerlo de excluidos
-                                                                      if (isExcluded) {
-                                                                        setActivityExcludedTickets({
-                                                                          ...activityExcludedTickets,
-                                                                          [activity.id]: currentExcluded.filter(id => id !== ticket.id),
-                                                                        });
-                                                                      }
-                                                                      // Si no está en selectedAssociations, agregarlo
-                                                                      if (!currentAssociations.includes(ticketId)) {
-                                                                        setActivitySelectedAssociations({
-                                                                          ...activitySelectedAssociations,
-                                                                          [activity.id]: [...currentAssociations, ticketId],
-                                                                        });
-                                                                      }
-                                                                    } else {
-                                                                      // Si se desmarca, remover de selectedAssociations y agregar a excluidos si está asociado
-                                                                      setActivitySelectedAssociations({
-                                                                        ...activitySelectedAssociations,
-                                                                        [activity.id]: currentAssociations.filter(id => id !== ticketId),
-                                                                      });
-                                                                      if (isAssociated && !currentExcluded.includes(ticket.id)) {
-                                                                        setActivityExcludedTickets({
-                                                                          ...activityExcludedTickets,
-                                                                          [activity.id]: [...currentExcluded, ticket.id],
-                                                                        });
-                                                                      }
-                                                                    }
-                                                                  }}
-                                                                  sx={{
-                                                                    color: '#00bcd4',
-                                                                    '&.Mui-checked': {
-                                                                      color: '#00bcd4',
-                                                                    },
-                                                                  }}
-                                                                />
-                                                                <Tooltip
-                                                                  title={
-                                                                    <Box>
-                                                                      <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                                                                        {ticket.subject}
-                                                                      </Typography>
-                                                                      {ticket.description && (
-                                                                        <Typography variant="body2" sx={{ fontSize: '0.75rem' }}>
-                                                                          {ticket.description}
-                                                                        </Typography>
-                                                                      )}
-                                                                    </Box>
-                                                                  }
-                                                                  arrow
-                                                                  placement="top"
-                                                                >
-                                                                  <Typography 
-                                                                    variant="body2" 
-                                                                    sx={{ 
-                                                                      fontSize: '0.875rem', 
-                                                                      flex: 1,
-                                                                      overflow: 'hidden',
-                                                                      textOverflow: 'ellipsis',
-                                                                      whiteSpace: 'nowrap',
-                                                                      cursor: 'pointer',
-                                                                    }}
-                                                                  >
-                                                                    {ticket.subject}
-                                                                  </Typography>
-                                                                </Tooltip>
-                                                              </Box>
-                                                            );
-                                                        })}
-                                                        {associatedTickets.length === 0 && (
-                                                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem', p: 1 }}>
-                                                            No hay tickets asociados
-                                                          </Typography>
-                                                        )}
-                                                      </>
-                                                    )}
-                                                    </Box>
-                                                  </Box>
-                                                </Box>
-                                              </Box>
-                                              )}
-                                            </Box>
-                                          </Box>
-                                        </>
-                                      )}
-                                        </Box>
-                                      </Box>
-                                    </Paper>
-                                  ) : (
-                                    /* Otras actividades (email, call, meeting, task) - Versión mejorada */
-                                    <Paper
-                                      elevation={0}
-                                      sx={{
-                                        p: isExpanded ? 2 : 1.5,
-                                        border: `1px solid ${theme.palette.divider}`,
-                                        borderRadius: 2,
-                                        bgcolor: theme.palette.background.paper,
-                                        color: theme.palette.text.primary,
-                                        transition: 'all 0.3s ease',
-                                        cursor: 'pointer',
-                                        '&:hover': {
-                                          borderColor: '#2E7D32',
-                                          boxShadow: theme.palette.mode === 'dark' 
-                                            ? '0 2px 8px rgba(46, 125, 50, 0.2)' 
-                                            : '0 2px 8px rgba(46, 125, 50, 0.08)',
-                                        },
-                                      }}
-                                      onClick={() => toggleActivityExpand(activity.id)}
-                                    >
-                                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                                        <Avatar sx={{ 
-                                          bgcolor: activity.type === 'email' ? '#2E7D32' :
-                                                   activity.type === 'call' ? '#4CAF50' :
-                                                   activity.type === 'meeting' ? '#FF9800' :
-                                                   activity.type === 'task' ? '#9C27B0' : '#757575',
-                                          width: 40,
-                                          height: 40,
-                                        }}>
-                                          {activity.type === 'email' ? <Email sx={{ fontSize: 20, color: 'white' }} /> :
-                                           activity.type === 'call' ? <Phone sx={{ fontSize: 20, color: 'white' }} /> :
-                                           activity.type === 'meeting' ? <Event sx={{ fontSize: 20, color: 'white' }} /> :
-                                           activity.type === 'task' ? <Assignment sx={{ fontSize: 20, color: 'white' }} /> : <Comment sx={{ fontSize: 20, color: 'white' }} />}
-                                        </Avatar>
-                                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
-                                            <Typography 
-                                              variant="body2" 
-                                              sx={{ 
-                                                fontWeight: 'bold',
-                                                color: 'text.primary',
-                                                fontSize: '0.875rem',
-                                              }}
-                                            >
-                                              {activity.subject || 'Sin título'}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', whiteSpace: 'nowrap', ml: 1 }}>
-                                              {activity.createdAt && new Date(activity.createdAt).toLocaleDateString('es-ES', {
-                                                day: 'numeric',
-                                                month: 'short',
-                                                year: 'numeric',
-                                              })}, {activity.createdAt && new Date(activity.createdAt).toLocaleTimeString('es-ES', {
-                                                hour: '2-digit',
-                                                minute: '2-digit',
-                                              })}
-                                            </Typography>
-                                          </Box>
-                                          
-                                          {activity.description && (
-                                            <Box
-                                              sx={{
-                                                mt: 1,
-                                                p: 1.5,
-                                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'grey.100',
-                                                borderRadius: 1,
-                                                border: `1px solid ${theme.palette.divider}`,
-                                                wordBreak: 'break-word',
-                                                whiteSpace: 'pre-wrap',
-                                                fontSize: '0.875rem',
-                                                color: theme.palette.text.secondary,
-                                              }}
-                                            >
-                                              {activity.description}
-                                            </Box>
-                                          )}
-                                        </Box>
-                                      </Box>
-                                    </Paper>
-                                  )}
-                                </Box>
-                              );
-                            })}
-                          </Box>
-                        </Box>
-                      ))}
-                    </Box>
-                  ) : (
-                    <Box sx={{ textAlign: 'center', py: 4 }}>
-                      <Search sx={{ fontSize: 48, color: '#e0e0e0', mb: 1 }} />
-                      <Typography variant="body2" color="text.secondary">
-                        Ninguna actividad coincide con los filtros actuales. Cambia los filtros para ampliar tu búsqueda.
-                      </Typography>
-                    </Box>
-                  )}
-                </Card>
+              <ActivitiesTabContent
+                activities={activities}
+                activitySearch={activitySearch}
+                onSearchChange={setActivitySearch}
+                onCreateActivity={(type) => handleCreateActivity(type as string)}
+                onActivityClick={setExpandedActivity}
+                onToggleComplete={(activityId, completed) => {
+                  setCompletedActivities((prev) => ({
+                    ...prev,
+                    [activityId]: completed,
+                  }));
+                }}
+                completedActivities={completedActivities}
+                getActivityTypeLabel={getActivityTypeLabel}
+                getActivityStatusColor={getActivityStatusColor}
+                emptyMessage="No hay actividades registradas para este contacto. Crea una nueva actividad para comenzar."
+              />
             </>
           )}
-
         </Box>
 
         {/* Columna Copiloto IA y Registro de Cambios - Solo en desktop cuando está abierto */}
         {isDesktop && copilotOpen && (
-        <Box sx={{
-          width: 380,
-          flexShrink: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2,
-          alignSelf: 'flex-start',
-        }}>
-          {/* Copiloto IA */}
-          <Box sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-            borderRight: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-            borderRadius: 2,
-            bgcolor: theme.palette.mode === 'dark' 
-              ? theme.palette.background.paper 
-              : 'linear-gradient(180deg, rgba(249, 250, 251, 0.5) 0%, rgba(255, 255, 255, 1) 100%)',
-            backgroundImage: theme.palette.mode === 'dark' 
-              ? 'none' 
-              : 'linear-gradient(180deg, rgba(249, 250, 251, 0.5) 0%, rgba(255, 255, 255, 1) 100%)',
-            p: 2,
-            pb: 3,
-            boxSizing: 'border-box',
-            overflowY: 'auto',
-            height: 'fit-content',
-            maxHeight: 'calc(100vh - 80px)',
-          }}>
-        {/* Header del Drawer */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <AutoAwesome sx={{ color: taxiMonterricoColors.green, fontSize: 24 }} />
-            <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
-              Copiloto IA
-            </Typography>
-          </Box>
-          <IconButton
-            size="small"
-            onClick={() => setCopilotOpen(false)}
+          <Box
             sx={{
-              color: theme.palette.text.secondary,
-              '&:hover': {
-                bgcolor: theme.palette.action.hover,
-              },
+              width: 380,
+              flexShrink: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+              alignSelf: "flex-start",
             }}
           >
-            <Close />
-          </IconButton>
-      </Box>
-
-        {/* Card 1: Muestra preocupantes */}
-        <Card 
-          sx={{ 
-            mb: 2, 
-            p: 2, 
-            bgcolor: theme.palette.mode === 'dark' 
-              ? 'rgba(255, 152, 0, 0.1)' 
-              : 'rgba(255, 152, 0, 0.05)',
-            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 152, 0, 0.15)'}`,
-            borderRadius: 2,
-          }}
-        >
-          <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+            {/* Copiloto IA */}
             <Box
               sx={{
-                width: 40,
-                height: 40,
-                borderRadius: 1.5,
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 152, 0, 0.2)' 
-                  : 'rgba(255, 152, 0, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
+                display: "flex",
+                flexDirection: "column",
+                border: `1px solid ${
+                  theme.palette.mode === "dark"
+                    ? "rgba(255,255,255,0.15)"
+                    : "rgba(0,0,0,0.15)"
+                }`,
+                borderRight: `1px solid ${
+                  theme.palette.mode === "dark"
+                    ? "rgba(255,255,255,0.15)"
+                    : "rgba(0,0,0,0.15)"
+                }`,
+                borderRadius: 2,
+                bgcolor:
+                  theme.palette.mode === "dark"
+                    ? theme.palette.background.paper
+                    : "linear-gradient(180deg, rgba(249, 250, 251, 0.5) 0%, rgba(255, 255, 255, 1) 100%)",
+                backgroundImage:
+                  theme.palette.mode === "dark"
+                    ? "none"
+                    : "linear-gradient(180deg, rgba(249, 250, 251, 0.5) 0%, rgba(255, 255, 255, 1) 100%)",
+                p: 2,
+                pb: 3,
+                boxSizing: "border-box",
+                overflowY: "auto",
+                height: "fit-content",
+                maxHeight: "calc(100vh - 80px)",
               }}
             >
-              <ReportProblem sx={{ fontSize: 20, color: '#FF9800' }} />
-            </Box>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem' }}>
-                Muestra preocupantes
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
-                {associatedTickets.length > 0 
-                  ? `Este contacto tiene ${associatedTickets.length} ticket(s) abierto(s) que requieren atención.`
-                  : 'Sin datos suficientes para generar alertas en este momento.'}
-              </Typography>
-            </Box>
-          </Box>
-          <Button
-            variant="outlined"
-            size="small"
-            fullWidth
-            sx={{
-              mt: 1,
-              borderColor: '#FF9800',
-              color: '#FF9800',
-              textTransform: 'none',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              '&:hover': {
-                borderColor: '#FF9800',
-                backgroundColor: 'rgba(255, 152, 0, 0.08)',
-              },
-            }}
-            onClick={() => {
-              setActiveTab(2);
-              setCopilotOpen(false);
-            }}
-          >
-            Ver tickets
-          </Button>
-        </Card>
-
-        {/* Card 2: Próximas pérdidas */}
-        <Card 
-          sx={{ 
-            mb: 2, 
-            p: 2, 
-            bgcolor: theme.palette.mode === 'dark' 
-              ? 'rgba(244, 67, 54, 0.1)' 
-              : 'rgba(244, 67, 54, 0.05)',
-            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(244, 67, 54, 0.15)'}`,
-            borderRadius: 2,
-          }}
-        >
-          <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: 1.5,
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(244, 67, 54, 0.2)' 
-                  : 'rgba(244, 67, 54, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <Receipt sx={{ fontSize: 20, color: '#F44336' }} />
-            </Box>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem' }}>
-                Próximas pérdidas
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
-                {associatedTickets.length > 0 || contact.lifecycleStage === 'customer'
-                  ? 'Facturas pendientes o pagos atrasados detectados. Revisa el estado financiero.'
-                  : 'Sin datos suficientes para identificar riesgos financieros en este momento.'}
-              </Typography>
-            </Box>
-          </Box>
-          <Button
-            variant="outlined"
-            size="small"
-            fullWidth
-            sx={{
-              mt: 1,
-              borderColor: '#F44336',
-              color: '#F44336',
-              textTransform: 'none',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              '&:hover': {
-                borderColor: '#F44336',
-                backgroundColor: 'rgba(244, 67, 54, 0.08)',
-              },
-            }}
-            onClick={() => {
-              setActiveTab(2);
-              setCopilotOpen(false);
-            }}
-          >
-            Ver facturas
-          </Button>
-        </Card>
-
-        {/* Card 3: Manejo seguimiento */}
-        <Card 
-          sx={{ 
-            p: 2, 
-            bgcolor: theme.palette.mode === 'dark' 
-              ? 'rgba(46, 125, 50, 0.1)' 
-              : 'rgba(46, 125, 50, 0.05)',
-            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(46, 125, 50, 0.2)' : 'rgba(46, 125, 50, 0.15)'}`,
-            borderRadius: 2,
-          }}
-        >
-          <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: 1.5,
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(46, 125, 50, 0.2)' 
-                  : 'rgba(46, 125, 50, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <TaskAlt sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
-            </Box>
-            <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem' }}>
-                Manejo seguimiento
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
-                {activities.length > 0
-                  ? `Última actividad hace ${Math.floor((Date.now() - new Date(activities[0].createdAt).getTime()) / (1000 * 60 * 60 * 24))} días. Es momento de hacer seguimiento.`
-                  : 'Sin datos suficientes. Crea una tarea para iniciar el seguimiento.'}
-              </Typography>
-            </Box>
-          </Box>
-          <Button
-            variant="outlined"
-            size="small"
-            fullWidth
-            sx={{
-              mt: 1,
-              borderColor: taxiMonterricoColors.green,
-              color: taxiMonterricoColors.green,
-              textTransform: 'none',
-              fontSize: '0.875rem',
-              fontWeight: 500,
-              '&:hover': {
-                borderColor: taxiMonterricoColors.green,
-                backgroundColor: 'rgba(46, 125, 50, 0.08)',
-              },
-            }}
-            onClick={() => {
-              handleOpenTask();
-              setCopilotOpen(false);
-            }}
-          >
-            Crear tarea
-          </Button>
-        </Card>
-          </Box>
-
-          {/* Card Independiente: Registro de Cambios / Logs */}
-          {historyOpen && (
-          <Box sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-            borderRadius: 2,
-            bgcolor: theme.palette.background.paper,
-            p: 2,
-            pb: 3,
-            boxSizing: 'border-box',
-            overflowY: 'auto',
-            height: 'fit-content',
-            maxHeight: 'calc(100vh - 80px)',
-          }}>
-          {/* Card: Registro de Cambios */}
-          <Card 
-            sx={{ 
-              p: 2, 
-              bgcolor: theme.palette.mode === 'dark' 
-                ? 'rgba(33, 150, 243, 0.1)' 
-                : 'rgba(33, 150, 243, 0.05)',
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.15)'}`,
-              borderRadius: 2,
-              maxHeight: 400,
-              display: 'flex',
-              flexDirection: 'column',
-            }}
-          >
-            <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+              {/* Header del Drawer */}
               <Box
                 sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 1.5,
-                  bgcolor: theme.palette.mode === 'dark' 
-                    ? 'rgba(33, 150, 243, 0.2)' 
-                    : 'rgba(33, 150, 243, 0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  mb: 3,
                 }}
               >
-                <History sx={{ fontSize: 20, color: '#2196F3' }} />
-              </Box>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem' }}>
-                  Registro de Cambios
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
-                  Historial de actividades y modificaciones recientes
-                </Typography>
-              </Box>
-            </Box>
-            
-            {/* Lista de logs */}
-            <Box sx={{ 
-              overflowY: 'auto', 
-              maxHeight: 280,
-              mt: 1,
-              '&::-webkit-scrollbar': {
-                width: 6,
-              },
-              '&::-webkit-scrollbar-track': {
-                backgroundColor: 'transparent',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
-                borderRadius: 3,
-              },
-            }}>
-              {loadingLogs ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                  <CircularProgress size={20} />
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <AutoAwesome
+                    sx={{ color: taxiMonterricoColors.green, fontSize: 24 }}
+                  />
+                  <Typography
+                    variant="h6"
+                    sx={{ fontWeight: 600, fontSize: "1.125rem" }}
+                  >
+                    Copiloto IA
+                  </Typography>
                 </Box>
-              ) : activityLogs.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', textAlign: 'center', py: 2, fontStyle: 'italic' }}>
-                  No hay registros disponibles
-                </Typography>
-              ) : (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                  {activityLogs.map((log, index) => {
-                    const renderIcon = () => {
-                      switch (log.iconType) {
-                        case 'note':
-                          return <Note sx={{ fontSize: 16 }} />;
-                        case 'email':
-                          return <Email sx={{ fontSize: 16 }} />;
-                        case 'call':
-                          return <Phone sx={{ fontSize: 16 }} />;
-                        case 'meeting':
-                          return <Event sx={{ fontSize: 16 }} />;
-                        case 'task':
-                          return <TaskAlt sx={{ fontSize: 16 }} />;
-                        case 'contact':
-                          return <Person sx={{ fontSize: 16 }} />;
-                        default:
-                          return <History sx={{ fontSize: 16 }} />;
-                      }
-                    };
+                <IconButton
+                  size="small"
+                  onClick={() => setCopilotOpen(false)}
+                  sx={{
+                    color: theme.palette.text.secondary,
+                    "&:hover": {
+                      bgcolor: theme.palette.action.hover,
+                    },
+                  }}
+                >
+                  <Close />
+                </IconButton>
+              </Box>
 
-                    return (
+              {/* Card 1: Muestra preocupantes */}
+              <Card
+                sx={{
+                  mb: 2,
+                  p: 2,
+                  bgcolor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255, 152, 0, 0.1)"
+                      : "rgba(255, 152, 0, 0.05)",
+                  border: `1px solid ${
+                    theme.palette.mode === "dark"
+                      ? "rgba(255, 152, 0, 0.2)"
+                      : "rgba(255, 152, 0, 0.15)"
+                  }`,
+                  borderRadius: 2,
+                }}
+              >
+                <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 1.5,
+                      bgcolor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255, 152, 0, 0.2)"
+                          : "rgba(255, 152, 0, 0.1)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <ReportProblem sx={{ fontSize: 20, color: "#FF9800" }} />
+                  </Box>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 700, mb: 0.5, fontSize: "0.875rem" }}
+                    >
+                      Muestra preocupantes
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ fontSize: "0.8125rem", lineHeight: 1.5 }}
+                    >
+                      {associatedTickets.length > 0
+                        ? `Este contacto tiene ${associatedTickets.length} ticket(s) abierto(s) que requieren atención.`
+                        : "Sin datos suficientes para generar alertas en este momento."}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  sx={{
+                    mt: 1,
+                    borderColor: "#FF9800",
+                    color: "#FF9800",
+                    textTransform: "none",
+                    fontSize: "0.875rem",
+                    fontWeight: 500,
+                    "&:hover": {
+                      borderColor: "#FF9800",
+                      backgroundColor: "rgba(255, 152, 0, 0.08)",
+                    },
+                  }}
+                  onClick={() => {
+                    setActiveTab(2);
+                    setCopilotOpen(false);
+                  }}
+                >
+                  Ver tickets
+                </Button>
+              </Card>
+
+              {/* Card 2: Próximas pérdidas */}
+              <Card
+                sx={{
+                  mb: 2,
+                  p: 2,
+                  bgcolor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(244, 67, 54, 0.1)"
+                      : "rgba(244, 67, 54, 0.05)",
+                  border: `1px solid ${
+                    theme.palette.mode === "dark"
+                      ? "rgba(244, 67, 54, 0.2)"
+                      : "rgba(244, 67, 54, 0.15)"
+                  }`,
+                  borderRadius: 2,
+                }}
+              >
+                <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 1.5,
+                      bgcolor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(244, 67, 54, 0.2)"
+                          : "rgba(244, 67, 54, 0.1)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Receipt sx={{ fontSize: 20, color: "#F44336" }} />
+                  </Box>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 700, mb: 0.5, fontSize: "0.875rem" }}
+                    >
+                      Próximas pérdidas
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ fontSize: "0.8125rem", lineHeight: 1.5 }}
+                    >
+                      {associatedTickets.length > 0 ||
+                      contact.lifecycleStage === "customer"
+                        ? "Facturas pendientes o pagos atrasados detectados. Revisa el estado financiero."
+                        : "Sin datos suficientes para identificar riesgos financieros en este momento."}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  sx={{
+                    mt: 1,
+                    borderColor: "#F44336",
+                    color: "#F44336",
+                    textTransform: "none",
+                    fontSize: "0.875rem",
+                    fontWeight: 500,
+                    "&:hover": {
+                      borderColor: "#F44336",
+                      backgroundColor: "rgba(244, 67, 54, 0.08)",
+                    },
+                  }}
+                  onClick={() => {
+                    setActiveTab(2);
+                    setCopilotOpen(false);
+                  }}
+                >
+                  Ver facturas
+                </Button>
+              </Card>
+
+              {/* Card 3: Manejo seguimiento */}
+              <Card
+                sx={{
+                  p: 2,
+                  bgcolor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(46, 125, 50, 0.1)"
+                      : "rgba(46, 125, 50, 0.05)",
+                  border: `1px solid ${
+                    theme.palette.mode === "dark"
+                      ? "rgba(46, 125, 50, 0.2)"
+                      : "rgba(46, 125, 50, 0.15)"
+                  }`,
+                  borderRadius: 2,
+                }}
+              >
+                <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: 1.5,
+                      bgcolor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(46, 125, 50, 0.2)"
+                          : "rgba(46, 125, 50, 0.1)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <TaskAlt
+                      sx={{ fontSize: 20, color: taxiMonterricoColors.green }}
+                    />
+                  </Box>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{ fontWeight: 700, mb: 0.5, fontSize: "0.875rem" }}
+                    >
+                      Manejo seguimiento
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ fontSize: "0.8125rem", lineHeight: 1.5 }}
+                    >
+                      {activities.length > 0
+                        ? `Última actividad hace ${Math.floor(
+                            (Date.now() -
+                              new Date(activities[0].createdAt).getTime()) /
+                              (1000 * 60 * 60 * 24)
+                          )} días. Es momento de hacer seguimiento.`
+                        : "Sin datos suficientes. Crea una tarea para iniciar el seguimiento."}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                  sx={{
+                    mt: 1,
+                    borderColor: taxiMonterricoColors.green,
+                    color: taxiMonterricoColors.green,
+                    textTransform: "none",
+                    fontSize: "0.875rem",
+                    fontWeight: 500,
+                    "&:hover": {
+                      borderColor: taxiMonterricoColors.green,
+                      backgroundColor: "rgba(46, 125, 50, 0.08)",
+                    },
+                  }}
+                  onClick={() => {
+                    handleOpenTask();
+                    setCopilotOpen(false);
+                  }}
+                >
+                  Crear tarea
+                </Button>
+              </Card>
+            </Box>
+
+            {/* Card Independiente: Registro de Cambios / Logs */}
+            {historyOpen && (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  border: `1px solid ${
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.15)"
+                      : "rgba(0,0,0,0.15)"
+                  }`,
+                  borderRadius: 2,
+                  bgcolor: theme.palette.background.paper,
+                  p: 2,
+                  pb: 3,
+                  boxSizing: "border-box",
+                  overflowY: "auto",
+                  height: "fit-content",
+                  maxHeight: "calc(100vh - 80px)",
+                }}
+              >
+                {/* Card: Registro de Cambios */}
+                <Card
+                  sx={{
+                    p: 2,
+                    bgcolor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(33, 150, 243, 0.1)"
+                        : "rgba(33, 150, 243, 0.05)",
+                    border: `1px solid ${
+                      theme.palette.mode === "dark"
+                        ? "rgba(33, 150, 243, 0.2)"
+                        : "rgba(33, 150, 243, 0.15)"
+                    }`,
+                    borderRadius: 2,
+                    maxHeight: 400,
+                    display: "flex",
+                    flexDirection: "column",
+                  }}
+                >
+                  <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
                     <Box
-                      key={log.id}
                       sx={{
-                        display: 'flex',
-                        gap: 1,
-                        alignItems: 'flex-start',
-                        pb: index < activityLogs.length - 1 ? 1.5 : 0,
-                        borderBottom: index < activityLogs.length - 1 
-                          ? `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}` 
-                          : 'none',
+                        width: 40,
+                        height: 40,
+                        borderRadius: 1.5,
+                        bgcolor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(33, 150, 243, 0.2)"
+                            : "rgba(33, 150, 243, 0.1)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
                       }}
                     >
+                      <History sx={{ fontSize: 20, color: "#2196F3" }} />
+                    </Box>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ fontWeight: 700, mb: 0.5, fontSize: "0.875rem" }}
+                      >
+                        Registro de Cambios
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ fontSize: "0.8125rem", lineHeight: 1.5 }}
+                      >
+                        Historial de actividades y modificaciones recientes
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  {/* Lista de logs */}
+                  <Box
+                    sx={{
+                      overflowY: "auto",
+                      maxHeight: 280,
+                      mt: 1,
+                      "&::-webkit-scrollbar": {
+                        width: 6,
+                      },
+                      "&::-webkit-scrollbar-track": {
+                        backgroundColor: "transparent",
+                      },
+                      "&::-webkit-scrollbar-thumb": {
+                        backgroundColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(255,255,255,0.2)"
+                            : "rgba(0,0,0,0.2)",
+                        borderRadius: 3,
+                      },
+                    }}
+                  >
+                    {loadingLogs ? (
                       <Box
                         sx={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: 1,
-                          bgcolor: theme.palette.mode === 'dark' 
-                            ? 'rgba(33, 150, 243, 0.15)' 
-                            : 'rgba(33, 150, 243, 0.1)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                          mt: 0.25,
+                          display: "flex",
+                          justifyContent: "center",
+                          py: 2,
                         }}
                       >
-                        {renderIcon()}
+                        <CircularProgress size={20} />
                       </Box>
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 500, mb: 0.25 }}>
-                          {log.description}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-                          {log.user && (
-                            <Typography variant="caption" sx={{ fontSize: '0.6875rem', color: theme.palette.text.secondary }}>
-                              {log.user.firstName} {log.user.lastName}
-                            </Typography>
-                          )}
-                          {log.timestamp && (
-                            <>
-                              {log.user && (
-                                <Typography variant="caption" sx={{ fontSize: '0.6875rem', color: theme.palette.text.disabled }}>
-                                  •
+                    ) : activityLogs.length === 0 ? (
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                          fontSize: "0.75rem",
+                          textAlign: "center",
+                          py: 2,
+                          fontStyle: "italic",
+                        }}
+                      >
+                        No hay registros disponibles
+                      </Typography>
+                    ) : (
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 1.5,
+                        }}
+                      >
+                        {activityLogs.map((log, index) => {
+                          const renderIcon = () => {
+                            switch (log.iconType) {
+                              case "note":
+                                return <Note sx={{ fontSize: 16 }} />;
+                              case "email":
+                                return <Email sx={{ fontSize: 16 }} />;
+                              case "call":
+                                return <Phone sx={{ fontSize: 16 }} />;
+                              case "meeting":
+                                return <Event sx={{ fontSize: 16 }} />;
+                              case "task":
+                                return <TaskAlt sx={{ fontSize: 16 }} />;
+                              case "contact":
+                                return <Person sx={{ fontSize: 16 }} />;
+                              default:
+                                return <History sx={{ fontSize: 16 }} />;
+                            }
+                          };
+
+                          return (
+                            <Box
+                              key={log.id}
+                              sx={{
+                                display: "flex",
+                                gap: 1,
+                                alignItems: "flex-start",
+                                pb: index < activityLogs.length - 1 ? 1.5 : 0,
+                                borderBottom:
+                                  index < activityLogs.length - 1
+                                    ? `1px solid ${
+                                        theme.palette.mode === "dark"
+                                          ? "rgba(255,255,255,0.08)"
+                                          : "rgba(0,0,0,0.08)"
+                                      }`
+                                    : "none",
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: 1,
+                                  bgcolor:
+                                    theme.palette.mode === "dark"
+                                      ? "rgba(33, 150, 243, 0.15)"
+                                      : "rgba(33, 150, 243, 0.1)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  flexShrink: 0,
+                                  mt: 0.25,
+                                }}
+                              >
+                                {renderIcon()}
+                              </Box>
+                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontSize: "0.75rem",
+                                    fontWeight: 500,
+                                    mb: 0.25,
+                                  }}
+                                >
+                                  {log.description}
                                 </Typography>
-                              )}
-                              <Typography variant="caption" sx={{ fontSize: '0.6875rem', color: theme.palette.text.secondary }}>
-                                {new Date(log.timestamp).toLocaleDateString('es-ES', {
-                                  day: '2-digit',
-                                  month: 'short',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
-                              </Typography>
-                            </>
-                          )}
-                        </Box>
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 0.75,
+                                    flexWrap: "wrap",
+                                  }}
+                                >
+                                  {log.user && (
+                                    <Typography
+                                      variant="caption"
+                                      sx={{
+                                        fontSize: "0.6875rem",
+                                        color: theme.palette.text.secondary,
+                                      }}
+                                    >
+                                      {log.user.firstName} {log.user.lastName}
+                                    </Typography>
+                                  )}
+                                  {log.timestamp && (
+                                    <>
+                                      {log.user && (
+                                        <Typography
+                                          variant="caption"
+                                          sx={{
+                                            fontSize: "0.6875rem",
+                                            color: theme.palette.text.disabled,
+                                          }}
+                                        >
+                                          •
+                                        </Typography>
+                                      )}
+                                      <Typography
+                                        variant="caption"
+                                        sx={{
+                                          fontSize: "0.6875rem",
+                                          color: theme.palette.text.secondary,
+                                        }}
+                                      >
+                                        {new Date(
+                                          log.timestamp
+                                        ).toLocaleDateString("es-ES", {
+                                          day: "2-digit",
+                                          month: "short",
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </Typography>
+                                    </>
+                                  )}
+                                </Box>
+                              </Box>
+                            </Box>
+                          );
+                        })}
                       </Box>
-                    </Box>
-                    );
-                  })}
-                </Box>
-              )}
-            </Box>
-          </Card>
+                    )}
+                  </Box>
+                </Card>
+              </Box>
+            )}
           </Box>
-          )}
-        </Box>
         )}
 
         {/* Card Independiente: Registro de Cambios / Logs - Solo cuando Copiloto IA está cerrado */}
         {isDesktop && !copilotOpen && historyOpen && (
-        <Box sx={{
-          width: 380,
-          flexShrink: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-          borderRadius: 2,
-          bgcolor: theme.palette.background.paper,
-          p: 2,
-          pb: 3,
-          boxSizing: 'border-box',
-          overflowY: 'auto',
-          height: 'fit-content',
-          maxHeight: 'calc(100vh - 80px)',
-          alignSelf: 'flex-start',
-          mb: 2,
-        }}>
-          {/* Card: Registro de Cambios */}
-          <Card 
-            sx={{ 
-              p: 2, 
-              bgcolor: theme.palette.mode === 'dark' 
-                ? 'rgba(33, 150, 243, 0.1)' 
-                : 'rgba(33, 150, 243, 0.05)',
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.15)'}`,
+          <Box
+            sx={{
+              width: 380,
+              flexShrink: 0,
+              display: "flex",
+              flexDirection: "column",
+              border: `1px solid ${
+                theme.palette.mode === "dark"
+                  ? "rgba(255,255,255,0.15)"
+                  : "rgba(0,0,0,0.15)"
+              }`,
               borderRadius: 2,
-              maxHeight: 400,
-              display: 'flex',
-              flexDirection: 'column',
+              bgcolor: theme.palette.background.paper,
+              p: 2,
+              pb: 3,
+              boxSizing: "border-box",
+              overflowY: "auto",
+              height: "fit-content",
+              maxHeight: "calc(100vh - 80px)",
+              alignSelf: "flex-start",
+              mb: 2,
             }}
           >
-            <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+            {/* Card: Registro de Cambios */}
+            <Card
+              sx={{
+                p: 2,
+                bgcolor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(33, 150, 243, 0.1)"
+                    : "rgba(33, 150, 243, 0.05)",
+                border: `1px solid ${
+                  theme.palette.mode === "dark"
+                    ? "rgba(33, 150, 243, 0.2)"
+                    : "rgba(33, 150, 243, 0.15)"
+                }`,
+                borderRadius: 2,
+                maxHeight: 400,
+                display: "flex",
+                flexDirection: "column",
+              }}
+            >
+              <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 1.5,
+                    bgcolor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(33, 150, 243, 0.2)"
+                        : "rgba(33, 150, 243, 0.1)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  <History sx={{ fontSize: 20, color: "#2196F3" }} />
+                </Box>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ fontWeight: 700, mb: 0.5, fontSize: "0.875rem" }}
+                  >
+                    Registro de Cambios
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ fontSize: "0.8125rem", lineHeight: 1.5 }}
+                  >
+                    Historial de actividades y modificaciones recientes
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Lista de logs */}
               <Box
                 sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 1.5,
-                  bgcolor: theme.palette.mode === 'dark' 
-                    ? 'rgba(33, 150, 243, 0.2)' 
-                    : 'rgba(33, 150, 243, 0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
+                  overflowY: "auto",
+                  maxHeight: 280,
+                  mt: 1,
+                  "&::-webkit-scrollbar": {
+                    width: 6,
+                  },
+                  "&::-webkit-scrollbar-track": {
+                    backgroundColor: "transparent",
+                  },
+                  "&::-webkit-scrollbar-thumb": {
+                    backgroundColor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.2)"
+                        : "rgba(0,0,0,0.2)",
+                    borderRadius: 3,
+                  },
                 }}
               >
-                <History sx={{ fontSize: 20, color: '#2196F3' }} />
-              </Box>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem' }}>
-                  Registro de Cambios
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
-                  Historial de actividades y modificaciones recientes
-                </Typography>
-              </Box>
-            </Box>
-            
-            {/* Lista de logs */}
-            <Box sx={{ 
-              overflowY: 'auto', 
-              maxHeight: 280,
-              mt: 1,
-              '&::-webkit-scrollbar': {
-                width: 6,
-              },
-              '&::-webkit-scrollbar-track': {
-                backgroundColor: 'transparent',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
-                borderRadius: 3,
-              },
-            }}>
-              {loadingLogs ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
-                  <CircularProgress size={20} />
-                </Box>
-              ) : activityLogs.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', textAlign: 'center', py: 2, fontStyle: 'italic' }}>
-                  No hay registros disponibles
-                </Typography>
-              ) : (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                  {activityLogs.map((log, index) => {
-                    const renderIcon = () => {
-                      switch (log.iconType) {
-                        case 'note':
-                          return <Note sx={{ fontSize: 16 }} />;
-                        case 'email':
-                          return <Email sx={{ fontSize: 16 }} />;
-                        case 'call':
-                          return <Phone sx={{ fontSize: 16 }} />;
-                        case 'meeting':
-                          return <Event sx={{ fontSize: 16 }} />;
-                        case 'task':
-                          return <TaskAlt sx={{ fontSize: 16 }} />;
-                        case 'contact':
-                          return <Person sx={{ fontSize: 16 }} />;
-                        default:
-                          return <History sx={{ fontSize: 16 }} />;
-                      }
-                    };
+                {loadingLogs ? (
+                  <Box
+                    sx={{ display: "flex", justifyContent: "center", py: 2 }}
+                  >
+                    <CircularProgress size={20} />
+                  </Box>
+                ) : activityLogs.length === 0 ? (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      fontSize: "0.75rem",
+                      textAlign: "center",
+                      py: 2,
+                      fontStyle: "italic",
+                    }}
+                  >
+                    No hay registros disponibles
+                  </Typography>
+                ) : (
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}
+                  >
+                    {activityLogs.map((log, index) => {
+                      const renderIcon = () => {
+                        switch (log.iconType) {
+                          case "note":
+                            return <Note sx={{ fontSize: 16 }} />;
+                          case "email":
+                            return <Email sx={{ fontSize: 16 }} />;
+                          case "call":
+                            return <Phone sx={{ fontSize: 16 }} />;
+                          case "meeting":
+                            return <Event sx={{ fontSize: 16 }} />;
+                          case "task":
+                            return <TaskAlt sx={{ fontSize: 16 }} />;
+                          case "contact":
+                            return <Person sx={{ fontSize: 16 }} />;
+                          default:
+                            return <History sx={{ fontSize: 16 }} />;
+                        }
+                      };
 
-                    return (
-                    <Box
-                      key={log.id}
-                      sx={{
-                        display: 'flex',
-                        gap: 1,
-                        alignItems: 'flex-start',
-                        pb: index < activityLogs.length - 1 ? 1.5 : 0,
-                        borderBottom: index < activityLogs.length - 1 
-                          ? `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}` 
-                          : 'none',
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: 1,
-                          bgcolor: theme.palette.mode === 'dark' 
-                            ? 'rgba(33, 150, 243, 0.15)' 
-                            : 'rgba(33, 150, 243, 0.1)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
-                          mt: 0.25,
-                        }}
-                      >
-                        {renderIcon()}
-                      </Box>
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 500, mb: 0.25 }}>
-                          {log.description}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
-                          {log.user && (
-                            <Typography variant="caption" sx={{ fontSize: '0.6875rem', color: theme.palette.text.secondary }}>
-                              {log.user.firstName} {log.user.lastName}
+                      return (
+                        <Box
+                          key={log.id}
+                          sx={{
+                            display: "flex",
+                            gap: 1,
+                            alignItems: "flex-start",
+                            pb: index < activityLogs.length - 1 ? 1.5 : 0,
+                            borderBottom:
+                              index < activityLogs.length - 1
+                                ? `1px solid ${
+                                    theme.palette.mode === "dark"
+                                      ? "rgba(255,255,255,0.08)"
+                                      : "rgba(0,0,0,0.08)"
+                                  }`
+                                : "none",
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 1,
+                              bgcolor:
+                                theme.palette.mode === "dark"
+                                  ? "rgba(33, 150, 243, 0.15)"
+                                  : "rgba(33, 150, 243, 0.1)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              flexShrink: 0,
+                              mt: 0.25,
+                            }}
+                          >
+                            {renderIcon()}
+                          </Box>
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontSize: "0.75rem",
+                                fontWeight: 500,
+                                mb: 0.25,
+                              }}
+                            >
+                              {log.description}
                             </Typography>
-                          )}
-                          {log.timestamp && (
-                            <>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 0.75,
+                                flexWrap: "wrap",
+                              }}
+                            >
                               {log.user && (
-                                <Typography variant="caption" sx={{ fontSize: '0.6875rem', color: theme.palette.text.disabled }}>
-                                  •
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    fontSize: "0.6875rem",
+                                    color: theme.palette.text.secondary,
+                                  }}
+                                >
+                                  {log.user.firstName} {log.user.lastName}
                                 </Typography>
                               )}
-                              <Typography variant="caption" sx={{ fontSize: '0.6875rem', color: theme.palette.text.secondary }}>
-                                {new Date(log.timestamp).toLocaleDateString('es-ES', {
-                                  day: '2-digit',
-                                  month: 'short',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
-                              </Typography>
-                            </>
-                          )}
+                              {log.timestamp && (
+                                <>
+                                  {log.user && (
+                                    <Typography
+                                      variant="caption"
+                                      sx={{
+                                        fontSize: "0.6875rem",
+                                        color: theme.palette.text.disabled,
+                                      }}
+                                    >
+                                      •
+                                    </Typography>
+                                  )}
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      fontSize: "0.6875rem",
+                                      color: theme.palette.text.secondary,
+                                    }}
+                                  >
+                                    {new Date(log.timestamp).toLocaleDateString(
+                                      "es-ES",
+                                      {
+                                        day: "2-digit",
+                                        month: "short",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      }
+                                    )}
+                                  </Typography>
+                                </>
+                              )}
+                            </Box>
+                          </Box>
                         </Box>
-                      </Box>
-                    </Box>
-                    );
-                  })}
-                </Box>
-              )}
-            </Box>
-          </Card>
-        </Box>
+                      );
+                    })}
+                  </Box>
+                )}
+              </Box>
+            </Card>
+          </Box>
         )}
       </Box>
 
@@ -6284,26 +3761,44 @@ const ContactDetail: React.FC = () => {
         variant="temporary"
         PaperProps={{
           sx: {
-            width: '100%',
-            borderLeft: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'}`,
-            bgcolor: theme.palette.mode === 'dark' 
-              ? theme.palette.background.paper 
-              : 'linear-gradient(180deg, rgba(249, 250, 251, 0.5) 0%, rgba(255, 255, 255, 1) 100%)',
-            backgroundImage: theme.palette.mode === 'dark' 
-              ? 'none' 
-              : 'linear-gradient(180deg, rgba(249, 250, 251, 0.5) 0%, rgba(255, 255, 255, 1) 100%)',
-            pt: { xs: '76px', sm: 2 },
+            width: "100%",
+            borderLeft: `1px solid ${
+              theme.palette.mode === "dark"
+                ? "rgba(255,255,255,0.12)"
+                : "rgba(0,0,0,0.08)"
+            }`,
+            bgcolor:
+              theme.palette.mode === "dark"
+                ? theme.palette.background.paper
+                : "linear-gradient(180deg, rgba(249, 250, 251, 0.5) 0%, rgba(255, 255, 255, 1) 100%)",
+            backgroundImage:
+              theme.palette.mode === "dark"
+                ? "none"
+                : "linear-gradient(180deg, rgba(249, 250, 251, 0.5) 0%, rgba(255, 255, 255, 1) 100%)",
+            pt: { xs: "76px", sm: 2 },
             px: 2,
             pb: 2,
-            boxSizing: 'border-box',
+            boxSizing: "border-box",
           },
         }}
       >
         {/* Header del Drawer */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <AutoAwesome sx={{ color: taxiMonterricoColors.green, fontSize: 24 }} />
-            <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            mb: 3,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <AutoAwesome
+              sx={{ color: taxiMonterricoColors.green, fontSize: 24 }}
+            />
+            <Typography
+              variant="h6"
+              sx={{ fontWeight: 600, fontSize: "1.125rem" }}
+            >
               Copiloto IA
             </Typography>
           </Box>
@@ -6312,7 +3807,7 @@ const ContactDetail: React.FC = () => {
             onClick={() => setCopilotOpen(false)}
             sx={{
               color: theme.palette.text.secondary,
-              '&:hover': {
+              "&:hover": {
                 bgcolor: theme.palette.action.hover,
               },
             }}
@@ -6322,42 +3817,55 @@ const ContactDetail: React.FC = () => {
         </Box>
 
         {/* Card 1: Muestra preocupantes */}
-        <Card 
-          sx={{ 
-            mb: 2, 
-            p: 2, 
-            bgcolor: theme.palette.mode === 'dark' 
-              ? 'rgba(255, 152, 0, 0.1)' 
-              : 'rgba(255, 152, 0, 0.05)',
-            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 152, 0, 0.15)'}`,
+        <Card
+          sx={{
+            mb: 2,
+            p: 2,
+            bgcolor:
+              theme.palette.mode === "dark"
+                ? "rgba(255, 152, 0, 0.1)"
+                : "rgba(255, 152, 0, 0.05)",
+            border: `1px solid ${
+              theme.palette.mode === "dark"
+                ? "rgba(255, 152, 0, 0.2)"
+                : "rgba(255, 152, 0, 0.15)"
+            }`,
             borderRadius: 2,
           }}
         >
-          <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+          <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
             <Box
               sx={{
                 width: 40,
                 height: 40,
                 borderRadius: 1.5,
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 152, 0, 0.2)' 
-                  : 'rgba(255, 152, 0, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                bgcolor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(255, 152, 0, 0.2)"
+                    : "rgba(255, 152, 0, 0.1)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 flexShrink: 0,
               }}
             >
-              <ReportProblem sx={{ fontSize: 20, color: '#FF9800' }} />
+              <ReportProblem sx={{ fontSize: 20, color: "#FF9800" }} />
             </Box>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem' }}>
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 700, mb: 0.5, fontSize: "0.875rem" }}
+              >
                 Muestra preocupantes
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
-                {associatedTickets.length > 0 
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ fontSize: "0.8125rem", lineHeight: 1.5 }}
+              >
+                {associatedTickets.length > 0
                   ? `Este contacto tiene ${associatedTickets.length} ticket(s) abierto(s) que requieren atención.`
-                  : 'Sin datos suficientes para generar alertas en este momento.'}
+                  : "Sin datos suficientes para generar alertas en este momento."}
               </Typography>
             </Box>
           </Box>
@@ -6367,14 +3875,14 @@ const ContactDetail: React.FC = () => {
             fullWidth
             sx={{
               mt: 1,
-              borderColor: '#FF9800',
-              color: '#FF9800',
-              textTransform: 'none',
-              fontSize: '0.875rem',
+              borderColor: "#FF9800",
+              color: "#FF9800",
+              textTransform: "none",
+              fontSize: "0.875rem",
               fontWeight: 500,
-              '&:hover': {
-                borderColor: '#FF9800',
-                backgroundColor: 'rgba(255, 152, 0, 0.08)',
+              "&:hover": {
+                borderColor: "#FF9800",
+                backgroundColor: "rgba(255, 152, 0, 0.08)",
               },
             }}
             onClick={() => {
@@ -6387,42 +3895,56 @@ const ContactDetail: React.FC = () => {
         </Card>
 
         {/* Card 2: Próximas pérdidas */}
-        <Card 
-          sx={{ 
-            mb: 2, 
-            p: 2, 
-            bgcolor: theme.palette.mode === 'dark' 
-              ? 'rgba(244, 67, 54, 0.1)' 
-              : 'rgba(244, 67, 54, 0.05)',
-            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(244, 67, 54, 0.15)'}`,
+        <Card
+          sx={{
+            mb: 2,
+            p: 2,
+            bgcolor:
+              theme.palette.mode === "dark"
+                ? "rgba(244, 67, 54, 0.1)"
+                : "rgba(244, 67, 54, 0.05)",
+            border: `1px solid ${
+              theme.palette.mode === "dark"
+                ? "rgba(244, 67, 54, 0.2)"
+                : "rgba(244, 67, 54, 0.15)"
+            }`,
             borderRadius: 2,
           }}
         >
-          <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+          <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
             <Box
               sx={{
                 width: 40,
                 height: 40,
                 borderRadius: 1.5,
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(244, 67, 54, 0.2)' 
-                  : 'rgba(244, 67, 54, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                bgcolor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(244, 67, 54, 0.2)"
+                    : "rgba(244, 67, 54, 0.1)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 flexShrink: 0,
               }}
             >
-              <Receipt sx={{ fontSize: 20, color: '#F44336' }} />
+              <Receipt sx={{ fontSize: 20, color: "#F44336" }} />
             </Box>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem' }}>
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 700, mb: 0.5, fontSize: "0.875rem" }}
+              >
                 Próximas pérdidas
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
-                {associatedTickets.length > 0 || contact.lifecycleStage === 'customer'
-                  ? 'Facturas pendientes o pagos atrasados detectados. Revisa el estado financiero.'
-                  : 'Sin datos suficientes para identificar riesgos financieros en este momento.'}
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ fontSize: "0.8125rem", lineHeight: 1.5 }}
+              >
+                {associatedTickets.length > 0 ||
+                contact.lifecycleStage === "customer"
+                  ? "Facturas pendientes o pagos atrasados detectados. Revisa el estado financiero."
+                  : "Sin datos suficientes para identificar riesgos financieros en este momento."}
               </Typography>
             </Box>
           </Box>
@@ -6432,14 +3954,14 @@ const ContactDetail: React.FC = () => {
             fullWidth
             sx={{
               mt: 1,
-              borderColor: '#F44336',
-              color: '#F44336',
-              textTransform: 'none',
-              fontSize: '0.875rem',
+              borderColor: "#F44336",
+              color: "#F44336",
+              textTransform: "none",
+              fontSize: "0.875rem",
               fontWeight: 500,
-              '&:hover': {
-                borderColor: '#F44336',
-                backgroundColor: 'rgba(244, 67, 54, 0.08)',
+              "&:hover": {
+                borderColor: "#F44336",
+                backgroundColor: "rgba(244, 67, 54, 0.08)",
               },
             }}
             onClick={() => {
@@ -6452,41 +3974,60 @@ const ContactDetail: React.FC = () => {
         </Card>
 
         {/* Card 3: Manejo seguimiento */}
-        <Card 
-          sx={{ 
-            p: 2, 
-            bgcolor: theme.palette.mode === 'dark' 
-              ? 'rgba(46, 125, 50, 0.1)' 
-              : 'rgba(46, 125, 50, 0.05)',
-            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(46, 125, 50, 0.2)' : 'rgba(46, 125, 50, 0.15)'}`,
+        <Card
+          sx={{
+            p: 2,
+            bgcolor:
+              theme.palette.mode === "dark"
+                ? "rgba(46, 125, 50, 0.1)"
+                : "rgba(46, 125, 50, 0.05)",
+            border: `1px solid ${
+              theme.palette.mode === "dark"
+                ? "rgba(46, 125, 50, 0.2)"
+                : "rgba(46, 125, 50, 0.15)"
+            }`,
             borderRadius: 2,
           }}
         >
-          <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+          <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
             <Box
               sx={{
                 width: 40,
                 height: 40,
                 borderRadius: 1.5,
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(46, 125, 50, 0.2)' 
-                  : 'rgba(46, 125, 50, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                bgcolor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(46, 125, 50, 0.2)"
+                    : "rgba(46, 125, 50, 0.1)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 flexShrink: 0,
               }}
             >
-              <TaskAlt sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+              <TaskAlt
+                sx={{ fontSize: 20, color: taxiMonterricoColors.green }}
+              />
             </Box>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem' }}>
+              <Typography
+                variant="subtitle2"
+                sx={{ fontWeight: 700, mb: 0.5, fontSize: "0.875rem" }}
+              >
                 Manejo seguimiento
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ fontSize: "0.8125rem", lineHeight: 1.5 }}
+              >
                 {activities.length > 0
-                  ? `Última actividad hace ${Math.floor((Date.now() - new Date(activities[0].createdAt).getTime()) / (1000 * 60 * 60 * 24))} días. Es momento de hacer seguimiento.`
-                  : 'Sin datos suficientes. Crea una tarea para iniciar el seguimiento.'}
+                  ? `Última actividad hace ${Math.floor(
+                      (Date.now() -
+                        new Date(activities[0].createdAt).getTime()) /
+                        (1000 * 60 * 60 * 24)
+                    )} días. Es momento de hacer seguimiento.`
+                  : "Sin datos suficientes. Crea una tarea para iniciar el seguimiento."}
               </Typography>
             </Box>
           </Box>
@@ -6498,12 +4039,12 @@ const ContactDetail: React.FC = () => {
               mt: 1,
               borderColor: taxiMonterricoColors.green,
               color: taxiMonterricoColors.green,
-              textTransform: 'none',
-              fontSize: '0.875rem',
+              textTransform: "none",
+              fontSize: "0.875rem",
               fontWeight: 500,
-              '&:hover': {
+              "&:hover": {
                 borderColor: taxiMonterricoColors.green,
-                backgroundColor: 'rgba(46, 125, 50, 0.08)',
+                backgroundColor: "rgba(46, 125, 50, 0.08)",
               },
             }}
             onClick={() => {
@@ -6518,10 +4059,10 @@ const ContactDetail: React.FC = () => {
 
       {/* Mensaje de éxito */}
       {successMessage && (
-        <Alert 
-          severity="success" 
-          onClose={() => setSuccessMessage('')}
-          sx={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999 }}
+        <Alert
+          severity="success"
+          onClose={() => setSuccessMessage("")}
+          sx={{ position: "fixed", bottom: 20, right: 20, zIndex: 9999 }}
         >
           {successMessage}
         </Alert>
@@ -6529,10 +4070,10 @@ const ContactDetail: React.FC = () => {
 
       {/* Mensaje de advertencia */}
       {warningMessage && (
-        <Alert 
-          severity="warning" 
-          onClose={() => setWarningMessage('')}
-          sx={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999 }}
+        <Alert
+          severity="warning"
+          onClose={() => setWarningMessage("")}
+          sx={{ position: "fixed", bottom: 20, right: 20, zIndex: 9999 }}
         >
           {warningMessage}
         </Alert>
@@ -6547,40 +4088,47 @@ const ContactDetail: React.FC = () => {
         PaperProps={{
           sx: {
             borderRadius: 2,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-          }
+            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+          },
         }}
         BackdropProps={{
           sx: {
-            backdropFilter: 'blur(4px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          }
+            backdropFilter: "blur(4px)",
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+          },
         }}
       >
         <DialogTitle
           sx={{
-            bgcolor: theme.palette.mode === 'dark' ? '#0B1220' : '#f5f5f5',
+            bgcolor: theme.palette.mode === "dark" ? "#0B1220" : "#f5f5f5",
             borderBottom: `1px solid ${theme.palette.divider}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
             py: 1.5,
             px: 2,
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Email sx={{ fontSize: 20, color: theme.palette.text.primary }} />
-            <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem', color: theme.palette.text.primary }}>
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 600,
+                fontSize: "1rem",
+                color: theme.palette.text.primary,
+              }}
+            >
               Correo
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
             <IconButton
               size="small"
               onClick={() => setEmailConnectModalOpen(false)}
               sx={{
                 color: theme.palette.text.secondary,
-                '&:hover': {
+                "&:hover": {
                   bgcolor: theme.palette.action.hover,
                 },
               }}
@@ -6589,14 +4137,14 @@ const ContactDetail: React.FC = () => {
             </IconButton>
           </Box>
         </DialogTitle>
-        <DialogContent sx={{ px: 4, py: 4, textAlign: 'center' }}>
+        <DialogContent sx={{ px: 4, py: 4, textAlign: "center" }}>
           <Typography
             variant="h5"
             sx={{
               fontWeight: 600,
               mb: 2,
               color: theme.palette.text.primary,
-              fontSize: '1.5rem',
+              fontSize: "1.5rem",
             }}
           >
             Haz seguimiento de la actividad de tu correo en el CRM
@@ -6607,57 +4155,65 @@ const ContactDetail: React.FC = () => {
               mb: 3,
               color: theme.palette.text.secondary,
               lineHeight: 1.7,
-              fontSize: '0.9375rem',
+              fontSize: "0.9375rem",
             }}
           >
-            Conecta tu cuenta de correo electrónico al CRM para comenzar a enviar correos desde tu plataforma. Todas tus conversaciones por correo electrónico aparecerán en la siguiente cronología.
+            Conecta tu cuenta de correo electrónico al CRM para comenzar a
+            enviar correos desde tu plataforma. Todas tus conversaciones por
+            correo electrónico aparecerán en la siguiente cronología.
           </Typography>
           <Link
             component="button"
             onClick={() => {
               setEmailConnectModalOpen(false);
-              navigate('/settings');
+              navigate("/settings");
             }}
             sx={{
-              color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
-              textDecoration: 'none',
-              fontSize: '0.875rem',
-              cursor: 'pointer',
-              '&:hover': {
-                textDecoration: 'underline',
+              color: theme.palette.mode === "dark" ? "#64B5F6" : "#1976d2",
+              textDecoration: "none",
+              fontSize: "0.875rem",
+              cursor: "pointer",
+              "&:hover": {
+                textDecoration: "underline",
               },
             }}
           >
             Más información
           </Link>
         </DialogContent>
-        <DialogActions sx={{ px: 4, pb: 4, justifyContent: 'center' }}>
+        <DialogActions sx={{ px: 4, pb: 4, justifyContent: "center" }}>
           <Button
             onClick={handleEmailConnect}
             disabled={connectingEmail}
             variant="contained"
             sx={{
-              bgcolor: '#FF6B35',
-              color: 'white',
+              bgcolor: "#FF6B35",
+              color: "white",
               fontWeight: 600,
-              textTransform: 'none',
-              fontSize: '0.9375rem',
+              textTransform: "none",
+              fontSize: "0.9375rem",
               px: 4,
               py: 1.25,
               borderRadius: 2,
-              boxShadow: '0 4px 12px rgba(255, 107, 53, 0.3)',
-              '&:hover': {
-                bgcolor: '#E55A2B',
-                boxShadow: '0 6px 16px rgba(255, 107, 53, 0.4)',
+              boxShadow: "0 4px 12px rgba(255, 107, 53, 0.3)",
+              "&:hover": {
+                bgcolor: "#E55A2B",
+                boxShadow: "0 6px 16px rgba(255, 107, 53, 0.4)",
               },
-              '&.Mui-disabled': {
-                bgcolor: '#FF6B35',
+              "&.Mui-disabled": {
+                bgcolor: "#FF6B35",
                 opacity: 0.6,
               },
             }}
-            startIcon={connectingEmail ? <CircularProgress size={16} sx={{ color: 'white' }} /> : <Email />}
+            startIcon={
+              connectingEmail ? (
+                <CircularProgress size={16} sx={{ color: "white" }} />
+              ) : (
+                <Email />
+              )
+            }
           >
-            {connectingEmail ? 'Conectando...' : 'Conectar bandeja de entrada'}
+            {connectingEmail ? "Conectando..." : "Conectar bandeja de entrada"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -6666,31 +4222,35 @@ const ContactDetail: React.FC = () => {
       {noteOpen && (
         <Box
           sx={{
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: { xs: '95vw', sm: '700px' },
-            maxWidth: { xs: '95vw', sm: '90vw' },
-            height: '85vh',
-            backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
-            boxShadow: theme.palette.mode === 'dark' 
-              ? '0 20px 60px rgba(0,0,0,0.5)' 
-              : '0 20px 60px rgba(0,0,0,0.12)',
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: { xs: "95vw", sm: "700px" },
+            maxWidth: { xs: "95vw", sm: "90vw" },
+            height: "85vh",
+            backgroundColor:
+              theme.palette.mode === "dark"
+                ? "#1F2937"
+                : theme.palette.background.paper,
+            boxShadow:
+              theme.palette.mode === "dark"
+                ? "0 20px 60px rgba(0,0,0,0.5)"
+                : "0 20px 60px rgba(0,0,0,0.12)",
             zIndex: 1500,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
             borderRadius: 4,
-            animation: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            '@keyframes fadeInScale': {
-              '0%': {
+            animation: "fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            "@keyframes fadeInScale": {
+              "0%": {
                 opacity: 0,
-                transform: 'translate(-50%, -50%) scale(0.95)',
+                transform: "translate(-50%, -50%) scale(0.95)",
               },
-              '100%': {
+              "100%": {
                 opacity: 1,
-                transform: 'translate(-50%, -50%) scale(1)',
+                transform: "translate(-50%, -50%) scale(1)",
               },
             },
           }}
@@ -6701,34 +4261,37 @@ const ContactDetail: React.FC = () => {
             sx={{
               px: 3,
               py: 2,
-              backgroundColor: 'transparent',
+              backgroundColor: "transparent",
               color: theme.palette.text.primary,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="h6" sx={{ 
-                color: theme.palette.text.primary, 
-                fontWeight: 600, 
-                fontSize: '1.25rem',
-                letterSpacing: '-0.02em',
-              }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Typography
+                variant="h6"
+                sx={{
+                  color: theme.palette.text.primary,
+                  fontWeight: 600,
+                  fontSize: "1.25rem",
+                  letterSpacing: "-0.02em",
+                }}
+              >
                 Nota
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-              <IconButton 
-                sx={{ 
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+              <IconButton
+                sx={{
                   color: theme.palette.text.secondary,
-                  '&:hover': { 
-                    backgroundColor: theme.palette.error.main + '15',
+                  "&:hover": {
+                    backgroundColor: theme.palette.error.main + "15",
                     color: theme.palette.error.main,
                   },
-                  transition: 'all 0.2s ease',
-                }} 
-                size="small" 
+                  transition: "all 0.2s ease",
+                }}
+                size="small"
                 onClick={() => setNoteOpen(false)}
               >
                 <Close fontSize="small" />
@@ -6736,104 +4299,152 @@ const ContactDetail: React.FC = () => {
             </Box>
           </Box>
 
-          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'row', p: 3, overflow: 'hidden', gap: 3 }}>
-          {/* Columna Izquierda: Editor */}
-          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-            {/* Editor de texto enriquecido con barra de herramientas integrada */}
-            <Box sx={{ 
-              flexGrow: 1, 
-              display: 'flex', 
-              flexDirection: 'column', 
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`, 
-              borderRadius: 2,
-              overflow: 'hidden',
-              minHeight: '300px',
-              backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              '&:focus-within': {
-                boxShadow: 'none',
-                borderColor: theme.palette.divider,
-                transform: 'none',
-              },
-            }}>
-              <RichTextEditor
-                value={noteData.description}
-                onChange={(value: string) => setNoteData({ ...noteData, description: value })}
-                placeholder="Empieza a escribir para dejar una nota..."
-                onAssociateClick={() => {
-                  setNoteAssociateModalOpen(true);
-                  setSelectedCategory('empresas');
-                  setAssociateSearch('');
-                  // Inicializar selecciones con los valores actuales
-                  setNoteSelectedAssociations({
-                    companies: selectedCompanies,
-                    contacts: contact?.id ? [contact.id] : [],
-                    deals: selectedAssociations.filter((id: number) => id > 1000 && id < 2000).map(id => id - 1000),
-                    tickets: selectedAssociations.filter((id: number) => id > 2000).map(id => id - 2000),
-                  });
-                  fetchAssociations();
+          <Box
+            sx={{
+              flexGrow: 1,
+              display: "flex",
+              flexDirection: "row",
+              p: 3,
+              overflow: "hidden",
+              gap: 3,
+            }}
+          >
+            {/* Columna Izquierda: Editor */}
+            <Box
+              sx={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                minWidth: 0,
+              }}
+            >
+              {/* Editor de texto enriquecido con barra de herramientas integrada */}
+              <Box
+                sx={{
+                  flexGrow: 1,
+                  display: "flex",
+                  flexDirection: "column",
+                  border: `1px solid ${
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.1)"
+                      : theme.palette.divider
+                  }`,
+                  borderRadius: 2,
+                  overflow: "hidden",
+                  minHeight: "300px",
+                  backgroundColor:
+                    theme.palette.mode === "dark"
+                      ? "#1F2937"
+                      : theme.palette.background.paper,
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  "&:focus-within": {
+                    boxShadow: "none",
+                    borderColor: theme.palette.divider,
+                    transform: "none",
+                  },
                 }}
-              />
+              >
+                <RichTextEditor
+                  value={noteData.description}
+                  onChange={(value: string) =>
+                    setNoteData({ ...noteData, description: value })
+                  }
+                  placeholder="Empieza a escribir para dejar una nota..."
+                  onAssociateClick={() => {
+                    setNoteAssociateModalOpen(true);
+                    setSelectedCategory("empresas");
+                    setAssociateSearch("");
+                    // Inicializar selecciones con los valores actuales
+                    setNoteSelectedAssociations({
+                      companies: selectedCompanies,
+                      contacts: contact?.id ? [contact.id] : [],
+                      deals: selectedAssociations
+                        .filter((id: number) => id > 1000 && id < 2000)
+                        .map((id) => id - 1000),
+                      tickets: selectedAssociations
+                        .filter((id: number) => id > 2000)
+                        .map((id) => id - 2000),
+                    });
+                    fetchAssociations();
+                  }}
+                />
+              </Box>
             </Box>
-          </Box>
           </Box>
 
           {/* Footer con botones */}
-          <Box sx={{ 
-            px: 3,
-            py: 2.5, 
-            borderTop: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`, 
-            backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper, 
-            display: 'flex', 
-            justifyContent: 'flex-end', 
-            gap: 2,
-          }}>
-            <Button 
-              onClick={() => setNoteOpen(false)} 
-              sx={{ 
-                textTransform: 'none',
+          <Box
+            sx={{
+              px: 3,
+              py: 2.5,
+              borderTop: `1px solid ${
+                theme.palette.mode === "dark"
+                  ? "rgba(255,255,255,0.1)"
+                  : theme.palette.divider
+              }`,
+              backgroundColor:
+                theme.palette.mode === "dark"
+                  ? "#1F2937"
+                  : theme.palette.background.paper,
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 2,
+            }}
+          >
+            <Button
+              onClick={() => setNoteOpen(false)}
+              sx={{
+                textTransform: "none",
                 px: 3.5,
                 py: 1.25,
                 color: theme.palette.text.secondary,
                 fontWeight: 500,
                 borderRadius: 2,
-                '&:hover': {
+                "&:hover": {
                   backgroundColor: theme.palette.action.hover,
                 },
-                transition: 'all 0.2s ease',
+                transition: "all 0.2s ease",
               }}
             >
               Cancelar
             </Button>
-            <Button 
-              onClick={handleSaveNote} 
-              variant="contained" 
+            <Button
+              onClick={handleSaveNote}
+              variant="contained"
               disabled={saving || !noteData.description.trim()}
-              sx={{ 
-                textTransform: 'none',
+              sx={{
+                textTransform: "none",
                 px: 4,
                 py: 1.25,
-                backgroundColor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.orange,
+                backgroundColor: saving
+                  ? theme.palette.action.disabledBackground
+                  : taxiMonterricoColors.orange,
                 fontWeight: 600,
                 borderRadius: 2,
-                boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.orange}40`,
-                '&:hover': {
-                  backgroundColor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.orangeDark,
-                  boxShadow: saving ? 'none' : `0 6px 16px ${taxiMonterricoColors.orange}50`,
-                  transform: 'translateY(-1px)',
+                boxShadow: saving
+                  ? "none"
+                  : `0 4px 12px ${taxiMonterricoColors.orange}40`,
+                "&:hover": {
+                  backgroundColor: saving
+                    ? theme.palette.action.disabledBackground
+                    : taxiMonterricoColors.orangeDark,
+                  boxShadow: saving
+                    ? "none"
+                    : `0 6px 16px ${taxiMonterricoColors.orange}50`,
+                  transform: "translateY(-1px)",
                 },
-                '&:active': {
-                  transform: 'translateY(0)',
+                "&:active": {
+                  transform: "translateY(0)",
                 },
-                '&:disabled': {
+                "&:disabled": {
                   backgroundColor: theme.palette.action.disabledBackground,
                   color: theme.palette.action.disabled,
-                  boxShadow: 'none',
+                  boxShadow: "none",
                 },
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
               }}
             >
-              {saving ? 'Guardando...' : 'Crear nota'}
+              {saving ? "Guardando..." : "Crear nota"}
             </Button>
           </Box>
         </Box>
@@ -6843,19 +4454,22 @@ const ContactDetail: React.FC = () => {
       {noteOpen && (
         <Box
           sx={{
-            position: 'fixed',
+            position: "fixed",
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+            backgroundColor:
+              theme.palette.mode === "dark"
+                ? "rgba(0, 0, 0, 0.7)"
+                : "rgba(0, 0, 0, 0.5)",
             zIndex: 1499,
-            animation: 'fadeIn 0.3s ease-out',
-            '@keyframes fadeIn': {
-              '0%': {
+            animation: "fadeIn 0.3s ease-out",
+            "@keyframes fadeIn": {
+              "0%": {
                 opacity: 0,
               },
-              '100%': {
+              "100%": {
                 opacity: 1,
               },
             },
@@ -6874,16 +4488,16 @@ const ContactDetail: React.FC = () => {
         PaperProps={{
           sx: {
             borderRadius: 2,
-            maxHeight: '80vh',
-            width: '700px',
-            maxWidth: '90vw',
+            maxHeight: "80vh",
+            width: "700px",
+            maxWidth: "90vw",
           },
         }}
       >
         <Box
           sx={{
-            display: 'flex',
-            height: '500px',
+            display: "flex",
+            height: "500px",
           }}
         >
           {/* Panel izquierdo - Categorías */}
@@ -6891,47 +4505,67 @@ const ContactDetail: React.FC = () => {
             sx={{
               width: 160,
               borderRight: `1px solid ${theme.palette.divider}`,
-              backgroundColor: theme.palette.mode === 'dark' ? '#1e1e1e' : '#fafafa',
-              overflowY: 'auto',
+              backgroundColor:
+                theme.palette.mode === "dark" ? "#1e1e1e" : "#fafafa",
+              overflowY: "auto",
             }}
           >
             <List sx={{ p: 0 }}>
               <ListItem disablePadding>
                 <ListItemButton
-                  selected={selectedCategory === 'seleccionados'}
-                  onClick={() => setSelectedCategory('seleccionados')}
+                  selected={selectedCategory === "seleccionados"}
+                  onClick={() => setSelectedCategory("seleccionados")}
                   sx={{
                     py: 1.5,
                     px: 2,
-                    '&.Mui-selected': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
-                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
-                      '&:hover': {
-                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                    "&.Mui-selected": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(76, 175, 80, 0.3)"
+                          : "rgba(76, 175, 80, 0.15)",
+                      color:
+                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
+                      "&:hover": {
+                        backgroundColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(76, 175, 80, 0.4)"
+                            : "rgba(76, 175, 80, 0.2)",
                       },
                     },
                   }}
                 >
                   <ListItemText
                     primary="Seleccionados"
-                    secondary={Object.values(noteSelectedAssociations).flat().length}
-                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
-                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                    secondary={
+                      Object.values(noteSelectedAssociations).flat().length
+                    }
+                    primaryTypographyProps={{
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                    }}
+                    secondaryTypographyProps={{ fontSize: "0.75rem" }}
                   />
                 </ListItemButton>
               </ListItem>
               <ListItem disablePadding>
                 <ListItemButton
-                  selected={selectedCategory === 'empresas'}
-                  onClick={() => setSelectedCategory('empresas')}
+                  selected={selectedCategory === "empresas"}
+                  onClick={() => setSelectedCategory("empresas")}
                   sx={{
                     py: 1.5,
                     px: 2,
-                    '&.Mui-selected': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
-                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
-                      '&:hover': {
-                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                    "&.Mui-selected": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(76, 175, 80, 0.3)"
+                          : "rgba(76, 175, 80, 0.15)",
+                      color:
+                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
+                      "&:hover": {
+                        backgroundColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(76, 175, 80, 0.4)"
+                            : "rgba(76, 175, 80, 0.2)",
                       },
                     },
                   }}
@@ -6939,23 +4573,33 @@ const ContactDetail: React.FC = () => {
                   <ListItemText
                     primary="Empresas"
                     secondary={noteModalCompanies.length}
-                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
-                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                    primaryTypographyProps={{
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                    }}
+                    secondaryTypographyProps={{ fontSize: "0.75rem" }}
                   />
                 </ListItemButton>
               </ListItem>
               <ListItem disablePadding>
                 <ListItemButton
-                  selected={selectedCategory === 'contactos'}
-                  onClick={() => setSelectedCategory('contactos')}
+                  selected={selectedCategory === "contactos"}
+                  onClick={() => setSelectedCategory("contactos")}
                   sx={{
                     py: 1.5,
                     px: 2,
-                    '&.Mui-selected': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
-                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
-                      '&:hover': {
-                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                    "&.Mui-selected": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(76, 175, 80, 0.3)"
+                          : "rgba(76, 175, 80, 0.15)",
+                      color:
+                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
+                      "&:hover": {
+                        backgroundColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(76, 175, 80, 0.4)"
+                            : "rgba(76, 175, 80, 0.2)",
                       },
                     },
                   }}
@@ -6963,23 +4607,33 @@ const ContactDetail: React.FC = () => {
                   <ListItemText
                     primary="Contactos"
                     secondary={noteModalContacts.length}
-                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
-                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                    primaryTypographyProps={{
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                    }}
+                    secondaryTypographyProps={{ fontSize: "0.75rem" }}
                   />
                 </ListItemButton>
               </ListItem>
               <ListItem disablePadding>
                 <ListItemButton
-                  selected={selectedCategory === 'negocios'}
-                  onClick={() => setSelectedCategory('negocios')}
+                  selected={selectedCategory === "negocios"}
+                  onClick={() => setSelectedCategory("negocios")}
                   sx={{
                     py: 1.5,
                     px: 2,
-                    '&.Mui-selected': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
-                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
-                      '&:hover': {
-                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                    "&.Mui-selected": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(76, 175, 80, 0.3)"
+                          : "rgba(76, 175, 80, 0.15)",
+                      color:
+                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
+                      "&:hover": {
+                        backgroundColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(76, 175, 80, 0.4)"
+                            : "rgba(76, 175, 80, 0.2)",
                       },
                     },
                   }}
@@ -6987,23 +4641,33 @@ const ContactDetail: React.FC = () => {
                   <ListItemText
                     primary="Negocios"
                     secondary={noteModalDeals.length}
-                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
-                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                    primaryTypographyProps={{
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                    }}
+                    secondaryTypographyProps={{ fontSize: "0.75rem" }}
                   />
                 </ListItemButton>
               </ListItem>
               <ListItem disablePadding>
                 <ListItemButton
-                  selected={selectedCategory === 'tickets'}
-                  onClick={() => setSelectedCategory('tickets')}
+                  selected={selectedCategory === "tickets"}
+                  onClick={() => setSelectedCategory("tickets")}
                   sx={{
                     py: 1.5,
                     px: 2,
-                    '&.Mui-selected': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
-                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
-                      '&:hover': {
-                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                    "&.Mui-selected": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(76, 175, 80, 0.3)"
+                          : "rgba(76, 175, 80, 0.15)",
+                      color:
+                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
+                      "&:hover": {
+                        backgroundColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(76, 175, 80, 0.4)"
+                            : "rgba(76, 175, 80, 0.2)",
                       },
                     },
                   }}
@@ -7011,8 +4675,11 @@ const ContactDetail: React.FC = () => {
                   <ListItemText
                     primary="Tickets"
                     secondary={noteModalTickets.length}
-                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
-                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                    primaryTypographyProps={{
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                    }}
+                    secondaryTypographyProps={{ fontSize: "0.75rem" }}
                   />
                 </ListItemButton>
               </ListItem>
@@ -7023,9 +4690,9 @@ const ContactDetail: React.FC = () => {
           <Box
             sx={{
               flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
             }}
           >
             {/* Header */}
@@ -7033,12 +4700,15 @@ const ContactDetail: React.FC = () => {
               sx={{
                 p: 2,
                 borderBottom: `1px solid ${theme.palette.divider}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
               }}
             >
-              <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>
+              <Typography
+                variant="h6"
+                sx={{ fontWeight: 600, fontSize: "1rem" }}
+              >
                 Asociar
               </Typography>
               <IconButton
@@ -7050,19 +4720,28 @@ const ContactDetail: React.FC = () => {
             </Box>
 
             {/* Búsqueda */}
-            <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
+            <Box
+              sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}
+            >
               <Box
                 sx={{
-                  display: 'flex',
-                  alignItems: 'center',
+                  display: "flex",
+                  alignItems: "center",
                   border: `1px solid ${theme.palette.divider}`,
                   borderRadius: 1,
                   px: 1.5,
                   py: 0.75,
-                  backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : '#f5f5f5',
+                  backgroundColor:
+                    theme.palette.mode === "dark" ? "#2a2a2a" : "#f5f5f5",
                 }}
               >
-                <Search sx={{ color: theme.palette.text.secondary, mr: 1, fontSize: 20 }} />
+                <Search
+                  sx={{
+                    color: theme.palette.text.secondary,
+                    mr: 1,
+                    fontSize: 20,
+                  }}
+                />
                 <InputBase
                   placeholder="Buscar asociaciones actuales"
                   value={associateSearch}
@@ -7077,8 +4756,8 @@ const ContactDetail: React.FC = () => {
                   }}
                   sx={{
                     flex: 1,
-                    fontSize: '0.875rem',
-                    '& input': {
+                    fontSize: "0.875rem",
+                    "& input": {
                       py: 0.5,
                     },
                   }}
@@ -7087,34 +4766,53 @@ const ContactDetail: React.FC = () => {
             </Box>
 
             {/* Contenido */}
-            <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
+            <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
               {loadingAssociations ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    height: "100%",
+                  }}
+                >
                   <CircularProgress />
                 </Box>
               ) : (
                 <>
-                  {selectedCategory === 'empresas' && (
+                  {selectedCategory === "empresas" && (
                     <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ fontWeight: 600, mb: 1, fontSize: "0.875rem" }}
+                      >
                         Empresas
                       </Typography>
                       <List sx={{ p: 0 }}>
                         {noteModalCompanies
-                          .filter((company: any) => 
-                            !associateSearch || company.name?.toLowerCase().includes(associateSearch.toLowerCase()) || 
-                            company.domain?.toLowerCase().includes(associateSearch.toLowerCase())
+                          .filter(
+                            (company: any) =>
+                              !associateSearch ||
+                              company.name
+                                ?.toLowerCase()
+                                .includes(associateSearch.toLowerCase()) ||
+                              company.domain
+                                ?.toLowerCase()
+                                .includes(associateSearch.toLowerCase())
                           )
                           .map((company: any) => (
                             <ListItem key={company.id} disablePadding>
                               <ListItemButton
                                 sx={{ py: 0.75, px: 1 }}
                                 onClick={() => {
-                                  const current = noteSelectedAssociations.companies || [];
+                                  const current =
+                                    noteSelectedAssociations.companies || [];
                                   if (current.includes(company.id)) {
                                     setNoteSelectedAssociations({
                                       ...noteSelectedAssociations,
-                                      companies: current.filter((id) => id !== company.id),
+                                      companies: current.filter(
+                                        (id: number) => id !== company.id
+                                      ),
                                     });
                                   } else {
                                     setNoteSelectedAssociations({
@@ -7125,15 +4823,23 @@ const ContactDetail: React.FC = () => {
                                 }}
                               >
                                 <Checkbox
-                                  checked={noteSelectedAssociations.companies?.includes(company.id) || false}
+                                  checked={
+                                    noteSelectedAssociations.companies?.includes(
+                                      company.id
+                                    ) || false
+                                  }
                                   size="small"
                                   sx={{ p: 0.5, mr: 1 }}
                                 />
                                 <ListItemText
                                   primary={company.name}
                                   secondary={company.domain}
-                                  primaryTypographyProps={{ fontSize: '0.875rem' }}
-                                  secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  primaryTypographyProps={{
+                                    fontSize: "0.875rem",
+                                  }}
+                                  secondaryTypographyProps={{
+                                    fontSize: "0.75rem",
+                                  }}
                                 />
                               </ListItemButton>
                             </ListItem>
@@ -7142,28 +4848,39 @@ const ContactDetail: React.FC = () => {
                     </Box>
                   )}
 
-                  {selectedCategory === 'contactos' && (
+                  {selectedCategory === "contactos" && (
                     <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ fontWeight: 600, mb: 1, fontSize: "0.875rem" }}
+                      >
                         Contactos
                       </Typography>
                       <List sx={{ p: 0 }}>
                         {noteModalContacts
-                          .filter((contactItem: any) => 
-                            !associateSearch || 
-                            `${contactItem.firstName} ${contactItem.lastName}`.toLowerCase().includes(associateSearch.toLowerCase()) ||
-                            contactItem.email?.toLowerCase().includes(associateSearch.toLowerCase())
+                          .filter(
+                            (contactItem: any) =>
+                              !associateSearch ||
+                              `${contactItem.firstName} ${contactItem.lastName}`
+                                .toLowerCase()
+                                .includes(associateSearch.toLowerCase()) ||
+                              contactItem.email
+                                ?.toLowerCase()
+                                .includes(associateSearch.toLowerCase())
                           )
                           .map((contactItem: any) => (
                             <ListItem key={contactItem.id} disablePadding>
                               <ListItemButton
                                 sx={{ py: 0.75, px: 1 }}
                                 onClick={() => {
-                                  const current = noteSelectedAssociations.contacts || [];
+                                  const current =
+                                    noteSelectedAssociations.contacts || [];
                                   if (current.includes(contactItem.id)) {
                                     setNoteSelectedAssociations({
                                       ...noteSelectedAssociations,
-                                      contacts: current.filter((id) => id !== contactItem.id),
+                                      contacts: current.filter(
+                                        (id) => id !== contactItem.id
+                                      ),
                                     });
                                   } else {
                                     setNoteSelectedAssociations({
@@ -7174,15 +4891,23 @@ const ContactDetail: React.FC = () => {
                                 }}
                               >
                                 <Checkbox
-                                  checked={noteSelectedAssociations.contacts?.includes(contactItem.id) || false}
+                                  checked={
+                                    noteSelectedAssociations.contacts?.includes(
+                                      contactItem.id
+                                    ) || false
+                                  }
                                   size="small"
                                   sx={{ p: 0.5, mr: 1 }}
                                 />
                                 <ListItemText
                                   primary={`${contactItem.firstName} ${contactItem.lastName}`}
                                   secondary={contactItem.email}
-                                  primaryTypographyProps={{ fontSize: '0.875rem' }}
-                                  secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  primaryTypographyProps={{
+                                    fontSize: "0.875rem",
+                                  }}
+                                  secondaryTypographyProps={{
+                                    fontSize: "0.75rem",
+                                  }}
                                 />
                               </ListItemButton>
                             </ListItem>
@@ -7191,26 +4916,36 @@ const ContactDetail: React.FC = () => {
                     </Box>
                   )}
 
-                  {selectedCategory === 'negocios' && (
+                  {selectedCategory === "negocios" && (
                     <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ fontWeight: 600, mb: 1, fontSize: "0.875rem" }}
+                      >
                         Negocios
                       </Typography>
                       <List sx={{ p: 0 }}>
                         {noteModalDeals
-                          .filter((deal: any) => 
-                            !associateSearch || deal.name?.toLowerCase().includes(associateSearch.toLowerCase())
+                          .filter(
+                            (deal: any) =>
+                              !associateSearch ||
+                              deal.name
+                                ?.toLowerCase()
+                                .includes(associateSearch.toLowerCase())
                           )
                           .map((deal: any) => (
                             <ListItem key={deal.id} disablePadding>
                               <ListItemButton
                                 sx={{ py: 0.75, px: 1 }}
                                 onClick={() => {
-                                  const current = noteSelectedAssociations.deals || [];
+                                  const current =
+                                    noteSelectedAssociations.deals || [];
                                   if (current.includes(deal.id)) {
                                     setNoteSelectedAssociations({
                                       ...noteSelectedAssociations,
-                                      deals: current.filter((id) => id !== deal.id),
+                                      deals: current.filter(
+                                        (id) => id !== deal.id
+                                      ),
                                     });
                                   } else {
                                     setNoteSelectedAssociations({
@@ -7221,15 +4956,29 @@ const ContactDetail: React.FC = () => {
                                 }}
                               >
                                 <Checkbox
-                                  checked={noteSelectedAssociations.deals?.includes(deal.id) || false}
+                                  checked={
+                                    noteSelectedAssociations.deals?.includes(
+                                      deal.id
+                                    ) || false
+                                  }
                                   size="small"
                                   sx={{ p: 0.5, mr: 1 }}
                                 />
                                 <ListItemText
                                   primary={deal.name}
-                                  secondary={`${deal.amount ? `S/ ${deal.amount.toLocaleString('es-ES')}` : ''} ${deal.stage || ''}`}
-                                  primaryTypographyProps={{ fontSize: '0.875rem' }}
-                                  secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  secondary={`${
+                                    deal.amount
+                                      ? `S/ ${deal.amount.toLocaleString(
+                                          "es-ES"
+                                        )}`
+                                      : ""
+                                  } ${deal.stage || ""}`}
+                                  primaryTypographyProps={{
+                                    fontSize: "0.875rem",
+                                  }}
+                                  secondaryTypographyProps={{
+                                    fontSize: "0.75rem",
+                                  }}
                                 />
                               </ListItemButton>
                             </ListItem>
@@ -7238,26 +4987,36 @@ const ContactDetail: React.FC = () => {
                     </Box>
                   )}
 
-                  {selectedCategory === 'tickets' && (
+                  {selectedCategory === "tickets" && (
                     <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ fontWeight: 600, mb: 1, fontSize: "0.875rem" }}
+                      >
                         Tickets
                       </Typography>
                       <List sx={{ p: 0 }}>
                         {noteModalTickets
-                          .filter((ticket: any) => 
-                            !associateSearch || ticket.subject?.toLowerCase().includes(associateSearch.toLowerCase())
+                          .filter(
+                            (ticket: any) =>
+                              !associateSearch ||
+                              ticket.subject
+                                ?.toLowerCase()
+                                .includes(associateSearch.toLowerCase())
                           )
                           .map((ticket: any) => (
                             <ListItem key={ticket.id} disablePadding>
                               <ListItemButton
                                 sx={{ py: 0.75, px: 1 }}
                                 onClick={() => {
-                                  const current = noteSelectedAssociations.tickets || [];
+                                  const current =
+                                    noteSelectedAssociations.tickets || [];
                                   if (current.includes(ticket.id)) {
                                     setNoteSelectedAssociations({
                                       ...noteSelectedAssociations,
-                                      tickets: current.filter((id) => id !== ticket.id),
+                                      tickets: current.filter(
+                                        (id) => id !== ticket.id
+                                      ),
                                     });
                                   } else {
                                     setNoteSelectedAssociations({
@@ -7268,15 +5027,23 @@ const ContactDetail: React.FC = () => {
                                 }}
                               >
                                 <Checkbox
-                                  checked={noteSelectedAssociations.tickets?.includes(ticket.id) || false}
+                                  checked={
+                                    noteSelectedAssociations.tickets?.includes(
+                                      ticket.id
+                                    ) || false
+                                  }
                                   size="small"
                                   sx={{ p: 0.5, mr: 1 }}
                                 />
                                 <ListItemText
                                   primary={ticket.subject}
                                   secondary={ticket.description}
-                                  primaryTypographyProps={{ fontSize: '0.875rem' }}
-                                  secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  primaryTypographyProps={{
+                                    fontSize: "0.875rem",
+                                  }}
+                                  secondaryTypographyProps={{
+                                    fontSize: "0.75rem",
+                                  }}
                                 />
                               </ListItemButton>
                             </ListItem>
@@ -7285,79 +5052,123 @@ const ContactDetail: React.FC = () => {
                     </Box>
                   )}
 
-                  {selectedCategory === 'seleccionados' && (
+                  {selectedCategory === "seleccionados" && (
                     <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
-                        Seleccionados ({Object.values(noteSelectedAssociations).flat().length})
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ fontWeight: 600, mb: 1, fontSize: "0.875rem" }}
+                      >
+                        Seleccionados (
+                        {Object.values(noteSelectedAssociations).flat().length})
                       </Typography>
-                      {Object.values(noteSelectedAssociations).flat().length === 0 ? (
-                        <Typography variant="body2" sx={{ color: theme.palette.text.secondary, py: 2 }}>
+                      {Object.values(noteSelectedAssociations).flat().length ===
+                      0 ? (
+                        <Typography
+                          variant="body2"
+                          sx={{ color: theme.palette.text.secondary, py: 2 }}
+                        >
                           No hay elementos seleccionados
                         </Typography>
                       ) : (
                         <List sx={{ p: 0 }}>
-                          {noteSelectedAssociations.companies?.map((companyId) => {
-                            const company = noteModalCompanies.find((c: any) => c.id === companyId);
-                            if (!company) return null;
-                            return (
-                              <ListItem key={companyId} disablePadding>
-                                <ListItemButton
-                                  sx={{ py: 0.75, px: 1 }}
-                                  onClick={() => {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      companies: noteSelectedAssociations.companies.filter((id) => id !== companyId),
-                                    });
-                                  }}
-                                >
-                                  <Checkbox
-                                    checked={true}
-                                    size="small"
-                                    sx={{ p: 0.5, mr: 1 }}
-                                  />
-                                  <Business sx={{ fontSize: 18, mr: 1, color: theme.palette.text.secondary }} />
-                                  <ListItemText
-                                    primary={company.name}
-                                    secondary={company.domain}
-                                    primaryTypographyProps={{ fontSize: '0.875rem' }}
-                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
-                                  />
-                                </ListItemButton>
-                              </ListItem>
-                            );
-                          })}
-                          {noteSelectedAssociations.contacts?.map((contactId) => {
-                            const contactItem = noteModalContacts.find((c: any) => c.id === contactId);
-                            if (!contactItem) return null;
-                            return (
-                              <ListItem key={contactId} disablePadding>
-                                <ListItemButton
-                                  sx={{ py: 0.75, px: 1 }}
-                                  onClick={() => {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      contacts: noteSelectedAssociations.contacts.filter((id) => id !== contactId),
-                                    });
-                                  }}
-                                >
-                                  <Checkbox
-                                    checked={true}
-                                    size="small"
-                                    sx={{ p: 0.5, mr: 1 }}
-                                  />
-                                  <Person sx={{ fontSize: 18, mr: 1, color: theme.palette.text.secondary }} />
-                                  <ListItemText
-                                    primary={`${contactItem.firstName} ${contactItem.lastName}`}
-                                    secondary={contactItem.email}
-                                    primaryTypographyProps={{ fontSize: '0.875rem' }}
-                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
-                                  />
-                                </ListItemButton>
-                              </ListItem>
-                            );
-                          })}
+                          {noteSelectedAssociations.companies?.map(
+                            (companyId) => {
+                              const company = noteModalCompanies.find(
+                                (c: any) => c.id === companyId
+                              );
+                              if (!company) return null;
+                              return (
+                                <ListItem key={companyId} disablePadding>
+                                  <ListItemButton
+                                    sx={{ py: 0.75, px: 1 }}
+                                    onClick={() => {
+                                      setNoteSelectedAssociations({
+                                        ...noteSelectedAssociations,
+                                        companies:
+                                          noteSelectedAssociations.companies.filter(
+                                            (id) => id !== companyId
+                                          ),
+                                      });
+                                    }}
+                                  >
+                                    <Checkbox
+                                      checked={true}
+                                      size="small"
+                                      sx={{ p: 0.5, mr: 1 }}
+                                    />
+                                    <Business
+                                      sx={{
+                                        fontSize: 18,
+                                        mr: 1,
+                                        color: theme.palette.text.secondary,
+                                      }}
+                                    />
+                                    <ListItemText
+                                      primary={company.name}
+                                      secondary={company.domain}
+                                      primaryTypographyProps={{
+                                        fontSize: "0.875rem",
+                                      }}
+                                      secondaryTypographyProps={{
+                                        fontSize: "0.75rem",
+                                      }}
+                                    />
+                                  </ListItemButton>
+                                </ListItem>
+                              );
+                            }
+                          )}
+                          {noteSelectedAssociations.contacts?.map(
+                            (contactId) => {
+                              const contactItem = noteModalContacts.find(
+                                (c: any) => c.id === contactId
+                              );
+                              if (!contactItem) return null;
+                              return (
+                                <ListItem key={contactId} disablePadding>
+                                  <ListItemButton
+                                    sx={{ py: 0.75, px: 1 }}
+                                    onClick={() => {
+                                      setNoteSelectedAssociations({
+                                        ...noteSelectedAssociations,
+                                        contacts:
+                                          noteSelectedAssociations.contacts.filter(
+                                            (id) => id !== contactId
+                                          ),
+                                      });
+                                    }}
+                                  >
+                                    <Checkbox
+                                      checked={true}
+                                      size="small"
+                                      sx={{ p: 0.5, mr: 1 }}
+                                    />
+                                    <Person
+                                      sx={{
+                                        fontSize: 18,
+                                        mr: 1,
+                                        color: theme.palette.text.secondary,
+                                      }}
+                                    />
+                                    <ListItemText
+                                      primary={`${contactItem.firstName} ${contactItem.lastName}`}
+                                      secondary={contactItem.email}
+                                      primaryTypographyProps={{
+                                        fontSize: "0.875rem",
+                                      }}
+                                      secondaryTypographyProps={{
+                                        fontSize: "0.75rem",
+                                      }}
+                                    />
+                                  </ListItemButton>
+                                </ListItem>
+                              );
+                            }
+                          )}
                           {noteSelectedAssociations.deals?.map((dealId) => {
-                            const deal = noteModalDeals.find((d: any) => d.id === dealId);
+                            const deal = noteModalDeals.find(
+                              (d: any) => d.id === dealId
+                            );
                             if (!deal) return null;
                             return (
                               <ListItem key={dealId} disablePadding>
@@ -7366,7 +5177,10 @@ const ContactDetail: React.FC = () => {
                                   onClick={() => {
                                     setNoteSelectedAssociations({
                                       ...noteSelectedAssociations,
-                                      deals: noteSelectedAssociations.deals.filter((id) => id !== dealId),
+                                      deals:
+                                        noteSelectedAssociations.deals.filter(
+                                          (id) => id !== dealId
+                                        ),
                                     });
                                   }}
                                 >
@@ -7377,16 +5191,28 @@ const ContactDetail: React.FC = () => {
                                   />
                                   <ListItemText
                                     primary={deal.name}
-                                    secondary={`${deal.amount ? `S/ ${deal.amount.toLocaleString('es-ES')}` : ''} ${deal.stage || ''}`}
-                                    primaryTypographyProps={{ fontSize: '0.875rem' }}
-                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                    secondary={`${
+                                      deal.amount
+                                        ? `S/ ${deal.amount.toLocaleString(
+                                            "es-ES"
+                                          )}`
+                                        : ""
+                                    } ${deal.stage || ""}`}
+                                    primaryTypographyProps={{
+                                      fontSize: "0.875rem",
+                                    }}
+                                    secondaryTypographyProps={{
+                                      fontSize: "0.75rem",
+                                    }}
                                   />
                                 </ListItemButton>
                               </ListItem>
                             );
                           })}
                           {noteSelectedAssociations.tickets?.map((ticketId) => {
-                            const ticket = noteModalTickets.find((t: any) => t.id === ticketId);
+                            const ticket = noteModalTickets.find(
+                              (t: any) => t.id === ticketId
+                            );
                             if (!ticket) return null;
                             return (
                               <ListItem key={ticketId} disablePadding>
@@ -7395,7 +5221,10 @@ const ContactDetail: React.FC = () => {
                                   onClick={() => {
                                     setNoteSelectedAssociations({
                                       ...noteSelectedAssociations,
-                                      tickets: noteSelectedAssociations.tickets.filter((id) => id !== ticketId),
+                                      tickets:
+                                        noteSelectedAssociations.tickets.filter(
+                                          (id) => id !== ticketId
+                                        ),
                                     });
                                   }}
                                 >
@@ -7407,8 +5236,12 @@ const ContactDetail: React.FC = () => {
                                   <ListItemText
                                     primary={ticket.subject}
                                     secondary={ticket.description}
-                                    primaryTypographyProps={{ fontSize: '0.875rem' }}
-                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                    primaryTypographyProps={{
+                                      fontSize: "0.875rem",
+                                    }}
+                                    secondaryTypographyProps={{
+                                      fontSize: "0.75rem",
+                                    }}
                                   />
                                 </ListItemButton>
                               </ListItem>
@@ -7423,10 +5256,12 @@ const ContactDetail: React.FC = () => {
             </Box>
           </Box>
         </Box>
-        <DialogActions sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
+        <DialogActions
+          sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}
+        >
           <Button
             onClick={() => setNoteAssociateModalOpen(false)}
-            sx={{ textTransform: 'none' }}
+            sx={{ textTransform: "none" }}
           >
             Cancelar
           </Button>
@@ -7436,16 +5271,20 @@ const ContactDetail: React.FC = () => {
               setSelectedCompanies(noteSelectedAssociations.companies || []);
               setSelectedContacts(noteSelectedAssociations.contacts || []);
               // Convertir deals y tickets a la estructura esperada
-              const dealIds = (noteSelectedAssociations.deals || []).map(id => 1000 + id);
-              const ticketIds = (noteSelectedAssociations.tickets || []).map(id => 2000 + id);
+              const dealIds = (noteSelectedAssociations.deals || []).map(
+                (id) => 1000 + id
+              );
+              const ticketIds = (noteSelectedAssociations.tickets || []).map(
+                (id) => 2000 + id
+              );
               setSelectedAssociations([...dealIds, ...ticketIds]);
               setNoteAssociateModalOpen(false);
             }}
             variant="contained"
-            sx={{ 
-              textTransform: 'none',
+            sx={{
+              textTransform: "none",
               backgroundColor: taxiMonterricoColors.green,
-              '&:hover': {
+              "&:hover": {
                 backgroundColor: taxiMonterricoColors.greenDark,
               },
             }}
@@ -7459,8 +5298,10 @@ const ContactDetail: React.FC = () => {
       <EmailComposer
         open={emailOpen}
         onClose={() => setEmailOpen(false)}
-        recipientEmail={contact?.email || ''}
-        recipientName={contact ? `${contact.firstName} ${contact.lastName}` : undefined}
+        recipientEmail={contact?.email || ""}
+        recipientName={
+          contact ? `${contact.firstName} ${contact.lastName}` : undefined
+        }
         onSend={handleSendEmail}
       />
 
@@ -7469,29 +5310,29 @@ const ContactDetail: React.FC = () => {
         <>
           <Box
             sx={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '600px',
-              maxWidth: '95vw',
-              maxHeight: '90vh',
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              width: "600px",
+              maxWidth: "95vw",
+              maxHeight: "90vh",
               backgroundColor: theme.palette.background.paper,
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
               borderRadius: 4,
               zIndex: 1500,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              animation: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              '@keyframes fadeInScale': {
-                '0%': {
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              animation: "fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              "@keyframes fadeInScale": {
+                "0%": {
                   opacity: 0,
-                  transform: 'translate(-50%, -50%) scale(0.9)',
+                  transform: "translate(-50%, -50%) scale(0.9)",
                 },
-                '100%': {
+                "100%": {
                   opacity: 1,
-                  transform: 'translate(-50%, -50%) scale(1)',
+                  transform: "translate(-50%, -50%) scale(1)",
                 },
               },
             }}
@@ -7499,103 +5340,119 @@ const ContactDetail: React.FC = () => {
           >
             <Box
               sx={{
-                backgroundColor: 'transparent',
+                backgroundColor: "transparent",
                 color: theme.palette.text.primary,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                minHeight: { xs: '64px', md: '72px' },
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                minHeight: { xs: "64px", md: "72px" },
                 px: { xs: 3, md: 4 },
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Box
                   sx={{
                     width: 40,
                     height: 40,
-                    borderRadius: '50%',
+                    borderRadius: "50%",
                     backgroundColor: `${taxiMonterricoColors.green}15`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
-                  <Phone sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+                  <Phone
+                    sx={{ fontSize: 20, color: taxiMonterricoColors.green }}
+                  />
                 </Box>
-                <Typography variant="h5" sx={{ color: theme.palette.text.primary, fontWeight: 700, fontSize: { xs: '1.1rem', md: '1.25rem' }, letterSpacing: '-0.02em' }}>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    color: theme.palette.text.primary,
+                    fontWeight: 700,
+                    fontSize: { xs: "1.1rem", md: "1.25rem" },
+                    letterSpacing: "-0.02em",
+                  }}
+                >
                   Llamada
                 </Typography>
               </Box>
-              <IconButton 
-                sx={{ 
+              <IconButton
+                sx={{
                   color: theme.palette.text.secondary,
-                  transition: 'all 0.2s ease',
-                  '&:hover': { 
+                  transition: "all 0.2s ease",
+                  "&:hover": {
                     backgroundColor: theme.palette.action.hover,
                     color: theme.palette.text.primary,
-                    transform: 'rotate(90deg)',
-                  }
-                }} 
-                size="medium" 
+                    transform: "rotate(90deg)",
+                  },
+                }}
+                size="medium"
                 onClick={() => setCallOpen(false)}
               >
                 <Close />
               </IconButton>
             </Box>
 
-            <Box sx={{ 
-              flexGrow: 1, 
-              display: 'flex', 
-              flexDirection: 'column', 
-              p: { xs: 3, md: 4 }, 
-              overflow: 'hidden', 
-              overflowY: 'auto',
-              gap: 3,
-              '&::-webkit-scrollbar': {
-                width: '8px',
-              },
-              '&::-webkit-scrollbar-track': {
-                backgroundColor: 'transparent',
-                borderRadius: '4px',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                backgroundColor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255,255,255,0.2)' 
-                  : 'rgba(0,0,0,0.2)',
-                borderRadius: '4px',
-                '&:hover': {
-                  backgroundColor: theme.palette.mode === 'dark' 
-                    ? 'rgba(255,255,255,0.3)' 
-                    : 'rgba(0,0,0,0.3)',
+            <Box
+              sx={{
+                flexGrow: 1,
+                display: "flex",
+                flexDirection: "column",
+                p: { xs: 3, md: 4 },
+                overflow: "hidden",
+                overflowY: "auto",
+                gap: 3,
+                "&::-webkit-scrollbar": {
+                  width: "8px",
                 },
-                transition: 'background-color 0.2s ease',
-              },
-            }}>
+                "&::-webkit-scrollbar-track": {
+                  backgroundColor: "transparent",
+                  borderRadius: "4px",
+                },
+                "&::-webkit-scrollbar-thumb": {
+                  backgroundColor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.2)"
+                      : "rgba(0,0,0,0.2)",
+                  borderRadius: "4px",
+                  "&:hover": {
+                    backgroundColor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.3)"
+                        : "rgba(0,0,0,0.3)",
+                  },
+                  transition: "background-color 0.2s ease",
+                },
+              }}
+            >
               <TextField
                 label="Asunto"
                 value={callData.subject}
-                onChange={(e) => setCallData({ ...callData, subject: e.target.value })}
+                onChange={(e) =>
+                  setCallData({ ...callData, subject: e.target.value })
+                }
                 required
                 fullWidth
-                sx={{ 
-                  '& .MuiOutlinedInput-root': {
+                sx={{
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 2,
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '& fieldset': {
-                      borderWidth: '2px',
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    "& fieldset": {
+                      borderWidth: "2px",
                       borderColor: theme.palette.divider,
                     },
-                    '&:hover fieldset': {
+                    "&:hover fieldset": {
                       borderColor: taxiMonterricoColors.green,
                     },
-                    '&.Mui-focused fieldset': {
+                    "&.Mui-focused fieldset": {
                       borderColor: taxiMonterricoColors.green,
-                      borderWidth: '2px',
+                      borderWidth: "2px",
                     },
                   },
-                  '& .MuiInputLabel-root': {
+                  "& .MuiInputLabel-root": {
                     fontWeight: 500,
-                    '&.Mui-focused': {
+                    "&.Mui-focused": {
                       color: taxiMonterricoColors.green,
                     },
                   },
@@ -7605,27 +5462,29 @@ const ContactDetail: React.FC = () => {
                 label="Duración (minutos)"
                 type="number"
                 value={callData.duration}
-                onChange={(e) => setCallData({ ...callData, duration: e.target.value })}
+                onChange={(e) =>
+                  setCallData({ ...callData, duration: e.target.value })
+                }
                 fullWidth
-                sx={{ 
-                  '& .MuiOutlinedInput-root': {
+                sx={{
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 2,
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '& fieldset': {
-                      borderWidth: '2px',
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    "& fieldset": {
+                      borderWidth: "2px",
                       borderColor: theme.palette.divider,
                     },
-                    '&:hover fieldset': {
+                    "&:hover fieldset": {
                       borderColor: taxiMonterricoColors.green,
                     },
-                    '&.Mui-focused fieldset': {
+                    "&.Mui-focused fieldset": {
                       borderColor: taxiMonterricoColors.green,
-                      borderWidth: '2px',
+                      borderWidth: "2px",
                     },
                   },
-                  '& .MuiInputLabel-root': {
+                  "& .MuiInputLabel-root": {
                     fontWeight: 500,
-                    '&.Mui-focused': {
+                    "&.Mui-focused": {
                       color: taxiMonterricoColors.green,
                     },
                   },
@@ -7636,27 +5495,29 @@ const ContactDetail: React.FC = () => {
                 multiline
                 rows={8}
                 value={callData.description}
-                onChange={(e) => setCallData({ ...callData, description: e.target.value })}
+                onChange={(e) =>
+                  setCallData({ ...callData, description: e.target.value })
+                }
                 fullWidth
-                sx={{ 
-                  '& .MuiOutlinedInput-root': {
+                sx={{
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 2,
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '& fieldset': {
-                      borderWidth: '2px',
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    "& fieldset": {
+                      borderWidth: "2px",
                       borderColor: theme.palette.divider,
                     },
-                    '&:hover fieldset': {
+                    "&:hover fieldset": {
                       borderColor: taxiMonterricoColors.green,
                     },
-                    '&.Mui-focused fieldset': {
+                    "&.Mui-focused fieldset": {
                       borderColor: taxiMonterricoColors.green,
-                      borderWidth: '2px',
+                      borderWidth: "2px",
                     },
                   },
-                  '& .MuiInputLabel-root': {
+                  "& .MuiInputLabel-root": {
                     fontWeight: 500,
-                    '&.Mui-focused': {
+                    "&.Mui-focused": {
                       color: taxiMonterricoColors.green,
                     },
                   },
@@ -7664,78 +5525,88 @@ const ContactDetail: React.FC = () => {
               />
             </Box>
 
-            <Box sx={{ 
-              p: 3, 
-              borderTop: `1px solid ${theme.palette.divider}`, 
-              backgroundColor: theme.palette.background.paper, 
-              display: 'flex', 
-              justifyContent: 'flex-end', 
-              gap: 2 
-            }}>
-              <Button 
-                onClick={() => setCallOpen(false)} 
+            <Box
+              sx={{
+                p: 3,
+                borderTop: `1px solid ${theme.palette.divider}`,
+                backgroundColor: theme.palette.background.paper,
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 2,
+              }}
+            >
+              <Button
+                onClick={() => setCallOpen(false)}
                 variant="outlined"
-                sx={{ 
-                  textTransform: 'none',
+                sx={{
+                  textTransform: "none",
                   color: theme.palette.text.secondary,
                   borderColor: theme.palette.divider,
                   fontWeight: 600,
                   px: 3,
                   py: 1,
                   borderRadius: 2,
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
+                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                  "&:hover": {
                     bgcolor: theme.palette.action.hover,
                     borderColor: theme.palette.text.secondary,
-                    transform: 'translateY(-1px)',
+                    transform: "translateY(-1px)",
                   },
                 }}
               >
                 Cancelar
               </Button>
-              <Button 
-                onClick={handleSaveCall} 
-                variant="contained" 
+              <Button
+                onClick={handleSaveCall}
+                variant="contained"
                 disabled={saving || !callData.subject.trim()}
-                sx={{ 
-                  textTransform: 'none',
-                  bgcolor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.green,
-                  color: 'white',
+                sx={{
+                  textTransform: "none",
+                  bgcolor: saving
+                    ? theme.palette.action.disabledBackground
+                    : taxiMonterricoColors.green,
+                  color: "white",
                   fontWeight: 600,
                   px: 4,
                   py: 1,
                   borderRadius: 2,
-                  boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.green}40`,
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    bgcolor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.greenDark,
-                    boxShadow: saving ? 'none' : `0 6px 16px ${taxiMonterricoColors.green}50`,
-                    transform: 'translateY(-2px)',
+                  boxShadow: saving
+                    ? "none"
+                    : `0 4px 12px ${taxiMonterricoColors.green}40`,
+                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                  "&:hover": {
+                    bgcolor: saving
+                      ? theme.palette.action.disabledBackground
+                      : taxiMonterricoColors.greenDark,
+                    boxShadow: saving
+                      ? "none"
+                      : `0 6px 16px ${taxiMonterricoColors.green}50`,
+                    transform: "translateY(-2px)",
                   },
-                  '&:active': {
-                    transform: 'translateY(0)',
+                  "&:active": {
+                    transform: "translateY(0)",
                   },
-                  '&.Mui-disabled': {
+                  "&.Mui-disabled": {
                     bgcolor: theme.palette.action.disabledBackground,
                     color: theme.palette.action.disabled,
-                    boxShadow: 'none',
+                    boxShadow: "none",
                   },
                 }}
               >
-                {saving ? 'Guardando...' : 'Guardar'}
+                {saving ? "Guardando..." : "Guardar"}
               </Button>
             </Box>
           </Box>
           <Box
             sx={{
-              position: 'fixed',
+              position: "fixed",
               top: 0,
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              backgroundColor: "rgba(0, 0, 0, 0.5)",
               zIndex: 1499,
-              animation: 'fadeIn 0.3s ease-out',
+              animation: "fadeIn 0.3s ease-out",
             }}
             onClick={() => setCallOpen(false)}
           />
@@ -7744,262 +5615,283 @@ const ContactDetail: React.FC = () => {
 
       {/* Dialog de Tarea */}
       <Dialog
-        open={taskOpen} 
-        onClose={() => setTaskOpen(false)} 
+        open={taskOpen}
+        onClose={() => setTaskOpen(false)}
         maxWidth={false}
         fullWidth={false}
         PaperProps={{
           sx: {
             borderRadius: 2,
-              maxHeight: '90vh',
-            width: '560px',
-            maxWidth: '90vw',
+            maxHeight: "90vh",
+            width: "560px",
+            maxWidth: "90vw",
           },
         }}
-          >
-            <Box
-              sx={{
-                backgroundColor: 'transparent',
-                color: theme.palette.text.primary,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+      >
+        <Box
+          sx={{
+            backgroundColor: "transparent",
+            color: theme.palette.text.primary,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
             minHeight: 48,
             px: 2,
             pt: 1.5,
             pb: 0.5,
           }}
         >
-          <Typography variant="h5" sx={{ color: theme.palette.text.primary, fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.02em' }}>
-                  Tarea
-                </Typography>
-              <IconButton 
-                sx={{ 
-                  color: theme.palette.text.secondary,
-                  transition: 'all 0.2s ease',
-                  '&:hover': { 
-                    backgroundColor: theme.palette.action.hover,
-                    color: theme.palette.text.primary,
-                    transform: 'rotate(90deg)',
-                  }
-                }} 
-                size="medium" 
-                onClick={() => setTaskOpen(false)}
-              >
-                <Close />
-              </IconButton>
-            </Box>
+          <Typography
+            variant="h5"
+            sx={{
+              color: theme.palette.text.primary,
+              fontWeight: 700,
+              fontSize: "1rem",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Tarea
+          </Typography>
+          <IconButton
+            sx={{
+              color: theme.palette.text.secondary,
+              transition: "all 0.2s ease",
+              "&:hover": {
+                backgroundColor: theme.palette.action.hover,
+                color: theme.palette.text.primary,
+                transform: "rotate(90deg)",
+              },
+            }}
+            size="medium"
+            onClick={() => setTaskOpen(false)}
+          >
+            <Close />
+          </IconButton>
+        </Box>
 
         <DialogContent sx={{ px: 2, pb: 1, pt: 0.5 }}>
-              <TextField
-                label="Título"
-                value={taskData.title}
-                onChange={(e) => setTaskData({ ...taskData, title: e.target.value })}
-                fullWidth
+          <TextField
+            label="Título"
+            value={taskData.title}
+            onChange={(e) =>
+              setTaskData({ ...taskData, title: e.target.value })
+            }
+            fullWidth
             InputLabelProps={{
               shrink: !!taskData.title,
             }}
-                sx={{ 
+            sx={{
               mb: 1.5,
-                  '& .MuiOutlinedInput-root': {
+              "& .MuiOutlinedInput-root": {
                 borderRadius: 0.5,
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                fontSize: '0.75rem',
-                    '& fieldset': {
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                fontSize: "0.75rem",
+                "& fieldset": {
                   borderWidth: 0,
-                  border: 'none',
+                  border: "none",
                   top: 0,
-                    },
-                    '&:hover fieldset': {
-                  border: 'none',
-                    },
-                    '&.Mui-focused fieldset': {
-                  borderWidth: '2px !important',
+                },
+                "&:hover fieldset": {
+                  border: "none",
+                },
+                "&.Mui-focused fieldset": {
+                  borderWidth: "2px !important",
                   borderColor: `${taxiMonterricoColors.orange} !important`,
-                  borderStyle: 'solid !important',
+                  borderStyle: "solid !important",
                   top: 0,
                 },
               },
-              '& .MuiOutlinedInput-notchedOutline': {
-                borderWidth: '0px !important',
-                '& legend': {
+              "& .MuiOutlinedInput-notchedOutline": {
+                borderWidth: "0px !important",
+                "& legend": {
                   width: 0,
-                  display: 'none',
+                  display: "none",
                 },
               },
-              '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                borderWidth: '2px !important',
-                borderColor: `${taxiMonterricoColors.green} !important`,
-                borderStyle: 'solid !important',
-                '& legend': {
-                  width: 0,
-                  display: 'none',
-                    },
+              "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline":
+                {
+                  borderWidth: "2px !important",
+                  borderColor: `${taxiMonterricoColors.green} !important`,
+                  borderStyle: "solid !important",
+                  "& legend": {
+                    width: 0,
+                    display: "none",
                   },
-                  '& .MuiInputLabel-root': {
-                    fontWeight: 500,
-                position: 'absolute',
+                },
+              "& .MuiInputLabel-root": {
+                fontWeight: 500,
+                position: "absolute",
                 left: 12,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                pointerEvents: 'none',
+                top: "50%",
+                transform: "translateY(-50%)",
+                pointerEvents: "none",
                 zIndex: 0,
-                backgroundColor: 'transparent',
+                backgroundColor: "transparent",
                 padding: 0,
                 margin: 0,
-                fontSize: '0.75rem',
-                    '&.Mui-focused': {
+                fontSize: "0.75rem",
+                "&.Mui-focused": {
                   color: taxiMonterricoColors.orange,
-                  transform: 'translateY(-50%)',
-                  backgroundColor: 'transparent',
+                  transform: "translateY(-50%)",
+                  backgroundColor: "transparent",
                 },
-                '&.MuiInputLabel-shrink': {
-                  display: 'none',
+                "&.MuiInputLabel-shrink": {
+                  display: "none",
                 },
               },
-              '& .MuiInputBase-input': {
-                position: 'relative',
+              "& .MuiInputBase-input": {
+                position: "relative",
                 zIndex: 1,
-                fontSize: '0.75rem',
+                fontSize: "0.75rem",
                 py: 1,
-                  },
-                }}
-              />
-          <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+              },
+            }}
+          />
+          <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
             <Box sx={{ flex: 1 }}>
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  mb: 0.75, 
+              <Typography
+                variant="body2"
+                sx={{
+                  mb: 0.75,
                   color: theme.palette.text.secondary,
                   fontWeight: 500,
-                  fontSize: '0.75rem',
+                  fontSize: "0.75rem",
                 }}
               >
                 Prioridad
               </Typography>
-                <TextField
-                  select
-                  value={taskData.priority}
-                  onChange={(e) => setTaskData({ ...taskData, priority: e.target.value })}
-                  fullWidth
+              <TextField
+                select
+                value={taskData.priority}
+                onChange={(e) =>
+                  setTaskData({ ...taskData, priority: e.target.value })
+                }
+                fullWidth
                 SelectProps={{
-                MenuProps: {
-                  PaperProps: {
-                    sx: {
-                      borderRadius: 2,
-                      mt: 1,
+                  MenuProps: {
+                    PaperProps: {
+                      sx: {
+                        borderRadius: 2,
+                        mt: 1,
+                      },
                     },
                   },
-                },
-              }}
-                  sx={{ 
-                    '& .MuiOutlinedInput-root': {
-                  borderRadius: 0.5,
-                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  fontSize: '0.75rem',
-                      '& fieldset': {
-                        borderWidth: '2px',
-                        borderColor: theme.palette.divider,
-                      },
-                      '&:hover fieldset': {
-                    borderColor: taxiMonterricoColors.orange,
-                      },
-                      '&.Mui-focused fieldset': {
-                    borderColor: taxiMonterricoColors.orange,
-                        borderWidth: '2px',
-                      },
+                }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 0.5,
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    fontSize: "0.75rem",
+                    "& fieldset": {
+                      borderWidth: "2px",
+                      borderColor: theme.palette.divider,
                     },
-                '& .MuiInputBase-input': {
-                  fontSize: '0.75rem',
-                  py: 1,
+                    "&:hover fieldset": {
+                      borderColor: taxiMonterricoColors.orange,
                     },
-                    '& .MuiInputLabel-root': {
-                      fontWeight: 500,
-                  fontSize: '0.75rem',
-                      '&.Mui-focused': {
-                    color: taxiMonterricoColors.orange,
-                      },
+                    "&.Mui-focused fieldset": {
+                      borderColor: taxiMonterricoColors.orange,
+                      borderWidth: "2px",
                     },
-                  }}
-                >
-              <MenuItem value="low" sx={{ fontSize: '0.75rem', py: 0.75 }}>Baja</MenuItem>
-              <MenuItem value="medium" sx={{ fontSize: '0.75rem', py: 0.75 }}>Media</MenuItem>
-              <MenuItem value="high" sx={{ fontSize: '0.75rem', py: 0.75 }}>Alta</MenuItem>
-              <MenuItem value="urgent" sx={{ fontSize: '0.75rem', py: 0.75 }}>Urgente</MenuItem>
-                </TextField>
+                  },
+                  "& .MuiInputBase-input": {
+                    fontSize: "0.75rem",
+                    py: 1,
+                  },
+                  "& .MuiInputLabel-root": {
+                    fontWeight: 500,
+                    fontSize: "0.75rem",
+                    "&.Mui-focused": {
+                      color: taxiMonterricoColors.orange,
+                    },
+                  },
+                }}
+              >
+                <MenuItem value="low" sx={{ fontSize: "0.75rem", py: 0.75 }}>
+                  Baja
+                </MenuItem>
+                <MenuItem value="medium" sx={{ fontSize: "0.75rem", py: 0.75 }}>
+                  Media
+                </MenuItem>
+                <MenuItem value="high" sx={{ fontSize: "0.75rem", py: 0.75 }}>
+                  Alta
+                </MenuItem>
+                <MenuItem value="urgent" sx={{ fontSize: "0.75rem", py: 0.75 }}>
+                  Urgente
+                </MenuItem>
+              </TextField>
             </Box>
             <Box sx={{ flex: 1 }}>
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  mb: 0.75, 
+              <Typography
+                variant="body2"
+                sx={{
+                  mb: 0.75,
                   color: theme.palette.text.secondary,
                   fontWeight: 500,
-                  fontSize: '0.75rem',
+                  fontSize: "0.75rem",
                 }}
               >
                 Fecha límite
               </Typography>
-                <TextField
+              <TextField
                 value={formatDateDisplay(taskData.dueDate)}
                 onClick={handleOpenDatePicker}
-                  fullWidth
+                fullWidth
                 InputProps={{
-                readOnly: true,
-                endAdornment: (
-                  <IconButton
-                    size="small"
-                    onClick={handleOpenDatePicker}
-                  sx={{ 
-                      color: theme.palette.text.secondary,
-                      mr: 0.5,
-                      '&:hover': {
-                        backgroundColor: 'transparent',
-                        color: taxiMonterricoColors.orange,
-                      }
-                    }}
-                  >
-                    <CalendarToday sx={{ fontSize: 18 }} />
-                  </IconButton>
-                ),
-              }}
-              sx={{ 
-                cursor: 'pointer',
-                    '& .MuiOutlinedInput-root': {
-                  borderRadius: 0.5,
-                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  fontSize: '0.75rem',
-                      '& fieldset': {
-                        borderWidth: '2px',
-                        borderColor: theme.palette.divider,
-                      },
-                      '&:hover fieldset': {
-                    borderColor: taxiMonterricoColors.orange,
-                      },
-                      '&.Mui-focused fieldset': {
-                    borderColor: taxiMonterricoColors.orange,
-                        borderWidth: '2px',
-                      },
+                  readOnly: true,
+                  endAdornment: (
+                    <IconButton
+                      size="small"
+                      onClick={handleOpenDatePicker}
+                      sx={{
+                        color: theme.palette.text.secondary,
+                        mr: 0.5,
+                        "&:hover": {
+                          backgroundColor: "transparent",
+                          color: taxiMonterricoColors.orange,
+                        },
+                      }}
+                    >
+                      <CalendarToday sx={{ fontSize: 18 }} />
+                    </IconButton>
+                  ),
+                }}
+                sx={{
+                  cursor: "pointer",
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 0.5,
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    fontSize: "0.75rem",
+                    "& fieldset": {
+                      borderWidth: "2px",
+                      borderColor: theme.palette.divider,
                     },
-                '& .MuiInputBase-input': {
-                  fontSize: '0.75rem',
-                  py: 1,
-                  cursor: 'pointer',
+                    "&:hover fieldset": {
+                      borderColor: taxiMonterricoColors.orange,
                     },
-                    '& .MuiInputLabel-root': {
-                      fontWeight: 500,
-                  fontSize: '0.75rem',
-                      '&.Mui-focused': {
-                    color: taxiMonterricoColors.orange,
-                      },
+                    "&.Mui-focused fieldset": {
+                      borderColor: taxiMonterricoColors.orange,
+                      borderWidth: "2px",
                     },
-                  }}
-                />
-              </Box> 
+                  },
+                  "& .MuiInputBase-input": {
+                    fontSize: "0.75rem",
+                    py: 1,
+                    cursor: "pointer",
+                  },
+                  "& .MuiInputLabel-root": {
+                    fontWeight: 500,
+                    fontSize: "0.75rem",
+                    "&.Mui-focused": {
+                      color: taxiMonterricoColors.orange,
+                    },
+                  },
+                }}
+              />
             </Box>
+          </Box>
           <Divider sx={{ my: 1.5 }} />
-          <Box sx={{ position: 'relative' }}>
+          <Box sx={{ position: "relative" }}>
             <Box
               ref={descriptionEditorRef}
               contentEditable
@@ -8011,64 +5903,81 @@ const ContactDetail: React.FC = () => {
                 }
               }}
               sx={{
-                minHeight: '150px',
-                maxHeight: '250px',
-                overflowY: 'auto',
+                minHeight: "150px",
+                maxHeight: "250px",
+                overflowY: "auto",
                 pt: 0,
                 pb: 1.5,
                 px: 1,
                 borderRadius: 0.5,
-                border: 'none',
-                outline: 'none',
-                fontSize: '0.75rem',
+                border: "none",
+                outline: "none",
+                fontSize: "0.75rem",
                 lineHeight: 1.5,
                 color: theme.palette.text.primary,
-                '&:empty:before': {
+                "&:empty:before": {
                   content: '"Descripción"',
                   color: theme.palette.text.disabled,
                 },
-                '&::-webkit-scrollbar': {
-                  width: '6px',
+                "&::-webkit-scrollbar": {
+                  width: "6px",
                 },
-                '&::-webkit-scrollbar-track': {
-                  backgroundColor: 'transparent',
+                "&::-webkit-scrollbar-track": {
+                  backgroundColor: "transparent",
                 },
-                '&::-webkit-scrollbar-thumb': {
-                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
-                  borderRadius: '3px',
+                "&::-webkit-scrollbar-thumb": {
+                  backgroundColor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.2)"
+                      : "rgba(0,0,0,0.2)",
+                  borderRadius: "3px",
                 },
               }}
             />
             <Box
               sx={{
-                position: 'absolute',
+                position: "absolute",
                 bottom: 0.5,
                 left: 4,
                 right: 4,
-              display: 'flex', 
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
                 gap: 0.5,
-                backgroundColor: 'transparent',
+                backgroundColor: "transparent",
                 borderRadius: 1,
                 p: 0.5,
-                border: 'none',
+                border: "none",
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'nowrap' }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  flexWrap: "nowrap",
+                }}
+              >
                 <IconButton
                   size="small"
-                  sx={{ 
-                    p: 0.25, 
-                    minWidth: 28, 
+                  sx={{
+                    p: 0.25,
+                    minWidth: 28,
                     height: 28,
-                    backgroundColor: activeFormats.bold ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
-                    '&:hover': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
-                    }
+                    backgroundColor: activeFormats.bold
+                      ? theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.15)"
+                        : "#e0e0e0"
+                      : "transparent",
+                    "&:hover": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.1)"
+                          : "#e0e0e0",
+                    },
                   }}
                   onClick={() => {
-                    document.execCommand('bold');
+                    document.execCommand("bold");
                     updateActiveFormats();
                   }}
                   title="Negrita"
@@ -8077,17 +5986,24 @@ const ContactDetail: React.FC = () => {
                 </IconButton>
                 <IconButton
                   size="small"
-                  sx={{ 
-                    p: 0.25, 
-                    minWidth: 28, 
+                  sx={{
+                    p: 0.25,
+                    minWidth: 28,
                     height: 28,
-                    backgroundColor: activeFormats.italic ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
-                    '&:hover': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
-                    }
+                    backgroundColor: activeFormats.italic
+                      ? theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.15)"
+                        : "#e0e0e0"
+                      : "transparent",
+                    "&:hover": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.1)"
+                          : "#e0e0e0",
+                    },
                   }}
                   onClick={() => {
-                    document.execCommand('italic');
+                    document.execCommand("italic");
                     updateActiveFormats();
                   }}
                   title="Cursiva"
@@ -8096,17 +6012,24 @@ const ContactDetail: React.FC = () => {
                 </IconButton>
                 <IconButton
                   size="small"
-                  sx={{ 
-                    p: 0.25, 
-                    minWidth: 28, 
+                  sx={{
+                    p: 0.25,
+                    minWidth: 28,
                     height: 28,
-                    backgroundColor: activeFormats.underline ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
-                    '&:hover': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
-                    }
+                    backgroundColor: activeFormats.underline
+                      ? theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.15)"
+                        : "#e0e0e0"
+                      : "transparent",
+                    "&:hover": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.1)"
+                          : "#e0e0e0",
+                    },
                   }}
                   onClick={() => {
-                    document.execCommand('underline');
+                    document.execCommand("underline");
                     updateActiveFormats();
                   }}
                   title="Subrayado"
@@ -8115,219 +6038,287 @@ const ContactDetail: React.FC = () => {
                 </IconButton>
                 <IconButton
                   size="small"
-                  sx={{ 
-                    p: 0.25, 
-                    minWidth: 28, 
+                  sx={{
+                    p: 0.25,
+                    minWidth: 28,
                     height: 28,
-                    backgroundColor: activeFormats.strikeThrough ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
-                    '&:hover': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
-                    }
+                    backgroundColor: activeFormats.strikeThrough
+                      ? theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.15)"
+                        : "#e0e0e0"
+                      : "transparent",
+                    "&:hover": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.1)"
+                          : "#e0e0e0",
+                    },
                   }}
                   onClick={() => {
-                    document.execCommand('strikeThrough');
+                    document.execCommand("strikeThrough");
                     updateActiveFormats();
                   }}
                   title="Tachado"
                 >
                   <FormatStrikethrough sx={{ fontSize: 16 }} />
                 </IconButton>
-              <IconButton
-                size="small"
-                sx={{ p: 0.25, minWidth: 28, height: 28 }}
-                onClick={(e) => setMoreMenuAnchorEl(e.currentTarget)}
-                title="Más opciones"
-              >
-                <MoreVert sx={{ fontSize: 16 }} />
-              </IconButton>
-              <Menu
-                anchorEl={moreMenuAnchorEl}
-                open={Boolean(moreMenuAnchorEl)}
-                onClose={() => setMoreMenuAnchorEl(null)}
-              >
-                <MenuItem 
-                  onClick={() => { document.execCommand('justifyLeft'); setMoreMenuAnchorEl(null); }}
-                  sx={{ py: 0.75, px: 1, minWidth: 'auto', justifyContent: 'center' }}
-                  title="Alinear izquierda"
+                <IconButton
+                  size="small"
+                  sx={{ p: 0.25, minWidth: 28, height: 28 }}
+                  onClick={(e) => setMoreMenuAnchorEl(e.currentTarget)}
+                  title="Más opciones"
                 >
-                  <FormatAlignLeft sx={{ fontSize: 16 }} />
-                </MenuItem>
-                <MenuItem 
-                  onClick={() => { document.execCommand('justifyCenter'); setMoreMenuAnchorEl(null); }}
-                  sx={{ py: 0.75, px: 1, minWidth: 'auto', justifyContent: 'center' }}
-                  title="Alinear centro"
+                  <MoreVert sx={{ fontSize: 16 }} />
+                </IconButton>
+                <Menu
+                  anchorEl={moreMenuAnchorEl}
+                  open={Boolean(moreMenuAnchorEl)}
+                  onClose={() => setMoreMenuAnchorEl(null)}
                 >
-                  <FormatAlignCenter sx={{ fontSize: 16 }} />
-                </MenuItem>
-                <MenuItem 
-                  onClick={() => { document.execCommand('justifyRight'); setMoreMenuAnchorEl(null); }}
-                  sx={{ py: 0.75, px: 1, minWidth: 'auto', justifyContent: 'center' }}
-                  title="Alinear derecha"
+                  <MenuItem
+                    onClick={() => {
+                      document.execCommand("justifyLeft");
+                      setMoreMenuAnchorEl(null);
+                    }}
+                    sx={{
+                      py: 0.75,
+                      px: 1,
+                      minWidth: "auto",
+                      justifyContent: "center",
+                    }}
+                    title="Alinear izquierda"
+                  >
+                    <FormatAlignLeft sx={{ fontSize: 16 }} />
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => {
+                      document.execCommand("justifyCenter");
+                      setMoreMenuAnchorEl(null);
+                    }}
+                    sx={{
+                      py: 0.75,
+                      px: 1,
+                      minWidth: "auto",
+                      justifyContent: "center",
+                    }}
+                    title="Alinear centro"
+                  >
+                    <FormatAlignCenter sx={{ fontSize: 16 }} />
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => {
+                      document.execCommand("justifyRight");
+                      setMoreMenuAnchorEl(null);
+                    }}
+                    sx={{
+                      py: 0.75,
+                      px: 1,
+                      minWidth: "auto",
+                      justifyContent: "center",
+                    }}
+                    title="Alinear derecha"
+                  >
+                    <FormatAlignRight sx={{ fontSize: 16 }} />
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => {
+                      document.execCommand("justifyFull");
+                      setMoreMenuAnchorEl(null);
+                    }}
+                    sx={{
+                      py: 0.75,
+                      px: 1,
+                      minWidth: "auto",
+                      justifyContent: "center",
+                    }}
+                    title="Justificar"
+                  >
+                    <FormatAlignJustify sx={{ fontSize: 16 }} />
+                  </MenuItem>
+                </Menu>
+                <Divider
+                  orientation="vertical"
+                  flexItem
+                  sx={{ mx: 0.5, height: "20px" }}
+                />
+                <IconButton
+                  size="small"
+                  sx={{
+                    p: 0.25,
+                    minWidth: 28,
+                    height: 28,
+                    backgroundColor: activeFormats.unorderedList
+                      ? theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.15)"
+                        : "#e0e0e0"
+                      : "transparent",
+                    "&:hover": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.1)"
+                          : "#e0e0e0",
+                    },
+                  }}
+                  onClick={() => {
+                    document.execCommand("insertUnorderedList");
+                    updateActiveFormats();
+                  }}
+                  title="Lista con viñetas"
                 >
-                  <FormatAlignRight sx={{ fontSize: 16 }} />
-                </MenuItem>
-                <MenuItem 
-                  onClick={() => { document.execCommand('justifyFull'); setMoreMenuAnchorEl(null); }}
-                  sx={{ py: 0.75, px: 1, minWidth: 'auto', justifyContent: 'center' }}
-                  title="Justificar"
+                  <FormatListBulleted sx={{ fontSize: 16 }} />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  sx={{
+                    p: 0.25,
+                    minWidth: 28,
+                    height: 28,
+                    backgroundColor: activeFormats.orderedList
+                      ? theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.15)"
+                        : "#e0e0e0"
+                      : "transparent",
+                    "&:hover": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.1)"
+                          : "#e0e0e0",
+                    },
+                  }}
+                  onClick={() => {
+                    document.execCommand("insertOrderedList");
+                    updateActiveFormats();
+                  }}
+                  title="Lista numerada"
                 >
-                  <FormatAlignJustify sx={{ fontSize: 16 }} />
-                </MenuItem>
-              </Menu>
-              <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: '20px' }} />
-              <IconButton
-                size="small"
-                sx={{ 
-                  p: 0.25, 
-                  minWidth: 28, 
-                  height: 28,
-                  backgroundColor: activeFormats.unorderedList ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
-                  '&:hover': {
-                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
-                  }
-                }}
-                onClick={() => {
-                  document.execCommand('insertUnorderedList');
-                  updateActiveFormats();
-                }}
-                title="Lista con viñetas"
-              >
-                <FormatListBulleted sx={{ fontSize: 16 }} />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ 
-                  p: 0.25, 
-                  minWidth: 28, 
-                  height: 28,
-                  backgroundColor: activeFormats.orderedList ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
-                  '&:hover': {
-                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
-                  }
-                }}
-                onClick={() => {
-                  document.execCommand('insertOrderedList');
-                  updateActiveFormats();
-                }}
-                title="Lista numerada"
-              >
-                <FormatListNumbered sx={{ fontSize: 16 }} />
-              </IconButton>
-              <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: '20px' }} />
-              <IconButton
-                size="small"
-                sx={{ p: 0.25, minWidth: 28, height: 28 }}
-                onClick={() => {
-                  const url = prompt('URL:');
-                  if (url) {
-                    document.execCommand('createLink', false, url);
-                  }
-                }}
-                title="Insertar enlace"
-              >
-                <LinkIcon sx={{ fontSize: 16 }} />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ p: 0.25, minWidth: 28, height: 28 }}
-                onClick={() => imageInputRef.current?.click()}
-                title="Insertar imagen"
-              >
-                <Image sx={{ fontSize: 16 }} />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ p: 0.25, minWidth: 28, height: 28 }}
-                onClick={() => {
-                  const code = prompt('Ingresa el código:');
-                  if (code && descriptionEditorRef.current) {
-                    const selection = window.getSelection();
-                    let range: Range | null = null;
-                    
-                    if (selection && selection.rangeCount > 0) {
-                      range = selection.getRangeAt(0);
-                    } else {
-                      range = document.createRange();
-                      range.selectNodeContents(descriptionEditorRef.current);
-                      range.collapse(false);
+                  <FormatListNumbered sx={{ fontSize: 16 }} />
+                </IconButton>
+                <Divider
+                  orientation="vertical"
+                  flexItem
+                  sx={{ mx: 0.5, height: "20px" }}
+                />
+                <IconButton
+                  size="small"
+                  sx={{ p: 0.25, minWidth: 28, height: 28 }}
+                  onClick={() => {
+                    const url = prompt("URL:");
+                    if (url) {
+                      document.execCommand("createLink", false, url);
                     }
-                    
-                    if (range) {
-                      const pre = document.createElement('pre');
-                      pre.style.backgroundColor = theme.palette.mode === 'dark' ? '#1e1e1e' : '#f5f5f5';
-                      pre.style.color = theme.palette.text.primary;
-                      pre.style.padding = '8px';
-                      pre.style.borderRadius = '4px';
-                      pre.style.fontFamily = 'monospace';
-                      pre.style.fontSize = '0.75rem';
-                      pre.textContent = code;
-                      
-                      range.deleteContents();
-                      range.insertNode(pre);
-                      range.setStartAfter(pre);
-                      range.collapse(true);
-                      if (selection) {
+                  }}
+                  title="Insertar enlace"
+                >
+                  <LinkIcon sx={{ fontSize: 16 }} />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  sx={{ p: 0.25, minWidth: 28, height: 28 }}
+                  onClick={() => imageInputRef.current?.click()}
+                  title="Insertar imagen"
+                >
+                  <Image sx={{ fontSize: 16 }} />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  sx={{ p: 0.25, minWidth: 28, height: 28 }}
+                  onClick={() => {
+                    const code = prompt("Ingresa el código:");
+                    if (code && descriptionEditorRef.current) {
+                      const selection = window.getSelection();
+                      let range: Range | null = null;
+
+                      if (selection && selection.rangeCount > 0) {
+                        range = selection.getRangeAt(0);
+                      } else {
+                        range = document.createRange();
+                        range.selectNodeContents(descriptionEditorRef.current);
+                        range.collapse(false);
+                      }
+
+                      if (range) {
+                        const pre = document.createElement("pre");
+                        pre.style.backgroundColor =
+                          theme.palette.mode === "dark" ? "#1e1e1e" : "#f5f5f5";
+                        pre.style.color = theme.palette.text.primary;
+                        pre.style.padding = "8px";
+                        pre.style.borderRadius = "4px";
+                        pre.style.fontFamily = "monospace";
+                        pre.style.fontSize = "0.75rem";
+                        pre.textContent = code;
+
+                        range.deleteContents();
+                        range.insertNode(pre);
+                        range.setStartAfter(pre);
+                        range.collapse(true);
+                        if (selection) {
+                          selection.removeAllRanges();
+                          selection.addRange(range);
+                        }
+                        setTaskData({
+                          ...taskData,
+                          description: descriptionEditorRef.current.innerHTML,
+                        });
+                      }
+                    }
+                  }}
+                  title="Insertar código"
+                >
+                  <Code sx={{ fontSize: 16 }} />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  sx={{ p: 0.25, minWidth: 28, height: 28 }}
+                  onClick={() => {
+                    const rows = prompt("Número de filas:", "3");
+                    const cols = prompt("Número de columnas:", "3");
+                    if (rows && cols && descriptionEditorRef.current) {
+                      const table = document.createElement("table");
+                      table.style.borderCollapse = "collapse";
+                      table.style.width = "100%";
+                      table.style.border = "1px solid #ccc";
+                      table.style.margin = "8px 0";
+
+                      for (let i = 0; i < parseInt(rows); i++) {
+                        const tr = document.createElement("tr");
+                        for (let j = 0; j < parseInt(cols); j++) {
+                          const td = document.createElement("td");
+                          td.style.border = "1px solid #ccc";
+                          td.style.padding = "8px";
+                          td.innerHTML = "&nbsp;";
+                          tr.appendChild(td);
+                        }
+                        table.appendChild(tr);
+                      }
+
+                      const selection = window.getSelection();
+                      if (selection && selection.rangeCount > 0) {
+                        const range = selection.getRangeAt(0);
+                        range.deleteContents();
+                        range.insertNode(table);
+                        range.setStartAfter(table);
+                        range.collapse(true);
                         selection.removeAllRanges();
                         selection.addRange(range);
+                        setTaskData({
+                          ...taskData,
+                          description: descriptionEditorRef.current.innerHTML,
+                        });
                       }
-                      setTaskData({ ...taskData, description: descriptionEditorRef.current.innerHTML });
                     }
-                  }
-                }}
-                title="Insertar código"
-              >
-                <Code sx={{ fontSize: 16 }} />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ p: 0.25, minWidth: 28, height: 28 }}
-                onClick={() => {
-                  const rows = prompt('Número de filas:', '3');
-                  const cols = prompt('Número de columnas:', '3');
-                  if (rows && cols && descriptionEditorRef.current) {
-                    const table = document.createElement('table');
-                    table.style.borderCollapse = 'collapse';
-                    table.style.width = '100%';
-                    table.style.border = '1px solid #ccc';
-                    table.style.margin = '8px 0';
-                    
-                    for (let i = 0; i < parseInt(rows); i++) {
-                      const tr = document.createElement('tr');
-                      for (let j = 0; j < parseInt(cols); j++) {
-                        const td = document.createElement('td');
-                        td.style.border = '1px solid #ccc';
-                        td.style.padding = '8px';
-                        td.innerHTML = '&nbsp;';
-                        tr.appendChild(td);
-                      }
-                      table.appendChild(tr);
-                    }
-                    
-                    const selection = window.getSelection();
-                    if (selection && selection.rangeCount > 0) {
-                      const range = selection.getRangeAt(0);
-                      range.deleteContents();
-                      range.insertNode(table);
-                      range.setStartAfter(table);
-                      range.collapse(true);
-                      selection.removeAllRanges();
-                      selection.addRange(range);
-                      setTaskData({ ...taskData, description: descriptionEditorRef.current.innerHTML });
-                    }
-                  }
-                }}
-                title="Insertar tabla"
-              >
-                <TableChart sx={{ fontSize: 16 }} />
-              </IconButton>
-              <IconButton
-                size="small"
-                sx={{ p: 0.25, minWidth: 28, height: 28 }}
-                onClick={() => fileInputRef.current?.click()}
-                title="Adjuntar archivo"
-              >
-                <AttachFile sx={{ fontSize: 16 }} />
-              </IconButton>
+                  }}
+                  title="Insertar tabla"
+                >
+                  <TableChart sx={{ fontSize: 16 }} />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  sx={{ p: 0.25, minWidth: 28, height: 28 }}
+                  onClick={() => fileInputRef.current?.click()}
+                  title="Adjuntar archivo"
+                >
+                  <AttachFile sx={{ fontSize: 16 }} />
+                </IconButton>
               </Box>
             </Box>
           </Box>
@@ -8336,13 +6327,13 @@ const ContactDetail: React.FC = () => {
             ref={imageInputRef}
             type="file"
             accept="image/*"
-            style={{ display: 'none' }}
+            style={{ display: "none" }}
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (!file || !descriptionEditorRef.current) return;
 
-              if (!file.type.startsWith('image/')) {
-                alert('Por favor, selecciona un archivo de imagen válido.');
+              if (!file.type.startsWith("image/")) {
+                alert("Por favor, selecciona un archivo de imagen válido.");
                 return;
               }
 
@@ -8351,10 +6342,10 @@ const ContactDetail: React.FC = () => {
                 const dataUrl = event.target?.result as string;
                 if (dataUrl) {
                   descriptionEditorRef.current?.focus();
-                  
+
                   const selection = window.getSelection();
                   let range: Range | null = null;
-                  
+
                   if (selection && selection.rangeCount > 0) {
                     range = selection.getRangeAt(0);
                   } else if (descriptionEditorRef.current) {
@@ -8368,12 +6359,12 @@ const ContactDetail: React.FC = () => {
                   }
 
                   if (range) {
-                    const img = document.createElement('img');
+                    const img = document.createElement("img");
                     img.src = dataUrl;
-                    img.style.maxWidth = '100%';
-                    img.style.height = 'auto';
+                    img.style.maxWidth = "100%";
+                    img.style.height = "auto";
                     img.alt = file.name;
-                    
+
                     range.insertNode(img);
                     range.setStartAfter(img);
                     range.collapse(true);
@@ -8381,22 +6372,25 @@ const ContactDetail: React.FC = () => {
                       selection.removeAllRanges();
                       selection.addRange(range);
                     }
-                    
+
                     if (descriptionEditorRef.current) {
-                      setTaskData({ ...taskData, description: descriptionEditorRef.current.innerHTML });
+                      setTaskData({
+                        ...taskData,
+                        description: descriptionEditorRef.current.innerHTML,
+                      });
                     }
                   }
                 }
               };
-              
+
               reader.onerror = () => {
-                alert('Error al leer el archivo de imagen.');
+                alert("Error al leer el archivo de imagen.");
               };
-              
+
               reader.readAsDataURL(file);
-              
+
               if (imageInputRef.current) {
-                imageInputRef.current.value = '';
+                imageInputRef.current.value = "";
               }
             }}
           />
@@ -8404,7 +6398,7 @@ const ContactDetail: React.FC = () => {
           <input
             ref={fileInputRef}
             type="file"
-            style={{ display: 'none' }}
+            style={{ display: "none" }}
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (!file || !descriptionEditorRef.current) return;
@@ -8414,10 +6408,10 @@ const ContactDetail: React.FC = () => {
                 const dataUrl = event.target?.result as string;
                 if (dataUrl) {
                   descriptionEditorRef.current?.focus();
-                  
+
                   const selection = window.getSelection();
                   let range: Range | null = null;
-                  
+
                   if (selection && selection.rangeCount > 0) {
                     range = selection.getRangeAt(0);
                   } else if (descriptionEditorRef.current) {
@@ -8431,18 +6425,19 @@ const ContactDetail: React.FC = () => {
                   }
 
                   if (range) {
-                    const link = document.createElement('a');
+                    const link = document.createElement("a");
                     link.href = dataUrl;
                     link.download = file.name;
                     link.textContent = `📎 ${file.name}`;
-                    link.style.display = 'inline-block';
-                    link.style.margin = '4px';
-                    link.style.padding = '4px 8px';
-                    link.style.backgroundColor = theme.palette.mode === 'dark' ? '#2a2a2a' : '#f5f5f5';
-                    link.style.borderRadius = '4px';
-                    link.style.textDecoration = 'none';
+                    link.style.display = "inline-block";
+                    link.style.margin = "4px";
+                    link.style.padding = "4px 8px";
+                    link.style.backgroundColor =
+                      theme.palette.mode === "dark" ? "#2a2a2a" : "#f5f5f5";
+                    link.style.borderRadius = "4px";
+                    link.style.textDecoration = "none";
                     link.style.color = theme.palette.text.primary;
-                    
+
                     range.insertNode(link);
                     range.setStartAfter(link);
                     range.collapse(true);
@@ -8450,22 +6445,25 @@ const ContactDetail: React.FC = () => {
                       selection.removeAllRanges();
                       selection.addRange(range);
                     }
-                    
+
                     if (descriptionEditorRef.current) {
-                      setTaskData({ ...taskData, description: descriptionEditorRef.current.innerHTML });
+                      setTaskData({
+                        ...taskData,
+                        description: descriptionEditorRef.current.innerHTML,
+                      });
                     }
                   }
                 }
               };
-              
+
               reader.onerror = () => {
-                alert('Error al leer el archivo.');
+                alert("Error al leer el archivo.");
               };
-              
+
               reader.readAsDataURL(file);
-              
+
               if (fileInputRef.current) {
-                fileInputRef.current.value = '';
+                fileInputRef.current.value = "";
               }
             }}
           />
@@ -8474,48 +6472,52 @@ const ContactDetail: React.FC = () => {
           <Divider sx={{ mt: 0.25, mb: 1.5 }} />
         </Box>
         <DialogActions sx={{ px: 2, pb: 1.5, pt: 0.5, gap: 0.75 }}>
-              <Button 
-                onClick={() => setTaskOpen(false)} 
+          <Button
+            onClick={() => setTaskOpen(false)}
             size="small"
-                sx={{ 
-                  textTransform: 'none',
-                  color: theme.palette.text.secondary,
+            sx={{
+              textTransform: "none",
+              color: theme.palette.text.secondary,
               fontWeight: 500,
               px: 2,
               py: 0.5,
-              fontSize: '0.75rem',
-                  '&:hover': {
-                    bgcolor: theme.palette.action.hover,
-              }
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleSaveTask} 
-                variant="contained" 
+              fontSize: "0.75rem",
+              "&:hover": {
+                bgcolor: theme.palette.action.hover,
+              },
+            }}
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleSaveTask}
+            variant="contained"
             size="small"
-                disabled={saving || !taskData.title.trim()}
-                sx={{ 
-                  textTransform: 'none',
+            disabled={saving || !taskData.title.trim()}
+            sx={{
+              textTransform: "none",
               fontWeight: 500,
               px: 2,
               py: 0.5,
-              fontSize: '0.75rem',
-              bgcolor: taskData.title.trim() ? taxiMonterricoColors.green : theme.palette.action.disabledBackground,
-                  color: 'white',
-                  '&:hover': {
-                bgcolor: taskData.title.trim() ? taxiMonterricoColors.green : theme.palette.action.disabledBackground,
+              fontSize: "0.75rem",
+              bgcolor: taskData.title.trim()
+                ? taxiMonterricoColors.green
+                : theme.palette.action.disabledBackground,
+              color: "white",
+              "&:hover": {
+                bgcolor: taskData.title.trim()
+                  ? taxiMonterricoColors.green
+                  : theme.palette.action.disabledBackground,
                 opacity: 0.9,
-                  },
-              '&:disabled': {
-                    bgcolor: theme.palette.action.disabledBackground,
-                    color: theme.palette.action.disabled,
-              }
-                }}
-              >
-                {saving ? 'Guardando...' : 'Guardar'}
-              </Button>
+              },
+              "&:disabled": {
+                bgcolor: theme.palette.action.disabledBackground,
+                color: theme.palette.action.disabled,
+              },
+            }}
+          >
+            {saving ? "Guardando..." : "Guardar"}
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -8525,20 +6527,21 @@ const ContactDetail: React.FC = () => {
         anchorEl={datePickerAnchorEl}
         onClose={() => setDatePickerAnchorEl(null)}
         anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
+          vertical: "bottom",
+          horizontal: "left",
         }}
         transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
+          vertical: "top",
+          horizontal: "left",
         }}
         PaperProps={{
           sx: {
             borderRadius: 2,
-            overflow: 'hidden',
-            boxShadow: theme.palette.mode === 'dark' 
-              ? '0 8px 32px rgba(0,0,0,0.4)' 
-              : '0 8px 32px rgba(0,0,0,0.12)',
+            overflow: "hidden",
+            boxShadow:
+              theme.palette.mode === "dark"
+                ? "0 8px 32px rgba(0,0,0,0.4)"
+                : "0 8px 32px rgba(0,0,0,0.12)",
             mt: 0.5,
             maxWidth: 280,
           },
@@ -8546,14 +6549,16 @@ const ContactDetail: React.FC = () => {
       >
         <Box sx={{ p: 2, bgcolor: theme.palette.background.paper }}>
           {/* Header con mes y año */}
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between', 
-            mb: 3,
-            pb: 2,
-            borderBottom: `1px solid ${theme.palette.divider}`,
-          }}>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              mb: 3,
+              pb: 2,
+              borderBottom: `1px solid ${theme.palette.divider}`,
+            }}
+          >
             <IconButton
               size="small"
               onClick={() => {
@@ -8564,7 +6569,7 @@ const ContactDetail: React.FC = () => {
               sx={{
                 color: theme.palette.text.secondary,
                 border: `1px solid ${theme.palette.divider}`,
-                '&:hover': {
+                "&:hover": {
                   bgcolor: theme.palette.action.hover,
                   borderColor: taxiMonterricoColors.green,
                   color: taxiMonterricoColors.green,
@@ -8573,12 +6578,15 @@ const ContactDetail: React.FC = () => {
             >
               <ChevronLeft />
             </IconButton>
-            <Typography variant="h6" sx={{ 
-              fontWeight: 600, 
-              fontSize: '0.95rem',
-              color: theme.palette.text.primary,
-              letterSpacing: '-0.01em',
-            }}>
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 600,
+                fontSize: "0.95rem",
+                color: theme.palette.text.primary,
+                letterSpacing: "-0.01em",
+              }}
+            >
               {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
             </Typography>
             <IconButton
@@ -8591,7 +6599,7 @@ const ContactDetail: React.FC = () => {
               sx={{
                 color: theme.palette.text.secondary,
                 border: `1px solid ${theme.palette.divider}`,
-                '&:hover': {
+                "&:hover": {
                   bgcolor: theme.palette.action.hover,
                   borderColor: taxiMonterricoColors.green,
                   color: taxiMonterricoColors.green,
@@ -8600,27 +6608,29 @@ const ContactDetail: React.FC = () => {
             >
               <ChevronRight />
             </IconButton>
-            </Box>
+          </Box>
 
           {/* Días de la semana */}
-          <Box sx={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(7, 1fr)', 
-            gap: 0.5, 
-            mb: 1.5,
-          }}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(7, 1fr)",
+              gap: 0.5,
+              mb: 1.5,
+            }}
+          >
             {weekDays.map((day) => (
               <Typography
                 key={day}
                 variant="caption"
                 sx={{
-                  textAlign: 'center',
+                  textAlign: "center",
                   fontWeight: 600,
                   color: theme.palette.text.secondary,
-                  fontSize: '0.7rem',
+                  fontSize: "0.7rem",
                   py: 0.5,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
                 }}
               >
                 {day}
@@ -8629,17 +6639,19 @@ const ContactDetail: React.FC = () => {
           </Box>
 
           {/* Calendario */}
-          <Box sx={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(7, 1fr)', 
-            gap: 0.5,
-            mb: 1.5,
-          }}>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(7, 1fr)",
+              gap: 0.5,
+              mb: 1.5,
+            }}
+          >
             {getDaysInMonth(currentMonth).map((item, index) => {
               // Calcular año y mes correctos
               let year = currentMonth.getFullYear();
               let month = currentMonth.getMonth();
-              
+
               if (!item.isCurrentMonth) {
                 if (index < 7) {
                   // Mes anterior
@@ -8657,56 +6669,63 @@ const ContactDetail: React.FC = () => {
                   }
                 }
               }
-              
+
               const date = new Date(year, month, item.day);
 
-              const isSelected = selectedDate && 
+              const isSelected =
+                selectedDate &&
                 item.isCurrentMonth &&
                 date.toDateString() === selectedDate.toDateString();
-              const isToday = item.isCurrentMonth &&
+              const isToday =
+                item.isCurrentMonth &&
                 date.toDateString() === new Date().toDateString();
 
               return (
                 <Box
-                  key={`${item.isCurrentMonth ? 'current' : 'other'}-${item.day}-${index}`}
+                  key={`${item.isCurrentMonth ? "current" : "other"}-${
+                    item.day
+                  }-${index}`}
                   onClick={() => {
                     if (item.isCurrentMonth) {
                       // Pasar directamente año, mes y día para evitar problemas de zona horaria
                       handleDateSelect(year, month + 1, item.day);
                     }
                   }}
-            sx={{
-                    aspectRatio: '1',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                  sx={{
+                    aspectRatio: "1",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                     borderRadius: 2,
-                    cursor: item.isCurrentMonth ? 'pointer' : 'default',
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    cursor: item.isCurrentMonth ? "pointer" : "default",
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                     bgcolor: isSelected
                       ? taxiMonterricoColors.green
                       : isToday
                       ? `${taxiMonterricoColors.green}20`
-                      : 'transparent',
+                      : "transparent",
                     color: isSelected
-                      ? 'white'
+                      ? "white"
                       : isToday
                       ? taxiMonterricoColors.green
                       : item.isCurrentMonth
                       ? theme.palette.text.primary
                       : theme.palette.text.disabled,
                     fontWeight: isSelected ? 700 : isToday ? 600 : 400,
-                    fontSize: '0.75rem',
-                    position: 'relative',
-                    minHeight: '28px',
-                    minWidth: '28px',
-                    '&:hover': {
+                    fontSize: "0.75rem",
+                    position: "relative",
+                    minHeight: "28px",
+                    minWidth: "28px",
+                    "&:hover": {
                       bgcolor: item.isCurrentMonth
-                        ? (isSelected
-                            ? taxiMonterricoColors.green
-                            : `${taxiMonterricoColors.green}15`)
-                        : 'transparent',
-                      transform: item.isCurrentMonth && !isSelected ? 'scale(1.05)' : 'none',
+                        ? isSelected
+                          ? taxiMonterricoColors.green
+                          : `${taxiMonterricoColors.green}15`
+                        : "transparent",
+                      transform:
+                        item.isCurrentMonth && !isSelected
+                          ? "scale(1.05)"
+                          : "none",
                     },
                     opacity: item.isCurrentMonth ? 1 : 0.35,
                   }}
@@ -8718,24 +6737,26 @@ const ContactDetail: React.FC = () => {
           </Box>
 
           {/* Botones de acción */}
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            mt: 1.5, 
-            pt: 1.5, 
-            borderTop: `1px solid ${theme.palette.divider}`,
-            gap: 1,
-          }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              mt: 1.5,
+              pt: 1.5,
+              borderTop: `1px solid ${theme.palette.divider}`,
+              gap: 1,
+            }}
+          >
             <Button
               onClick={handleClearDate}
               sx={{
-                textTransform: 'none',
+                textTransform: "none",
                 color: theme.palette.text.secondary,
                 fontWeight: 500,
                 px: 1.5,
                 py: 0.5,
                 borderRadius: 1,
-                '&:hover': {
+                "&:hover": {
                   bgcolor: theme.palette.action.hover,
                   color: theme.palette.text.primary,
                 },
@@ -8746,13 +6767,13 @@ const ContactDetail: React.FC = () => {
             <Button
               onClick={handleToday}
               sx={{
-                textTransform: 'none',
+                textTransform: "none",
                 color: taxiMonterricoColors.green,
                 fontWeight: 600,
                 px: 1.5,
                 py: 0.5,
                 borderRadius: 1,
-                '&:hover': {
+                "&:hover": {
                   bgcolor: `${taxiMonterricoColors.green}15`,
                 },
               }}
@@ -8768,29 +6789,29 @@ const ContactDetail: React.FC = () => {
         <>
           <Box
             sx={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '600px',
-              maxWidth: '95vw',
-              maxHeight: '90vh',
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              width: "600px",
+              maxWidth: "95vw",
+              maxHeight: "90vh",
               backgroundColor: theme.palette.background.paper,
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
               borderRadius: 4,
               zIndex: 1500,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              animation: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              '@keyframes fadeInScale': {
-                '0%': {
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              animation: "fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              "@keyframes fadeInScale": {
+                "0%": {
                   opacity: 0,
-                  transform: 'translate(-50%, -50%) scale(0.9)',
+                  transform: "translate(-50%, -50%) scale(0.9)",
                 },
-                '100%': {
+                "100%": {
                   opacity: 1,
-                  transform: 'translate(-50%, -50%) scale(1)',
+                  transform: "translate(-50%, -50%) scale(1)",
                 },
               },
             }}
@@ -8798,103 +6819,119 @@ const ContactDetail: React.FC = () => {
           >
             <Box
               sx={{
-                backgroundColor: 'transparent',
+                backgroundColor: "transparent",
                 color: theme.palette.text.primary,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                minHeight: { xs: '64px', md: '72px' },
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                minHeight: { xs: "64px", md: "72px" },
                 px: { xs: 3, md: 4 },
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Box
                   sx={{
                     width: 40,
                     height: 40,
-                    borderRadius: '50%',
+                    borderRadius: "50%",
                     backgroundColor: `${taxiMonterricoColors.green}15`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
-                  <Event sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+                  <Event
+                    sx={{ fontSize: 20, color: taxiMonterricoColors.green }}
+                  />
                 </Box>
-                <Typography variant="h5" sx={{ color: theme.palette.text.primary, fontWeight: 700, fontSize: { xs: '1.1rem', md: '1.25rem' }, letterSpacing: '-0.02em' }}>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    color: theme.palette.text.primary,
+                    fontWeight: 700,
+                    fontSize: { xs: "1.1rem", md: "1.25rem" },
+                    letterSpacing: "-0.02em",
+                  }}
+                >
                   Reunión
                 </Typography>
               </Box>
-              <IconButton 
-                sx={{ 
+              <IconButton
+                sx={{
                   color: theme.palette.text.secondary,
-                  transition: 'all 0.2s ease',
-                  '&:hover': { 
+                  transition: "all 0.2s ease",
+                  "&:hover": {
                     backgroundColor: theme.palette.action.hover,
                     color: theme.palette.text.primary,
-                    transform: 'rotate(90deg)',
-                  }
-                }} 
-                size="medium" 
+                    transform: "rotate(90deg)",
+                  },
+                }}
+                size="medium"
                 onClick={() => setMeetingOpen(false)}
               >
                 <Close />
               </IconButton>
             </Box>
 
-            <Box sx={{ 
-              flexGrow: 1, 
-              display: 'flex', 
-              flexDirection: 'column', 
-              p: { xs: 3, md: 4 }, 
-              overflow: 'hidden', 
-              overflowY: 'auto',
-              gap: 3,
-              '&::-webkit-scrollbar': {
-                width: '8px',
-              },
-              '&::-webkit-scrollbar-track': {
-                backgroundColor: 'transparent',
-                borderRadius: '4px',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                backgroundColor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255,255,255,0.2)' 
-                  : 'rgba(0,0,0,0.2)',
-                borderRadius: '4px',
-                '&:hover': {
-                  backgroundColor: theme.palette.mode === 'dark' 
-                    ? 'rgba(255,255,255,0.3)' 
-                    : 'rgba(0,0,0,0.3)',
+            <Box
+              sx={{
+                flexGrow: 1,
+                display: "flex",
+                flexDirection: "column",
+                p: { xs: 3, md: 4 },
+                overflow: "hidden",
+                overflowY: "auto",
+                gap: 3,
+                "&::-webkit-scrollbar": {
+                  width: "8px",
                 },
-                transition: 'background-color 0.2s ease',
-              },
-            }}>
+                "&::-webkit-scrollbar-track": {
+                  backgroundColor: "transparent",
+                  borderRadius: "4px",
+                },
+                "&::-webkit-scrollbar-thumb": {
+                  backgroundColor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.2)"
+                      : "rgba(0,0,0,0.2)",
+                  borderRadius: "4px",
+                  "&:hover": {
+                    backgroundColor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.3)"
+                        : "rgba(0,0,0,0.3)",
+                  },
+                  transition: "background-color 0.2s ease",
+                },
+              }}
+            >
               <TextField
                 label="Asunto"
                 value={meetingData.subject}
-                onChange={(e) => setMeetingData({ ...meetingData, subject: e.target.value })}
+                onChange={(e) =>
+                  setMeetingData({ ...meetingData, subject: e.target.value })
+                }
                 required
                 fullWidth
-                sx={{ 
-                  '& .MuiOutlinedInput-root': {
+                sx={{
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 2,
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '& fieldset': {
-                      borderWidth: '2px',
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    "& fieldset": {
+                      borderWidth: "2px",
                       borderColor: theme.palette.divider,
                     },
-                    '&:hover fieldset': {
+                    "&:hover fieldset": {
                       borderColor: taxiMonterricoColors.green,
                     },
-                    '&.Mui-focused fieldset': {
+                    "&.Mui-focused fieldset": {
                       borderColor: taxiMonterricoColors.green,
-                      borderWidth: '2px',
+                      borderWidth: "2px",
                     },
                   },
-                  '& .MuiInputLabel-root': {
+                  "& .MuiInputLabel-root": {
                     fontWeight: 500,
-                    '&.Mui-focused': {
+                    "&.Mui-focused": {
                       color: taxiMonterricoColors.green,
                     },
                   },
@@ -8905,59 +6942,66 @@ const ContactDetail: React.FC = () => {
                 multiline
                 rows={5}
                 value={meetingData.description}
-                onChange={(e) => setMeetingData({ ...meetingData, description: e.target.value })}
+                onChange={(e) =>
+                  setMeetingData({
+                    ...meetingData,
+                    description: e.target.value,
+                  })
+                }
                 fullWidth
-                sx={{ 
-                  '& .MuiOutlinedInput-root': {
+                sx={{
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 2,
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '& fieldset': {
-                      borderWidth: '2px',
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    "& fieldset": {
+                      borderWidth: "2px",
                       borderColor: theme.palette.divider,
                     },
-                    '&:hover fieldset': {
+                    "&:hover fieldset": {
                       borderColor: taxiMonterricoColors.green,
                     },
-                    '&.Mui-focused fieldset': {
+                    "&.Mui-focused fieldset": {
                       borderColor: taxiMonterricoColors.green,
-                      borderWidth: '2px',
+                      borderWidth: "2px",
                     },
                   },
-                  '& .MuiInputLabel-root': {
+                  "& .MuiInputLabel-root": {
                     fontWeight: 500,
-                    '&.Mui-focused': {
+                    "&.Mui-focused": {
                       color: taxiMonterricoColors.green,
                     },
                   },
                 }}
               />
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ display: "flex", gap: 2 }}>
                 <TextField
                   label="Fecha"
                   type="date"
                   value={meetingData.date}
-                  onChange={(e) => setMeetingData({ ...meetingData, date: e.target.value })}
+                  onChange={(e) =>
+                    setMeetingData({ ...meetingData, date: e.target.value })
+                  }
                   fullWidth
                   InputLabelProps={{ shrink: true }}
-                  sx={{ 
-                    '& .MuiOutlinedInput-root': {
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 2,
-                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '& fieldset': {
-                        borderWidth: '2px',
+                      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                      "& fieldset": {
+                        borderWidth: "2px",
                         borderColor: theme.palette.divider,
                       },
-                      '&:hover fieldset': {
+                      "&:hover fieldset": {
                         borderColor: taxiMonterricoColors.green,
                       },
-                      '&.Mui-focused fieldset': {
+                      "&.Mui-focused fieldset": {
                         borderColor: taxiMonterricoColors.green,
-                        borderWidth: '2px',
+                        borderWidth: "2px",
                       },
                     },
-                    '& .MuiInputLabel-root': {
+                    "& .MuiInputLabel-root": {
                       fontWeight: 500,
-                      '&.Mui-focused': {
+                      "&.Mui-focused": {
                         color: taxiMonterricoColors.green,
                       },
                     },
@@ -8967,28 +7011,30 @@ const ContactDetail: React.FC = () => {
                   label="Hora"
                   type="time"
                   value={meetingData.time}
-                  onChange={(e) => setMeetingData({ ...meetingData, time: e.target.value })}
+                  onChange={(e) =>
+                    setMeetingData({ ...meetingData, time: e.target.value })
+                  }
                   fullWidth
                   InputLabelProps={{ shrink: true }}
-                  sx={{ 
-                    '& .MuiOutlinedInput-root': {
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 2,
-                      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                      '& fieldset': {
-                        borderWidth: '2px',
+                      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                      "& fieldset": {
+                        borderWidth: "2px",
                         borderColor: theme.palette.divider,
                       },
-                      '&:hover fieldset': {
+                      "&:hover fieldset": {
                         borderColor: taxiMonterricoColors.green,
                       },
-                      '&.Mui-focused fieldset': {
+                      "&.Mui-focused fieldset": {
                         borderColor: taxiMonterricoColors.green,
-                        borderWidth: '2px',
+                        borderWidth: "2px",
                       },
                     },
-                    '& .MuiInputLabel-root': {
+                    "& .MuiInputLabel-root": {
                       fontWeight: 500,
-                      '&.Mui-focused': {
+                      "&.Mui-focused": {
                         color: taxiMonterricoColors.green,
                       },
                     },
@@ -8997,78 +7043,88 @@ const ContactDetail: React.FC = () => {
               </Box>
             </Box>
 
-            <Box sx={{ 
-              p: 3, 
-              borderTop: `1px solid ${theme.palette.divider}`, 
-              backgroundColor: theme.palette.background.paper, 
-              display: 'flex', 
-              justifyContent: 'flex-end', 
-              gap: 2 
-            }}>
-              <Button 
-                onClick={() => setMeetingOpen(false)} 
+            <Box
+              sx={{
+                p: 3,
+                borderTop: `1px solid ${theme.palette.divider}`,
+                backgroundColor: theme.palette.background.paper,
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 2,
+              }}
+            >
+              <Button
+                onClick={() => setMeetingOpen(false)}
                 variant="outlined"
-                sx={{ 
-                  textTransform: 'none',
+                sx={{
+                  textTransform: "none",
                   color: theme.palette.text.secondary,
                   borderColor: theme.palette.divider,
                   fontWeight: 600,
                   px: 3,
                   py: 1,
                   borderRadius: 2,
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
+                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                  "&:hover": {
                     bgcolor: theme.palette.action.hover,
                     borderColor: theme.palette.text.secondary,
-                    transform: 'translateY(-1px)',
+                    transform: "translateY(-1px)",
                   },
                 }}
               >
                 Cancelar
               </Button>
-              <Button 
-                onClick={handleSaveMeeting} 
-                variant="contained" 
+              <Button
+                onClick={handleSaveMeeting}
+                variant="contained"
                 disabled={saving || !meetingData.subject.trim()}
-                sx={{ 
-                  textTransform: 'none',
-                  bgcolor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.green,
-                  color: 'white',
+                sx={{
+                  textTransform: "none",
+                  bgcolor: saving
+                    ? theme.palette.action.disabledBackground
+                    : taxiMonterricoColors.green,
+                  color: "white",
                   fontWeight: 600,
                   px: 4,
                   py: 1,
                   borderRadius: 2,
-                  boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.green}40`,
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    bgcolor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.greenDark,
-                    boxShadow: saving ? 'none' : `0 6px 16px ${taxiMonterricoColors.green}50`,
-                    transform: 'translateY(-2px)',
+                  boxShadow: saving
+                    ? "none"
+                    : `0 4px 12px ${taxiMonterricoColors.green}40`,
+                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                  "&:hover": {
+                    bgcolor: saving
+                      ? theme.palette.action.disabledBackground
+                      : taxiMonterricoColors.greenDark,
+                    boxShadow: saving
+                      ? "none"
+                      : `0 6px 16px ${taxiMonterricoColors.green}50`,
+                    transform: "translateY(-2px)",
                   },
-                  '&:active': {
-                    transform: 'translateY(0)',
+                  "&:active": {
+                    transform: "translateY(0)",
                   },
-                  '&.Mui-disabled': {
+                  "&.Mui-disabled": {
                     bgcolor: theme.palette.action.disabledBackground,
                     color: theme.palette.action.disabled,
-                    boxShadow: 'none',
+                    boxShadow: "none",
                   },
                 }}
               >
-                {saving ? 'Guardando...' : 'Guardar'}
+                {saving ? "Guardando..." : "Guardar"}
               </Button>
             </Box>
           </Box>
           <Box
             sx={{
-              position: 'fixed',
+              position: "fixed",
               top: 0,
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              backgroundColor: "rgba(0, 0, 0, 0.5)",
               zIndex: 1499,
-              animation: 'fadeIn 0.3s ease-out',
+              animation: "fadeIn 0.3s ease-out",
             }}
             onClick={() => setMeetingOpen(false)}
           />
@@ -9076,59 +7132,73 @@ const ContactDetail: React.FC = () => {
       )}
 
       {/* Diálogo para agregar empresa */}
-      <Dialog open={addCompanyOpen} onClose={() => { 
-        setAddCompanyOpen(false); 
-        setCompanyDialogTab('create'); 
-        setSelectedExistingCompanies([]); 
-        setExistingCompaniesSearch('');
-        setCompanyFormData({ 
-          name: '', 
-          domain: '', 
-          phone: '', 
-          companyname: '', 
-          lifecycleStage: 'lead',
-          ruc: '',
-          address: '',
-          city: '',
-          state: '',
-          country: '',
-        });
-        setRucError('');
-      }} maxWidth="sm" fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: 2,
-          boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-        }
-      }}
-      BackdropProps={{
-        sx: {
-          backdropFilter: 'blur(4px)',
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        }
-      }}
+      <Dialog
+        open={addCompanyOpen}
+        onClose={() => {
+          setAddCompanyOpen(false);
+          setCompanyDialogTab("create");
+          setSelectedExistingCompanies([]);
+          setExistingCompaniesSearch("");
+          setCompanyFormData({
+            name: "",
+            domain: "",
+            phone: "",
+            companyname: "",
+            lifecycleStage: "lead",
+            ruc: "",
+            address: "",
+            city: "",
+            state: "",
+            country: "",
+          });
+          setRucError("");
+        }}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+          },
+        }}
+        BackdropProps={{
+          sx: {
+            backdropFilter: "blur(4px)",
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+          },
+        }}
       >
         <DialogContent sx={{ pt: 1 }}>
           {/* Pestañas */}
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-            <Tabs value={companyDialogTab === 'create' ? 0 : 1} onChange={(e, newValue) => setCompanyDialogTab(newValue === 0 ? 'create' : 'existing')}>
+          <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+            <Tabs
+              value={companyDialogTab === "create" ? 0 : 1}
+              onChange={(e, newValue) =>
+                setCompanyDialogTab(newValue === 0 ? "create" : "existing")
+              }
+            >
               <Tab label="Crear nueva" />
               <Tab label="Agregar existente" />
             </Tabs>
           </Box>
 
-          {companyDialogTab === 'create' && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+          {companyDialogTab === "create" && (
+            <Box
+              sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}
+            >
               {/* RUC y Tipo de Contribuyente / Industria en la misma fila */}
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ display: "flex", gap: 2 }}>
                 <TextField
                   label="RUC"
                   value={companyFormData.ruc}
                   onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, ''); // Solo números
+                    const value = e.target.value.replace(/\D/g, ""); // Solo números
                     const limitedValue = value.slice(0, 11);
-                    setCompanyFormData({ ...companyFormData, ruc: limitedValue });
-                    setRucError('');
+                    setCompanyFormData({
+                      ...companyFormData,
+                      ruc: limitedValue,
+                    });
+                    setRucError("");
                   }}
                   error={!!rucError}
                   helperText={rucError}
@@ -9139,13 +7209,17 @@ const ContactDetail: React.FC = () => {
                       <InputAdornment position="end">
                         <IconButton
                           onClick={handleSearchRuc}
-                          disabled={loadingRuc || !companyFormData.ruc || companyFormData.ruc.length < 11}
+                          disabled={
+                            loadingRuc ||
+                            !companyFormData.ruc ||
+                            companyFormData.ruc.length < 11
+                          }
                           sx={{
                             color: taxiMonterricoColors.green,
-                            '&:hover': {
+                            "&:hover": {
                               bgcolor: `${taxiMonterricoColors.green}15`,
                             },
-                            '&.Mui-disabled': {
+                            "&.Mui-disabled": {
                               color: theme.palette.text.disabled,
                             },
                           }}
@@ -9160,108 +7234,148 @@ const ContactDetail: React.FC = () => {
                     ),
                   }}
                   sx={{
-                    flex: '2 1 0%',
+                    flex: "2 1 0%",
                     minWidth: 0,
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
-                    }
+                    },
                   }}
                 />
                 <TextField
                   label="Razón social"
                   value={companyFormData.companyname}
-                  onChange={(e) => setCompanyFormData({ ...companyFormData, companyname: e.target.value })}
+                  onChange={(e) =>
+                    setCompanyFormData({
+                      ...companyFormData,
+                      companyname: e.target.value,
+                    })
+                  }
                   InputLabelProps={{ shrink: true }}
                   sx={{
-                    flex: '3 1 0%',
+                    flex: "3 1 0%",
                     minWidth: 0,
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
-                    }
+                    },
                   }}
                 />
               </Box>
               <TextField
                 label="Nombre"
                 value={companyFormData.name}
-                onChange={(e) => setCompanyFormData({ ...companyFormData, name: e.target.value })}
+                onChange={(e) =>
+                  setCompanyFormData({
+                    ...companyFormData,
+                    name: e.target.value,
+                  })
+                }
                 InputLabelProps={{ shrink: true }}
                 sx={{
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
-                  }
+                  },
                 }}
               />
               <TextField
                 label="Dominio"
                 value={companyFormData.domain}
-                onChange={(e) => setCompanyFormData({ ...companyFormData, domain: e.target.value })}
+                onChange={(e) =>
+                  setCompanyFormData({
+                    ...companyFormData,
+                    domain: e.target.value,
+                  })
+                }
                 InputLabelProps={{ shrink: true }}
                 sx={{
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
-                  }
+                  },
                 }}
               />
               <TextField
                 label="Teléfono"
                 value={companyFormData.phone}
-                onChange={(e) => setCompanyFormData({ ...companyFormData, phone: e.target.value })}
+                onChange={(e) =>
+                  setCompanyFormData({
+                    ...companyFormData,
+                    phone: e.target.value,
+                  })
+                }
                 InputLabelProps={{ shrink: true }}
                 sx={{
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
-                  }
+                  },
                 }}
               />
               <TextField
                 label="Dirección"
                 value={companyFormData.address}
-                onChange={(e) => setCompanyFormData({ ...companyFormData, address: e.target.value })}
+                onChange={(e) =>
+                  setCompanyFormData({
+                    ...companyFormData,
+                    address: e.target.value,
+                  })
+                }
                 multiline
                 rows={2}
                 InputLabelProps={{ shrink: true }}
                 sx={{
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
-                  }
+                  },
                 }}
               />
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ display: "flex", gap: 2 }}>
                 <TextField
                   label="Distrito"
                   value={companyFormData.city}
-                  onChange={(e) => setCompanyFormData({ ...companyFormData, city: e.target.value })}
+                  onChange={(e) =>
+                    setCompanyFormData({
+                      ...companyFormData,
+                      city: e.target.value,
+                    })
+                  }
                   InputLabelProps={{ shrink: true }}
                   sx={{
                     flex: 1,
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
-                    }
+                    },
                   }}
                 />
                 <TextField
                   label="Provincia"
                   value={companyFormData.state}
-                  onChange={(e) => setCompanyFormData({ ...companyFormData, state: e.target.value })}
+                  onChange={(e) =>
+                    setCompanyFormData({
+                      ...companyFormData,
+                      state: e.target.value,
+                    })
+                  }
                   InputLabelProps={{ shrink: true }}
                   sx={{
                     flex: 1,
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
-                    }
+                    },
                   }}
                 />
                 <TextField
                   label="Departamento"
                   value={companyFormData.country}
-                  onChange={(e) => setCompanyFormData({ ...companyFormData, country: e.target.value })}
+                  onChange={(e) =>
+                    setCompanyFormData({
+                      ...companyFormData,
+                      country: e.target.value,
+                    })
+                  }
                   InputLabelProps={{ shrink: true }}
                   sx={{
                     flex: 1,
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
-                    }
+                    },
                   }}
                 />
               </Box>
@@ -9269,34 +7383,43 @@ const ContactDetail: React.FC = () => {
                 select
                 label="Etapa del Ciclo de Vida"
                 value={companyFormData.lifecycleStage}
-                onChange={(e) => setCompanyFormData({ ...companyFormData, lifecycleStage: e.target.value })}
+                onChange={(e) =>
+                  setCompanyFormData({
+                    ...companyFormData,
+                    lifecycleStage: e.target.value,
+                  })
+                }
                 InputLabelProps={{ shrink: true }}
                 sx={{
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
-                  }
+                  },
                 }}
               >
-                  <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
-                  <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
-                  <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
-                  <MenuItem value="lead">Lead</MenuItem>
-                  <MenuItem value="contacto">Contacto</MenuItem>
-                  <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
-                  <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-                  <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
-                  <MenuItem value="negociacion">Negociación</MenuItem>
-                  <MenuItem value="licitacion">Licitación</MenuItem>
-                  <MenuItem value="licitacion_etapa_final">Licitación Etapa Final</MenuItem>
-                  <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
-                  <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
-                  <MenuItem value="activo">Activo</MenuItem>
+                <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
+                <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
+                <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+                <MenuItem value="lead">Lead</MenuItem>
+                <MenuItem value="contacto">Contacto</MenuItem>
+                <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+                <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+                <MenuItem value="propuesta_economica">
+                  Propuesta Económica
+                </MenuItem>
+                <MenuItem value="negociacion">Negociación</MenuItem>
+                <MenuItem value="licitacion">Licitación</MenuItem>
+                <MenuItem value="licitacion_etapa_final">
+                  Licitación Etapa Final
+                </MenuItem>
+                <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+                <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
+                <MenuItem value="activo">Activo</MenuItem>
               </TextField>
             </Box>
           )}
 
-          {companyDialogTab === 'existing' && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {companyDialogTab === "existing" && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               {/* Campo de búsqueda */}
               <TextField
                 size="small"
@@ -9311,50 +7434,68 @@ const ContactDetail: React.FC = () => {
                     </InputAdornment>
                   ),
                 }}
-                sx={{ 
+                sx={{
                   mb: 2,
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
-                  }
+                  },
                 }}
               />
 
               {/* Lista de empresas */}
-              <Box sx={{ 
-                maxHeight: '400px', 
-                overflowY: 'auto', 
-                border: `1px solid ${theme.palette.divider}`, 
-                borderRadius: 1,
-                '&::-webkit-scrollbar': {
-                  width: '8px',
-                },
-                '&::-webkit-scrollbar-track': {
-                  background: theme.palette.mode === 'dark' ? theme.palette.background.paper : '#f1f1f1',
-                  borderRadius: '4px',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  background: theme.palette.mode === 'dark' ? theme.palette.divider : '#888',
-                  borderRadius: '4px',
-                  '&:hover': {
-                    background: theme.palette.mode === 'dark' ? theme.palette.text.secondary : '#555',
+              <Box
+                sx={{
+                  maxHeight: "400px",
+                  overflowY: "auto",
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: 1,
+                  "&::-webkit-scrollbar": {
+                    width: "8px",
                   },
-                },
-              }}>
+                  "&::-webkit-scrollbar-track": {
+                    background:
+                      theme.palette.mode === "dark"
+                        ? theme.palette.background.paper
+                        : "#f1f1f1",
+                    borderRadius: "4px",
+                  },
+                  "&::-webkit-scrollbar-thumb": {
+                    background:
+                      theme.palette.mode === "dark"
+                        ? theme.palette.divider
+                        : "#888",
+                    borderRadius: "4px",
+                    "&:hover": {
+                      background:
+                        theme.palette.mode === "dark"
+                          ? theme.palette.text.secondary
+                          : "#555",
+                    },
+                  },
+                }}
+              >
                 {(() => {
-                  const associatedCompanyIds = (associatedCompanies || []).map((c: any) => c && c.id).filter((id: any) => id !== undefined && id !== null);
-                  const filteredCompanies = allCompanies.filter((company: any) => {
-                    if (associatedCompanyIds.includes(company.id)) return false;
-                    if (!existingCompaniesSearch) return true;
-                    const searchLower = existingCompaniesSearch.toLowerCase();
-                    return (
-                      (company.name && company.name.toLowerCase().includes(searchLower)) ||
-                      (company.domain && company.domain.toLowerCase().includes(searchLower))
-                    );
-                  });
+                  const associatedCompanyIds = (associatedCompanies || [])
+                    .map((c: any) => c && c.id)
+                    .filter((id: any) => id !== undefined && id !== null);
+                  const filteredCompanies = allCompanies.filter(
+                    (company: any) => {
+                      if (associatedCompanyIds.includes(company.id))
+                        return false;
+                      if (!existingCompaniesSearch) return true;
+                      const searchLower = existingCompaniesSearch.toLowerCase();
+                      return (
+                        (company.name &&
+                          company.name.toLowerCase().includes(searchLower)) ||
+                        (company.domain &&
+                          company.domain.toLowerCase().includes(searchLower))
+                      );
+                    }
+                  );
 
                   if (filteredCompanies.length === 0) {
                     return (
-                      <Box sx={{ p: 2, textAlign: 'center' }}>
+                      <Box sx={{ p: 2, textAlign: "center" }}>
                         <Typography variant="body2" color="text.secondary">
                           No hay empresas disponibles
                         </Typography>
@@ -9366,36 +7507,54 @@ const ContactDetail: React.FC = () => {
                     <Box
                       key={company.id}
                       sx={{
-                        display: 'flex',
-                        alignItems: 'center',
+                        display: "flex",
+                        alignItems: "center",
                         p: 1.5,
                         borderBottom: `1px solid ${theme.palette.divider}`,
-                        '&:hover': { backgroundColor: theme.palette.action.hover },
-                        '&:last-child': { borderBottom: 'none' },
+                        "&:hover": {
+                          backgroundColor: theme.palette.action.hover,
+                        },
+                        "&:last-child": { borderBottom: "none" },
                       }}
                     >
                       <Checkbox
                         checked={selectedExistingCompanies.includes(company.id)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setSelectedExistingCompanies([...selectedExistingCompanies, company.id]);
+                            setSelectedExistingCompanies([
+                              ...selectedExistingCompanies,
+                              company.id,
+                            ]);
                           } else {
-                            setSelectedExistingCompanies(selectedExistingCompanies.filter(id => id !== company.id));
+                            setSelectedExistingCompanies(
+                              selectedExistingCompanies.filter(
+                                (id) => id !== company.id
+                              )
+                            );
                           }
                         }}
                         sx={{
                           color: taxiMonterricoColors.green,
-                          '&.Mui-checked': {
+                          "&.Mui-checked": {
                             color: taxiMonterricoColors.green,
                           },
                         }}
                       />
                       <Box sx={{ flex: 1, ml: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 500, color: theme.palette.text.primary }}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontWeight: 500,
+                            color: theme.palette.text.primary,
+                          }}
+                        >
                           {company.name}
                         </Typography>
                         {company.domain && (
-                          <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                          <Typography
+                            variant="caption"
+                            sx={{ color: theme.palette.text.secondary }}
+                          >
                             {company.domain}
                           </Typography>
                         )}
@@ -9407,75 +7566,77 @@ const ContactDetail: React.FC = () => {
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ 
-          px: 3, 
-          py: 2,
-          borderTop: `1px solid ${theme.palette.divider}`,
-          gap: 1,
-        }}>
-          <Button 
-            onClick={() => { 
-              setAddCompanyOpen(false); 
-              setCompanyDialogTab('create'); 
-              setSelectedExistingCompanies([]); 
-              setExistingCompaniesSearch('');
-              setCompanyFormData({ 
-                name: '', 
-                domain: '', 
-                phone: '', 
-                companyname: '', 
-                lifecycleStage: 'lead',
-                ruc: '',
-                address: '',
-                city: '',
-                state: '',
-                country: '',
+        <DialogActions
+          sx={{
+            px: 3,
+            py: 2,
+            borderTop: `1px solid ${theme.palette.divider}`,
+            gap: 1,
+          }}
+        >
+          <Button
+            onClick={() => {
+              setAddCompanyOpen(false);
+              setCompanyDialogTab("create");
+              setSelectedExistingCompanies([]);
+              setExistingCompaniesSearch("");
+              setCompanyFormData({
+                name: "",
+                domain: "",
+                phone: "",
+                companyname: "",
+                lifecycleStage: "lead",
+                ruc: "",
+                address: "",
+                city: "",
+                state: "",
+                country: "",
               });
-              setRucError('');
+              setRucError("");
             }}
             sx={{
-              textTransform: 'none',
-              color: '#757575',
+              textTransform: "none",
+              color: "#757575",
               fontWeight: 500,
-              '&:hover': {
-                bgcolor: '#f5f5f5',
-              }
+              "&:hover": {
+                bgcolor: "#f5f5f5",
+              },
             }}
           >
             Cancelar
           </Button>
-          {companyDialogTab === 'create' ? (
-            <Button 
-              onClick={handleAddCompany} 
-              variant="contained" 
+          {companyDialogTab === "create" ? (
+            <Button
+              onClick={handleAddCompany}
+              variant="contained"
               disabled={!companyFormData.name.trim()}
               sx={{
-                textTransform: 'none',
+                textTransform: "none",
                 fontWeight: 500,
                 borderRadius: 1.5,
                 px: 2.5,
                 bgcolor: taxiMonterricoColors.green,
-                '&:hover': {
+                "&:hover": {
                   bgcolor: taxiMonterricoColors.greenDark,
-                }
+                },
               }}
             >
               Crear
             </Button>
           ) : (
-            <Button 
-              onClick={handleAddExistingCompanies} 
-              variant="contained" 
+            <Button
+              onClick={handleAddExistingCompanies}
+              variant="contained"
               disabled={selectedExistingCompanies.length === 0}
               sx={{
-                textTransform: 'none',
+                textTransform: "none",
                 fontWeight: 500,
                 borderRadius: 1.5,
                 px: 2.5,
                 bgcolor: taxiMonterricoColors.green,
-                '&:hover': {
+                "&:hover": {
                   bgcolor: taxiMonterricoColors.greenDark,
-                }
+                },
               }}
             >
               Agregar ({selectedExistingCompanies.length})
@@ -9485,41 +7646,45 @@ const ContactDetail: React.FC = () => {
       </Dialog>
 
       {/* Diálogo para agregar negocio */}
-      <Dialog 
-        open={addDealOpen} 
-        onClose={() => setAddDealOpen(false)} 
-        maxWidth="sm" 
+      <Dialog
+        open={addDealOpen}
+        onClose={() => setAddDealOpen(false)}
+        maxWidth="sm"
         fullWidth
         BackdropProps={{
           sx: {
-            backdropFilter: 'blur(4px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          }
+            backdropFilter: "blur(4px)",
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+          },
         }}
       >
-        <DialogTitle>
-          Nuevo Negocio
-        </DialogTitle>
+        <DialogTitle>Nuevo Negocio</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
             <TextField
               label="Nombre"
               value={dealFormData.name}
-              onChange={(e) => setDealFormData({ ...dealFormData, name: e.target.value })}
+              onChange={(e) =>
+                setDealFormData({ ...dealFormData, name: e.target.value })
+              }
               required
             />
             <TextField
               label="Monto"
               type="number"
               value={dealFormData.amount}
-              onChange={(e) => setDealFormData({ ...dealFormData, amount: e.target.value })}
+              onChange={(e) =>
+                setDealFormData({ ...dealFormData, amount: e.target.value })
+              }
               required
             />
             <TextField
               select
               label="Etapa"
               value={dealFormData.stage}
-              onChange={(e) => setDealFormData({ ...dealFormData, stage: e.target.value })}
+              onChange={(e) =>
+                setDealFormData({ ...dealFormData, stage: e.target.value })
+              }
             >
               {stageOptions.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
@@ -9531,30 +7696,58 @@ const ContactDetail: React.FC = () => {
               label="Fecha de Cierre"
               type="date"
               value={dealFormData.closeDate}
-              onChange={(e) => setDealFormData({ ...dealFormData, closeDate: e.target.value })}
+              onChange={(e) =>
+                setDealFormData({ ...dealFormData, closeDate: e.target.value })
+              }
               InputLabelProps={{ shrink: true }}
             />
             <TextField
               select
               label="Prioridad"
               value={dealFormData.priority}
-              onChange={(e) => setDealFormData({ ...dealFormData, priority: e.target.value as 'baja' | 'media' | 'alta' })}
+              onChange={(e) =>
+                setDealFormData({
+                  ...dealFormData,
+                  priority: e.target.value as "baja" | "media" | "alta",
+                })
+              }
             >
               <MenuItem value="baja">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#20B2AA' }} />
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      bgcolor: "#20B2AA",
+                    }}
+                  />
                   Baja
                 </Box>
               </MenuItem>
               <MenuItem value="media">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#F59E0B' }} />
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      bgcolor: "#F59E0B",
+                    }}
+                  />
                   Media
                 </Box>
               </MenuItem>
               <MenuItem value="alta">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#EF4444' }} />
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      bgcolor: "#EF4444",
+                    }}
+                  />
                   Alta
                 </Box>
               </MenuItem>
@@ -9562,8 +7755,15 @@ const ContactDetail: React.FC = () => {
             <TextField
               select
               label="Empresa"
-              value={dealFormData.companyId || contact?.Company?.id?.toString() || contact?.Companies?.[0]?.id?.toString() || ''}
-              onChange={(e) => setDealFormData({ ...dealFormData, companyId: e.target.value })}
+              value={
+                dealFormData.companyId ||
+                contact?.Company?.id?.toString() ||
+                contact?.Companies?.[0]?.id?.toString() ||
+                ""
+              }
+              onChange={(e) =>
+                setDealFormData({ ...dealFormData, companyId: e.target.value })
+              }
               fullWidth
             >
               <MenuItem value="">
@@ -9578,15 +7778,20 @@ const ContactDetail: React.FC = () => {
             <TextField
               select
               label="Contacto"
-              value={dealFormData.contactId || id?.toString() || ''}
-              onChange={(e) => setDealFormData({ ...dealFormData, contactId: e.target.value })}
+              value={dealFormData.contactId || id?.toString() || ""}
+              onChange={(e) =>
+                setDealFormData({ ...dealFormData, contactId: e.target.value })
+              }
               fullWidth
             >
               <MenuItem value="">
                 <em>Ninguno</em>
               </MenuItem>
               {allContacts.map((contactItem) => (
-                <MenuItem key={contactItem.id} value={contactItem.id.toString()}>
+                <MenuItem
+                  key={contactItem.id}
+                  value={contactItem.id.toString()}
+                >
                   {contactItem.firstName} {contactItem.lastName}
                 </MenuItem>
               ))}
@@ -9602,32 +7807,42 @@ const ContactDetail: React.FC = () => {
       </Dialog>
 
       {/* Diálogo para agregar ticket */}
-      <Dialog 
-        open={addTicketOpen} 
-        onClose={() => setAddTicketOpen(false)} 
-        maxWidth="sm" 
+      <Dialog
+        open={addTicketOpen}
+        onClose={() => setAddTicketOpen(false)}
+        maxWidth="sm"
         fullWidth
         BackdropProps={{
           sx: {
-            backdropFilter: 'blur(4px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          }
+            backdropFilter: "blur(4px)",
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+          },
         }}
       >
         <DialogTitle>Crear Ticket</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
             <TextField
               label="Asunto"
               value={ticketFormData.subject}
-              onChange={(e) => setTicketFormData({ ...ticketFormData, subject: e.target.value })}
+              onChange={(e) =>
+                setTicketFormData({
+                  ...ticketFormData,
+                  subject: e.target.value,
+                })
+              }
               required
               fullWidth
             />
             <TextField
               label="Descripción"
               value={ticketFormData.description}
-              onChange={(e) => setTicketFormData({ ...ticketFormData, description: e.target.value })}
+              onChange={(e) =>
+                setTicketFormData({
+                  ...ticketFormData,
+                  description: e.target.value,
+                })
+              }
               multiline
               rows={4}
               fullWidth
@@ -9636,7 +7851,9 @@ const ContactDetail: React.FC = () => {
               select
               label="Estado"
               value={ticketFormData.status}
-              onChange={(e) => setTicketFormData({ ...ticketFormData, status: e.target.value })}
+              onChange={(e) =>
+                setTicketFormData({ ...ticketFormData, status: e.target.value })
+              }
               fullWidth
               SelectProps={{ native: true }}
             >
@@ -9650,7 +7867,12 @@ const ContactDetail: React.FC = () => {
               select
               label="Prioridad"
               value={ticketFormData.priority}
-              onChange={(e) => setTicketFormData({ ...ticketFormData, priority: e.target.value })}
+              onChange={(e) =>
+                setTicketFormData({
+                  ...ticketFormData,
+                  priority: e.target.value,
+                })
+              }
               fullWidth
               SelectProps={{ native: true }}
             >
@@ -9663,191 +7885,208 @@ const ContactDetail: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAddTicketOpen(false)}>Cancelar</Button>
-          <Button onClick={handleAddTicket} variant="contained" disabled={!ticketFormData.subject.trim()}>
+          <Button
+            onClick={handleAddTicket}
+            variant="contained"
+            disabled={!ticketFormData.subject.trim()}
+          >
             Crear
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Dialog para ver detalles de actividad expandida */}
-      <Dialog
+      <ActivityDetailDialog
+        activity={expandedActivity}
         open={!!expandedActivity}
         onClose={() => setExpandedActivity(null)}
+        getActivityTypeLabel={getActivityTypeLabel}
+      />
+
+      {/* Dialog para confirmar eliminación de empresa */}
+      <Dialog
+        open={removeCompanyDialogOpen}
+        onClose={() => {
+          setRemoveCompanyDialogOpen(false);
+          setCompanyToRemove(null);
+        }}
         maxWidth="sm"
         fullWidth
         PaperProps={{
           sx: {
             borderRadius: 2,
-            maxHeight: '90vh',
           },
         }}
       >
-        {expandedActivity && (
-          <>
-            <Box
-              sx={{
-                backgroundColor: 'transparent',
-                color: theme.palette.text.primary,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                minHeight: 48,
-                px: 2,
-                pt: 1.5,
-                pb: 0.5,
-              }}
-            >
-              <Typography variant="h6" sx={{ color: theme.palette.text.primary, fontWeight: 700, fontSize: '1rem' }}>
-                {(() => {
-                  switch (expandedActivity.type) {
-                    case 'note': return 'Nota';
-                    case 'email': return 'Correo';
-                    case 'call': return 'Llamada';
-                    case 'task': case 'todo': return 'Tarea';
-                    case 'meeting': return 'Reunión';
-                    default: return 'Actividad';
-                  }
-                })()}
-              </Typography>
-              <IconButton
-                sx={{
-                  color: theme.palette.text.secondary,
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    backgroundColor: theme.palette.action.hover,
-                    color: theme.palette.text.primary,
-                  },
-                }}
-                size="medium"
-                onClick={() => setExpandedActivity(null)}
-              >
-                <Close />
-              </IconButton>
-            </Box>
+        <DialogTitle sx={{ pb: 1, fontWeight: 600 }}>
+          Eliminar asociación
+        </DialogTitle>
+        <DialogContent>
+          <Typography
+            variant="body1"
+            sx={{ color: theme.palette.text.secondary }}
+          >
+            {companyToRemove?.name} ya no se asociará con {contact?.firstName} {contact?.lastName}.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button
+            onClick={() => {
+              setRemoveCompanyDialogOpen(false);
+              setCompanyToRemove(null);
+            }}
+            sx={{
+              textTransform: "none",
+              color: theme.palette.text.secondary,
+              borderColor: theme.palette.divider,
+              "&:hover": {
+                borderColor: theme.palette.divider,
+                backgroundColor: theme.palette.action.hover,
+              },
+            }}
+            variant="outlined"
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmRemoveCompany}
+            variant="contained"
+            sx={{
+              textTransform: "none",
+              bgcolor: "#FF9800",
+              color: "white",
+              "&:hover": {
+                bgcolor: "#F57C00",
+              },
+            }}
+          >
+            Eliminar asociación
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-            <DialogContent sx={{ px: 2, pb: 1, pt: 0.5 }}>
-              {/* Título */}
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
-                  Título
-                </Typography>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                  {expandedActivity.subject || expandedActivity.title}
-                </Typography>
-              </Box>
+      {/* Dialog para confirmar eliminación de negocio */}
+      <Dialog
+        open={removeDealDialogOpen}
+        onClose={() => {
+          setRemoveDealDialogOpen(false);
+          setDealToRemove(null);
+        }}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1, fontWeight: 600 }}>
+          Eliminar asociación
+        </DialogTitle>
+        <DialogContent>
+          <Typography
+            variant="body1"
+            sx={{ color: theme.palette.text.secondary }}
+          >
+            {dealToRemove?.name} ya no se asociará con {contact?.firstName} {contact?.lastName}.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button
+            onClick={() => {
+              setRemoveDealDialogOpen(false);
+              setDealToRemove(null);
+            }}
+            sx={{
+              textTransform: "none",
+              color: theme.palette.text.secondary,
+              borderColor: theme.palette.divider,
+              "&:hover": {
+                borderColor: theme.palette.divider,
+                backgroundColor: theme.palette.action.hover,
+              },
+            }}
+            variant="outlined"
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmRemoveDeal}
+            variant="contained"
+            sx={{
+              textTransform: "none",
+              bgcolor: "#FF9800",
+              color: "white",
+              "&:hover": {
+                bgcolor: "#F57C00",
+              },
+            }}
+          >
+            Eliminar asociación
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-              {/* Descripción */}
-              {expandedActivity.description && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
-                    Descripción
-                  </Typography>
-                  <Box
-                    sx={{
-                      p: 1.5,
-                      borderRadius: 1,
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
-                      border: `1px solid ${theme.palette.divider}`,
-                      fontSize: '0.875rem',
-                      lineHeight: 1.6,
-                      '& *': {
-                        margin: 0,
-                      },
-                    }}
-                    dangerouslySetInnerHTML={{ __html: expandedActivity.description }}
-                  />
-                </Box>
-              )}
-
-              <Divider sx={{ my: 2 }} />
-
-              {/* Campos adicionales en grid */}
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
-                {/* Fecha de vencimiento */}
-                {expandedActivity.dueDate && (
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
-                      Fecha de vencimiento
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
-                      {new Date(expandedActivity.dueDate).toLocaleDateString('es-ES', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                      })}
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* Prioridad */}
-                {expandedActivity.priority && (
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
-                      Prioridad
-                    </Typography>
-                    <Chip
-                      label={expandedActivity.priority === 'low' ? 'Baja' : expandedActivity.priority === 'medium' ? 'Media' : expandedActivity.priority === 'high' ? 'Alta' : expandedActivity.priority === 'urgent' ? 'Urgente' : expandedActivity.priority}
-                      size="small"
-                      sx={{
-                        bgcolor: expandedActivity.priority === 'urgent' ? '#f44336' : expandedActivity.priority === 'high' ? '#ff9800' : expandedActivity.priority === 'medium' ? '#ffc107' : '#4caf50',
-                        color: 'white',
-                        fontWeight: 600,
-                        fontSize: '0.75rem',
-                      }}
-                    />
-                  </Box>
-                )}
-
-                {/* Estado */}
-                {expandedActivity.status && (
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
-                      Estado
-                    </Typography>
-                    <Chip
-                      label={expandedActivity.status === 'pending' ? 'Pendiente' : expandedActivity.status === 'in_progress' ? 'En progreso' : expandedActivity.status === 'completed' ? 'Completada' : expandedActivity.status}
-                      size="small"
-                      sx={{
-                        bgcolor: expandedActivity.status === 'completed' ? '#4caf50' : expandedActivity.status === 'in_progress' ? '#2196f3' : theme.palette.action.disabledBackground,
-                        color: expandedActivity.status === 'completed' ? 'white' : theme.palette.text.primary,
-                        fontWeight: 600,
-                        fontSize: '0.75rem',
-                      }}
-                    />
-                  </Box>
-                )}
-
-                {/* Usuario asignado */}
-                {expandedActivity.User && (
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
-                      Asignado a
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
-                      {expandedActivity.User.firstName} {expandedActivity.User.lastName}
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* Fecha de creación */}
-                {expandedActivity.createdAt && (
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
-                      Creado
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
-                      {new Date(expandedActivity.createdAt).toLocaleDateString('es-ES', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                      })}
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            </DialogContent>
-          </>
-        )}
+      {/* Dialog para confirmar eliminación de ticket */}
+      <Dialog
+        open={removeTicketDialogOpen}
+        onClose={() => {
+          setRemoveTicketDialogOpen(false);
+          setTicketToRemove(null);
+        }}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1, fontWeight: 600 }}>
+          Eliminar asociación
+        </DialogTitle>
+        <DialogContent>
+          <Typography
+            variant="body1"
+            sx={{ color: theme.palette.text.secondary }}
+          >
+            {ticketToRemove?.name} ya no se asociará con {contact?.firstName} {contact?.lastName}.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button
+            onClick={() => {
+              setRemoveTicketDialogOpen(false);
+              setTicketToRemove(null);
+            }}
+            sx={{
+              textTransform: "none",
+              color: theme.palette.text.secondary,
+              borderColor: theme.palette.divider,
+              "&:hover": {
+                borderColor: theme.palette.divider,
+                backgroundColor: theme.palette.action.hover,
+              },
+            }}
+            variant="outlined"
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmRemoveTicket}
+            variant="contained"
+            sx={{
+              textTransform: "none",
+              bgcolor: "#FF9800",
+              color: "white",
+              "&:hover": {
+                bgcolor: "#F57C00",
+              },
+            }}
+          >
+            Eliminar asociación
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

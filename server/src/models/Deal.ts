@@ -46,6 +46,8 @@ export class Deal extends Model<DealAttributes, DealCreationAttributes> implemen
   public Company?: Company;
   public Contacts?: Contact[];
   public Companies?: Company[];
+  public Deals?: Deal[];
+  public RelatedDeals?: Deal[];
 
   // Métodos de asociación generados por Sequelize para belongsToMany
   public getContacts?: () => Promise<Contact[]>;
@@ -56,6 +58,14 @@ export class Deal extends Model<DealAttributes, DealCreationAttributes> implemen
   public setCompanies?: (companyIds: number[]) => Promise<void>;
   public addCompanies?: (companyIds: number[]) => Promise<void>;
   public removeCompany?: (companyId: number) => Promise<void>;
+  public getDeals?: () => Promise<Deal[]>;
+  public setDeals?: (dealIds: number[]) => Promise<void>;
+  public addDeals?: (dealIds: number[]) => Promise<void>;
+  public removeDeal?: (dealId: number) => Promise<void>;
+  public getRelatedDeals?: () => Promise<Deal[]>;
+  public setRelatedDeals?: (dealIds: number[]) => Promise<void>;
+  public addRelatedDeals?: (dealIds: number[]) => Promise<void>;
+  public removeRelatedDeal?: (dealId: number) => Promise<void>;
 }
 
 Deal.init(

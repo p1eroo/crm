@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -24,18 +24,10 @@ import {
   Checkbox,
   FormControlLabel,
   InputAdornment,
-  TableSortLabel,
   RadioGroup,
   Radio,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Tooltip,
   Card,
-  CardContent,
   useTheme,
   Drawer,
   useMediaQuery,
@@ -46,7 +38,7 @@ import {
   ListItemButton,
   ListItemText,
   InputBase,
-} from '@mui/material';
+} from "@mui/material";
 import {
   MoreVert,
   Note,
@@ -54,25 +46,17 @@ import {
   Phone,
   Assignment,
   Event,
-  Comment,
   Link as LinkIcon,
-  ExpandMore,
   Close,
   KeyboardArrowDown,
   KeyboardArrowLeft,
   Search,
-  Settings,
-  OpenInNew,
-  ContentCopy,
   KeyboardArrowRight,
-  Edit,
   LocationOn,
   CalendarToday,
   DonutSmall,
   AccessTime,
   Person,
-  AttachMoney,
-  Support,
   AutoAwesome,
   ReportProblem,
   Receipt,
@@ -95,19 +79,28 @@ import {
   ChevronRight,
   Business,
   History,
-} from '@mui/icons-material';
+} from "@mui/icons-material";
+import { LinkedIn } from "@mui/icons-material";
+import api from "../config/api";
+import RichTextEditor from "../components/RichTextEditor";
+import EmailComposer from "../components/EmailComposer";
+import { taxiMonterricoColors } from "../theme/colors";
 import {
-  LinkedIn,
-} from '@mui/icons-material';
-import api from '../config/api';
-import RichTextEditor from '../components/RichTextEditor';
-import EmailComposer from '../components/EmailComposer';
-import { taxiMonterricoColors } from '../theme/colors';
-import { useAuth } from '../context/AuthContext';
-import axios from 'axios';
-import empresaLogo from '../assets/empresa.png';
-import contactLogo from '../assets/contact.png';
-import { formatDatePeru } from '../utils/dateUtils';
+  RecentActivitiesCard,
+  LinkedContactsCard,
+  LinkedDealsCard,
+  LinkedTicketsCard,
+  FullContactsTableCard,
+  FullDealsTableCard,
+  FullTicketsTableCard,
+  FullActivitiesTableCard,
+  ActivityDetailDialog,
+  ActivitiesTabContent,
+} from "../components/DetailCards";
+import { useAuth } from "../context/AuthContext";
+import axios from "axios";
+import empresaLogo from "../assets/empresa.png";
+import { formatDatePeru } from "../utils/dateUtils";
 import {
   BarChart,
   Bar,
@@ -119,7 +112,7 @@ import {
   Tooltip as RechartsTooltip,
   Legend,
   ResponsiveContainer,
-} from 'recharts';
+} from "recharts";
 
 interface CompanyDetailData {
   id: number;
@@ -150,20 +143,20 @@ interface CompanyDetailData {
   };
 }
 
-
 const CompanyDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const [company, setCompany] = useState<CompanyDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
   const [copilotOpen, setCopilotOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [actionsMenuAnchorEl, setActionsMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [actionsMenuAnchorEl, setActionsMenuAnchorEl] =
+    useState<null | HTMLElement>(null);
   const [associatedDeals, setAssociatedDeals] = useState<any[]>([]);
   const [associatedContacts, setAssociatedContacts] = useState<any[]>([]);
   const [associatedTickets, setAssociatedTickets] = useState<any[]>([]);
@@ -172,18 +165,13 @@ const CompanyDetail: React.FC = () => {
   const [loadingLogs, setLoadingLogs] = useState(false);
   
   // Estados para búsquedas y filtros
-  const [activitySearch, setActivitySearch] = useState('');
-  const [contactSearch, setContactSearch] = useState('');
-  const [dealSearch, setDealSearch] = useState('');
-  const [activityFilterMenuAnchor, setActivityFilterMenuAnchor] = useState<null | HTMLElement>(null);
-  const [activityFilterSearch, setActivityFilterSearch] = useState('');
-  const [timeRangeMenuAnchor, setTimeRangeMenuAnchor] = useState<null | HTMLElement>(null);
-  const [selectedTimeRange, setSelectedTimeRange] = useState<string>('Todo hasta ahora');
-  const [selectedActivityTypes, setSelectedActivityTypes] = useState<string[]>([]);
-  const [selectedActivityType, setSelectedActivityType] = useState('all');
+  const [activitySearch, setActivitySearch] = useState("");
+  const [contactSearch, setContactSearch] = useState("");
+  const [dealSearch, setDealSearch] = useState("");
   const [expandedActivity, setExpandedActivity] = useState<any | null>(null);
-  const [completedActivities, setCompletedActivities] = useState<{ [key: number]: boolean }>({});
-  const activityFilterChipRef = useRef<HTMLDivElement>(null);
+  const [completedActivities, setCompletedActivities] = useState<{
+    [key: number]: boolean;
+  }>({});
   
   // Estados para los filtros de actividad
   // Nota: communicationFilters y teamActivityFilters están comentados porque no se usan actualmente
@@ -210,47 +198,91 @@ const CompanyDetail: React.FC = () => {
   // const [expandedActivities, setExpandedActivities] = useState<Set<number>>(new Set());
   // const [noteActionMenus, setNoteActionMenus] = useState<{ [key: number]: HTMLElement | null }>({});
   const [summaryExpanded, setSummaryExpanded] = useState<boolean>(false);
-  const [timePeriod, setTimePeriod] = useState<'day' | 'week' | 'month'>('week');
-  const [dealSortOrder, setDealSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [dealSortField, setDealSortField] = useState<string>('');
-  const [contactSortOrder, setContactSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [contactSortField, setContactSortField] = useState<string>('');
+  const [timePeriod, setTimePeriod] = useState<"day" | "week" | "month">(
+    "week"
+  );
+  const [dealSortOrder, setDealSortOrder] = useState<"asc" | "desc">("asc");
+  const [dealSortField, setDealSortField] = useState<
+    "name" | "amount" | "closeDate" | "stage"
+  >("name");
+  const [contactSortOrder, setContactSortOrder] = useState<"asc" | "desc">(
+    "asc"
+  );
+  const [contactSortField, setContactSortField] = useState<
+    "firstName" | "email" | "phone"
+  >("firstName");
+  const [ticketSearch, setTicketSearch] = useState("");
+  const [removeContactDialogOpen, setRemoveContactDialogOpen] = useState(false);
+  const [removeDealDialogOpen, setRemoveDealDialogOpen] = useState(false);
+  const [removeTicketDialogOpen, setRemoveTicketDialogOpen] = useState(false);
+  const [contactToRemove, setContactToRemove] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
+  const [dealToRemove, setDealToRemove] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
+  const [ticketToRemove, setTicketToRemove] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
   
   // Estados para diálogos
   const [addContactOpen, setAddContactOpen] = useState(false);
   const [addDealOpen, setAddDealOpen] = useState(false);
   const [addTicketOpen, setAddTicketOpen] = useState(false);
-  const [createActivityMenuAnchor, setCreateActivityMenuAnchor] = useState<null | HTMLElement>(null);
+  const [, setCreateActivityMenuAnchor] =
+    useState<null | HTMLElement>(null);
   const [contactFormData, setContactFormData] = useState({ 
-    firstName: '', 
-    lastName: '', 
-    email: '', 
-    phone: '', 
-    jobTitle: '', 
-    lifecycleStage: 'lead',
-    dni: '',
-    cee: '',
-    address: '',
-    city: '',
-    state: '',
-    country: '',
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    jobTitle: "",
+    lifecycleStage: "lead",
+    dni: "",
+    cee: "",
+    address: "",
+    city: "",
+    state: "",
+    country: "",
   });
-  const [idType, setIdType] = useState<'dni' | 'cee'>('dni');
+  const [idType, setIdType] = useState<"dni" | "cee">("dni");
   const [loadingDni, setLoadingDni] = useState(false);
-  const [dniError, setDniError] = useState('');
+  const [dniError, setDniError] = useState("");
   const [loadingCee, setLoadingCee] = useState(false);
-  const [ceeError, setCeeError] = useState('');
-  const [contactDialogTab, setContactDialogTab] = useState<'create' | 'existing'>('create');
-  const [existingContactsSearch, setExistingContactsSearch] = useState('');
-  const [selectedExistingContacts, setSelectedExistingContacts] = useState<number[]>([]);
-  const [dealFormData, setDealFormData] = useState({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'baja' as 'baja' | 'media' | 'alta', companyId: '', contactId: '' });
+  const [ceeError, setCeeError] = useState("");
+  const [contactDialogTab, setContactDialogTab] = useState<
+    "create" | "existing"
+  >("create");
+  const [existingContactsSearch, setExistingContactsSearch] = useState("");
+  const [selectedExistingContacts, setSelectedExistingContacts] = useState<
+    number[]
+  >([]);
+  const [dealFormData, setDealFormData] = useState({
+    name: "",
+    amount: "",
+    stage: "lead",
+    closeDate: "",
+    priority: "baja" as "baja" | "media" | "alta",
+    companyId: "",
+    contactId: "",
+  });
   const [allCompanies, setAllCompanies] = useState<any[]>([]);
-  const [ticketFormData, setTicketFormData] = useState({ subject: '', description: '', status: 'new', priority: 'medium' });
+  const [ticketFormData, setTicketFormData] = useState({
+    subject: "",
+    description: "",
+    status: "new",
+    priority: "medium",
+  });
   
   // Estados para edición de campos del contacto
   
   // Estados para asociaciones en nota
-  const [selectedAssociations, setSelectedAssociations] = useState<number[]>([]);
+  const [selectedAssociations, setSelectedAssociations] = useState<number[]>(
+    []
+  );
   const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
   const [allContacts, setAllContacts] = useState<any[]>([]);
   // Estados para elementos excluidos (desmarcados manualmente aunque estén asociados)
@@ -263,13 +295,15 @@ const CompanyDetail: React.FC = () => {
   const [taskOpen, setTaskOpen] = useState(false);
   const [meetingOpen, setMeetingOpen] = useState(false);
   const [noteAssociateModalOpen, setNoteAssociateModalOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState('empresas');
-  const [associateSearch, setAssociateSearch] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState("empresas");
+  const [associateSearch, setAssociateSearch] = useState("");
   const [noteModalCompanies, setNoteModalCompanies] = useState<any[]>([]);
   const [noteModalContacts, setNoteModalContacts] = useState<any[]>([]);
   const [noteModalDeals, setNoteModalDeals] = useState<any[]>([]);
   const [noteModalTickets, setNoteModalTickets] = useState<any[]>([]);
-  const [noteSelectedAssociations, setNoteSelectedAssociations] = useState<{ [key: string]: number[] }>({
+  const [noteSelectedAssociations, setNoteSelectedAssociations] = useState<{
+    [key: string]: number[];
+  }>({
     companies: [],
     contacts: [],
     deals: [],
@@ -281,26 +315,28 @@ const CompanyDetail: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({
-    name: '',
-    domain: '',
-    linkedin: '',
-    companyname: '',
-    phone: '',
-    phone2: '',
-    phone3: '',
-    lifecycleStage: 'lead',
-    ruc: '',
-    address: '',
-    city: '',
-    state: '',
-    country: '',
-    email: '',
-    leadSource: '',
-    estimatedRevenue: '',
+    name: "",
+    domain: "",
+    linkedin: "",
+    companyname: "",
+    phone: "",
+    phone2: "",
+    phone3: "",
+    lifecycleStage: "lead",
+    ruc: "",
+    address: "",
+    city: "",
+    state: "",
+    country: "",
+    email: "",
+    leadSource: "",
+    estimatedRevenue: "",
     isRecoveredClient: false,
   });
   const descriptionEditorRef = React.useRef<HTMLDivElement>(null);
-  const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState<null | HTMLElement>(null);
+  const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState<null | HTMLElement>(
+    null
+  );
   const imageInputRef = React.useRef<HTMLInputElement>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [activeFormats, setActiveFormats] = useState({
@@ -313,18 +349,34 @@ const CompanyDetail: React.FC = () => {
   });
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [datePickerAnchorEl, setDatePickerAnchorEl] = useState<null | HTMLElement>(null);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [warningMessage, setWarningMessage] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [datePickerAnchorEl, setDatePickerAnchorEl] =
+    useState<null | HTMLElement>(null);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [warningMessage, setWarningMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const [emailConnectModalOpen, setEmailConnectModalOpen] = useState(false);
   const [connectingEmail, setConnectingEmail] = useState(false);
   
   // Estados para formularios
-  const [noteData, setNoteData] = useState({ subject: '', description: '' });
-  const [callData, setCallData] = useState({ subject: '', description: '', duration: '' });
-  const [taskData, setTaskData] = useState({ title: '', description: '', priority: 'medium', dueDate: '', type: 'todo' as string });
-  const [meetingData, setMeetingData] = useState({ subject: '', description: '', date: '', time: '' });
+  const [noteData, setNoteData] = useState({ subject: "", description: "" });
+  const [callData, setCallData] = useState({
+    subject: "",
+    description: "",
+    duration: "",
+  });
+  const [taskData, setTaskData] = useState({
+    title: "",
+    description: "",
+    priority: "medium",
+    dueDate: "",
+    type: "todo" as string,
+  });
+  const [meetingData, setMeetingData] = useState({
+    subject: "",
+    description: "",
+    date: "",
+    time: "",
+  });
   const [createFollowUpTask, setCreateFollowUpTask] = useState(false);
 
   const fetchCompany = useCallback(async () => {
@@ -332,12 +384,13 @@ const CompanyDetail: React.FC = () => {
       const response = await api.get(`/companies/${id}`);
       setCompany(response.data);
       // Actualizar contactos asociados desde la relación muchos-a-muchos
-      const contacts = (response.data.Contacts && Array.isArray(response.data.Contacts))
+      const contacts =
+        response.data.Contacts && Array.isArray(response.data.Contacts)
         ? response.data.Contacts
         : [];
       setAssociatedContacts(contacts);
     } catch (error) {
-      console.error('Error fetching company:', error);
+      console.error("Error fetching company:", error);
     } finally {
       setLoading(false);
     }
@@ -347,25 +400,28 @@ const CompanyDetail: React.FC = () => {
     try {
       // Obtener empresa con contactos asociados desde la relación muchos-a-muchos
       const companyResponse = await api.get(`/companies/${id}`);
-      const contacts = (companyResponse.data.Contacts && Array.isArray(companyResponse.data.Contacts))
+      const contacts =
+        companyResponse.data.Contacts &&
+        Array.isArray(companyResponse.data.Contacts)
         ? companyResponse.data.Contacts
         : [];
       setAssociatedContacts(contacts);
 
       // Obtener deals asociados
-      const dealsResponse = await api.get('/deals', {
+      const dealsResponse = await api.get("/deals", {
         params: { companyId: id },
       });
       setAssociatedDeals(dealsResponse.data.deals || dealsResponse.data || []);
 
       // Obtener actividades
-      const activitiesResponse = await api.get('/activities', {
+      const activitiesResponse = await api.get("/activities", {
         params: { companyId: id },
       });
-      const activitiesData = activitiesResponse.data.activities || activitiesResponse.data || [];
+      const activitiesData =
+        activitiesResponse.data.activities || activitiesResponse.data || [];
 
       // Obtener tareas asociadas a la empresa
-      const tasksResponse = await api.get('/tasks', {
+      const tasksResponse = await api.get("/tasks", {
         params: { companyId: id },
       });
       const tasksData = tasksResponse.data.tasks || tasksResponse.data || [];
@@ -373,7 +429,7 @@ const CompanyDetail: React.FC = () => {
       // Convertir tareas a formato de actividad para mostrarlas en la lista
       const tasksAsActivities = tasksData.map((task: any) => ({
         id: task.id,
-        type: task.type || 'task',
+        type: task.type || "task",
         subject: task.title,
         description: task.description,
         dueDate: task.dueDate,
@@ -386,35 +442,38 @@ const CompanyDetail: React.FC = () => {
       }));
 
       // Combinar actividades y tareas, ordenadas por fecha de creación (más recientes primero)
-      const allActivities = [...activitiesData, ...tasksAsActivities].sort((a: any, b: any) => {
+      const allActivities = [...activitiesData, ...tasksAsActivities].sort(
+        (a: any, b: any) => {
         const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
         const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
         return dateB - dateA;
-      });
+        }
+      );
 
       setActivities(allActivities);
 
       // Obtener tickets asociados
-      const ticketsResponse = await api.get('/tickets', {
+      const ticketsResponse = await api.get("/tickets", {
         params: { companyId: id },
       });
-      setAssociatedTickets(ticketsResponse.data.tickets || ticketsResponse.data || []);
-
+      setAssociatedTickets(
+        ticketsResponse.data.tickets || ticketsResponse.data || []
+      );
     } catch (error) {
-      console.error('Error fetching associated records:', error);
+      console.error("Error fetching associated records:", error);
     }
   }, [id]);
 
   // Funciones helper para los logs
   const getActivityDescription = (activity: any) => {
     const typeMap: { [key: string]: string } = {
-      'note': 'Nota creada',
-      'email': 'Email enviado',
-      'call': 'Llamada registrada',
-      'meeting': 'Reunión agendada',
-      'task': 'Tarea creada',
+      note: "Nota creada",
+      email: "Email enviado",
+      call: "Llamada registrada",
+      meeting: "Reunión agendada",
+      task: "Tarea creada",
     };
-    return typeMap[activity.type] || 'Actividad creada';
+    return typeMap[activity.type] || "Actividad creada";
   };
 
   const getActivityIconType = (type: string) => {
@@ -423,21 +482,24 @@ const CompanyDetail: React.FC = () => {
 
   const getActivityTypeLabel = (type: string) => {
     const typeMap: { [key: string]: string } = {
-      'note': 'Nota',
-      'email': 'Correo',
-      'call': 'Llamada',
-      'task': 'Tarea',
-      'meeting': 'Reunión',
-      'todo': 'Tarea',
+      note: "Nota",
+      email: "Correo",
+      call: "Llamada",
+      task: "Tarea",
+      meeting: "Reunión",
+      todo: "Tarea",
     };
-    return typeMap[type?.toLowerCase()] || 'Actividad';
+    return typeMap[type?.toLowerCase()] || "Actividad";
   };
 
   const getActivityStatusColor = (activity: any) => {
     if (!activity.dueDate) {
       // Sin fecha de vencimiento - gris neutro
       return {
-        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F5F5F5',
+        bgcolor:
+          theme.palette.mode === "dark"
+            ? "rgba(255, 255, 255, 0.05)"
+            : "#F5F5F5",
       };
     }
 
@@ -452,17 +514,20 @@ const CompanyDetail: React.FC = () => {
     if (diffDays < 0) {
       // Vencida - rojo claro
       return {
-        bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.15)' : '#FFEBEE',
+        bgcolor:
+          theme.palette.mode === "dark" ? "rgba(244, 67, 54, 0.15)" : "#FFEBEE",
       };
     } else if (diffDays <= 3) {
       // Por vencer (1-3 días) - amarillo/naranja claro
       return {
-        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.15)' : '#FFF9C4',
+        bgcolor:
+          theme.palette.mode === "dark" ? "rgba(255, 152, 0, 0.15)" : "#FFF9C4",
       };
     } else {
       // A tiempo - verde claro
       return {
-        bgcolor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.15)' : '#E8F5E9',
+        bgcolor:
+          theme.palette.mode === "dark" ? "rgba(76, 175, 80, 0.15)" : "#E8F5E9",
       };
     }
   };
@@ -473,11 +538,12 @@ const CompanyDetail: React.FC = () => {
     try {
       // Obtener actividades y cambios de la empresa
       const [activitiesResponse, companyResponse] = await Promise.all([
-        api.get('/activities', { params: { companyId: id } }),
-        api.get(`/companies/${id}`)
+        api.get("/activities", { params: { companyId: id } }),
+        api.get(`/companies/${id}`),
       ]);
       
-      const activities = activitiesResponse.data.activities || activitiesResponse.data || [];
+      const activities =
+        activitiesResponse.data.activities || activitiesResponse.data || [];
       const companyData = companyResponse.data;
       
       // Crear logs a partir de actividades y cambios
@@ -488,7 +554,7 @@ const CompanyDetail: React.FC = () => {
         logs.push({
           id: `activity-${activity.id}`,
           type: activity.type,
-          action: 'created',
+          action: "created",
           description: getActivityDescription(activity),
           user: activity.User,
           timestamp: activity.createdAt,
@@ -497,15 +563,18 @@ const CompanyDetail: React.FC = () => {
       });
       
       // Agregar cambios en la empresa si hay updatedAt
-      if (companyData.updatedAt && companyData.createdAt !== companyData.updatedAt) {
+      if (
+        companyData.updatedAt &&
+        companyData.createdAt !== companyData.updatedAt
+      ) {
         logs.push({
           id: `company-update-${companyData.id}`,
-          type: 'company',
-          action: 'updated',
-          description: 'Información de la empresa actualizada',
+          type: "company",
+          action: "updated",
+          description: "Información de la empresa actualizada",
           user: companyData.Owner,
           timestamp: companyData.updatedAt,
-          iconType: 'company',
+          iconType: "company",
         });
       }
       
@@ -518,7 +587,7 @@ const CompanyDetail: React.FC = () => {
       
       setActivityLogs(logs.slice(0, 10)); // Mostrar solo los últimos 10
     } catch (error) {
-      console.error('Error fetching activity logs:', error);
+      console.error("Error fetching activity logs:", error);
     } finally {
       setLoadingLogs(false);
     }
@@ -546,14 +615,21 @@ const CompanyDetail: React.FC = () => {
   useEffect(() => {
     // Inicializar contactos seleccionados con los contactos asociados
     if (associatedContacts.length > 0) {
-      const contactIds = associatedContacts.map((c: any) => c && c.id).filter((id: any) => id !== undefined && id !== null);
+      const contactIds = associatedContacts
+        .map((c: any) => c && c.id)
+        .filter((id: any) => id !== undefined && id !== null);
       if (contactIds.length > 0) {
-        setSelectedContacts(prev => {
+        setSelectedContacts((prev) => {
           // Combinar con las existentes para no perder selecciones manuales, eliminando duplicados
           const combined = [...prev, ...contactIds];
-          const unique = combined.filter((id, index) => combined.indexOf(id) === index);
+          const unique = combined.filter(
+            (id, index) => combined.indexOf(id) === index
+          );
           // Solo actualizar si hay cambios para evitar loops infinitos
-          if (unique.length !== prev.length || unique.some(id => !prev.includes(id))) {
+          if (
+            unique.length !== prev.length ||
+            unique.some((id) => !prev.includes(id))
+          ) {
             return unique;
           }
           return prev;
@@ -564,12 +640,17 @@ const CompanyDetail: React.FC = () => {
     // Inicializar negocios seleccionados con los negocios asociados
     if (associatedDeals.length > 0) {
       const dealIds = associatedDeals.map((d: any) => 1000 + d.id);
-      setSelectedAssociations(prev => {
+      setSelectedAssociations((prev) => {
         // Combinar con las existentes para no perder selecciones manuales, eliminando duplicados
         const combined = [...prev, ...dealIds];
-        const unique = combined.filter((id, index) => combined.indexOf(id) === index);
+        const unique = combined.filter(
+          (id, index) => combined.indexOf(id) === index
+        );
         // Solo actualizar si hay cambios para evitar loops infinitos
-        if (unique.length !== prev.length || unique.some(id => !prev.includes(id))) {
+        if (
+          unique.length !== prev.length ||
+          unique.some((id) => !prev.includes(id))
+        ) {
           return unique;
         }
         return prev;
@@ -579,60 +660,64 @@ const CompanyDetail: React.FC = () => {
     // Inicializar tickets seleccionados con los tickets asociados
     if (associatedTickets.length > 0) {
       const ticketIds = associatedTickets.map((t: any) => 2000 + t.id);
-      setSelectedAssociations(prev => {
+      setSelectedAssociations((prev) => {
         // Combinar con las existentes para no perder selecciones manuales, eliminando duplicados
         const combined = [...prev, ...ticketIds];
-        const unique = combined.filter((id, index) => combined.indexOf(id) === index);
+        const unique = combined.filter(
+          (id, index) => combined.indexOf(id) === index
+        );
         // Solo actualizar si hay cambios para evitar loops infinitos
-        if (unique.length !== prev.length || unique.some(id => !prev.includes(id))) {
+        if (
+          unique.length !== prev.length ||
+          unique.some((id) => !prev.includes(id))
+        ) {
           return unique;
         }
         return prev;
       });
     }
-    
   }, [associatedContacts, associatedDeals, associatedTickets]);
 
   const fetchAllContacts = async () => {
     try {
-      const response = await api.get('/contacts');
+      const response = await api.get("/contacts");
       setAllContacts(response.data.contacts || response.data || []);
     } catch (error) {
-      console.error('Error fetching all contacts:', error);
+      console.error("Error fetching all contacts:", error);
     }
   };
 
   const fetchAllCompanies = async () => {
     try {
-      const response = await api.get('/companies', { params: { limit: 1000 } });
+      const response = await api.get("/companies", { params: { limit: 1000 } });
       setAllCompanies(response.data.companies || response.data || []);
     } catch (error) {
-      console.error('Error fetching all companies:', error);
+      console.error("Error fetching all companies:", error);
     }
   };
 
   // Opciones de etapa según las imágenes proporcionadas
   const stageOptions = [
-    { value: 'lead_inactivo', label: 'Lead Inactivo' },
-    { value: 'cliente_perdido', label: 'Cliente perdido' },
-    { value: 'cierre_perdido', label: 'Cierre Perdido' },
-    { value: 'lead', label: 'Lead' },
-    { value: 'contacto', label: 'Contacto' },
-    { value: 'reunion_agendada', label: 'Reunión Agendada' },
-    { value: 'reunion_efectiva', label: 'Reunión Efectiva' },
-    { value: 'propuesta_economica', label: 'Propuesta Económica' },
-    { value: 'negociacion', label: 'Negociación' },
-    { value: 'licitacion', label: 'Licitación' },
-    { value: 'licitacion_etapa_final', label: 'Licitación Etapa Final' },
-    { value: 'cierre_ganado', label: 'Cierre Ganado' },
-    { value: 'firma_contrato', label: 'Firma de Contrato' },
-    { value: 'activo', label: 'Activo' },
+    { value: "lead_inactivo", label: "Lead Inactivo" },
+    { value: "cliente_perdido", label: "Cliente perdido" },
+    { value: "cierre_perdido", label: "Cierre Perdido" },
+    { value: "lead", label: "Lead" },
+    { value: "contacto", label: "Contacto" },
+    { value: "reunion_agendada", label: "Reunión Agendada" },
+    { value: "reunion_efectiva", label: "Reunión Efectiva" },
+    { value: "propuesta_economica", label: "Propuesta Económica" },
+    { value: "negociacion", label: "Negociación" },
+    { value: "licitacion", label: "Licitación" },
+    { value: "licitacion_etapa_final", label: "Licitación Etapa Final" },
+    { value: "cierre_ganado", label: "Cierre Ganado" },
+    { value: "firma_contrato", label: "Firma de Contrato" },
+    { value: "activo", label: "Activo" },
   ];
 
   // Manejar tecla ESC para cerrar paneles
   useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         if (noteOpen) setNoteOpen(false);
         if (emailOpen) setEmailOpen(false);
         if (callOpen) setCallOpen(false);
@@ -641,9 +726,9 @@ const CompanyDetail: React.FC = () => {
       }
     };
 
-    window.addEventListener('keydown', handleEscKey);
+    window.addEventListener("keydown", handleEscKey);
     return () => {
-      window.removeEventListener('keydown', handleEscKey);
+      window.removeEventListener("keydown", handleEscKey);
     };
   }, [noteOpen, emailOpen, callOpen, taskOpen, meetingOpen]);
 
@@ -653,7 +738,10 @@ const CompanyDetail: React.FC = () => {
   }, [id]);
 
   const getCompanyInitials = (companyName: string) => {
-    const words = companyName.trim().split(' ').filter(word => word.length > 0);
+    const words = companyName
+      .trim()
+      .split(" ")
+      .filter((word) => word.length > 0);
     if (words.length >= 2) {
       return `${words[0].charAt(0)}${words[1].charAt(0)}`.toUpperCase();
     }
@@ -667,25 +755,25 @@ const CompanyDetail: React.FC = () => {
     if (firstName) {
       return firstName.substring(0, 2).toUpperCase();
     }
-    return '--';
+    return "--";
   };
 
   const getStageLabel = (stage: string) => {
     const labels: { [key: string]: string } = {
-      'lead': 'Lead',
-      'contacto': 'Contacto',
-      'reunion_agendada': 'Reunión Agendada',
-      'reunion_efectiva': 'Reunión Efectiva',
-      'propuesta_economica': 'Propuesta Económica',
-      'negociacion': 'Negociación',
-      'licitacion': 'Licitación',
-      'licitacion_etapa_final': 'Licitación Etapa Final',
-      'cierre_ganado': 'Cierre Ganado',
-      'cierre_perdido': 'Cierre Perdido',
-      'firma_contrato': 'Firma de Contrato',
-      'activo': 'Activo',
-      'cliente_perdido': 'Cliente perdido',
-      'lead_inactivo': 'Lead Inactivo',
+      lead: "Lead",
+      contacto: "Contacto",
+      reunion_agendada: "Reunión Agendada",
+      reunion_efectiva: "Reunión Efectiva",
+      propuesta_economica: "Propuesta Económica",
+      negociacion: "Negociación",
+      licitacion: "Licitación",
+      licitacion_etapa_final: "Licitación Etapa Final",
+      cierre_ganado: "Cierre Ganado",
+      cierre_perdido: "Cierre Perdido",
+      firma_contrato: "Firma de Contrato",
+      activo: "Activo",
+      cliente_perdido: "Cliente perdido",
+      lead_inactivo: "Lead Inactivo",
     };
     return labels[stage] || stage;
   };
@@ -701,26 +789,26 @@ const CompanyDetail: React.FC = () => {
   const handleOpenEditDialog = () => {
     if (company) {
       setEditFormData({
-        name: company.name || '',
-        domain: company.domain || '',
-        linkedin: company.linkedin || '',
-        companyname: company.companyname || '',
-        phone: company.phone || '',
-        phone2: (company as any).phone2 || '',
-        phone3: (company as any).phone3 || '',
-        lifecycleStage: company.lifecycleStage || 'lead',
-        ruc: (company as any).ruc || '',
-        address: company.address || '',
-        city: company.city || '',
-        state: company.state || '',
-        country: company.country || '',
-        email: (company as any).email || '',
-        leadSource: (company as any).leadSource || '',
-        estimatedRevenue: (company as any).estimatedRevenue || '',
+        name: company.name || "",
+        domain: company.domain || "",
+        linkedin: company.linkedin || "",
+        companyname: company.companyname || "",
+        phone: company.phone || "",
+        phone2: (company as any).phone2 || "",
+        phone3: (company as any).phone3 || "",
+        lifecycleStage: company.lifecycleStage || "lead",
+        ruc: (company as any).ruc || "",
+        address: company.address || "",
+        city: company.city || "",
+        state: company.state || "",
+        country: company.country || "",
+        email: (company as any).email || "",
+        leadSource: (company as any).leadSource || "",
+        estimatedRevenue: (company as any).estimatedRevenue || "",
         isRecoveredClient: (company as any).isRecoveredClient || false,
       });
       setEditDialogOpen(true);
-      setErrorMessage('');
+      setErrorMessage("");
     }
     setAnchorEl(null);
   };
@@ -728,25 +816,25 @@ const CompanyDetail: React.FC = () => {
   const handleCloseEditDialog = () => {
     setEditDialogOpen(false);
     setEditFormData({
-      name: '',
-      domain: '',
-      linkedin: '',
-      companyname: '',
-      phone: '',
-      phone2: '',
-      phone3: '',
-      lifecycleStage: 'lead',
-      ruc: '',
-      address: '',
-      city: '',
-      state: '',
-      country: '',
-      email: '',
-      leadSource: '',
-      estimatedRevenue: '',
+      name: "",
+      domain: "",
+      linkedin: "",
+      companyname: "",
+      phone: "",
+      phone2: "",
+      phone3: "",
+      lifecycleStage: "lead",
+      ruc: "",
+      address: "",
+      city: "",
+      state: "",
+      country: "",
+      email: "",
+      leadSource: "",
+      estimatedRevenue: "",
       isRecoveredClient: false,
     });
-    setErrorMessage('');
+    setErrorMessage("");
   };
 
   const handleSaveCompany = async () => {
@@ -756,7 +844,7 @@ const CompanyDetail: React.FC = () => {
 
     try {
       setSaving(true);
-      setErrorMessage('');
+      setErrorMessage("");
       
       // Preparar los datos para enviar, convirtiendo valores vacíos a null
       const dataToSend: any = {
@@ -764,7 +852,11 @@ const CompanyDetail: React.FC = () => {
       };
       
       // Manejar estimatedRevenue
-      if (editFormData.estimatedRevenue === '' || editFormData.estimatedRevenue === null || editFormData.estimatedRevenue === undefined) {
+      if (
+        editFormData.estimatedRevenue === "" ||
+        editFormData.estimatedRevenue === null ||
+        editFormData.estimatedRevenue === undefined
+      ) {
         dataToSend.estimatedRevenue = null;
       } else {
         const parsed = parseFloat(editFormData.estimatedRevenue as string);
@@ -772,15 +864,16 @@ const CompanyDetail: React.FC = () => {
       }
       
       // Manejar leadSource
-      dataToSend.leadSource = editFormData.leadSource === '' ? null : editFormData.leadSource;
+      dataToSend.leadSource =
+        editFormData.leadSource === "" ? null : editFormData.leadSource;
       
       // Manejar email
-      dataToSend.email = editFormData.email === '' ? null : editFormData.email;
+      dataToSend.email = editFormData.email === "" ? null : editFormData.email;
       
       // Asegurarse de que isRecoveredClient sea boolean
       dataToSend.isRecoveredClient = Boolean(editFormData.isRecoveredClient);
       
-      console.log('Datos a enviar:', dataToSend);
+      console.log("Datos a enviar:", dataToSend);
       
       const response = await api.put(`/companies/${company.id}`, dataToSend);
       setCompany(response.data);
@@ -788,8 +881,11 @@ const CompanyDetail: React.FC = () => {
       // Recargar los datos de la empresa
       await fetchCompany();
     } catch (error: any) {
-      console.error('Error al actualizar la empresa:', error);
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Error al guardar la empresa. Por favor, intenta nuevamente.';
+      console.error("Error al actualizar la empresa:", error);
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Error al guardar la empresa. Por favor, intenta nuevamente.";
       setErrorMessage(errorMessage);
     } finally {
       setSaving(false);
@@ -798,29 +894,48 @@ const CompanyDetail: React.FC = () => {
 
   // Funciones para abrir diálogos
   const handleOpenNote = () => {
-    setNoteData({ subject: '', description: '' });
+    setNoteData({ subject: "", description: "" });
     setCreateFollowUpTask(false);
     setNoteOpen(true);
   };
 
-  const fetchAssociations = useCallback(async (searchTerm?: string) => {
+  const fetchAssociations = useCallback(
+    async (searchTerm?: string) => {
     setLoadingAssociations(true);
     try {
       // Si hay búsqueda, cargar todos los resultados
       if (searchTerm && searchTerm.trim().length > 0) {
-        const [companiesRes, contactsRes, dealsRes, ticketsRes] = await Promise.all([
-          api.get('/companies', { params: { limit: 1000, search: searchTerm } }),
-          api.get('/contacts', { params: { limit: 1000, search: searchTerm } }),
-          api.get('/deals', { params: { limit: 1000, search: searchTerm } }),
-          api.get('/tickets', { params: { limit: 1000, search: searchTerm } }),
-        ]);
-        setNoteModalCompanies(companiesRes.data.companies || companiesRes.data || []);
-        setNoteModalContacts(contactsRes.data.contacts || contactsRes.data || []);
+          const [companiesRes, contactsRes, dealsRes, ticketsRes] =
+            await Promise.all([
+              api.get("/companies", {
+                params: { limit: 1000, search: searchTerm },
+              }),
+              api.get("/contacts", {
+                params: { limit: 1000, search: searchTerm },
+              }),
+              api.get("/deals", {
+                params: { limit: 1000, search: searchTerm },
+              }),
+              api.get("/tickets", {
+                params: { limit: 1000, search: searchTerm },
+              }),
+            ]);
+          setNoteModalCompanies(
+            companiesRes.data.companies || companiesRes.data || []
+          );
+          setNoteModalContacts(
+            contactsRes.data.contacts || contactsRes.data || []
+          );
         setNoteModalDeals(dealsRes.data.deals || dealsRes.data || []);
         setNoteModalTickets(ticketsRes.data.tickets || ticketsRes.data || []);
       } else {
         // Si no hay búsqueda, solo cargar los vinculados a la empresa actual
-        const associatedItems: { companies: any[]; contacts: any[]; deals: any[]; tickets: any[] } = {
+          const associatedItems: {
+            companies: any[];
+            contacts: any[];
+            deals: any[];
+            tickets: any[];
+          } = {
           companies: [],
           contacts: [],
           deals: [],
@@ -851,11 +966,13 @@ const CompanyDetail: React.FC = () => {
         setNoteModalTickets(associatedItems.tickets);
       }
     } catch (error) {
-      console.error('Error fetching associations:', error);
+        console.error("Error fetching associations:", error);
     } finally {
       setLoadingAssociations(false);
     }
-  }, [company, associatedContacts, associatedDeals, associatedTickets]);
+    },
+    [company, associatedContacts, associatedDeals, associatedTickets]
+  );
 
   // Inicializar asociaciones cuando se abre el modal de asociaciones
   useEffect(() => {
@@ -865,17 +982,27 @@ const CompanyDetail: React.FC = () => {
       setNoteSelectedAssociations({
         companies: selectedCompanies,
         contacts: selectedContacts,
-        deals: selectedAssociations.filter((id: number) => id > 1000 && id < 2000).map(id => id - 1000),
-        tickets: selectedAssociations.filter((id: number) => id > 2000).map(id => id - 2000),
+        deals: selectedAssociations
+          .filter((id: number) => id > 1000 && id < 2000)
+          .map((id) => id - 1000),
+        tickets: selectedAssociations
+          .filter((id: number) => id > 2000)
+          .map((id) => id - 2000),
       });
-      setSelectedCategory('empresas'); // Default to 'Empresas'
+      setSelectedCategory("empresas"); // Default to 'Empresas'
     }
-  }, [noteAssociateModalOpen, fetchAssociations, selectedCompanies, selectedContacts, selectedAssociations]);
+  }, [
+    noteAssociateModalOpen,
+    fetchAssociations,
+    selectedCompanies,
+    selectedContacts,
+    selectedAssociations,
+  ]);
 
   const handleOpenEmail = async () => {
     // Verificar si hay token guardado en el backend
     try {
-      const response = await api.get('/google/token');
+      const response = await api.get("/google/token");
       const hasToken = response.data.hasToken && !response.data.isExpired;
       
       if (hasToken) {
@@ -897,41 +1024,47 @@ const CompanyDetail: React.FC = () => {
 
   const handleEmailConnect = async () => {
     if (!user?.id) {
-      setWarningMessage('Usuario no identificado');
-      setTimeout(() => setWarningMessage(''), 3000);
+      setWarningMessage("Usuario no identificado");
+      setTimeout(() => setWarningMessage(""), 3000);
       return;
     }
 
     setConnectingEmail(true);
     try {
-      const response = await api.get('/google/auth');
+      const response = await api.get("/google/auth");
       if (response.data.authUrl) {
         window.location.href = response.data.authUrl;
       } else {
-        throw new Error('No se pudo obtener la URL de autorización');
+        throw new Error("No se pudo obtener la URL de autorización");
       }
     } catch (error: any) {
-      console.error('Error iniciando conexión con Google:', error);
-      const errorMessage = error.response?.data?.message || 'Error al conectar con Google. Por favor, intenta nuevamente.';
+      console.error("Error iniciando conexión con Google:", error);
+      const errorMessage =
+        error.response?.data?.message ||
+        "Error al conectar con Google. Por favor, intenta nuevamente.";
       setWarningMessage(errorMessage);
-      setTimeout(() => setWarningMessage(''), 5000);
+      setTimeout(() => setWarningMessage(""), 5000);
       setConnectingEmail(false);
     }
   };
 
-  const handleSendEmail = async (emailData: { to: string; subject: string; body: string }) => {
+  const handleSendEmail = async (emailData: {
+    to: string;
+    subject: string;
+    body: string;
+  }) => {
     try {
       // Enviar email a través del backend (el backend obtendrá el token automáticamente)
-      await api.post('/emails/send', {
+      await api.post("/emails/send", {
         to: emailData.to,
         subject: emailData.subject,
         body: emailData.body,
       });
 
       // Registrar como actividad
-      await api.post('/activities/emails', {
+      await api.post("/activities/emails", {
         subject: emailData.subject,
-        description: emailData.body.replace(/<[^>]*>/g, ''), // Remover HTML para la descripción
+        description: emailData.body.replace(/<[^>]*>/g, ""), // Remover HTML para la descripción
         companyId: id,
       });
 
@@ -940,19 +1073,27 @@ const CompanyDetail: React.FC = () => {
     } catch (error: any) {
       // Si el token expiró o no hay token, mostrar mensaje
       if (error.response?.status === 401) {
-        throw new Error('Por favor, conecta tu correo desde Configuración > Perfil > Correo');
+        throw new Error(
+          "Por favor, conecta tu correo desde Configuración > Perfil > Correo"
+        );
       }
       throw error;
     }
   };
 
   const handleOpenCall = () => {
-    setCallData({ subject: '', description: '', duration: '' });
+    setCallData({ subject: "", description: "", duration: "" });
     setCallOpen(true);
   };
 
   const handleOpenTask = () => {
-    setTaskData({ title: '', description: '', priority: 'medium', dueDate: '', type: 'todo' });
+    setTaskData({
+      title: "",
+      description: "",
+      priority: "medium",
+      dueDate: "",
+      type: "todo",
+    });
     setSelectedDate(null);
     setCurrentMonth(new Date());
     setTaskOpen(true);
@@ -961,12 +1102,12 @@ const CompanyDetail: React.FC = () => {
   const updateActiveFormats = useCallback(() => {
     if (descriptionEditorRef.current) {
       setActiveFormats({
-        bold: document.queryCommandState('bold'),
-        italic: document.queryCommandState('italic'),
-        underline: document.queryCommandState('underline'),
-        strikeThrough: document.queryCommandState('strikeThrough'),
-        unorderedList: document.queryCommandState('insertUnorderedList'),
-        orderedList: document.queryCommandState('insertOrderedList'),
+        bold: document.queryCommandState("bold"),
+        italic: document.queryCommandState("italic"),
+        underline: document.queryCommandState("underline"),
+        strikeThrough: document.queryCommandState("strikeThrough"),
+        unorderedList: document.queryCommandState("insertUnorderedList"),
+        orderedList: document.queryCommandState("insertOrderedList"),
       });
     }
   }, []);
@@ -974,7 +1115,7 @@ const CompanyDetail: React.FC = () => {
   useEffect(() => {
     if (descriptionEditorRef.current && taskOpen) {
       if (taskData.description !== descriptionEditorRef.current.innerHTML) {
-        descriptionEditorRef.current.innerHTML = taskData.description || '';
+        descriptionEditorRef.current.innerHTML = taskData.description || "";
       }
     }
   }, [taskData.description, taskOpen]);
@@ -992,21 +1133,26 @@ const CompanyDetail: React.FC = () => {
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      if (
+        e.key === "ArrowUp" ||
+        e.key === "ArrowDown" ||
+        e.key === "ArrowLeft" ||
+        e.key === "ArrowRight"
+      ) {
         updateActiveFormats();
       }
     };
 
-    document.addEventListener('selectionchange', handleSelectionChange);
+    document.addEventListener("selectionchange", handleSelectionChange);
     const editorElement = editor;
-    editorElement.addEventListener('mouseup', handleMouseUp);
-    editorElement.addEventListener('keyup', handleKeyUp as any);
+    editorElement.addEventListener("mouseup", handleMouseUp);
+    editorElement.addEventListener("keyup", handleKeyUp as any);
 
     return () => {
-      document.removeEventListener('selectionchange', handleSelectionChange);
+      document.removeEventListener("selectionchange", handleSelectionChange);
       if (editorElement) {
-        editorElement.removeEventListener('mouseup', handleMouseUp);
-        editorElement.removeEventListener('keyup', handleKeyUp as any);
+        editorElement.removeEventListener("mouseup", handleMouseUp);
+        editorElement.removeEventListener("keyup", handleKeyUp as any);
       }
     };
   }, [updateActiveFormats, taskOpen]);
@@ -1037,20 +1183,24 @@ const CompanyDetail: React.FC = () => {
   const handleDateSelect = (year: number, month: number, day: number) => {
     const date = new Date(year, month - 1, day);
     setSelectedDate(date);
-    const formattedDate = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const formattedDate = `${year}-${String(month).padStart(2, "0")}-${String(
+      day
+    ).padStart(2, "0")}`;
     setTaskData({ ...taskData, dueDate: formattedDate });
     setDatePickerAnchorEl(null);
   };
 
   const handleClearDate = () => {
     setSelectedDate(null);
-    setTaskData({ ...taskData, dueDate: '' });
+    setTaskData({ ...taskData, dueDate: "" });
     setDatePickerAnchorEl(null);
   };
 
   const handleToday = () => {
     const today = new Date();
-    const peruToday = new Date(today.toLocaleString('en-US', { timeZone: 'America/Lima' }));
+    const peruToday = new Date(
+      today.toLocaleString("en-US", { timeZone: "America/Lima" })
+    );
     const year = peruToday.getFullYear();
     const month = peruToday.getMonth() + 1;
     const day = peruToday.getDate();
@@ -1091,17 +1241,26 @@ const CompanyDetail: React.FC = () => {
   };
 
   const monthNames = [
-    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
   ];
 
-  const weekDays = ['Do', 'Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa'];
-
+  const weekDays = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"];
 
   // Funciones para guardar
   const handleSaveNote = async () => {
     if (!noteData.description.trim()) {
-      setSuccessMessage('');
+      setSuccessMessage("");
       return;
     }
     setSaving(true);
@@ -1113,20 +1272,29 @@ const CompanyDetail: React.FC = () => {
     
     try {
       // Obtener empresas seleccionadas (incluyendo la empresa actual si no está excluida)
-      companiesToCreateNote = selectedCompanies.filter(companyId => !excludedCompanies.includes(companyId));
+      companiesToCreateNote = selectedCompanies.filter(
+        (companyId) => !excludedCompanies.includes(companyId)
+      );
       
       // Si no hay empresas seleccionadas, usar la empresa actual
-      finalCompanyIds = companiesToCreateNote.length > 0 ? companiesToCreateNote : (company?.id ? [company.id] : []);
+      finalCompanyIds =
+        companiesToCreateNote.length > 0
+          ? companiesToCreateNote
+          : company?.id
+          ? [company.id]
+          : [];
       
       if (finalCompanyIds.length === 0) {
-        setSuccessMessage('Error: No hay empresas seleccionadas');
-        setTimeout(() => setSuccessMessage(''), 3000);
+        setSuccessMessage("Error: No hay empresas seleccionadas");
+        setTimeout(() => setSuccessMessage(""), 3000);
         setSaving(false);
         return;
       }
 
       // Obtener contactos seleccionados
-      contactsToAssociate = selectedContacts.filter(contactId => !excludedContacts.includes(contactId));
+      contactsToAssociate = selectedContacts.filter(
+        (contactId) => !excludedContacts.includes(contactId)
+      );
       
       // Crear notas para cada empresa seleccionada
       const activityPromises: Promise<any>[] = [];
@@ -1146,7 +1314,7 @@ const CompanyDetail: React.FC = () => {
           // Crear una nota para cada combinación de empresa y contacto
           for (const contactId of contactsToAssociate) {
             activityPromises.push(
-              api.post('/activities/notes', {
+              api.post("/activities/notes", {
                 subject: noteData.subject || `Nota para ${companyName}`,
                 description: noteData.description,
                 companyId: companyId,
@@ -1157,7 +1325,7 @@ const CompanyDetail: React.FC = () => {
         } else {
           // Crear nota solo con la empresa (sin contacto)
           activityPromises.push(
-            api.post('/activities/notes', {
+            api.post("/activities/notes", {
               subject: noteData.subject || `Nota para ${companyName}`,
               description: noteData.description,
               companyId: companyId,
@@ -1177,48 +1345,67 @@ const CompanyDetail: React.FC = () => {
         // Obtener nombre de la primera empresa
         let firstCompanyName = `Empresa ${finalCompanyIds[0]}`;
         try {
-          const companyResponse = await api.get(`/companies/${finalCompanyIds[0]}`);
+          const companyResponse = await api.get(
+            `/companies/${finalCompanyIds[0]}`
+          );
           const companyData = companyResponse.data;
           firstCompanyName = companyData.name || firstCompanyName;
         } catch (e) {
           console.error(`Error fetching company ${finalCompanyIds[0]}:`, e);
         }
         
-        await api.post('/tasks', {
-          title: `Seguimiento de nota: ${noteData.subject || `Nota para ${firstCompanyName}`}`,
+        await api.post("/tasks", {
+          title: `Seguimiento de nota: ${
+            noteData.subject || `Nota para ${firstCompanyName}`
+          }`,
           description: `Tarea de seguimiento generada automáticamente por la nota: ${noteData.description}`,
-          type: 'todo',
-          status: 'not started',
-          priority: 'medium',
-          dueDate: followUpDate.toISOString().split('T')[0],
+          type: "todo",
+          status: "not started",
+          priority: "medium",
+          dueDate: followUpDate.toISOString().split("T")[0],
           companyId: finalCompanyIds[0],
         });
       }
       
       const noteCount = activityPromises.length;
-      setSuccessMessage(`Nota${noteCount > 1 ? 's' : ''} creada${noteCount > 1 ? 's' : ''} exitosamente${createFollowUpTask ? ' y tarea de seguimiento creada' : ''}`);
+      setSuccessMessage(
+        `Nota${noteCount > 1 ? "s" : ""} creada${
+          noteCount > 1 ? "s" : ""
+        } exitosamente${
+          createFollowUpTask ? " y tarea de seguimiento creada" : ""
+        }`
+      );
       setNoteOpen(false);
-      setNoteData({ subject: '', description: '' });
+      setNoteData({ subject: "", description: "" });
       setCreateFollowUpTask(false);
       setSelectedContacts([]);
       setSelectedCompanies([]);
       setExcludedContacts([]);
       setExcludedCompanies([]);
       fetchAssociatedRecords(); // Actualizar actividades
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error: any) {
-      console.error('Error saving note:', error);
-      console.error('Error details:', {
+      console.error("Error saving note:", error);
+      console.error("Error details:", {
         message: error.message,
         response: error.response?.data,
         status: error.response?.status,
         selectedCompanies,
-        finalCompanyIds: companiesToCreateNote.length > 0 ? companiesToCreateNote : (company?.id ? [company.id] : []),
+        finalCompanyIds:
+          companiesToCreateNote.length > 0
+            ? companiesToCreateNote
+            : company?.id
+            ? [company.id]
+            : [],
         contactsToAssociate,
       });
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Error desconocido';
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Error desconocido";
       setSuccessMessage(`Error al crear la nota: ${errorMessage}`);
-      setTimeout(() => setSuccessMessage(''), 5000);
+      setTimeout(() => setSuccessMessage(""), 5000);
     } finally {
       setSaving(false);
     }
@@ -1230,18 +1417,18 @@ const CompanyDetail: React.FC = () => {
     }
     setSaving(true);
     try {
-      await api.post('/activities/calls', {
+      await api.post("/activities/calls", {
         subject: callData.subject,
         description: callData.description,
         companyId: id,
       });
-      setSuccessMessage('Llamada registrada exitosamente');
+      setSuccessMessage("Llamada registrada exitosamente");
       setCallOpen(false);
-      setCallData({ subject: '', description: '', duration: '' });
+      setCallData({ subject: "", description: "", duration: "" });
       fetchAssociatedRecords(); // Actualizar actividades
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
-      console.error('Error saving call:', error);
+      console.error("Error saving call:", error);
     } finally {
       setSaving(false);
     }
@@ -1253,24 +1440,34 @@ const CompanyDetail: React.FC = () => {
     }
     setSaving(true);
     try {
-      await api.post('/tasks', {
+      await api.post("/tasks", {
         title: taskData.title,
         description: taskData.description,
-        type: taskData.type || 'todo',
-        status: 'not started',
-        priority: taskData.priority || 'medium',
+        type: taskData.type || "todo",
+        status: "not started",
+        priority: taskData.priority || "medium",
         dueDate: taskData.dueDate || undefined,
         companyId: id,
       });
-      setSuccessMessage((taskData.type === 'meeting' ? 'Reunión' : 'Tarea') + ' creada exitosamente' + (taskData.dueDate ? ' y sincronizada con Google Calendar' : ''));
+      setSuccessMessage(
+        (taskData.type === "meeting" ? "Reunión" : "Tarea") +
+          " creada exitosamente" +
+          (taskData.dueDate ? " y sincronizada con Google Calendar" : "")
+      );
       setTaskOpen(false);
-      setTaskData({ title: '', description: '', priority: 'medium', dueDate: '', type: 'todo' });
+      setTaskData({
+        title: "",
+        description: "",
+        priority: "medium",
+        dueDate: "",
+        type: "todo",
+      });
       fetchAssociatedRecords(); // Actualizar actividades
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
-      console.error('Error saving task:', error);
-      setSuccessMessage('Error al crear la tarea');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      console.error("Error saving task:", error);
+      setSuccessMessage("Error al crear la tarea");
+      setTimeout(() => setSuccessMessage(""), 3000);
     } finally {
       setSaving(false);
     }
@@ -1282,26 +1479,30 @@ const CompanyDetail: React.FC = () => {
     }
     setSaving(true);
     try {
-      const dueDate = meetingData.date && meetingData.time 
+      const dueDate =
+        meetingData.date && meetingData.time
         ? new Date(`${meetingData.date}T${meetingData.time}`).toISOString()
         : undefined;
 
-      await api.post('/tasks', {
+      await api.post("/tasks", {
         title: meetingData.subject,
         description: meetingData.description,
-        type: 'meeting',
-        status: 'not started',
-        priority: 'medium',
+        type: "meeting",
+        status: "not started",
+        priority: "medium",
         dueDate: dueDate,
         companyId: id,
       });
-      setSuccessMessage('Reunión creada exitosamente' + (dueDate ? ' y sincronizada con Google Calendar' : ''));
+      setSuccessMessage(
+        "Reunión creada exitosamente" +
+          (dueDate ? " y sincronizada con Google Calendar" : "")
+      );
       setMeetingOpen(false);
-      setMeetingData({ subject: '', description: '', date: '', time: '' });
+      setMeetingData({ subject: "", description: "", date: "", time: "" });
       fetchAssociatedRecords(); // Actualizar actividades
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
-      console.error('Error saving meeting:', error);
+      console.error("Error saving meeting:", error);
     } finally {
       setSaving(false);
     }
@@ -1310,28 +1511,30 @@ const CompanyDetail: React.FC = () => {
   // Funciones para la pestaña Descripción
   // Función para capitalizar solo las iniciales de cada palabra
   const capitalizeInitials = (text: string): string => {
-    if (!text) return '';
+    if (!text) return "";
     return text
       .toLowerCase()
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
   };
 
   const handleSearchDni = async () => {
     if (!contactFormData.dni || contactFormData.dni.length < 8) {
-      setDniError('El DNI debe tener al menos 8 dígitos');
+      setDniError("El DNI debe tener al menos 8 dígitos");
       return;
     }
 
     setLoadingDni(true);
-    setDniError('');
+    setDniError("");
 
     try {
-      const factilizaToken = process.env.REACT_APP_FACTILIZA_TOKEN || '';
+      const factilizaToken = process.env.REACT_APP_FACTILIZA_TOKEN || "";
       
       if (!factilizaToken) {
-        setDniError('Token de API no configurado. Por favor, configure REACT_APP_FACTILIZA_TOKEN');
+        setDniError(
+          "Token de API no configurado. Por favor, configure REACT_APP_FACTILIZA_TOKEN"
+        );
         setLoadingDni(false);
         return;
       }
@@ -1340,45 +1543,49 @@ const CompanyDetail: React.FC = () => {
         `https://api.factiliza.com/v1/dni/info/${contactFormData.dni}`,
         {
           headers: {
-            'Authorization': `Bearer ${factilizaToken}`,
+            Authorization: `Bearer ${factilizaToken}`,
           },
         }
       );
 
       if (response.data.success && response.data.data) {
         const data = response.data.data;
-        const nombres = data.nombres || '';
-        const apellidoPaterno = data.apellido_paterno || '';
-        const apellidoMaterno = data.apellido_materno || '';
+        const nombres = data.nombres || "";
+        const apellidoPaterno = data.apellido_paterno || "";
+        const apellidoMaterno = data.apellido_materno || "";
         
         // Capitalizar solo las iniciales
         const nombresCapitalizados = capitalizeInitials(nombres);
-        const apellidosCapitalizados = capitalizeInitials(`${apellidoPaterno} ${apellidoMaterno}`.trim());
-        const direccionCapitalizada = capitalizeInitials(data.direccion || '');
-        const distritoCapitalizado = capitalizeInitials(data.distrito || '');
-        const provinciaCapitalizada = capitalizeInitials(data.provincia || '');
-        const departamentoCapitalizado = capitalizeInitials(data.departamento || '');
-        
-        setContactFormData(prev => ({
+        const apellidosCapitalizados = capitalizeInitials(
+          `${apellidoPaterno} ${apellidoMaterno}`.trim()
+        );
+        const direccionCapitalizada = capitalizeInitials(data.direccion || "");
+        const distritoCapitalizado = capitalizeInitials(data.distrito || "");
+        const provinciaCapitalizada = capitalizeInitials(data.provincia || "");
+        const departamentoCapitalizado = capitalizeInitials(
+          data.departamento || ""
+        );
+
+        setContactFormData((prev) => ({
           ...prev,
           firstName: nombresCapitalizados,
           lastName: apellidosCapitalizados,
           address: direccionCapitalizada,
           city: distritoCapitalizado,
           state: provinciaCapitalizada,
-          country: departamentoCapitalizado || 'Perú',
+          country: departamentoCapitalizado || "Perú",
         }));
       } else {
-        setDniError('No se encontró información para este DNI');
+        setDniError("No se encontró información para este DNI");
       }
     } catch (error: any) {
-      console.error('Error al buscar DNI:', error);
+      console.error("Error al buscar DNI:", error);
       if (error.response?.status === 400) {
-        setDniError('DNI no válido o no encontrado');
+        setDniError("DNI no válido o no encontrado");
       } else if (error.response?.status === 401) {
-        setDniError('Error de autenticación con la API');
+        setDniError("Error de autenticación con la API");
       } else {
-        setDniError('Error al consultar el DNI. Por favor, intente nuevamente');
+        setDniError("Error al consultar el DNI. Por favor, intente nuevamente");
       }
     } finally {
       setLoadingDni(false);
@@ -1387,18 +1594,20 @@ const CompanyDetail: React.FC = () => {
 
   const handleSearchCee = async () => {
     if (!contactFormData.cee || contactFormData.cee.length < 12) {
-      setCeeError('El CEE debe tener 12 caracteres');
+      setCeeError("El CEE debe tener 12 caracteres");
       return;
     }
 
     setLoadingCee(true);
-    setCeeError('');
+    setCeeError("");
 
     try {
-      const factilizaToken = process.env.REACT_APP_FACTILIZA_TOKEN || '';
+      const factilizaToken = process.env.REACT_APP_FACTILIZA_TOKEN || "";
       
       if (!factilizaToken) {
-        setCeeError('Token de API no configurado. Por favor, configure REACT_APP_FACTILIZA_TOKEN');
+        setCeeError(
+          "Token de API no configurado. Por favor, configure REACT_APP_FACTILIZA_TOKEN"
+        );
         setLoadingCee(false);
         return;
       }
@@ -1407,37 +1616,39 @@ const CompanyDetail: React.FC = () => {
         `https://api.factiliza.com/v1/cee/info/${contactFormData.cee}`,
         {
           headers: {
-            'Authorization': `Bearer ${factilizaToken}`,
+            Authorization: `Bearer ${factilizaToken}`,
           },
         }
       );
 
       if (response.data.status === 200 && response.data.data) {
         const data = response.data.data;
-        const nombres = data.nombres || '';
-        const apellidoPaterno = data.apellido_paterno || '';
-        const apellidoMaterno = data.apellido_materno || '';
+        const nombres = data.nombres || "";
+        const apellidoPaterno = data.apellido_paterno || "";
+        const apellidoMaterno = data.apellido_materno || "";
         
         // Capitalizar solo las iniciales
         const nombresCapitalizados = capitalizeInitials(nombres);
-        const apellidosCapitalizados = capitalizeInitials(`${apellidoPaterno} ${apellidoMaterno}`.trim());
+        const apellidosCapitalizados = capitalizeInitials(
+          `${apellidoPaterno} ${apellidoMaterno}`.trim()
+        );
         
-        setContactFormData(prev => ({
+        setContactFormData((prev) => ({
           ...prev,
           firstName: nombresCapitalizados,
           lastName: apellidosCapitalizados,
         }));
       } else {
-        setCeeError('No se encontró información para este CEE');
+        setCeeError("No se encontró información para este CEE");
       }
     } catch (error: any) {
-      console.error('Error al buscar CEE:', error);
+      console.error("Error al buscar CEE:", error);
       if (error.response?.status === 400) {
-        setCeeError('CEE no válido o no encontrado');
+        setCeeError("CEE no válido o no encontrado");
       } else if (error.response?.status === 401) {
-        setCeeError('Error de autenticación con la API');
+        setCeeError("Error de autenticación con la API");
       } else {
-        setCeeError('Error al consultar el CEE. Por favor, intente nuevamente');
+        setCeeError("Error al consultar el CEE. Por favor, intente nuevamente");
       }
     } finally {
       setLoadingCee(false);
@@ -1447,7 +1658,7 @@ const CompanyDetail: React.FC = () => {
   const handleAddContact = async () => {
     try {
       // Crear el contacto primero con la empresa actual como empresa principal
-      const contactResponse = await api.post('/contacts', {
+      const contactResponse = await api.post("/contacts", {
         ...contactFormData,
         companyId: id, // Usar la empresa actual como empresa principal
       });
@@ -1459,37 +1670,42 @@ const CompanyDetail: React.FC = () => {
       
       // Actualizar la empresa y los contactos asociados
       setCompany(companyResponse.data);
-      const contacts = (companyResponse.data.Contacts && Array.isArray(companyResponse.data.Contacts))
+      const contacts =
+        companyResponse.data.Contacts &&
+        Array.isArray(companyResponse.data.Contacts)
         ? companyResponse.data.Contacts
         : [];
       setAssociatedContacts(contacts);
       
-      setSuccessMessage('Contacto agregado exitosamente');
+      setSuccessMessage("Contacto agregado exitosamente");
       setAddContactOpen(false);
       setContactFormData({ 
-        firstName: '', 
-        lastName: '', 
-        email: '', 
-        phone: '', 
-        jobTitle: '', 
-        lifecycleStage: 'lead',
-        dni: '',
-        cee: '',
-        address: '',
-        city: '',
-        state: '',
-        country: '',
+        firstName: "",
+        lastName: "",
+        email: "",
+        phone: "",
+        jobTitle: "",
+        lifecycleStage: "lead",
+        dni: "",
+        cee: "",
+        address: "",
+        city: "",
+        state: "",
+        country: "",
       });
-      setIdType('dni');
-      setDniError('');
-      setCeeError('');
-      setContactDialogTab('create');
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setIdType("dni");
+      setDniError("");
+      setCeeError("");
+      setContactDialogTab("create");
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error: any) {
-      console.error('Error adding contact:', error);
-      const errorMessage = error.response?.data?.error || error.message || 'Error al agregar el contacto';
+      console.error("Error adding contact:", error);
+      const errorMessage =
+        error.response?.data?.error ||
+        error.message ||
+        "Error al agregar el contacto";
       setSuccessMessage(errorMessage);
-      setTimeout(() => setSuccessMessage(''), 5000);
+      setTimeout(() => setSuccessMessage(""), 5000);
     }
   };
 
@@ -1506,48 +1722,54 @@ const CompanyDetail: React.FC = () => {
       
       // Actualizar la empresa y los contactos asociados
       setCompany(response.data);
-      const contacts = (response.data.Contacts && Array.isArray(response.data.Contacts))
+      const contacts =
+        response.data.Contacts && Array.isArray(response.data.Contacts)
         ? response.data.Contacts
         : [];
       setAssociatedContacts(contacts);
       
-      setSuccessMessage(`${selectedExistingContacts.length} contacto(s) agregado(s) exitosamente`);
+      setSuccessMessage(
+        `${selectedExistingContacts.length} contacto(s) agregado(s) exitosamente`
+      );
       
       setAddContactOpen(false);
       setSelectedExistingContacts([]);
-      setExistingContactsSearch('');
-      setContactDialogTab('create');
+      setExistingContactsSearch("");
+      setContactDialogTab("create");
       
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error: any) {
-      console.error('Error associating contacts:', error);
-      const errorMessage = error.response?.data?.error || error.message || 'Error al asociar los contactos';
+      console.error("Error associating contacts:", error);
+      const errorMessage =
+        error.response?.data?.error ||
+        error.message ||
+        "Error al asociar los contactos";
       setSuccessMessage(errorMessage);
-      setTimeout(() => setSuccessMessage(''), 5000);
+      setTimeout(() => setSuccessMessage(""), 5000);
     }
   };
 
   const handleOpenAddContactDialog = () => {
     setContactFormData({ 
-      firstName: '', 
-      lastName: '', 
-      email: '', 
-      phone: '', 
-      jobTitle: '', 
-      lifecycleStage: 'lead',
-      dni: '',
-      cee: '',
-      address: '',
-      city: '',
-      state: '',
-      country: '',
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      jobTitle: "",
+      lifecycleStage: "lead",
+      dni: "",
+      cee: "",
+      address: "",
+      city: "",
+      state: "",
+      country: "",
     });
-    setIdType('dni');
-    setDniError('');
-    setCeeError('');
-    setContactDialogTab('create');
+    setIdType("dni");
+    setDniError("");
+    setCeeError("");
+    setContactDialogTab("create");
     setSelectedExistingContacts([]);
-    setExistingContactsSearch('');
+    setExistingContactsSearch("");
     setAddContactOpen(true);
     // Cargar contactos disponibles cuando se abre el diálogo
     if (allContacts.length === 0) {
@@ -1555,57 +1777,84 @@ const CompanyDetail: React.FC = () => {
     }
   };
 
-
   const handleAddDeal = async () => {
     try {
-      await api.post('/deals', {
+      await api.post("/deals", {
         ...dealFormData,
         amount: parseFloat(dealFormData.amount) || 0,
-        companyId: dealFormData.companyId ? parseInt(dealFormData.companyId) : company?.id,
-        contactId: dealFormData.contactId ? parseInt(dealFormData.contactId) : null,
+        companyId: dealFormData.companyId
+          ? parseInt(dealFormData.companyId)
+          : company?.id,
+        contactId: dealFormData.contactId
+          ? parseInt(dealFormData.contactId)
+          : null,
       });
-      setSuccessMessage('Negocio agregado exitosamente');
+      setSuccessMessage("Negocio agregado exitosamente");
       setAddDealOpen(false);
-      setDealFormData({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'baja' as 'baja' | 'media' | 'alta', companyId: '', contactId: '' });
+      setDealFormData({
+        name: "",
+        amount: "",
+        stage: "lead",
+        closeDate: "",
+        priority: "baja" as "baja" | "media" | "alta",
+        companyId: "",
+        contactId: "",
+      });
       fetchAssociatedRecords();
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
-      console.error('Error adding deal:', error);
+      console.error("Error adding deal:", error);
     }
   };
 
   const handleAddTicket = async () => {
     try {
-      await api.post('/tickets', {
+      await api.post("/tickets", {
         ...ticketFormData,
         companyId: company?.id,
       });
-      setSuccessMessage('Ticket creado exitosamente');
+      setSuccessMessage("Ticket creado exitosamente");
       setAddTicketOpen(false);
-      setTicketFormData({ subject: '', description: '', status: 'new', priority: 'medium' });
+      setTicketFormData({
+        subject: "",
+        description: "",
+        status: "new",
+        priority: "medium",
+      });
       fetchAssociatedRecords();
-      setTimeout(() => setSuccessMessage(''), 3000);
+      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
-      console.error('Error adding ticket:', error);
+      console.error("Error adding ticket:", error);
     }
   };
-
 
   const handleCreateActivity = (type: string) => {
     setCreateActivityMenuAnchor(null);
     switch (type) {
-      case 'note':
+      case "note":
         handleOpenNote();
         break;
-      case 'call':
+      case "call":
         handleOpenCall();
         break;
-      case 'task':
-        setTaskData({ title: '', description: '', priority: 'medium', dueDate: '', type: 'todo' });
+      case "task":
+        setTaskData({
+          title: "",
+          description: "",
+          priority: "medium",
+          dueDate: "",
+          type: "todo",
+        });
         setTaskOpen(true);
         break;
-      case 'meeting':
-        setTaskData({ title: '', description: '', priority: 'medium', dueDate: '', type: 'meeting' });
+      case "meeting":
+        setTaskData({
+          title: "",
+          description: "",
+          priority: "medium",
+          dueDate: "",
+          type: "meeting",
+        });
         setTaskOpen(true);
         break;
     }
@@ -1613,61 +1862,107 @@ const CompanyDetail: React.FC = () => {
 
   const handleCopyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    setSuccessMessage('Copiado al portapapeles');
-    setTimeout(() => setSuccessMessage(''), 2000);
+    setSuccessMessage("Copiado al portapapeles");
+    setTimeout(() => setSuccessMessage(""), 2000);
   };
 
-  const handleSortDeals = (field: string) => {
-    if (dealSortField === field) {
-      setDealSortOrder(dealSortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
+  const handleSortContacts = (field: "firstName" | "email" | "phone") => {
+    const isAsc = contactSortField === field && contactSortOrder === "asc";
+    setContactSortOrder(isAsc ? "desc" : "asc");
+    setContactSortField(field);
+  };
+
+  const handleSortDeals = (
+    field: "name" | "amount" | "closeDate" | "stage"
+  ) => {
+    const isAsc = dealSortField === field && dealSortOrder === "asc";
+    setDealSortOrder(isAsc ? "desc" : "asc");
       setDealSortField(field);
-      setDealSortOrder('asc');
+  };
+
+  const handleRemoveContactClick = (contactId: number, contactName: string) => {
+    setContactToRemove({ id: contactId, name: contactName });
+    setRemoveContactDialogOpen(true);
+  };
+
+  const handleConfirmRemoveContact = async () => {
+    if (!id || !contactToRemove) return;
+    try {
+      setSaving(true);
+      await api.delete(`/companies/${id}/contacts/${contactToRemove.id}`);
+      setAssociatedContacts((prevContacts) =>
+        prevContacts.filter((contact: any) => contact.id !== contactToRemove.id)
+      );
+      await fetchCompany();
+      setRemoveContactDialogOpen(false);
+      setContactToRemove(null);
+    } catch (error: any) {
+      console.error("Error removing contact:", error);
+      const errorMessage =
+        error.response?.data?.error ||
+        error.message ||
+        "Error al eliminar el contacto";
+      alert(errorMessage);
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleSortCompanies = (field: string) => {
-    if (contactSortField === field) {
-      setContactSortOrder(contactSortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setContactSortField(field);
-      setContactSortOrder('asc');
+  const handleRemoveDealClick = (dealId: number, dealName: string) => {
+    setDealToRemove({ id: dealId, name: dealName });
+    setRemoveDealDialogOpen(true);
+  };
+
+  const handleConfirmRemoveDeal = async () => {
+    if (!id || !dealToRemove) return;
+    try {
+      setSaving(true);
+      await api.delete(`/companies/${id}/deals/${dealToRemove.id}`);
+      setAssociatedDeals((prevDeals) =>
+        prevDeals.filter((deal: any) => deal.id !== dealToRemove.id)
+      );
+      await fetchCompany();
+      setRemoveDealDialogOpen(false);
+      setDealToRemove(null);
+    } catch (error: any) {
+      console.error("Error removing deal:", error);
+      const errorMessage =
+        error.response?.data?.error ||
+        error.message ||
+        "Error al eliminar el negocio";
+      alert(errorMessage);
+    } finally {
+      setSaving(false);
     }
   };
 
-  const sortedDeals = [...associatedDeals].sort((a, b) => {
-    if (!dealSortField) return 0;
-    let aVal: any = a[dealSortField];
-    let bVal: any = b[dealSortField];
-    
-    if (dealSortField === 'amount') {
-      aVal = aVal || 0;
-      bVal = bVal || 0;
-    } else if (dealSortField === 'closeDate') {
-      aVal = aVal ? new Date(aVal).getTime() : 0;
-      bVal = bVal ? new Date(bVal).getTime() : 0;
-    } else {
-      aVal = String(aVal || '').toLowerCase();
-      bVal = String(bVal || '').toLowerCase();
-    }
-    
-    if (aVal < bVal) return dealSortOrder === 'asc' ? -1 : 1;
-    if (aVal > bVal) return dealSortOrder === 'asc' ? 1 : -1;
-    return 0;
-  });
+  const handleRemoveTicketClick = (ticketId: number, ticketName: string) => {
+    setTicketToRemove({ id: ticketId, name: ticketName });
+    setRemoveTicketDialogOpen(true);
+  };
 
-  const sortedContacts = [...associatedContacts].sort((a, b) => {
-    if (!contactSortField) return 0;
-    let aVal: any = a[contactSortField];
-    let bVal: any = b[contactSortField];
-    
-    aVal = String(aVal || '').toLowerCase();
-    bVal = String(bVal || '').toLowerCase();
-    
-    if (aVal < bVal) return contactSortOrder === 'asc' ? -1 : 1;
-    if (aVal > bVal) return contactSortOrder === 'asc' ? 1 : -1;
-    return 0;
-  });
+  const handleConfirmRemoveTicket = async () => {
+    if (!id || !ticketToRemove) return;
+    try {
+      setSaving(true);
+      await api.delete(`/companies/${id}/tickets/${ticketToRemove.id}`);
+      setAssociatedTickets((prevTickets) =>
+        prevTickets.filter((ticket: any) => ticket.id !== ticketToRemove.id)
+      );
+      await fetchCompany();
+      setRemoveTicketDialogOpen(false);
+      setTicketToRemove(null);
+    } catch (error: any) {
+      console.error("Error removing ticket:", error);
+      const errorMessage =
+        error.response?.data?.error ||
+        error.message ||
+        "Error al eliminar el ticket";
+      alert(errorMessage);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Nota: filteredActivities está comentado porque no se usa actualmente
   // const filteredActivities = activities.filter((activity) => {
@@ -1713,22 +2008,6 @@ const CompanyDetail: React.FC = () => {
   //   
   //   return true;
   // });
-
-  const filteredContacts = sortedContacts.filter((contact) => {
-    if (contactSearch && !contact.firstName?.toLowerCase().includes(contactSearch.toLowerCase()) &&
-        !contact.lastName?.toLowerCase().includes(contactSearch.toLowerCase()) &&
-        !contact.email?.toLowerCase().includes(contactSearch.toLowerCase())) {
-      return false;
-    }
-    return true;
-  });
-
-  const filteredDeals = sortedDeals.filter((deal) => {
-    if (dealSearch && !deal.name?.toLowerCase().includes(dealSearch.toLowerCase())) {
-      return false;
-    }
-    return true;
-  });
 
   // Función para obtener el rango de fechas según la opción seleccionada
   // Nota: getDateRange está comentado porque no se usa actualmente
@@ -1905,7 +2184,12 @@ const CompanyDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
         <CircularProgress />
       </Box>
     );
@@ -1915,36 +2199,42 @@ const CompanyDetail: React.FC = () => {
     return (
       <Box>
         <Typography>Empresa no encontrada</Typography>
-        <Button onClick={() => navigate('/companies')}>Volver a Empresas</Button>
+        <Button onClick={() => navigate("/companies")}>
+          Volver a Empresas
+        </Button>
       </Box>
     );
   }
 
   return (
-    <Box sx={{ 
+    <Box
+      sx={{
       bgcolor: theme.palette.background.default,
-      minHeight: '100vh',
+        minHeight: "100vh",
       pb: { xs: 2, sm: 3, md: 4 },
-      display: 'flex', 
-      flexDirection: 'column',
-    }}>
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
       {/* Título de la página */}
-      <Box sx={{ 
+      <Box
+        sx={{
         pt: { xs: 2, sm: 3 }, 
         pb: 2, 
         px: { xs: 2, sm: 3, md: 4 },
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
         gap: 1.5,
-      }}>
+        }}
+      >
         {/* Lado izquierdo: Botón de regresar y título */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
           <IconButton
-            onClick={() => navigate('/companies')}
+            onClick={() => navigate("/companies")}
             sx={{
               color: theme.palette.text.secondary,
-              '&:hover': {
+              "&:hover": {
                 bgcolor: theme.palette.action.hover,
                 color: theme.palette.text.primary,
               },
@@ -1957,7 +2247,7 @@ const CompanyDetail: React.FC = () => {
             sx={{
               fontWeight: 500,
               color: theme.palette.text.primary,
-              fontSize: { xs: '1.125rem', sm: '1.25rem', md: '1.5rem' },
+              fontSize: { xs: "1.125rem", sm: "1.25rem", md: "1.5rem" },
             }}
           >
             Información de la empresa
@@ -1965,32 +2255,39 @@ const CompanyDetail: React.FC = () => {
         </Box>
 
         {/* Lado derecho: Breadcrumb */}
-        <Box sx={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
           gap: 0.5,
           color: theme.palette.text.secondary,
-        }}>
+          }}
+        >
           <Typography
             component="span"
-            onClick={() => navigate('/companies')}
+            onClick={() => navigate("/companies")}
             sx={{
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
-              cursor: 'pointer',
+              fontSize: { xs: "0.75rem", sm: "0.875rem" },
+              cursor: "pointer",
               color: theme.palette.text.secondary,
-              '&:hover': {
+              "&:hover": {
                 color: theme.palette.text.primary,
-                textDecoration: 'underline',
+                textDecoration: "underline",
               },
             }}
           >
             Empresas
           </Typography>
-          <KeyboardArrowRight sx={{ fontSize: { xs: 16, sm: 18 }, color: theme.palette.text.disabled }} />
+          <KeyboardArrowRight
+            sx={{
+              fontSize: { xs: 16, sm: 18 },
+              color: theme.palette.text.disabled,
+            }}
+          />
           <Typography
             component="span"
             sx={{
-              fontSize: { xs: '0.75rem', sm: '0.875rem' },
+              fontSize: { xs: "0.75rem", sm: "0.875rem" },
               color: theme.palette.text.primary,
               fontWeight: 500,
             }}
@@ -2001,15 +2298,17 @@ const CompanyDetail: React.FC = () => {
       </Box>
 
       {/* Contenido principal */}
-      <Box sx={{ 
-        display: 'flex',
-        flexDirection: { xs: 'column', md: 'row' },
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", md: "row" },
         flex: 1,
-        overflow: { xs: 'visible', md: 'hidden' },
-        minHeight: { xs: 'auto', md: 0 },
+          overflow: { xs: "visible", md: "hidden" },
+          minHeight: { xs: "auto", md: 0 },
         gap: 2,
         px: { xs: 2, sm: 3, md: 4 },
-      }}>
+        }}
+      >
             <Menu 
               anchorEl={anchorEl} 
               open={Boolean(anchorEl)} 
@@ -2021,16 +2320,16 @@ const CompanyDetail: React.FC = () => {
                 sx: {
                   mt: 1,
                   borderRadius: 2,
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-                  animation: 'slideDown 0.2s ease',
-                  '@keyframes slideDown': {
-                    '0%': {
+              boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+              animation: "slideDown 0.2s ease",
+              "@keyframes slideDown": {
+                "0%": {
                       opacity: 0,
-                      transform: 'translateY(-10px)',
+                  transform: "translateY(-10px)",
                     },
-                    '100%': {
+                "100%": {
                       opacity: 1,
-                      transform: 'translateY(0)',
+                  transform: "translateY(0)",
                     },
                   },
                 },
@@ -2039,10 +2338,10 @@ const CompanyDetail: React.FC = () => {
               <MenuItem 
                 onClick={handleOpenEditDialog}
                 sx={{
-                  transition: 'all 0.15s ease',
-                  '&:hover': {
-                    backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                    transform: 'translateX(4px)',
+              transition: "all 0.15s ease",
+              "&:hover": {
+                backgroundColor: "rgba(46, 125, 50, 0.08)",
+                transform: "translateX(4px)",
                   },
                 }}
               >
@@ -2051,10 +2350,10 @@ const CompanyDetail: React.FC = () => {
               <MenuItem 
                 onClick={handleMenuClose}
                 sx={{
-                  transition: 'all 0.15s ease',
-                  '&:hover': {
-                    backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                    transform: 'translateX(4px)',
+              transition: "all 0.15s ease",
+              "&:hover": {
+                backgroundColor: "rgba(46, 125, 50, 0.08)",
+                transform: "translateX(4px)",
                   },
                 }}
               >
@@ -2063,10 +2362,10 @@ const CompanyDetail: React.FC = () => {
               <MenuItem 
                 onClick={handleMenuClose}
                 sx={{
-                  transition: 'all 0.15s ease',
-                  '&:hover': {
-                    backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                    transform: 'translateX(4px)',
+              transition: "all 0.15s ease",
+              "&:hover": {
+                backgroundColor: "rgba(46, 125, 50, 0.08)",
+                transform: "translateX(4px)",
                   },
                 }}
               >
@@ -2075,11 +2374,13 @@ const CompanyDetail: React.FC = () => {
             </Menu>
 
         {/* Columna Principal - Descripción y Actividades */}
-              <Box sx={{ 
+        <Box
+          sx={{
                 flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-        }}>
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
           {/* CompanyHeader */}
           <Paper
             elevation={0}
@@ -2091,46 +2392,75 @@ const CompanyDetail: React.FC = () => {
               mb: 2,
                 bgcolor: theme.palette.background.paper,
             border: `1px solid ${theme.palette.divider}`,
-              display: 'flex',
-              flexDirection: 'column',
+              display: "flex",
+              flexDirection: "column",
               gap: 1.5,
             }}
           >
             {/* Parte superior: Avatar + Info a la izquierda, Botones a la derecha */}
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 2,
+              }}
+            >
               {/* Izquierda: Avatar + Nombre + Subtítulo */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flex: 1, minWidth: 0 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 2,
+                  flex: 1,
+                  minWidth: 0,
+                }}
+              >
                 <Avatar
                   src={empresaLogo}
                   sx={{
                     width: 56,
                     height: 56,
-                    bgcolor: empresaLogo ? 'transparent' : taxiMonterricoColors.orange,
-                    fontSize: '1.25rem',
+                    bgcolor: empresaLogo
+                      ? "transparent"
+                      : taxiMonterricoColors.orange,
+                    fontSize: "1.25rem",
                     fontWeight: 600,
                   }}
                 >
                   {!empresaLogo && getCompanyInitials(company.name)}
                 </Avatar>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.25rem', mb: 0.5 }}>
+                  <Typography
+                    variant="h6"
+                    sx={{ fontWeight: 600, fontSize: "1.25rem", mb: 0.5 }}
+                  >
                     {company.name}
             </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                    {company.domain || company.companyname || 'Sin información adicional'}
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ fontSize: "0.875rem" }}
+                  >
+                    {company.domain ||
+                      company.companyname ||
+                      "Sin información adicional"}
                 </Typography>
               </Box>
               </Box>
 
               {/* Derecha: Etapa + Menú desplegable de acciones */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                 <Chip
                   label={getStageLabel(company.lifecycleStage)}
                   size="small"
                   sx={{
                     height: 24,
-                    fontSize: '0.75rem',
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(46, 125, 50, 0.2)' : 'rgba(46, 125, 50, 0.1)',
+                    fontSize: "0.75rem",
+                    bgcolor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(46, 125, 50, 0.2)"
+                        : "rgba(46, 125, 50, 0.1)",
                     color: taxiMonterricoColors.green,
                     fontWeight: 500,
                   }}
@@ -2140,7 +2470,7 @@ const CompanyDetail: React.FC = () => {
                     onClick={(e) => setActionsMenuAnchorEl(e.currentTarget)}
                   sx={{
                       color: theme.palette.text.secondary,
-                    '&:hover': {
+                      "&:hover": {
                         bgcolor: theme.palette.action.hover,
                         color: theme.palette.text.primary,
                     },
@@ -2154,12 +2484,12 @@ const CompanyDetail: React.FC = () => {
                   open={Boolean(actionsMenuAnchorEl)}
                   onClose={() => setActionsMenuAnchorEl(null)}
                   anchorOrigin={{
-                    vertical: 'bottom',
-                    horizontal: 'right',
+                    vertical: "bottom",
+                    horizontal: "right",
                   }}
                   transformOrigin={{
-                    vertical: 'top',
-                    horizontal: 'right',
+                    vertical: "top",
+                    horizontal: "right",
                   }}
                 >
                   <MenuItem
@@ -2204,7 +2534,7 @@ const CompanyDetail: React.FC = () => {
                     onClick={handleMenuOpen}
                   sx={{
                       color: theme.palette.text.secondary,
-                    '&:hover': {
+                      "&:hover": {
                         bgcolor: theme.palette.action.hover,
                         color: theme.palette.text.primary,
                     },
@@ -2217,11 +2547,33 @@ const CompanyDetail: React.FC = () => {
               </Box>
 
             {/* Línea separadora */}
-            <Divider sx={{ borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)' }} />
+            <Divider
+              sx={{
+                borderColor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(255, 255, 255, 0.08)"
+                    : "rgba(0, 0, 0, 0.08)",
+              }}
+            />
 
             {/* Parte inferior: Chips */}
-            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+            <Box
+              sx={{
+                display: "flex",
+                gap: 1,
+                flexWrap: "wrap",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: 1,
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                }}
+              >
                 {/* Email de la empresa */}
                 {(company as any).email && (
                   <Chip
@@ -2230,10 +2582,13 @@ const CompanyDetail: React.FC = () => {
                     size="small"
                     sx={{
                       height: 24,
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+                      fontSize: "0.75rem",
+                      bgcolor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255, 255, 255, 0.05)"
+                          : "#FFFFFF",
                       border: `1px solid ${theme.palette.divider}`,
-                      '& .MuiChip-icon': {
+                      "& .MuiChip-icon": {
                         color: theme.palette.text.secondary,
                       },
                     }}
@@ -2243,14 +2598,17 @@ const CompanyDetail: React.FC = () => {
                 {(company.city || company.address) && (
                   <Chip
                     icon={<LocationOn sx={{ fontSize: 14 }} />}
-                    label={company.city || company.address || '--'}
+                    label={company.city || company.address || "--"}
                     size="small"
                     sx={{
                       height: 24,
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+                      fontSize: "0.75rem",
+                      bgcolor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255, 255, 255, 0.05)"
+                          : "#FFFFFF",
                       border: `1px solid ${theme.palette.divider}`,
-                      '& .MuiChip-icon': {
+                      "& .MuiChip-icon": {
                         color: theme.palette.text.secondary,
                       },
                     }}
@@ -2263,10 +2621,13 @@ const CompanyDetail: React.FC = () => {
                     size="small"
                     sx={{
                       height: 24,
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+                      fontSize: "0.75rem",
+                      bgcolor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255, 255, 255, 0.05)"
+                          : "#FFFFFF",
                       border: `1px solid ${theme.palette.divider}`,
-                      '& .MuiChip-icon': {
+                      "& .MuiChip-icon": {
                         color: theme.palette.text.secondary,
                       },
                     }}
@@ -2279,10 +2640,13 @@ const CompanyDetail: React.FC = () => {
                     size="small"
                     sx={{
                       height: 24,
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#FFFFFF',
+                      fontSize: "0.75rem",
+                      bgcolor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255, 255, 255, 0.05)"
+                          : "#FFFFFF",
                       border: `1px solid ${theme.palette.divider}`,
-                      '& .MuiChip-icon': {
+                      "& .MuiChip-icon": {
                         color: theme.palette.text.secondary,
                       },
                     }}
@@ -2290,23 +2654,40 @@ const CompanyDetail: React.FC = () => {
                 )}
               </Box>
               <IconButton
-                component={company.linkedin && company.linkedin !== '#' ? 'a' : 'button'}
-                href={company.linkedin && company.linkedin !== '#' ? company.linkedin : undefined}
-                target={company.linkedin && company.linkedin !== '#' ? '_blank' : undefined}
-                rel={company.linkedin && company.linkedin !== '#' ? 'noopener noreferrer' : undefined}
+                component={
+                  company.linkedin && company.linkedin !== "#" ? "a" : "button"
+                }
+                href={
+                  company.linkedin && company.linkedin !== "#"
+                    ? company.linkedin
+                    : undefined
+                }
+                target={
+                  company.linkedin && company.linkedin !== "#"
+                    ? "_blank"
+                    : undefined
+                }
+                rel={
+                  company.linkedin && company.linkedin !== "#"
+                    ? "noopener noreferrer"
+                    : undefined
+                }
                 size="small"
                 onClick={(e: React.MouseEvent<HTMLElement>) => {
-                    if (!company.linkedin || company.linkedin === '#') {
+                  if (!company.linkedin || company.linkedin === "#") {
                       e.preventDefault();
                       // Abrir el diálogo de edición en lugar de mostrar un prompt
                       handleOpenEditDialog();
                     }
                   }}
                   sx={{
-                  color: company.linkedin && company.linkedin !== '#' ? '#0077b5' : theme.palette.text.secondary,
-                    '&:hover': {
+                  color:
+                    company.linkedin && company.linkedin !== "#"
+                      ? "#0077b5"
+                      : theme.palette.text.secondary,
+                  "&:hover": {
                     bgcolor: theme.palette.action.hover,
-                    color: '#0077b5',
+                    color: "#0077b5",
                     },
                   }}
                 >
@@ -2316,60 +2697,69 @@ const CompanyDetail: React.FC = () => {
           </Paper>
 
           {/* Tabs estilo barra de filtros */}
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-            <Card sx={{ 
+          <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
+            <Card
+              sx={{
               borderRadius: 2,
-              boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+                boxShadow:
+                  theme.palette.mode === "dark"
+                    ? "0 2px 8px rgba(0,0,0,0.3)"
+                    : "0 2px 8px rgba(0,0,0,0.1)",
               bgcolor: theme.palette.background.paper,
               px: 2,
               py: 0.5,
-          display: 'flex',
-              alignItems: 'center',
+                display: "flex",
+                alignItems: "center",
               flex: 1,
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-        }}>
+                border: `1px solid ${
+                  theme.palette.mode === "dark"
+                    ? "rgba(255,255,255,0.15)"
+                    : "rgba(0,0,0,0.15)"
+                }`,
+              }}
+            >
           <Tabs
             value={tabValue}
             onChange={(e, newValue) => setTabValue(newValue)}
             sx={{
-              minHeight: 'auto',
+                  minHeight: "auto",
                   flex: 1,
-              '& .MuiTabs-flexContainer': {
+                  "& .MuiTabs-flexContainer": {
                     gap: 0,
-                    justifyContent: 'flex-start',
+                    justifyContent: "flex-start",
                   },
-                  '& .MuiTabs-indicator': {
+                  "& .MuiTabs-indicator": {
                     backgroundColor: taxiMonterricoColors.green,
                     height: 2,
               },
-              '& .MuiTab-root': {
-                textTransform: 'none',
-                fontSize: '0.875rem',
+                  "& .MuiTab-root": {
+                    textTransform: "none",
+                    fontSize: "0.875rem",
                 fontWeight: 500,
                     minHeight: 40,
                     height: 40,
                     paddingX: 3,
-                    bgcolor: 'transparent',
+                    bgcolor: "transparent",
                     color: theme.palette.text.secondary,
-                    transition: 'all 0.2s ease',
-                    position: 'relative',
-                    '&.Mui-selected': {
-                      bgcolor: 'transparent',
+                    transition: "all 0.2s ease",
+                    position: "relative",
+                    "&.Mui-selected": {
+                      bgcolor: "transparent",
                       color: theme.palette.text.primary,
                       fontWeight: 700,
                     },
-                    '&:hover': {
-                      bgcolor: 'transparent',
+                    "&:hover": {
+                      bgcolor: "transparent",
                       color: theme.palette.text.primary,
                     },
-                    '&:not(:last-child)::after': {
+                    "&:not(:last-child)::after": {
                       content: '""',
-                      position: 'absolute',
+                      position: "absolute",
                       right: 0,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      width: '1px',
-                      height: '60%',
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      width: "1px",
+                      height: "60%",
                       backgroundColor: theme.palette.divider,
                     },
               },
@@ -2379,22 +2769,26 @@ const CompanyDetail: React.FC = () => {
                 <Tab label="Información Avanzada" />
             <Tab label="Actividades" />
           </Tabs>
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
                 ml: 1,
                 pl: 1,
                 borderLeft: `1px solid ${theme.palette.divider}`,
                 gap: 0.5,
-              }}>
+                }}
+              >
                 <Tooltip title="Registro de Cambios">
                   <IconButton
                     onClick={() => setHistoryOpen(!historyOpen)}
                     size="small"
                     sx={{
-                      color: historyOpen ? '#2196F3' : theme.palette.text.secondary,
-                      '&:hover': {
-                        bgcolor: 'transparent',
+                      color: historyOpen
+                        ? "#2196F3"
+                        : theme.palette.text.secondary,
+                      "&:hover": {
+                        bgcolor: "transparent",
                       },
                     }}
                   >
@@ -2406,9 +2800,11 @@ const CompanyDetail: React.FC = () => {
                     onClick={() => setCopilotOpen(!copilotOpen)}
                     size="small"
                     sx={{
-                      color: copilotOpen ? taxiMonterricoColors.green : theme.palette.text.secondary,
-                      '&:hover': {
-                        bgcolor: 'transparent',
+                      color: copilotOpen
+                        ? taxiMonterricoColors.green
+                        : theme.palette.text.secondary,
+                      "&:hover": {
+                        bgcolor: "transparent",
                       },
                     }}
                   >
@@ -2423,1374 +2819,321 @@ const CompanyDetail: React.FC = () => {
           {tabValue === 0 && (
             <>
               {/* Cards de Fecha de Creación, Etapa del Ciclo de Vida, Última Actividad y Propietario */}
-              <Box sx={{ 
-                display: 'grid', 
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
-                gap: 2, 
-                mb: 2 
-              }}>
-              <Card
+              <Box
                 sx={{
-                    width: '100%',
-                  p: 2,
-                    bgcolor: theme.palette.background.paper,
-                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                  borderRadius: 1.5,
-                  display: 'flex',
-                  flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    textAlign: 'left',
+                  display: "grid",
+                  gridTemplateColumns: {
+                    xs: "1fr",
+                    sm: "repeat(2, 1fr)",
+                    md: "repeat(4, 1fr)",
+                  },
+                gap: 2, 
+                  mb: 2,
                 }}
               >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <CalendarToday sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+              <Card
+                sx={{
+                    width: "100%",
+                  p: 2,
+                    bgcolor: theme.palette.background.paper,
+                    border: `1px solid ${
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.15)"
+                        : "rgba(0,0,0,0.15)"
+                    }`,
+                  borderRadius: 1.5,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    textAlign: "left",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 1,
+                    }}
+                  >
+                    <CalendarToday
+                      sx={{ fontSize: 18, color: theme.palette.text.secondary }}
+                    />
+                    <Typography
+                      variant="subtitle2"
+                      sx={{
+                        fontWeight: 600,
+                        color: theme.palette.text.primary,
+                      }}
+                    >
                   Fecha de creación
                 </Typography>
                   </Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ fontSize: "0.875rem" }}
+                  >
                   {company.createdAt
-                    ? `${new Date(company.createdAt).toLocaleDateString('es-ES', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                      })} ${new Date(company.createdAt).toLocaleTimeString('es-ES', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}`
-                    : 'No disponible'}
+                      ? `${new Date(company.createdAt).toLocaleDateString(
+                          "es-ES",
+                          {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                          }
+                        )} ${new Date(company.createdAt).toLocaleTimeString(
+                          "es-ES",
+                          {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }
+                        )}`
+                      : "No disponible"}
                 </Typography>
               </Card>
 
               <Card
                 sx={{
-                    width: '100%',
+                    width: "100%",
                   p: 2,
                     bgcolor: theme.palette.background.paper,
-                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                    border: `1px solid ${
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.15)"
+                        : "rgba(0,0,0,0.15)"
+                    }`,
                   borderRadius: 1.5,
-                  display: 'flex',
-                  flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    textAlign: 'left',
-                }}
-              >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <DonutSmall sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    textAlign: "left",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 1,
+                    }}
+                  >
+                    <DonutSmall
+                      sx={{ fontSize: 18, color: theme.palette.text.secondary }}
+                    />
+                    <Typography
+                      variant="subtitle2"
+                      sx={{
+                        fontWeight: 600,
+                        color: theme.palette.text.primary,
+                      }}
+                    >
                   Etapa del ciclo de vida
                 </Typography>
                   </Box>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                    <KeyboardArrowRight sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
-                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                  {company.lifecycleStage ? getStageLabel(company.lifecycleStage) : 'No disponible'}
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+                    <KeyboardArrowRight
+                      sx={{ fontSize: 16, color: theme.palette.text.secondary }}
+                    />
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ fontSize: "0.875rem" }}
+                    >
+                      {company.lifecycleStage
+                        ? getStageLabel(company.lifecycleStage)
+                        : "No disponible"}
                 </Typography>
                   </Box>
               </Card>
 
               <Card
                 sx={{
-                    width: '100%',
+                    width: "100%",
                   p: 2,
                     bgcolor: theme.palette.background.paper,
-                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                    border: `1px solid ${
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.15)"
+                        : "rgba(0,0,0,0.15)"
+                    }`,
                   borderRadius: 1.5,
-                  display: 'flex',
-                  flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    textAlign: 'left',
-                }}
-              >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <AccessTime sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    textAlign: "left",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 1,
+                    }}
+                  >
+                    <AccessTime
+                      sx={{ fontSize: 18, color: theme.palette.text.secondary }}
+                    />
+                    <Typography
+                      variant="subtitle2"
+                      sx={{
+                        fontWeight: 600,
+                        color: theme.palette.text.primary,
+                      }}
+                    >
                   Última actividad
                 </Typography>
                   </Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ fontSize: "0.875rem" }}
+                  >
                   {activities.length > 0 && activities[0].createdAt
-                      ? new Date(activities[0].createdAt).toLocaleDateString('es-ES', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                        })
-                    : 'No hay actividades'}
+                      ? new Date(activities[0].createdAt).toLocaleDateString(
+                          "es-ES",
+                          {
+                            day: "numeric",
+                            month: "long",
+                            year: "numeric",
+                          }
+                        )
+                      : "No hay actividades"}
                 </Typography>
               </Card>
 
                 <Card
                       sx={{
-                    width: '100%',
+                    width: "100%",
                     p: 2,
                           bgcolor: theme.palette.background.paper,
-                    border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+                    border: `1px solid ${
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.15)"
+                        : "rgba(0,0,0,0.15)"
+                    }`,
                     borderRadius: 1.5,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'flex-start',
-                    textAlign: 'left',
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "flex-start",
+                    textAlign: "left",
                   }}
-                >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Person sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                    <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                      Propietario del registro
-                    </Typography>
-                      </Box>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.875rem' }}>
-                    {company.Owner 
-                      ? (company.Owner.firstName || company.Owner.lastName
-                          ? `${company.Owner.firstName || ''} ${company.Owner.lastName || ''}`.trim()
-                          : company.Owner.email || 'Sin nombre')
-                      : 'No asignado'}
-                        </Typography>
-                </Card>
-                      </Box>
-                      
-              {/* Grid 2x2 para Actividades Recientes, Contactos, Negocios y Tickets */}
-              <Box sx={{
-                display: 'grid',
-                gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' },
-                gap: 2,
-                mt: 2,
-                mb: 2,
-              }}>
-                {/* Card de Actividades Recientes */}
-                <Card sx={{ 
-                  borderRadius: 2,
-                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                  bgcolor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                }}>
-                  <CardContent>
-                    <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
-                      Actividades Recientes
-                    </Typography>
-                          
-                {activities && activities.length > 0 ? (
-                  <Box sx={{ 
-                    display: 'flex', 
-                    gap: 1.5, 
-                    overflowX: 'auto',
-                    pb: 1,
-                    '&::-webkit-scrollbar': {
-                      height: 6,
-                    },
-                    '&::-webkit-scrollbar-track': {
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-                      borderRadius: 3,
-                    },
-                    '&::-webkit-scrollbar-thumb': {
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
-                      borderRadius: 3,
-                      '&:hover': {
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)',
-                      },
-                    },
-                  }}>
-                    {activities
-                      .sort((a, b) => {
-                        const dateA = new Date(a.createdAt || 0).getTime();
-                        const dateB = new Date(b.createdAt || 0).getTime();
-                        return dateB - dateA;
-                      })
-                      .slice(0, 6)
-                      .map((activity) => {
-                        const getActivityIcon = () => {
-                          switch (activity.type) {
-                            case 'note':
-                              return <Note sx={{ fontSize: 20, color: '#9E9E9E' }} />;
-                            case 'email':
-                              return <Email sx={{ fontSize: 20, color: '#1976D2' }} />;
-                            case 'call':
-                              return <Phone sx={{ fontSize: 20, color: '#2E7D32' }} />;
-                            case 'task':
-                            case 'todo':
-                              return <Assignment sx={{ fontSize: 20, color: '#F57C00' }} />;
-                            case 'meeting':
-                              return <Event sx={{ fontSize: 20, color: '#7B1FA2' }} />;
-                            default:
-                              return <Comment sx={{ fontSize: 20, color: theme.palette.text.secondary }} />;
-                          }
-                        };
-
-                        const getActivityTypeLabel = () => {
-                          switch (activity.type) {
-                            case 'note':
-                              return 'Nota';
-                            case 'email':
-                              return 'Correo';
-                            case 'call':
-                              return 'Llamada';
-                            case 'task':
-                            case 'todo':
-                              return 'Tarea';
-                            case 'meeting':
-                              return 'Reunión';
-                            default:
-                              return 'Actividad';
-                          }
-                        };
-
-                        const getActivityColor = () => {
-                          switch (activity.type) {
-                            case 'note':
-                              return { bg: 'rgba(158, 158, 158, 0.1)', border: 'rgba(158, 158, 158, 0.3)' };
-                            case 'email':
-                              return { bg: 'rgba(25, 118, 210, 0.1)', border: 'rgba(25, 118, 210, 0.3)' };
-                            case 'call':
-                              return { bg: 'rgba(46, 125, 50, 0.1)', border: 'rgba(46, 125, 50, 0.3)' };
-                            case 'task':
-                            case 'todo':
-                              return { bg: 'rgba(245, 124, 0, 0.1)', border: 'rgba(245, 124, 0, 0.3)' };
-                            case 'meeting':
-                              return { bg: 'rgba(123, 31, 162, 0.1)', border: 'rgba(123, 31, 162, 0.3)' };
-                            default:
-                              return { bg: theme.palette.action.hover, border: theme.palette.divider };
-                          }
-                        };
-
-                        const colors = getActivityColor();
-                        const activityTitle = activity.subject || activity.title || getActivityTypeLabel();
-
-                        return (
-                          <Tooltip 
-                            key={activity.id} 
-                            title={activityTitle}
-                            arrow
-                            placement="top"
                           >
                             <Box
                               sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                minWidth: 100,
-                                maxWidth: 100,
-                                p: 1.5,
-                                borderRadius: 2,
-                                border: `1px solid ${colors.border}`,
-                                bgcolor: colors.bg,
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                flexShrink: 0,
-                                '&:hover': {
-                                  transform: 'translateY(-2px)',
-                                  boxShadow: theme.palette.mode === 'dark' 
-                                    ? '0 4px 12px rgba(0,0,0,0.4)' 
-                                    : '0 4px 12px rgba(0,0,0,0.15)',
-                                },
-                              }}
-                            >
-                              <Box sx={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center',
-                                width: 36,
-                                height: 36,
-                                borderRadius: '50%',
-                                bgcolor: theme.palette.background.paper,
-                                mb: 1,
-                              }}>
-                                {getActivityIcon()}
-                              </Box>
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 1,
+                    }}
+                  >
+                    <Person
+                      sx={{ fontSize: 18, color: theme.palette.text.secondary }}
+                    />
                               <Typography 
-                                variant="caption" 
+                      variant="subtitle2"
                                 sx={{ 
                                   fontWeight: 600, 
-                                  fontSize: '0.7rem', 
                                   color: theme.palette.text.primary,
-                                  textAlign: 'center',
-                                  lineHeight: 1.2,
-                                  mb: 0.5,
                                 }}
                               >
-                                {getActivityTypeLabel()}
+                      Propietario del registro
                               </Typography>
-                              <Typography 
-                                variant="caption" 
-                                sx={{ 
-                                  fontSize: '0.65rem', 
-                                  color: theme.palette.text.secondary,
-                                  textAlign: 'center',
-                                }}
-                              >
-                                {activity.createdAt && new Date(activity.createdAt).toLocaleDateString('es-ES', {
-                                  day: 'numeric',
-                                  month: 'short',
-                                })}
-                              </Typography>
-                            </Box>
-                          </Tooltip>
-                        );
-                      })}
                   </Box>
-                ) : (
-                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
-                    No hay actividades recientes
-                  </Typography>
-                )}
-                  </CardContent>
+                              <Typography 
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ fontSize: "0.875rem" }}
+                  >
+                    {company.Owner
+                      ? company.Owner.firstName || company.Owner.lastName
+                        ? `${company.Owner.firstName || ""} ${
+                            company.Owner.lastName || ""
+                          }`.trim()
+                        : company.Owner.email || "Sin nombre"
+                      : "No asignado"}
+                              </Typography>
                 </Card>
-
-                {/* Card de Contactos Vinculados */}
-                <Card sx={{ 
-                  borderRadius: 2,
-                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                  bgcolor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                      <Person sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
-                      <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                        Contactos vinculados
-                      </Typography>
                     </Box>
-                {associatedContacts && associatedContacts.length > 0 ? (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    {associatedContacts.slice(0, 5).map((contact: any) => (
-                      <Box
-                        key={contact.id}
-                        onClick={() => navigate(`/contacts/${contact.id}`)}
+
+              {/* Grid 2x2 para Actividades Recientes, Contactos, Negocios y Tickets */}
+              <Box
                         sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          p: 1.5,
-                          borderRadius: 1,
-                          border: `1px solid ${theme.palette.divider}`,
-                          transition: 'all 0.2s ease',
-                          cursor: 'pointer',
-                          '&:hover': {
-                            borderColor: taxiMonterricoColors.green,
-                            backgroundColor: theme.palette.mode === 'dark' 
-                              ? 'rgba(46, 125, 50, 0.1)' 
-                              : 'rgba(46, 125, 50, 0.05)',
-                          },
-                        }}
-                      >
-                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.875rem', color: theme.palette.text.primary }}>
-                          {contact.firstName && contact.lastName 
-                            ? `${contact.firstName} ${contact.lastName}`
-                            : contact.email || 'Sin nombre'}
-                        </Typography>
-                      </Box>
-                    ))}
-                    {associatedContacts.length > 5 && (
-                      <Typography variant="caption" sx={{ color: theme.palette.text.secondary, textAlign: 'center', mt: 1 }}>
-                        Y {associatedContacts.length - 5} más...
-                                                                        </Typography>
-                                                                      )}
-                                                                    </Box>
-                ) : (
-                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
-                    No hay contactos vinculados
-                  </Typography>
-                )}
-                  </CardContent>
-                </Card>
-
-                {/* Card de Negocios Vinculados */}
-                <Card sx={{ 
-                  borderRadius: 2,
-                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                  bgcolor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                      <AttachMoney sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
-                      <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                        Negocios vinculados
-                      </Typography>
-                    </Box>
-                {associatedDeals && associatedDeals.length > 0 ? (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    {associatedDeals.slice(0, 5).map((deal: any) => (
-                      <Box
-                        key={deal.id}
-                        onClick={() => navigate(`/deals/${deal.id}`)}
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          p: 1.5,
-                          borderRadius: 1,
-                          border: `1px solid ${theme.palette.divider}`,
-                          transition: 'all 0.2s ease',
-                          cursor: 'pointer',
-                          '&:hover': {
-                            borderColor: taxiMonterricoColors.green,
-                            backgroundColor: theme.palette.mode === 'dark' 
-                              ? 'rgba(46, 125, 50, 0.1)' 
-                              : 'rgba(46, 125, 50, 0.05)',
-                          },
-                        }}
-                      >
-                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.875rem', color: theme.palette.text.primary }}>
-                          {deal.name || 'Sin nombre'}
-                                                                    </Typography>
-                        {deal.amount && (
-                          <Typography variant="body2" sx={{ fontSize: '0.875rem', color: theme.palette.text.secondary }}>
-                            S/ {deal.amount.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                                            </Typography>
-                                                          )}
-                      </Box>
-                    ))}
-                    {associatedDeals.length > 5 && (
-                      <Typography variant="caption" sx={{ color: theme.palette.text.secondary, textAlign: 'center', mt: 1 }}>
-                        Y {associatedDeals.length - 5} más...
-                                                                          </Typography>
-                                                                        )}
-                                                                      </Box>
-                ) : (
-                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
-                    No hay negocios vinculados
-                  </Typography>
-                )}
-                  </CardContent>
-                </Card>
-
-                {/* Card de Tickets Vinculados */}
-                <Card sx={{ 
-                  borderRadius: 2,
-                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                  bgcolor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                }}>
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                      <Support sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
-                      <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
-                        Tickets vinculados
-                      </Typography>
-                    </Box>
-                {associatedTickets && associatedTickets.length > 0 ? (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    {associatedTickets.slice(0, 5).map((ticket: any) => (
-                      <Box
-                        key={ticket.id}
-                                      sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                                        p: 1.5,
-                                        borderRadius: 1,
-                          border: `1px solid ${theme.palette.divider}`,
-                                        transition: 'all 0.2s ease',
-                                        '&:hover': {
-                            borderColor: taxiMonterricoColors.green,
-                            backgroundColor: theme.palette.mode === 'dark' 
-                              ? 'rgba(46, 125, 50, 0.1)' 
-                              : 'rgba(46, 125, 50, 0.05)',
-                          },
-                        }}
-                      >
-                        <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.875rem', color: theme.palette.text.primary }}>
-                          {ticket.subject || ticket.title || 'Sin asunto'}
-                                          </Typography>
-                        {ticket.status && (
-                          <Typography variant="caption" sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary }}>
-                            {ticket.status}
-                                          </Typography>
-                                          )}
-                                        </Box>
-                    ))}
-                    {associatedTickets.length > 5 && (
-                      <Typography variant="caption" sx={{ color: theme.palette.text.secondary, textAlign: 'center', mt: 1 }}>
-                        Y {associatedTickets.length - 5} más...
-                                        </Typography>
-                    )}
-                    </Box>
-                  ) : (
-                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontStyle: 'italic', textAlign: 'center', py: 2 }}>
-                    No hay tickets vinculados
-                  </Typography>
-                )}
-                  </CardContent>
-                </Card>
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" },
+                  gap: 2,
+                  mt: 2,
+                  mb: 2,
+                }}
+              >
+                <RecentActivitiesCard activities={activities} />
+                <LinkedContactsCard contacts={associatedContacts || []} />
+                <LinkedDealsCard deals={associatedDeals || []} />
+                <LinkedTicketsCard tickets={associatedTickets || []} />
               </Box>
             </>
           )}
 
           {/* Contenido de las pestañas */}
-          <Box sx={{ flex: 1, overflow: 'auto' }}>
+          <Box sx={{ flex: 1, overflow: "auto" }}>
             {/* Pestaña Información Avanzada */}
             {tabValue === 1 && (
               <Box>
-                {/* Card de Actividades Recientes - Versión completa */}
-                <Card sx={{ 
-                  borderRadius: 2,
-                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                  bgcolor: theme.palette.background.paper,
-                  px: 2,
-                  py: 2,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  mt: 2,
-                  mb: 2,
-                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
-                }}>
-                  <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
-                    Actividades Recientes
-                  </Typography>
-                  
-                  {/* Opciones de búsqueda y crear actividades */}
-                  <Box sx={{ 
-                    display: 'flex', 
-                    gap: 2, 
-                    mb: 2,
-                    flexWrap: 'wrap',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}>
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                      <TextField
-                        size="small"
-                        placeholder="Buscar actividades"
-                        value={activitySearch}
-                        onChange={(e) => setActivitySearch(e.target.value)}
-                        sx={{
-                          width: '250px',
-                          transition: 'all 0.3s ease',
-                          '& .MuiOutlinedInput-root': {
-                            height: '32px',
-                            fontSize: '0.875rem',
-                            '&:hover': {
-                              '& fieldset': {
-                                borderColor: taxiMonterricoColors.green,
-                              },
-                            },
-                            '&.Mui-focused': {
-                              '& fieldset': {
-                                borderColor: taxiMonterricoColors.green,
-                                borderWidth: 2,
-                              },
-                            },
-                          },
-                        }}
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <Search fontSize="small" />
-                            </InputAdornment>
-                          ),
-                        }}
-                      />
-                      <Button 
-                        size="small" 
-                        variant="outlined" 
-                        endIcon={<ExpandMore />}
-                        onClick={(e) => setCreateActivityMenuAnchor(e.currentTarget)}
-                        sx={{
-                          borderColor: taxiMonterricoColors.green,
-                          color: taxiMonterricoColors.green,
-                          transition: 'all 0.2s ease',
-                          '&:hover': {
-                            borderColor: taxiMonterricoColors.green,
-                            backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                            transform: 'translateY(-2px)',
-                            boxShadow: '0 4px 12px rgba(46, 125, 50, 0.2)',
-                          },
-                          '&:active': {
-                            transform: 'translateY(0)',
-                          },
-                        }}
-                      >
-                        Crear actividades
-                      </Button>
-                    </Box>
-                    
-                    {/* Filtros alineados a la derecha */}
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-                      <Chip 
-                        label={selectedTimeRange}
-                        size="small" 
-                        deleteIcon={<KeyboardArrowDown fontSize="small" />}
-                        onDelete={(e) => {
-                          e.stopPropagation();
-                          setTimeRangeMenuAnchor(e.currentTarget);
-                        }}
-                        onClick={(e) => setTimeRangeMenuAnchor(e.currentTarget)}
-                        sx={{ 
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          color: taxiMonterricoColors.green,
-                          '&:hover': {
-                            backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                            transform: 'scale(1.05)',
-                            boxShadow: '0 2px 8px rgba(46, 125, 50, 0.2)',
-                          },
-                        }}
-                      />
-                      <Box 
-                        ref={activityFilterChipRef}
-                        sx={{ display: 'inline-flex' }}
-                      >
-                        {selectedActivityTypes.length > 0 ? (
-                          <Chip 
-                            label={`(${selectedActivityTypes.length}) Actividad`}
-                            size="small" 
-                            deleteIcon={<Close fontSize="small" />}
-                            onDelete={(e) => {
-                              e.stopPropagation();
-                              setSelectedActivityTypes([]);
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (activityFilterChipRef.current) {
-                                setActivityFilterMenuAnchor(activityFilterChipRef.current);
-                              }
-                            }}
-                            sx={{ 
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              bgcolor: 'rgba(46, 125, 50, 0.1)',
-                              color: taxiMonterricoColors.green,
-                              '&:hover': {
-                                backgroundColor: 'rgba(46, 125, 50, 0.15)',
-                                transform: 'scale(1.05)',
-                                boxShadow: '0 2px 8px rgba(46, 125, 50, 0.2)',
-                              },
-                            }}
-                          />
-                        ) : (
-                          <Chip 
-                            label="Actividad"
-                            size="small" 
-                            deleteIcon={<KeyboardArrowDown fontSize="small" />}
-                            onDelete={(e) => {
-                              e.stopPropagation();
-                              if (activityFilterChipRef.current) {
-                                setActivityFilterMenuAnchor(activityFilterChipRef.current);
-                              }
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (activityFilterChipRef.current) {
-                                setActivityFilterMenuAnchor(activityFilterChipRef.current);
-                              }
-                            }}
-                            sx={{ 
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease',
-                              color: taxiMonterricoColors.green,
-                              '&:hover': {
-                                backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                                transform: 'scale(1.05)',
-                                boxShadow: '0 2px 8px rgba(46, 125, 50, 0.2)',
-                              },
-                            }}
-                          />
-                        )}
-                      </Box>
-                    </Box>
-                  </Box>
-
-                  {/* Menú de crear actividades */}
-                  <Menu
-                    anchorEl={createActivityMenuAnchor}
-                    open={Boolean(createActivityMenuAnchor)}
-                    onClose={() => setCreateActivityMenuAnchor(null)}
-                    anchorOrigin={{
-                      vertical: 'bottom',
-                      horizontal: 'left',
-                    }}
-                    transformOrigin={{
-                      vertical: 'top',
-                      horizontal: 'left',
-                    }}
-                    PaperProps={{
-                      sx: {
-                        mt: 1,
-                        minWidth: 320,
-                        maxWidth: 320,
-                        borderRadius: 2,
-                        boxShadow: theme.palette.mode === 'dark' 
-                          ? '0 4px 20px rgba(0,0,0,0.5)' 
-                          : '0 4px 20px rgba(0,0,0,0.15)',
-                        bgcolor: theme.palette.background.paper,
-                      },
-                    }}
-                  >
-                    <MenuItem 
-                      onClick={() => handleCreateActivity('note')}
-                      sx={{
-                        py: 1.5,
-                        px: 2,
-                        '&:hover': {
-                          backgroundColor: theme.palette.action.hover,
-                        },
-                      }}
-                    >
-                      <Edit sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
-                      <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
-                        Crear nota
-                      </Typography>
-                    </MenuItem>
-                    
-                    <MenuItem 
-                      onClick={() => handleCreateActivity('task')}
-                      sx={{
-                        py: 1.5,
-                        px: 2,
-                        '&:hover': {
-                          backgroundColor: theme.palette.action.hover,
-                        },
-                      }}
-                    >
-                      <Assignment sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
-                      <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
-                        Crear tarea
-                      </Typography>
-                    </MenuItem>
-                    
-                    <MenuItem 
-                      onClick={() => handleCreateActivity('call')}
-                      sx={{
-                        py: 1.5,
-                        px: 2,
-                        '&:hover': {
-                          backgroundColor: theme.palette.action.hover,
-                        },
-                      }}
-                    >
-                      <Phone sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
-                      <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
-                        Hacer llamada telefónica
-                      </Typography>
-                      <KeyboardArrowRight sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-                    </MenuItem>
-                    
-                    <MenuItem 
-                      onClick={() => handleCreateActivity('meeting')}
-                      sx={{
-                        py: 1.5,
-                        px: 2,
-                        '&:hover': {
-                          backgroundColor: theme.palette.action.hover,
-                        },
-                      }}
-                    >
-                      <Event sx={{ mr: 2, fontSize: 20, color: theme.palette.text.secondary }} />
-                      <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
-                        Programar reunión
-                      </Typography>
-                    </MenuItem>
-                  </Menu>
-
-                  {/* Menú de rango de tiempo */}
-                  <Menu
-                    anchorEl={timeRangeMenuAnchor}
-                    open={Boolean(timeRangeMenuAnchor)}
-                    onClose={() => setTimeRangeMenuAnchor(null)}
-                    anchorOrigin={{
-                      vertical: 'bottom',
-                      horizontal: 'right',
-                    }}
-                    transformOrigin={{
-                      vertical: 'top',
-                      horizontal: 'right',
-                    }}
-                    PaperProps={{
-                      sx: {
-                        mt: 1,
-                        minWidth: 280,
-                        maxWidth: 280,
-                        borderRadius: 2,
-                        boxShadow: theme.palette.mode === 'dark' 
-                          ? '0 4px 20px rgba(0,0,0,0.5)' 
-                          : '0 4px 20px rgba(0,0,0,0.15)',
-                        bgcolor: theme.palette.background.paper,
-                      },
-                    }}
-                  >
-                    {['Todo', 'Hoy', 'Ayer', 'Esta semana', 'Semana pasada', 'Últimos 7 días'].map((option) => {
-                      const isSelected = selectedTimeRange === option || (option === 'Todo' && selectedTimeRange === 'Todo hasta ahora');
-                      return (
-                        <MenuItem
-                          key={option}
-                          onClick={() => {
-                            setSelectedTimeRange(option === 'Todo' ? 'Todo hasta ahora' : option);
-                            setTimeRangeMenuAnchor(null);
-                          }}
-                          sx={{
-                            py: 1.5,
-                            px: 2,
-                            color: theme.palette.text.primary,
-                            backgroundColor: isSelected 
-                              ? (theme.palette.mode === 'dark' 
-                                ? 'rgba(144, 202, 249, 0.16)' 
-                                : '#e3f2fd')
-                              : 'transparent',
-                            '&:hover': {
-                              backgroundColor: isSelected
-                                ? (theme.palette.mode === 'dark' 
-                                  ? 'rgba(144, 202, 249, 0.24)' 
-                                  : '#bbdefb')
-                                : theme.palette.action.hover,
-                            },
-                          }}
-                        >
-                          <Typography variant="body2" sx={{ color: 'inherit' }}>
-                            {option}
-                          </Typography>
-                        </MenuItem>
-                      );
-                    })}
-                  </Menu>
-
-                  {/* Menú de tipo de actividad */}
-                  <Menu
-                    anchorEl={activityFilterMenuAnchor}
-                    open={Boolean(activityFilterMenuAnchor)}
-                    onClose={() => setActivityFilterMenuAnchor(null)}
-                    anchorOrigin={{
-                      vertical: 'bottom',
-                      horizontal: 'right',
-                    }}
-                    transformOrigin={{
-                      vertical: 'top',
-                      horizontal: 'right',
-                    }}
-                    PaperProps={{
-                      sx: {
-                        mt: 1,
-                        minWidth: 280,
-                        maxWidth: 280,
-                        borderRadius: 2,
-                        boxShadow: theme.palette.mode === 'dark' 
-                          ? '0 4px 20px rgba(0,0,0,0.5)' 
-                          : '0 4px 20px rgba(0,0,0,0.15)',
-                        bgcolor: theme.palette.background.paper,
-                      },
-                    }}
-                  >
-                    <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
-                      <TextField
-                        size="small"
-                        placeholder="Buscar"
-                        fullWidth
-                        value={activityFilterSearch}
-                        onChange={(e) => setActivityFilterSearch(e.target.value)}
-                        InputProps={{
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <Search fontSize="small" sx={{ color: theme.palette.text.secondary }} />
-                            </InputAdornment>
-                          ),
-                        }}
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            backgroundColor: theme.palette.mode === 'dark' 
-                              ? theme.palette.background.default 
-                              : '#f5f5f5',
-                            '& fieldset': {
-                              borderColor: theme.palette.divider,
-                            },
-                            '&:hover fieldset': {
-                              borderColor: theme.palette.text.secondary,
-                            },
-                            '&.Mui-focused fieldset': {
-                              borderColor: taxiMonterricoColors.green,
-                            },
-                          },
-                        }}
-                      />
-                    </Box>
-                    {(() => {
-                      // Filtrar tipos según el término de búsqueda
-                      const availableTypes = ['Nota', 'Correo', 'Llamada', 'Tarea', 'Reunión'];
-                      const filteredTypes = activityFilterSearch
-                        ? availableTypes.filter(type => 
-                            type.toLowerCase().includes(activityFilterSearch.toLowerCase())
-                          )
-                        : availableTypes;
-
-                      return filteredTypes.map((type) => {
-                        const isSelected = selectedActivityTypes.includes(type);
-                        return (
-                          <MenuItem
-                            key={type}
-                            onClick={() => {
-                              if (isSelected) {
-                                setSelectedActivityTypes(selectedActivityTypes.filter(t => t !== type));
-                              } else {
-                                setSelectedActivityTypes([...selectedActivityTypes, type]);
-                              }
-                            }}
-                            sx={{
-                              py: 1.5,
-                              px: 2,
-                              backgroundColor: isSelected 
-                                ? (theme.palette.mode === 'dark' 
-                                  ? 'rgba(46, 125, 50, 0.16)' 
-                                  : 'rgba(46, 125, 50, 0.08)')
-                                : 'transparent',
-                              '&:hover': {
-                                backgroundColor: isSelected
-                                  ? (theme.palette.mode === 'dark' 
-                                    ? 'rgba(46, 125, 50, 0.24)' 
-                                    : 'rgba(46, 125, 50, 0.12)')
-                                  : theme.palette.action.hover,
-                              },
-                            }}
-                          >
-                            <Checkbox
-                              checked={isSelected}
-                              size="small"
-                              sx={{
-                                color: taxiMonterricoColors.green,
-                                '&.Mui-checked': {
-                                  color: taxiMonterricoColors.green,
-                                },
-                              }}
-                            />
-                            <Typography variant="body2" sx={{ flexGrow: 1, color: theme.palette.text.primary }}>
-                              {type}
-                            </Typography>
-                          </MenuItem>
-                        );
-                      });
-                    })()}
-                  </Menu>
-
-                  {(() => {
-                    // Filtrar actividades según el término de búsqueda
-                    let filteredActivities = activitySearch
-                      ? activities.filter((activity) => {
-                          const searchTerm = activitySearch.toLowerCase();
-                          const subject = (activity.subject || activity.title || '').toLowerCase();
-                          const description = (activity.description || '').toLowerCase();
-                          return subject.includes(searchTerm) || description.includes(searchTerm);
-                        })
-                      : activities;
-
-                    // Filtrar por tipo de actividad
-                    if (selectedActivityTypes.length > 0) {
-                      const typeMap: { [key: string]: string[] } = {
-                        'Nota': ['note'],
-                        'Correo': ['email'],
-                        'Llamada': ['call'],
-                        'Tarea': ['task'],
-                        'Reunión': ['meeting'],
-                      };
-                      filteredActivities = filteredActivities.filter((activity) => {
-                        // Obtener el tipo de actividad
-                        let activityType = activity.type?.toLowerCase() || '';
-                        
-                        // Si es una tarea (isTask), asegurarse de que el tipo sea 'task'
-                        if (activity.isTask && !activityType) {
-                          activityType = 'task';
-                        }
-                        
-                        // Verificar si el tipo de actividad coincide con alguno de los seleccionados
-                        return selectedActivityTypes.some(selectedType => {
-                          const mappedTypes = typeMap[selectedType] || [];
-                          return mappedTypes.includes(activityType);
-                        });
-                      });
-                    }
-
-                    // Filtrar por rango de tiempo
-                    if (selectedTimeRange !== 'Todo hasta ahora') {
-                      const now = new Date();
-                      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                      let startDate: Date;
-
-                      switch (selectedTimeRange) {
-                        case 'Hoy':
-                          startDate = today;
-                          break;
-                        case 'Ayer':
-                          startDate = new Date(today);
-                          startDate.setDate(startDate.getDate() - 1);
-                          break;
-                        case 'Esta semana':
-                          startDate = new Date(today);
-                          startDate.setDate(startDate.getDate() - today.getDay());
-                          break;
-                        case 'Semana pasada':
-                          startDate = new Date(today);
-                          startDate.setDate(startDate.getDate() - today.getDay() - 7);
-                          break;
-                        case 'Últimos 7 días':
-                          startDate = new Date(today);
-                          startDate.setDate(startDate.getDate() - 7);
-                          break;
-                        default:
-                          startDate = new Date(0);
-                      }
-
-                      filteredActivities = filteredActivities.filter((activity) => {
-                        const activityDate = new Date(activity.createdAt || activity.dueDate || 0);
-                        return activityDate >= startDate;
-                      });
-                    }
-
-                    if (filteredActivities.length === 0) {
-                      return (
-                        <Box sx={{ textAlign: 'center', py: 4 }}>
-                          <Typography variant="body2" color="text.secondary">
-                            {activitySearch ? 'No se encontraron actividades' : 'No hay actividades registradas'}
-                          </Typography>
-                        </Box>
-                      );
-                    }
-
-                    return (
-                      <Box sx={{ 
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 0.5,
-                      }}>
-                        {filteredActivities.map((activity) => {
-                          const getActivityIconCompact = () => {
-                            switch (activity.type) {
-                              case 'note':
-                                return <Note sx={{ fontSize: 18, color: '#9E9E9E' }} />;
-                              case 'email':
-                                return <Email sx={{ fontSize: 18, color: '#1976D2' }} />;
-                              case 'call':
-                                return <Phone sx={{ fontSize: 18, color: '#2E7D32' }} />;
-                              case 'task':
-                              case 'todo':
-                                return <Assignment sx={{ fontSize: 18, color: '#F57C00' }} />;
-                              case 'meeting':
-                                return <Event sx={{ fontSize: 18, color: '#7B1FA2' }} />;
-                              default:
-                                return <Comment sx={{ fontSize: 18, color: theme.palette.text.secondary }} />;
-                            }
-                          };
-
-                          const getTypeColor = () => {
-                            switch (activity.type) {
-                              case 'note':
-                                return '#9E9E9E';
-                              case 'email':
-                                return '#1976D2';
-                              case 'call':
-                                return '#2E7D32';
-                              case 'task':
-                              case 'todo':
-                                return '#F57C00';
-                              case 'meeting':
-                                return '#7B1FA2';
-                              default:
-                                return theme.palette.text.secondary;
-                            }
-                          };
-
-                          return (
-                            <Box
-                              key={activity.id}
-                              onClick={() => setExpandedActivity(activity)}
-                              sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 1.5,
-                                py: 1,
-                                px: 1.5,
-                                borderRadius: 1,
-                                cursor: 'pointer',
-                                transition: 'all 0.15s ease',
-                                borderBottom: `1px solid ${theme.palette.divider}`,
-                                '&:hover': {
-                                  bgcolor: theme.palette.action.hover,
-                                },
-                                '&:last-child': {
-                                  borderBottom: 'none',
-                                },
-                              }}
-                            >
-                              {/* Checkbox */}
-                              <Checkbox
-                                checked={completedActivities[activity.id] || false}
-                                onChange={(e) => {
-                                  e.stopPropagation();
-                                  setCompletedActivities(prev => ({
+                {/* Card de Actividades Recientes */}
+                <FullActivitiesTableCard
+                  activities={activities}
+                  searchValue={activitySearch}
+                  onSearchChange={setActivitySearch}
+                  onCreateActivity={(type) => handleCreateActivity(type as string)}
+                  onActivityClick={setExpandedActivity}
+                  onToggleComplete={(activityId, completed) => {
+                                  setCompletedActivities((prev) => ({
                                     ...prev,
-                                    [activity.id]: e.target.checked
+                      [activityId]: completed,
                                   }));
                                 }}
-                                onClick={(e) => e.stopPropagation()}
-                                size="small"
-                                sx={{
-                                  p: 0,
-                                  '& .MuiSvgIcon-root': {
-                                    fontSize: 20,
-                                  },
-                                }}
-                              />
-
-                              {/* Icono */}
-                              <Box sx={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                                {getActivityIconCompact()}
-                              </Box>
-
-                              {/* Título */}
-                              <Typography 
-                                variant="body2" 
-                                sx={{ 
-                                  flex: 1,
-                                  fontWeight: 500,
-                                  fontSize: '0.875rem',
-                                  overflow: 'hidden',
-                                  textOverflow: 'ellipsis',
-                                  whiteSpace: 'nowrap',
-                                  textDecoration: completedActivities[activity.id] ? 'line-through' : 'none',
-                                  opacity: completedActivities[activity.id] ? 0.6 : 1,
-                                  color: theme.palette.text.primary,
-                                }}
-                              >
-                                {activity.subject || activity.title || 'Sin título'}
-                              </Typography>
-
-                              {/* Usuario */}
-                              <Typography 
-                                variant="body2" 
-                                sx={{ 
-                                  color: theme.palette.text.secondary,
-                                  fontSize: '0.813rem',
-                                  whiteSpace: 'nowrap',
-                                  minWidth: 100,
-                                  textAlign: 'center',
-                                }}
-                              >
-                                {activity.User ? `${activity.User.firstName} ${activity.User.lastName}` : '-'}
-                              </Typography>
-
-                              {/* Fecha */}
-                              <Typography 
-                                variant="body2" 
-                                sx={{ 
-                                  color: theme.palette.text.secondary,
-                                  fontSize: '0.813rem',
-                                  whiteSpace: 'nowrap',
-                                  minWidth: 85,
-                                  textAlign: 'center',
-                                }}
-                              >
-                                {activity.createdAt 
-                                  ? new Date(activity.createdAt).toLocaleDateString('es-ES', {
-                                      day: 'numeric',
-                                      month: 'short',
-                                      year: 'numeric',
-                                    })
-                                  : '-'}
-                              </Typography>
-
-                              {/* Tipo como chip */}
-                              <Typography
-                                variant="body2"
-                                sx={{
-                                  color: getTypeColor(),
-                                  fontWeight: 600,
-                                  fontSize: '0.75rem',
-                                  textTransform: 'uppercase',
-                                  minWidth: 60,
-                                  textAlign: 'right',
-                                }}
-                              >
-                                {getActivityTypeLabel(activity.type)}
-                              </Typography>
-                            </Box>
-                          );
-                        })}
-                      </Box>
-                    );
-                  })()}
-                </Card>
+                  completedActivities={completedActivities}
+                  getActivityTypeLabel={getActivityTypeLabel}
+                />
 
                 {/* Contactos */}
-                <Card sx={{ 
-                  mb: 4, 
-                  p: 3, 
-                  borderRadius: 2, 
-                  boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
-                  bgcolor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.divider}`,
-                }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                      Contactos
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Link 
-                        sx={{ fontSize: '0.875rem', cursor: 'pointer' }}
-                        onClick={handleOpenAddContactDialog}
-                      >
-                        + Agregar
-                      </Link>
-                      {user?.role !== 'user' && (
-                        <IconButton size="small">
-                          <Settings fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                  </Box>
-                  <TextField
-                    size="small"
-                    placeholder="Buscar"
-                    value={contactSearch}
-                    onChange={(e) => setContactSearch(e.target.value)}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Search fontSize="small" />
-                        </InputAdornment>
-                      ),
-                    }}
-                    fullWidth
-                    sx={{ 
-                      mb: 2,
-                      transition: 'all 0.3s ease',
-                      '& .MuiOutlinedInput-root': {
-                        '&:hover': {
-                          '& fieldset': {
-                            borderColor: '#2E7D32',
-                          },
-                        },
-                        '&.Mui-focused': {
-                          transform: 'scale(1.02)',
-                          '& fieldset': {
-                            borderColor: '#2E7D32',
-                            borderWidth: 2,
-                          },
-                        },
-                      },
-                    }}
-                  />
-                  {filteredContacts.length > 0 ? (
-                    <TableContainer>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>
-                              <TableSortLabel
-                                active={contactSortField === 'firstName'}
-                                direction={contactSortField === 'firstName' ? contactSortOrder : 'asc'}
-                                onClick={() => handleSortCompanies('firstName')}
-                              >
-                                NOMBRE
-                              </TableSortLabel>
-                            </TableCell>
-                            <TableCell>
-                              <TableSortLabel
-                                active={contactSortField === 'email'}
-                                direction={contactSortField === 'email' ? contactSortOrder : 'asc'}
-                                onClick={() => handleSortCompanies('email')}
-                              >
-                                CORREO ELECTRÓNICO
-                              </TableSortLabel>
-                            </TableCell>
-                            <TableCell>
-                              <TableSortLabel
-                                active={contactSortField === 'phone'}
-                                direction={contactSortField === 'phone' ? contactSortOrder : 'asc'}
-                                onClick={() => handleSortCompanies('phone')}
-                              >
-                                NÚMERO DE TELÉFONO
-                              </TableSortLabel>
-                            </TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {filteredContacts.map((contact: any) => (
-                            <TableRow 
-                              key={contact.id}
-                              onClick={() => navigate(`/contacts/${contact.id}`)}
-                              sx={{
-                                transition: 'all 0.2s ease',
-                                cursor: 'pointer',
-                                '&:hover': {
-                                  backgroundColor: 'rgba(46, 125, 50, 0.04)',
-                                  transform: 'scale(1.01)',
-                                },
-                              }}
-                            >
-                              <TableCell>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                  <Avatar 
-                                    src={contactLogo}
-                                    sx={{ 
-                                      width: 32, 
-                                      height: 32, 
-                                      bgcolor: contactLogo ? 'transparent' : taxiMonterricoColors.green 
-                                    }}
-                                  >
-                                    {!contactLogo && getContactInitials(contact.firstName, contact.lastName)}
-                                  </Avatar>
-                                  <Typography variant="body2">
-                                    {contact.firstName} {contact.lastName}
-                                  </Typography>
-                                </Box>
-                              </TableCell>
-                              <TableCell>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  {contact.email || '--'}
-                                  {contact.email && (
-                                    <>
-                                      <IconButton 
-                                        size="small" 
-                                        sx={{ p: 0.5 }}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          window.open(`mailto:${contact.email}`, '_blank');
-                                        }}
-                                        title="Enviar correo"
-                                      >
-                                        <OpenInNew fontSize="small" />
-                                      </IconButton>
-                                      <IconButton 
-                                        size="small" 
-                                        sx={{ p: 0.5 }}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleCopyToClipboard(contact.email || '');
-                                        }}
-                                        title="Copiar correo"
-                                      >
-                                        <ContentCopy fontSize="small" />
-                                      </IconButton>
-                                    </>
-                                  )}
-                                </Box>
-                              </TableCell>
-                              <TableCell>{contact.phone || '--'}</TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-                      No existen objetos asociados de este tipo o no tienes permiso para verlos.
-                    </Typography>
-                  )}
-                </Card>
+                <FullContactsTableCard
+                  contacts={associatedContacts || []}
+                  searchValue={contactSearch}
+                  onSearchChange={setContactSearch}
+                  onAddExisting={() => {
+                    handleOpenAddContactDialog();
+                  }}
+                  onAddNew={() => {
+                    handleOpenAddContactDialog();
+                  }}
+                  showActions={true}
+                  onRemove={(contactId, contactName) =>
+                    handleRemoveContactClick(contactId, contactName || "")
+                  }
+                  getContactInitials={getContactInitials}
+                  onCopyToClipboard={handleCopyToClipboard}
+                  sortField={contactSortField}
+                  sortOrder={contactSortOrder}
+                  onSort={handleSortContacts}
+                />
 
                 {/* Negocios */}
-                <Card sx={{ 
-                  mb: 4, 
-                  p: 3, 
-                  borderRadius: 2, 
-                  boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
-                  bgcolor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.divider}`,
-                }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                      Negocios
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Link 
-                        sx={{ fontSize: '0.875rem', cursor: 'pointer' }}
-                        onClick={() => {
-                          setDealFormData({ name: '', amount: '', stage: 'lead', closeDate: '', priority: 'baja' as 'baja' | 'media' | 'alta', companyId: company?.id?.toString() || '', contactId: '' });
+                <FullDealsTableCard
+                  deals={associatedDeals || []}
+                  searchValue={dealSearch}
+                  onSearchChange={setDealSearch}
+                  onAddExisting={() => {
+                    setDealFormData({
+                      name: "",
+                      amount: "",
+                      stage: "lead",
+                      closeDate: "",
+                      priority: "baja" as "baja" | "media" | "alta",
+                      companyId: company?.id?.toString() || "",
+                      contactId: "",
+                    });
                           if (allCompanies.length === 0) {
                             fetchAllCompanies();
                           }
@@ -3799,684 +3142,127 @@ const CompanyDetail: React.FC = () => {
                           }
                           setAddDealOpen(true);
                         }}
-                      >
-                        + Agregar
-                      </Link>
-                      {user?.role !== 'user' && (
-                        <IconButton size="small">
-                          <Settings fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                  </Box>
-                  <TextField
-                    size="small"
-                    placeholder="Buscar"
-                    value={dealSearch}
-                    onChange={(e) => setDealSearch(e.target.value)}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Search fontSize="small" />
-                        </InputAdornment>
-                      ),
-                    }}
-                    fullWidth
-                    sx={{ mb: 2 }}
-                  />
-                  <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-                    <Button size="small" variant="outlined" endIcon={<ExpandMore />}>
-                      Propietario del negocio
-                    </Button>
-                    <Button size="small" variant="outlined" endIcon={<ExpandMore />}>
-                      Fecha de cierre
-                    </Button>
-                    <Button size="small" variant="outlined" endIcon={<ExpandMore />}>
-                      Fecha de creación
-                    </Button>
-                    <Button size="small" variant="outlined" endIcon={<ExpandMore />}>
-                      Más
-                    </Button>
-                  </Box>
-                  {filteredDeals.length > 0 ? (
-                    <TableContainer>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow>
-                            <TableCell>
-                              <TableSortLabel
-                                active={dealSortField === 'name'}
-                                direction={dealSortField === 'name' ? dealSortOrder : 'asc'}
-                                onClick={() => handleSortDeals('name')}
-                              >
-                                NOMBRE DEL NEGOCIO
-                              </TableSortLabel>
-                            </TableCell>
-                            <TableCell>
-                              <TableSortLabel
-                                active={dealSortField === 'amount'}
-                                direction={dealSortField === 'amount' ? dealSortOrder : 'asc'}
-                                onClick={() => handleSortDeals('amount')}
-                              >
-                                VALOR
-                              </TableSortLabel>
-                            </TableCell>
-                            <TableCell>
-                              <TableSortLabel
-                                active={dealSortField === 'closeDate'}
-                                direction={dealSortField === 'closeDate' ? dealSortOrder : 'asc'}
-                                onClick={() => handleSortDeals('closeDate')}
-                              >
-                                FECHA DE CIERRE
-                              </TableSortLabel>
-                            </TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {filteredDeals.map((deal) => (
-                            <TableRow 
-                              key={deal.id}
-                              onClick={() => navigate(`/deals/${deal.id}`)}
-                              sx={{
-                                transition: 'all 0.2s ease',
-                                cursor: 'pointer',
-                                '&:hover': {
-                                  backgroundColor: 'rgba(46, 125, 50, 0.04)',
-                                  transform: 'scale(1.01)',
-                                },
-                              }}
-                            >
-                              <TableCell>{deal.name}</TableCell>
-                              <TableCell>
-                                {deal.amount ? `S/ ${deal.amount.toLocaleString('es-ES')}` : '--'}
-                              </TableCell>
-                              <TableCell>
-                                {deal.closeDate 
-                                  ? new Date(deal.closeDate).toLocaleDateString('es-ES', { 
-                                      day: 'numeric', 
-                                      month: 'long', 
-                                      year: 'numeric' 
-                                    })
-                                  : '--'}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  ) : (
-                    <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-                      No existen objetos asociados de este tipo o no tienes permiso para verlos.
-                    </Typography>
-                  )}
-                </Card>
+                  onAddNew={() => {
+                    setDealFormData({
+                      name: "",
+                      amount: "",
+                      stage: "lead",
+                      closeDate: "",
+                      priority: "baja" as "baja" | "media" | "alta",
+                      companyId: company?.id?.toString() || "",
+                      contactId: "",
+                    });
+                    if (allCompanies.length === 0) {
+                      fetchAllCompanies();
+                    }
+                    if (allContacts.length === 0) {
+                      fetchAllContacts();
+                    }
+                    setAddDealOpen(true);
+                  }}
+                  showActions={true}
+                  onRemove={(dealId, dealName) =>
+                    handleRemoveDealClick(dealId, dealName || "")
+                  }
+                  getInitials={(name: string) => {
+                    return name
+                      ? name.split(" ").length >= 2
+                        ? `${name.split(" ")[0][0]}${name.split(" ")[1][0]}`.toUpperCase()
+                        : name.substring(0, 2).toUpperCase()
+                      : "--";
+                  }}
+                  getStageLabel={getStageLabel}
+                  sortField={dealSortField}
+                  sortOrder={dealSortOrder}
+                  onSort={handleSortDeals}
+                />
 
                 {/* Tickets */}
-                <Card sx={{ 
-                  mb: 4, 
-                  p: 3, 
-                  borderRadius: 2, 
-                  boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.3)' : '0 1px 3px rgba(0,0,0,0.1)', 
-                  bgcolor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.divider}`,
-                }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                    <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
-                      Tickets
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Link 
-                        component="button" 
-                        sx={{ fontSize: '0.875rem', cursor: 'pointer', border: 'none', background: 'none', color: 'primary.main' }}
-                        onClick={() => setAddTicketOpen(true)}
-                      >
-                        + Agregar
-                      </Link>
-                      {user?.role !== 'user' && (
-                        <IconButton size="small">
-                          <Settings fontSize="small" />
-                        </IconButton>
-                      )}
-                    </Box>
-                  </Box>
-                  {associatedTickets.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary" sx={{ py: 2 }}>
-                      No existen objetos asociados de este tipo o no tienes permiso para verlos.
-                    </Typography>
-                  ) : (
-                    <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid #e0e0e0' }}>
-                      <Table size="small">
-                        <TableHead>
-                          <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Asunto</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Estado</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Prioridad</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Asignado a</TableCell>
-                            <TableCell sx={{ fontWeight: 'bold' }}>Fecha de creación</TableCell>
-                          </TableRow>
-                        </TableHead>
-                        <TableBody>
-                          {associatedTickets.map((ticket) => (
-                            <TableRow key={ticket.id} hover>
-                              <TableCell>{ticket.subject}</TableCell>
-                              <TableCell>
-                                <Chip 
-                                  label={ticket.status} 
-                                  size="small" 
-                                  sx={{ 
-                                    bgcolor: ticket.status === 'closed' ? '#e0e0e0' : 
-                                            ticket.status === 'resolved' ? '#c8e6c9' :
-                                            ticket.status === 'pending' ? '#fff9c4' :
-                                            ticket.status === 'open' ? '#bbdefb' : '#f5f5f5',
-                                    textTransform: 'capitalize'
-                                  }} 
-                                />
-                              </TableCell>
-                              <TableCell>
-                                <Chip 
-                                  label={ticket.priority} 
-                                  size="small" 
-                                  sx={{ 
-                                    bgcolor: ticket.priority === 'urgent' ? '#ffcdd2' :
-                                            ticket.priority === 'high' ? '#ffe0b2' :
-                                            ticket.priority === 'medium' ? '#fff9c4' : '#e8f5e9',
-                                    textTransform: 'capitalize'
-                                  }} 
-                                />
-                              </TableCell>
-                              <TableCell>
-                                {ticket.AssignedTo ? `${ticket.AssignedTo.firstName} ${ticket.AssignedTo.lastName}` : '-'}
-                              </TableCell>
-                              <TableCell>
-                                {ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString('es-ES') : '-'}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </TableContainer>
-                  )}
-                </Card>
+                <FullTicketsTableCard
+                  tickets={associatedTickets || []}
+                  searchValue={ticketSearch}
+                  onSearchChange={setTicketSearch}
+                  onAdd={() => setAddTicketOpen(true)}
+                  showActions={true}
+                  onRemove={(ticketId: number, ticketName?: string) =>
+                    handleRemoveTicketClick(ticketId, ticketName || "")
+                  }
+                />
               </Box>
             )}
 
             {/* Pestaña Actividades */}
             {tabValue === 2 && (
-              <Card sx={{ 
-                borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 2,
-                display: 'flex',
-                flexDirection: 'column',
-              }}>
-                {/* Barra de búsqueda y filtros */}
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 3, flexWrap: 'wrap' }}>
-                  <TextField
-                    size="small"
-                    placeholder="Buscar actividad"
-                    value={activitySearch}
-                    onChange={(e) => setActivitySearch(e.target.value)}
-                    sx={{
-                      flex: 1,
-                      minWidth: '250px',
-                      '& .MuiOutlinedInput-root': {
-                        height: '36px',
-                        fontSize: '0.875rem',
-                        '&:hover': {
-                          '& fieldset': {
-                            borderColor: taxiMonterricoColors.green,
-                          },
-                        },
-                        '&.Mui-focused': {
-                          '& fieldset': {
-                            borderColor: taxiMonterricoColors.green,
-                            borderWidth: 2,
-                          },
-                        },
-                      },
-                    }}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <Search fontSize="small" />
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    endIcon={<ExpandMore />}
-                    onClick={(e) => setActivityFilterMenuAnchor(e.currentTarget)}
-                    sx={{
-                      borderColor: taxiMonterricoColors.green,
-                      color: taxiMonterricoColors.green,
-                      textTransform: 'none',
-                      '&:hover': {
-                        borderColor: taxiMonterricoColors.green,
-                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                      },
-                    }}
-                  >
-                    Filtrar actividad ({activities.length}/{activities.length})
-                  </Button>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    endIcon={<ExpandMore />}
-                    onClick={(e) => setTimeRangeMenuAnchor(e.currentTarget)}
-                    sx={{
-                      borderColor: taxiMonterricoColors.green,
-                      color: taxiMonterricoColors.green,
-                      textTransform: 'none',
-                      '&:hover': {
-                        borderColor: taxiMonterricoColors.green,
-                        backgroundColor: 'rgba(46, 125, 50, 0.08)',
-                      },
-                    }}
-                  >
-                    {selectedTimeRange}
-                  </Button>
-                </Box>
-
-                {/* Menú de filtro de actividad */}
-                <Menu
-                  anchorEl={activityFilterMenuAnchor}
-                  open={Boolean(activityFilterMenuAnchor)}
-                  onClose={() => setActivityFilterMenuAnchor(null)}
-                  PaperProps={{
-                    sx: {
-                      mt: 1,
-                      minWidth: 280,
-                      borderRadius: 2,
-                      boxShadow: theme.palette.mode === 'dark' ? '0 4px 20px rgba(0,0,0,0.5)' : '0 4px 20px rgba(0,0,0,0.15)',
-                    },
-                  }}
-                >
-                  <Box sx={{ p: 1.5, borderBottom: `1px solid ${theme.palette.divider}` }}>
-                    <TextField
-                      size="small"
-                      placeholder="Buscar"
-                      fullWidth
-                      value={activityFilterSearch}
-                      onChange={(e) => setActivityFilterSearch(e.target.value)}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <Search fontSize="small" />
-                          </InputAdornment>
-                        ),
-                      }}
-                    />
-                  </Box>
-                  {['Nota', 'Correo', 'Llamada', 'Tarea', 'Reunión'].map((type) => {
-                    const isSelected = selectedActivityTypes.includes(type);
-                    return (
-                      <MenuItem
-                        key={type}
-                        onClick={() => {
-                          if (isSelected) {
-                            setSelectedActivityTypes(selectedActivityTypes.filter(t => t !== type));
-                          } else {
-                            setSelectedActivityTypes([...selectedActivityTypes, type]);
-                          }
-                        }}
-                        sx={{
-                          py: 1.5,
-                          backgroundColor: isSelected ? 'rgba(46, 125, 50, 0.08)' : 'transparent',
-                        }}
-                      >
-                        <Checkbox checked={isSelected} size="small" sx={{ color: taxiMonterricoColors.green, '&.Mui-checked': { color: taxiMonterricoColors.green } }} />
-                        <Typography variant="body2">{type}</Typography>
-                      </MenuItem>
-                    );
-                  })}
-                </Menu>
-
-                {/* Menú de rango de tiempo */}
-                <Menu
-                  anchorEl={timeRangeMenuAnchor}
-                  open={Boolean(timeRangeMenuAnchor)}
-                  onClose={() => setTimeRangeMenuAnchor(null)}
-                  PaperProps={{
-                    sx: {
-                      mt: 1,
-                      minWidth: 200,
-                      borderRadius: 2,
-                    },
-                  }}
-                >
-                  {[
-                    'Todo',
-                    'Hoy',
-                    'Ayer',
-                    'Esta semana',
-                    'Semana pasada',
-                    'Últimos 7 días',
-                  ].map((option) => (
-                    <MenuItem 
-                      key={option}
-                      onClick={() => { 
-                        setSelectedTimeRange(option === 'Todo' ? 'Todo hasta ahora' : option); 
-                        setTimeRangeMenuAnchor(null); 
-                      }}
-                      sx={{
-                        backgroundColor: (selectedTimeRange === option || (option === 'Todo' && selectedTimeRange === 'Todo hasta ahora')) 
-                          ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)') 
-                          : 'transparent',
-                      }}
-                    >
-                      {option}
-                    </MenuItem>
-                  ))}
-                </Menu>
-
-                {/* Tabs secundarios de tipo de actividad */}
-                <Box sx={{ 
-                  display: 'flex', 
-                  gap: 0.5, 
-                  mb: 3, 
-                  borderBottom: `2px solid ${theme.palette.divider}`,
-                  overflowX: 'auto',
-                }}>
-                  {[
-                    { value: 'all', label: 'Actividad' },
-                    { value: 'note', label: 'Notas' },
-                    { value: 'email', label: 'Correos' },
-                    { value: 'call', label: 'Llamadas' },
-                    { value: 'task', label: 'Tareas' },
-                    { value: 'meeting', label: 'Reuniones' },
-                  ].map((tab) => (
-                    <Button
-                      key={tab.value}
-                      size="small"
-                      onClick={() => setSelectedActivityType(tab.value)}
-                      sx={{
-                        color: selectedActivityType === tab.value ? taxiMonterricoColors.green : theme.palette.text.secondary,
-                        textTransform: 'none',
-                        fontWeight: selectedActivityType === tab.value ? 600 : 500,
-                        borderBottom: selectedActivityType === tab.value ? `3px solid ${taxiMonterricoColors.green}` : '3px solid transparent',
-                        borderRadius: 0,
-                        minWidth: 'auto',
-                        px: 2.5,
-                        py: 1.5,
-                        '&:hover': {
-                          color: taxiMonterricoColors.green,
-                          bgcolor: 'transparent',
-                        },
-                      }}
-                    >
-                      {tab.label}
-                    </Button>
-                  ))}
-                </Box>
-
-                {/* Contenido de actividades */}
-                {(() => {
-                  // Filtrar por búsqueda
-                  let filteredActivities = activitySearch
-                    ? activities.filter((activity) => {
-                        const searchTerm = activitySearch.toLowerCase();
-                        const subject = (activity.subject || activity.title || '').toLowerCase();
-                        const description = (activity.description || '').toLowerCase();
-                        return subject.includes(searchTerm) || description.includes(searchTerm);
-                      })
-                    : activities;
-
-                  // Filtrar por tipo de actividad (tab seleccionado)
-                  if (selectedActivityType !== 'all') {
-                    const typeMap: { [key: string]: string } = {
-                      'note': 'note',
-                      'email': 'email',
-                      'call': 'call',
-                      'task': 'task',
-                      'meeting': 'meeting',
-                    };
-                    filteredActivities = filteredActivities.filter((activity) => {
-                      let activityType = activity.type?.toLowerCase() || '';
-                      if (activity.isTask && !activityType) {
-                        activityType = 'task';
-                      }
-                      return activityType === typeMap[selectedActivityType];
-                    });
-                  }
-
-                  // Filtrar por tipos seleccionados en el menú de filtro
-                  if (selectedActivityTypes.length > 0) {
-                    const typeMap: { [key: string]: string[] } = {
-                      'Nota': ['note'],
-                      'Correo': ['email'],
-                      'Llamada': ['call'],
-                      'Tarea': ['task'],
-                      'Reunión': ['meeting'],
-                    };
-                    filteredActivities = filteredActivities.filter((activity) => {
-                      let activityType = activity.type?.toLowerCase() || '';
-                      if (activity.isTask && !activityType) {
-                        activityType = 'task';
-                      }
-                      return selectedActivityTypes.some(selectedType => {
-                        const mappedTypes = typeMap[selectedType] || [];
-                        return mappedTypes.includes(activityType);
-                      });
-                    });
-                  }
-
-                  // Filtrar por rango de tiempo
-                  if (selectedTimeRange !== 'Todo hasta ahora') {
-                    const now = new Date();
-                    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    const yesterday = new Date(today);
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    const startOfWeek = new Date(today);
-                    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-                    const startOfLastWeek = new Date(startOfWeek);
-                    startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
-                    const endOfLastWeek = new Date(startOfWeek);
-                    endOfLastWeek.setDate(endOfLastWeek.getDate() - 1);
-                    const sevenDaysAgo = new Date(today);
-                    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-                    filteredActivities = filteredActivities.filter((activity) => {
-                      const activityDate = new Date(activity.createdAt);
-                      const activityDay = new Date(activityDate.getFullYear(), activityDate.getMonth(), activityDate.getDate());
-                      
-                      switch (selectedTimeRange) {
-                        case 'Hoy':
-                          return activityDay.getTime() === today.getTime();
-                        case 'Ayer':
-                          return activityDay.getTime() === yesterday.getTime();
-                        case 'Esta semana':
-                          return activityDay >= startOfWeek && activityDay <= today;
-                        case 'Semana pasada':
-                          return activityDay >= startOfLastWeek && activityDay <= endOfLastWeek;
-                        case 'Últimos 7 días':
-                          return activityDay >= sevenDaysAgo && activityDay <= today;
-                        default:
-                          return true;
-                      }
-                    });
-                  }
-
-                  if (filteredActivities.length === 0) {
-                    return (
-                      <Box sx={{ textAlign: 'center', py: 8 }}>
-                        <Box
-                          sx={{
-                            width: 120,
-                            height: 120,
-                            borderRadius: '50%',
-                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F3F4F6',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            mx: 'auto',
-                            mb: 2,
-                          }}
-                        >
-                          <Assignment sx={{ fontSize: 48, color: theme.palette.text.secondary }} />
-                        </Box>
-                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1, color: theme.palette.text.primary }}>
-                          No hay actividades registradas
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          No hay actividades registradas para esta empresa. Crea una nueva actividad para comenzar.
-                        </Typography>
-                      </Box>
-                    );
-                  }
-
-                  return (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      {filteredActivities.map((activity) => (
-                        <Paper
-                          key={activity.id}
-                          onClick={() => setExpandedActivity(activity)}
-                          sx={{
-                            p: 2,
-                            ...getActivityStatusColor(activity),
-                            borderRadius: 1.5,
-                            position: 'relative',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            '&:hover': {
-                              opacity: 0.9,
-                              boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                            },
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              position: 'absolute',
-                              top: 8,
-                              right: 8,
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'flex-end',
-                              gap: 0.5,
-                            }}
-                          >
-                            <Typography
-                              variant="caption"
-                              sx={{
-                                color: taxiMonterricoColors.green,
-                                fontWeight: 600,
-                                fontSize: '0.7rem',
-                                textTransform: 'uppercase',
-                              }}
-                            >
-                              {getActivityTypeLabel(activity.type)}
-                            </Typography>
-                            {activity.User && (
-                              <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-                                Por {activity.User.firstName} {activity.User.lastName}
-                                {activity.createdAt && (
-                                  <span> • {new Date(activity.createdAt).toLocaleDateString('es-ES', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: 'numeric',
-                                  })}</span>
-                                )}
-                              </Typography>
-                            )}
-                          </Box>
-                          <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Checkbox
-                              checked={completedActivities[activity.id] || false}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                setCompletedActivities(prev => ({
-                                  ...prev,
-                                  [activity.id]: e.target.checked
-                                }));
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              size="small"
-                              sx={{
-                                p: 0.5,
-                                '& .MuiSvgIcon-root': {
-                                  fontSize: 20,
-                                },
-                              }}
-                            />
-                            <Typography 
-                              variant="subtitle2" 
-                              sx={{ 
-                                fontWeight: 600, 
-                                mb: 0.5, 
-                                pr: 6,
-                                flex: 1,
-                                textDecoration: completedActivities[activity.id] ? 'line-through' : 'none',
-                                opacity: completedActivities[activity.id] ? 0.6 : 1,
-                              }}
-                            >
-                              {activity.subject || activity.title}
-                            </Typography>
-                          </Box>
-                          {activity.description && (
-                            <Box
-                              sx={{
-                                mt: 2,
-                                p: 1.5,
-                                borderRadius: 1,
-                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
-                                border: `1px solid ${theme.palette.divider}`,
-                              }}
-                            >
-                              <Typography 
-                                variant="body2" 
-                                sx={{ 
-                                  color: theme.palette.text.secondary,
-                                  whiteSpace: 'pre-wrap',
-                                  fontSize: '0.875rem',
-                                }}
-                              >
-                                {activity.description.replace(/<[^>]*>/g, '').substring(0, 200)}{activity.description.length > 200 ? '...' : ''}
-                              </Typography>
-                            </Box>
-                          )}
-                        </Paper>
-                      ))}
-                    </Box>
-                  );
-                })()}
-              </Card>
+              <ActivitiesTabContent
+                activities={activities}
+                activitySearch={activitySearch}
+                onSearchChange={setActivitySearch}
+                onCreateActivity={(type) => handleCreateActivity(type as string)}
+                onActivityClick={setExpandedActivity}
+                onToggleComplete={(activityId, completed) => {
+                  setCompletedActivities((prev) => ({
+                    ...prev,
+                    [activityId]: completed,
+                  }));
+                }}
+                completedActivities={completedActivities}
+                getActivityTypeLabel={getActivityTypeLabel}
+                getActivityStatusColor={getActivityStatusColor}
+                emptyMessage="No hay actividades registradas para esta empresa. Crea una nueva actividad para comenzar."
+              />
             )}
-
           </Box>
         </Box>
 
         {/* Columna Copiloto IA y Registro de Cambios - Solo en desktop cuando está abierto */}
         {isDesktop && copilotOpen && (
-                  <Box sx={{ 
+          <Box
+            sx={{
           width: 380,
           flexShrink: 0,
-          display: 'flex',
-          flexDirection: 'column',
+              display: "flex",
+              flexDirection: "column",
           gap: 2,
-          alignSelf: 'flex-start',
-        }}>
+              alignSelf: "flex-start",
+            }}
+          >
           {/* Copiloto IA */}
-          <Box sx={{
-                    display: 'flex', 
-          flexDirection: 'column',
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
           border: `1px solid ${theme.palette.divider}`,
           borderRadius: 2,
           bgcolor: theme.palette.background.paper,
           p: 2,
           pb: 3,
-          boxSizing: 'border-box',
-          overflowY: 'auto',
-          height: 'fit-content',
-          maxHeight: 'calc(100vh - 80px)',
-        }}>
+                boxSizing: "border-box",
+                overflowY: "auto",
+                height: "fit-content",
+                maxHeight: "calc(100vh - 80px)",
+              }}
+            >
         {/* Header del Copilot */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <AutoAwesome sx={{ color: taxiMonterricoColors.green, fontSize: 24 }} />
-            <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem', color: theme.palette.text.primary }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  mb: 3,
+                }}
+              >
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <AutoAwesome
+                    sx={{ color: taxiMonterricoColors.green, fontSize: 24 }}
+                  />
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 600,
+                      fontSize: "1.125rem",
+                      color: theme.palette.text.primary,
+                    }}
+                  >
               Copiloto IA
             </Typography>
           </Box>
@@ -4485,7 +3271,7 @@ const CompanyDetail: React.FC = () => {
             onClick={() => setCopilotOpen(false)}
                       sx={{ 
               color: theme.palette.text.secondary,
-                          '&:hover': {
+                    "&:hover": {
                 bgcolor: theme.palette.action.hover,
               },
             }}
@@ -4499,38 +3285,56 @@ const CompanyDetail: React.FC = () => {
                         sx={{
             mb: 2, 
             p: 2, 
-            bgcolor: theme.palette.mode === 'dark' 
-              ? 'rgba(255, 152, 0, 0.1)' 
-              : 'rgba(255, 152, 0, 0.05)',
-            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 152, 0, 0.15)'}`,
+                  bgcolor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255, 152, 0, 0.1)"
+                      : "rgba(255, 152, 0, 0.05)",
+                  border: `1px solid ${
+                    theme.palette.mode === "dark"
+                      ? "rgba(255, 152, 0, 0.2)"
+                      : "rgba(255, 152, 0, 0.15)"
+                  }`,
             borderRadius: 2,
           }}
         >
-          <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+                <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
             <Box
                         sx={{
                 width: 40,
                 height: 40,
                 borderRadius: 1.5,
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 152, 0, 0.2)' 
-                  : 'rgba(255, 152, 0, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                      bgcolor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255, 152, 0, 0.2)"
+                          : "rgba(255, 152, 0, 0.1)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                 flexShrink: 0,
               }}
             >
-              <ReportProblem sx={{ fontSize: 20, color: '#FF9800' }} />
+                    <ReportProblem sx={{ fontSize: 20, color: "#FF9800" }} />
                     </Box>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem', color: theme.palette.text.primary }}>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{
+                        fontWeight: 700,
+                        mb: 0.5,
+                        fontSize: "0.875rem",
+                        color: theme.palette.text.primary,
+                      }}
+                    >
                 Muestra preocupantes
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ fontSize: "0.8125rem", lineHeight: 1.5 }}
+                    >
                 {associatedTickets.length > 0 
                   ? `Esta empresa tiene ${associatedTickets.length} ticket(s) abierto(s) que requieren atención.`
-                  : 'Sin datos suficientes para generar alertas en este momento.'}
+                        : "Sin datos suficientes para generar alertas en este momento."}
               </Typography>
                   </Box>
           </Box>
@@ -4540,14 +3344,17 @@ const CompanyDetail: React.FC = () => {
             fullWidth
                         sx={{
               mt: 1,
-              borderColor: '#FF9800',
-              color: '#FF9800',
-                          textTransform: 'none',
-              fontSize: '0.875rem',
+                    borderColor: "#FF9800",
+                    color: "#FF9800",
+                    textTransform: "none",
+                    fontSize: "0.875rem",
               fontWeight: 500,
-                          '&:hover': {
-                borderColor: '#FF9800',
-                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.15)' : 'rgba(255, 152, 0, 0.08)',
+                    "&:hover": {
+                      borderColor: "#FF9800",
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255, 152, 0, 0.15)"
+                          : "rgba(255, 152, 0, 0.08)",
               },
             }}
             onClick={() => {
@@ -4564,36 +3371,55 @@ const CompanyDetail: React.FC = () => {
                               sx={{
                                 mb: 2,
             p: 2, 
-            bgcolor: theme.palette.mode === 'dark' 
-              ? 'rgba(244, 67, 54, 0.1)' 
-              : 'rgba(244, 67, 54, 0.05)',
-            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(244, 67, 54, 0.15)'}`,
+                  bgcolor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(244, 67, 54, 0.1)"
+                      : "rgba(244, 67, 54, 0.05)",
+                  border: `1px solid ${
+                    theme.palette.mode === "dark"
+                      ? "rgba(244, 67, 54, 0.2)"
+                      : "rgba(244, 67, 54, 0.15)"
+                  }`,
             borderRadius: 2,
           }}
         >
-          <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+                <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
             <Box
               sx={{
                 width: 40,
                 height: 40,
                 borderRadius: 1.5,
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(244, 67, 54, 0.2)' 
-                  : 'rgba(244, 67, 54, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                      bgcolor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(244, 67, 54, 0.2)"
+                          : "rgba(244, 67, 54, 0.1)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                 flexShrink: 0,
               }}
             >
-              <Receipt sx={{ fontSize: 20, color: '#F44336' }} />
+                    <Receipt sx={{ fontSize: 20, color: "#F44336" }} />
             </Box>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem', color: theme.palette.text.primary }}>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{
+                        fontWeight: 700,
+                        mb: 0.5,
+                        fontSize: "0.875rem",
+                        color: theme.palette.text.primary,
+                      }}
+                    >
                 Próximas pérdidas
                             </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
-                Sin datos suficientes para identificar riesgos financieros en este momento.
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ fontSize: "0.8125rem", lineHeight: 1.5 }}
+                    >
+                      Sin datos suficientes para identificar riesgos financieros
+                      en este momento.
               </Typography>
             </Box>
           </Box>
@@ -4603,14 +3429,17 @@ const CompanyDetail: React.FC = () => {
             fullWidth
                                   sx={{
               mt: 1,
-              borderColor: '#F44336',
-              color: '#F44336',
-              textTransform: 'none',
-              fontSize: '0.875rem',
+                    borderColor: "#F44336",
+                    color: "#F44336",
+                    textTransform: "none",
+                    fontSize: "0.875rem",
               fontWeight: 500,
-                                    '&:hover': {
-                borderColor: '#F44336',
-                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.15)' : 'rgba(244, 67, 54, 0.08)',
+                    "&:hover": {
+                      borderColor: "#F44336",
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(244, 67, 54, 0.15)"
+                          : "rgba(244, 67, 54, 0.08)",
               },
             }}
             onClick={() => {
@@ -4626,38 +3455,62 @@ const CompanyDetail: React.FC = () => {
         <Card 
                                         sx={{
             p: 2, 
-            bgcolor: theme.palette.mode === 'dark' 
-              ? 'rgba(46, 125, 50, 0.1)' 
-              : 'rgba(46, 125, 50, 0.05)',
-            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(46, 125, 50, 0.2)' : 'rgba(46, 125, 50, 0.15)'}`,
+                  bgcolor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(46, 125, 50, 0.1)"
+                      : "rgba(46, 125, 50, 0.05)",
+                  border: `1px solid ${
+                    theme.palette.mode === "dark"
+                      ? "rgba(46, 125, 50, 0.2)"
+                      : "rgba(46, 125, 50, 0.15)"
+                  }`,
             borderRadius: 2,
           }}
         >
-          <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+                <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
                                               <Box
                                                 sx={{
                 width: 40,
                 height: 40,
                 borderRadius: 1.5,
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(46, 125, 50, 0.2)' 
-                  : 'rgba(46, 125, 50, 0.1)',
-                                                  display: 'flex',
-                                                  alignItems: 'center',
-                                                  justifyContent: 'center',
+                      bgcolor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(46, 125, 50, 0.2)"
+                          : "rgba(46, 125, 50, 0.1)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
                 flexShrink: 0,
               }}
             >
-              <TaskAlt sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+                    <TaskAlt
+                      sx={{ fontSize: 20, color: taxiMonterricoColors.green }}
+                    />
                                               </Box>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem', color: theme.palette.text.primary }}>
+                    <Typography
+                      variant="subtitle2"
+                      sx={{
+                        fontWeight: 700,
+                        mb: 0.5,
+                        fontSize: "0.875rem",
+                        color: theme.palette.text.primary,
+                      }}
+                    >
                 Manejo seguimiento
                                               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ fontSize: "0.8125rem", lineHeight: 1.5 }}
+                    >
                 {activities.length > 0
-                  ? `Última actividad hace ${Math.floor((Date.now() - new Date(activities[0].createdAt).getTime()) / (1000 * 60 * 60 * 24))} días. Es momento de hacer seguimiento.`
-                  : 'Sin datos suficientes. Crea una tarea para iniciar el seguimiento.'}
+                        ? `Última actividad hace ${Math.floor(
+                            (Date.now() -
+                              new Date(activities[0].createdAt).getTime()) /
+                              (1000 * 60 * 60 * 24)
+                          )} días. Es momento de hacer seguimiento.`
+                        : "Sin datos suficientes. Crea una tarea para iniciar el seguimiento."}
                                           </Typography>
                                       </Box>
                                     </Box>
@@ -4669,12 +3522,15 @@ const CompanyDetail: React.FC = () => {
               mt: 1,
               borderColor: taxiMonterricoColors.green,
               color: taxiMonterricoColors.green,
-              textTransform: 'none',
-              fontSize: '0.875rem',
+                    textTransform: "none",
+                    fontSize: "0.875rem",
               fontWeight: 500,
-              '&:hover': {
+                    "&:hover": {
                 borderColor: taxiMonterricoColors.green,
-                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(46, 125, 50, 0.15)' : 'rgba(46, 125, 50, 0.08)',
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(46, 125, 50, 0.15)"
+                          : "rgba(46, 125, 50, 0.08)",
               },
             }}
             onClick={() => {
@@ -4689,100 +3545,145 @@ const CompanyDetail: React.FC = () => {
 
           {/* Card Independiente: Registro de Cambios / Logs */}
           {historyOpen && (
-          <Box sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  border: `1px solid ${
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.15)"
+                      : "rgba(0,0,0,0.15)"
+                  }`,
             borderRadius: 2,
             bgcolor: theme.palette.background.paper,
             p: 2,
             pb: 3,
-            boxSizing: 'border-box',
-            overflowY: 'auto',
-            height: 'fit-content',
-            maxHeight: 'calc(100vh - 80px)',
-          }}>
+                  boxSizing: "border-box",
+                  overflowY: "auto",
+                  height: "fit-content",
+                  maxHeight: "calc(100vh - 80px)",
+                }}
+              >
             {/* Card: Registro de Cambios */}
             <Card 
               sx={{ 
                 p: 2, 
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(33, 150, 243, 0.1)' 
-                  : 'rgba(33, 150, 243, 0.05)',
-                border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.15)'}`,
+                    bgcolor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(33, 150, 243, 0.1)"
+                        : "rgba(33, 150, 243, 0.05)",
+                    border: `1px solid ${
+                      theme.palette.mode === "dark"
+                        ? "rgba(33, 150, 243, 0.2)"
+                        : "rgba(33, 150, 243, 0.15)"
+                    }`,
                 borderRadius: 2,
                 maxHeight: 400,
-                display: 'flex',
-                flexDirection: 'column',
+                    display: "flex",
+                    flexDirection: "column",
               }}
             >
-              <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+                  <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
                 <Box
                   sx={{
                     width: 40,
                     height: 40,
                     borderRadius: 1.5,
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? 'rgba(33, 150, 243, 0.2)' 
-                      : 'rgba(33, 150, 243, 0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                        bgcolor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(33, 150, 243, 0.2)"
+                            : "rgba(33, 150, 243, 0.1)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                     flexShrink: 0,
                   }}
                 >
-                  <History sx={{ fontSize: 20, color: '#2196F3' }} />
+                      <History sx={{ fontSize: 20, color: "#2196F3" }} />
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem' }}>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ fontWeight: 700, mb: 0.5, fontSize: "0.875rem" }}
+                      >
                     Registro de Cambios
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ fontSize: "0.8125rem", lineHeight: 1.5 }}
+                      >
                     Historial de actividades y modificaciones recientes
                   </Typography>
                 </Box>
               </Box>
               
               {/* Lista de logs */}
-              <Box sx={{ 
-                overflowY: 'auto', 
+                  <Box
+                    sx={{
+                      overflowY: "auto",
                 maxHeight: 280,
                 mt: 1,
-                '&::-webkit-scrollbar': {
+                      "&::-webkit-scrollbar": {
                   width: 6,
                 },
-                '&::-webkit-scrollbar-track': {
-                  backgroundColor: 'transparent',
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                      "&::-webkit-scrollbar-track": {
+                        backgroundColor: "transparent",
+                      },
+                      "&::-webkit-scrollbar-thumb": {
+                        backgroundColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(255,255,255,0.2)"
+                            : "rgba(0,0,0,0.2)",
                   borderRadius: 3,
                 },
-              }}>
+                    }}
+                  >
                 {loadingLogs ? (
-                  <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          justifyContent: "center",
+                          py: 2,
+                        }}
+                      >
                     <CircularProgress size={20} />
                   </Box>
                 ) : activityLogs.length === 0 ? (
-                  <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', textAlign: 'center', py: 2, fontStyle: 'italic' }}>
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                          fontSize: "0.75rem",
+                          textAlign: "center",
+                          py: 2,
+                          fontStyle: "italic",
+                        }}
+                      >
                     No hay registros disponibles
                   </Typography>
                 ) : (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 1.5,
+                        }}
+                      >
                     {activityLogs.map((log, index) => {
                       const renderIcon = () => {
                         switch (log.iconType) {
-                          case 'note':
+                              case "note":
                             return <Note sx={{ fontSize: 16 }} />;
-                          case 'email':
+                              case "email":
                             return <Email sx={{ fontSize: 16 }} />;
-                          case 'call':
+                              case "call":
                             return <Phone sx={{ fontSize: 16 }} />;
-                          case 'meeting':
+                              case "meeting":
                             return <Event sx={{ fontSize: 16 }} />;
-                          case 'task':
+                              case "task":
                             return <TaskAlt sx={{ fontSize: 16 }} />;
-                          case 'company':
+                              case "company":
                             return <Business sx={{ fontSize: 16 }} />;
                           default:
                             return <History sx={{ fontSize: 16 }} />;
@@ -4793,13 +3694,18 @@ const CompanyDetail: React.FC = () => {
                       <Box
                         key={log.id}
                         sx={{
-                          display: 'flex',
+                                display: "flex",
                           gap: 1,
-                          alignItems: 'flex-start',
+                                alignItems: "flex-start",
                           pb: index < activityLogs.length - 1 ? 1.5 : 0,
-                          borderBottom: index < activityLogs.length - 1 
-                            ? `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}` 
-                            : 'none',
+                                borderBottom:
+                                  index < activityLogs.length - 1
+                                    ? `1px solid ${
+                                        theme.palette.mode === "dark"
+                                          ? "rgba(255,255,255,0.08)"
+                                          : "rgba(0,0,0,0.08)"
+                                      }`
+                                    : "none",
                         }}
                       >
                         <Box
@@ -4807,12 +3713,13 @@ const CompanyDetail: React.FC = () => {
                             width: 32,
                             height: 32,
                             borderRadius: 1,
-                            bgcolor: theme.palette.mode === 'dark' 
-                              ? 'rgba(33, 150, 243, 0.15)' 
-                              : 'rgba(33, 150, 243, 0.1)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
+                                  bgcolor:
+                                    theme.palette.mode === "dark"
+                                      ? "rgba(33, 150, 243, 0.15)"
+                                      : "rgba(33, 150, 243, 0.1)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
                             flexShrink: 0,
                             mt: 0.25,
                           }}
@@ -4820,28 +3727,62 @@ const CompanyDetail: React.FC = () => {
                           {renderIcon()}
                         </Box>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 500, mb: 0.25 }}>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontSize: "0.75rem",
+                                    fontWeight: 500,
+                                    mb: 0.25,
+                                  }}
+                                >
                             {log.description}
                           </Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                                <Box
+                                  sx={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 0.75,
+                                    flexWrap: "wrap",
+                                  }}
+                                >
                             {log.user && (
-                              <Typography variant="caption" sx={{ fontSize: '0.6875rem', color: theme.palette.text.secondary }}>
+                                    <Typography
+                                      variant="caption"
+                                      sx={{
+                                        fontSize: "0.6875rem",
+                                        color: theme.palette.text.secondary,
+                                      }}
+                                    >
                                 {log.user.firstName} {log.user.lastName}
                               </Typography>
                             )}
                             {log.timestamp && (
                               <>
                                 {log.user && (
-                                  <Typography variant="caption" sx={{ fontSize: '0.6875rem', color: theme.palette.text.disabled }}>
+                                        <Typography
+                                          variant="caption"
+                                          sx={{
+                                            fontSize: "0.6875rem",
+                                            color: theme.palette.text.disabled,
+                                          }}
+                                        >
                                     •
                                   </Typography>
                                 )}
-                                <Typography variant="caption" sx={{ fontSize: '0.6875rem', color: theme.palette.text.secondary }}>
-                                  {new Date(log.timestamp).toLocaleDateString('es-ES', {
-                                    day: '2-digit',
-                                    month: 'short',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
+                                      <Typography
+                                        variant="caption"
+                                        sx={{
+                                          fontSize: "0.6875rem",
+                                          color: theme.palette.text.secondary,
+                                        }}
+                                      >
+                                        {new Date(
+                                          log.timestamp
+                                        ).toLocaleDateString("es-ES", {
+                                          day: "2-digit",
+                                          month: "short",
+                                          hour: "2-digit",
+                                          minute: "2-digit",
                                   })}
                                 </Typography>
                               </>
@@ -4862,104 +3803,141 @@ const CompanyDetail: React.FC = () => {
 
         {/* Card Independiente: Registro de Cambios / Logs - Solo cuando Copiloto IA está cerrado */}
         {isDesktop && !copilotOpen && historyOpen && (
-        <Box sx={{
+          <Box
+            sx={{
           width: 380,
           flexShrink: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+              display: "flex",
+              flexDirection: "column",
+              border: `1px solid ${
+                theme.palette.mode === "dark"
+                  ? "rgba(255,255,255,0.15)"
+                  : "rgba(0,0,0,0.15)"
+              }`,
           borderRadius: 2,
           bgcolor: theme.palette.background.paper,
           p: 2,
           pb: 3,
-          boxSizing: 'border-box',
-          overflowY: 'auto',
-          height: 'fit-content',
-          maxHeight: 'calc(100vh - 80px)',
-          alignSelf: 'flex-start',
+              boxSizing: "border-box",
+              overflowY: "auto",
+              height: "fit-content",
+              maxHeight: "calc(100vh - 80px)",
+              alignSelf: "flex-start",
           mb: 2,
-        }}>
+            }}
+          >
           {/* Card: Registro de Cambios */}
           <Card 
             sx={{ 
               p: 2, 
-              bgcolor: theme.palette.mode === 'dark' 
-                ? 'rgba(33, 150, 243, 0.1)' 
-                : 'rgba(33, 150, 243, 0.05)',
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.2)' : 'rgba(33, 150, 243, 0.15)'}`,
+                bgcolor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(33, 150, 243, 0.1)"
+                    : "rgba(33, 150, 243, 0.05)",
+                border: `1px solid ${
+                  theme.palette.mode === "dark"
+                    ? "rgba(33, 150, 243, 0.2)"
+                    : "rgba(33, 150, 243, 0.15)"
+                }`,
               borderRadius: 2,
               maxHeight: 400,
-              display: 'flex',
-              flexDirection: 'column',
+                display: "flex",
+                flexDirection: "column",
             }}
           >
-            <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+              <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
               <Box
                 sx={{
                   width: 40,
                   height: 40,
                   borderRadius: 1.5,
-                  bgcolor: theme.palette.mode === 'dark' 
-                    ? 'rgba(33, 150, 243, 0.2)' 
-                    : 'rgba(33, 150, 243, 0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                    bgcolor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(33, 150, 243, 0.2)"
+                        : "rgba(33, 150, 243, 0.1)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   flexShrink: 0,
                 }}
               >
-                <History sx={{ fontSize: 20, color: '#2196F3' }} />
+                  <History sx={{ fontSize: 20, color: "#2196F3" }} />
               </Box>
               <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem' }}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ fontWeight: 700, mb: 0.5, fontSize: "0.875rem" }}
+                  >
                   Registro de Cambios
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ fontSize: "0.8125rem", lineHeight: 1.5 }}
+                  >
                   Historial de actividades y modificaciones recientes
                 </Typography>
               </Box>
             </Box>
             
             {/* Lista de logs */}
-            <Box sx={{ 
-              overflowY: 'auto', 
+              <Box
+                sx={{
+                  overflowY: "auto",
               maxHeight: 280,
               mt: 1,
-              '&::-webkit-scrollbar': {
+                  "&::-webkit-scrollbar": {
                 width: 6,
               },
-              '&::-webkit-scrollbar-track': {
-                backgroundColor: 'transparent',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
+                  "&::-webkit-scrollbar-track": {
+                    backgroundColor: "transparent",
+                  },
+                  "&::-webkit-scrollbar-thumb": {
+                    backgroundColor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.2)"
+                        : "rgba(0,0,0,0.2)",
                 borderRadius: 3,
               },
-            }}>
+                }}
+              >
               {loadingLogs ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                  <Box
+                    sx={{ display: "flex", justifyContent: "center", py: 2 }}
+                  >
                   <CircularProgress size={20} />
                 </Box>
               ) : activityLogs.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', textAlign: 'center', py: 2, fontStyle: 'italic' }}>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      fontSize: "0.75rem",
+                      textAlign: "center",
+                      py: 2,
+                      fontStyle: "italic",
+                    }}
+                  >
                   No hay registros disponibles
                 </Typography>
               ) : (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                  <Box
+                    sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}
+                  >
                   {activityLogs.map((log, index) => {
                     const renderIcon = () => {
                       switch (log.iconType) {
-                        case 'note':
+                          case "note":
                           return <Note sx={{ fontSize: 16 }} />;
-                        case 'email':
+                          case "email":
                           return <Email sx={{ fontSize: 16 }} />;
-                        case 'call':
+                          case "call":
                           return <Phone sx={{ fontSize: 16 }} />;
-                        case 'meeting':
+                          case "meeting":
                           return <Event sx={{ fontSize: 16 }} />;
-                        case 'task':
+                          case "task":
                           return <TaskAlt sx={{ fontSize: 16 }} />;
-                        case 'company':
+                          case "company":
                           return <Business sx={{ fontSize: 16 }} />;
                         default:
                           return <History sx={{ fontSize: 16 }} />;
@@ -4970,13 +3948,18 @@ const CompanyDetail: React.FC = () => {
                     <Box
                       key={log.id}
                       sx={{
-                        display: 'flex',
+                            display: "flex",
                         gap: 1,
-                        alignItems: 'flex-start',
+                            alignItems: "flex-start",
                         pb: index < activityLogs.length - 1 ? 1.5 : 0,
-                        borderBottom: index < activityLogs.length - 1 
-                          ? `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}` 
-                          : 'none',
+                            borderBottom:
+                              index < activityLogs.length - 1
+                                ? `1px solid ${
+                                    theme.palette.mode === "dark"
+                                      ? "rgba(255,255,255,0.08)"
+                                      : "rgba(0,0,0,0.08)"
+                                  }`
+                                : "none",
                       }}
                     >
                       <Box
@@ -4984,12 +3967,13 @@ const CompanyDetail: React.FC = () => {
                           width: 32,
                           height: 32,
                           borderRadius: 1,
-                          bgcolor: theme.palette.mode === 'dark' 
-                            ? 'rgba(33, 150, 243, 0.15)' 
-                            : 'rgba(33, 150, 243, 0.1)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
+                              bgcolor:
+                                theme.palette.mode === "dark"
+                                  ? "rgba(33, 150, 243, 0.15)"
+                                  : "rgba(33, 150, 243, 0.1)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
                           flexShrink: 0,
                           mt: 0.25,
                         }}
@@ -4997,29 +3981,64 @@ const CompanyDetail: React.FC = () => {
                         {renderIcon()}
                       </Box>
                       <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography variant="body2" sx={{ fontSize: '0.75rem', fontWeight: 500, mb: 0.25 }}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                fontSize: "0.75rem",
+                                fontWeight: 500,
+                                mb: 0.25,
+                              }}
+                            >
                           {log.description}
                         </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 0.75,
+                                flexWrap: "wrap",
+                              }}
+                            >
                           {log.user && (
-                            <Typography variant="caption" sx={{ fontSize: '0.6875rem', color: theme.palette.text.secondary }}>
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    fontSize: "0.6875rem",
+                                    color: theme.palette.text.secondary,
+                                  }}
+                                >
                               {log.user.firstName} {log.user.lastName}
                             </Typography>
                           )}
                           {log.timestamp && (
                             <>
                               {log.user && (
-                                <Typography variant="caption" sx={{ fontSize: '0.6875rem', color: theme.palette.text.disabled }}>
+                                    <Typography
+                                      variant="caption"
+                                      sx={{
+                                        fontSize: "0.6875rem",
+                                        color: theme.palette.text.disabled,
+                                      }}
+                                    >
                                   •
                                 </Typography>
                               )}
-                              <Typography variant="caption" sx={{ fontSize: '0.6875rem', color: theme.palette.text.secondary }}>
-                                {new Date(log.timestamp).toLocaleDateString('es-ES', {
-                                  day: '2-digit',
-                                  month: 'short',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      fontSize: "0.6875rem",
+                                      color: theme.palette.text.secondary,
+                                    }}
+                                  >
+                                    {new Date(log.timestamp).toLocaleDateString(
+                                      "es-ES",
+                                      {
+                                        day: "2-digit",
+                                        month: "short",
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      }
+                                    )}
                               </Typography>
                             </>
                           )}
@@ -5044,19 +4063,35 @@ const CompanyDetail: React.FC = () => {
         variant="temporary"
         PaperProps={{
           sx: {
-            width: '100%',
+            width: "100%",
             borderLeft: `1px solid ${theme.palette.divider}`,
             bgcolor: theme.palette.background.paper,
             p: 2,
-            boxSizing: 'border-box',
+            boxSizing: "border-box",
           },
         }}
       >
         {/* Header del Drawer */}
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <AutoAwesome sx={{ color: taxiMonterricoColors.green, fontSize: 24 }} />
-            <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem', color: theme.palette.text.primary }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            mb: 3,
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <AutoAwesome
+              sx={{ color: taxiMonterricoColors.green, fontSize: 24 }}
+            />
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 600,
+                fontSize: "1.125rem",
+                color: theme.palette.text.primary,
+              }}
+            >
               Copiloto IA
                             </Typography>
           </Box>
@@ -5065,7 +4100,7 @@ const CompanyDetail: React.FC = () => {
             onClick={() => setCopilotOpen(false)}
                                   sx={{
               color: theme.palette.text.secondary,
-                                    '&:hover': {
+              "&:hover": {
                 bgcolor: theme.palette.action.hover,
               },
             }}
@@ -5079,38 +4114,56 @@ const CompanyDetail: React.FC = () => {
           sx={{ 
             mb: 2, 
             p: 2, 
-            bgcolor: theme.palette.mode === 'dark' 
-              ? 'rgba(255, 152, 0, 0.1)' 
-              : 'rgba(255, 152, 0, 0.05)',
-            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.2)' : 'rgba(255, 152, 0, 0.15)'}`,
+            bgcolor:
+              theme.palette.mode === "dark"
+                ? "rgba(255, 152, 0, 0.1)"
+                : "rgba(255, 152, 0, 0.05)",
+            border: `1px solid ${
+              theme.palette.mode === "dark"
+                ? "rgba(255, 152, 0, 0.2)"
+                : "rgba(255, 152, 0, 0.15)"
+            }`,
             borderRadius: 2,
           }}
         >
-          <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+          <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
             <Box
                                         sx={{
                 width: 40,
                 height: 40,
                 borderRadius: 1.5,
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 152, 0, 0.2)' 
-                  : 'rgba(255, 152, 0, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                bgcolor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(255, 152, 0, 0.2)"
+                    : "rgba(255, 152, 0, 0.1)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 flexShrink: 0,
               }}
             >
-              <ReportProblem sx={{ fontSize: 20, color: '#FF9800' }} />
+              <ReportProblem sx={{ fontSize: 20, color: "#FF9800" }} />
                                           </Box>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem', color: theme.palette.text.primary }}>
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  fontWeight: 700,
+                  mb: 0.5,
+                  fontSize: "0.875rem",
+                  color: theme.palette.text.primary,
+                }}
+              >
                 Muestra preocupantes
                                           </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ fontSize: "0.8125rem", lineHeight: 1.5 }}
+              >
                 {associatedTickets.length > 0 
                   ? `Esta empresa tiene ${associatedTickets.length} ticket(s) abierto(s) que requieren atención.`
-                  : 'Sin datos suficientes para generar alertas en este momento.'}
+                  : "Sin datos suficientes para generar alertas en este momento."}
                                     </Typography>
                                   </Box>
                           </Box>
@@ -5120,14 +4173,17 @@ const CompanyDetail: React.FC = () => {
             fullWidth
             sx={{
               mt: 1,
-              borderColor: '#FF9800',
-              color: '#FF9800',
-              textTransform: 'none',
-              fontSize: '0.875rem',
+              borderColor: "#FF9800",
+              color: "#FF9800",
+              textTransform: "none",
+              fontSize: "0.875rem",
               fontWeight: 500,
-              '&:hover': {
-                borderColor: '#FF9800',
-                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.15)' : 'rgba(255, 152, 0, 0.08)',
+              "&:hover": {
+                borderColor: "#FF9800",
+                backgroundColor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(255, 152, 0, 0.15)"
+                    : "rgba(255, 152, 0, 0.08)",
               },
             }}
             onClick={() => {
@@ -5144,36 +4200,55 @@ const CompanyDetail: React.FC = () => {
           sx={{ 
             mb: 2, 
             p: 2, 
-            bgcolor: theme.palette.mode === 'dark' 
-              ? 'rgba(244, 67, 54, 0.1)' 
-              : 'rgba(244, 67, 54, 0.05)',
-            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(244, 67, 54, 0.15)'}`,
+            bgcolor:
+              theme.palette.mode === "dark"
+                ? "rgba(244, 67, 54, 0.1)"
+                : "rgba(244, 67, 54, 0.05)",
+            border: `1px solid ${
+              theme.palette.mode === "dark"
+                ? "rgba(244, 67, 54, 0.2)"
+                : "rgba(244, 67, 54, 0.15)"
+            }`,
             borderRadius: 2,
           }}
         >
-          <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+          <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
             <Box
               sx={{
                 width: 40,
                 height: 40,
                 borderRadius: 1.5,
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(244, 67, 54, 0.2)' 
-                  : 'rgba(244, 67, 54, 0.1)',
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
+                bgcolor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(244, 67, 54, 0.2)"
+                    : "rgba(244, 67, 54, 0.1)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 flexShrink: 0,
               }}
             >
-              <Receipt sx={{ fontSize: 20, color: '#F44336' }} />
+              <Receipt sx={{ fontSize: 20, color: "#F44336" }} />
                             </Box>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem', color: theme.palette.text.primary }}>
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  fontWeight: 700,
+                  mb: 0.5,
+                  fontSize: "0.875rem",
+                  color: theme.palette.text.primary,
+                }}
+              >
                 Próximas pérdidas
                             </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
-                Sin datos suficientes para identificar riesgos financieros en este momento.
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ fontSize: "0.8125rem", lineHeight: 1.5 }}
+              >
+                Sin datos suficientes para identificar riesgos financieros en
+                este momento.
                             </Typography>
                           </Box>
                       </Box>
@@ -5183,14 +4258,17 @@ const CompanyDetail: React.FC = () => {
             fullWidth
             sx={{
               mt: 1,
-              borderColor: '#F44336',
-              color: '#F44336',
-              textTransform: 'none',
-              fontSize: '0.875rem',
+              borderColor: "#F44336",
+              color: "#F44336",
+              textTransform: "none",
+              fontSize: "0.875rem",
               fontWeight: 500,
-              '&:hover': {
-                borderColor: '#F44336',
-                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.15)' : 'rgba(244, 67, 54, 0.08)',
+              "&:hover": {
+                borderColor: "#F44336",
+                backgroundColor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(244, 67, 54, 0.15)"
+                    : "rgba(244, 67, 54, 0.08)",
               },
             }}
             onClick={() => {
@@ -5206,38 +4284,62 @@ const CompanyDetail: React.FC = () => {
         <Card 
           sx={{ 
             p: 2, 
-            bgcolor: theme.palette.mode === 'dark' 
-              ? 'rgba(46, 125, 50, 0.1)' 
-              : 'rgba(46, 125, 50, 0.05)',
-            border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(46, 125, 50, 0.2)' : 'rgba(46, 125, 50, 0.15)'}`,
+            bgcolor:
+              theme.palette.mode === "dark"
+                ? "rgba(46, 125, 50, 0.1)"
+                : "rgba(46, 125, 50, 0.05)",
+            border: `1px solid ${
+              theme.palette.mode === "dark"
+                ? "rgba(46, 125, 50, 0.2)"
+                : "rgba(46, 125, 50, 0.15)"
+            }`,
             borderRadius: 2,
           }}
         >
-          <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+          <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
             <Box
               sx={{
                 width: 40,
                 height: 40,
                 borderRadius: 1.5,
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(46, 125, 50, 0.2)' 
-                  : 'rgba(46, 125, 50, 0.1)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
+                bgcolor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(46, 125, 50, 0.2)"
+                    : "rgba(46, 125, 50, 0.1)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 flexShrink: 0,
               }}
             >
-              <TaskAlt sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+              <TaskAlt
+                sx={{ fontSize: 20, color: taxiMonterricoColors.green }}
+              />
                   </Box>
             <Box sx={{ flex: 1, minWidth: 0 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem', color: theme.palette.text.primary }}>
+              <Typography
+                variant="subtitle2"
+                sx={{
+                  fontWeight: 700,
+                  mb: 0.5,
+                  fontSize: "0.875rem",
+                  color: theme.palette.text.primary,
+                }}
+              >
                 Manejo seguimiento
                   </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ fontSize: "0.8125rem", lineHeight: 1.5 }}
+              >
                 {activities.length > 0
-                  ? `Última actividad hace ${Math.floor((Date.now() - new Date(activities[0].createdAt).getTime()) / (1000 * 60 * 60 * 24))} días. Es momento de hacer seguimiento.`
-                  : 'Sin datos suficientes. Crea una tarea para iniciar el seguimiento.'}
+                  ? `Última actividad hace ${Math.floor(
+                      (Date.now() -
+                        new Date(activities[0].createdAt).getTime()) /
+                        (1000 * 60 * 60 * 24)
+                    )} días. Es momento de hacer seguimiento.`
+                  : "Sin datos suficientes. Crea una tarea para iniciar el seguimiento."}
                   </Typography>
                 </Box>
               </Box>
@@ -5249,12 +4351,15 @@ const CompanyDetail: React.FC = () => {
               mt: 1,
               borderColor: taxiMonterricoColors.green,
               color: taxiMonterricoColors.green,
-              textTransform: 'none',
-              fontSize: '0.875rem',
+              textTransform: "none",
+              fontSize: "0.875rem",
               fontWeight: 500,
-              '&:hover': {
+              "&:hover": {
                 borderColor: taxiMonterricoColors.green,
-                backgroundColor: theme.palette.mode === 'dark' ? 'rgba(46, 125, 50, 0.15)' : 'rgba(46, 125, 50, 0.08)',
+                backgroundColor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(46, 125, 50, 0.15)"
+                    : "rgba(46, 125, 50, 0.08)",
               },
             }}
             onClick={() => {
@@ -5271,29 +4376,31 @@ const CompanyDetail: React.FC = () => {
       {!summaryExpanded && (
         <Box
           sx={{
-            position: 'fixed',
+            position: "fixed",
             right: 0,
-            top: '50%',
-            transform: 'translateY(-50%)',
+            top: "50%",
+            transform: "translateY(-50%)",
             zIndex: 1000,
-            display: { xs: 'none', lg: 'flex' },
+            display: { xs: "none", lg: "flex" },
           }}
         >
           <IconButton
             onClick={() => setSummaryExpanded(true)}
             sx={{
-              backgroundColor: theme.palette.mode === 'dark' 
-                ? 'rgba(46, 125, 50, 0.8)' 
-                : 'rgba(46, 125, 50, 0.1)',
-              color: '#2E7D32',
-              borderRadius: '8px 0 0 8px',
+              backgroundColor:
+                theme.palette.mode === "dark"
+                  ? "rgba(46, 125, 50, 0.8)"
+                  : "rgba(46, 125, 50, 0.1)",
+              color: "#2E7D32",
+              borderRadius: "8px 0 0 8px",
               width: 40,
               height: 80,
-              transition: 'all 0.2s ease',
-              '&:hover': {
-                backgroundColor: theme.palette.mode === 'dark' 
-                  ? 'rgba(46, 125, 50, 0.9)' 
-                  : 'rgba(46, 125, 50, 0.15)',
+              transition: "all 0.2s ease",
+              "&:hover": {
+                backgroundColor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(46, 125, 50, 0.9)"
+                    : "rgba(46, 125, 50, 0.15)",
               },
             }}
           >
@@ -5309,27 +4416,27 @@ const CompanyDetail: React.FC = () => {
         onClose={() => setSummaryExpanded(false)}
         PaperProps={{
           sx: {
-            width: '100vw',
-            maxWidth: '100vw',
-            height: '100vh',
-            maxHeight: '100vh',
+            width: "100vw",
+            maxWidth: "100vw",
+            height: "100vh",
+            maxHeight: "100vh",
           },
         }}
       >
         <Box
           sx={{
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
             bgcolor: theme.palette.background.default,
           }}
         >
           {/* Header del Drawer */}
           <Box
             sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
               p: 3,
               borderBottom: `1px solid ${theme.palette.divider}`,
               bgcolor: theme.palette.background.paper,
@@ -5342,7 +4449,7 @@ const CompanyDetail: React.FC = () => {
               onClick={() => setSummaryExpanded(false)}
               sx={{
                 color: theme.palette.text.secondary,
-                '&:hover': {
+                "&:hover": {
                   bgcolor: theme.palette.action.hover,
                 },
               }}
@@ -5355,63 +4462,81 @@ const CompanyDetail: React.FC = () => {
           <Box
             sx={{
               flex: 1,
-              overflowY: 'auto',
-              overflowX: 'hidden',
-              width: '100%',
-              height: '100%',
+              overflowY: "auto",
+              overflowX: "hidden",
+              width: "100%",
+              height: "100%",
               p: 3,
               // Ocultar scrollbar pero mantener scroll funcional
-              '&::-webkit-scrollbar': {
-                display: 'none',
+              "&::-webkit-scrollbar": {
+                display: "none",
                 width: 0,
               },
               // Para Firefox
-              scrollbarWidth: 'none',
+              scrollbarWidth: "none",
             }}
           >
             {/* Controles de período */}
             <Box
               sx={{
-                display: 'flex',
+                display: "flex",
                 gap: 2,
                 mb: 4,
-                justifyContent: 'center',
+                justifyContent: "center",
               }}
             >
               <Button
-                variant={timePeriod === 'day' ? 'contained' : 'outlined'}
-                onClick={() => setTimePeriod('day')}
+                variant={timePeriod === "day" ? "contained" : "outlined"}
+                onClick={() => setTimePeriod("day")}
                 sx={{
                   minWidth: 120,
-                  bgcolor: timePeriod === 'day' ? taxiMonterricoColors.green : 'transparent',
-                  '&:hover': {
-                    bgcolor: timePeriod === 'day' ? taxiMonterricoColors.green : theme.palette.action.hover,
+                  bgcolor:
+                    timePeriod === "day"
+                      ? taxiMonterricoColors.green
+                      : "transparent",
+                  "&:hover": {
+                    bgcolor:
+                      timePeriod === "day"
+                        ? taxiMonterricoColors.green
+                        : theme.palette.action.hover,
                   },
                 }}
               >
                 Por Día
               </Button>
               <Button
-                variant={timePeriod === 'week' ? 'contained' : 'outlined'}
-                onClick={() => setTimePeriod('week')}
+                variant={timePeriod === "week" ? "contained" : "outlined"}
+                onClick={() => setTimePeriod("week")}
                 sx={{
                   minWidth: 120,
-                  bgcolor: timePeriod === 'week' ? taxiMonterricoColors.green : 'transparent',
-                  '&:hover': {
-                    bgcolor: timePeriod === 'week' ? taxiMonterricoColors.green : theme.palette.action.hover,
+                  bgcolor:
+                    timePeriod === "week"
+                      ? taxiMonterricoColors.green
+                      : "transparent",
+                  "&:hover": {
+                    bgcolor:
+                      timePeriod === "week"
+                        ? taxiMonterricoColors.green
+                        : theme.palette.action.hover,
                   },
                 }}
               >
                 Por Semana
               </Button>
               <Button
-                variant={timePeriod === 'month' ? 'contained' : 'outlined'}
-                onClick={() => setTimePeriod('month')}
+                variant={timePeriod === "month" ? "contained" : "outlined"}
+                onClick={() => setTimePeriod("month")}
                 sx={{
                   minWidth: 120,
-                  bgcolor: timePeriod === 'month' ? taxiMonterricoColors.green : 'transparent',
-                  '&:hover': {
-                    bgcolor: timePeriod === 'month' ? taxiMonterricoColors.green : theme.palette.action.hover,
+                  bgcolor:
+                    timePeriod === "month"
+                      ? taxiMonterricoColors.green
+                      : "transparent",
+                  "&:hover": {
+                    bgcolor:
+                      timePeriod === "month"
+                        ? taxiMonterricoColors.green
+                        : theme.palette.action.hover,
                   },
                 }}
               >
@@ -5426,9 +4551,10 @@ const CompanyDetail: React.FC = () => {
                 mb: 3,
                 bgcolor: theme.palette.background.paper,
                 borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark'
-                  ? '0 4px 12px rgba(0,0,0,0.3)'
-                  : '0 4px 12px rgba(0,0,0,0.1)',
+                boxShadow:
+                  theme.palette.mode === "dark"
+                    ? "0 4px 12px rgba(0,0,0,0.3)"
+                    : "0 4px 12px rgba(0,0,0,0.1)",
               }}
             >
               <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
@@ -5437,50 +4563,53 @@ const CompanyDetail: React.FC = () => {
               <ResponsiveContainer width="100%" height={400}>
                 <BarChart
                   data={
-                    timePeriod === 'day'
+                    timePeriod === "day"
                       ? [
-                          { servicio: 'Transporte', cantidad: 45 },
-                          { servicio: 'Envío', cantidad: 32 },
-                          { servicio: 'Carga', cantidad: 28 },
-                          { servicio: 'Mensajería', cantidad: 19 },
-                          { servicio: 'Delivery', cantidad: 15 },
-                          { servicio: 'Traslado', cantidad: 12 },
+                          { servicio: "Transporte", cantidad: 45 },
+                          { servicio: "Envío", cantidad: 32 },
+                          { servicio: "Carga", cantidad: 28 },
+                          { servicio: "Mensajería", cantidad: 19 },
+                          { servicio: "Delivery", cantidad: 15 },
+                          { servicio: "Traslado", cantidad: 12 },
                         ]
-                      : timePeriod === 'week'
+                      : timePeriod === "week"
                       ? [
-                          { servicio: 'Transporte', cantidad: 285 },
-                          { servicio: 'Envío', cantidad: 198 },
-                          { servicio: 'Carga', cantidad: 175 },
-                          { servicio: 'Mensajería', cantidad: 124 },
-                          { servicio: 'Delivery', cantidad: 98 },
-                          { servicio: 'Traslado', cantidad: 76 },
+                          { servicio: "Transporte", cantidad: 285 },
+                          { servicio: "Envío", cantidad: 198 },
+                          { servicio: "Carga", cantidad: 175 },
+                          { servicio: "Mensajería", cantidad: 124 },
+                          { servicio: "Delivery", cantidad: 98 },
+                          { servicio: "Traslado", cantidad: 76 },
                         ]
                       : [
-                          { servicio: 'Transporte', cantidad: 1245 },
-                          { servicio: 'Envío', cantidad: 892 },
-                          { servicio: 'Carga', cantidad: 756 },
-                          { servicio: 'Mensajería', cantidad: 534 },
-                          { servicio: 'Delivery', cantidad: 421 },
-                          { servicio: 'Traslado', cantidad: 328 },
+                          { servicio: "Transporte", cantidad: 1245 },
+                          { servicio: "Envío", cantidad: 892 },
+                          { servicio: "Carga", cantidad: 756 },
+                          { servicio: "Mensajería", cantidad: 534 },
+                          { servicio: "Delivery", cantidad: 421 },
+                          { servicio: "Traslado", cantidad: 328 },
                         ]
                   }
                   margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke={theme.palette.divider}
+                  />
                   <XAxis
                     dataKey="servicio"
                     tick={{ fill: theme.palette.text.secondary }}
-                    style={{ fontSize: '12px' }}
+                    style={{ fontSize: "12px" }}
                   />
                   <YAxis
                     tick={{ fill: theme.palette.text.secondary }}
-                    style={{ fontSize: '12px' }}
+                    style={{ fontSize: "12px" }}
                   />
                   <RechartsTooltip
                     contentStyle={{
                       backgroundColor: theme.palette.background.paper,
                       border: `1px solid ${theme.palette.divider}`,
-                      borderRadius: '8px',
+                      borderRadius: "8px",
                     }}
                   />
                   <Legend />
@@ -5500,9 +4629,10 @@ const CompanyDetail: React.FC = () => {
                 p: 3,
                 bgcolor: theme.palette.background.paper,
                 borderRadius: 2,
-                boxShadow: theme.palette.mode === 'dark'
-                  ? '0 4px 12px rgba(0,0,0,0.3)'
-                  : '0 4px 12px rgba(0,0,0,0.1)',
+                boxShadow:
+                  theme.palette.mode === "dark"
+                    ? "0 4px 12px rgba(0,0,0,0.3)"
+                    : "0 4px 12px rgba(0,0,0,0.1)",
               }}
             >
               <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
@@ -5511,51 +4641,149 @@ const CompanyDetail: React.FC = () => {
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart
                   data={
-                    timePeriod === 'day'
+                    timePeriod === "day"
                       ? [
-                          { periodo: '00:00', Transporte: 2, Envío: 1, Carga: 1 },
-                          { periodo: '04:00', Transporte: 1, Envío: 0, Carga: 0 },
-                          { periodo: '08:00', Transporte: 8, Envío: 5, Carga: 4 },
-                          { periodo: '12:00', Transporte: 12, Envío: 9, Carga: 7 },
-                          { periodo: '16:00', Transporte: 15, Envío: 11, Carga: 9 },
-                          { periodo: '20:00', Transporte: 7, Envío: 6, Carga: 7 },
+                          {
+                            periodo: "00:00",
+                            Transporte: 2,
+                            Envío: 1,
+                            Carga: 1,
+                          },
+                          {
+                            periodo: "04:00",
+                            Transporte: 1,
+                            Envío: 0,
+                            Carga: 0,
+                          },
+                          {
+                            periodo: "08:00",
+                            Transporte: 8,
+                            Envío: 5,
+                            Carga: 4,
+                          },
+                          {
+                            periodo: "12:00",
+                            Transporte: 12,
+                            Envío: 9,
+                            Carga: 7,
+                          },
+                          {
+                            periodo: "16:00",
+                            Transporte: 15,
+                            Envío: 11,
+                            Carga: 9,
+                          },
+                          {
+                            periodo: "20:00",
+                            Transporte: 7,
+                            Envío: 6,
+                            Carga: 7,
+                          },
                         ]
-                      : timePeriod === 'week'
+                      : timePeriod === "week"
                       ? [
-                          { periodo: 'Lun', Transporte: 38, Envío: 27, Carga: 23 },
-                          { periodo: 'Mar', Transporte: 42, Envío: 30, Carga: 26 },
-                          { periodo: 'Mié', Transporte: 45, Envío: 32, Carga: 28 },
-                          { periodo: 'Jue', Transporte: 48, Envío: 35, Carga: 30 },
-                          { periodo: 'Vie', Transporte: 52, Envío: 38, Carga: 33 },
-                          { periodo: 'Sáb', Transporte: 35, Envío: 25, Carga: 22 },
-                          { periodo: 'Dom', Transporte: 25, Envío: 19, Carga: 13 },
+                          {
+                            periodo: "Lun",
+                            Transporte: 38,
+                            Envío: 27,
+                            Carga: 23,
+                          },
+                          {
+                            periodo: "Mar",
+                            Transporte: 42,
+                            Envío: 30,
+                            Carga: 26,
+                          },
+                          {
+                            periodo: "Mié",
+                            Transporte: 45,
+                            Envío: 32,
+                            Carga: 28,
+                          },
+                          {
+                            periodo: "Jue",
+                            Transporte: 48,
+                            Envío: 35,
+                            Carga: 30,
+                          },
+                          {
+                            periodo: "Vie",
+                            Transporte: 52,
+                            Envío: 38,
+                            Carga: 33,
+                          },
+                          {
+                            periodo: "Sáb",
+                            Transporte: 35,
+                            Envío: 25,
+                            Carga: 22,
+                          },
+                          {
+                            periodo: "Dom",
+                            Transporte: 25,
+                            Envío: 19,
+                            Carga: 13,
+                          },
                         ]
                       : [
-                          { periodo: 'Ene', Transporte: 1020, Envío: 730, Carga: 620 },
-                          { periodo: 'Feb', Transporte: 1150, Envío: 825, Carga: 700 },
-                          { periodo: 'Mar', Transporte: 1245, Envío: 892, Carga: 756 },
-                          { periodo: 'Abr', Transporte: 1180, Envío: 845, Carga: 715 },
-                          { periodo: 'May', Transporte: 1320, Envío: 945, Carga: 800 },
-                          { periodo: 'Jun', Transporte: 1280, Envío: 915, Carga: 775 },
+                          {
+                            periodo: "Ene",
+                            Transporte: 1020,
+                            Envío: 730,
+                            Carga: 620,
+                          },
+                          {
+                            periodo: "Feb",
+                            Transporte: 1150,
+                            Envío: 825,
+                            Carga: 700,
+                          },
+                          {
+                            periodo: "Mar",
+                            Transporte: 1245,
+                            Envío: 892,
+                            Carga: 756,
+                          },
+                          {
+                            periodo: "Abr",
+                            Transporte: 1180,
+                            Envío: 845,
+                            Carga: 715,
+                          },
+                          {
+                            periodo: "May",
+                            Transporte: 1320,
+                            Envío: 945,
+                            Carga: 800,
+                          },
+                          {
+                            periodo: "Jun",
+                            Transporte: 1280,
+                            Envío: 915,
+                            Carga: 775,
+                          },
                         ]
                   }
                   margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke={theme.palette.divider}
+                  />
                   <XAxis
                     dataKey="periodo"
                     tick={{ fill: theme.palette.text.secondary }}
-                    style={{ fontSize: '12px' }}
+                    style={{ fontSize: "12px" }}
                   />
                   <YAxis
                     tick={{ fill: theme.palette.text.secondary }}
-                    style={{ fontSize: '12px' }}
+                    style={{ fontSize: "12px" }}
                   />
                   <RechartsTooltip
                     contentStyle={{
                       backgroundColor: theme.palette.background.paper,
                       border: `1px solid ${theme.palette.divider}`,
-                      borderRadius: '8px',
+                      borderRadius: "8px",
                     }}
                   />
                   <Legend />
@@ -5591,8 +4819,8 @@ const CompanyDetail: React.FC = () => {
       {successMessage && (
         <Alert 
           severity="success" 
-          onClose={() => setSuccessMessage('')}
-          sx={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999 }}
+          onClose={() => setSuccessMessage("")}
+          sx={{ position: "fixed", bottom: 20, right: 20, zIndex: 9999 }}
         >
           {successMessage}
         </Alert>
@@ -5602,31 +4830,35 @@ const CompanyDetail: React.FC = () => {
       {noteOpen && (
         <Box
           sx={{
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: { xs: '95vw', sm: '700px' },
-            maxWidth: { xs: '95vw', sm: '90vw' },
-            height: '85vh',
-            backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
-            boxShadow: theme.palette.mode === 'dark' 
-              ? '0 20px 60px rgba(0,0,0,0.5)' 
-              : '0 20px 60px rgba(0,0,0,0.12)',
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: { xs: "95vw", sm: "700px" },
+            maxWidth: { xs: "95vw", sm: "90vw" },
+            height: "85vh",
+            backgroundColor:
+              theme.palette.mode === "dark"
+                ? "#1F2937"
+                : theme.palette.background.paper,
+            boxShadow:
+              theme.palette.mode === "dark"
+                ? "0 20px 60px rgba(0,0,0,0.5)"
+                : "0 20px 60px rgba(0,0,0,0.12)",
             zIndex: 1500,
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
             borderRadius: 4,
-            animation: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            '@keyframes fadeInScale': {
-              '0%': {
+            animation: "fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+            "@keyframes fadeInScale": {
+              "0%": {
                 opacity: 0,
-                transform: 'translate(-50%, -50%) scale(0.95)',
+                transform: "translate(-50%, -50%) scale(0.95)",
               },
-              '100%': {
+              "100%": {
                 opacity: 1,
-                transform: 'translate(-50%, -50%) scale(1)',
+                transform: "translate(-50%, -50%) scale(1)",
               },
             },
           }}
@@ -5637,32 +4869,35 @@ const CompanyDetail: React.FC = () => {
             sx={{
               px: 3,
               py: 2,
-              backgroundColor: 'transparent',
+              backgroundColor: "transparent",
               color: theme.palette.text.primary,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="h6" sx={{ 
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Typography
+                variant="h6"
+                sx={{
                 color: theme.palette.text.primary, 
                 fontWeight: 600, 
-                fontSize: '1.25rem',
-                letterSpacing: '-0.02em',
-              }}>
+                  fontSize: "1.25rem",
+                  letterSpacing: "-0.02em",
+                }}
+              >
                 Nota
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
               <IconButton 
                 sx={{ 
                   color: theme.palette.text.secondary,
-                  '&:hover': { 
-                    backgroundColor: theme.palette.error.main + '15',
+                  "&:hover": {
+                    backgroundColor: theme.palette.error.main + "15",
                     color: theme.palette.error.main,
                   },
-                  transition: 'all 0.2s ease',
+                  transition: "all 0.2s ease",
                 }} 
                 size="small" 
                 onClick={() => setNoteOpen(false)}
@@ -5672,40 +4907,71 @@ const CompanyDetail: React.FC = () => {
             </Box>
           </Box>
 
-          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'row', p: 3, overflow: 'hidden', gap: 3 }}>
+          <Box
+            sx={{
+              flexGrow: 1,
+              display: "flex",
+              flexDirection: "row",
+              p: 3,
+              overflow: "hidden",
+              gap: 3,
+            }}
+          >
           {/* Columna Izquierda: Editor */}
-          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <Box
+              sx={{
+                flex: 1,
+                display: "flex",
+                flexDirection: "column",
+                minWidth: 0,
+              }}
+            >
             {/* Editor de texto enriquecido con barra de herramientas integrada */}
-            <Box sx={{ 
+              <Box
+                sx={{
               flexGrow: 1, 
-              display: 'flex', 
-              flexDirection: 'column', 
-              border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`, 
+                  display: "flex",
+                  flexDirection: "column",
+                  border: `1px solid ${
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.1)"
+                      : theme.palette.divider
+                  }`,
               borderRadius: 2,
-              overflow: 'hidden',
-              minHeight: '300px',
-              backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              '&:focus-within': {
-                boxShadow: 'none',
+                  overflow: "hidden",
+                  minHeight: "300px",
+                  backgroundColor:
+                    theme.palette.mode === "dark"
+                      ? "#1F2937"
+                      : theme.palette.background.paper,
+                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                  "&:focus-within": {
+                    boxShadow: "none",
                 borderColor: theme.palette.divider,
-                transform: 'none',
+                    transform: "none",
               },
-            }}>
+                }}
+              >
               <RichTextEditor
                 value={noteData.description}
-                onChange={(value: string) => setNoteData({ ...noteData, description: value })}
+                  onChange={(value: string) =>
+                    setNoteData({ ...noteData, description: value })
+                  }
                 placeholder="Empieza a escribir para dejar una nota..."
                 onAssociateClick={() => {
                   setNoteAssociateModalOpen(true);
-                  setSelectedCategory('empresas');
-                  setAssociateSearch('');
+                    setSelectedCategory("empresas");
+                    setAssociateSearch("");
                   // Inicializar selecciones con los valores actuales
                   setNoteSelectedAssociations({
                     companies: selectedCompanies,
                     contacts: selectedContacts,
-                    deals: selectedAssociations.filter((id: number) => id > 1000 && id < 2000).map(id => id - 1000),
-                    tickets: selectedAssociations.filter((id: number) => id > 2000).map(id => id - 2000),
+                      deals: selectedAssociations
+                        .filter((id: number) => id > 1000 && id < 2000)
+                        .map((id) => id - 1000),
+                      tickets: selectedAssociations
+                        .filter((id: number) => id > 2000)
+                        .map((id) => id - 2000),
                   });
                   fetchAssociations();
                 }}
@@ -5715,28 +4981,37 @@ const CompanyDetail: React.FC = () => {
           </Box>
 
           {/* Footer con botones */}
-          <Box sx={{ 
+          <Box
+            sx={{
             px: 3,
             py: 2.5, 
-            borderTop: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`, 
-            backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper, 
-            display: 'flex', 
-            justifyContent: 'flex-end', 
+              borderTop: `1px solid ${
+                theme.palette.mode === "dark"
+                  ? "rgba(255,255,255,0.1)"
+                  : theme.palette.divider
+              }`,
+              backgroundColor:
+                theme.palette.mode === "dark"
+                  ? "#1F2937"
+                  : theme.palette.background.paper,
+              display: "flex",
+              justifyContent: "flex-end",
             gap: 2,
-          }}>
+            }}
+          >
             <Button 
               onClick={() => setNoteOpen(false)} 
               sx={{ 
-                textTransform: 'none',
+                textTransform: "none",
                 px: 3.5,
                 py: 1.25,
                 color: theme.palette.text.secondary,
                 fontWeight: 500,
                 borderRadius: 2,
-                '&:hover': {
+                "&:hover": {
                   backgroundColor: theme.palette.action.hover,
                 },
-                transition: 'all 0.2s ease',
+                transition: "all 0.2s ease",
               }}
             >
               Cancelar
@@ -5746,30 +5021,38 @@ const CompanyDetail: React.FC = () => {
               variant="contained" 
               disabled={saving || !noteData.description.trim()}
               sx={{ 
-                textTransform: 'none',
+                textTransform: "none",
                 px: 4,
                 py: 1.25,
-                backgroundColor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.orange,
+                backgroundColor: saving
+                  ? theme.palette.action.disabledBackground
+                  : taxiMonterricoColors.orange,
                 fontWeight: 600,
                 borderRadius: 2,
-                boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.orange}40`,
-                '&:hover': {
-                  backgroundColor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.orangeDark,
-                  boxShadow: saving ? 'none' : `0 6px 16px ${taxiMonterricoColors.orange}50`,
-                  transform: 'translateY(-1px)',
+                boxShadow: saving
+                  ? "none"
+                  : `0 4px 12px ${taxiMonterricoColors.orange}40`,
+                "&:hover": {
+                  backgroundColor: saving
+                    ? theme.palette.action.disabledBackground
+                    : taxiMonterricoColors.orangeDark,
+                  boxShadow: saving
+                    ? "none"
+                    : `0 6px 16px ${taxiMonterricoColors.orange}50`,
+                  transform: "translateY(-1px)",
                 },
-                '&:active': {
-                  transform: 'translateY(0)',
+                "&:active": {
+                  transform: "translateY(0)",
                 },
-                '&:disabled': {
+                "&:disabled": {
                   backgroundColor: theme.palette.action.disabledBackground,
                   color: theme.palette.action.disabled,
-                  boxShadow: 'none',
+                  boxShadow: "none",
                 },
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
               }}
             >
-              {saving ? 'Guardando...' : 'Crear nota'}
+              {saving ? "Guardando..." : "Crear nota"}
             </Button>
           </Box>
         </Box>
@@ -5779,19 +5062,22 @@ const CompanyDetail: React.FC = () => {
       {noteOpen && (
         <Box
           sx={{
-            position: 'fixed',
+            position: "fixed",
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.7)' : 'rgba(0, 0, 0, 0.5)',
+            backgroundColor:
+              theme.palette.mode === "dark"
+                ? "rgba(0, 0, 0, 0.7)"
+                : "rgba(0, 0, 0, 0.5)",
             zIndex: 1499,
-            animation: 'fadeIn 0.3s ease-out',
-            '@keyframes fadeIn': {
-              '0%': {
+            animation: "fadeIn 0.3s ease-out",
+            "@keyframes fadeIn": {
+              "0%": {
                 opacity: 0,
               },
-              '100%': {
+              "100%": {
                 opacity: 1,
               },
             },
@@ -5810,16 +5096,16 @@ const CompanyDetail: React.FC = () => {
         PaperProps={{
           sx: {
             borderRadius: 2,
-            maxHeight: '80vh',
-            width: '700px',
-            maxWidth: '90vw',
+            maxHeight: "80vh",
+            width: "700px",
+            maxWidth: "90vw",
           },
         }}
       >
         <Box
           sx={{
-            display: 'flex',
-            height: '500px',
+            display: "flex",
+            height: "500px",
           }}
         >
           {/* Panel izquierdo - Categorías */}
@@ -5827,47 +5113,67 @@ const CompanyDetail: React.FC = () => {
             sx={{
               width: 160,
               borderRight: `1px solid ${theme.palette.divider}`,
-              backgroundColor: theme.palette.mode === 'dark' ? '#1e1e1e' : '#fafafa',
-              overflowY: 'auto',
+              backgroundColor:
+                theme.palette.mode === "dark" ? "#1e1e1e" : "#fafafa",
+              overflowY: "auto",
             }}
           >
             <List sx={{ p: 0 }}>
               <ListItem disablePadding>
                 <ListItemButton
-                  selected={selectedCategory === 'seleccionados'}
-                  onClick={() => setSelectedCategory('seleccionados')}
+                  selected={selectedCategory === "seleccionados"}
+                  onClick={() => setSelectedCategory("seleccionados")}
                   sx={{
                     py: 1.5,
                     px: 2,
-                    '&.Mui-selected': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
-                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
-                      '&:hover': {
-                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                    "&.Mui-selected": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(76, 175, 80, 0.3)"
+                          : "rgba(76, 175, 80, 0.15)",
+                      color:
+                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
+                      "&:hover": {
+                        backgroundColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(76, 175, 80, 0.4)"
+                            : "rgba(76, 175, 80, 0.2)",
                       },
                     },
                   }}
                 >
                   <ListItemText
                     primary="Seleccionados"
-                    secondary={Object.values(noteSelectedAssociations).flat().length}
-                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
-                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                    secondary={
+                      Object.values(noteSelectedAssociations).flat().length
+                    }
+                    primaryTypographyProps={{
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                    }}
+                    secondaryTypographyProps={{ fontSize: "0.75rem" }}
                   />
                 </ListItemButton>
               </ListItem>
               <ListItem disablePadding>
                 <ListItemButton
-                  selected={selectedCategory === 'empresas'}
-                  onClick={() => setSelectedCategory('empresas')}
+                  selected={selectedCategory === "empresas"}
+                  onClick={() => setSelectedCategory("empresas")}
                   sx={{
                     py: 1.5,
                     px: 2,
-                    '&.Mui-selected': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
-                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
-                      '&:hover': {
-                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                    "&.Mui-selected": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(76, 175, 80, 0.3)"
+                          : "rgba(76, 175, 80, 0.15)",
+                      color:
+                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
+                      "&:hover": {
+                        backgroundColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(76, 175, 80, 0.4)"
+                            : "rgba(76, 175, 80, 0.2)",
                       },
                     },
                   }}
@@ -5875,23 +5181,33 @@ const CompanyDetail: React.FC = () => {
                   <ListItemText
                     primary="Empresas"
                     secondary={noteModalCompanies.length}
-                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
-                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                    primaryTypographyProps={{
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                    }}
+                    secondaryTypographyProps={{ fontSize: "0.75rem" }}
                   />
                 </ListItemButton>
               </ListItem>
               <ListItem disablePadding>
                 <ListItemButton
-                  selected={selectedCategory === 'contactos'}
-                  onClick={() => setSelectedCategory('contactos')}
+                  selected={selectedCategory === "contactos"}
+                  onClick={() => setSelectedCategory("contactos")}
                   sx={{
                     py: 1.5,
                     px: 2,
-                    '&.Mui-selected': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
-                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
-                      '&:hover': {
-                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                    "&.Mui-selected": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(76, 175, 80, 0.3)"
+                          : "rgba(76, 175, 80, 0.15)",
+                      color:
+                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
+                      "&:hover": {
+                        backgroundColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(76, 175, 80, 0.4)"
+                            : "rgba(76, 175, 80, 0.2)",
                       },
                     },
                   }}
@@ -5899,23 +5215,33 @@ const CompanyDetail: React.FC = () => {
                   <ListItemText
                     primary="Contactos"
                     secondary={noteModalContacts.length}
-                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
-                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                    primaryTypographyProps={{
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                    }}
+                    secondaryTypographyProps={{ fontSize: "0.75rem" }}
                   />
                 </ListItemButton>
               </ListItem>
               <ListItem disablePadding>
                 <ListItemButton
-                  selected={selectedCategory === 'negocios'}
-                  onClick={() => setSelectedCategory('negocios')}
+                  selected={selectedCategory === "negocios"}
+                  onClick={() => setSelectedCategory("negocios")}
                   sx={{
                     py: 1.5,
                     px: 2,
-                    '&.Mui-selected': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
-                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
-                      '&:hover': {
-                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                    "&.Mui-selected": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(76, 175, 80, 0.3)"
+                          : "rgba(76, 175, 80, 0.15)",
+                      color:
+                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
+                      "&:hover": {
+                        backgroundColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(76, 175, 80, 0.4)"
+                            : "rgba(76, 175, 80, 0.2)",
                       },
                     },
                   }}
@@ -5923,23 +5249,33 @@ const CompanyDetail: React.FC = () => {
                   <ListItemText
                     primary="Negocios"
                     secondary={noteModalDeals.length}
-                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
-                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                    primaryTypographyProps={{
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                    }}
+                    secondaryTypographyProps={{ fontSize: "0.75rem" }}
                   />
                 </ListItemButton>
               </ListItem>
               <ListItem disablePadding>
                 <ListItemButton
-                  selected={selectedCategory === 'tickets'}
-                  onClick={() => setSelectedCategory('tickets')}
+                  selected={selectedCategory === "tickets"}
+                  onClick={() => setSelectedCategory("tickets")}
                   sx={{
                     py: 1.5,
                     px: 2,
-                    '&.Mui-selected': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.15)',
-                      color: theme.palette.mode === 'dark' ? '#ffffff' : 'inherit',
-                      '&:hover': {
-                        backgroundColor: theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.4)' : 'rgba(76, 175, 80, 0.2)',
+                    "&.Mui-selected": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(76, 175, 80, 0.3)"
+                          : "rgba(76, 175, 80, 0.15)",
+                      color:
+                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
+                      "&:hover": {
+                        backgroundColor:
+                          theme.palette.mode === "dark"
+                            ? "rgba(76, 175, 80, 0.4)"
+                            : "rgba(76, 175, 80, 0.2)",
                       },
                     },
                   }}
@@ -5947,8 +5283,11 @@ const CompanyDetail: React.FC = () => {
                   <ListItemText
                     primary="Tickets"
                     secondary={noteModalTickets.length}
-                    primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
-                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                    primaryTypographyProps={{
+                      fontSize: "0.875rem",
+                      fontWeight: 500,
+                    }}
+                    secondaryTypographyProps={{ fontSize: "0.75rem" }}
                   />
                 </ListItemButton>
               </ListItem>
@@ -5959,9 +5298,9 @@ const CompanyDetail: React.FC = () => {
           <Box
             sx={{
               flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
             }}
           >
             {/* Header */}
@@ -5969,12 +5308,15 @@ const CompanyDetail: React.FC = () => {
               sx={{
                 p: 2,
                 borderBottom: `1px solid ${theme.palette.divider}`,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
               }}
             >
-              <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem' }}>
+              <Typography
+                variant="h6"
+                sx={{ fontWeight: 600, fontSize: "1rem" }}
+              >
                 Asociar
               </Typography>
               <IconButton
@@ -5986,19 +5328,28 @@ const CompanyDetail: React.FC = () => {
             </Box>
 
             {/* Búsqueda */}
-            <Box sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}>
+            <Box
+              sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}
+            >
               <Box
                 sx={{
-                  display: 'flex',
-                  alignItems: 'center',
+                  display: "flex",
+                  alignItems: "center",
                   border: `1px solid ${theme.palette.divider}`,
                   borderRadius: 1,
                   px: 1.5,
                   py: 0.75,
-                  backgroundColor: theme.palette.mode === 'dark' ? '#2a2a2a' : '#f5f5f5',
+                  backgroundColor:
+                    theme.palette.mode === "dark" ? "#2a2a2a" : "#f5f5f5",
                 }}
               >
-                <Search sx={{ color: theme.palette.text.secondary, mr: 1, fontSize: 20 }} />
+                <Search
+                  sx={{
+                    color: theme.palette.text.secondary,
+                    mr: 1,
+                    fontSize: 20,
+                  }}
+                />
                 <InputBase
                   placeholder="Buscar asociaciones actuales"
                   value={associateSearch}
@@ -6013,8 +5364,8 @@ const CompanyDetail: React.FC = () => {
                   }}
                   sx={{
                     flex: 1,
-                    fontSize: '0.875rem',
-                    '& input': {
+                    fontSize: "0.875rem",
+                    "& input": {
                       py: 0.5,
                     },
                   }}
@@ -6023,34 +5374,53 @@ const CompanyDetail: React.FC = () => {
             </Box>
 
             {/* Contenido */}
-            <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
+            <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
               {loadingAssociations ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    height: "100%",
+                  }}
+                >
                   <CircularProgress />
                 </Box>
               ) : (
                 <>
-                  {selectedCategory === 'empresas' && (
+                  {selectedCategory === "empresas" && (
                     <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ fontWeight: 600, mb: 1, fontSize: "0.875rem" }}
+                      >
                         Empresas
                       </Typography>
                       <List sx={{ p: 0 }}>
                         {noteModalCompanies
-                          .filter((company: any) => 
-                            !associateSearch || company.name?.toLowerCase().includes(associateSearch.toLowerCase()) || 
-                            company.domain?.toLowerCase().includes(associateSearch.toLowerCase())
+                          .filter(
+                            (company: any) =>
+                              !associateSearch ||
+                              company.name
+                                ?.toLowerCase()
+                                .includes(associateSearch.toLowerCase()) ||
+                              company.domain
+                                ?.toLowerCase()
+                                .includes(associateSearch.toLowerCase())
                           )
                           .map((company: any) => (
                             <ListItem key={company.id} disablePadding>
                               <ListItemButton
                                 sx={{ py: 0.75, px: 1 }}
                                 onClick={() => {
-                                  const current = noteSelectedAssociations.companies || [];
+                                  const current =
+                                    noteSelectedAssociations.companies || [];
                                   if (current.includes(company.id)) {
                                     setNoteSelectedAssociations({
                                       ...noteSelectedAssociations,
-                                      companies: current.filter((id) => id !== company.id),
+                                      companies: current.filter(
+                                        (id) => id !== company.id
+                                      ),
                                     });
                                   } else {
                                     setNoteSelectedAssociations({
@@ -6061,27 +5431,37 @@ const CompanyDetail: React.FC = () => {
                                 }}
                               >
                                 <Checkbox
-                                  checked={noteSelectedAssociations.companies?.includes(company.id) || false}
+                                  checked={
+                                    noteSelectedAssociations.companies?.includes(
+                                      company.id
+                                    ) || false
+                                  }
                                   size="small"
                                   sx={{ p: 0.5, mr: 1 }}
                                 />
                                 <ListItemText
-                                  primary={company.name && company.name.length > 12 ? company.name.substring(0, 12) + '...' : company.name}
-                                  secondary={company.domain || '--'}
+                                  primary={
+                                    company.name && company.name.length > 12
+                                      ? company.name.substring(0, 12) + "..."
+                                      : company.name
+                                  }
+                                  secondary={company.domain || "--"}
                                   sx={{
-                                    overflow: 'hidden',
-                                    '& .MuiListItemText-primary': {
-                                      overflow: 'hidden',
-                                      textOverflow: 'ellipsis',
-                                      whiteSpace: 'nowrap',
-                                      maxWidth: '120px',
-                                      display: 'block',
-                                    }
+                                    overflow: "hidden",
+                                    "& .MuiListItemText-primary": {
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                      maxWidth: "120px",
+                                      display: "block",
+                                    },
                                   }}
                                   primaryTypographyProps={{ 
-                                    fontSize: '0.875rem',
+                                    fontSize: "0.875rem",
                                   }}
-                                  secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  secondaryTypographyProps={{
+                                    fontSize: "0.75rem",
+                                  }}
                                 />
                               </ListItemButton>
                             </ListItem>
@@ -6090,28 +5470,39 @@ const CompanyDetail: React.FC = () => {
                     </Box>
                   )}
 
-                  {selectedCategory === 'contactos' && (
+                  {selectedCategory === "contactos" && (
                     <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ fontWeight: 600, mb: 1, fontSize: "0.875rem" }}
+                      >
                         Contactos
                       </Typography>
                       <List sx={{ p: 0 }}>
                         {noteModalContacts
-                          .filter((contactItem: any) => 
+                          .filter(
+                            (contactItem: any) =>
                             !associateSearch || 
-                            `${contactItem.firstName} ${contactItem.lastName}`.toLowerCase().includes(associateSearch.toLowerCase()) ||
-                            contactItem.email?.toLowerCase().includes(associateSearch.toLowerCase())
+                              `${contactItem.firstName} ${contactItem.lastName}`
+                                .toLowerCase()
+                                .includes(associateSearch.toLowerCase()) ||
+                              contactItem.email
+                                ?.toLowerCase()
+                                .includes(associateSearch.toLowerCase())
                           )
                           .map((contactItem: any) => (
                             <ListItem key={contactItem.id} disablePadding>
                               <ListItemButton
                                 sx={{ py: 0.75, px: 1 }}
                                 onClick={() => {
-                                  const current = noteSelectedAssociations.contacts || [];
+                                  const current =
+                                    noteSelectedAssociations.contacts || [];
                                   if (current.includes(contactItem.id)) {
                                     setNoteSelectedAssociations({
                                       ...noteSelectedAssociations,
-                                      contacts: current.filter((id) => id !== contactItem.id),
+                                      contacts: current.filter(
+                                        (id) => id !== contactItem.id
+                                      ),
                                     });
                                   } else {
                                     setNoteSelectedAssociations({
@@ -6122,15 +5513,23 @@ const CompanyDetail: React.FC = () => {
                                 }}
                               >
                                 <Checkbox
-                                  checked={noteSelectedAssociations.contacts?.includes(contactItem.id) || false}
+                                  checked={
+                                    noteSelectedAssociations.contacts?.includes(
+                                      contactItem.id
+                                    ) || false
+                                  }
                                   size="small"
                                   sx={{ p: 0.5, mr: 1 }}
                                 />
                                 <ListItemText
                                   primary={`${contactItem.firstName} ${contactItem.lastName}`}
                                   secondary={contactItem.email}
-                                  primaryTypographyProps={{ fontSize: '0.875rem' }}
-                                  secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  primaryTypographyProps={{
+                                    fontSize: "0.875rem",
+                                  }}
+                                  secondaryTypographyProps={{
+                                    fontSize: "0.75rem",
+                                  }}
                                 />
                               </ListItemButton>
                             </ListItem>
@@ -6139,26 +5538,36 @@ const CompanyDetail: React.FC = () => {
                     </Box>
                   )}
 
-                  {selectedCategory === 'negocios' && (
+                  {selectedCategory === "negocios" && (
                     <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ fontWeight: 600, mb: 1, fontSize: "0.875rem" }}
+                      >
                         Negocios
                       </Typography>
                       <List sx={{ p: 0 }}>
                         {noteModalDeals
-                          .filter((deal: any) => 
-                            !associateSearch || deal.name?.toLowerCase().includes(associateSearch.toLowerCase())
+                          .filter(
+                            (deal: any) =>
+                              !associateSearch ||
+                              deal.name
+                                ?.toLowerCase()
+                                .includes(associateSearch.toLowerCase())
                           )
                           .map((deal: any) => (
                             <ListItem key={deal.id} disablePadding>
                               <ListItemButton
                                 sx={{ py: 0.75, px: 1 }}
                                 onClick={() => {
-                                  const current = noteSelectedAssociations.deals || [];
+                                  const current =
+                                    noteSelectedAssociations.deals || [];
                                   if (current.includes(deal.id)) {
                                     setNoteSelectedAssociations({
                                       ...noteSelectedAssociations,
-                                      deals: current.filter((id) => id !== deal.id),
+                                      deals: current.filter(
+                                        (id) => id !== deal.id
+                                      ),
                                     });
                                   } else {
                                     setNoteSelectedAssociations({
@@ -6169,15 +5578,29 @@ const CompanyDetail: React.FC = () => {
                                 }}
                               >
                                 <Checkbox
-                                  checked={noteSelectedAssociations.deals?.includes(deal.id) || false}
+                                  checked={
+                                    noteSelectedAssociations.deals?.includes(
+                                      deal.id
+                                    ) || false
+                                  }
                                   size="small"
                                   sx={{ p: 0.5, mr: 1 }}
                                 />
                                 <ListItemText
                                   primary={deal.name}
-                                  secondary={`${deal.amount ? `S/ ${deal.amount.toLocaleString('es-ES')}` : ''} ${deal.stage || ''}`}
-                                  primaryTypographyProps={{ fontSize: '0.875rem' }}
-                                  secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  secondary={`${
+                                    deal.amount
+                                      ? `S/ ${deal.amount.toLocaleString(
+                                          "es-ES"
+                                        )}`
+                                      : ""
+                                  } ${deal.stage || ""}`}
+                                  primaryTypographyProps={{
+                                    fontSize: "0.875rem",
+                                  }}
+                                  secondaryTypographyProps={{
+                                    fontSize: "0.75rem",
+                                  }}
                                 />
                               </ListItemButton>
                             </ListItem>
@@ -6186,26 +5609,36 @@ const CompanyDetail: React.FC = () => {
                     </Box>
                   )}
 
-                  {selectedCategory === 'tickets' && (
+                  {selectedCategory === "tickets" && (
                     <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ fontWeight: 600, mb: 1, fontSize: "0.875rem" }}
+                      >
                         Tickets
                       </Typography>
                       <List sx={{ p: 0 }}>
                         {noteModalTickets
-                          .filter((ticket: any) => 
-                            !associateSearch || ticket.subject?.toLowerCase().includes(associateSearch.toLowerCase())
+                          .filter(
+                            (ticket: any) =>
+                              !associateSearch ||
+                              ticket.subject
+                                ?.toLowerCase()
+                                .includes(associateSearch.toLowerCase())
                           )
                           .map((ticket: any) => (
                             <ListItem key={ticket.id} disablePadding>
                               <ListItemButton
                                 sx={{ py: 0.75, px: 1 }}
                                 onClick={() => {
-                                  const current = noteSelectedAssociations.tickets || [];
+                                  const current =
+                                    noteSelectedAssociations.tickets || [];
                                   if (current.includes(ticket.id)) {
                                     setNoteSelectedAssociations({
                                       ...noteSelectedAssociations,
-                                      tickets: current.filter((id) => id !== ticket.id),
+                                      tickets: current.filter(
+                                        (id) => id !== ticket.id
+                                      ),
                                     });
                                   } else {
                                     setNoteSelectedAssociations({
@@ -6216,15 +5649,23 @@ const CompanyDetail: React.FC = () => {
                                 }}
                               >
                                 <Checkbox
-                                  checked={noteSelectedAssociations.tickets?.includes(ticket.id) || false}
+                                  checked={
+                                    noteSelectedAssociations.tickets?.includes(
+                                      ticket.id
+                                    ) || false
+                                  }
                                   size="small"
                                   sx={{ p: 0.5, mr: 1 }}
                                 />
                                 <ListItemText
                                   primary={ticket.subject}
                                   secondary={ticket.description}
-                                  primaryTypographyProps={{ fontSize: '0.875rem' }}
-                                  secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                  primaryTypographyProps={{
+                                    fontSize: "0.875rem",
+                                  }}
+                                  secondaryTypographyProps={{
+                                    fontSize: "0.75rem",
+                                  }}
                                 />
                               </ListItemButton>
                             </ListItem>
@@ -6233,19 +5674,30 @@ const CompanyDetail: React.FC = () => {
                     </Box>
                   )}
 
-                  {selectedCategory === 'seleccionados' && (
+                  {selectedCategory === "seleccionados" && (
                     <Box>
-                      <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: '0.875rem' }}>
-                        Seleccionados ({Object.values(noteSelectedAssociations).flat().length})
+                      <Typography
+                        variant="subtitle2"
+                        sx={{ fontWeight: 600, mb: 1, fontSize: "0.875rem" }}
+                      >
+                        Seleccionados (
+                        {Object.values(noteSelectedAssociations).flat().length})
                       </Typography>
-                      {Object.values(noteSelectedAssociations).flat().length === 0 ? (
-                        <Typography variant="body2" sx={{ color: theme.palette.text.secondary, py: 2 }}>
+                      {Object.values(noteSelectedAssociations).flat().length ===
+                      0 ? (
+                        <Typography
+                          variant="body2"
+                          sx={{ color: theme.palette.text.secondary, py: 2 }}
+                        >
                           No hay elementos seleccionados
                         </Typography>
                       ) : (
                         <List sx={{ p: 0 }}>
-                          {noteSelectedAssociations.companies?.map((companyId) => {
-                            const company = noteModalCompanies.find((c: any) => c.id === companyId);
+                          {noteSelectedAssociations.companies?.map(
+                            (companyId) => {
+                              const company = noteModalCompanies.find(
+                                (c: any) => c.id === companyId
+                              );
                             if (!company) return null;
                             return (
                               <ListItem key={companyId} disablePadding>
@@ -6254,7 +5706,10 @@ const CompanyDetail: React.FC = () => {
                                   onClick={() => {
                                     setNoteSelectedAssociations({
                                       ...noteSelectedAssociations,
-                                      companies: noteSelectedAssociations.companies.filter((id) => id !== companyId),
+                                        companies:
+                                          noteSelectedAssociations.companies.filter(
+                                            (id) => id !== companyId
+                                          ),
                                     });
                                   }}
                                 >
@@ -6263,31 +5718,48 @@ const CompanyDetail: React.FC = () => {
                                     size="small"
                                     sx={{ p: 0.5, mr: 1 }}
                                   />
-                                  <Business sx={{ fontSize: 18, mr: 1, color: theme.palette.text.secondary }} />
-                                  <ListItemText
-                                    primary={company.name && company.name.length > 12 ? company.name.substring(0, 12) + '...' : company.name}
-                                    secondary={company.domain || '--'}
+                                    <Business
                                     sx={{
-                                      overflow: 'hidden',
-                                      '& .MuiListItemText-primary': {
-                                        overflow: 'hidden',
-                                        textOverflow: 'ellipsis',
-                                        whiteSpace: 'nowrap',
-                                        maxWidth: '120px',
-                                        display: 'block',
+                                        fontSize: 18,
+                                        mr: 1,
+                                        color: theme.palette.text.secondary,
+                                      }}
+                                    />
+                                    <ListItemText
+                                      primary={
+                                        company.name && company.name.length > 12
+                                          ? company.name.substring(0, 12) +
+                                            "..."
+                                          : company.name
                                       }
+                                      secondary={company.domain || "--"}
+                                      sx={{
+                                        overflow: "hidden",
+                                        "& .MuiListItemText-primary": {
+                                          overflow: "hidden",
+                                          textOverflow: "ellipsis",
+                                          whiteSpace: "nowrap",
+                                          maxWidth: "120px",
+                                          display: "block",
+                                        },
                                     }}
                                     primaryTypographyProps={{ 
-                                      fontSize: '0.875rem',
+                                        fontSize: "0.875rem",
                                     }}
-                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                      secondaryTypographyProps={{
+                                        fontSize: "0.75rem",
+                                      }}
                                   />
                                 </ListItemButton>
                               </ListItem>
                             );
-                          })}
-                          {noteSelectedAssociations.contacts?.map((contactId) => {
-                            const contactItem = noteModalContacts.find((c: any) => c.id === contactId);
+                            }
+                          )}
+                          {noteSelectedAssociations.contacts?.map(
+                            (contactId) => {
+                              const contactItem = noteModalContacts.find(
+                                (c: any) => c.id === contactId
+                              );
                             if (!contactItem) return null;
                             return (
                               <ListItem key={contactId} disablePadding>
@@ -6296,7 +5768,10 @@ const CompanyDetail: React.FC = () => {
                                   onClick={() => {
                                     setNoteSelectedAssociations({
                                       ...noteSelectedAssociations,
-                                      contacts: noteSelectedAssociations.contacts.filter((id) => id !== contactId),
+                                        contacts:
+                                          noteSelectedAssociations.contacts.filter(
+                                            (id) => id !== contactId
+                                          ),
                                     });
                                   }}
                                 >
@@ -6305,19 +5780,32 @@ const CompanyDetail: React.FC = () => {
                                     size="small"
                                     sx={{ p: 0.5, mr: 1 }}
                                   />
-                                  <Person sx={{ fontSize: 18, mr: 1, color: theme.palette.text.secondary }} />
+                                    <Person
+                                      sx={{
+                                        fontSize: 18,
+                                        mr: 1,
+                                        color: theme.palette.text.secondary,
+                                      }}
+                                    />
                                   <ListItemText
                                     primary={`${contactItem.firstName} ${contactItem.lastName}`}
                                     secondary={contactItem.email}
-                                    primaryTypographyProps={{ fontSize: '0.875rem' }}
-                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                      primaryTypographyProps={{
+                                        fontSize: "0.875rem",
+                                      }}
+                                      secondaryTypographyProps={{
+                                        fontSize: "0.75rem",
+                                      }}
                                   />
                                 </ListItemButton>
                               </ListItem>
                             );
-                          })}
+                            }
+                          )}
                           {noteSelectedAssociations.deals?.map((dealId) => {
-                            const deal = noteModalDeals.find((d: any) => d.id === dealId);
+                            const deal = noteModalDeals.find(
+                              (d: any) => d.id === dealId
+                            );
                             if (!deal) return null;
                             return (
                               <ListItem key={dealId} disablePadding>
@@ -6326,7 +5814,10 @@ const CompanyDetail: React.FC = () => {
                                   onClick={() => {
                                     setNoteSelectedAssociations({
                                       ...noteSelectedAssociations,
-                                      deals: noteSelectedAssociations.deals.filter((id) => id !== dealId),
+                                      deals:
+                                        noteSelectedAssociations.deals.filter(
+                                          (id) => id !== dealId
+                                        ),
                                     });
                                   }}
                                 >
@@ -6337,16 +5828,28 @@ const CompanyDetail: React.FC = () => {
                                   />
                                   <ListItemText
                                     primary={deal.name}
-                                    secondary={`${deal.amount ? `S/ ${deal.amount.toLocaleString('es-ES')}` : ''} ${deal.stage || ''}`}
-                                    primaryTypographyProps={{ fontSize: '0.875rem' }}
-                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                    secondary={`${
+                                      deal.amount
+                                        ? `S/ ${deal.amount.toLocaleString(
+                                            "es-ES"
+                                          )}`
+                                        : ""
+                                    } ${deal.stage || ""}`}
+                                    primaryTypographyProps={{
+                                      fontSize: "0.875rem",
+                                    }}
+                                    secondaryTypographyProps={{
+                                      fontSize: "0.75rem",
+                                    }}
                                   />
                                 </ListItemButton>
                               </ListItem>
                             );
                           })}
                           {noteSelectedAssociations.tickets?.map((ticketId) => {
-                            const ticket = noteModalTickets.find((t: any) => t.id === ticketId);
+                            const ticket = noteModalTickets.find(
+                              (t: any) => t.id === ticketId
+                            );
                             if (!ticket) return null;
                             return (
                               <ListItem key={ticketId} disablePadding>
@@ -6355,7 +5858,10 @@ const CompanyDetail: React.FC = () => {
                                   onClick={() => {
                                     setNoteSelectedAssociations({
                                       ...noteSelectedAssociations,
-                                      tickets: noteSelectedAssociations.tickets.filter((id) => id !== ticketId),
+                                      tickets:
+                                        noteSelectedAssociations.tickets.filter(
+                                          (id) => id !== ticketId
+                                        ),
                                     });
                                   }}
                                 >
@@ -6367,8 +5873,12 @@ const CompanyDetail: React.FC = () => {
                                   <ListItemText
                                     primary={ticket.subject}
                                     secondary={ticket.description}
-                                    primaryTypographyProps={{ fontSize: '0.875rem' }}
-                                    secondaryTypographyProps={{ fontSize: '0.75rem' }}
+                                    primaryTypographyProps={{
+                                      fontSize: "0.875rem",
+                                    }}
+                                    secondaryTypographyProps={{
+                                      fontSize: "0.75rem",
+                                    }}
                                   />
                                 </ListItemButton>
                               </ListItem>
@@ -6383,10 +5893,12 @@ const CompanyDetail: React.FC = () => {
             </Box>
           </Box>
         </Box>
-        <DialogActions sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
+        <DialogActions
+          sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}
+        >
           <Button
             onClick={() => setNoteAssociateModalOpen(false)}
-            sx={{ textTransform: 'none' }}
+            sx={{ textTransform: "none" }}
           >
             Cancelar
           </Button>
@@ -6396,16 +5908,20 @@ const CompanyDetail: React.FC = () => {
               setSelectedCompanies(noteSelectedAssociations.companies || []);
               setSelectedContacts(noteSelectedAssociations.contacts || []);
               // Convertir deals y tickets a la estructura esperada
-              const dealIds = (noteSelectedAssociations.deals || []).map(id => 1000 + id);
-              const ticketIds = (noteSelectedAssociations.tickets || []).map(id => 2000 + id);
+              const dealIds = (noteSelectedAssociations.deals || []).map(
+                (id) => 1000 + id
+              );
+              const ticketIds = (noteSelectedAssociations.tickets || []).map(
+                (id) => 2000 + id
+              );
               setSelectedAssociations([...dealIds, ...ticketIds]);
               setNoteAssociateModalOpen(false);
             }}
             variant="contained"
             sx={{ 
-              textTransform: 'none',
+              textTransform: "none",
               backgroundColor: taxiMonterricoColors.green,
-              '&:hover': {
+              "&:hover": {
                 backgroundColor: taxiMonterricoColors.greenDark,
               },
             }}
@@ -6419,8 +5935,8 @@ const CompanyDetail: React.FC = () => {
       {warningMessage && (
         <Alert 
           severity="warning" 
-          onClose={() => setWarningMessage('')}
-          sx={{ position: 'fixed', bottom: 20, right: 20, zIndex: 9999 }}
+          onClose={() => setWarningMessage("")}
+          sx={{ position: "fixed", bottom: 20, right: 20, zIndex: 9999 }}
         >
           {warningMessage}
         </Alert>
@@ -6435,40 +5951,47 @@ const CompanyDetail: React.FC = () => {
         PaperProps={{
           sx: {
             borderRadius: 2,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-          }
+            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+          },
         }}
         BackdropProps={{
           sx: {
-            backdropFilter: 'blur(4px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          }
+            backdropFilter: "blur(4px)",
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+          },
         }}
       >
         <DialogTitle
           sx={{
-            bgcolor: theme.palette.mode === 'dark' ? '#0B1220' : '#f5f5f5',
+            bgcolor: theme.palette.mode === "dark" ? "#0B1220" : "#f5f5f5",
             borderBottom: `1px solid ${theme.palette.divider}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
             py: 1.5,
             px: 2,
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
             <Email sx={{ fontSize: 20, color: theme.palette.text.primary }} />
-            <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1rem', color: theme.palette.text.primary }}>
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 600,
+                fontSize: "1rem",
+                color: theme.palette.text.primary,
+              }}
+            >
               Correo
             </Typography>
           </Box>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
             <IconButton
               size="small"
               onClick={() => setEmailConnectModalOpen(false)}
               sx={{
                 color: theme.palette.text.secondary,
-                '&:hover': {
+                "&:hover": {
                   bgcolor: theme.palette.action.hover,
                 },
               }}
@@ -6477,14 +6000,14 @@ const CompanyDetail: React.FC = () => {
             </IconButton>
           </Box>
         </DialogTitle>
-        <DialogContent sx={{ px: 4, py: 4, textAlign: 'center' }}>
+        <DialogContent sx={{ px: 4, py: 4, textAlign: "center" }}>
           <Typography
             variant="h5"
             sx={{
               fontWeight: 600,
               mb: 2,
               color: theme.palette.text.primary,
-              fontSize: '1.5rem',
+              fontSize: "1.5rem",
             }}
           >
             Haz seguimiento de la actividad de tu correo en el CRM
@@ -6495,57 +6018,65 @@ const CompanyDetail: React.FC = () => {
               mb: 3,
               color: theme.palette.text.secondary,
               lineHeight: 1.7,
-              fontSize: '0.9375rem',
+              fontSize: "0.9375rem",
             }}
           >
-            Conecta tu cuenta de correo electrónico al CRM para comenzar a enviar correos desde tu plataforma. Todas tus conversaciones por correo electrónico aparecerán en la siguiente cronología.
+            Conecta tu cuenta de correo electrónico al CRM para comenzar a
+            enviar correos desde tu plataforma. Todas tus conversaciones por
+            correo electrónico aparecerán en la siguiente cronología.
           </Typography>
           <Link
             component="button"
             onClick={() => {
               setEmailConnectModalOpen(false);
-              navigate('/settings');
+              navigate("/settings");
             }}
             sx={{
-              color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
-              textDecoration: 'none',
-              fontSize: '0.875rem',
-              cursor: 'pointer',
-              '&:hover': {
-                textDecoration: 'underline',
+              color: theme.palette.mode === "dark" ? "#64B5F6" : "#1976d2",
+              textDecoration: "none",
+              fontSize: "0.875rem",
+              cursor: "pointer",
+              "&:hover": {
+                textDecoration: "underline",
               },
             }}
           >
             Más información
           </Link>
         </DialogContent>
-        <DialogActions sx={{ px: 4, pb: 4, justifyContent: 'center' }}>
+        <DialogActions sx={{ px: 4, pb: 4, justifyContent: "center" }}>
           <Button
             onClick={handleEmailConnect}
             disabled={connectingEmail}
             variant="contained"
             sx={{
-              bgcolor: '#FF6B35',
-              color: 'white',
+              bgcolor: "#FF6B35",
+              color: "white",
               fontWeight: 600,
-              textTransform: 'none',
-              fontSize: '0.9375rem',
+              textTransform: "none",
+              fontSize: "0.9375rem",
               px: 4,
               py: 1.25,
               borderRadius: 2,
-              boxShadow: '0 4px 12px rgba(255, 107, 53, 0.3)',
-              '&:hover': {
-                bgcolor: '#E55A2B',
-                boxShadow: '0 6px 16px rgba(255, 107, 53, 0.4)',
+              boxShadow: "0 4px 12px rgba(255, 107, 53, 0.3)",
+              "&:hover": {
+                bgcolor: "#E55A2B",
+                boxShadow: "0 6px 16px rgba(255, 107, 53, 0.4)",
               },
-              '&.Mui-disabled': {
-                bgcolor: '#FF6B35',
+              "&.Mui-disabled": {
+                bgcolor: "#FF6B35",
                 opacity: 0.6,
               },
             }}
-            startIcon={connectingEmail ? <CircularProgress size={16} sx={{ color: 'white' }} /> : <Email />}
+            startIcon={
+              connectingEmail ? (
+                <CircularProgress size={16} sx={{ color: "white" }} />
+              ) : (
+                <Email />
+              )
+            }
           >
-            {connectingEmail ? 'Conectando...' : 'Conectar bandeja de entrada'}
+            {connectingEmail ? "Conectando..." : "Conectar bandeja de entrada"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -6554,40 +6085,39 @@ const CompanyDetail: React.FC = () => {
       <EmailComposer
         open={emailOpen}
         onClose={() => setEmailOpen(false)}
-        recipientEmail={(company as any)?.email || ''}
-        recipientName={company?.name || ''}
+        recipientEmail={(company as any)?.email || ""}
+        recipientName={company?.name || ""}
         onSend={handleSendEmail}
       />
-
 
       {/* Ventana flotante de Llamada */}
       {callOpen && (
         <>
           <Box
             sx={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '600px',
-              maxWidth: '95vw',
-              maxHeight: '90vh',
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              width: "600px",
+              maxWidth: "95vw",
+              maxHeight: "90vh",
               backgroundColor: theme.palette.background.paper,
-              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
               borderRadius: 4,
               zIndex: 1500,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              animation: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              '@keyframes fadeInScale': {
-                '0%': {
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              animation: "fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+              "@keyframes fadeInScale": {
+                "0%": {
                   opacity: 0,
-                  transform: 'translate(-50%, -50%) scale(0.9)',
+                  transform: "translate(-50%, -50%) scale(0.9)",
                 },
-                '100%': {
+                "100%": {
                   opacity: 1,
-                  transform: 'translate(-50%, -50%) scale(1)',
+                  transform: "translate(-50%, -50%) scale(1)",
                 },
               },
             }}
@@ -6595,42 +6125,52 @@ const CompanyDetail: React.FC = () => {
           >
             <Box
               sx={{
-                backgroundColor: 'transparent',
+                backgroundColor: "transparent",
                 color: theme.palette.text.primary,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                minHeight: { xs: '64px', md: '72px' },
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                minHeight: { xs: "64px", md: "72px" },
                 px: { xs: 3, md: 4 },
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                 <Box
                   sx={{
                     width: 40,
                     height: 40,
-                    borderRadius: '50%',
+                    borderRadius: "50%",
                     backgroundColor: `${taxiMonterricoColors.green}15`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                   }}
                 >
-                  <Phone sx={{ fontSize: 20, color: taxiMonterricoColors.green }} />
+                  <Phone
+                    sx={{ fontSize: 20, color: taxiMonterricoColors.green }}
+                  />
                 </Box>
-                <Typography variant="h5" sx={{ color: theme.palette.text.primary, fontWeight: 700, fontSize: { xs: '1.1rem', md: '1.25rem' }, letterSpacing: '-0.02em' }}>
+                <Typography
+                  variant="h5"
+                  sx={{
+                    color: theme.palette.text.primary,
+                    fontWeight: 700,
+                    fontSize: { xs: "1.1rem", md: "1.25rem" },
+                    letterSpacing: "-0.02em",
+                  }}
+                >
                   Llamada
                 </Typography>
               </Box>
               <IconButton 
                 sx={{ 
                   color: theme.palette.text.secondary,
-                  transition: 'all 0.2s ease',
-                  '&:hover': { 
+                  transition: "all 0.2s ease",
+                  "&:hover": {
                     backgroundColor: theme.palette.action.hover,
                     color: theme.palette.text.primary,
-                    transform: 'rotate(90deg)',
-                  }
+                    transform: "rotate(90deg)",
+                  },
                 }} 
                 size="medium" 
                 onClick={() => setCallOpen(false)}
@@ -6639,59 +6179,65 @@ const CompanyDetail: React.FC = () => {
               </IconButton>
             </Box>
 
-            <Box sx={{ 
+            <Box
+              sx={{
               flexGrow: 1, 
-              display: 'flex', 
-              flexDirection: 'column', 
+                display: "flex",
+                flexDirection: "column",
               p: { xs: 3, md: 4 }, 
-              overflow: 'hidden', 
-              overflowY: 'auto',
+                overflow: "hidden",
+                overflowY: "auto",
               gap: 3,
-              '&::-webkit-scrollbar': {
-                width: '8px',
-              },
-              '&::-webkit-scrollbar-track': {
-                backgroundColor: 'transparent',
-                borderRadius: '4px',
-              },
-              '&::-webkit-scrollbar-thumb': {
-                backgroundColor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255,255,255,0.2)' 
-                  : 'rgba(0,0,0,0.2)',
-                borderRadius: '4px',
-                '&:hover': {
-                  backgroundColor: theme.palette.mode === 'dark' 
-                    ? 'rgba(255,255,255,0.3)' 
-                    : 'rgba(0,0,0,0.3)',
+                "&::-webkit-scrollbar": {
+                  width: "8px",
                 },
-                transition: 'background-color 0.2s ease',
-              },
-            }}>
+                "&::-webkit-scrollbar-track": {
+                  backgroundColor: "transparent",
+                  borderRadius: "4px",
+                },
+                "&::-webkit-scrollbar-thumb": {
+                  backgroundColor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.2)"
+                      : "rgba(0,0,0,0.2)",
+                  borderRadius: "4px",
+                  "&:hover": {
+                    backgroundColor:
+                      theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.3)"
+                        : "rgba(0,0,0,0.3)",
+                  },
+                  transition: "background-color 0.2s ease",
+                },
+              }}
+            >
               <TextField
                 label="Asunto"
                 value={callData.subject}
-                onChange={(e) => setCallData({ ...callData, subject: e.target.value })}
+                onChange={(e) =>
+                  setCallData({ ...callData, subject: e.target.value })
+                }
                 required
                 fullWidth
                 sx={{ 
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 2,
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '& fieldset': {
-                      borderWidth: '2px',
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    "& fieldset": {
+                      borderWidth: "2px",
                       borderColor: theme.palette.divider,
                     },
-                    '&:hover fieldset': {
+                    "&:hover fieldset": {
                       borderColor: taxiMonterricoColors.green,
                     },
-                    '&.Mui-focused fieldset': {
+                    "&.Mui-focused fieldset": {
                       borderColor: taxiMonterricoColors.green,
-                      borderWidth: '2px',
+                      borderWidth: "2px",
                     },
                   },
-                  '& .MuiInputLabel-root': {
+                  "& .MuiInputLabel-root": {
                     fontWeight: 500,
-                    '&.Mui-focused': {
+                    "&.Mui-focused": {
                       color: taxiMonterricoColors.green,
                     },
                   },
@@ -6701,27 +6247,29 @@ const CompanyDetail: React.FC = () => {
                 label="Duración (minutos)"
                 type="number"
                 value={callData.duration}
-                onChange={(e) => setCallData({ ...callData, duration: e.target.value })}
+                onChange={(e) =>
+                  setCallData({ ...callData, duration: e.target.value })
+                }
                 fullWidth
                 sx={{ 
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 2,
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '& fieldset': {
-                      borderWidth: '2px',
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    "& fieldset": {
+                      borderWidth: "2px",
                       borderColor: theme.palette.divider,
                     },
-                    '&:hover fieldset': {
+                    "&:hover fieldset": {
                       borderColor: taxiMonterricoColors.green,
                     },
-                    '&.Mui-focused fieldset': {
+                    "&.Mui-focused fieldset": {
                       borderColor: taxiMonterricoColors.green,
-                      borderWidth: '2px',
+                      borderWidth: "2px",
                     },
                   },
-                  '& .MuiInputLabel-root': {
+                  "& .MuiInputLabel-root": {
                     fontWeight: 500,
-                    '&.Mui-focused': {
+                    "&.Mui-focused": {
                       color: taxiMonterricoColors.green,
                     },
                   },
@@ -6732,27 +6280,29 @@ const CompanyDetail: React.FC = () => {
                 multiline
                 rows={8}
                 value={callData.description}
-                onChange={(e) => setCallData({ ...callData, description: e.target.value })}
+                onChange={(e) =>
+                  setCallData({ ...callData, description: e.target.value })
+                }
                 fullWidth
                 sx={{ 
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 2,
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '& fieldset': {
-                      borderWidth: '2px',
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    "& fieldset": {
+                      borderWidth: "2px",
                       borderColor: theme.palette.divider,
                     },
-                    '&:hover fieldset': {
+                    "&:hover fieldset": {
                       borderColor: taxiMonterricoColors.green,
                     },
-                    '&.Mui-focused fieldset': {
+                    "&.Mui-focused fieldset": {
                       borderColor: taxiMonterricoColors.green,
-                      borderWidth: '2px',
+                      borderWidth: "2px",
                     },
                   },
-                  '& .MuiInputLabel-root': {
+                  "& .MuiInputLabel-root": {
                     fontWeight: 500,
-                    '&.Mui-focused': {
+                    "&.Mui-focused": {
                       color: taxiMonterricoColors.green,
                     },
                   },
@@ -6760,30 +6310,32 @@ const CompanyDetail: React.FC = () => {
               />
             </Box>
 
-            <Box sx={{ 
+            <Box
+              sx={{
               p: 3, 
               borderTop: `1px solid ${theme.palette.divider}`, 
               backgroundColor: theme.palette.background.paper, 
-              display: 'flex', 
-              justifyContent: 'flex-end', 
-              gap: 2 
-            }}>
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 2,
+              }}
+            >
               <Button 
                 onClick={() => setCallOpen(false)} 
                 variant="outlined"
                 sx={{ 
-                  textTransform: 'none',
+                  textTransform: "none",
                   color: theme.palette.text.secondary,
                   borderColor: theme.palette.divider,
                   fontWeight: 600,
                   px: 3,
                   py: 1,
                   borderRadius: 2,
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
+                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                  "&:hover": {
                     bgcolor: theme.palette.action.hover,
                     borderColor: theme.palette.text.secondary,
-                    transform: 'translateY(-1px)',
+                    transform: "translateY(-1px)",
                   },
                 }}
               >
@@ -6794,44 +6346,52 @@ const CompanyDetail: React.FC = () => {
                 variant="contained" 
                 disabled={saving || !callData.subject.trim()}
                 sx={{ 
-                  textTransform: 'none',
-                  bgcolor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.green,
-                  color: 'white',
+                  textTransform: "none",
+                  bgcolor: saving
+                    ? theme.palette.action.disabledBackground
+                    : taxiMonterricoColors.green,
+                  color: "white",
                   fontWeight: 600,
                   px: 4,
                   py: 1,
                   borderRadius: 2,
-                  boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.green}40`,
-                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    bgcolor: saving ? theme.palette.action.disabledBackground : taxiMonterricoColors.greenDark,
-                    boxShadow: saving ? 'none' : `0 6px 16px ${taxiMonterricoColors.green}50`,
-                    transform: 'translateY(-2px)',
+                  boxShadow: saving
+                    ? "none"
+                    : `0 4px 12px ${taxiMonterricoColors.green}40`,
+                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                  "&:hover": {
+                    bgcolor: saving
+                      ? theme.palette.action.disabledBackground
+                      : taxiMonterricoColors.greenDark,
+                    boxShadow: saving
+                      ? "none"
+                      : `0 6px 16px ${taxiMonterricoColors.green}50`,
+                    transform: "translateY(-2px)",
                   },
-                  '&:active': {
-                    transform: 'translateY(0)',
+                  "&:active": {
+                    transform: "translateY(0)",
                   },
-                  '&.Mui-disabled': {
+                  "&.Mui-disabled": {
                     bgcolor: theme.palette.action.disabledBackground,
                     color: theme.palette.action.disabled,
-                    boxShadow: 'none',
+                    boxShadow: "none",
                   },
                 }}
               >
-                {saving ? 'Guardando...' : 'Guardar'}
+                {saving ? "Guardando..." : "Guardar"}
               </Button>
             </Box>
           </Box>
           <Box
             sx={{
-              position: 'fixed',
+              position: "fixed",
               top: 0,
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              backgroundColor: "rgba(0, 0, 0, 0.5)",
               zIndex: 1499,
-              animation: 'fadeIn 0.3s ease-out',
+              animation: "fadeIn 0.3s ease-out",
             }}
             onClick={() => setCallOpen(false)}
           />
@@ -6847,37 +6407,45 @@ const CompanyDetail: React.FC = () => {
         PaperProps={{
           sx: {
             borderRadius: 2,
-            maxHeight: '90vh',
-            width: '560px',
-            maxWidth: '90vw',
+            maxHeight: "90vh",
+            width: "560px",
+            maxWidth: "90vw",
           },
         }}
       >
         <Box
           sx={{
-            backgroundColor: 'transparent',
+            backgroundColor: "transparent",
             color: theme.palette.text.primary,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
             minHeight: 48,
             px: 2,
             pt: 1.5,
             pb: 0.5,
           }}
         >
-          <Typography variant="h5" sx={{ color: theme.palette.text.primary, fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.02em' }}>
-            {taskData.type === 'meeting' ? 'Reunión' : 'Tarea'}
+          <Typography
+            variant="h5"
+            sx={{
+              color: theme.palette.text.primary,
+              fontWeight: 700,
+              fontSize: "1rem",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            {taskData.type === "meeting" ? "Reunión" : "Tarea"}
           </Typography>
           <IconButton 
             sx={{ 
               color: theme.palette.text.secondary,
-              transition: 'all 0.2s ease',
-              '&:hover': { 
+              transition: "all 0.2s ease",
+              "&:hover": {
                 backgroundColor: theme.palette.action.hover,
                 color: theme.palette.text.primary,
-                transform: 'rotate(90deg)',
-              }
+                transform: "rotate(90deg)",
+              },
             }} 
             size="medium" 
             onClick={() => setTaskOpen(false)}
@@ -6890,78 +6458,81 @@ const CompanyDetail: React.FC = () => {
           <TextField
             label="Título"
             value={taskData.title}
-            onChange={(e) => setTaskData({ ...taskData, title: e.target.value })}
+            onChange={(e) =>
+              setTaskData({ ...taskData, title: e.target.value })
+            }
             fullWidth
             InputLabelProps={{
               shrink: !!taskData.title,
             }}
             sx={{ 
               mb: 1.5,
-              '& .MuiOutlinedInput-root': {
+              "& .MuiOutlinedInput-root": {
                 borderRadius: 0.5,
-                transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                fontSize: '0.75rem',
-                '& fieldset': {
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                fontSize: "0.75rem",
+                "& fieldset": {
                   borderWidth: 0,
-                  border: 'none',
+                  border: "none",
                   top: 0,
                 },
-                '&:hover fieldset': {
-                  border: 'none',
+                "&:hover fieldset": {
+                  border: "none",
                 },
-                '&.Mui-focused fieldset': {
-                  borderWidth: '2px !important',
+                "&.Mui-focused fieldset": {
+                  borderWidth: "2px !important",
                   borderColor: `${taxiMonterricoColors.orange} !important`,
-                  borderStyle: 'solid !important',
+                  borderStyle: "solid !important",
                   top: 0,
                 },
               },
-              '& .MuiOutlinedInput-notchedOutline': {
-                borderWidth: '0px !important',
-                '& legend': {
+              "& .MuiOutlinedInput-notchedOutline": {
+                borderWidth: "0px !important",
+                "& legend": {
                   width: 0,
-                  display: 'none',
+                  display: "none",
                 },
               },
-              '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                borderWidth: '2px !important',
+              "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline":
+                {
+                  borderWidth: "2px !important",
                 borderColor: `${taxiMonterricoColors.green} !important`,
-                borderStyle: 'solid !important',
-                '& legend': {
+                  borderStyle: "solid !important",
+                  "& legend": {
                   width: 0,
-                  display: 'none',
+                    display: "none",
                 },
               },
-              '& .MuiInputLabel-root': {
+              "& .MuiInputLabel-root": {
                 fontWeight: 500,
-                position: 'absolute',
+                position: "absolute",
                 left: 12,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                pointerEvents: 'none',
+                top: "50%",
+                transform: "translateY(-50%)",
+                pointerEvents: "none",
                 zIndex: 0,
-                backgroundColor: 'transparent',
+                backgroundColor: "transparent",
                 padding: 0,
                 margin: 0,
-                fontSize: '0.75rem',
-                '&.Mui-focused': {
+                fontSize: "0.75rem",
+                "&.Mui-focused": {
                   color: taxiMonterricoColors.orange,
-                  transform: 'translateY(-50%)',
-                  backgroundColor: 'transparent',
+                  transform: "translateY(-50%)",
+                  backgroundColor: "transparent",
                 },
-                '&.MuiInputLabel-shrink': {
-                  display: 'none',
+                "&.MuiInputLabel-shrink": {
+                  display: "none",
                 },
               },
-              '& .MuiInputBase-input': {
-                position: 'relative',
+              "& .MuiInputBase-input": {
+                position: "relative",
                 zIndex: 1,
-                fontSize: '0.75rem',
+                fontSize: "0.75rem",
                 py: 1,
               },
             }}
           />
-          <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+          <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
             <Box sx={{ flex: 1 }}>
               <Typography 
                 variant="body2" 
@@ -6969,7 +6540,7 @@ const CompanyDetail: React.FC = () => {
                   mb: 0.75, 
                   color: theme.palette.text.secondary,
                   fontWeight: 500,
-                  fontSize: '0.75rem',
+                  fontSize: "0.75rem",
                 }}
               >
                 Prioridad
@@ -6977,7 +6548,9 @@ const CompanyDetail: React.FC = () => {
               <TextField
                 select
                 value={taskData.priority}
-                onChange={(e) => setTaskData({ ...taskData, priority: e.target.value })}
+                onChange={(e) =>
+                  setTaskData({ ...taskData, priority: e.target.value })
+                }
                 fullWidth
                 SelectProps={{
                   MenuProps: {
@@ -6990,39 +6563,47 @@ const CompanyDetail: React.FC = () => {
                   },
                 }}
                 sx={{ 
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 0.5,
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    fontSize: '0.75rem',
-                    '& fieldset': {
-                      borderWidth: '2px',
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    fontSize: "0.75rem",
+                    "& fieldset": {
+                      borderWidth: "2px",
                       borderColor: theme.palette.divider,
                     },
-                    '&:hover fieldset': {
+                    "&:hover fieldset": {
                       borderColor: taxiMonterricoColors.orange,
                     },
-                    '&.Mui-focused fieldset': {
+                    "&.Mui-focused fieldset": {
                       borderColor: taxiMonterricoColors.orange,
-                      borderWidth: '2px',
+                      borderWidth: "2px",
                     },
                   },
-                  '& .MuiInputBase-input': {
-                    fontSize: '0.75rem',
+                  "& .MuiInputBase-input": {
+                    fontSize: "0.75rem",
                     py: 1,
                   },
-                  '& .MuiInputLabel-root': {
+                  "& .MuiInputLabel-root": {
                     fontWeight: 500,
-                    fontSize: '0.75rem',
-                    '&.Mui-focused': {
+                    fontSize: "0.75rem",
+                    "&.Mui-focused": {
                       color: taxiMonterricoColors.orange,
                     },
                   },
                 }}
               >
-                <MenuItem value="low" sx={{ fontSize: '0.75rem', py: 0.75 }}>Baja</MenuItem>
-                <MenuItem value="medium" sx={{ fontSize: '0.75rem', py: 0.75 }}>Media</MenuItem>
-                <MenuItem value="high" sx={{ fontSize: '0.75rem', py: 0.75 }}>Alta</MenuItem>
-                <MenuItem value="urgent" sx={{ fontSize: '0.75rem', py: 0.75 }}>Urgente</MenuItem>
+                <MenuItem value="low" sx={{ fontSize: "0.75rem", py: 0.75 }}>
+                  Baja
+                </MenuItem>
+                <MenuItem value="medium" sx={{ fontSize: "0.75rem", py: 0.75 }}>
+                  Media
+                </MenuItem>
+                <MenuItem value="high" sx={{ fontSize: "0.75rem", py: 0.75 }}>
+                  Alta
+                </MenuItem>
+                <MenuItem value="urgent" sx={{ fontSize: "0.75rem", py: 0.75 }}>
+                  Urgente
+                </MenuItem>
               </TextField>
             </Box>
             <Box sx={{ flex: 1 }}>
@@ -7032,7 +6613,7 @@ const CompanyDetail: React.FC = () => {
                   mb: 0.75, 
                   color: theme.palette.text.secondary,
                   fontWeight: 500,
-                  fontSize: '0.75rem',
+                  fontSize: "0.75rem",
                 }}
               >
                 Fecha límite
@@ -7050,10 +6631,10 @@ const CompanyDetail: React.FC = () => {
                       sx={{ 
                         color: theme.palette.text.secondary,
                         mr: 0.5,
-                        '&:hover': {
-                          backgroundColor: 'transparent',
+                        "&:hover": {
+                          backgroundColor: "transparent",
                           color: taxiMonterricoColors.orange,
-                        }
+                        },
                       }}
                     >
                       <CalendarToday sx={{ fontSize: 18 }} />
@@ -7061,32 +6642,32 @@ const CompanyDetail: React.FC = () => {
                   ),
                 }}
                 sx={{ 
-                  cursor: 'pointer',
-                  '& .MuiOutlinedInput-root': {
+                  cursor: "pointer",
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 0.5,
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                    fontSize: '0.75rem',
-                    '& fieldset': {
-                      borderWidth: '2px',
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    fontSize: "0.75rem",
+                    "& fieldset": {
+                      borderWidth: "2px",
                       borderColor: theme.palette.divider,
                     },
-                    '&:hover fieldset': {
+                    "&:hover fieldset": {
                       borderColor: taxiMonterricoColors.orange,
                     },
-                    '&.Mui-focused fieldset': {
+                    "&.Mui-focused fieldset": {
                       borderColor: taxiMonterricoColors.orange,
-                      borderWidth: '2px',
+                      borderWidth: "2px",
                     },
                   },
-                  '& .MuiInputBase-input': {
-                    fontSize: '0.75rem',
+                  "& .MuiInputBase-input": {
+                    fontSize: "0.75rem",
                     py: 1,
-                    cursor: 'pointer',
+                    cursor: "pointer",
                   },
-                  '& .MuiInputLabel-root': {
+                  "& .MuiInputLabel-root": {
                     fontWeight: 500,
-                    fontSize: '0.75rem',
-                    '&.Mui-focused': {
+                    fontSize: "0.75rem",
+                    "&.Mui-focused": {
                       color: taxiMonterricoColors.orange,
                     },
                   },
@@ -7095,7 +6676,7 @@ const CompanyDetail: React.FC = () => {
             </Box>
           </Box>
           <Divider sx={{ my: 1.5 }} />
-          <Box sx={{ position: 'relative' }}>
+          <Box sx={{ position: "relative" }}>
             <Box
               ref={descriptionEditorRef}
               contentEditable
@@ -7107,64 +6688,81 @@ const CompanyDetail: React.FC = () => {
                 }
               }}
               sx={{
-                minHeight: '150px',
-                maxHeight: '250px',
-                overflowY: 'auto',
+                minHeight: "150px",
+                maxHeight: "250px",
+                overflowY: "auto",
                 pt: 0,
                 pb: 1.5,
                 px: 1,
                 borderRadius: 0.5,
-                border: 'none',
-                outline: 'none',
-                fontSize: '0.75rem',
+                border: "none",
+                outline: "none",
+                fontSize: "0.75rem",
                 lineHeight: 1.5,
                 color: theme.palette.text.primary,
-                '&:empty:before': {
+                "&:empty:before": {
                   content: '"Descripción"',
                   color: theme.palette.text.disabled,
                 },
-                '&::-webkit-scrollbar': {
-                  width: '6px',
+                "&::-webkit-scrollbar": {
+                  width: "6px",
                 },
-                '&::-webkit-scrollbar-track': {
-                  backgroundColor: 'transparent',
+                "&::-webkit-scrollbar-track": {
+                  backgroundColor: "transparent",
                 },
-                '&::-webkit-scrollbar-thumb': {
-                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)',
-                  borderRadius: '3px',
+                "&::-webkit-scrollbar-thumb": {
+                  backgroundColor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.2)"
+                      : "rgba(0,0,0,0.2)",
+                  borderRadius: "3px",
                 },
               }}
             />
             <Box
               sx={{
-                position: 'absolute',
+                position: "absolute",
                 bottom: 0.5,
                 left: 4,
                 right: 4,
-                display: 'flex', 
-                alignItems: 'center',
-                justifyContent: 'space-between',
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
                 gap: 0.5,
-                backgroundColor: 'transparent',
+                backgroundColor: "transparent",
                 borderRadius: 1,
                 p: 0.5,
-                border: 'none',
+                border: "none",
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'nowrap' }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  flexWrap: "nowrap",
+                }}
+              >
                 <IconButton
                   size="small"
                   sx={{ 
                     p: 0.25, 
                     minWidth: 28, 
                     height: 28,
-                    backgroundColor: activeFormats.bold ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
-                    '&:hover': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
-                    }
+                    backgroundColor: activeFormats.bold
+                      ? theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.15)"
+                        : "#e0e0e0"
+                      : "transparent",
+                    "&:hover": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.1)"
+                          : "#e0e0e0",
+                    },
                   }}
                   onClick={() => {
-                    document.execCommand('bold');
+                    document.execCommand("bold");
                     updateActiveFormats();
                   }}
                   title="Negrita"
@@ -7177,13 +6775,20 @@ const CompanyDetail: React.FC = () => {
                     p: 0.25, 
                     minWidth: 28, 
                     height: 28,
-                    backgroundColor: activeFormats.italic ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
-                    '&:hover': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
-                    }
+                    backgroundColor: activeFormats.italic
+                      ? theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.15)"
+                        : "#e0e0e0"
+                      : "transparent",
+                    "&:hover": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.1)"
+                          : "#e0e0e0",
+                    },
                   }}
                   onClick={() => {
-                    document.execCommand('italic');
+                    document.execCommand("italic");
                     updateActiveFormats();
                   }}
                   title="Cursiva"
@@ -7196,13 +6801,20 @@ const CompanyDetail: React.FC = () => {
                     p: 0.25, 
                     minWidth: 28, 
                     height: 28,
-                    backgroundColor: activeFormats.underline ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
-                    '&:hover': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
-                    }
+                    backgroundColor: activeFormats.underline
+                      ? theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.15)"
+                        : "#e0e0e0"
+                      : "transparent",
+                    "&:hover": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.1)"
+                          : "#e0e0e0",
+                    },
                   }}
                   onClick={() => {
-                    document.execCommand('underline');
+                    document.execCommand("underline");
                     updateActiveFormats();
                   }}
                   title="Subrayado"
@@ -7215,13 +6827,20 @@ const CompanyDetail: React.FC = () => {
                     p: 0.25, 
                     minWidth: 28, 
                     height: 28,
-                    backgroundColor: activeFormats.strikeThrough ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
-                    '&:hover': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
-                    }
+                    backgroundColor: activeFormats.strikeThrough
+                      ? theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.15)"
+                        : "#e0e0e0"
+                      : "transparent",
+                    "&:hover": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.1)"
+                          : "#e0e0e0",
+                    },
                   }}
                   onClick={() => {
-                    document.execCommand('strikeThrough');
+                    document.execCommand("strikeThrough");
                     updateActiveFormats();
                   }}
                   title="Tachado"
@@ -7242,48 +6861,91 @@ const CompanyDetail: React.FC = () => {
                   onClose={() => setMoreMenuAnchorEl(null)}
                 >
                   <MenuItem 
-                    onClick={() => { document.execCommand('justifyLeft'); setMoreMenuAnchorEl(null); }}
-                    sx={{ py: 0.75, px: 1, minWidth: 'auto', justifyContent: 'center' }}
+                    onClick={() => {
+                      document.execCommand("justifyLeft");
+                      setMoreMenuAnchorEl(null);
+                    }}
+                    sx={{
+                      py: 0.75,
+                      px: 1,
+                      minWidth: "auto",
+                      justifyContent: "center",
+                    }}
                     title="Alinear izquierda"
                   >
                     <FormatAlignLeft sx={{ fontSize: 16 }} />
                   </MenuItem>
                   <MenuItem 
-                    onClick={() => { document.execCommand('justifyCenter'); setMoreMenuAnchorEl(null); }}
-                    sx={{ py: 0.75, px: 1, minWidth: 'auto', justifyContent: 'center' }}
+                    onClick={() => {
+                      document.execCommand("justifyCenter");
+                      setMoreMenuAnchorEl(null);
+                    }}
+                    sx={{
+                      py: 0.75,
+                      px: 1,
+                      minWidth: "auto",
+                      justifyContent: "center",
+                    }}
                     title="Alinear centro"
                   >
                     <FormatAlignCenter sx={{ fontSize: 16 }} />
                   </MenuItem>
                   <MenuItem 
-                    onClick={() => { document.execCommand('justifyRight'); setMoreMenuAnchorEl(null); }}
-                    sx={{ py: 0.75, px: 1, minWidth: 'auto', justifyContent: 'center' }}
+                    onClick={() => {
+                      document.execCommand("justifyRight");
+                      setMoreMenuAnchorEl(null);
+                    }}
+                    sx={{
+                      py: 0.75,
+                      px: 1,
+                      minWidth: "auto",
+                      justifyContent: "center",
+                    }}
                     title="Alinear derecha"
                   >
                     <FormatAlignRight sx={{ fontSize: 16 }} />
                   </MenuItem>
                   <MenuItem 
-                    onClick={() => { document.execCommand('justifyFull'); setMoreMenuAnchorEl(null); }}
-                    sx={{ py: 0.75, px: 1, minWidth: 'auto', justifyContent: 'center' }}
+                    onClick={() => {
+                      document.execCommand("justifyFull");
+                      setMoreMenuAnchorEl(null);
+                    }}
+                    sx={{
+                      py: 0.75,
+                      px: 1,
+                      minWidth: "auto",
+                      justifyContent: "center",
+                    }}
                     title="Justificar"
                   >
                     <FormatAlignJustify sx={{ fontSize: 16 }} />
                   </MenuItem>
                 </Menu>
-                <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: '20px' }} />
+                <Divider
+                  orientation="vertical"
+                  flexItem
+                  sx={{ mx: 0.5, height: "20px" }}
+                />
                 <IconButton
                   size="small"
                   sx={{ 
                     p: 0.25, 
                     minWidth: 28, 
                     height: 28,
-                    backgroundColor: activeFormats.unorderedList ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
-                    '&:hover': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
-                    }
+                    backgroundColor: activeFormats.unorderedList
+                      ? theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.15)"
+                        : "#e0e0e0"
+                      : "transparent",
+                    "&:hover": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.1)"
+                          : "#e0e0e0",
+                    },
                   }}
                   onClick={() => {
-                    document.execCommand('insertUnorderedList');
+                    document.execCommand("insertUnorderedList");
                     updateActiveFormats();
                   }}
                   title="Lista con viñetas"
@@ -7296,27 +6958,38 @@ const CompanyDetail: React.FC = () => {
                     p: 0.25, 
                     minWidth: 28, 
                     height: 28,
-                    backgroundColor: activeFormats.orderedList ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
-                    '&:hover': {
-                      backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
-                    }
+                    backgroundColor: activeFormats.orderedList
+                      ? theme.palette.mode === "dark"
+                        ? "rgba(255,255,255,0.15)"
+                        : "#e0e0e0"
+                      : "transparent",
+                    "&:hover": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.1)"
+                          : "#e0e0e0",
+                    },
                   }}
                   onClick={() => {
-                    document.execCommand('insertOrderedList');
+                    document.execCommand("insertOrderedList");
                     updateActiveFormats();
                   }}
                   title="Lista numerada"
                 >
                   <FormatListNumbered sx={{ fontSize: 16 }} />
                 </IconButton>
-                <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: '20px' }} />
+                <Divider
+                  orientation="vertical"
+                  flexItem
+                  sx={{ mx: 0.5, height: "20px" }}
+                />
                 <IconButton
                   size="small"
                   sx={{ p: 0.25, minWidth: 28, height: 28 }}
                   onClick={() => {
-                    const url = prompt('URL:');
+                    const url = prompt("URL:");
                     if (url) {
-                      document.execCommand('createLink', false, url);
+                      document.execCommand("createLink", false, url);
                     }
                   }}
                   title="Insertar enlace"
@@ -7335,7 +7008,7 @@ const CompanyDetail: React.FC = () => {
                   size="small"
                   sx={{ p: 0.25, minWidth: 28, height: 28 }}
                   onClick={() => {
-                    const code = prompt('Ingresa el código:');
+                    const code = prompt("Ingresa el código:");
                     if (code && descriptionEditorRef.current) {
                       const selection = window.getSelection();
                       let range: Range | null = null;
@@ -7349,13 +7022,14 @@ const CompanyDetail: React.FC = () => {
                       }
                       
                       if (range) {
-                        const pre = document.createElement('pre');
-                        pre.style.backgroundColor = theme.palette.mode === 'dark' ? '#1e1e1e' : '#f5f5f5';
+                        const pre = document.createElement("pre");
+                        pre.style.backgroundColor =
+                          theme.palette.mode === "dark" ? "#1e1e1e" : "#f5f5f5";
                         pre.style.color = theme.palette.text.primary;
-                        pre.style.padding = '8px';
-                        pre.style.borderRadius = '4px';
-                        pre.style.fontFamily = 'monospace';
-                        pre.style.fontSize = '0.75rem';
+                        pre.style.padding = "8px";
+                        pre.style.borderRadius = "4px";
+                        pre.style.fontFamily = "monospace";
+                        pre.style.fontSize = "0.75rem";
                         pre.textContent = code;
                         
                         range.deleteContents();
@@ -7366,7 +7040,10 @@ const CompanyDetail: React.FC = () => {
                           selection.removeAllRanges();
                           selection.addRange(range);
                         }
-                        setTaskData({ ...taskData, description: descriptionEditorRef.current.innerHTML });
+                        setTaskData({
+                          ...taskData,
+                          description: descriptionEditorRef.current.innerHTML,
+                        });
                       }
                     }
                   }}
@@ -7378,22 +7055,22 @@ const CompanyDetail: React.FC = () => {
                   size="small"
                   sx={{ p: 0.25, minWidth: 28, height: 28 }}
                   onClick={() => {
-                    const rows = prompt('Número de filas:', '3');
-                    const cols = prompt('Número de columnas:', '3');
+                    const rows = prompt("Número de filas:", "3");
+                    const cols = prompt("Número de columnas:", "3");
                     if (rows && cols && descriptionEditorRef.current) {
-                      const table = document.createElement('table');
-                      table.style.borderCollapse = 'collapse';
-                      table.style.width = '100%';
-                      table.style.border = '1px solid #ccc';
-                      table.style.margin = '8px 0';
+                      const table = document.createElement("table");
+                      table.style.borderCollapse = "collapse";
+                      table.style.width = "100%";
+                      table.style.border = "1px solid #ccc";
+                      table.style.margin = "8px 0";
                       
                       for (let i = 0; i < parseInt(rows); i++) {
-                        const tr = document.createElement('tr');
+                        const tr = document.createElement("tr");
                         for (let j = 0; j < parseInt(cols); j++) {
-                          const td = document.createElement('td');
-                          td.style.border = '1px solid #ccc';
-                          td.style.padding = '8px';
-                          td.innerHTML = '&nbsp;';
+                          const td = document.createElement("td");
+                          td.style.border = "1px solid #ccc";
+                          td.style.padding = "8px";
+                          td.innerHTML = "&nbsp;";
                           tr.appendChild(td);
                         }
                         table.appendChild(tr);
@@ -7408,7 +7085,10 @@ const CompanyDetail: React.FC = () => {
                         range.collapse(true);
                         selection.removeAllRanges();
                         selection.addRange(range);
-                        setTaskData({ ...taskData, description: descriptionEditorRef.current.innerHTML });
+                        setTaskData({
+                          ...taskData,
+                          description: descriptionEditorRef.current.innerHTML,
+                        });
                       }
                     }
                   }}
@@ -7432,13 +7112,13 @@ const CompanyDetail: React.FC = () => {
             ref={imageInputRef}
             type="file"
             accept="image/*"
-            style={{ display: 'none' }}
+            style={{ display: "none" }}
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (!file || !descriptionEditorRef.current) return;
 
-              if (!file.type.startsWith('image/')) {
-                alert('Por favor, selecciona un archivo de imagen válido.');
+              if (!file.type.startsWith("image/")) {
+                alert("Por favor, selecciona un archivo de imagen válido.");
                 return;
               }
 
@@ -7464,10 +7144,10 @@ const CompanyDetail: React.FC = () => {
                   }
 
                   if (range) {
-                    const img = document.createElement('img');
+                    const img = document.createElement("img");
                     img.src = dataUrl;
-                    img.style.maxWidth = '100%';
-                    img.style.height = 'auto';
+                    img.style.maxWidth = "100%";
+                    img.style.height = "auto";
                     img.alt = file.name;
                     
                     range.insertNode(img);
@@ -7479,20 +7159,23 @@ const CompanyDetail: React.FC = () => {
                     }
                     
                     if (descriptionEditorRef.current) {
-                      setTaskData({ ...taskData, description: descriptionEditorRef.current.innerHTML });
+                      setTaskData({
+                        ...taskData,
+                        description: descriptionEditorRef.current.innerHTML,
+                      });
                     }
                   }
                 }
               };
               
               reader.onerror = () => {
-                alert('Error al leer el archivo de imagen.');
+                alert("Error al leer el archivo de imagen.");
               };
               
               reader.readAsDataURL(file);
               
               if (imageInputRef.current) {
-                imageInputRef.current.value = '';
+                imageInputRef.current.value = "";
               }
             }}
           />
@@ -7500,7 +7183,7 @@ const CompanyDetail: React.FC = () => {
           <input
             ref={fileInputRef}
             type="file"
-            style={{ display: 'none' }}
+            style={{ display: "none" }}
             onChange={(e) => {
               const file = e.target.files?.[0];
               if (!file || !descriptionEditorRef.current) return;
@@ -7527,16 +7210,17 @@ const CompanyDetail: React.FC = () => {
                   }
 
                   if (range) {
-                    const link = document.createElement('a');
+                    const link = document.createElement("a");
                     link.href = dataUrl;
                     link.download = file.name;
                     link.textContent = `📎 ${file.name}`;
-                    link.style.display = 'inline-block';
-                    link.style.margin = '4px';
-                    link.style.padding = '4px 8px';
-                    link.style.backgroundColor = theme.palette.mode === 'dark' ? '#2a2a2a' : '#f5f5f5';
-                    link.style.borderRadius = '4px';
-                    link.style.textDecoration = 'none';
+                    link.style.display = "inline-block";
+                    link.style.margin = "4px";
+                    link.style.padding = "4px 8px";
+                    link.style.backgroundColor =
+                      theme.palette.mode === "dark" ? "#2a2a2a" : "#f5f5f5";
+                    link.style.borderRadius = "4px";
+                    link.style.textDecoration = "none";
                     link.style.color = theme.palette.text.primary;
                     
                     range.insertNode(link);
@@ -7548,20 +7232,23 @@ const CompanyDetail: React.FC = () => {
                     }
                     
                     if (descriptionEditorRef.current) {
-                      setTaskData({ ...taskData, description: descriptionEditorRef.current.innerHTML });
+                      setTaskData({
+                        ...taskData,
+                        description: descriptionEditorRef.current.innerHTML,
+                      });
                     }
                   }
                 }
               };
               
               reader.onerror = () => {
-                alert('Error al leer el archivo.');
+                alert("Error al leer el archivo.");
               };
               
               reader.readAsDataURL(file);
               
               if (fileInputRef.current) {
-                fileInputRef.current.value = '';
+                fileInputRef.current.value = "";
               }
             }}
           />
@@ -7574,15 +7261,15 @@ const CompanyDetail: React.FC = () => {
             onClick={() => setTaskOpen(false)} 
             size="small"
             sx={{ 
-              textTransform: 'none',
+              textTransform: "none",
               color: theme.palette.text.secondary,
               fontWeight: 500,
               px: 2,
               py: 0.5,
-              fontSize: '0.75rem',
-              '&:hover': {
+              fontSize: "0.75rem",
+              "&:hover": {
                 bgcolor: theme.palette.action.hover,
-              }
+              },
             }}
           >
             Cancelar
@@ -7593,24 +7280,28 @@ const CompanyDetail: React.FC = () => {
             size="small"
             disabled={saving || !taskData.title.trim()}
             sx={{ 
-              textTransform: 'none',
+              textTransform: "none",
               fontWeight: 500,
               px: 2,
               py: 0.5,
-              fontSize: '0.75rem',
-              bgcolor: taskData.title.trim() ? taxiMonterricoColors.green : theme.palette.action.disabledBackground,
-              color: 'white',
-              '&:hover': {
-                bgcolor: taskData.title.trim() ? taxiMonterricoColors.green : theme.palette.action.disabledBackground,
+              fontSize: "0.75rem",
+              bgcolor: taskData.title.trim()
+                ? taxiMonterricoColors.green
+                : theme.palette.action.disabledBackground,
+              color: "white",
+              "&:hover": {
+                bgcolor: taskData.title.trim()
+                  ? taxiMonterricoColors.green
+                  : theme.palette.action.disabledBackground,
                 opacity: 0.9,
               },
-              '&:disabled': {
+              "&:disabled": {
                 bgcolor: theme.palette.action.disabledBackground,
                 color: theme.palette.action.disabled,
-              }
+              },
             }}
           >
-            {saving ? 'Guardando...' : 'Guardar'}
+            {saving ? "Guardando..." : "Guardar"}
           </Button>
         </DialogActions>
       </Dialog>
@@ -7621,20 +7312,21 @@ const CompanyDetail: React.FC = () => {
         anchorEl={datePickerAnchorEl}
         onClose={() => setDatePickerAnchorEl(null)}
         anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
+          vertical: "bottom",
+          horizontal: "left",
         }}
         transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
+          vertical: "top",
+          horizontal: "left",
         }}
         PaperProps={{
           sx: {
             borderRadius: 2,
-            overflow: 'hidden',
-            boxShadow: theme.palette.mode === 'dark' 
-              ? '0 8px 32px rgba(0,0,0,0.4)' 
-              : '0 8px 32px rgba(0,0,0,0.12)',
+            overflow: "hidden",
+            boxShadow:
+              theme.palette.mode === "dark"
+                ? "0 8px 32px rgba(0,0,0,0.4)"
+                : "0 8px 32px rgba(0,0,0,0.12)",
             mt: 0.5,
             maxWidth: 280,
           },
@@ -7642,14 +7334,16 @@ const CompanyDetail: React.FC = () => {
       >
         <Box sx={{ p: 2, bgcolor: theme.palette.background.paper }}>
           {/* Header con mes y año */}
-          <Box sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between', 
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
             mb: 3,
             pb: 2,
             borderBottom: `1px solid ${theme.palette.divider}`,
-          }}>
+            }}
+          >
             <IconButton
               size="small"
               onClick={() => {
@@ -7660,7 +7354,7 @@ const CompanyDetail: React.FC = () => {
               sx={{
                 color: theme.palette.text.secondary,
                 border: `1px solid ${theme.palette.divider}`,
-                '&:hover': {
+                "&:hover": {
                   bgcolor: theme.palette.action.hover,
                   borderColor: taxiMonterricoColors.green,
                   color: taxiMonterricoColors.green,
@@ -7669,12 +7363,15 @@ const CompanyDetail: React.FC = () => {
             >
               <ChevronLeft />
             </IconButton>
-            <Typography variant="h6" sx={{ 
+            <Typography
+              variant="h6"
+              sx={{
               fontWeight: 600, 
-              fontSize: '0.95rem',
+                fontSize: "0.95rem",
               color: theme.palette.text.primary,
-              letterSpacing: '-0.01em',
-            }}>
+                letterSpacing: "-0.01em",
+              }}
+            >
               {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
             </Typography>
             <IconButton
@@ -7687,7 +7384,7 @@ const CompanyDetail: React.FC = () => {
               sx={{
                 color: theme.palette.text.secondary,
                 border: `1px solid ${theme.palette.divider}`,
-                '&:hover': {
+                "&:hover": {
                   bgcolor: theme.palette.action.hover,
                   borderColor: taxiMonterricoColors.green,
                   color: taxiMonterricoColors.green,
@@ -7699,24 +7396,26 @@ const CompanyDetail: React.FC = () => {
           </Box>
 
           {/* Días de la semana */}
-          <Box sx={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(7, 1fr)', 
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(7, 1fr)",
             gap: 0.5, 
             mb: 1.5,
-          }}>
+            }}
+          >
             {weekDays.map((day) => (
               <Typography
                 key={day}
                 variant="caption"
                 sx={{
-                  textAlign: 'center',
+                  textAlign: "center",
                   fontWeight: 600,
                   color: theme.palette.text.secondary,
-                  fontSize: '0.7rem',
+                  fontSize: "0.7rem",
                   py: 0.5,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
                 }}
               >
                 {day}
@@ -7725,12 +7424,14 @@ const CompanyDetail: React.FC = () => {
           </Box>
 
           {/* Calendario */}
-          <Box sx={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(7, 1fr)', 
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(7, 1fr)",
             gap: 0.5,
             mb: 1.5,
-          }}>
+            }}
+          >
             {getDaysInMonth(currentMonth).map((item, index) => {
               let year = currentMonth.getFullYear();
               let month = currentMonth.getMonth();
@@ -7753,52 +7454,59 @@ const CompanyDetail: React.FC = () => {
               
               const date = new Date(year, month, item.day);
 
-              const isSelected = selectedDate && 
+              const isSelected =
+                selectedDate &&
                 item.isCurrentMonth &&
                 date.toDateString() === selectedDate.toDateString();
-              const isToday = item.isCurrentMonth &&
+              const isToday =
+                item.isCurrentMonth &&
                 date.toDateString() === new Date().toDateString();
 
               return (
                 <Box
-                  key={`${item.isCurrentMonth ? 'current' : 'other'}-${item.day}-${index}`}
+                  key={`${item.isCurrentMonth ? "current" : "other"}-${
+                    item.day
+                  }-${index}`}
                   onClick={() => {
                     if (item.isCurrentMonth) {
                       handleDateSelect(year, month + 1, item.day);
                     }
                   }}
                   sx={{
-                    aspectRatio: '1',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    aspectRatio: "1",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                     borderRadius: 2,
-                    cursor: item.isCurrentMonth ? 'pointer' : 'default',
-                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    cursor: item.isCurrentMonth ? "pointer" : "default",
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                     bgcolor: isSelected
                       ? taxiMonterricoColors.green
                       : isToday
                       ? `${taxiMonterricoColors.green}20`
-                      : 'transparent',
+                      : "transparent",
                     color: isSelected
-                      ? 'white'
+                      ? "white"
                       : isToday
                       ? taxiMonterricoColors.green
                       : item.isCurrentMonth
                       ? theme.palette.text.primary
                       : theme.palette.text.disabled,
                     fontWeight: isSelected ? 700 : isToday ? 600 : 400,
-                    fontSize: '0.75rem',
-                    position: 'relative',
-                    minHeight: '28px',
-                    minWidth: '28px',
-                    '&:hover': {
+                    fontSize: "0.75rem",
+                    position: "relative",
+                    minHeight: "28px",
+                    minWidth: "28px",
+                    "&:hover": {
                       bgcolor: item.isCurrentMonth
-                        ? (isSelected
+                        ? isSelected
                             ? taxiMonterricoColors.green
-                            : `${taxiMonterricoColors.green}15`)
-                        : 'transparent',
-                      transform: item.isCurrentMonth && !isSelected ? 'scale(1.05)' : 'none',
+                          : `${taxiMonterricoColors.green}15`
+                        : "transparent",
+                      transform:
+                        item.isCurrentMonth && !isSelected
+                          ? "scale(1.05)"
+                          : "none",
                     },
                     opacity: item.isCurrentMonth ? 1 : 0.35,
                   }}
@@ -7810,24 +7518,26 @@ const CompanyDetail: React.FC = () => {
           </Box>
 
           {/* Botones de acción */}
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
             mt: 1.5, 
             pt: 1.5, 
             borderTop: `1px solid ${theme.palette.divider}`,
             gap: 1,
-          }}>
+            }}
+          >
             <Button
               onClick={handleClearDate}
               sx={{
-                textTransform: 'none',
+                textTransform: "none",
                 color: theme.palette.text.secondary,
                 fontWeight: 500,
                 px: 1.5,
                 py: 0.5,
                 borderRadius: 1,
-                '&:hover': {
+                "&:hover": {
                   bgcolor: theme.palette.action.hover,
                   color: theme.palette.text.primary,
                 },
@@ -7838,13 +7548,13 @@ const CompanyDetail: React.FC = () => {
             <Button
               onClick={handleToday}
               sx={{
-                textTransform: 'none',
+                textTransform: "none",
                 color: taxiMonterricoColors.green,
                 fontWeight: 600,
                 px: 1.5,
                 py: 0.5,
                 borderRadius: 1,
-                '&:hover': {
+                "&:hover": {
                   bgcolor: `${taxiMonterricoColors.green}15`,
                 },
               }}
@@ -7860,44 +7570,51 @@ const CompanyDetail: React.FC = () => {
         <>
           <Box
             sx={{
-              position: 'fixed',
+              position: "fixed",
               top: 0,
               right: 0,
-              width: '500px',
-              maxWidth: '90vw',
-              height: '100vh',
-              backgroundColor: 'white',
-              boxShadow: '-4px 0 20px rgba(0,0,0,0.15)',
+              width: "500px",
+              maxWidth: "90vw",
+              height: "100vh",
+              backgroundColor: "white",
+              boxShadow: "-4px 0 20px rgba(0,0,0,0.15)",
               zIndex: 1300,
-              display: 'flex',
-              flexDirection: 'column',
-              overflow: 'hidden',
-              animation: 'slideInRight 0.3s ease-out',
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              animation: "slideInRight 0.3s ease-out",
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <Box
               sx={{
                 background: `linear-gradient(135deg, ${taxiMonterricoColors.orange} 0%, ${taxiMonterricoColors.orangeDark} 100%)`,
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                minHeight: { xs: '48px', md: '56px' },
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                color: "white",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                minHeight: { xs: "48px", md: "56px" },
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                 px: { xs: 2, md: 2.5 },
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
                 <Event sx={{ fontSize: { xs: 18, md: 22 } }} />
-                <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, fontSize: { xs: '1rem', md: '1.1rem' } }}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    color: "white",
+                    fontWeight: 600,
+                    fontSize: { xs: "1rem", md: "1.1rem" },
+                  }}
+                >
                   Reunión
                 </Typography>
               </Box>
               <IconButton 
                 sx={{ 
-                  color: 'white',
-                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.15)' }
+                  color: "white",
+                  "&:hover": { backgroundColor: "rgba(255,255,255,0.15)" },
                 }} 
                 size="small" 
                 onClick={() => setMeetingOpen(false)}
@@ -7906,19 +7623,31 @@ const CompanyDetail: React.FC = () => {
               </IconButton>
             </Box>
 
-            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: { xs: 2, md: 3 }, overflow: 'hidden', overflowY: 'auto', bgcolor: '#fafafa' }}>
+            <Box
+              sx={{
+                flexGrow: 1,
+                display: "flex",
+                flexDirection: "column",
+                p: { xs: 2, md: 3 },
+                overflow: "hidden",
+                overflowY: "auto",
+                bgcolor: "#fafafa",
+              }}
+            >
               <TextField
                 label="Asunto"
                 value={meetingData.subject}
-                onChange={(e) => setMeetingData({ ...meetingData, subject: e.target.value })}
+                onChange={(e) =>
+                  setMeetingData({ ...meetingData, subject: e.target.value })
+                }
                 required
                 fullWidth
                 sx={{ 
                   mb: 2.5,
-                  bgcolor: 'white',
-                  '& .MuiOutlinedInput-root': {
+                  bgcolor: "white",
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
-                    '&.Mui-focused fieldset': {
+                    "&.Mui-focused fieldset": {
                       borderColor: taxiMonterricoColors.orange,
                     },
                   },
@@ -7929,32 +7658,39 @@ const CompanyDetail: React.FC = () => {
                 multiline
                 rows={5}
                 value={meetingData.description}
-                onChange={(e) => setMeetingData({ ...meetingData, description: e.target.value })}
+                onChange={(e) =>
+                  setMeetingData({
+                    ...meetingData,
+                    description: e.target.value,
+                  })
+                }
                 fullWidth
                 sx={{ 
                   mb: 2.5,
-                  bgcolor: 'white',
-                  '& .MuiOutlinedInput-root': {
+                  bgcolor: "white",
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
-                    '&.Mui-focused fieldset': {
+                    "&.Mui-focused fieldset": {
                       borderColor: taxiMonterricoColors.orange,
                     },
                   },
                 }}
               />
-              <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
                 <TextField
                   label="Fecha"
                   type="date"
                   value={meetingData.date}
-                  onChange={(e) => setMeetingData({ ...meetingData, date: e.target.value })}
+                  onChange={(e) =>
+                    setMeetingData({ ...meetingData, date: e.target.value })
+                  }
                   fullWidth
                   InputLabelProps={{ shrink: true }}
                   sx={{ 
-                    bgcolor: 'white',
-                    '& .MuiOutlinedInput-root': {
+                    bgcolor: "white",
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
-                      '&.Mui-focused fieldset': {
+                      "&.Mui-focused fieldset": {
                         borderColor: taxiMonterricoColors.orange,
                       },
                     },
@@ -7964,14 +7700,16 @@ const CompanyDetail: React.FC = () => {
                   label="Hora"
                   type="time"
                   value={meetingData.time}
-                  onChange={(e) => setMeetingData({ ...meetingData, time: e.target.value })}
+                  onChange={(e) =>
+                    setMeetingData({ ...meetingData, time: e.target.value })
+                  }
                   fullWidth
                   InputLabelProps={{ shrink: true }}
                   sx={{ 
-                    bgcolor: 'white',
-                    '& .MuiOutlinedInput-root': {
+                    bgcolor: "white",
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
-                      '&.Mui-focused fieldset': {
+                      "&.Mui-focused fieldset": {
                         borderColor: taxiMonterricoColors.orange,
                       },
                     },
@@ -7980,16 +7718,25 @@ const CompanyDetail: React.FC = () => {
               </Box>
             </Box>
 
-            <Box sx={{ p: 2.5, borderTop: '1px solid #e0e0e0', backgroundColor: 'white', display: 'flex', justifyContent: 'flex-end', gap: 1.5 }}>
+            <Box
+              sx={{
+                p: 2.5,
+                borderTop: "1px solid #e0e0e0",
+                backgroundColor: "white",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 1.5,
+              }}
+            >
               <Button 
                 onClick={() => setMeetingOpen(false)} 
                 sx={{ 
-                  textTransform: 'none',
-                  color: '#757575',
+                  textTransform: "none",
+                  color: "#757575",
                   fontWeight: 500,
                   px: 2.5,
-                  '&:hover': {
-                    bgcolor: '#f5f5f5',
+                  "&:hover": {
+                    bgcolor: "#f5f5f5",
                   },
                 }}
               >
@@ -8000,35 +7747,41 @@ const CompanyDetail: React.FC = () => {
                 variant="contained" 
                 disabled={saving || !meetingData.subject.trim()}
                 sx={{ 
-                  textTransform: 'none',
-                  bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.orange,
+                  textTransform: "none",
+                  bgcolor: saving ? "#bdbdbd" : taxiMonterricoColors.orange,
                   fontWeight: 500,
                   px: 3,
-                  boxShadow: saving ? 'none' : `0 2px 8px ${taxiMonterricoColors.orange}30`,
-                  '&:hover': {
-                    bgcolor: saving ? '#bdbdbd' : taxiMonterricoColors.orangeDark,
-                    boxShadow: saving ? 'none' : `0 4px 12px ${taxiMonterricoColors.orange}40`,
+                  boxShadow: saving
+                    ? "none"
+                    : `0 2px 8px ${taxiMonterricoColors.orange}30`,
+                  "&:hover": {
+                    bgcolor: saving
+                      ? "#bdbdbd"
+                      : taxiMonterricoColors.orangeDark,
+                    boxShadow: saving
+                      ? "none"
+                      : `0 4px 12px ${taxiMonterricoColors.orange}40`,
                   },
-                  '&.Mui-disabled': {
-                    bgcolor: '#bdbdbd',
-                    color: 'white',
+                  "&.Mui-disabled": {
+                    bgcolor: "#bdbdbd",
+                    color: "white",
                   },
                 }}
               >
-                {saving ? 'Guardando...' : 'Guardar'}
+                {saving ? "Guardando..." : "Guardar"}
               </Button>
             </Box>
           </Box>
           <Box
             sx={{
-              position: 'fixed',
+              position: "fixed",
               top: 0,
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.1)',
+              backgroundColor: "rgba(0, 0, 0, 0.1)",
               zIndex: 1299,
-              animation: 'fadeIn 0.3s ease-out',
+              animation: "fadeIn 0.3s ease-out",
             }}
             onClick={() => setMeetingOpen(false)}
           />
@@ -8040,90 +7793,123 @@ const CompanyDetail: React.FC = () => {
         open={addContactOpen} 
         onClose={() => { 
           setAddContactOpen(false); 
-          setContactDialogTab('create'); 
+          setContactDialogTab("create");
           setSelectedExistingContacts([]); 
-          setExistingContactsSearch('');
+          setExistingContactsSearch("");
           setContactFormData({ 
-            firstName: '', 
-            lastName: '', 
-            email: '', 
-            phone: '', 
-            jobTitle: '', 
-            lifecycleStage: 'lead',
-            dni: '',
-            cee: '',
-            address: '',
-            city: '',
-            state: '',
-            country: '',
+            firstName: "",
+            lastName: "",
+            email: "",
+            phone: "",
+            jobTitle: "",
+            lifecycleStage: "lead",
+            dni: "",
+            cee: "",
+            address: "",
+            city: "",
+            state: "",
+            country: "",
           });
-          setIdType('dni');
-          setDniError('');
-          setCeeError('');
+          setIdType("dni");
+          setDniError("");
+          setCeeError("");
         }} 
         maxWidth="md" 
         fullWidth
         BackdropProps={{
           sx: {
-            backdropFilter: 'blur(4px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          }
+            backdropFilter: "blur(4px)",
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+          },
         }}
       >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          {contactDialogTab === 'create' ? 'Crear nuevo contacto' : 'Agregar Contacto existente'}
-          <IconButton onClick={() => { 
+        <DialogTitle
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          {contactDialogTab === "create"
+            ? "Crear nuevo contacto"
+            : "Agregar Contacto existente"}
+          <IconButton
+            onClick={() => {
             setAddContactOpen(false); 
-            setContactDialogTab('create'); 
+              setContactDialogTab("create");
             setSelectedExistingContacts([]); 
-            setExistingContactsSearch('');
+              setExistingContactsSearch("");
             setContactFormData({ 
-              firstName: '', 
-              lastName: '', 
-              email: '', 
-              phone: '', 
-              jobTitle: '', 
-              lifecycleStage: 'lead',
-              dni: '',
-              cee: '',
-              address: '',
-              city: '',
-              state: '',
-              country: '',
-            });
-            setIdType('dni');
-            setDniError('');
-            setCeeError('');
-          }} size="small">
+                firstName: "",
+                lastName: "",
+                email: "",
+                phone: "",
+                jobTitle: "",
+                lifecycleStage: "lead",
+                dni: "",
+                cee: "",
+                address: "",
+                city: "",
+                state: "",
+                country: "",
+              });
+              setIdType("dni");
+              setDniError("");
+              setCeeError("");
+            }}
+            size="small"
+          >
             <Close />
           </IconButton>
         </DialogTitle>
         <DialogContent>
           {/* Pestañas */}
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-            <Tabs value={contactDialogTab === 'create' ? 0 : 1} onChange={(e, newValue) => setContactDialogTab(newValue === 0 ? 'create' : 'existing')}>
+          <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+            <Tabs
+              value={contactDialogTab === "create" ? 0 : 1}
+              onChange={(e, newValue) =>
+                setContactDialogTab(newValue === 0 ? "create" : "existing")
+              }
+            >
               <Tab label="Crear nueva" />
               <Tab label="Agregar existente" />
             </Tabs>
           </Box>
 
-          {contactDialogTab === 'create' && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
+          {contactDialogTab === "create" && (
+            <Box
+              sx={{ display: "flex", flexDirection: "column", gap: 2.5, mt: 1 }}
+            >
               {/* Selección de tipo de identificación y campo de entrada */}
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', sm: 'row' } }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 2,
+                    alignItems: "flex-start",
+                    flexDirection: { xs: "column", sm: "row" },
+                  }}
+                >
                   <RadioGroup
                     row
                     value={idType}
                     onChange={(e) => {
-                      const newType = e.target.value as 'dni' | 'cee';
+                      const newType = e.target.value as "dni" | "cee";
                       setIdType(newType);
-                      if (newType === 'dni') {
-                        setContactFormData({ ...contactFormData, cee: '', dni: '' });
-                        setCeeError('');
+                      if (newType === "dni") {
+                        setContactFormData({
+                          ...contactFormData,
+                          cee: "",
+                          dni: "",
+                        });
+                        setCeeError("");
                       } else {
-                        setContactFormData({ ...contactFormData, dni: '', cee: '' });
-                        setDniError('');
+                        setContactFormData({
+                          ...contactFormData,
+                          dni: "",
+                          cee: "",
+                        });
+                        setDniError("");
                       }
                     }}
                     sx={{ gap: 2, flexShrink: 0 }}
@@ -8134,7 +7920,7 @@ const CompanyDetail: React.FC = () => {
                         <Radio 
                           sx={{ 
                             color: theme.palette.text.secondary,
-                            '&.Mui-checked': {
+                            "&.Mui-checked": {
                               color: taxiMonterricoColors.orange,
                             },
                           }} 
@@ -8145,23 +7931,33 @@ const CompanyDetail: React.FC = () => {
                         m: 0,
                         px: 2,
                         py: 0.75,
-                        height: '48px',
-                        border: `2px solid ${idType === 'dni' ? taxiMonterricoColors.orange : theme.palette.divider}`,
+                        height: "48px",
+                        border: `2px solid ${
+                          idType === "dni"
+                            ? taxiMonterricoColors.orange
+                            : theme.palette.divider
+                        }`,
                         borderRadius: 2,
-                        bgcolor: idType === 'dni' 
-                          ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : `${taxiMonterricoColors.orange}10`)
-                          : 'transparent',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        '&:hover': {
+                        bgcolor:
+                          idType === "dni"
+                            ? theme.palette.mode === "dark"
+                              ? `${taxiMonterricoColors.orange}20`
+                              : `${taxiMonterricoColors.orange}10`
+                            : "transparent",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                        display: "flex",
+                        alignItems: "center",
+                        "&:hover": {
                           borderColor: taxiMonterricoColors.orange,
-                          bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}15` : `${taxiMonterricoColors.orange}08`,
+                          bgcolor:
+                            theme.palette.mode === "dark"
+                              ? `${taxiMonterricoColors.orange}15`
+                              : `${taxiMonterricoColors.orange}08`,
                         },
-                        '& .MuiFormControlLabel-label': {
+                        "& .MuiFormControlLabel-label": {
                           color: theme.palette.text.primary,
-                          fontWeight: idType === 'dni' ? 500 : 400,
+                          fontWeight: idType === "dni" ? 500 : 400,
                         },
                       }}
                     />
@@ -8171,7 +7967,7 @@ const CompanyDetail: React.FC = () => {
                         <Radio 
                           sx={{ 
                             color: theme.palette.text.secondary,
-                            '&.Mui-checked': {
+                            "&.Mui-checked": {
                               color: taxiMonterricoColors.orange,
                             },
                           }} 
@@ -8182,23 +7978,33 @@ const CompanyDetail: React.FC = () => {
                         m: 0,
                         px: 2,
                         py: 0.75,
-                        height: '48px',
-                        border: `2px solid ${idType === 'cee' ? taxiMonterricoColors.orange : theme.palette.divider}`,
+                        height: "48px",
+                        border: `2px solid ${
+                          idType === "cee"
+                            ? taxiMonterricoColors.orange
+                            : theme.palette.divider
+                        }`,
                         borderRadius: 2,
-                        bgcolor: idType === 'cee' 
-                          ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}20` : `${taxiMonterricoColors.orange}10`)
-                          : 'transparent',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        display: 'flex',
-                        alignItems: 'center',
-                        '&:hover': {
+                        bgcolor:
+                          idType === "cee"
+                            ? theme.palette.mode === "dark"
+                              ? `${taxiMonterricoColors.orange}20`
+                              : `${taxiMonterricoColors.orange}10`
+                            : "transparent",
+                        cursor: "pointer",
+                        transition: "all 0.2s ease",
+                        display: "flex",
+                        alignItems: "center",
+                        "&:hover": {
                           borderColor: taxiMonterricoColors.orange,
-                          bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}15` : `${taxiMonterricoColors.orange}08`,
+                          bgcolor:
+                            theme.palette.mode === "dark"
+                              ? `${taxiMonterricoColors.orange}15`
+                              : `${taxiMonterricoColors.orange}08`,
                         },
-                        '& .MuiFormControlLabel-label': {
+                        "& .MuiFormControlLabel-label": {
                           color: theme.palette.text.primary,
-                          fontWeight: idType === 'cee' ? 500 : 400,
+                          fontWeight: idType === "cee" ? 500 : 400,
                         },
                       }}
                     />
@@ -8206,19 +8012,28 @@ const CompanyDetail: React.FC = () => {
 
                   {/* Campo de entrada según el tipo seleccionado */}
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    {idType === 'dni' ? (
+                    {idType === "dni" ? (
                       <TextField
                         label="DNI"
                         value={contactFormData.dni}
                         onChange={(e) => {
-                          const value = e.target.value.replace(/\D/g, '');
+                          const value = e.target.value.replace(/\D/g, "");
                           const limitedValue = value.slice(0, 8);
-                          setContactFormData({ ...contactFormData, dni: limitedValue, cee: '' });
-                          setDniError('');
-                          setCeeError('');
+                          setContactFormData({
+                            ...contactFormData,
+                            dni: limitedValue,
+                            cee: "",
+                          });
+                          setDniError("");
+                          setCeeError("");
                         }}
                         onKeyPress={(e) => {
-                          if (e.key === 'Enter' && contactFormData.dni && contactFormData.dni.length === 8 && !loadingDni) {
+                          if (
+                            e.key === "Enter" &&
+                            contactFormData.dni &&
+                            contactFormData.dni.length === 8 &&
+                            !loadingDni
+                          ) {
                             handleSearchDni();
                           }
                         }}
@@ -8227,31 +8042,35 @@ const CompanyDetail: React.FC = () => {
                         InputLabelProps={{ shrink: true }}
                         inputProps={{ maxLength: 8 }}
                         sx={{
-                          width: '100%',
-                          '& .MuiOutlinedInput-root': {
+                          width: "100%",
+                          "& .MuiOutlinedInput-root": {
                             borderRadius: 2,
-                            minHeight: '48px',
-                            height: '48px',
+                            minHeight: "48px",
+                            height: "48px",
                           },
-                          '& .MuiInputBase-input': {
+                          "& .MuiInputBase-input": {
                             py: 1.5,
-                            height: '48px',
-                            display: 'flex',
-                            alignItems: 'center',
+                            height: "48px",
+                            display: "flex",
+                            alignItems: "center",
                           },
                         }}
                         InputProps={{
                           endAdornment: (
                             <IconButton
                               onClick={handleSearchDni}
-                              disabled={loadingDni || !contactFormData.dni || contactFormData.dni.length < 8}
+                              disabled={
+                                loadingDni ||
+                                !contactFormData.dni ||
+                                contactFormData.dni.length < 8
+                              }
                               size="small"
                               sx={{
                                 color: taxiMonterricoColors.orange,
-                                '&:hover': {
+                                "&:hover": {
                                   bgcolor: `${taxiMonterricoColors.orange}15`,
                                 },
-                                '&.Mui-disabled': {
+                                "&.Mui-disabled": {
                                   color: theme.palette.text.disabled,
                                 },
                               }}
@@ -8271,14 +8090,24 @@ const CompanyDetail: React.FC = () => {
                         value={contactFormData.cee}
                         onChange={(e) => {
                           // Convertir a mayúsculas respetando caracteres especiales del español
-                          const value = e.target.value.toLocaleUpperCase('es-ES');
+                          const value =
+                            e.target.value.toLocaleUpperCase("es-ES");
                           const limitedValue = value.slice(0, 12);
-                          setContactFormData({ ...contactFormData, cee: limitedValue, dni: '' });
-                          setCeeError('');
-                          setDniError('');
+                          setContactFormData({
+                            ...contactFormData,
+                            cee: limitedValue,
+                            dni: "",
+                          });
+                          setCeeError("");
+                          setDniError("");
                         }}
                         onKeyPress={(e) => {
-                          if (e.key === 'Enter' && contactFormData.cee && contactFormData.cee.length === 12 && !loadingCee) {
+                          if (
+                            e.key === "Enter" &&
+                            contactFormData.cee &&
+                            contactFormData.cee.length === 12 &&
+                            !loadingCee
+                          ) {
                             handleSearchCee();
                           }
                         }}
@@ -8287,31 +8116,35 @@ const CompanyDetail: React.FC = () => {
                         InputLabelProps={{ shrink: true }}
                         inputProps={{ maxLength: 12 }}
                         sx={{
-                          width: '100%',
-                          '& .MuiOutlinedInput-root': {
+                          width: "100%",
+                          "& .MuiOutlinedInput-root": {
                             borderRadius: 2,
-                            minHeight: '48px',
-                            height: '48px',
+                            minHeight: "48px",
+                            height: "48px",
                           },
-                          '& .MuiInputBase-input': {
+                          "& .MuiInputBase-input": {
                             py: 1.5,
-                            height: '48px',
-                            display: 'flex',
-                            alignItems: 'center',
+                            height: "48px",
+                            display: "flex",
+                            alignItems: "center",
                           },
                         }}
                         InputProps={{
                           endAdornment: (
                             <IconButton
                               onClick={handleSearchCee}
-                              disabled={loadingCee || !contactFormData.cee || contactFormData.cee.length < 12}
+                              disabled={
+                                loadingCee ||
+                                !contactFormData.cee ||
+                                contactFormData.cee.length < 12
+                              }
                               size="small"
                               sx={{
                                 color: taxiMonterricoColors.orange,
-                                '&:hover': {
+                                "&:hover": {
                                   bgcolor: `${taxiMonterricoColors.orange}15`,
                                 },
-                                '&.Mui-disabled': {
+                                "&.Mui-disabled": {
                                   color: theme.palette.text.disabled,
                                 },
                               }}
@@ -8331,58 +8164,78 @@ const CompanyDetail: React.FC = () => {
               </Box>
               
               {/* Nombre y Apellido en su propia fila */}
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ display: "flex", gap: 2 }}>
                 <TextField
                   label="Nombre"
                   value={contactFormData.firstName}
-                  onChange={(e) => setContactFormData({ ...contactFormData, firstName: e.target.value })}
+                  onChange={(e) =>
+                    setContactFormData({
+                      ...contactFormData,
+                      firstName: e.target.value,
+                    })
+                  }
                   InputLabelProps={{ shrink: true }}
                   sx={{
                     flex: 1,
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
-                    }
+                    },
                   }}
                 />
                 <TextField
                   label="Apellido"
                   value={contactFormData.lastName}
-                  onChange={(e) => setContactFormData({ ...contactFormData, lastName: e.target.value })}
+                  onChange={(e) =>
+                    setContactFormData({
+                      ...contactFormData,
+                      lastName: e.target.value,
+                    })
+                  }
                   InputLabelProps={{ shrink: true }}
                   sx={{
                     flex: 1,
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
-                    }
+                    },
                   }}
                 />
               </Box>
               
               {/* Email y Teléfono en su propia fila */}
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ display: "flex", gap: 2 }}>
                 <TextField
                   label="Email"
                   type="email"
                   value={contactFormData.email}
-                  onChange={(e) => setContactFormData({ ...contactFormData, email: e.target.value })}
+                  onChange={(e) =>
+                    setContactFormData({
+                      ...contactFormData,
+                      email: e.target.value,
+                    })
+                  }
                   InputLabelProps={{ shrink: true }}
                   sx={{
                     flex: 1,
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
-                    }
+                    },
                   }}
                 />
                 <TextField
                   label="Teléfono"
                   value={contactFormData.phone}
-                  onChange={(e) => setContactFormData({ ...contactFormData, phone: e.target.value })}
+                  onChange={(e) =>
+                    setContactFormData({
+                      ...contactFormData,
+                      phone: e.target.value,
+                    })
+                  }
                   InputLabelProps={{ shrink: true }}
                   sx={{
                     flex: 1,
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
-                    }
+                    },
                   }}
                 />
               </Box>
@@ -8391,83 +8244,113 @@ const CompanyDetail: React.FC = () => {
               <TextField
                 label="Dirección"
                 value={contactFormData.address}
-                onChange={(e) => setContactFormData({ ...contactFormData, address: e.target.value })}
+                onChange={(e) =>
+                  setContactFormData({
+                    ...contactFormData,
+                    address: e.target.value,
+                  })
+                }
                 multiline
                 rows={2}
                 fullWidth
                 InputLabelProps={{ shrink: true }}
                 sx={{
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
-                  }
+                  },
                 }}
               />
               
               {/* Distrito, Provincia y Departamento en su propia fila */}
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ display: "flex", gap: 2 }}>
                 <TextField
                   label="Distrito"
                   value={contactFormData.city}
-                  onChange={(e) => setContactFormData({ ...contactFormData, city: e.target.value })}
+                  onChange={(e) =>
+                    setContactFormData({
+                      ...contactFormData,
+                      city: e.target.value,
+                    })
+                  }
                   InputLabelProps={{ shrink: true }}
                   sx={{
                     flex: 1,
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
-                    }
+                    },
                   }}
                 />
                 <TextField
                   label="Provincia"
                   value={contactFormData.state}
-                  onChange={(e) => setContactFormData({ ...contactFormData, state: e.target.value })}
+                  onChange={(e) =>
+                    setContactFormData({
+                      ...contactFormData,
+                      state: e.target.value,
+                    })
+                  }
                   InputLabelProps={{ shrink: true }}
                   sx={{
                     flex: 1,
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
-                    }
+                    },
                   }}
                 />
                 <TextField
                   label="Departamento"
                   value={contactFormData.country}
-                  onChange={(e) => setContactFormData({ ...contactFormData, country: e.target.value })}
+                  onChange={(e) =>
+                    setContactFormData({
+                      ...contactFormData,
+                      country: e.target.value,
+                    })
+                  }
                   InputLabelProps={{ shrink: true }}
                   sx={{
                     flex: 1,
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
-                    }
+                    },
                   }}
                 />
               </Box>
               
               {/* Cargo y Etapa del Ciclo de Vida en su propia fila */}
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ display: "flex", gap: 2 }}>
                 <TextField
                   label="Cargo"
                   value={contactFormData.jobTitle}
-                  onChange={(e) => setContactFormData({ ...contactFormData, jobTitle: e.target.value })}
+                  onChange={(e) =>
+                    setContactFormData({
+                      ...contactFormData,
+                      jobTitle: e.target.value,
+                    })
+                  }
                   InputLabelProps={{ shrink: true }}
                   sx={{
                     flex: 1,
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
-                    }
+                    },
                   }}
                 />
                 <TextField
                   select
                   label="Etapa del Ciclo de Vida"
                   value={contactFormData.lifecycleStage}
-                  onChange={(e) => setContactFormData({ ...contactFormData, lifecycleStage: e.target.value })}
+                  onChange={(e) =>
+                    setContactFormData({
+                      ...contactFormData,
+                      lifecycleStage: e.target.value,
+                    })
+                  }
                   InputLabelProps={{ shrink: true }}
                   sx={{
                     flex: 1,
-                    '& .MuiOutlinedInput-root': {
+                    "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
-                    }
+                    },
                   }}
                 >
                 <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
@@ -8477,10 +8360,14 @@ const CompanyDetail: React.FC = () => {
                 <MenuItem value="contacto">Contacto</MenuItem>
                 <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
                 <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-                <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
+                  <MenuItem value="propuesta_economica">
+                    Propuesta Económica
+                  </MenuItem>
                 <MenuItem value="negociacion">Negociación</MenuItem>
                 <MenuItem value="licitacion">Licitación</MenuItem>
-                <MenuItem value="licitacion_etapa_final">Licitación Etapa Final</MenuItem>
+                  <MenuItem value="licitacion_etapa_final">
+                    Licitación Etapa Final
+                  </MenuItem>
                 <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
                 <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
                 <MenuItem value="activo">Activo</MenuItem>
@@ -8489,8 +8376,8 @@ const CompanyDetail: React.FC = () => {
             </Box>
           )}
 
-          {contactDialogTab === 'existing' && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {contactDialogTab === "existing" && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
               {/* Campo de búsqueda */}
               <TextField
                 size="small"
@@ -8501,7 +8388,7 @@ const CompanyDetail: React.FC = () => {
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
-                      <Search sx={{ color: '#00bcd4' }} />
+                      <Search sx={{ color: "#00bcd4" }} />
                     </InputAdornment>
                   ),
                 }}
@@ -8509,46 +8396,82 @@ const CompanyDetail: React.FC = () => {
               />
 
               {/* Contador y ordenamiento */}
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="body2" sx={{ color: '#666' }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 2,
+                }}
+              >
+                <Typography variant="body2" sx={{ color: "#666" }}>
                   {(() => {
-                    const associatedContactIds = (associatedContacts || []).map((c: any) => c && c.id).filter((id: any) => id !== undefined && id !== null);
+                    const associatedContactIds = (associatedContacts || [])
+                      .map((c: any) => c && c.id)
+                      .filter((id: any) => id !== undefined && id !== null);
                     const filtered = allContacts.filter((contact: any) => {
-                      if (associatedContactIds.includes(contact.id)) return false;
+                      if (associatedContactIds.includes(contact.id))
+                        return false;
                       if (!existingContactsSearch) return true;
                       const searchLower = existingContactsSearch.toLowerCase();
                       return (
-                        (contact.firstName && contact.firstName.toLowerCase().includes(searchLower)) ||
-                        (contact.lastName && contact.lastName.toLowerCase().includes(searchLower)) ||
-                        (contact.email && contact.email.toLowerCase().includes(searchLower))
+                        (contact.firstName &&
+                          contact.firstName
+                            .toLowerCase()
+                            .includes(searchLower)) ||
+                        (contact.lastName &&
+                          contact.lastName
+                            .toLowerCase()
+                            .includes(searchLower)) ||
+                        (contact.email &&
+                          contact.email.toLowerCase().includes(searchLower))
                       );
                     });
                     return `${filtered.length} Contactos`;
                   })()}
                 </Typography>
-                <Typography variant="body2" sx={{ color: '#666' }}>
+                <Typography variant="body2" sx={{ color: "#666" }}>
                   Predeterminado (Agregado recientemente)
                 </Typography>
               </Box>
 
               {/* Lista de contactos */}
-              <Box sx={{ maxHeight: '400px', overflowY: 'auto', border: '1px solid #e0e0e0', borderRadius: 1 }}>
+              <Box
+                sx={{
+                  maxHeight: "400px",
+                  overflowY: "auto",
+                  border: "1px solid #e0e0e0",
+                  borderRadius: 1,
+                }}
+              >
                 {(() => {
-                  const associatedContactIds = (associatedContacts || []).map((c: any) => c && c.id).filter((id: any) => id !== undefined && id !== null);
-                  const filteredContacts = allContacts.filter((contact: any) => {
-                    if (associatedContactIds.includes(contact.id)) return false;
+                  const associatedContactIds = (associatedContacts || [])
+                    .map((c: any) => c && c.id)
+                    .filter((id: any) => id !== undefined && id !== null);
+                  const filteredContacts = allContacts.filter(
+                    (contact: any) => {
+                      if (associatedContactIds.includes(contact.id))
+                        return false;
                     if (!existingContactsSearch) return true;
                     const searchLower = existingContactsSearch.toLowerCase();
                     return (
-                      (contact.firstName && contact.firstName.toLowerCase().includes(searchLower)) ||
-                      (contact.lastName && contact.lastName.toLowerCase().includes(searchLower)) ||
-                      (contact.email && contact.email.toLowerCase().includes(searchLower))
-                    );
-                  });
+                        (contact.firstName &&
+                          contact.firstName
+                            .toLowerCase()
+                            .includes(searchLower)) ||
+                        (contact.lastName &&
+                          contact.lastName
+                            .toLowerCase()
+                            .includes(searchLower)) ||
+                        (contact.email &&
+                          contact.email.toLowerCase().includes(searchLower))
+                      );
+                    }
+                  );
 
                   if (filteredContacts.length === 0) {
                     return (
-                      <Box sx={{ p: 2, textAlign: 'center' }}>
+                      <Box sx={{ p: 2, textAlign: "center" }}>
                         <Typography variant="body2" color="text.secondary">
                           No hay contactos disponibles
                         </Typography>
@@ -8560,27 +8483,34 @@ const CompanyDetail: React.FC = () => {
                     <Box
                       key={contact.id}
                       sx={{
-                        display: 'flex',
-                        alignItems: 'center',
+                        display: "flex",
+                        alignItems: "center",
                         p: 1.5,
-                        borderBottom: '1px solid #f0f0f0',
-                        '&:hover': { backgroundColor: '#f5f5f5' },
-                        '&:last-child': { borderBottom: 'none' },
+                        borderBottom: "1px solid #f0f0f0",
+                        "&:hover": { backgroundColor: "#f5f5f5" },
+                        "&:last-child": { borderBottom: "none" },
                       }}
                     >
                       <Checkbox
                         checked={selectedExistingContacts.includes(contact.id)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setSelectedExistingContacts([...selectedExistingContacts, contact.id]);
+                            setSelectedExistingContacts([
+                              ...selectedExistingContacts,
+                              contact.id,
+                            ]);
                           } else {
-                            setSelectedExistingContacts(selectedExistingContacts.filter(id => id !== contact.id));
+                            setSelectedExistingContacts(
+                              selectedExistingContacts.filter(
+                                (id) => id !== contact.id
+                              )
+                            );
                           }
                         }}
                         sx={{
-                          color: '#00bcd4',
-                          '&.Mui-checked': {
-                            color: '#00bcd4',
+                          color: "#00bcd4",
+                          "&.Mui-checked": {
+                            color: "#00bcd4",
                           },
                         }}
                       />
@@ -8589,7 +8519,7 @@ const CompanyDetail: React.FC = () => {
                           {contact.firstName} {contact.lastName}
                         </Typography>
                         {contact.email && (
-                          <Typography variant="caption" sx={{ color: '#666' }}>
+                          <Typography variant="caption" sx={{ color: "#666" }}>
                             {contact.email}
                           </Typography>
                         )}
@@ -8602,37 +8532,51 @@ const CompanyDetail: React.FC = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => { 
+          <Button
+            onClick={() => {
             setAddContactOpen(false); 
-            setContactDialogTab('create'); 
+              setContactDialogTab("create");
             setSelectedExistingContacts([]); 
-            setExistingContactsSearch('');
+              setExistingContactsSearch("");
             setContactFormData({ 
-              firstName: '', 
-              lastName: '', 
-              email: '', 
-              phone: '', 
-              jobTitle: '', 
-              lifecycleStage: 'lead',
-              dni: '',
-              cee: '',
-              address: '',
-              city: '',
-              state: '',
-              country: '',
-            });
-            setIdType('dni');
-            setDniError('');
-            setCeeError('');
-          }}>
+                firstName: "",
+                lastName: "",
+                email: "",
+                phone: "",
+                jobTitle: "",
+                lifecycleStage: "lead",
+                dni: "",
+                cee: "",
+                address: "",
+                city: "",
+                state: "",
+                country: "",
+              });
+              setIdType("dni");
+              setDniError("");
+              setCeeError("");
+            }}
+          >
             Cancelar
           </Button>
-          {contactDialogTab === 'create' ? (
-            <Button onClick={handleAddContact} variant="contained" disabled={!contactFormData.firstName.trim() || !contactFormData.lastName.trim() || !contactFormData.email.trim()}>
+          {contactDialogTab === "create" ? (
+            <Button
+              onClick={handleAddContact}
+              variant="contained"
+              disabled={
+                !contactFormData.firstName.trim() ||
+                !contactFormData.lastName.trim() ||
+                !contactFormData.email.trim()
+              }
+            >
               Agregar
             </Button>
           ) : (
-            <Button onClick={handleAddExistingContacts} variant="contained" disabled={selectedExistingContacts.length === 0}>
+            <Button
+              onClick={handleAddExistingContacts}
+              variant="contained"
+              disabled={selectedExistingContacts.length === 0}
+            >
               Agregar ({selectedExistingContacts.length})
             </Button>
           )}
@@ -8647,34 +8591,38 @@ const CompanyDetail: React.FC = () => {
         fullWidth
         BackdropProps={{
           sx: {
-            backdropFilter: 'blur(4px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          }
+            backdropFilter: "blur(4px)",
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+          },
         }}
       >
-        <DialogTitle>
-          Nuevo Negocio
-        </DialogTitle>
+        <DialogTitle>Nuevo Negocio</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
             <TextField
               label="Nombre"
               value={dealFormData.name}
-              onChange={(e) => setDealFormData({ ...dealFormData, name: e.target.value })}
+              onChange={(e) =>
+                setDealFormData({ ...dealFormData, name: e.target.value })
+              }
               required
             />
             <TextField
               label="Monto"
               type="number"
               value={dealFormData.amount}
-              onChange={(e) => setDealFormData({ ...dealFormData, amount: e.target.value })}
+              onChange={(e) =>
+                setDealFormData({ ...dealFormData, amount: e.target.value })
+              }
               required
             />
             <TextField
               select
               label="Etapa"
               value={dealFormData.stage}
-              onChange={(e) => setDealFormData({ ...dealFormData, stage: e.target.value })}
+              onChange={(e) =>
+                setDealFormData({ ...dealFormData, stage: e.target.value })
+              }
             >
               {stageOptions.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
@@ -8686,30 +8634,58 @@ const CompanyDetail: React.FC = () => {
               label="Fecha de Cierre"
               type="date"
               value={dealFormData.closeDate}
-              onChange={(e) => setDealFormData({ ...dealFormData, closeDate: e.target.value })}
+              onChange={(e) =>
+                setDealFormData({ ...dealFormData, closeDate: e.target.value })
+              }
               InputLabelProps={{ shrink: true }}
             />
             <TextField
               select
               label="Prioridad"
               value={dealFormData.priority}
-              onChange={(e) => setDealFormData({ ...dealFormData, priority: e.target.value as 'baja' | 'media' | 'alta' })}
+              onChange={(e) =>
+                setDealFormData({
+                  ...dealFormData,
+                  priority: e.target.value as "baja" | "media" | "alta",
+                })
+              }
             >
               <MenuItem value="baja">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#20B2AA' }} />
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      bgcolor: "#20B2AA",
+                    }}
+                  />
                   Baja
                 </Box>
               </MenuItem>
               <MenuItem value="media">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#F59E0B' }} />
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      bgcolor: "#F59E0B",
+                    }}
+                  />
                   Media
                 </Box>
               </MenuItem>
               <MenuItem value="alta">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#EF4444' }} />
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Box
+                    sx={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      bgcolor: "#EF4444",
+                    }}
+                  />
                   Alta
                 </Box>
               </MenuItem>
@@ -8717,8 +8693,10 @@ const CompanyDetail: React.FC = () => {
             <TextField
               select
               label="Empresa"
-              value={dealFormData.companyId || company?.id?.toString() || ''}
-              onChange={(e) => setDealFormData({ ...dealFormData, companyId: e.target.value })}
+              value={dealFormData.companyId || company?.id?.toString() || ""}
+              onChange={(e) =>
+                setDealFormData({ ...dealFormData, companyId: e.target.value })
+              }
               fullWidth
             >
               <MenuItem value="">
@@ -8734,7 +8712,9 @@ const CompanyDetail: React.FC = () => {
               select
               label="Contacto"
               value={dealFormData.contactId}
-              onChange={(e) => setDealFormData({ ...dealFormData, contactId: e.target.value })}
+              onChange={(e) =>
+                setDealFormData({ ...dealFormData, contactId: e.target.value })
+              }
               fullWidth
             >
               <MenuItem value="">
@@ -8764,25 +8744,35 @@ const CompanyDetail: React.FC = () => {
         fullWidth
         BackdropProps={{
           sx: {
-            backdropFilter: 'blur(4px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          }
+            backdropFilter: "blur(4px)",
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+          },
         }}
       >
         <DialogTitle>Crear Ticket</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
             <TextField
               label="Asunto"
               value={ticketFormData.subject}
-              onChange={(e) => setTicketFormData({ ...ticketFormData, subject: e.target.value })}
+              onChange={(e) =>
+                setTicketFormData({
+                  ...ticketFormData,
+                  subject: e.target.value,
+                })
+              }
               required
               fullWidth
             />
             <TextField
               label="Descripción"
               value={ticketFormData.description}
-              onChange={(e) => setTicketFormData({ ...ticketFormData, description: e.target.value })}
+              onChange={(e) =>
+                setTicketFormData({
+                  ...ticketFormData,
+                  description: e.target.value,
+                })
+              }
               multiline
               rows={4}
               fullWidth
@@ -8791,7 +8781,9 @@ const CompanyDetail: React.FC = () => {
               select
               label="Estado"
               value={ticketFormData.status}
-              onChange={(e) => setTicketFormData({ ...ticketFormData, status: e.target.value })}
+              onChange={(e) =>
+                setTicketFormData({ ...ticketFormData, status: e.target.value })
+              }
               fullWidth
               SelectProps={{ native: true }}
             >
@@ -8805,7 +8797,12 @@ const CompanyDetail: React.FC = () => {
               select
               label="Prioridad"
               value={ticketFormData.priority}
-              onChange={(e) => setTicketFormData({ ...ticketFormData, priority: e.target.value })}
+              onChange={(e) =>
+                setTicketFormData({
+                  ...ticketFormData,
+                  priority: e.target.value,
+                })
+              }
               fullWidth
               SelectProps={{ native: true }}
             >
@@ -8818,12 +8815,15 @@ const CompanyDetail: React.FC = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setAddTicketOpen(false)}>Cancelar</Button>
-          <Button onClick={handleAddTicket} variant="contained" disabled={!ticketFormData.subject.trim()}>
+          <Button
+            onClick={handleAddTicket}
+            variant="contained"
+            disabled={!ticketFormData.subject.trim()}
+          >
             Crear
           </Button>
         </DialogActions>
       </Dialog>
-
 
       {/* Dialog de Edición de Empresa */}
       <Dialog 
@@ -8833,34 +8833,34 @@ const CompanyDetail: React.FC = () => {
         fullWidth
         BackdropProps={{
           sx: {
-            backdropFilter: 'blur(4px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          }
+            backdropFilter: "blur(4px)",
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+          },
         }}
       >
-        <DialogTitle>
-          Editar Empresa
-        </DialogTitle>
+        <DialogTitle>Editar Empresa</DialogTitle>
         <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
             <TextField
               label="Nombre"
               value={editFormData.name}
-              onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+              onChange={(e) =>
+                setEditFormData({ ...editFormData, name: e.target.value })
+              }
               InputLabelProps={{ shrink: true }}
               required
               disabled
               sx={{
-                '& .MuiOutlinedInput-root': {
+                "& .MuiOutlinedInput-root": {
                   borderRadius: 1.5,
-                }
+                },
               }}
             />
             <TextField
               label="RUC"
               value={editFormData.ruc}
               onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, '');
+                const value = e.target.value.replace(/\D/g, "");
                 const limitedValue = value.slice(0, 11);
                 setEditFormData({ ...editFormData, ruc: limitedValue });
               }}
@@ -8868,73 +8868,83 @@ const CompanyDetail: React.FC = () => {
               InputLabelProps={{ shrink: true }}
               disabled
               sx={{
-                '& .MuiOutlinedInput-root': {
+                "& .MuiOutlinedInput-root": {
                   borderRadius: 1.5,
-                }
+                },
               }}
             />
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ display: "flex", gap: 2 }}>
               <TextField
                 label="Dominio"
                 value={editFormData.domain}
-                onChange={(e) => setEditFormData({ ...editFormData, domain: e.target.value })}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, domain: e.target.value })
+                }
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
-                  }
+                  },
                 }}
               />
               <TextField
                 label="LinkedIn"
                 value={editFormData.linkedin}
-                onChange={(e) => setEditFormData({ ...editFormData, linkedin: e.target.value })}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, linkedin: e.target.value })
+                }
                 InputLabelProps={{ shrink: true }}
                 placeholder="https://www.linkedin.com/company/..."
                 sx={{
                   flex: 1,
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
-                  }
+                  },
                 }}
               />
             </Box>
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ display: "flex", gap: 2 }}>
               <TextField
                 label="Teléfono"
                 value={editFormData.phone}
-                onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, phone: e.target.value })
+                }
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
-                  }
+                  },
                 }}
               />
               <TextField
                 label="Teléfono 2"
                 value={editFormData.phone2}
-                onChange={(e) => setEditFormData({ ...editFormData, phone2: e.target.value })}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, phone2: e.target.value })
+                }
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
-                  }
+                  },
                 }}
               />
               <TextField
                 label="Teléfono 3"
                 value={editFormData.phone3}
-                onChange={(e) => setEditFormData({ ...editFormData, phone3: e.target.value })}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, phone3: e.target.value })
+                }
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
-                  }
+                  },
                 }}
               />
             </Box>
@@ -8942,24 +8952,28 @@ const CompanyDetail: React.FC = () => {
               label="Correo"
               type="email"
               value={editFormData.email}
-              onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+              onChange={(e) =>
+                setEditFormData({ ...editFormData, email: e.target.value })
+              }
               InputLabelProps={{ shrink: true }}
               sx={{
-                '& .MuiOutlinedInput-root': {
+                "& .MuiOutlinedInput-root": {
                   borderRadius: 1.5,
-                }
+                },
               }}
             />
             <TextField
               select
               label="Origen de lead"
               value={editFormData.leadSource}
-              onChange={(e) => setEditFormData({ ...editFormData, leadSource: e.target.value })}
+              onChange={(e) =>
+                setEditFormData({ ...editFormData, leadSource: e.target.value })
+              }
               InputLabelProps={{ shrink: true }}
               sx={{
-                '& .MuiOutlinedInput-root': {
+                "& .MuiOutlinedInput-root": {
                   borderRadius: 1.5,
-                }
+                },
               }}
             >
               <MenuItem value="">--</MenuItem>
@@ -8973,22 +8987,34 @@ const CompanyDetail: React.FC = () => {
               label="Potencial de Facturación Estimado"
               type="number"
               value={editFormData.estimatedRevenue}
-              onChange={(e) => setEditFormData({ ...editFormData, estimatedRevenue: e.target.value })}
+              onChange={(e) =>
+                setEditFormData({
+                  ...editFormData,
+                  estimatedRevenue: e.target.value,
+                })
+              }
               InputProps={{
-                startAdornment: <InputAdornment position="start">S/</InputAdornment>,
+                startAdornment: (
+                  <InputAdornment position="start">S/</InputAdornment>
+                ),
               }}
               InputLabelProps={{ shrink: true }}
               sx={{
-                '& .MuiOutlinedInput-root': {
+                "& .MuiOutlinedInput-root": {
                   borderRadius: 1.5,
-                }
+                },
               }}
             />
             <FormControlLabel
               control={
                 <Checkbox
                   checked={editFormData.isRecoveredClient}
-                  onChange={(e) => setEditFormData({ ...editFormData, isRecoveredClient: e.target.checked })}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      isRecoveredClient: e.target.checked,
+                    })
+                  }
                 />
               }
               label="Cliente Recuperado"
@@ -8996,62 +9022,75 @@ const CompanyDetail: React.FC = () => {
             <TextField
               label="Razón social"
               value={editFormData.companyname}
-              onChange={(e) => setEditFormData({ ...editFormData, companyname: e.target.value })}
+              onChange={(e) =>
+                setEditFormData({
+                  ...editFormData,
+                  companyname: e.target.value,
+                })
+              }
               InputLabelProps={{ shrink: true }}
               sx={{
-                '& .MuiOutlinedInput-root': {
+                "& .MuiOutlinedInput-root": {
                   borderRadius: 1.5,
-                }
+                },
               }}
             />
             <TextField
               label="Dirección"
               value={editFormData.address}
-              onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
+              onChange={(e) =>
+                setEditFormData({ ...editFormData, address: e.target.value })
+              }
               multiline
               rows={2}
               InputLabelProps={{ shrink: true }}
               sx={{
-                '& .MuiOutlinedInput-root': {
+                "& .MuiOutlinedInput-root": {
                   borderRadius: 1.5,
-                }
+                },
               }}
             />
-            <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ display: "flex", gap: 2 }}>
               <TextField
                 label="Distrito"
                 value={editFormData.city}
-                onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, city: e.target.value })
+                }
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
-                  }
+                  },
                 }}
               />
               <TextField
                 label="Provincia"
                 value={editFormData.state}
-                onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, state: e.target.value })
+                }
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
-                  }
+                  },
                 }}
               />
               <TextField
                 label="Departamento"
                 value={editFormData.country}
-                onChange={(e) => setEditFormData({ ...editFormData, country: e.target.value })}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, country: e.target.value })
+                }
                 InputLabelProps={{ shrink: true }}
                 sx={{
                   flex: 1,
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
-                  }
+                  },
                 }}
               />
             </Box>
@@ -9060,12 +9099,17 @@ const CompanyDetail: React.FC = () => {
                 select
                 label="Etapa del Ciclo de Vida"
                 value={editFormData.lifecycleStage}
-                onChange={(e) => setEditFormData({ ...editFormData, lifecycleStage: e.target.value })}
+                onChange={(e) =>
+                  setEditFormData({
+                    ...editFormData,
+                    lifecycleStage: e.target.value,
+                  })
+                }
                 InputLabelProps={{ shrink: true }}
                 sx={{
-                  '& .MuiOutlinedInput-root': {
+                  "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
-                  }
+                  },
                 }}
               >
                 <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
@@ -9075,10 +9119,14 @@ const CompanyDetail: React.FC = () => {
                 <MenuItem value="contacto">Contacto</MenuItem>
                 <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
                 <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-                <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
+                <MenuItem value="propuesta_economica">
+                  Propuesta Económica
+                </MenuItem>
                 <MenuItem value="negociacion">Negociación</MenuItem>
                 <MenuItem value="licitacion">Licitación</MenuItem>
-                <MenuItem value="licitacion_etapa_final">Licitación Etapa Final</MenuItem>
+                <MenuItem value="licitacion_etapa_final">
+                  Licitación Etapa Final
+                </MenuItem>
                 <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
                 <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
                 <MenuItem value="activo">Activo</MenuItem>
@@ -9086,7 +9134,11 @@ const CompanyDetail: React.FC = () => {
             </FormControl>
           </Box>
           {errorMessage && (
-            <Alert severity="error" onClose={() => setErrorMessage('')} sx={{ mx: 2, mb: 2 }}>
+            <Alert
+              severity="error"
+              onClose={() => setErrorMessage("")}
+              sx={{ mx: 2, mb: 2 }}
+            >
               {errorMessage}
             </Alert>
           )}
@@ -9101,186 +9153,208 @@ const CompanyDetail: React.FC = () => {
             disabled={saving || !editFormData.name.trim()}
             sx={{
               bgcolor: taxiMonterricoColors.green,
-              '&:hover': {
+              "&:hover": {
                 bgcolor: taxiMonterricoColors.greenDark,
               },
             }}
           >
-            {saving ? 'Guardando...' : 'Guardar'}
+            {saving ? "Guardando..." : "Guardar"}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Dialog para ver detalles de actividad expandida */}
-      <Dialog
+      <ActivityDetailDialog
+        activity={expandedActivity}
         open={!!expandedActivity}
         onClose={() => setExpandedActivity(null)}
+        getActivityTypeLabel={getActivityTypeLabel}
+      />
+
+      {/* Dialog para confirmar eliminación de contacto */}
+      <Dialog
+        open={removeContactDialogOpen}
+        onClose={() => {
+          setRemoveContactDialogOpen(false);
+          setContactToRemove(null);
+        }}
         maxWidth="sm"
         fullWidth
         PaperProps={{
           sx: {
             borderRadius: 2,
-            maxHeight: '90vh',
           },
         }}
       >
-        {expandedActivity && (
-          <>
-            <Box
-              sx={{
-                backgroundColor: 'transparent',
-                color: theme.palette.text.primary,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                minHeight: 48,
-                px: 2,
-                pt: 1.5,
-                pb: 0.5,
-              }}
-            >
-              <Typography variant="h6" sx={{ color: theme.palette.text.primary, fontWeight: 700, fontSize: '1rem' }}>
-                {getActivityTypeLabel(expandedActivity.type)}
-              </Typography>
-              <IconButton
-                sx={{
-                  color: theme.palette.text.secondary,
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    backgroundColor: theme.palette.action.hover,
-                    color: theme.palette.text.primary,
-                  },
-                }}
-                size="medium"
-                onClick={() => setExpandedActivity(null)}
-              >
-                <Close />
-              </IconButton>
-            </Box>
+        <DialogTitle sx={{ pb: 1, fontWeight: 600 }}>
+          Eliminar asociación
+        </DialogTitle>
+        <DialogContent>
+          <Typography
+            variant="body1"
+            sx={{ color: theme.palette.text.secondary }}
+          >
+            {contactToRemove?.name} ya no se asociará con {company?.name}.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button
+            onClick={() => {
+              setRemoveContactDialogOpen(false);
+              setContactToRemove(null);
+            }}
+            sx={{
+              textTransform: "none",
+              color: theme.palette.text.secondary,
+              borderColor: theme.palette.divider,
+              "&:hover": {
+                borderColor: theme.palette.divider,
+                backgroundColor: theme.palette.action.hover,
+              },
+            }}
+            variant="outlined"
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmRemoveContact}
+            variant="contained"
+            sx={{
+              textTransform: "none",
+              bgcolor: "#FF9800",
+              color: "white",
+              "&:hover": {
+                bgcolor: "#F57C00",
+              },
+            }}
+          >
+            Eliminar asociación
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-            <DialogContent sx={{ px: 2, pb: 1, pt: 0.5 }}>
-              {/* Título */}
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
-                  Título
-                </Typography>
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
-                  {expandedActivity.subject || expandedActivity.title}
-                </Typography>
-              </Box>
+      {/* Dialog para confirmar eliminación de negocio */}
+      <Dialog
+        open={removeDealDialogOpen}
+        onClose={() => {
+          setRemoveDealDialogOpen(false);
+          setDealToRemove(null);
+        }}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1, fontWeight: 600 }}>
+          Eliminar asociación
+        </DialogTitle>
+        <DialogContent>
+          <Typography
+            variant="body1"
+            sx={{ color: theme.palette.text.secondary }}
+          >
+            {dealToRemove?.name} ya no se asociará con {company?.name}.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button
+            onClick={() => {
+              setRemoveDealDialogOpen(false);
+              setDealToRemove(null);
+            }}
+            sx={{
+              textTransform: "none",
+              color: theme.palette.text.secondary,
+              borderColor: theme.palette.divider,
+              "&:hover": {
+                borderColor: theme.palette.divider,
+                backgroundColor: theme.palette.action.hover,
+              },
+            }}
+            variant="outlined"
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmRemoveDeal}
+            variant="contained"
+            sx={{
+              textTransform: "none",
+              bgcolor: "#FF9800",
+              color: "white",
+              "&:hover": {
+                bgcolor: "#F57C00",
+              },
+            }}
+          >
+            Eliminar asociación
+          </Button>
+        </DialogActions>
+      </Dialog>
 
-              {/* Descripción */}
-              {expandedActivity.description && (
-                <Box sx={{ mb: 2 }}>
-                  <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
-                    Descripción
-                  </Typography>
-                  <Box
-                    sx={{
-                      p: 1.5,
-                      borderRadius: 1,
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#F9FAFB',
-                      border: `1px solid ${theme.palette.divider}`,
-                      fontSize: '0.875rem',
-                      lineHeight: 1.6,
-                      '& *': {
-                        margin: 0,
-                      },
-                    }}
-                    dangerouslySetInnerHTML={{ __html: expandedActivity.description }}
-                  />
-                </Box>
-              )}
-
-              <Divider sx={{ my: 2 }} />
-
-              {/* Campos adicionales en grid */}
-              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
-                {/* Fecha de vencimiento */}
-                {expandedActivity.dueDate && (
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
-                      Fecha de vencimiento
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
-                      {new Date(expandedActivity.dueDate).toLocaleDateString('es-ES', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                      })}
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* Prioridad */}
-                {expandedActivity.priority && (
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
-                      Prioridad
-                    </Typography>
-                    <Chip
-                      label={expandedActivity.priority === 'low' ? 'Baja' : expandedActivity.priority === 'medium' ? 'Media' : expandedActivity.priority === 'high' ? 'Alta' : expandedActivity.priority === 'urgent' ? 'Urgente' : expandedActivity.priority}
-                      size="small"
-                      sx={{
-                        bgcolor: expandedActivity.priority === 'urgent' ? '#f44336' : expandedActivity.priority === 'high' ? '#ff9800' : expandedActivity.priority === 'medium' ? '#ffc107' : '#4caf50',
-                        color: 'white',
-                        fontWeight: 600,
-                        fontSize: '0.75rem',
-                      }}
-                    />
-                  </Box>
-                )}
-
-                {/* Estado */}
-                {expandedActivity.status && (
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
-                      Estado
-                    </Typography>
-                    <Chip
-                      label={expandedActivity.status === 'pending' ? 'Pendiente' : expandedActivity.status === 'in_progress' ? 'En progreso' : expandedActivity.status === 'completed' ? 'Completada' : expandedActivity.status}
-                      size="small"
-                      sx={{
-                        bgcolor: expandedActivity.status === 'completed' ? taxiMonterricoColors.green : expandedActivity.status === 'in_progress' ? '#2196f3' : theme.palette.action.disabledBackground,
-                        color: expandedActivity.status === 'completed' ? 'white' : theme.palette.text.primary,
-                        fontWeight: 600,
-                        fontSize: '0.75rem',
-                      }}
-                    />
-                  </Box>
-                )}
-
-                {/* Usuario asignado */}
-                {expandedActivity.User && (
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
-                      Asignado a
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
-                      {expandedActivity.User.firstName} {expandedActivity.User.lastName}
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* Fecha de creación */}
-                {expandedActivity.createdAt && (
-                  <Box>
-                    <Typography variant="body2" sx={{ mb: 0.75, color: theme.palette.text.secondary, fontWeight: 500, fontSize: '0.75rem' }}>
-                      Creado
-                    </Typography>
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
-                      {new Date(expandedActivity.createdAt).toLocaleDateString('es-ES', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                      })}
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-            </DialogContent>
-          </>
-        )}
+      {/* Dialog para confirmar eliminación de ticket */}
+      <Dialog
+        open={removeTicketDialogOpen}
+        onClose={() => {
+          setRemoveTicketDialogOpen(false);
+          setTicketToRemove(null);
+        }}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1, fontWeight: 600 }}>
+          Eliminar asociación
+        </DialogTitle>
+        <DialogContent>
+          <Typography
+            variant="body1"
+            sx={{ color: theme.palette.text.secondary }}
+          >
+            {ticketToRemove?.name} ya no se asociará con {company?.name}.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button
+            onClick={() => {
+              setRemoveTicketDialogOpen(false);
+              setTicketToRemove(null);
+            }}
+            sx={{
+              textTransform: "none",
+              color: theme.palette.text.secondary,
+              borderColor: theme.palette.divider,
+              "&:hover": {
+                borderColor: theme.palette.divider,
+                backgroundColor: theme.palette.action.hover,
+              },
+            }}
+            variant="outlined"
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmRemoveTicket}
+            variant="contained"
+            sx={{
+              textTransform: "none",
+              bgcolor: "#FF9800",
+              color: "white",
+              "&:hover": {
+                bgcolor: "#F57C00",
+              },
+            }}
+          >
+            Eliminar asociación
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );
