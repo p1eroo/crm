@@ -24,6 +24,8 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useSidebar } from '../../context/SidebarContext';
+import logo from '../../assets/tm_logo.png';
+import logoMobile from '../../assets/logo.png';
 
 const Sidebar: React.FC = () => {
   const navigate = useNavigate();
@@ -64,26 +66,68 @@ const mainMenuItems = [
         position: 'fixed',
         height: '100vh',
         zIndex: 1200,
+        top: 0,
         '& .MuiDrawer-paper': {
           width: drawerWidth,
           boxSizing: 'border-box',
           overflowX: 'hidden',
+          overflowY: 'visible',
           bgcolor: theme.palette.background.paper,
           borderRight: 'none',
           boxShadow: 'none',
           display: 'flex',
           flexDirection: 'column',
-          py: 2,
+          py: 0,
           position: 'fixed',
           height: '100vh',
+          top: 0,
         },
       }}
     >
+      {/* Logo en la parte superior del Sidebar */}
+      <Box sx={{ 
+        width: '100%',
+        px: collapsed ? 1 : 0,
+        ml: collapsed ? 0 : -3,
+        pt: collapsed ? 1.65 : 0,
+        mt: collapsed ? 0 : -4,
+        pb: collapsed ? 0.5 : 0.5,
+        display: 'flex',
+        justifyContent: collapsed ? 'center' : 'flex-start',
+        alignItems: 'center',
+        borderBottom: 'none',
+        mb: collapsed ? 3 : -3,
+      }}>
+        {collapsed ? (
+          <img
+            src={logoMobile}
+            alt="Taxi Monterrico Logo"
+            style={{
+              width: 45,
+              height: 45,
+              objectFit: 'contain',
+            }}
+          />
+        ) : (
+          <img
+            src={logo}
+            alt="Taxi Monterrico Logo"
+            style={{
+              width: '100%',
+              maxWidth: 200,
+              height: 'auto',
+              maxHeight: 140,
+              objectFit: 'contain',
+            }}
+          />
+        )}
+      </Box>
+
       {/* Lista de items del menú */}
       <List sx={{ 
         width: '100%', 
         px: collapsed ? 1 : 0.8, 
-        pt: 9.5, // Padding superior para que no quede oculto por el header (72px + espacio extra)
+        pt: 0,
         pb: 0,
         display: 'flex',
         flexDirection: 'column',

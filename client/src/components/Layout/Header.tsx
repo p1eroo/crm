@@ -12,6 +12,7 @@ import {
   MenuItem,
   Typography,
   useTheme,
+  useMediaQuery,
   Tooltip,
   Divider,
   CircularProgress,
@@ -43,14 +44,19 @@ import ProfileModal from '../ProfileModal';
 import api from '../../config/api';
 import { useTheme as useThemeContext } from '../../context/ThemeContext';
 import { useSidebar } from '../../context/SidebarContext';
-import logo from '../../assets/tm_logo.png';
-import logoMobile from '../../assets/logo.png';
 
 const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const theme = useTheme();
   const { mode, toggleTheme } = useThemeContext();
   const { open: sidebarOpen, toggleSidebar, toggleCollapsed, collapsed } = useSidebar();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  
+  // Calcular el ancho del drawer igual que en MainLayout
+  const drawerWidth = collapsed 
+    ? (isMobile ? 0 : 85) 
+    : 270;
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
@@ -93,8 +99,6 @@ const Header: React.FC = () => {
   const getInitials = (firstName?: string, lastName?: string) => {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
   };
-
-  const theme = useTheme();
 
   // Búsqueda global
   useEffect(() => {
@@ -289,8 +293,11 @@ const Header: React.FC = () => {
   return (
     <Box
       sx={{
-        width: '100vw',
-        bgcolor: theme.palette.background.paper,
+        width: { 
+          xs: '100vw',
+          sm: sidebarOpen ? `calc(100vw - ${drawerWidth}px)` : '100vw'
+        },
+        bgcolor: '#edf0f5',
         pl: { xs: 1, sm: 0 },
         pr: { xs: 1, sm: 2.5 },
         pt: { xs: 1, sm: 1.25 },
@@ -302,7 +309,10 @@ const Header: React.FC = () => {
         height: { xs: 60, sm: 72 },
         position: { xs: 'fixed', sm: 'sticky' },
         top: 0,
-        left: 0,
+        left: { 
+          xs: 0,
+          sm: sidebarOpen ? `${drawerWidth}px` : 0 
+        },
         zIndex: { xs: 1400, sm: 1300 },
         marginLeft: 0,
         marginRight: 0,
@@ -313,47 +323,19 @@ const Header: React.FC = () => {
           sm: 'none'
         },
         borderBottom: { xs: `1px solid ${theme.palette.divider}`, sm: 'none' },
+        transition: { 
+          xs: 'none',
+          sm: 'left 0.2s cubic-bezier(0.4, 0, 0.2, 1), width 0.2s cubic-bezier(0.4, 0, 0.2, 1)' 
+        },
       }}
     >
-      {/* Logo y botón de menú - siempre en la misma posición */}
+      {/* Botón de menú */}
       <Box sx={{ 
         display: 'flex', 
         alignItems: 'center', 
         gap: { xs: 1, sm: 1 }, 
         flexShrink: 0,
-        marginLeft: { xs: 0, sm: -6.5 },
       }}>
-        {/* Logo - Desktop */}
-        <Box sx={{ 
-          display: { xs: 'none', sm: 'flex' }, 
-          alignItems: 'center', 
-          height: '100%',
-          ml: collapsed ? '72px' : -7,
-        }}>
-          <img
-            src={collapsed ? logoMobile : logo}
-            alt="Taxi Monterrico Logo"
-            style={{
-              width: collapsed ? 45 : 360,
-              height: collapsed ? 45 : 'auto',
-              maxHeight: collapsed ? 45 : 115,
-              objectFit: 'contain',
-            }}
-          />
-        </Box>
-        {/* Logo - Mobile */}
-        <Box sx={{ display: { xs: 'flex', sm: 'none' }, alignItems: 'center', order: { xs: 0, sm: 0 } }}>
-          <img
-            src={logoMobile}
-            alt="Taxi Monterrico Logo"
-            style={{
-              width: 40,
-              height: 40,
-              objectFit: 'contain',
-            }}
-          />
-        </Box>
-        
         {/* Icono de menú para toggle del sidebar */}
         <IconButton
           onClick={() => {
@@ -371,8 +353,6 @@ const Header: React.FC = () => {
             width: 36,
             height: 36,
             flexShrink: 0,
-            marginLeft: { xs: 0, sm: collapsed ? 2 : 1 },
-            order: { xs: 1, sm: 0 },
             '&:hover': {
               bgcolor: theme.palette.action.hover,
             },

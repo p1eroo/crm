@@ -11,6 +11,7 @@ const Contact_1 = require("../models/Contact");
 const Company_1 = require("../models/Company");
 const DealContact_1 = require("../models/DealContact");
 const DealCompany_1 = require("../models/DealCompany");
+const DealDeal_1 = require("../models/DealDeal");
 const auth_1 = require("../middleware/auth");
 const router = express_1.default.Router();
 router.use(auth_1.authenticateToken);
@@ -40,18 +41,63 @@ router.get('/', async (req, res) => {
         if (pipelineId) {
             where.pipelineId = pipelineId;
         }
+        // Manejar contactId: buscar tanto en relación uno-a-muchos como muchos-a-muchos
         if (contactId) {
-            where.contactId = contactId;
+            const contactIdNum = Number(contactId);
+            // Obtener dealIds de la relación muchos-a-muchos (deal_contacts)
+            const dealContacts = await DealContact_1.DealContact.findAll({
+                where: { contactId: contactIdNum },
+                attributes: ['dealId'],
+            });
+            const dealIdsFromManyToMany = dealContacts.map(dc => dc.dealId);
+            // Construir condición OR para buscar en ambas relaciones
+            const contactConditions = [
+                { contactId: contactIdNum }
+            ];
+            // Si hay deals en la relación muchos-a-muchos, agregarlos a la búsqueda
+            if (dealIdsFromManyToMany.length > 0) {
+                contactConditions.push({
+                    id: { [sequelize_1.Op.in]: dealIdsFromManyToMany }
+                });
+            }
+            where[sequelize_1.Op.or] = contactConditions;
         }
+        // Manejar companyId: buscar tanto en relación uno-a-muchos como muchos-a-muchos
         if (companyId) {
-            where.companyId = companyId;
+            const companyIdNum = Number(companyId);
+            // Obtener dealIds de la relación muchos-a-muchos (deal_companies)
+            const dealCompanies = await DealCompany_1.DealCompany.findAll({
+                where: { companyId: companyIdNum },
+                attributes: ['dealId'],
+            });
+            const dealIdsFromManyToMany = dealCompanies.map(dc => dc.dealId);
+            const companyConditions = [
+                { companyId: companyIdNum }
+            ];
+            // Si hay deals en la relación muchos-a-muchos, agregarlos a la búsqueda
+            if (dealIdsFromManyToMany.length > 0) {
+                companyConditions.push({
+                    id: { [sequelize_1.Op.in]: dealIdsFromManyToMany }
+                });
+            }
+            // Si ya existe Op.or para contactId, combinarlo con AND
+            if (where[sequelize_1.Op.or]) {
+                where[sequelize_1.Op.and] = [
+                    { [sequelize_1.Op.or]: where[sequelize_1.Op.or] },
+                    { [sequelize_1.Op.or]: companyConditions }
+                ];
+                delete where[sequelize_1.Op.or];
+            }
+            else {
+                where[sequelize_1.Op.or] = companyConditions;
+            }
         }
         const deals = await Deal_1.Deal.findAndCountAll({
             where,
             include: [
                 { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
-                { model: Contact_1.Contact, as: 'Contact', attributes: ['id', 'firstName', 'lastName', 'email'] },
-                { model: Company_1.Company, as: 'Company', attributes: ['id', 'name'] },
+                { model: Contact_1.Contact, as: 'Contact', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
+                { model: Company_1.Company, as: 'Company', attributes: ['id', 'name'], required: false },
             ],
             limit: Number(limit),
             offset,
@@ -79,12 +125,25 @@ router.get('/:id', async (req, res) => {
                 { model: Contact_1.Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'], required: false },
                 { model: Company_1.Company, as: 'Company', required: false },
                 { model: Company_1.Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone'], required: false },
+                { model: Deal_1.Deal, as: 'Deals', attributes: ['id', 'name', 'amount', 'stage', 'closeDate'], required: false },
+                { model: Deal_1.Deal, as: 'RelatedDeals', attributes: ['id', 'name', 'amount', 'stage', 'closeDate'], required: false },
             ],
         });
         if (!deal) {
             return res.status(404).json({ error: 'Deal no encontrado' });
         }
-        res.json(transformDeal(deal));
+        // Combinar ambas direcciones de la relación (bidireccional)
+        const dealJson = deal.toJSON ? deal.toJSON() : deal;
+        const allRelatedDeals = [
+            ...(dealJson.Deals || []),
+            ...(dealJson.RelatedDeals || []),
+        ];
+        // Eliminar duplicados por ID
+        const uniqueDeals = allRelatedDeals.filter((deal, index, self) => index === self.findIndex((d) => d.id === deal.id));
+        // Reemplazar Deals con la lista combinada y eliminar RelatedDeals
+        dealJson.Deals = uniqueDeals;
+        delete dealJson.RelatedDeals;
+        res.json(transformDeal(dealJson));
     }
     catch (error) {
         console.error('Error fetching deal:', error);
@@ -97,12 +156,25 @@ router.get('/:id', async (req, res) => {
                         { model: Contact_1.Contact, as: 'Contact', required: false },
                         { model: Company_1.Company, as: 'Company', required: false },
                         { model: Company_1.Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone'], required: false },
+                        { model: Deal_1.Deal, as: 'Deals', attributes: ['id', 'name', 'amount', 'stage', 'closeDate'], required: false },
+                        { model: Deal_1.Deal, as: 'RelatedDeals', attributes: ['id', 'name', 'amount', 'stage', 'closeDate'], required: false },
                     ],
                 });
                 if (!deal) {
                     return res.status(404).json({ error: 'Deal no encontrado' });
                 }
-                res.json(transformDeal(deal));
+                // Combinar ambas direcciones de la relación (bidireccional)
+                const dealJson = deal.toJSON ? deal.toJSON() : deal;
+                const allRelatedDeals = [
+                    ...(dealJson.Deals || []),
+                    ...(dealJson.RelatedDeals || []),
+                ];
+                // Eliminar duplicados por ID
+                const uniqueDeals = allRelatedDeals.filter((deal, index, self) => index === self.findIndex((d) => d.id === deal.id));
+                // Reemplazar Deals con la lista combinada y eliminar RelatedDeals
+                dealJson.Deals = uniqueDeals;
+                delete dealJson.RelatedDeals;
+                res.json(transformDeal(dealJson));
             }
             catch (fallbackError) {
                 console.error('Error en fallback:', fallbackError);
@@ -319,6 +391,117 @@ router.delete('/:id/companies/:companyId', async (req, res) => {
     catch (error) {
         console.error('Error removing company from deal:', error);
         res.status(500).json({ error: error.message || 'Error al eliminar la empresa del negocio' });
+    }
+});
+// Agregar negocios relacionados a un deal
+router.post('/:id/deals', async (req, res) => {
+    try {
+        const deal = await Deal_1.Deal.findByPk(req.params.id);
+        if (!deal) {
+            return res.status(404).json({ error: 'Deal no encontrado' });
+        }
+        const { dealIds } = req.body;
+        if (!Array.isArray(dealIds) || dealIds.length === 0) {
+            return res.status(400).json({ error: 'Se requiere un array de dealIds' });
+        }
+        // Obtener los negocios relacionados actuales (buscar en ambas direcciones para evitar duplicados)
+        const currentDeals = await deal.getDeals();
+        const currentRelatedDeals = await deal.getRelatedDeals();
+        const currentDealIds = [
+            ...currentDeals.map((d) => d.id),
+            ...currentRelatedDeals.map((d) => d.id),
+        ];
+        // Agregar solo los negocios que no están ya asociados
+        const newDealIds = dealIds.filter((id) => !currentDealIds.includes(id));
+        if (newDealIds.length > 0) {
+            // Agregar la relación en una dirección (dealId -> relatedDealId)
+            // La consulta bidireccional se maneja en el GET
+            await deal.addDeals(newDealIds);
+        }
+        // Obtener el deal actualizado
+        const updatedDeal = await Deal_1.Deal.findByPk(deal.id, {
+            include: [
+                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
+                { model: Contact_1.Contact, as: 'Contact', required: false },
+                { model: Contact_1.Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'], required: false },
+                { model: Company_1.Company, as: 'Company', required: false },
+                { model: Company_1.Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone'], required: false },
+                { model: Deal_1.Deal, as: 'Deals', attributes: ['id', 'name', 'amount', 'stage', 'closeDate'], required: false },
+                { model: Deal_1.Deal, as: 'RelatedDeals', attributes: ['id', 'name', 'amount', 'stage', 'closeDate'], required: false },
+            ],
+        });
+        // Combinar ambas direcciones de la relación (bidireccional)
+        const updatedDealJson = updatedDeal?.toJSON ? updatedDeal.toJSON() : updatedDeal;
+        if (updatedDealJson) {
+            const allRelatedDeals = [
+                ...(updatedDealJson.Deals || []),
+                ...(updatedDealJson.RelatedDeals || []),
+            ];
+            // Eliminar duplicados por ID
+            const uniqueDeals = allRelatedDeals.filter((deal, index, self) => index === self.findIndex((d) => d.id === deal.id));
+            // Reemplazar Deals con la lista combinada y eliminar RelatedDeals
+            updatedDealJson.Deals = uniqueDeals;
+            delete updatedDealJson.RelatedDeals;
+        }
+        res.json(transformDeal(updatedDealJson || updatedDeal));
+    }
+    catch (error) {
+        console.error('Error adding deals to deal:', error);
+        res.status(500).json({ error: error.message || 'Error al agregar negocios relacionados' });
+    }
+});
+// Eliminar negocio relacionado de un deal
+router.delete('/:id/deals/:dealId', async (req, res) => {
+    try {
+        const deal = await Deal_1.Deal.findByPk(req.params.id);
+        if (!deal) {
+            return res.status(404).json({ error: 'Deal no encontrado' });
+        }
+        const dealIdToRemove = parseInt(req.params.dealId);
+        try {
+            // Intentar eliminar usando Sequelize (solo elimina en una dirección)
+            await deal.removeDeal(dealIdToRemove);
+        }
+        catch (sequelizeError) {
+            console.warn(`⚠️  Sequelize removeDeal failed, attempting direct deletion from DealDeal: ${sequelizeError.message}`);
+        }
+        // Eliminar la relación en ambas direcciones (bidireccional)
+        await DealDeal_1.DealDeal.destroy({
+            where: {
+                [sequelize_1.Op.or]: [
+                    { dealId: deal.id, relatedDealId: dealIdToRemove },
+                    { dealId: dealIdToRemove, relatedDealId: deal.id },
+                ],
+            },
+        });
+        const updatedDeal = await Deal_1.Deal.findByPk(deal.id, {
+            include: [
+                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
+                { model: Contact_1.Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'], required: false },
+                { model: Company_1.Company, as: 'Company', required: false },
+                { model: Company_1.Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone'], required: false },
+                { model: Deal_1.Deal, as: 'Deals', attributes: ['id', 'name', 'amount', 'stage', 'closeDate'], required: false },
+                { model: Deal_1.Deal, as: 'RelatedDeals', attributes: ['id', 'name', 'amount', 'stage', 'closeDate'], required: false },
+            ],
+        });
+        // Combinar ambas direcciones de la relación (bidireccional)
+        const updatedDealJson = updatedDeal?.toJSON ? updatedDeal.toJSON() : updatedDeal;
+        if (updatedDealJson) {
+            const allRelatedDeals = [
+                ...(updatedDealJson.Deals || []),
+                ...(updatedDealJson.RelatedDeals || []),
+            ];
+            // Eliminar duplicados por ID
+            const uniqueDeals = allRelatedDeals.filter((deal, index, self) => index === self.findIndex((d) => d.id === deal.id));
+            // Reemplazar Deals con la lista combinada y eliminar RelatedDeals
+            updatedDealJson.Deals = uniqueDeals;
+            delete updatedDealJson.RelatedDeals;
+        }
+        res.json(transformDeal(updatedDealJson || updatedDeal));
+    }
+    catch (error) {
+        console.error('Error removing deal from deal:', error);
+        res.status(500).json({ error: error.message || 'Error al eliminar el negocio relacionado' });
     }
 });
 // Obtener deals por pipeline/stage

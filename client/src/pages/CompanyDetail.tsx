@@ -3200,11 +3200,11 @@ const CompanyDetail: React.FC = () => {
                 onCreateActivity={(type) => handleCreateActivity(type as string)}
                 onActivityClick={setExpandedActivity}
                 onToggleComplete={(activityId, completed) => {
-                  setCompletedActivities((prev) => ({
-                    ...prev,
+                                setCompletedActivities((prev) => ({
+                                  ...prev,
                     [activityId]: completed,
-                  }));
-                }}
+                                }));
+                              }}
                 completedActivities={completedActivities}
                 getActivityTypeLabel={getActivityTypeLabel}
                 getActivityStatusColor={getActivityStatusColor}

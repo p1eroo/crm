@@ -29,7 +29,7 @@ import {
   Paper,
   useTheme,
 } from '@mui/material';
-import { Add, Delete, Search, CheckCircle, Visibility, Warning, Schedule, PendingActions, Edit, ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { Add, Delete, Search, CheckCircle, Visibility, Warning, Schedule, PendingActions, Edit, ChevronLeft, ChevronRight, Assignment } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
@@ -664,8 +664,12 @@ const Tasks: React.FC = () => {
             overflowY: 'hidden',
             maxWidth: '100%',
             borderRadius: 0,
+            border: 'none',
+            boxShadow: 'none',
             '& .MuiPaper-root': {
               borderRadius: 0,
+              border: 'none',
+              boxShadow: 'none',
             },
             '&::-webkit-scrollbar': {
               height: 8,
@@ -686,6 +690,9 @@ const Tasks: React.FC = () => {
             <TableHead>
               <TableRow sx={{ 
                 bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa',
+                '& .MuiTableCell-head': {
+                  borderBottom: 'none',
+                },
                 '& .MuiTableCell-head:first-of-type': {
                   borderTopLeftRadius: 0,
                 },
@@ -725,7 +732,52 @@ const Tasks: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {paginatedTasks.map((task) => (
+              {paginatedTasks.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} sx={{ py: 8, textAlign: 'center', border: 'none' }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                      <Box
+                        sx={{
+                          width: 120,
+                          height: 120,
+                          borderRadius: '50%',
+                          bgcolor: theme.palette.mode === 'dark' 
+                            ? 'rgba(255, 255, 255, 0.05)' 
+                            : '#F3F4F6',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        <Assignment
+                          sx={{
+                            fontSize: 48,
+                            color: theme.palette.text.secondary,
+                          }}
+                        />
+                      </Box>
+                      <Box>
+                        <Typography
+                          variant="h6"
+                          sx={{
+                            fontWeight: 600,
+                            mb: 1,
+                            color: theme.palette.text.primary,
+                          }}
+                        >
+                          No hay tareas registradas
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {filteredTasks.length === 0 && tasks.length === 0
+                            ? 'Crea tu primera tarea para comenzar a organizar tu trabajo.'
+                            : 'No se encontraron tareas que coincidan con tu búsqueda.'}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                paginatedTasks.map((task) => (
                 <TableRow 
                   key={task.id}
                   hover
@@ -888,7 +940,8 @@ const Tasks: React.FC = () => {
                     </Box>
                   </TableCell>
                 </TableRow>
-              ))}
+                ))
+              )}
             </TableBody>
           </Table>
         </TableContainer>
@@ -900,6 +953,7 @@ const Tasks: React.FC = () => {
               bgcolor: theme.palette.background.paper,
               borderRadius: '0 0 6px 6px',
               boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
+              borderTop: 'none',
               px: { xs: 2, md: 3 },
               py: { xs: 1, md: 1.5 },
               display: 'flex',

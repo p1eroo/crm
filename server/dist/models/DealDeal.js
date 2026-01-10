@@ -7,14 +7,9 @@ class DealDeal extends sequelize_1.Model {
 }
 exports.DealDeal = DealDeal;
 DealDeal.init({
-    id: {
-        type: sequelize_1.DataTypes.INTEGER,
-        autoIncrement: true,
-        primaryKey: true,
-    },
     dealId: {
         type: sequelize_1.DataTypes.INTEGER,
-        allowNull: false,
+        primaryKey: true,
         references: {
             model: 'deals',
             key: 'id',
@@ -23,7 +18,7 @@ DealDeal.init({
     },
     relatedDealId: {
         type: sequelize_1.DataTypes.INTEGER,
-        allowNull: false,
+        primaryKey: true,
         references: {
             model: 'deals',
             key: 'id',

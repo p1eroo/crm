@@ -50,7 +50,6 @@ import {
   AutoAwesome,
   Close,
   Business,
-  AttachMoney,
   AccessTime,
   DonutSmall,
   KeyboardArrowRight,
@@ -252,29 +251,7 @@ const TaskDetail: React.FC = () => {
     "name" | "amount" | "closeDate" | "stage"
   >("name");
   const [dealSortOrder, setDealSortOrder] = useState<"asc" | "desc">("asc");
-
-  // Estados para diálogos de eliminación
-  const [removeContactDialogOpen, setRemoveContactDialogOpen] = useState(false);
-  const [removeCompanyDialogOpen, setRemoveCompanyDialogOpen] = useState(false);
-  const [removeDealDialogOpen, setRemoveDealDialogOpen] = useState(false);
-  const [contactToRemove, setContactToRemove] = useState<{
-    id: number;
-    name: string;
-  } | null>(null);
-  const [companyToRemove, setCompanyToRemove] = useState<{
-    id: number;
-    name: string;
-  } | null>(null);
-  const [dealToRemove, setDealToRemove] = useState<{
-    id: number;
-    name: string;
-  } | null>(null);
-  const [addContactMenuAnchor, setAddContactMenuAnchor] =
-    useState<null | HTMLElement>(null);
-  const [addCompanyMenuAnchor, setAddCompanyMenuAnchor] =
-    useState<null | HTMLElement>(null);
-  const [addDealMenuAnchor, setAddDealMenuAnchor] =
-    useState<null | HTMLElement>(null);
+  
   const [addContactDialogOpen, setAddContactDialogOpen] = useState(false);
   const [addCompanyDialogOpen, setAddCompanyDialogOpen] = useState(false);
   const [addDealDialogOpen, setAddDealDialogOpen] = useState(false);
@@ -1208,19 +1185,58 @@ const TaskDetail: React.FC = () => {
     navigator.clipboard.writeText(text);
   };
 
-  const handleRemoveContactClick = (contactId: number, contactName: string) => {
-    setContactToRemove({ id: contactId, name: contactName });
-    setRemoveContactDialogOpen(true);
+  const handleRemoveContactClick = async (contactId: number, contactName: string) => {
+    if (
+      window.confirm(
+        `¿Estás seguro de que deseas eliminar el contacto "${contactName}" de esta tarea?`
+      )
+    ) {
+    try {
+        await api.delete(`/tasks/${id}/contacts/${contactId}`);
+        fetchTask();
+    } catch (error: any) {
+        console.error("Error al eliminar contacto:", error);
+        alert(
+          error.response?.data?.error || "Error al eliminar el contacto"
+        );
+      }
+    }
   };
 
-  const handleRemoveCompanyClick = (companyId: number, companyName: string) => {
-    setCompanyToRemove({ id: companyId, name: companyName });
-    setRemoveCompanyDialogOpen(true);
+  const handleRemoveCompanyClick = async (companyId: number, companyName: string) => {
+    if (
+      window.confirm(
+        `¿Estás seguro de que deseas eliminar la empresa "${companyName}" de esta tarea?`
+      )
+    ) {
+    try {
+        await api.delete(`/tasks/${id}/companies/${companyId}`);
+        fetchTask();
+      } catch (error: any) {
+        console.error("Error al eliminar empresa:", error);
+        alert(
+          error.response?.data?.error || "Error al eliminar la empresa"
+        );
+      }
+    }
   };
 
-  const handleRemoveDealClick = (dealId: number, dealName: string) => {
-    setDealToRemove({ id: dealId, name: dealName });
-    setRemoveDealDialogOpen(true);
+  const handleRemoveDealClick = async (dealId: number, dealName: string) => {
+    if (
+      window.confirm(
+        `¿Estás seguro de que deseas eliminar el negocio "${dealName}" de esta tarea?`
+      )
+    ) {
+      try {
+        await api.delete(`/tasks/${id}/deals/${dealId}`);
+        fetchTask();
+    } catch (error: any) {
+        console.error("Error al eliminar negocio:", error);
+        alert(
+          error.response?.data?.error || "Error al eliminar el negocio"
+        );
+      }
+    }
   };
 
   const getActivityTypeLabel = (type: string) => {
@@ -4048,7 +4064,7 @@ const TaskDetail: React.FC = () => {
                         height: "48px",
                         border: `2px solid ${
                           contactFormData.identificationType === "cee"
-                            ? taxiMonterricoColors.orange
+                          ? taxiMonterricoColors.orange
                             : theme.palette.divider
                         }`,
                         borderRadius: 2,

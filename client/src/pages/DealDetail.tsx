@@ -35,11 +35,9 @@ import {
   Radio,
   FormControlLabel,
   Tooltip,
-  useMediaQuery,
 } from "@mui/material";
 import {
   Note,
-  Email,
   Phone,
   Person,
   Business,
@@ -131,8 +129,8 @@ const DealDetail: React.FC = () => {
   const [deal, setDeal] = useState<DealDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState<any[]>([]);
-  const [activityLogs, setActivityLogs] = useState<any[]>([]);
-  const [loadingLogs, setLoadingLogs] = useState(false);
+  const [, setActivityLogs] = useState<any[]>([]);
+  const [, setLoadingLogs] = useState(false);
   const [dealContacts, setDealContacts] = useState<any[]>([]);
   const [dealCompanies, setDealCompanies] = useState<any[]>([]);
   const [dealDeals, setDealDeals] = useState<any[]>([]);
@@ -224,16 +222,8 @@ const DealDetail: React.FC = () => {
   const [companySearch, setCompanySearch] = useState("");
   const [dealSearch, setDealSearch] = useState("");
   const [contactSearch, setContactSearch] = useState("");
-  const [addCompanyMenuAnchor, setAddCompanyMenuAnchor] =
-    useState<null | HTMLElement>(null);
-  const [addContactMenuAnchor, setAddContactMenuAnchor] =
-    useState<null | HTMLElement>(null);
-  const [contactSortField, setContactSortField] = useState<
-    "firstName" | "email" | "phone"
-  >("firstName");
-  const [contactSortOrder, setContactSortOrder] = useState<"asc" | "desc">(
-    "asc"
-  );
+  const [, setAddCompanyMenuAnchor] = useState<null | HTMLElement>(null);
+  const [, setAddContactMenuAnchor] = useState<null | HTMLElement>(null);
   const [companySortField, setCompanySortField] = useState<
     "name" | "domain" | "phone"
   >("name");
@@ -340,8 +330,7 @@ const DealDetail: React.FC = () => {
   const [completedActivities, setCompletedActivities] = useState<{
     [key: number]: boolean;
   }>({});
-  const [createActivityMenuAnchor, setCreateActivityMenuAnchor] =
-    useState<null | HTMLElement>(null);
+  const [, setCreateActivityMenuAnchor] = useState<null | HTMLElement>(null);
 
   // Función para copiar al portapapeles
   const handleCopyToClipboard = (text: string) => {
@@ -2524,15 +2513,15 @@ const DealDetail: React.FC = () => {
               }}
             >
               {/* Vista de Descripción */}
-              <Typography
-                variant="body2"
-                sx={{
-                  color: theme.palette.text.primary,
-                  whiteSpace: "pre-wrap",
-                }}
-              >
-                {deal.description}
-              </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: theme.palette.text.primary,
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {deal.description}
+                  </Typography>
             </Card>
           )}
 
@@ -2545,11 +2534,11 @@ const DealDetail: React.FC = () => {
               onCreateActivity={handleCreateActivity}
               onActivityClick={setExpandedActivity}
               onToggleComplete={(activityId, completed) => {
-                setCompletedActivities((prev) => ({
-                  ...prev,
+                                    setCompletedActivities((prev) => ({
+                                      ...prev,
                   [activityId]: completed,
-                }));
-              }}
+                                    }));
+                                  }}
               completedActivities={completedActivities}
               getActivityTypeLabel={getActivityTypeLabel}
             />
@@ -2721,11 +2710,11 @@ const DealDetail: React.FC = () => {
         fullWidth
       >
         <DialogTitle>
-          <Box
-            sx={{
-              display: "flex",
+              <Box
+                sx={{
+                  display: "flex",
               justifyContent: "space-between",
-              alignItems: "center",
+                  alignItems: "center",
             }}
           >
             <Typography variant="h6">
@@ -2733,7 +2722,7 @@ const DealDetail: React.FC = () => {
             </Typography>
             <IconButton
               onClick={() => setAddDealDialogOpen(false)}
-              size="small"
+                  size="small"
             >
               <Close />
             </IconButton>
@@ -2765,8 +2754,8 @@ const DealDetail: React.FC = () => {
                 InputLabelProps={{ shrink: true }}
                 fullWidth
                 required
-                sx={{
-                  "& .MuiOutlinedInput-root": {
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
                   },
                 }}
@@ -2796,12 +2785,12 @@ const DealDetail: React.FC = () => {
                 }
                 InputLabelProps={{ shrink: true }}
                 fullWidth
-                sx={{
+                  sx={{
                   "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
-                  },
-                }}
-              >
+                    },
+                  }}
+                >
                 {stageOptions.map((option) => (
                   <MenuItem key={option.value} value={option.value}>
                     {option.label}
@@ -2820,7 +2809,7 @@ const DealDetail: React.FC = () => {
                 }
                 InputLabelProps={{ shrink: true }}
                 fullWidth
-                sx={{
+                  sx={{
                   "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
                   },
@@ -2841,9 +2830,9 @@ const DealDetail: React.FC = () => {
                 sx={{
                   "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
-                  },
-                }}
-              >
+                    },
+                  }}
+                >
                 <MenuItem value="baja">
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                     <Box
@@ -2855,7 +2844,7 @@ const DealDetail: React.FC = () => {
                       }}
                     />
                     Baja
-                  </Box>
+              </Box>
                 </MenuItem>
                 <MenuItem value="media">
                   <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -2900,9 +2889,9 @@ const DealDetail: React.FC = () => {
                   sx={{
                     "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
-                    },
-                  }}
-                >
+                  },
+                }}
+              >
                   <MenuItem value="">
                     <em>Ninguna</em>
                   </MenuItem>
@@ -2943,28 +2932,28 @@ const DealDetail: React.FC = () => {
             </Box>
           ) : (
             <Box sx={{ mt: 1 }}>
-              <TextField
-                size="small"
+                  <TextField
+                    size="small"
                 placeholder="Buscar negocios"
                 value={existingDealsSearch}
                 onChange={(e) => setExistingDealsSearch(e.target.value)}
-                fullWidth
+                    fullWidth
                 sx={{ mb: 2 }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Search fontSize="small" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <Search fontSize="small" />
+                        </InputAdornment>
+                      ),
+                    }}
+                  />
               <Box sx={{ maxHeight: 400, overflowY: "auto" }}>
                 {loadingAllDeals ? (
                   <Box
                     sx={{ display: "flex", justifyContent: "center", py: 4 }}
                   >
                     <CircularProgress size={24} />
-                  </Box>
+                </Box>
                 ) : (
                   allDeals
                     .filter((deal: any) => {
@@ -3012,17 +3001,17 @@ const DealDetail: React.FC = () => {
                         }}
                       >
                         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                          <Checkbox
+                        <Checkbox
                             checked={selectedExistingDeals.includes(deal.id)}
-                            size="small"
-                            sx={{
+                          size="small"
+                          sx={{
                               p: 0,
+                            color: taxiMonterricoColors.green,
+                            "&.Mui-checked": {
                               color: taxiMonterricoColors.green,
-                              "&.Mui-checked": {
-                                color: taxiMonterricoColors.green,
-                              },
-                            }}
-                          />
+                            },
+                          }}
+                        />
                           <Box sx={{ flex: 1 }}>
                             <Typography variant="body2" sx={{ fontWeight: 500 }}>
                               {deal.name}
@@ -3044,7 +3033,7 @@ const DealDetail: React.FC = () => {
         </DialogContent>
         <DialogActions sx={{ p: 2, justifyContent: "flex-end", gap: 1 }}>
           <Button
-            onClick={() => {
+                    onClick={() => {
               setAddDealDialogOpen(false);
               setDealFormData({
                 name: "",
@@ -3058,15 +3047,15 @@ const DealDetail: React.FC = () => {
               });
               setSelectedExistingDeals([]);
               setExistingDealsSearch("");
-            }}
-            sx={{
-              textTransform: "none",
-              color: taxiMonterricoColors.green,
+                    }}
+                    sx={{
+                      textTransform: "none",
+                        color: taxiMonterricoColors.green,
               fontWeight: 500,
               px: 2,
               py: 0.5,
               fontSize: "0.75rem",
-              bgcolor: "transparent",
+                        bgcolor: "transparent",
               border: `1px solid ${taxiMonterricoColors.green}`,
               "&:hover": {
                 bgcolor:
@@ -3074,11 +3063,11 @@ const DealDetail: React.FC = () => {
                     ? "rgba(46, 125, 50, 0.15)"
                     : "rgba(46, 125, 50, 0.08)",
                 borderColor: taxiMonterricoColors.green,
-              },
-            }}
-          >
+                      },
+                    }}
+                  >
             Cancelar
-          </Button>
+                  </Button>
           <Button
             onClick={
               dealDialogTab === "create"
@@ -3093,7 +3082,7 @@ const DealDetail: React.FC = () => {
               (dealDialogTab === "create" &&
                 (!dealFormData.name.trim() || !dealFormData.amount.trim()))
             }
-            sx={{
+                        sx={{
               textTransform: "none",
               fontWeight: 500,
               px: 2,
@@ -3101,16 +3090,16 @@ const DealDetail: React.FC = () => {
               fontSize: "0.75rem",
               bgcolor: taxiMonterricoColors.green,
               color: "white",
-              "&:hover": {
+                          "&:hover": {
                 bgcolor: taxiMonterricoColors.green,
-                opacity: 0.9,
+                            opacity: 0.9,
               },
               "&:disabled": {
                 bgcolor: theme.palette.action.disabledBackground,
                 color: theme.palette.action.disabled,
-              },
-            }}
-          >
+                          },
+                        }}
+                      >
             {saving
               ? "Guardando..."
               : dealDialogTab === "create"
@@ -3148,21 +3137,21 @@ const DealDetail: React.FC = () => {
         fullWidth
       >
         <DialogTitle>
-          <Box
-            sx={{
-              display: "flex",
+                        <Box
+                          sx={{
+                            display: "flex",
               justifyContent: "space-between",
-              alignItems: "center",
+                            alignItems: "center",
             }}
           >
             <Typography variant="h6">Agregar Contacto</Typography>
             <IconButton
               onClick={() => setAddContactDialogOpen(false)}
-              size="small"
+                            size="small"
             >
               <Close />
             </IconButton>
-          </Box>
+                        </Box>
         </DialogTitle>
         <DialogContent>
           <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
@@ -3175,7 +3164,7 @@ const DealDetail: React.FC = () => {
               <Tab label="Crear nueva" />
               <Tab label="Agregar existente" />
             </Tabs>
-          </Box>
+        </Box>
 
           {contactDialogTab === "create" ? (
             <Box
@@ -3183,10 +3172,10 @@ const DealDetail: React.FC = () => {
             >
               {/* Selección de tipo de identificación y campo de entrada */}
               <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    gap: 2,
+          <Box
+            sx={{
+              display: "flex",
+              gap: 2,
                     alignItems: "flex-start",
                     flexDirection: { xs: "column", sm: "row" },
                   }}
@@ -3206,7 +3195,7 @@ const DealDetail: React.FC = () => {
                       value="dni"
                       control={
                         <Radio
-                          sx={{
+              sx={{
                             color: theme.palette.text.secondary,
                             "&.Mui-checked": {
                               color: taxiMonterricoColors.orange,
@@ -3215,7 +3204,7 @@ const DealDetail: React.FC = () => {
                         />
                       }
                       label="DNI"
-                      sx={{
+                sx={{
                         m: 0,
                         px: 2,
                         py: 0.75,
@@ -3234,8 +3223,8 @@ const DealDetail: React.FC = () => {
                             : "transparent",
                         cursor: "pointer",
                         transition: "all 0.2s ease",
-                        display: "flex",
-                        alignItems: "center",
+                  display: "flex",
+                  alignItems: "center",
                         "&:hover": {
                           borderColor: taxiMonterricoColors.orange,
                           bgcolor:
@@ -3256,8 +3245,8 @@ const DealDetail: React.FC = () => {
                       value="cee"
                       control={
                         <Radio
-                          sx={{
-                            color: theme.palette.text.secondary,
+                  sx={{
+                    color: theme.palette.text.secondary,
                             "&.Mui-checked": {
                               color: taxiMonterricoColors.orange,
                             },
@@ -3265,7 +3254,7 @@ const DealDetail: React.FC = () => {
                         />
                       }
                       label="CEE"
-                      sx={{
+                sx={{
                         m: 0,
                         px: 2,
                         py: 0.75,
@@ -3274,9 +3263,9 @@ const DealDetail: React.FC = () => {
                           contactFormData.identificationType === "cee"
                             ? taxiMonterricoColors.orange
                             : theme.palette.divider
-                        }`,
-                        borderRadius: 2,
-                        bgcolor:
+                  }`,
+                  borderRadius: 2,
+                      bgcolor:
                           contactFormData.identificationType === "cee"
                             ? theme.palette.mode === "dark"
                               ? `${taxiMonterricoColors.orange}20`
@@ -3284,12 +3273,12 @@ const DealDetail: React.FC = () => {
                             : "transparent",
                         cursor: "pointer",
                         transition: "all 0.2s ease",
-                        display: "flex",
-                        alignItems: "center",
-                        "&:hover": {
+                      display: "flex",
+                      alignItems: "center",
+                    "&:hover": {
                           borderColor: taxiMonterricoColors.orange,
                           bgcolor:
-                            theme.palette.mode === "dark"
+                        theme.palette.mode === "dark"
                               ? `${taxiMonterricoColors.orange}15`
                               : `${taxiMonterricoColors.orange}08`,
                         },
@@ -3322,33 +3311,33 @@ const DealDetail: React.FC = () => {
                       InputLabelProps={{ shrink: true }}
                       error={!!dniError}
                       helperText={dniError}
-                      sx={{
+                sx={{
                         width: "100%",
                         "& .MuiOutlinedInput-root": {
-                          borderRadius: 2,
+                  borderRadius: 2,
                           minHeight: "48px",
                           height: "48px",
                         },
                         "& .MuiInputBase-input": {
                           py: 1.5,
                           height: "48px",
-                          display: "flex",
-                          alignItems: "center",
+                      display: "flex",
+                      alignItems: "center",
                         },
                       }}
                       InputProps={{
                         endAdornment: (
                           <IconButton
-                            size="small"
+                  size="small"
                             onClick={handleSearchDni}
                             disabled={
                               loadingDni ||
                               !contactFormData.dni ||
                               contactFormData.dni.length < 8
                             }
-                            sx={{
+                  sx={{
                               color: taxiMonterricoColors.orange,
-                              "&:hover": {
+                    "&:hover": {
                                 bgcolor: `${taxiMonterricoColors.orange}15`,
                               },
                             }}
@@ -3378,7 +3367,7 @@ const DealDetail: React.FC = () => {
                     })
                   }
                   InputLabelProps={{ shrink: true }}
-                  sx={{
+                sx={{
                     flex: 1,
                     "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
@@ -3395,14 +3384,14 @@ const DealDetail: React.FC = () => {
                     })
                   }
                   InputLabelProps={{ shrink: true }}
-                  sx={{
+                    sx={{
                     flex: 1,
                     "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
                     },
                   }}
-                />
-              </Box>
+                    />
+                  </Box>
 
               {/* Email y Teléfono */}
               <Box sx={{ display: "flex", gap: 2 }}>
@@ -3417,7 +3406,7 @@ const DealDetail: React.FC = () => {
                     })
                   }
                   InputLabelProps={{ shrink: true }}
-                  sx={{
+                      sx={{
                     flex: 1,
                     "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
@@ -3441,7 +3430,7 @@ const DealDetail: React.FC = () => {
                     },
                   }}
                 />
-              </Box>
+            </Box>
 
               {/* Dirección */}
               <TextField
@@ -3490,14 +3479,14 @@ const DealDetail: React.FC = () => {
                     })
                   }
                   InputLabelProps={{ shrink: true }}
-                  sx={{
+                      sx={{
                     flex: 1,
                     "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
+                        borderRadius: 1.5,
                     },
                   }}
                 />
-              </Box>
+                  </Box>
 
               {/* Departamento */}
               <TextField
@@ -3510,7 +3499,7 @@ const DealDetail: React.FC = () => {
                   })
                 }
                 InputLabelProps={{ shrink: true }}
-                sx={{
+                    sx={{
                   "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
                   },
@@ -3529,7 +3518,7 @@ const DealDetail: React.FC = () => {
                     })
                   }
                   InputLabelProps={{ shrink: true }}
-                  sx={{
+                        sx={{
                     flex: 1,
                     "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
@@ -3547,7 +3536,7 @@ const DealDetail: React.FC = () => {
                     })
                   }
                   InputLabelProps={{ shrink: true }}
-                  sx={{
+                        sx={{
                     flex: 1,
                     "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
@@ -3608,7 +3597,7 @@ const DealDetail: React.FC = () => {
                       if (isAlreadyAdded) return false;
                       if (!existingContactsSearch.trim()) return true;
                       const searchLower = existingContactsSearch.toLowerCase();
-                      return (
+                          return (
                         contact.firstName
                           ?.toLowerCase()
                           .includes(searchLower) ||
@@ -3633,9 +3622,9 @@ const DealDetail: React.FC = () => {
                             ]);
                           }
                         }}
-                        sx={{
+                                sx={{
                           p: 1.5,
-                          borderRadius: 1,
+                                  borderRadius: 1,
                           mb: 1,
                           cursor: "pointer",
                           bgcolor: selectedExistingContacts.includes(contact.id)
@@ -3657,7 +3646,7 @@ const DealDetail: React.FC = () => {
                           <Checkbox
                             checked={selectedExistingContacts.includes(contact.id)}
                             size="small"
-                            sx={{
+                                  sx={{
                               p: 0,
                               color: taxiMonterricoColors.green,
                               "&.Mui-checked": {
@@ -3668,18 +3657,18 @@ const DealDetail: React.FC = () => {
                           <Box sx={{ flex: 1 }}>
                             <Typography variant="body2" sx={{ fontWeight: 500 }}>
                               {contact.firstName} {contact.lastName}
-                            </Typography>
+                                </Typography>
                             <Typography variant="caption" color="text.secondary">
                               {contact.email}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Box>
+                                    </Typography>
+                                </Box>
+                              </Box>
+                            </Box>
                     ))
-                )}
+                    )}
+                  </Box>
               </Box>
-            </Box>
-          )}
+            )}
         </DialogContent>
         <DialogActions sx={{ p: 2, justifyContent: "space-between" }}>
           <Box>
@@ -3720,8 +3709,8 @@ const DealDetail: React.FC = () => {
                 py: 0.5,
                 fontSize: "0.75rem",
                 "&:hover": {
-                  bgcolor:
-                    theme.palette.mode === "dark"
+                bgcolor:
+                  theme.palette.mode === "dark"
                       ? "rgba(255, 152, 0, 0.15)"
                       : "rgba(255, 152, 0, 0.08)",
                 },
@@ -3742,7 +3731,7 @@ const DealDetail: React.FC = () => {
                   selectedExistingContacts.length === 0) ||
                 (contactDialogTab === "create" && !contactFormData.email.trim())
               }
-              sx={{
+                  sx={{
                 textTransform: "none",
                 fontWeight: 500,
                 px: 2,
@@ -3765,7 +3754,7 @@ const DealDetail: React.FC = () => {
                 ? "Crear"
                 : "Agregar"}
             </Button>
-          </Box>
+                </Box>
         </DialogActions>
       </Dialog>
 
@@ -3796,7 +3785,7 @@ const DealDetail: React.FC = () => {
       >
         <DialogTitle>
           <Box
-            sx={{
+                    sx={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
@@ -3831,10 +3820,10 @@ const DealDetail: React.FC = () => {
               {/* RUC y Nombre */}
               <Box sx={{ display: "flex", gap: 2 }}>
                 <Box
-                  sx={{
+                          sx={{
                     flex: "1 1 0%",
                     minWidth: 0,
-                    display: "flex",
+                            display: "flex",
                     flexDirection: "column",
                     gap: 0.5,
                   }}
@@ -3864,7 +3853,7 @@ const DealDetail: React.FC = () => {
                     inputProps={{ maxLength: 11 }}
                     error={!!rucError}
                     helperText={rucError}
-                    sx={{
+                            sx={{
                       "& .MuiOutlinedInput-root": {
                         borderRadius: 1.5,
                       },
@@ -3893,7 +3882,7 @@ const DealDetail: React.FC = () => {
                       ),
                     }}
                   />
-                </Box>
+                          </Box>
                 <TextField
                   label="Nombre"
                   value={companyFormData.name}
@@ -3904,7 +3893,7 @@ const DealDetail: React.FC = () => {
                     })
                   }
                   InputLabelProps={{ shrink: true }}
-                  sx={{
+                              sx={{
                     flex: "4 1 0%",
                     minWidth: 0,
                     "& .MuiOutlinedInput-root": {
@@ -3924,7 +3913,7 @@ const DealDetail: React.FC = () => {
                     })
                   }
                   InputLabelProps={{ shrink: true }}
-                  sx={{
+                              sx={{
                     flex: 1,
                     "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
@@ -3941,7 +3930,7 @@ const DealDetail: React.FC = () => {
                     })
                   }
                   InputLabelProps={{ shrink: true }}
-                  sx={{
+                                  sx={{
                     flex: 1,
                     "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
@@ -3961,7 +3950,7 @@ const DealDetail: React.FC = () => {
                 multiline
                 rows={2}
                 InputLabelProps={{ shrink: true }}
-                sx={{
+                                      sx={{
                   "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
                   },
@@ -3978,7 +3967,7 @@ const DealDetail: React.FC = () => {
                     })
                   }
                   InputLabelProps={{ shrink: true }}
-                  sx={{
+                                    sx={{
                     flex: 1,
                     "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
@@ -4012,7 +4001,7 @@ const DealDetail: React.FC = () => {
                     })
                   }
                   InputLabelProps={{ shrink: true }}
-                  sx={{
+          sx={{
                     flex: 1,
                     "& .MuiOutlinedInput-root": {
                       borderRadius: 1.5,
@@ -4031,7 +4020,7 @@ const DealDetail: React.FC = () => {
                   })
                 }
                 InputLabelProps={{ shrink: true }}
-                sx={{
+              sx={{
                   "& .MuiOutlinedInput-root": {
                     borderRadius: 1.5,
                   },
@@ -4056,11 +4045,11 @@ const DealDetail: React.FC = () => {
                 <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
                 <MenuItem value="activo">Activo</MenuItem>
               </TextField>
-            </Box>
+          </Box>
           ) : (
             <Box sx={{ mt: 1 }}>
               <TextField
-                size="small"
+            size="small"
                 placeholder="Buscar empresas"
                 value={existingCompaniesSearch}
                 onChange={(e) => setExistingCompaniesSearch(e.target.value)}
@@ -4080,7 +4069,7 @@ const DealDetail: React.FC = () => {
                     sx={{ display: "flex", justifyContent: "center", py: 4 }}
                   >
                     <CircularProgress size={24} />
-                  </Box>
+        </Box>
                 ) : (
                   allCompanies
                     .filter((company: any) => {
@@ -4115,7 +4104,7 @@ const DealDetail: React.FC = () => {
                             ]);
                           }
                         }}
-                        sx={{
+          sx={{
                           p: 1.5,
                           borderRadius: 1,
                           mb: 1,
@@ -4125,7 +4114,7 @@ const DealDetail: React.FC = () => {
                               ? "rgba(46, 125, 50, 0.2)"
                               : "rgba(46, 125, 50, 0.1)"
                             : "transparent",
-                          border: `1px solid ${
+            border: `1px solid ${
                             selectedExistingCompanies.includes(company.id)
                               ? taxiMonterricoColors.green
                               : theme.palette.divider
@@ -4139,7 +4128,7 @@ const DealDetail: React.FC = () => {
                           <Checkbox
                             checked={selectedExistingCompanies.includes(company.id)}
                             size="small"
-                            sx={{
+              sx={{
                               p: 0,
                               color: taxiMonterricoColors.green,
                               "&.Mui-checked": {
@@ -4150,12 +4139,12 @@ const DealDetail: React.FC = () => {
                           <Box sx={{ flex: 1 }}>
                             <Typography variant="body2" sx={{ fontWeight: 500 }}>
                               {company.name}
-                            </Typography>
+              </Typography>
                             <Typography variant="caption" color="text.secondary">
                               {company.ruc || company.companyname}
-                            </Typography>
-                          </Box>
-                        </Box>
+              </Typography>
+            </Box>
+          </Box>
                       </Box>
                     ))
                 )}
@@ -4172,7 +4161,7 @@ const DealDetail: React.FC = () => {
             )}
           </Box>
           <Box sx={{ display: "flex", gap: 1 }}>
-            <Button
+          <Button
               onClick={() => {
                 setAddCompanyDialogOpen(false);
                 setCompanyFormData({
@@ -4192,30 +4181,30 @@ const DealDetail: React.FC = () => {
                 setExistingCompaniesSearch("");
                 setRucError("");
               }}
-              sx={{
-                textTransform: "none",
+            sx={{
+              textTransform: "none",
                 color: taxiMonterricoColors.orange,
-                fontWeight: 500,
+              fontWeight: 500,
                 px: 2,
                 py: 0.5,
                 fontSize: "0.75rem",
-                "&:hover": {
+              "&:hover": {
                   bgcolor:
-                    theme.palette.mode === "dark"
-                      ? "rgba(255, 152, 0, 0.15)"
-                      : "rgba(255, 152, 0, 0.08)",
-                },
-              }}
-            >
+                  theme.palette.mode === "dark"
+                    ? "rgba(255, 152, 0, 0.15)"
+                    : "rgba(255, 152, 0, 0.08)",
+              },
+            }}
+          >
               Cancelar
-            </Button>
+          </Button>
             {companyDialogTab === "create" ? (
               <>
                 <Button
                   onClick={handleCreateCompany}
                   variant="contained"
                   disabled={saving || !companyFormData.name.trim()}
-                  sx={{
+          sx={{
                     textTransform: "none",
                     fontWeight: 500,
                     px: 2,
@@ -4255,7 +4244,7 @@ const DealDetail: React.FC = () => {
                   }}
                   variant="contained"
                   disabled={saving || !companyFormData.name.trim()}
-                  sx={{
+                sx={{
                     textTransform: "none",
                     fontWeight: 500,
                     px: 2,
@@ -4275,18 +4264,18 @@ const DealDetail: React.FC = () => {
                 </Button>
               </>
             ) : (
-              <Button
+          <Button
                 onClick={handleAddExistingCompanies}
                 variant="contained"
                 disabled={saving || selectedExistingCompanies.length === 0}
-                sx={{
-                  textTransform: "none",
-                  fontWeight: 500,
+            sx={{
+              textTransform: "none",
+              fontWeight: 500,
                   px: 2,
                   py: 0.5,
                   fontSize: "0.75rem",
                   bgcolor: "#9E9E9E",
-                  "&:hover": {
+              "&:hover": {
                     bgcolor: "#757575",
                   },
                   "&:disabled": {
@@ -4296,7 +4285,7 @@ const DealDetail: React.FC = () => {
                 }}
               >
                 {saving ? "Guardando..." : "Agregar"}
-              </Button>
+          </Button>
             )}
           </Box>
         </DialogActions>
@@ -4321,12 +4310,12 @@ const DealDetail: React.FC = () => {
           Eliminar asociación
         </DialogTitle>
         <DialogContent>
-          <Typography
+              <Typography
             variant="body1"
             sx={{ color: theme.palette.text.secondary }}
           >
             {contactToRemove?.name} ya no se asociará con {deal?.name}.
-          </Typography>
+              </Typography>
         </DialogContent>
         <DialogActions sx={{ p: 2, gap: 1 }}>
           <Button
@@ -4350,7 +4339,7 @@ const DealDetail: React.FC = () => {
           <Button
             onClick={handleConfirmRemoveContact}
             variant="contained"
-            sx={{
+          sx={{
               textTransform: "none",
               bgcolor: "#FF9800",
               color: "white",
@@ -4383,12 +4372,12 @@ const DealDetail: React.FC = () => {
           Eliminar asociación
         </DialogTitle>
         <DialogContent>
-          <Typography
+              <Typography
             variant="body1"
             sx={{ color: theme.palette.text.secondary }}
           >
             {contactToRemove?.name} ya no se asociará con {deal?.name}.
-          </Typography>
+              </Typography>
         </DialogContent>
         <DialogActions sx={{ p: 2, gap: 1 }}>
           <Button
@@ -4396,11 +4385,11 @@ const DealDetail: React.FC = () => {
               setRemoveContactDialogOpen(false);
               setContactToRemove(null);
             }}
-            sx={{
+                sx={{
               textTransform: "none",
-              color: theme.palette.text.secondary,
+                  color: theme.palette.text.secondary,
               borderColor: theme.palette.divider,
-              "&:hover": {
+                  "&:hover": {
                 borderColor: theme.palette.divider,
                 backgroundColor: theme.palette.action.hover,
               },
@@ -4442,10 +4431,10 @@ const DealDetail: React.FC = () => {
         fullWidth
         PaperProps={{
           sx: {
-            borderRadius: 2,
-          },
-        }}
-      >
+                  borderRadius: 2,
+                  },
+                }}
+              >
         <DialogTitle sx={{ pb: 1, fontWeight: 600 }}>
           Eliminar asociación
         </DialogTitle>
@@ -4458,43 +4447,43 @@ const DealDetail: React.FC = () => {
           </Typography>
         </DialogContent>
         <DialogActions sx={{ p: 2, gap: 1 }}>
-          <Button
+            <Button
             onClick={() => {
               setRemoveDealDialogOpen(false);
               setDealToRemove(null);
             }}
-            sx={{
-              textTransform: "none",
-              color: theme.palette.text.secondary,
+              sx={{
+                textTransform: "none",
+                color: theme.palette.text.secondary,
               borderColor: theme.palette.divider,
-              "&:hover": {
+                "&:hover": {
                 borderColor: theme.palette.divider,
-                backgroundColor: theme.palette.action.hover,
-              },
-            }}
+                  backgroundColor: theme.palette.action.hover,
+                },
+              }}
             variant="outlined"
-          >
-            Cancelar
-          </Button>
-          <Button
+            >
+              Cancelar
+            </Button>
+            <Button
             onClick={handleConfirmRemoveDeal}
-            variant="contained"
+              variant="contained"
             disabled={saving}
-            sx={{
-              textTransform: "none",
+              sx={{
+                textTransform: "none",
               bgcolor: "#FF9800",
               color: "white",
-              "&:hover": {
+                "&:hover": {
                 bgcolor: "#F57C00",
-              },
-              "&:disabled": {
+                },
+                "&:disabled": {
                 bgcolor: theme.palette.action.disabledBackground,
-                color: theme.palette.action.disabled,
-              },
-            }}
-          >
+                  color: theme.palette.action.disabled,
+                },
+              }}
+            >
             {saving ? "Eliminando..." : "Eliminar asociación"}
-          </Button>
+            </Button>
         </DialogActions>
       </Dialog>
 
@@ -7063,8 +7052,8 @@ const DealDetail: React.FC = () => {
         open={!!expandedActivity}
         onClose={() => setExpandedActivity(null)}
         getActivityTypeLabel={getActivityTypeLabel}
-      />
-    </Box>
+                  />
+                </Box>
   );
 };
 

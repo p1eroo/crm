@@ -326,6 +326,7 @@ const Calendar: React.FC = () => {
             ? '0 4px 12px rgba(0,0,0,0.3)' 
             : '0 2px 8px rgba(0,0,0,0.1)',
           overflow: 'hidden',
+          border: 'none',
         }}
       >
         {/* Barra superior dentro del Card */}
@@ -458,7 +459,6 @@ const Calendar: React.FC = () => {
               display: 'grid', 
               gridTemplateColumns: 'repeat(7, 1fr)', 
               gap: 0,
-              border: `1px solid ${theme.palette.divider}`,
               borderRadius: 0,
               overflow: 'hidden',
             }}>
@@ -469,7 +469,7 @@ const Calendar: React.FC = () => {
                       key={index} 
                       sx={{ 
                         minHeight: 110,
-                        borderRight: `1px solid ${theme.palette.divider}`,
+                        borderRight: index % 7 !== 6 ? `1px solid ${theme.palette.divider}` : 'none',
                         borderBottom: `1px solid ${theme.palette.divider}`,
                       }} 
                     />
@@ -503,7 +503,7 @@ const Calendar: React.FC = () => {
                     }}
                     sx={{
                       minHeight: 110,
-                      borderRight: `1px solid ${theme.palette.divider}`,
+                      borderRight: index % 7 !== 6 ? `1px solid ${theme.palette.divider}` : 'none',
                       borderBottom: `1px solid ${theme.palette.divider}`,
                       borderRadius: 0,
                       p: 0.75,

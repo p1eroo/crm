@@ -9,7 +9,6 @@ import {
   Chip,
   MenuItem,
   Divider,
-  Link,
   Table,
   TableBody,
   TableCell,
@@ -459,68 +458,23 @@ const Tickets: React.FC = () => {
           </Box>
         </Box>
         {/* Contenido principal */}
-        {filteredTickets.length === 0 ? (
-        <Paper
-          sx={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            p: 4,
-            bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa',
-          }}
-        >
-          <Box sx={{ textAlign: 'center', maxWidth: 600 }}>
-            <Typography variant="h5" sx={{ fontWeight: 'bold', mb: 2, color: theme.palette.primary.main }}>
-              Hazle seguimiento a los problemas con tus clientes
-            </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
-              Crea tickets y asígnalos a un miembro de tu equipo para que pueda ofrecer la ayuda adecuada en el momento apropiado.
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-              ¿Quieres obtener más información sobre los tickets?{' '}
-              <Link
-                href="#"
-                sx={{
-                  color: theme.palette.primary.main,
-                  textDecoration: 'none',
-                  '&:hover': { textDecoration: 'underline' },
-                }}
-              >
-                Lee el artículo de la base de conocimientos.
-              </Link>
-            </Typography>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              sx={{
-                bgcolor: taxiMonterricoColors.green,
-                '&:hover': {
-                  bgcolor: taxiMonterricoColors.green,
-                  opacity: 0.9,
-                },
-                textTransform: 'none',
-                fontWeight: 500,
-                borderRadius: 1.5,
-                px: 2.5,
-                py: 1,
-              }}
-            >
-              Crear ticket
-            </Button>
-          </Box>
-        </Paper>
-      ) : (
-        <>
-          <TableContainer 
-            component={Paper}
-            sx={{ 
-              overflowX: 'auto',
-              overflowY: 'hidden',
-              maxWidth: '100%',
-              '&::-webkit-scrollbar': {
-                height: 8,
-              },
+        <TableContainer 
+          component={Paper}
+          sx={{ 
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            maxWidth: '100%',
+            borderRadius: 0,
+            border: 'none',
+            boxShadow: 'none',
+            '& .MuiPaper-root': {
+              borderRadius: 0,
+              border: 'none',
+              boxShadow: 'none',
+            },
+            '&::-webkit-scrollbar': {
+              height: 8,
+            },
             '&::-webkit-scrollbar-track': {
               backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f1f1f1',
             },
@@ -531,11 +485,16 @@ const Tickets: React.FC = () => {
                 backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.primary : '#555',
               },
             },
-            }}
-          >
-            <Table sx={{ minWidth: { xs: 800, md: 'auto' } }}>
-              <TableHead>
-                <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa' }}>
+          }}
+        >
+          <Table sx={{ minWidth: { xs: 800, md: 'auto' } }}>
+            <TableHead>
+              <TableRow sx={{ 
+                bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa',
+                '& .MuiTableCell-head': {
+                  borderBottom: 'none',
+                },
+              }}>
                   <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '25%' } }}>
                     Asunto
                   </TableCell>
@@ -571,16 +530,61 @@ const Tickets: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {paginatedTickets.map((ticket) => (
-                  <TableRow 
-                    key={ticket.id} 
-                    hover
-                    sx={{ 
-                      '&:hover': { bgcolor: theme.palette.mode === 'dark' ? theme.palette.action.hover : '#fafafa' },
-                      cursor: 'pointer',
-                      transition: 'background-color 0.2s',
-                    }}
-                  >
+                {paginatedTickets.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} sx={{ py: 8, textAlign: 'center', border: 'none' }}>
+                      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                        <Box
+                          sx={{
+                            width: 120,
+                            height: 120,
+                            borderRadius: '50%',
+                            bgcolor: theme.palette.mode === 'dark' 
+                              ? 'rgba(255, 255, 255, 0.05)' 
+                              : '#F3F4F6',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Support
+                            sx={{
+                              fontSize: 48,
+                              color: theme.palette.text.secondary,
+                            }}
+                          />
+                        </Box>
+                        <Box>
+                          <Typography
+                            variant="h6"
+                            sx={{
+                              fontWeight: 600,
+                              mb: 1,
+                              color: theme.palette.text.primary,
+                            }}
+                          >
+                            No hay tickets registrados
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {filteredTickets.length === 0 && tickets.length === 0
+                              ? 'Crea tu primer ticket para comenzar a gestionar el soporte a tus clientes.'
+                              : 'No se encontraron tickets que coincidan con tu búsqueda.'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  paginatedTickets.map((ticket) => (
+                    <TableRow 
+                      key={ticket.id} 
+                      hover
+                      sx={{ 
+                        '&:hover': { bgcolor: theme.palette.mode === 'dark' ? theme.palette.action.hover : '#fafafa' },
+                        cursor: 'pointer',
+                        transition: 'background-color 0.2s',
+                      }}
+                    >
                     <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '25%' } }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
                         <Avatar
@@ -746,7 +750,8 @@ const Tickets: React.FC = () => {
                       </Box>
                     </TableCell>
                   </TableRow>
-                ))}
+                  ))
+                )}
               </TableBody>
             </Table>
           </TableContainer>
@@ -758,6 +763,7 @@ const Tickets: React.FC = () => {
                 bgcolor: theme.palette.background.paper,
                 borderRadius: '0 0 6px 6px',
                 boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
+                borderTop: 'none',
                 px: { xs: 2, md: 3 },
                 py: { xs: 1, md: 1.5 },
                 display: 'flex',
@@ -838,8 +844,6 @@ const Tickets: React.FC = () => {
               </Box>
             </Box>
           )}
-        </>
-      )}
       </Card>
       {/* Modal de Confirmación de Eliminación */}
       <Dialog
