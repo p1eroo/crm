@@ -38,25 +38,19 @@ import {
   ListItemButton,
   ListItemText,
   InputBase,
-  Snackbar,
 } from "@mui/material";
 import {
   MoreVert,
   Note,
   Email,
   Phone,
-  Assignment,
   Event,
   Link as LinkIcon,
   Close,
-  KeyboardArrowDown,
   KeyboardArrowLeft,
   Search,
   KeyboardArrowRight,
-  LocationOn,
   CalendarToday,
-  DonutSmall,
-  AccessTime,
   Person,
   TaskAlt,
   FormatBold,
@@ -77,14 +71,12 @@ import {
   ChevronRight,
   Business,
   History,
-  LinkedIn,
   Dashboard,
   Info,
   Timeline,
 } from "@mui/icons-material";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCalendar, faClock, faUser } from "@fortawesome/free-regular-svg-icons";
-import { faArrowsRotate } from "@fortawesome/free-solid-svg-icons";
+import { faCalendar, faClock } from "@fortawesome/free-regular-svg-icons";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { far } from "@fortawesome/free-regular-svg-icons";
 import { fas } from "@fortawesome/free-solid-svg-icons";
@@ -161,14 +153,10 @@ const CompanyDetail: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up("md"));
   const [company, setCompany] = useState<CompanyDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [tabValue, setTabValue] = useState(0);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [actionsMenuAnchorEl, setActionsMenuAnchorEl] =
-    useState<null | HTMLElement>(null);
   const [associatedDeals, setAssociatedDeals] = useState<any[]>([]);
   const [associatedContacts, setAssociatedContacts] = useState<any[]>([]);
   const [associatedTickets, setAssociatedTickets] = useState<any[]>([]);
@@ -769,17 +757,6 @@ const CompanyDetail: React.FC = () => {
     setSummaryExpanded(false);
   }, [id]);
 
-  const getCompanyInitials = (companyName: string) => {
-    const words = companyName
-      .trim()
-      .split(" ")
-      .filter((word) => word.length > 0);
-    if (words.length >= 2) {
-      return `${words[0].charAt(0)}${words[1].charAt(0)}`.toUpperCase();
-    }
-    return companyName.substring(0, 2).toUpperCase();
-  };
-
   const getContactInitials = (firstName?: string, lastName?: string) => {
     if (firstName && lastName) {
       return `${firstName[0]}${lastName[0]}`.toUpperCase();
@@ -808,10 +785,6 @@ const CompanyDetail: React.FC = () => {
       lead_inactivo: "Lead Inactivo",
     };
     return labels[stage] || stage;
-  };
-
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
   };
 
   const handleMenuClose = () => {
@@ -1031,29 +1004,6 @@ const CompanyDetail: React.FC = () => {
     selectedAssociations,
   ]);
 
-  const handleOpenEmail = async () => {
-    // Verificar si hay token guardado en el backend
-    try {
-      const response = await api.get("/google/token");
-      const hasToken = response.data.hasToken && !response.data.isExpired;
-      
-      if (hasToken) {
-        // Ya está conectado, abrir el modal directamente
-        setEmailOpen(true);
-        return;
-      }
-    } catch (error: any) {
-      // Si no hay token (404) o hay otro error, mostrar modal
-      if (error.response?.status === 404) {
-        setEmailConnectModalOpen(true);
-        return;
-      }
-    }
-
-    // Si llegamos aquí, no hay token guardado
-    setEmailConnectModalOpen(true);
-  };
-
   const handleEmailConnect = async () => {
     if (!user?.id) {
       setWarningMessage("Usuario no identificado");
@@ -1116,19 +1066,6 @@ const CompanyDetail: React.FC = () => {
   const handleOpenCall = () => {
     setCallData({ subject: "", description: "", duration: "" });
     setCallOpen(true);
-  };
-
-  const handleOpenTask = () => {
-    setTaskData({
-      title: "",
-      description: "",
-      priority: "medium",
-      dueDate: "",
-      type: "todo",
-    });
-    setSelectedDate(null);
-    setCurrentMonth(new Date());
-    setTaskOpen(true);
   };
 
   const updateActiveFormats = useCallback(() => {

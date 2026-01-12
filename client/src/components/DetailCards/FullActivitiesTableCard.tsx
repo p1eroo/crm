@@ -16,10 +16,6 @@ import {
 import {
   Search,
   ExpandMore,
-  Edit,
-  Assignment,
-  Phone,
-  Event,
   KeyboardArrowDown,
   Close,
   Comment,

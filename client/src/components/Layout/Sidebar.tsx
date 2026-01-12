@@ -11,9 +11,6 @@ import {
   useMediaQuery,
 } from '@mui/material';
 import {
-  People,
-  Business,
-  AttachMoney,
   Assignment,
   Support,
   AdminPanelSettings,

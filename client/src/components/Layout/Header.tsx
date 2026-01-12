@@ -12,7 +12,6 @@ import {
   MenuItem,
   Typography,
   useTheme,
-  useMediaQuery,
   Tooltip,
   Divider,
   CircularProgress,
@@ -51,13 +50,8 @@ const Header: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const { mode, toggleTheme } = useThemeContext();
-  const { open: sidebarOpen, toggleSidebar, toggleCollapsed, collapsed } = useSidebar();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { open: sidebarOpen, toggleSidebar, toggleCollapsed } = useSidebar();
   
-  // Calcular el ancho del drawer igual que en MainLayout
-  const drawerWidth = collapsed 
-    ? (isMobile ? 0 : 85) 
-    : 270;
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);

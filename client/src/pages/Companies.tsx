@@ -10,7 +10,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Drawer,
   MenuItem,
   Chip,
   CircularProgress,
@@ -31,7 +30,7 @@ import {
   Popover,
   Card,
 } from '@mui/material';
-import { Add, Delete, Search, Visibility, UploadFile, FileDownload, Warning, CheckCircle, FilterList, Close, ExpandMore, Remove, Bolt, Edit, Business, ChevronLeft, ChevronRight, MoreVert, ViewColumn, Email, Phone, LocationOn, Link as LinkIcon, Note, Assignment, Event, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered } from '@mui/icons-material';
+import { Add, Delete, Search, Visibility, UploadFile, FileDownload, FilterList, Close, ExpandMore, Remove, Bolt, Edit, Business, ChevronLeft, ChevronRight, MoreVert, ViewColumn, Email, Phone, LocationOn, Link as LinkIcon, Note, Assignment, Event, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
@@ -69,7 +68,6 @@ const Companies: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const theme = useTheme();
-  const isLargeScreen = useMediaQuery('(min-width: 1400px)');
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,8 +97,8 @@ const Companies: React.FC = () => {
   const [nameError, setNameError] = useState('');
   const [rucValidationError, setRucValidationError] = useState('');
   const [, setRucInfo] = useState<any>(null);
-  const [rucDebts, setRucDebts] = useState<any>(null);
-  const [loadingDebts, setLoadingDebts] = useState(false);
+  const [, setRucDebts] = useState<any>(null);
+  const [, setLoadingDebts] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
