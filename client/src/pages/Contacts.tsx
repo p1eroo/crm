@@ -68,6 +68,7 @@ import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import * as XLSX from "xlsx";
 import contactLogo from "../assets/contact.png";
+import { UnifiedTable } from "../components/UnifiedTable";
 
 interface Contact {
   id: number;
@@ -1439,41 +1440,11 @@ const Contacts: React.FC = () => {
         pb: { xs: 2, sm: 3, md: 4 },
       }}
     >
-      {/* Header principal - fuera del contenedor */}
-      <Box sx={{ pt: 0, pb: 2, mb: 2 }}>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: { xs: "flex-start", sm: "flex-start" },
-            mb: 1.5,
-            flexDirection: { xs: "column", sm: "row" },
-            gap: { xs: 2, sm: 0 },
-          }}
-        >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Box>
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 500,
-                  color: theme.palette.text.primary,
-                  fontSize: { xs: "0.9375rem", sm: "1.125rem", md: "1.25rem" },
-                }}
-              >
-                Contactos
-              </Typography>
-            </Box>
-          </Box>
-          <Box
-            sx={{
-              display: "flex",
-              gap: { xs: 0.75, sm: 1.5 },
-              alignItems: "center",
-              flexWrap: { xs: "wrap", sm: "nowrap" },
-              width: { xs: "100%", sm: "auto" },
-            }}
-          >
+      {/* Contenedor principal */}
+      <UnifiedTable
+        title="Contactos"
+        actions={
+          <>
             <FormControl
               size="small"
               sx={{
@@ -1626,113 +1597,28 @@ const Contacts: React.FC = () => {
                 <FilterList sx={{ fontSize: { xs: 18, sm: 20 } }} />
               </IconButton>
             </Tooltip>
-          </Box>
-        </Box>
-      </Box>
-
-      {/* Indicador de filtros por columna activos */}
-      {Object.values(columnFilters).some(v => v) && (
-        <Box sx={{ 
-          display: 'flex', 
-          gap: 1, 
-          flexWrap: 'wrap', 
-          mb: 1.5,
-          alignItems: 'center',
-          px: { xs: 1, sm: 2 },
-        }}>
-          <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>
-            Filtros por columna:
-          </Typography>
-          {columnFilters.nombre && (
-            <Chip
-              size="small"
-              label={`Nombre: "${columnFilters.nombre}"`}
-              onDelete={() => setColumnFilters(prev => ({ ...prev, nombre: '' }))}
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
-          {columnFilters.empresa && (
-            <Chip
-              size="small"
-              label={`Empresa: "${columnFilters.empresa}"`}
-              onDelete={() => setColumnFilters(prev => ({ ...prev, empresa: '' }))}
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
-          {columnFilters.telefono && (
-            <Chip
-              size="small"
-              label={`Teléfono: "${columnFilters.telefono}"`}
-              onDelete={() => setColumnFilters(prev => ({ ...prev, telefono: '' }))}
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
-          {columnFilters.pais && (
-            <Chip
-              size="small"
-              label={`País: "${columnFilters.pais}"`}
-              onDelete={() => setColumnFilters(prev => ({ ...prev, pais: '' }))}
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
-          {columnFilters.etapa && (
-            <Chip
-              size="small"
-              label={`Etapa: "${columnFilters.etapa}"`}
-              onDelete={() => setColumnFilters(prev => ({ ...prev, etapa: '' }))}
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
-          <Button
-            size="small"
-            onClick={() => setColumnFilters({ nombre: '', empresa: '', telefono: '', pais: '', etapa: '' })}
-            sx={{ 
-              fontSize: '0.7rem', 
-              textTransform: 'none',
-              color: theme.palette.error.main,
-              minWidth: 'auto',
-              p: 0.5,
-            }}
-          >
-            Limpiar todos
-          </Button>
-        </Box>
-      )}
-
-      {/* Contenedor principal */}
-      <Box>
-        {/* Contenido principal (tabla completa con header y filas) */}
-        <Box
-          sx={{
-            display: "flex",
-            flexDirection: "column",
-            width: "100%",
-            overflow: { xs: "visible", md: "visible" },
-          }}
-        >
-          {/* Header de la tabla */}
+          </>
+        }
+        header={
           <Box
             component="div"
             sx={{
-              bgcolor: theme.palette.mode === "dark" 
-              ? "rgba(255, 255, 255, 0.05)" 
-              : "#f4f6f8",
-              borderRadius: { xs: "8px", md: "8px 8px 0 0" },
-              overflow: { xs: "visible", md: "hidden" },
-              display: { xs: "none", sm: "grid" },
+              bgcolor: theme.palette.background.paper,
+              overflow: 'hidden',
+              display: 'grid',
               gridTemplateColumns: {
                 sm: "repeat(6, minmax(0, 1fr))",
                 md: "1.5fr 1fr 0.9fr 0.7fr 1.2fr 0.7fr",
               },
               columnGap: { sm: 1, md: 1.5 },
-              width: "100%",
-              px: { sm: 1, md: 1.5 },
-              py: { sm: 1.5, md: 2 },
-              mb: 2,
-              boxShadow:
-                theme.palette.mode === "dark"
-                  ? "0 2px 8px rgba(0,0,0,0.3)"
-                  : "0 2px 8px rgba(0,0,0,0.08)",
+              minWidth: { xs: 800, md: 'auto' },
+              maxWidth: '100%',
+              width: '100%',
+              px: { xs: 1.5, md: 2 },
+              py: { xs: 1.25, md: 1.5 },
+              borderBottom: theme.palette.mode === 'light' 
+                ? '1px solid rgba(0, 0, 0, 0.08)' 
+                : '1px solid rgba(255, 255, 255, 0.1)',
             }}
           >
             <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
@@ -1875,58 +1761,37 @@ const Contacts: React.FC = () => {
               Acciones
             </Box>
           </Box>
-
-          {/* Filas de contactos */}
-          <Box sx={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-            {paginatedContacts.map((contact) => (
+        }
+        rows={
+          <>
+          {paginatedContacts.map((contact) => (
               <Box
                 key={contact.id}
                 component="div"
                 onClick={() => navigate(`/contacts/${contact.id}`)}
                 sx={{
-                  bgcolor:
-                    theme.palette.mode === "dark"
-                      ? "#152030"
-                      : theme.palette.background.paper,
+                  bgcolor: theme.palette.background.paper,
                   cursor: "pointer",
                   transition: "all 0.2s ease",
-                  // Vista móvil: card layout
-                  display: { xs: "flex", sm: "grid" },
-                  flexDirection: { xs: "column", sm: "row" },
+                  display: "grid",
                   gridTemplateColumns: {
                     sm: "repeat(6, minmax(0, 1fr))",
                     md: "1.5fr 1fr 0.9fr 0.7fr 1.2fr 0.7fr",
                   },
                   columnGap: { sm: 1, md: 1.5 },
+                  minWidth: { xs: 800, md: 'auto' },
+                  maxWidth: '100%',
                   width: "100%",
-                  borderRadius: { xs: 2, sm: 0 },
-                  border: {
-                    xs: `1px solid ${theme.palette.divider}`,
-                    sm: "none",
-                  },
-                  boxShadow: {
-                    xs:
-                      theme.palette.mode === "dark"
-                        ? "0 2px 8px rgba(0,0,0,0.3)"
-                        : "0 2px 8px rgba(0,0,0,0.08)",
-                    sm:
-                      theme.palette.mode === "dark"
-                        ? "0 1px 3px rgba(0,0,0,0.2)"
-                        : "0 1px 3px rgba(0,0,0,0.05)",
-                  },
-                  px: { xs: 2, sm: 1, md: 1.5 },
-                  py: { xs: 0.5, md: 0.75 },
-                  gap: { xs: 1.5, sm: 0 },
-                  "&:hover": {
-                    bgcolor:
-                      theme.palette.mode === "dark"
-                        ? "#1A2740"
-                        : theme.palette.background.paper,
-                    boxShadow:
-                      theme.palette.mode === "dark"
-                        ? "0 2px 6px rgba(0,0,0,0.3)"
-                        : "0 2px 6px rgba(0,0,0,0.1)",
-                    transform: { xs: "none", sm: "translateY(-1px)" },
+                  overflow: 'hidden',
+                  px: { xs: 1.5, md: 2 },
+                  py: { xs: 1, md: 1.25 },
+                  borderBottom: theme.palette.mode === 'light' 
+                    ? '1px solid rgba(0, 0, 0, 0.08)' 
+                    : '1px solid rgba(255, 255, 255, 0.1)',
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.02)' 
+                      : 'rgba(0, 0, 0, 0.02)',
                   },
                 }}
               >
@@ -2440,60 +2305,44 @@ const Contacts: React.FC = () => {
                 </Box>
               </Box>
             ))}
-            {paginatedContacts.length === 0 && (
-              <Box sx={pageStyles.emptyState}>
-                <Box
+            </>
+        }
+        emptyState={
+          paginatedContacts.length === 0 ? (
+            <Box sx={pageStyles.emptyState}>
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 1,
+                }}
+              >
+                <Person
+                  sx={{ fontSize: 48, color: theme.palette.text.disabled }}
+                />
+                <Typography
+                  variant="body1"
                   sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 1,
+                    color: theme.palette.text.secondary,
+                    fontWeight: 500,
                   }}
                 >
-                  <Person
-                    sx={{ fontSize: 48, color: theme.palette.text.disabled }}
-                  />
-                  <Typography
-                    variant="body1"
-                    sx={{
-                      color: theme.palette.text.secondary,
-                      fontWeight: 500,
-                    }}
-                  >
-                    No hay contactos para mostrar
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{ color: theme.palette.text.secondary }}
-                  >
-                    Crea tu primer contacto para comenzar
-                  </Typography>
-                </Box>
+                  No hay contactos para mostrar
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{ color: theme.palette.text.secondary }}
+                >
+                  Crea tu primer contacto para comenzar
+                </Typography>
               </Box>
-            )}
-          </Box>
-
-          {/* Paginación */}
-          {filteredContacts.length > 0 && (
-            <Box
-              sx={{
-                bgcolor: theme.palette.background.paper,
-                borderRadius: "0 0 8px 8px",
-                boxShadow:
-                  theme.palette.mode === "dark"
-                    ? "0 1px 3px rgba(0,0,0,0.2)"
-                    : "0 1px 3px rgba(0,0,0,0.05)",
-                px: { xs: 1, md: 2 },
-                py: { xs: 1, md: 1.5 },
-                mt: 2,
-                mb: 2,
-                display: "flex",
-                flexDirection: { xs: "column", md: "row" },
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: { xs: 1.5, md: 2 },
-              }}
-            >
+            </Box>
+          ) : undefined
+        }
+        pagination={
+          filteredContacts.length > 0 ? (
+            <>
               {/* Rows per page selector */}
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <Typography
@@ -2593,10 +2442,34 @@ const Contacts: React.FC = () => {
                   </IconButton>
                 </Box>
               </Box>
-            </Box>
-          )}
+              </>
+          ) : undefined
+        }
+      />
+
+      {/* Indicador de filtros por columna activos */}
+      {Object.values(columnFilters).some(v => v) && (
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 1, 
+          flexWrap: 'wrap', 
+          mb: 2,
+          alignItems: 'center',
+        }}>
+          <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem' }}>
+            Filtros activos:
+          </Typography>
+          {Object.entries(columnFilters).map(([key, value]) => value && (
+            <Chip
+              key={key}
+              label={`${key}: ${value}`}
+              size="small"
+              onDelete={() => setColumnFilters(prev => ({ ...prev, [key]: '' }))}
+              sx={{ fontSize: '0.6875rem', height: 20 }}
+            />
+          ))}
         </Box>
-      </Box>
+      )}
 
       {/* Popover de Filtros - Diseño tipo Tags */}
       <Popover

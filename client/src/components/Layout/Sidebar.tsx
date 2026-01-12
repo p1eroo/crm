@@ -36,8 +36,8 @@ const Sidebar: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const drawerWidth = collapsed 
-    ? (isMobile ? 0 : 85) 
-    : 270;
+    ? (isMobile ? 0 : 90) 
+    : 300;
 
 const mainMenuItems = [
   { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
@@ -72,8 +72,10 @@ const mainMenuItems = [
           boxSizing: 'border-box',
           overflowX: 'hidden',
           overflowY: 'visible',
-          bgcolor: theme.palette.background.paper,
-          borderRight: 'none',
+          bgcolor: theme.palette.background.default,
+          borderRight: theme.palette.mode === 'light' 
+            ? '1px solid rgba(0, 0, 0, 0.05)' 
+            : '1px solid rgba(255, 255, 255, 0.08)',
           boxShadow: 'none',
           display: 'flex',
           flexDirection: 'column',
@@ -103,8 +105,8 @@ const mainMenuItems = [
             src={logoMobile}
             alt="Taxi Monterrico Logo"
             style={{
-              width: 45,
-              height: 45,
+              width: 40,
+              height: 40,
               objectFit: 'contain',
             }}
           />

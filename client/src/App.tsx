@@ -63,8 +63,8 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
       dark: taxiMonterricoColors.orangeDark,
     },
     background: {
-      default: mode === 'light' ? '#edf0f5' : '#0B1220', // Navy blue premium
-      paper: mode === 'light' ? '#ffffff' : '#111A2C', // Navy blue premium más claro
+      default: mode === 'light' ? '#fafafa' : '#0B1220', // Gris muy claro (casi blanco) como minimals.cc
+      paper: mode === 'light' ? '#ffffff' : '#111A2C', // Blanco puro para los cards
     },
     text: {
       primary: mode === 'light' ? '#1F2937' : '#E5E7EB', // Gris claro premium

@@ -295,9 +295,9 @@ const Header: React.FC = () => {
       sx={{
         width: { 
           xs: '100vw',
-          sm: sidebarOpen ? `calc(100vw - ${drawerWidth}px)` : '100vw'
+          sm: '100%' // El contenedor en MainLayout ya maneja el ancho
         },
-        bgcolor: '#edf0f5',
+        bgcolor: theme.palette.background.default,
         pl: { xs: 1, sm: 0 },
         pr: { xs: 1, sm: 2.5 },
         pt: { xs: 1, sm: 1.25 },
@@ -311,7 +311,7 @@ const Header: React.FC = () => {
         top: 0,
         left: { 
           xs: 0,
-          sm: sidebarOpen ? `${drawerWidth}px` : 0 
+          sm: 0 // El contenedor en MainLayout ya maneja el posicionamiento
         },
         zIndex: { xs: 1400, sm: 1300 },
         marginLeft: 0,
@@ -329,9 +329,9 @@ const Header: React.FC = () => {
         },
       }}
     >
-      {/* Botón de menú */}
+      {/* Botón de menú - Solo visible en móviles */}
       <Box sx={{ 
-        display: 'flex', 
+        display: { xs: 'flex', sm: 'none' }, // Oculto en desktop, visible en móviles
         alignItems: 'center', 
         gap: { xs: 1, sm: 1 }, 
         flexShrink: 0,

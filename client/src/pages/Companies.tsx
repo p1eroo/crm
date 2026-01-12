@@ -39,6 +39,7 @@ import axios from 'axios';
 import * as XLSX from 'xlsx';
 import empresaLogo from '../assets/empresa.png';
 import RichTextEditor from '../components/RichTextEditor';
+import { UnifiedTable } from '../components/UnifiedTable';
 
 interface Company {
   id: number;
@@ -665,7 +666,7 @@ const Companies: React.FC = () => {
       'Estado/Provincia': company.state || '--',
       'País': company.country || '--',
       'Etapa': company.lifecycleStage || '--',
-      'Potencial de Facturación Estimado': company.estimatedRevenue 
+      'Facturación': company.estimatedRevenue 
         ? `S/ ${Number(company.estimatedRevenue).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
         : '--',
       'Estado': company.lifecycleStage === 'cierre_ganado' ? 'Activo' : 'Inactivo',
@@ -692,7 +693,7 @@ const Companies: React.FC = () => {
       { wch: 18 }, // Estado/Provincia
       { wch: 15 }, // País
       { wch: 15 }, // Etapa
-      { wch: 30 }, // Potencial de Facturación Estimado
+      { wch: 30 }, // Facturación
       { wch: 12 }, // Estado
       { wch: 18 }, // Fecha de Creación
     ];
@@ -875,8 +876,8 @@ const Companies: React.FC = () => {
           state: (row['Estado/Provincia'] || '').toString().trim() || undefined,
           country: (row['País'] || '').toString().trim() || undefined,
           lifecycleStage: (row['Etapa'] || 'lead').toString().trim() || 'lead',
-          estimatedRevenue: row['Potencial de Facturación Estimado'] 
-            ? parseFloat((row['Potencial de Facturación Estimado'] || '').toString().replace(/[^\d.-]/g, '')) || undefined
+          estimatedRevenue: row['Facturación'] 
+            ? parseFloat((row['Facturación'] || '').toString().replace(/[^\d.-]/g, '')) || undefined
             : undefined,
           isRecoveredClient: isRecoveredClient,
           ownerId: ownerId || undefined,
@@ -1718,142 +1719,6 @@ const Companies: React.FC = () => {
       minHeight: '100vh',
       pb: { xs: 2, sm: 3, md: 4 },
     }}>
-      {/* Header principal - fuera del contenedor */}
-      <Box sx={{ pt: 0, pb: 2, mb: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box>
-              <Typography variant="h4" sx={pageStyles.pageTitle}>
-                Empresas
-              </Typography>
-            </Box>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-            <FormControl size="small" sx={{ minWidth: 130 }}>
-                <Select
-                  id="companies-sort-select"
-                  name="companies-sort"
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  displayEmpty
-                  sx={{
-                    borderRadius: 1.5,
-                    bgcolor: theme.palette.background.paper,
-                    fontSize: '0.8125rem',
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme.palette.divider,
-                    },
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme.palette.text.secondary,
-                    },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
-                    },
-                  }}
-                >
-                  <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
-                  <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
-                  <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
-                  <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
-                </Select>
-              </FormControl>
-              <Tooltip title={importing ? 'Importando...' : 'Importar'}>
-                <IconButton
-                size="small"
-                  onClick={handleImportFromExcel}
-                  disabled={importing}
-                  sx={pageStyles.outlinedIconButton}
-                >
-                <UploadFile sx={{ fontSize: 18 }} />
-                </IconButton>
-              </Tooltip>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
-              <Tooltip title="Exportar">
-                <IconButton
-                size="small"
-                  onClick={handleExportToExcel}
-                  sx={pageStyles.outlinedIconButton}
-                >
-                <FileDownload sx={{ fontSize: 18 }} />
-                </IconButton>
-              </Tooltip>
-            <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"}>
-              <IconButton
-                size="small"
-                onClick={() => setShowColumnFilters(!showColumnFilters)}
-                sx={{
-                  border: `1px solid ${showColumnFilters ? theme.palette.primary.main : theme.palette.divider}`,
-                  borderRadius: 1,
-                  bgcolor: showColumnFilters 
-                    ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
-                    : 'transparent',
-                  color: showColumnFilters ? theme.palette.primary.main : theme.palette.text.secondary,
-                  p: { xs: 0.75, sm: 0.875 },
-                  '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? 'rgba(25, 118, 210, 0.3)' 
-                      : 'rgba(25, 118, 210, 0.15)',
-                  },
-                }}
-              >
-                <ViewColumn sx={{ fontSize: { xs: 18, sm: 20 } }} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Filtros avanzados">
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  setFilterAnchorEl(e.currentTarget);
-                  // Si no hay reglas, agregar una inicial
-                  if (filterRules.length === 0) {
-                    setFilterRules([{
-                      id: `filter-${Date.now()}`,
-                      column: 'name',
-                      operator: 'contains',
-                      value: '',
-                    }]);
-                  }
-                }}
-                sx={{
-                  border: `1px solid ${filterRules.length > 0 ? theme.palette.primary.main : theme.palette.divider}`,
-                  borderRadius: 1,
-                  bgcolor: filterRules.length > 0 
-                    ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
-                    : 'transparent',
-                  color: filterRules.length > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
-                  p: { xs: 0.75, sm: 0.875 },
-                  '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? 'rgba(25, 118, 210, 0.3)' 
-                      : 'rgba(25, 118, 210, 0.15)',
-                    borderColor: theme.palette.primary.main,
-                  },
-                }}
-              >
-                <FilterList sx={{ fontSize: { xs: 18, sm: 20 } }} />
-              </IconButton>
-            </Tooltip>
-              <Tooltip title="Nueva Empresa">
-                <IconButton
-                  size="small"
-                  onClick={() => handleOpen()}
-                  sx={{
-                    bgcolor: taxiMonterricoColors.green,
-                    color: 'white',
-                    '&:hover': {
-                      bgcolor: taxiMonterricoColors.greenDark,
-                    },
-                    borderRadius: 1.5,
-                    p: 0.875,
-                    boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
-                  }}
-                >
-                  <Add sx={{ fontSize: 18 }} />
-                </IconButton>
-              </Tooltip>
-            </Box>
-          </Box>
-        </Box>
 
       {/* Indicador de filtros por columna activos */}
       {Object.values(columnFilters).some(v => v) && (
@@ -1943,27 +1808,157 @@ const Companies: React.FC = () => {
       {/* Contenedor principal con layout flex para tabla y panel de filtros */}
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', md: 'row' } }}>
         {/* Contenido principal (tabla completa con header y filas) */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          {/* Header de la tabla */}
-          <Box
-            component="div"
-          sx={{ 
-              bgcolor: theme.palette.mode === 'dark' ? '#1a1f2e' : '#f4f6f8',
-              borderRadius: '8px 8px 0 0',
-              overflow: 'hidden',
-              display: 'grid',
-              gridTemplateColumns: { xs: 'repeat(10, minmax(0, 2fr))', md: '0.2fr 0.8fr 0.55fr 0.5fr 0.4fr 0.6fr 0.4fr 0.4fr 0.6fr 0.4fr' },
-              columnGap: { xs: 1, md: 2 },
-              minWidth: { xs: 800, md: 'auto' },
-            maxWidth: '100%',
-              width: '100%',
-              px: { xs: 1, md: 1.5 },
-              py: { xs: 1.5, md: 2 },
-              mb: 2,
-              boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
-            }}
-          >
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+        <UnifiedTable
+          title="Empresas"
+          actions={
+            <>
+                <FormControl size="small" sx={{ minWidth: 130 }}>
+                  <Select
+                    id="companies-sort-select"
+                    name="companies-sort"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    displayEmpty
+                    sx={{
+                      borderRadius: 1.5,
+                      bgcolor: theme.palette.background.paper,
+                      fontSize: '0.8125rem',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: theme.palette.divider,
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: theme.palette.text.secondary,
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
+                      },
+                    }}
+                  >
+                    <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
+                    <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
+                    <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
+                    <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
+                  </Select>
+                </FormControl>
+                <Tooltip title={importing ? 'Importando...' : 'Importar'}>
+                  <IconButton
+                    size="small"
+                    onClick={handleImportFromExcel}
+                    disabled={importing}
+                    sx={pageStyles.outlinedIconButton}
+                  >
+                    <UploadFile sx={{ fontSize: 18 }} />
+                  </IconButton>
+                </Tooltip>
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
+                <Tooltip title="Exportar">
+                  <IconButton
+                    size="small"
+                    onClick={handleExportToExcel}
+                    sx={pageStyles.outlinedIconButton}
+                  >
+                    <FileDownload sx={{ fontSize: 18 }} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"}>
+                  <IconButton
+                    size="small"
+                    onClick={() => setShowColumnFilters(!showColumnFilters)}
+                    sx={{
+                      border: `1px solid ${showColumnFilters ? theme.palette.primary.main : theme.palette.divider}`,
+                      borderRadius: 1,
+                      bgcolor: showColumnFilters 
+                        ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
+                        : 'transparent',
+                      color: showColumnFilters ? theme.palette.primary.main : theme.palette.text.secondary,
+                      p: { xs: 0.75, sm: 0.875 },
+                      '&:hover': {
+                        bgcolor: theme.palette.mode === 'dark' 
+                          ? 'rgba(25, 118, 210, 0.3)' 
+                          : 'rgba(25, 118, 210, 0.15)',
+                      },
+                    }}
+                  >
+                    <ViewColumn sx={{ fontSize: { xs: 18, sm: 20 } }} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Filtros avanzados">
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      setFilterAnchorEl(e.currentTarget);
+                      // Si no hay reglas, agregar una inicial
+                      if (filterRules.length === 0) {
+                        setFilterRules([{
+                          id: `filter-${Date.now()}`,
+                          column: 'name',
+                          operator: 'contains',
+                          value: '',
+                        }]);
+                      }
+                    }}
+                    sx={{
+                      border: `1px solid ${filterRules.length > 0 ? theme.palette.primary.main : theme.palette.divider}`,
+                      borderRadius: 1,
+                      bgcolor: filterRules.length > 0 
+                        ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
+                        : 'transparent',
+                      color: filterRules.length > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
+                      p: { xs: 0.75, sm: 0.875 },
+                      '&:hover': {
+                        bgcolor: theme.palette.mode === 'dark' 
+                          ? 'rgba(25, 118, 210, 0.3)' 
+                          : 'rgba(25, 118, 210, 0.15)',
+                        borderColor: theme.palette.primary.main,
+                      },
+                    }}
+                  >
+                    <FilterList sx={{ fontSize: { xs: 18, sm: 20 } }} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Nueva Empresa">
+                  <IconButton
+                    size="small"
+                    onClick={() => handleOpen()}
+                    sx={{
+                      bgcolor: taxiMonterricoColors.green,
+                      color: 'white',
+                      '&:hover': {
+                        bgcolor: taxiMonterricoColors.greenDark,
+                      },
+                      borderRadius: 1.5,
+                      p: 0.875,
+                      boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
+                    }}
+                  >
+                    <Add sx={{ fontSize: 18 }} />
+                  </IconButton>
+                </Tooltip>
+            </>
+          }
+          header={
+            <Box
+              component="div"
+              sx={{ 
+                bgcolor: theme.palette.background.paper,
+                overflow: 'hidden',
+                display: 'grid',
+                gridTemplateColumns: { 
+                  xs: 'repeat(10, minmax(0, 1fr))', 
+                  md: '50px 2fr 1.3fr 1.3fr 1.1fr 1.4fr 1fr 1fr 1.6fr 100px' 
+                },
+                columnGap: { xs: 0.5, md: 1 },
+                minWidth: { xs: 800, md: 'auto' },
+                maxWidth: '100%',
+                width: '100%',
+                px: { xs: 1.5, md: 2 },
+                py: { xs: 1.25, md: 1.5 },
+                borderBottom: theme.palette.mode === 'light' 
+                  ? '1px solid rgba(0, 0, 0, 0.08)' 
+                  : '1px solid rgba(255, 255, 255, 0.1)',
+              }}
+            >
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.25, md: 0.5 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
                 <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>C.R.</Typography>
                 {showColumnFilters && (
@@ -1989,7 +1984,7 @@ const Companies: React.FC = () => {
                 />
               )}
             </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
                 <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Nombre de Empresa</Typography>
                 {showColumnFilters && (
@@ -2017,12 +2012,13 @@ const Companies: React.FC = () => {
             </Box>
             <Box sx={{ 
               ...pageStyles.tableHeaderCell, 
-              px: { xs: 0.75, md: 1 },
-              justifyContent: 'flex-start'
+              px: { xs: 0.5, md: 0.75 },
+              justifyContent: 'flex-start',
+              alignItems: 'center'
             }}>
                   Última Actividad
             </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
                 <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Propietario</Typography>
                 {showColumnFilters && (
@@ -2048,7 +2044,7 @@ const Companies: React.FC = () => {
                 />
               )}
             </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
                 <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Teléfono</Typography>
                 {showColumnFilters && (
@@ -2074,7 +2070,7 @@ const Companies: React.FC = () => {
                 />
               )}
             </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
                 <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Correo</Typography>
                 {showColumnFilters && (
@@ -2100,7 +2096,7 @@ const Companies: React.FC = () => {
                 />
               )}
             </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
                 <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Origen de lead</Typography>
                 {showColumnFilters && (
@@ -2126,7 +2122,7 @@ const Companies: React.FC = () => {
                 />
               )}
             </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
                 <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Etapa</Typography>
                 {showColumnFilters && (
@@ -2154,51 +2150,58 @@ const Companies: React.FC = () => {
             </Box>
             <Box sx={{ 
               ...pageStyles.tableHeaderCell, 
-              px: { xs: 0.75, md: 1 },
-              justifyContent: 'flex-start'
+              px: { xs: 0.5, md: 0.75 },
+              justifyContent: 'flex-start',
+              alignItems: 'center'
             }}>
-                  Potencial de Facturación Estimado
+                  Facturación
             </Box>
             <Box sx={{ 
               ...pageStyles.tableHeaderCell, 
-              px: { xs: 0.75, md: 1 },
-              justifyContent: 'flex-start'
+              px: { xs: 0.5, md: 0.75 },
+              justifyContent: 'flex-start',
+              alignItems: 'center'
             }}>
                   Acciones
             </Box>
-          </Box>
-
-          {/* Filas de empresas */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {paginatedCompanies.map((company) => (
-            <React.Fragment key={company.id}>
-            <Box
-              component="div"
-              onClick={() => navigate(`/companies/${company.id}`)}
+            </Box>
+          }
+          rows={
+            <>
+            {paginatedCompanies.map((company, index) => (
+              <React.Fragment key={company.id}>
+                <Box
+                  component="div"
+                  onClick={() => navigate(`/companies/${company.id}`)}
                   sx={{ 
-                bgcolor: theme.palette.background.paper,
+                    bgcolor: theme.palette.background.paper,
                     cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                display: 'grid',
-                gridTemplateColumns: { xs: 'repeat(10, minmax(0, 2fr))', md: '0.3fr 1.5fr 0.9fr 0.9fr 0.7fr 1fr 0.6fr 1fr 0.7fr 0.8fr' },
-                columnGap: { xs: 1, md: 2 },
-                minWidth: { xs: 800, md: 'auto' },
-                maxWidth: '100%',
-                width: '100%',
-                overflow: 'hidden',
-                borderRadius: expandedCompanyId === company.id ? '8px 8px 0 0' : '8px',
-                border: 'none',
-                boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
-                px: { xs: 1, md: 1.5 },
-                py: { xs: 0.5, md: 0.75 },
-                '&:hover': {
-                  bgcolor: theme.palette.background.paper,
-                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 6px rgba(0,0,0,0.3)' : '0 2px 6px rgba(0,0,0,0.1)',
-                  transform: 'translateY(-1px)',
-                },
-              }}
-            >
-                <Box sx={{ px: 0, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
+                    transition: 'all 0.2s ease',
+                    display: 'grid',
+                    gridTemplateColumns: { 
+                      xs: 'repeat(10, minmax(0, 1fr))', 
+                      md: '50px 2fr 1.3fr 1.3fr 1.1fr 1.4fr 1fr 1fr 1.6fr 100px' 
+                    },
+                    columnGap: { xs: 0.5, md: 1 },
+                    minWidth: { xs: 800, md: 'auto' },
+                    maxWidth: '100%',
+                    width: '100%',
+                    overflow: 'hidden',
+                    px: { xs: 1.5, md: 2 },
+                    py: { xs: 1.25, md: 1.5 },
+                    borderBottom: index < paginatedCompanies.length - 1 || expandedCompanyId === company.id
+                      ? (theme.palette.mode === 'light' 
+                        ? '1px solid rgba(0, 0, 0, 0.08)' 
+                        : '1px solid rgba(255, 255, 255, 0.1)')
+                      : 'none',
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(255, 255, 255, 0.02)' 
+                        : 'rgba(0, 0, 0, 0.02)',
+                    },
+                  }}
+                >
+                <Box sx={{ px: { xs: 0.25, md: 0.5 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
                   <Checkbox
                     checked={(company as any).isRecoveredClient || false}
                     onChange={(e) => {
@@ -2215,8 +2218,8 @@ const Companies: React.FC = () => {
                     }}
                   />
                 </Box>
-                <Box sx={{ py: { xs: 0.5, md: 0.75 }, px: { xs: 0.75, md: 1 }, display: 'flex', alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1, md: 1.5 }, width: '100%' }}>
+                <Box sx={{ py: 0, px: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 }, width: '100%' }}>
                       <Avatar
                         src={empresaLogo}
                         sx={{
@@ -2292,7 +2295,7 @@ const Companies: React.FC = () => {
                     </Box>
                 </Box>
                 {/* Nueva columna: Fecha de última actividad */}
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                   <Typography 
                     variant="body2" 
                     sx={{ 
@@ -2311,7 +2314,7 @@ const Companies: React.FC = () => {
                   </Typography>
                 </Box>
                 {/* Nueva columna: Propietario */}
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                   {company.Owner ? (
                     <Typography
                       variant="body2" 
@@ -2341,7 +2344,7 @@ const Companies: React.FC = () => {
                     </Typography>
                   )}
                 </Box>
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                       <Typography 
                         variant="body2" 
                         sx={{ 
@@ -2353,7 +2356,7 @@ const Companies: React.FC = () => {
                     {company.phone || '--'}
                       </Typography>
                 </Box>
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                   <Typography 
                     variant="body2" 
                     sx={{ 
@@ -2371,7 +2374,7 @@ const Companies: React.FC = () => {
                     {(company as any).email || '--'}
                   </Typography>
                 </Box>
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                   <Typography 
                     variant="body2" 
                     sx={{ 
@@ -2388,7 +2391,7 @@ const Companies: React.FC = () => {
                     {getLeadSourceLabel((company as any).leadSource)}
                   </Typography>
                 </Box>
-                <Box sx={{ px: { xs: 1, md: 1.5 }, py: { xs: 0.75, md: 1 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
+                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
                     <Chip
                     label={getStageLabel(company.lifecycleStage || 'lead')}
                       size="small"
@@ -2459,7 +2462,7 @@ const Companies: React.FC = () => {
                     </Menu>
                 </Box>
                 
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                   <Typography 
                     variant="body2" 
                     sx={{ 
@@ -2476,85 +2479,21 @@ const Companies: React.FC = () => {
                   </Typography>
                 </Box>
                 
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
-                  {/* Vista desktop: mostrar todos los iconos */}
-                  {isLargeScreen ? (
-                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                      <Tooltip title="Editar">
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOpen(company);
-                          }}
-                          sx={{
-                            color: theme.palette.text.secondary,
-                            padding: 1,
-                            '&:hover': {
-                              color: taxiMonterricoColors.green,
-                              bgcolor: `${taxiMonterricoColors.green}15`,
-                            },
-                          }}
-                        >
-                          <Edit sx={{ fontSize: '1.25rem' }} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Vista previa">
-                        <IconButton
-                          size="small"
-                          onClick={(e) => handlePreview(company, e)}
-                          sx={{
-                            color: theme.palette.text.secondary,
-                            padding: 1,
-                            bgcolor: expandedCompanyId === company.id 
-                              ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.3)' : 'rgba(25, 118, 210, 0.15)')
-                              : 'transparent',
-                            '&:hover': {
-                              color: taxiMonterricoColors.green,
-                              bgcolor: `${taxiMonterricoColors.green}15`,
-                            },
-                          }}
-                        >
-                          <Visibility sx={{ fontSize: '1.25rem' }} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Eliminar">
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(company.id);
-                          }}
-                          sx={{
-                            color: theme.palette.text.secondary,
-                            padding: 1,
-                            '&:hover': {
-                              color: '#d32f2f',
-                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.15)' : '#ffebee',
-                            },
-                          }}
-                        >
-                          <Delete sx={{ fontSize: '1.25rem' }} />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  ) : (
-                    /* Vista mobile/tablet: mostrar menú de 3 puntos */
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <IconButton
-                      size="small"
-                      onClick={(e) => handleActionsMenuOpen(e, company)}
-                      sx={{
-                        color: theme.palette.text.secondary,
-                        padding: 0.5,
-                        '&:hover': {
-                          color: theme.palette.text.primary,
-                          bgcolor: theme.palette.action.hover,
-                        },
-                      }}
-                    >
-                      <MoreVert sx={{ fontSize: '1.25rem' }} />
-                    </IconButton>
+                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => handleActionsMenuOpen(e, company)}
+                    sx={{
+                      color: theme.palette.text.secondary,
+                      padding: 0.5,
+                      '&:hover': {
+                        color: theme.palette.text.primary,
+                        bgcolor: theme.palette.action.hover,
+                      },
+                    }}
+                  >
+                    <MoreVert sx={{ fontSize: '1.25rem' }} />
+                  </IconButton>
                     <Menu
                       anchorEl={actionsMenuAnchor[company.id]}
                       open={Boolean(actionsMenuAnchor[company.id])}
@@ -2625,29 +2564,25 @@ const Companies: React.FC = () => {
                         <Typography variant="body2">Eliminar</Typography>
                       </MenuItem>
                     </Menu>
-                  </Box>
-                  )}
                 </Box>
             </Box>
 
-            {/* Vista expandida */}
-            {expandedCompanyId === company.id && (
-              <Box
-                sx={{
-                  bgcolor: theme.palette.background.paper,
-                  borderRadius: '0 0 8px 8px',
-                  border: `1px solid ${theme.palette.divider}`,
-                  borderTop: 'none',
-                  boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-                  p: 3,
-                  mb: 2,
-                  display: 'flex',
-                  flexDirection: { xs: 'column', md: 'row' },
-                  gap: 3,
-                  overflow: 'visible',
-                }}
-                onClick={(e) => e.stopPropagation()}
-              >
+                {/* Vista expandida */}
+                {expandedCompanyId === company.id && (
+                  <Box
+                    sx={{
+                      bgcolor: theme.palette.background.paper,
+                      borderTop: theme.palette.mode === 'light' 
+                        ? '1px solid rgba(0, 0, 0, 0.08)' 
+                        : '1px solid rgba(255, 255, 255, 0.1)',
+                      p: 3,
+                      display: 'flex',
+                      flexDirection: { xs: 'column', md: 'row' },
+                      gap: 3,
+                      overflow: 'visible',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
                 {/* Columna Izquierda - Card con información principal */}
                 <Box sx={{ flex: { xs: '1', md: '0 0 300px' }, display: 'flex', flexDirection: 'column', alignSelf: 'flex-start' }}>
                   <Card
@@ -2826,39 +2761,26 @@ const Companies: React.FC = () => {
             )}
           </React.Fragment>
           ))}
-          {paginatedCompanies.length === 0 && (
-            <Box sx={pageStyles.emptyState}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                <Business sx={{ fontSize: 48, color: theme.palette.text.disabled }} />
-                <Typography variant="body1" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
-                  No hay empresas para mostrar
-                </Typography>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                  Crea tu primera empresa para comenzar
-                </Typography>
+            </>
+          }
+          emptyState={
+            paginatedCompanies.length === 0 ? (
+              <Box sx={{ ...pageStyles.emptyState, m: 3 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                  <Business sx={{ fontSize: 48, color: theme.palette.text.disabled }} />
+                  <Typography variant="body1" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
+                    No hay empresas para mostrar
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                    Crea tu primera empresa para comenzar
+                  </Typography>
+                </Box>
               </Box>
-            </Box>
-          )}
-          </Box>
-
-          {/* Paginación */}
-          {filteredCompanies.length > 0 && (
-            <Box
-              sx={{
-                bgcolor: theme.palette.background.paper,
-                borderRadius: '0 0 8px 8px',
-                boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
-                px: { xs: 1, md: 2 },
-                py: { xs: 1, md: 1.5 },
-                mt: 2,
-                mb: 2,
-                display: 'flex',
-                flexDirection: { xs: 'column', md: 'row' },
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: { xs: 1.5, md: 2 },
-              }}
-            >
+            ) : undefined
+          }
+          pagination={
+            filteredCompanies.length > 0 ? (
+              <>
               {/* Rows per page selector */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
@@ -2875,13 +2797,13 @@ const Companies: React.FC = () => {
                     fontSize: '0.8125rem',
                     height: '32px',
                     '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme.palette.divider,
+                      border: 'none',
                     },
                     '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme.palette.text.secondary,
+                      border: 'none',
                     },
                     '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: taxiMonterricoColors.green,
+                      border: 'none',
                     },
                   }}
                 >
@@ -2927,9 +2849,10 @@ const Companies: React.FC = () => {
                   </IconButton>
                 </Box>
               </Box>
-            </Box>
-          )}
-        </Box>
+              </>
+            ) : undefined
+          }
+        />
 
         {/* Panel de Filtros Lateral */}
         {filterDrawerOpen && (
@@ -3700,7 +3623,7 @@ const Companies: React.FC = () => {
             <TextField
               fullWidth
               type="number"
-              label="Potencial de Facturación Estimado"
+              label="Facturación"
               value={formData.estimatedRevenue}
               onChange={(e) => setFormData({ ...formData, estimatedRevenue: e.target.value })}
               InputLabelProps={{ shrink: true }}
