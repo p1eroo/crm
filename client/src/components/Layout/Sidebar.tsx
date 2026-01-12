@@ -11,7 +11,6 @@ import {
   useMediaQuery,
 } from '@mui/material';
 import {
-  Dashboard,
   People,
   Business,
   AttachMoney,
@@ -20,8 +19,10 @@ import {
   AdminPanelSettings,
   Assessment,
   CalendarToday,
-  Settings,
 } from '@mui/icons-material';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChartPie, faIndustry, faHandHoldingDollar } from '@fortawesome/free-solid-svg-icons';
+import { faAddressBook } from '@fortawesome/free-regular-svg-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useSidebar } from '../../context/SidebarContext';
 import logo from '../../assets/tm_logo.png';
@@ -40,10 +41,10 @@ const Sidebar: React.FC = () => {
     : 300;
 
 const mainMenuItems = [
-  { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Contactos', icon: <People />, path: '/contacts', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Empresas', icon: <Business />, path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Negocios', icon: <AttachMoney />, path: '/deals', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Dashboard', icon: <FontAwesomeIcon icon={faChartPie} />, path: '/dashboard', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Contactos', icon: <FontAwesomeIcon icon={faAddressBook} />, path: '/contacts', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Empresas', icon: <FontAwesomeIcon icon={faIndustry} />, path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Negocios', icon: <FontAwesomeIcon icon={faHandHoldingDollar} />, path: '/deals', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Tareas', icon: <Assignment />, path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Tickets', icon: <Support />, path: '/tickets', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Calendario', icon: <CalendarToday />, path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
@@ -73,9 +74,13 @@ const mainMenuItems = [
           overflowX: 'hidden',
           overflowY: 'visible',
           bgcolor: theme.palette.background.default,
+          border: 'none', // Eliminar todos los bordes primero
           borderRight: theme.palette.mode === 'light' 
             ? '1px solid rgba(0, 0, 0, 0.05)' 
-            : '1px solid rgba(255, 255, 255, 0.08)',
+            : '1px solid rgba(255, 255, 255, 0.08)', // Solo borde derecho
+          borderTop: 'none', // Asegurar que no haya borde superior
+          borderBottom: 'none', // Asegurar que no haya borde inferior
+          borderLeft: 'none', // Asegurar que no haya borde izquierdo
           boxShadow: 'none',
           display: 'flex',
           flexDirection: 'column',
@@ -203,7 +208,8 @@ const mainMenuItems = [
                     ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
                     : '#637381',
                   '& svg': {
-                    fontSize: 20,
+                    fontSize: 19,
+                    color: 'inherit', // Heredar el color del contenedor
                   },
                 }}
               >
@@ -218,7 +224,7 @@ const mainMenuItems = [
                     color: isSelected 
                       ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
                       : '#5a5c61',
-                    ml: 1,
+                    ml: 0.8,
                   }}
                 >
                   {item.text}
@@ -236,8 +242,7 @@ const mainMenuItems = [
                     textAlign: 'center',
                     mt: 0.25,
                   }}
-                >
-                  {item.text}
+                ><span>{item.text}</span>
                 </Typography>
               )}
             </ListItemButton>
@@ -316,7 +321,7 @@ const mainMenuItems = [
                   color: location.pathname === '/users' 
                     ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
                     : '#5a5c61',
-                  ml: 1,
+                  ml: 0.8,
                 }}
               >
                 Usuarios
@@ -344,67 +349,6 @@ const mainMenuItems = [
       
       {/* Separador */}
       <Box sx={{ flex: 1 }} />
-      
-      {/* Configuración */}
-      <Box sx={{ width: '100%', px: collapsed ? 1 : 3, mb: 1 }}>
-        <ListItemButton
-          onClick={() => navigate('/settings')}
-          sx={{
-            minHeight: collapsed ? 64 : 40,
-            borderRadius: 1,
-            flexDirection: collapsed ? 'column' : 'row',
-            justifyContent: collapsed ? 'center' : 'flex-start',
-            alignItems: 'center',
-            px: collapsed ? 1 : 1,
-            py: collapsed ? 1 : 0.75,
-            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-            '&:hover': {
-              backgroundColor: theme.palette.action.hover,
-            },
-          }}
-        >
-          <ListItemIcon
-            sx={{
-              minWidth: collapsed ? 'auto' : 36,
-              justifyContent: 'center',
-              margin: collapsed ? '0 0 4px 0' : 0,
-              color: '#637381',
-              '& svg': {
-                fontSize: 20,
-              },
-            }}
-          >
-            <Settings />
-          </ListItemIcon>
-          {!collapsed && (
-            <Typography
-              variant="body2"
-              sx={{
-                fontSize: '0.875rem',
-                fontWeight: 400,
-                color: '#5a5c61',
-                ml: 1,
-              }}
-            >
-              Configuración
-            </Typography>
-          )}
-          {collapsed && (
-            <Typography
-              variant="caption"
-              sx={{
-                fontSize: '0.625rem',
-                fontWeight: 400,
-                color: '#5a5c61',
-                textAlign: 'center',
-                mt: 0.25,
-              }}
-            >
-              Configuración
-            </Typography>
-          )}
-        </ListItemButton>
-      </Box>
       
     </Drawer>
   );

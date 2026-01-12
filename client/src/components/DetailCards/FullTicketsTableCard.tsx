@@ -92,6 +92,7 @@ const FullTicketsTableCard: React.FC<FullTicketsTableCardProps> = ({
         height: 'fit-content',
         minHeight: 'auto',
         overflow: 'visible',
+        border: "none",
       }}
     >
       <Typography

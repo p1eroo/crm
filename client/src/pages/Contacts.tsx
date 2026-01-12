@@ -67,8 +67,9 @@ import { pageStyles } from "../theme/styles";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import * as XLSX from "xlsx";
+import { FormDrawer } from "../components/FormDrawer";
 import contactLogo from "../assets/contact.png";
-import { UnifiedTable } from "../components/UnifiedTable";
+import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from "../components/UnifiedTable";
 
 interface Contact {
   id: number;
@@ -130,7 +131,7 @@ const Contacts: React.FC = () => {
   const [previewActivities, setPreviewActivities] = useState<any[]>([]);
   const [loadingActivities, setLoadingActivities] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(7);
+  const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
   const [activeTab] = useState(0);
   const [sortBy, setSortBy] = useState("newest");
   const [formData, setFormData] = useState({
@@ -1437,7 +1438,6 @@ const Contacts: React.FC = () => {
       sx={{
         bgcolor: theme.palette.background.default,
         minHeight: "100vh",
-        pb: { xs: 2, sm: 3, md: 4 },
       }}
     >
       {/* Contenedor principal */}
@@ -2740,57 +2740,38 @@ const Contacts: React.FC = () => {
         </Box>
       </Popover>
 
-      <Dialog
+      <FormDrawer
         open={open}
         onClose={handleClose}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-          },
-        }}
-        BackdropProps={{
-          sx: {
-            backdropFilter: "blur(4px)",
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-          },
-        }}
+        title={editingContact ? "Editar Contacto" : "Nuevo Contacto"}
+        onSubmit={handleSubmit}
+        submitLabel={editingContact ? "Actualizar" : "Crear"}
       >
-        <DialogContent sx={{ pt: 5, pb: 2 }}>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2.5 }}>
-            {/* Selección de tipo de identificación y campo de entrada */}
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {/* Selección de tipo de identificación */}
             <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  gap: 2,
-                  alignItems: "flex-start",
-                  flexDirection: { xs: "column", sm: "row" },
+              <RadioGroup
+                row
+                value={idType}
+                onChange={(e) => {
+                  const newType = e.target.value as "dni" | "cee";
+                  setIdType(newType);
+                  // Limpiar campos al cambiar de tipo
+                  if (newType === "dni") {
+                    setFormData((prev) => ({ ...prev, cee: "", dni: "" }));
+                    setCeeError("");
+                  } else {
+                    setFormData((prev) => ({ ...prev, dni: "", cee: "" }));
+                    setDniError("");
+                  }
                 }}
+                sx={{ gap: 2 }}
               >
-                <RadioGroup
-                  row
-                  value={idType}
-                  onChange={(e) => {
-                    const newType = e.target.value as "dni" | "cee";
-                    setIdType(newType);
-                    // Limpiar campos al cambiar de tipo
-                    if (newType === "dni") {
-                      setFormData((prev) => ({ ...prev, cee: "", dni: "" }));
-                      setCeeError("");
-                    } else {
-                      setFormData((prev) => ({ ...prev, dni: "", cee: "" }));
-                      setDniError("");
-                    }
-                  }}
-                  sx={{ gap: 2, flexShrink: 0 }}
-                >
                   <FormControlLabel
                     value="dni"
                     control={
                       <Radio
+                        size="small"
                         sx={{
                           color: theme.palette.text.secondary,
                           "&.Mui-checked": {
@@ -2802,15 +2783,15 @@ const Contacts: React.FC = () => {
                     label="DNI"
                     sx={{
                       m: 0,
-                      px: 2,
-                      py: 0.75,
-                      height: "48px",
+                      px: 1.5,
+                      py: 0.5,
+                      height: "36px",
                       border: `2px solid ${
                         idType === "dni"
                           ? taxiMonterricoColors.green
                           : theme.palette.divider
                       }`,
-                      borderRadius: 2,
+                      borderRadius: 1.5,
                       bgcolor:
                         idType === "dni"
                           ? theme.palette.mode === "dark"
@@ -2831,6 +2812,7 @@ const Contacts: React.FC = () => {
                       "& .MuiFormControlLabel-label": {
                         color: theme.palette.text.primary,
                         fontWeight: idType === "dni" ? 500 : 400,
+                        fontSize: "0.875rem",
                       },
                     }}
                   />
@@ -2838,6 +2820,7 @@ const Contacts: React.FC = () => {
                     value="cee"
                     control={
                       <Radio
+                        size="small"
                         sx={{
                           color: theme.palette.text.secondary,
                           "&.Mui-checked": {
@@ -2849,15 +2832,15 @@ const Contacts: React.FC = () => {
                     label="CEE"
                     sx={{
                       m: 0,
-                      px: 2,
-                      py: 0.75,
-                      height: "48px",
+                      px: 1.5,
+                      py: 0.5,
+                      height: "36px",
                       border: `2px solid ${
                         idType === "cee"
                           ? taxiMonterricoColors.green
                           : theme.palette.divider
                       }`,
-                      borderRadius: 2,
+                      borderRadius: 1.5,
                       bgcolor:
                         idType === "cee"
                           ? theme.palette.mode === "dark"
@@ -2878,13 +2861,14 @@ const Contacts: React.FC = () => {
                       "& .MuiFormControlLabel-label": {
                         color: theme.palette.text.primary,
                         fontWeight: idType === "cee" ? 500 : 400,
+                        fontSize: "0.875rem",
                       },
                     }}
                   />
-                </RadioGroup>
+              </RadioGroup>
 
-                {/* Campo de entrada según el tipo seleccionado */}
-                <Box sx={{ flex: 1, minWidth: 0 }}>
+              {/* Campo de entrada según el tipo seleccionado */}
+              <Box>
                   {idType === "dni" ? (
                     <TextField
                       label="DNI"
@@ -2916,20 +2900,11 @@ const Contacts: React.FC = () => {
                       }}
                       error={!!dniError || !!dniValidationError}
                       helperText={dniError || dniValidationError}
-                      InputLabelProps={{ shrink: true }}
                       inputProps={{ maxLength: 8 }}
+                      fullWidth
                       sx={{
-                        width: "100%",
                         "& .MuiOutlinedInput-root": {
-                          borderRadius: 2,
-                          minHeight: "48px", // Misma altura que los botones (py: 1.5 = 12px arriba + 12px abajo + contenido)
-                          height: "48px",
-                        },
-                        "& .MuiInputBase-input": {
-                          py: 1.5, // Mismo padding vertical que los botones
-                          height: "48px",
-                          display: "flex",
-                          alignItems: "center",
+                          borderRadius: 1.5,
                         },
                       }}
                       InputProps={{
@@ -2993,20 +2968,11 @@ const Contacts: React.FC = () => {
                       }}
                       error={!!ceeError || !!ceeValidationError}
                       helperText={ceeError || ceeValidationError}
-                      InputLabelProps={{ shrink: true }}
                       inputProps={{ maxLength: 12 }}
+                      fullWidth
                       sx={{
-                        width: "100%",
                         "& .MuiOutlinedInput-root": {
-                          borderRadius: 2,
-                          minHeight: "48px", // Misma altura que los botones (py: 1.5 = 12px arriba + 12px abajo + contenido)
-                          height: "48px",
-                        },
-                        "& .MuiInputBase-input": {
-                          py: 1.5, // Mismo padding vertical que los botones
-                          height: "48px",
-                          display: "flex",
-                          alignItems: "center",
+                          borderRadius: 1.5,
                         },
                       }}
                       InputProps={{
@@ -3039,100 +3005,93 @@ const Contacts: React.FC = () => {
                       }}
                     />
                   )}
-                </Box>
               </Box>
             </Box>
 
-            {/* Nombre y Apellido en su propia fila */}
-            <Box sx={{ display: "flex", gap: 2 }}>
-              <TextField
-                label="Nombre"
-                value={formData.firstName}
-                onChange={(e) => {
-                  setFormData((prev) => ({
-                    ...prev,
-                    firstName: e.target.value,
-                  }));
-                  if (formErrors.firstName) {
-                    setFormErrors((prev) => ({ ...prev, firstName: "" }));
-                  }
-                }}
-                error={!!formErrors.firstName}
-                helperText={formErrors.firstName}
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <TextField
-                label="Apellido"
-                value={formData.lastName}
-                onChange={(e) => {
-                  setFormData((prev) => ({
-                    ...prev,
-                    lastName: e.target.value,
-                  }));
-                  if (formErrors.lastName) {
-                    setFormErrors((prev) => ({ ...prev, lastName: "" }));
-                  }
-                }}
-                error={!!formErrors.lastName}
-                helperText={formErrors.lastName}
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-            </Box>
-
-            {/* Email y Teléfono en su propia fila */}
-            <Box sx={{ display: "flex", gap: 2 }}>
-              <TextField
-                label="Email"
-                type="email"
-                value={formData.email}
-                onChange={async (e) => {
-                  const newEmail = e.target.value;
-                  setFormData((prev) => ({ ...prev, email: newEmail }));
-                  if (formErrors.email) {
-                    setFormErrors((prev) => ({ ...prev, email: "" }));
-                  }
-                  // Validar email en tiempo real
-                  validateEmail(newEmail);
-                }}
-                error={!!formErrors.email || !!emailValidationError}
-                helperText={formErrors.email || emailValidationError}
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <TextField
-                label="Teléfono"
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, phone: e.target.value }))
+            {/* Nombre */}
+            <TextField
+              label="Nombre"
+              value={formData.firstName}
+              onChange={(e) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  firstName: e.target.value,
+                }));
+                if (formErrors.firstName) {
+                  setFormErrors((prev) => ({ ...prev, firstName: "" }));
                 }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-            </Box>
+              }}
+              error={!!formErrors.firstName}
+              helperText={formErrors.firstName}
+              fullWidth
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 1.5,
+                },
+              }}
+            />
+            {/* Apellido */}
+            <TextField
+              label="Apellido"
+              value={formData.lastName}
+              onChange={(e) => {
+                setFormData((prev) => ({
+                  ...prev,
+                  lastName: e.target.value,
+                }));
+                if (formErrors.lastName) {
+                  setFormErrors((prev) => ({ ...prev, lastName: "" }));
+                }
+              }}
+              error={!!formErrors.lastName}
+              helperText={formErrors.lastName}
+              fullWidth
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 1.5,
+                },
+              }}
+            />
 
-            {/* Dirección en su propia fila */}
+            {/* Email */}
+            <TextField
+              label="Email"
+              type="email"
+              value={formData.email}
+              onChange={async (e) => {
+                const newEmail = e.target.value;
+                setFormData((prev) => ({ ...prev, email: newEmail }));
+                if (formErrors.email) {
+                  setFormErrors((prev) => ({ ...prev, email: "" }));
+                }
+                // Validar email en tiempo real
+                validateEmail(newEmail);
+              }}
+              error={!!formErrors.email || !!emailValidationError}
+              helperText={formErrors.email || emailValidationError}
+              fullWidth
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 1.5,
+                },
+              }}
+            />
+            {/* Teléfono */}
+            <TextField
+              label="Teléfono"
+              value={formData.phone}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, phone: e.target.value }))
+              }
+              fullWidth
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 1.5,
+                },
+              }}
+            />
+
+            {/* Dirección */}
             <TextField
               label="Dirección"
               value={formData.address}
@@ -3142,7 +3101,6 @@ const Contacts: React.FC = () => {
               multiline
               rows={2}
               fullWidth
-              InputLabelProps={{ shrink: true }}
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: 1.5,
@@ -3150,51 +3108,48 @@ const Contacts: React.FC = () => {
               }}
             />
 
-            {/* Distrito, Provincia y Departamento en su propia fila */}
-            <Box sx={{ display: "flex", gap: 2 }}>
-              <TextField
-                label="Distrito"
-                value={formData.city}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, city: e.target.value }))
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <TextField
-                label="Provincia"
-                value={formData.state}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, state: e.target.value }))
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <TextField
-                label="Departamento"
-                value={formData.country}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, country: e.target.value }))
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-            </Box>
+            {/* Distrito */}
+            <TextField
+              label="Distrito"
+              value={formData.city}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, city: e.target.value }))
+              }
+              fullWidth
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 1.5,
+                },
+              }}
+            />
+            {/* Provincia */}
+            <TextField
+              label="Provincia"
+              value={formData.state}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, state: e.target.value }))
+              }
+              fullWidth
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 1.5,
+                },
+              }}
+            />
+            {/* Departamento */}
+            <TextField
+              label="Departamento"
+              value={formData.country}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, country: e.target.value }))
+              }
+              fullWidth
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 1.5,
+                },
+              }}
+            />
 
             {/* Empresa Principal */}
             <TextField
@@ -3217,8 +3172,29 @@ const Contacts: React.FC = () => {
               error={!!formErrors.companyId}
               helperText={formErrors.companyId}
               required
-              InputLabelProps={{ shrink: true }}
               disabled={loadingCompanies}
+              fullWidth
+              SelectProps={{
+                MenuProps: {
+                  disableScrollLock: true,
+                  disablePortal: true,
+                  PaperProps: {
+                    sx: {
+                      maxHeight: 300,
+                      zIndex: '2000 !important',
+                      position: 'absolute',
+                    },
+                  },
+                  anchorOrigin: {
+                    vertical: 'bottom',
+                    horizontal: 'left',
+                  },
+                  transformOrigin: {
+                    vertical: 'top',
+                    horizontal: 'left',
+                  },
+                },
+              }}
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: 1.5,
@@ -3242,40 +3218,59 @@ const Contacts: React.FC = () => {
               </MenuItem>
             </TextField>
 
-            {/* Cargo y Etapa del Ciclo de Vida en su propia fila */}
-            <Box sx={{ display: "flex", gap: 2 }}>
-              <TextField
-                label="Cargo"
-                value={formData.jobTitle}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, jobTitle: e.target.value }))
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
+            {/* Cargo */}
+            <TextField
+              label="Cargo"
+              value={formData.jobTitle}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, jobTitle: e.target.value }))
+              }
+              fullWidth
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 1.5,
+                },
+              }}
+            />
+            {/* Etapa del Ciclo de Vida */}
+            <TextField
+              select
+              label="Etapa del Ciclo de Vida"
+              value={formData.lifecycleStage}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  lifecycleStage: e.target.value,
+                }))
+              }
+              fullWidth
+              SelectProps={{
+                MenuProps: {
+                  disableScrollLock: true,
+                  disablePortal: true,
+                  PaperProps: {
+                    sx: {
+                      maxHeight: 300,
+                      zIndex: '2000 !important',
+                      position: 'absolute',
+                    },
                   },
-                }}
-              />
-              <TextField
-                select
-                label="Etapa del Ciclo de Vida"
-                value={formData.lifecycleStage}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    lifecycleStage: e.target.value,
-                  }))
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
+                  anchorOrigin: {
+                    vertical: 'bottom',
+                    horizontal: 'left',
                   },
-                }}
-              >
+                  transformOrigin: {
+                    vertical: 'top',
+                    horizontal: 'left',
+                  },
+                },
+              }}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 1.5,
+                },
+              }}
+            >
                 <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
                 <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
                 <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
@@ -3295,29 +3290,8 @@ const Contacts: React.FC = () => {
                 <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
                 <MenuItem value="activo">Activo</MenuItem>
               </TextField>
-            </Box>
-          </Box>
-        </DialogContent>
-        <DialogActions
-          sx={{
-            px: 2,
-            py: 2,
-            borderTop: `1px solid ${theme.palette.divider}`,
-            gap: 1,
-          }}
-        >
-          <Button onClick={handleClose} sx={pageStyles.cancelButton}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            variant="contained"
-            sx={pageStyles.saveButton}
-          >
-            {editingContact ? "Actualizar" : "Crear"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </Box>
+      </FormDrawer>
 
       {/* Panel de Vista Previa */}
       <Dialog

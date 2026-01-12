@@ -111,7 +111,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             bgcolor: theme.palette.background.default, 
             px: { xs: 3.5, sm: 5, md: 6, lg: 5, xl: 8 },
             pt: { xs: 1.5, sm: 2.5 }, 
-            pb: 2,
+            pb: 0,
             width: '100%',
             maxWidth: { lg: '1400px', xl: '1600px' },
             mx: 'auto',

@@ -97,6 +97,7 @@ const ActivitiesTabContent: React.FC<ActivitiesTabContentProps> = ({
         py: 2,
         display: "flex",
         flexDirection: "column",
+        border: "none",
       }}
     >
       {/* Barra de búsqueda y filtros */}
@@ -508,6 +509,11 @@ const ActivitiesTabContent: React.FC<ActivitiesTabContentProps> = ({
                   position: "relative",
                   cursor: "pointer",
                   transition: "all 0.2s ease",
+                  border: "none",
+                  boxShadow:
+                    theme.palette.mode === "dark"
+                      ? "0 2px 8px rgba(0,0,0,0.3)"
+                      : "0 2px 8px rgba(0,0,0,0.1)",
                   "&:hover": {
                     opacity: 0.9,
                     boxShadow:

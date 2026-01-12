@@ -1,6 +1,9 @@
 import React from 'react';
 import { Box, Typography, useTheme } from '@mui/material';
 
+// Valor por defecto para itemsPerPage en todas las tablas
+export const DEFAULT_ITEMS_PER_PAGE = 10;
+
 interface UnifiedTableProps {
   title: string;
   actions?: React.ReactNode;

@@ -24,7 +24,12 @@ import {
   Close,
   Comment,
 } from '@mui/icons-material';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { library } from '@fortawesome/fontawesome-svg-core';
+import { fas } from '@fortawesome/free-solid-svg-icons';
 import { taxiMonterricoColors } from '../../theme/colors';
+
+library.add(fas);
 
 interface Activity {
   id: number;
@@ -91,16 +96,16 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
   const getActivityIconCompact = (type?: string) => {
     switch (type) {
       case 'note':
-        return <Edit sx={{ fontSize: 18, color: '#9E9E9E' }} />;
+        return <FontAwesomeIcon icon={['fas', 'note-sticky']} style={{ fontSize: 18, color: '#9E9E9E' }} />;
       case 'email':
         return <Comment sx={{ fontSize: 18, color: '#1976D2' }} />;
       case 'call':
-        return <Phone sx={{ fontSize: 18, color: '#2E7D32' }} />;
+        return <FontAwesomeIcon icon={['fas', 'phone']} style={{ fontSize: 18, color: '#2E7D32' }} />;
       case 'task':
       case 'todo':
-        return <Assignment sx={{ fontSize: 18, color: '#F57C00' }} />;
+        return <FontAwesomeIcon icon={['fas', 'thumbtack']} style={{ fontSize: 18, color: '#F57C00' }} />;
       case 'meeting':
-        return <Event sx={{ fontSize: 18, color: '#7B1FA2' }} />;
+        return <FontAwesomeIcon icon={['fas', 'calendar-week']} style={{ fontSize: 18, color: '#7B1FA2' }} />;
       default:
         return <Comment sx={{ fontSize: 18, color: theme.palette.text.secondary }} />;
     }
@@ -212,11 +217,7 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
         flexDirection: 'column',
         mt: 2,
         mb: 2,
-        border: `1px solid ${
-          theme.palette.mode === 'dark'
-            ? 'rgba(255,255,255,0.15)'
-            : 'rgba(0,0,0,0.15)'
-        }`,
+        border: "none",
       }}
     >
       <Typography
@@ -424,11 +425,12 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
               },
             }}
           >
-            <Edit
-              sx={{
-                mr: 2,
-                fontSize: 20,
-                color: theme.palette.text.secondary,
+            <FontAwesomeIcon
+              icon={['fas', 'note-sticky']}
+              style={{
+                marginRight: 16,
+                fontSize: 14,
+                color: taxiMonterricoColors.green,
               }}
             />
             <Typography
@@ -455,11 +457,12 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
               },
             }}
           >
-            <Assignment
-              sx={{
-                mr: 2,
-                fontSize: 20,
-                color: theme.palette.text.secondary,
+            <FontAwesomeIcon
+              icon={['fas', 'thumbtack']}
+              style={{
+                marginRight: 16,
+                fontSize: 14,
+                color: taxiMonterricoColors.green,
               }}
             />
             <Typography
@@ -486,11 +489,12 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
               },
             }}
           >
-            <Phone
-              sx={{
-                mr: 2,
-                fontSize: 20,
-                color: theme.palette.text.secondary,
+            <FontAwesomeIcon
+              icon={['fas', 'phone']}
+              style={{
+                marginRight: 16,
+                fontSize: 14,
+                color: taxiMonterricoColors.green,
               }}
             />
             <Typography
@@ -517,11 +521,12 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
               },
             }}
           >
-            <Event
-              sx={{
-                mr: 2,
-                fontSize: 20,
-                color: theme.palette.text.secondary,
+            <FontAwesomeIcon
+              icon={['fas', 'calendar-week']}
+              style={{
+                marginRight: 16,
+                fontSize: 14,
+                color: taxiMonterricoColors.green,
               }}
             />
             <Typography

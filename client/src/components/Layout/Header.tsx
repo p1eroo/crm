@@ -37,13 +37,14 @@ import {
   LightMode,
   Logout,
   Menu as MenuIcon,
+  Settings,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { taxiMonterricoColors } from '../../theme/colors';
-import ProfileModal from '../ProfileModal';
 import api from '../../config/api';
 import { useTheme as useThemeContext } from '../../context/ThemeContext';
 import { useSidebar } from '../../context/SidebarContext';
+import { SettingsDrawer } from '../SettingsDrawer';
 
 const Header: React.FC = () => {
   const { user, logout } = useAuth();
@@ -59,7 +60,6 @@ const Header: React.FC = () => {
     : 270;
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
-  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [searchValue, setSearchValue] = useState('');
   const [searchResults, setSearchResults] = useState<any>(null);
@@ -73,6 +73,8 @@ const Header: React.FC = () => {
   const notificationButtonRef = useRef<HTMLButtonElement>(null);
   const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -92,7 +94,7 @@ const Header: React.FC = () => {
   };
 
   const handleProfileClick = () => {
-    setProfileModalOpen(true);
+    navigate('/profile');
     handleClose();
   };
 
@@ -287,8 +289,46 @@ const Header: React.FC = () => {
       fetchNotifications(false);
     }, 5 * 60 * 1000);
     
-    return () => clearInterval(interval);
+    // Escuchar eventos de actividad completada
+    const handleActivityCompleted = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      const { title, timestamp } = customEvent.detail;
+      
+      // Agregar la notificación al estado
+      const newNotification = {
+        type: 'activity',
+        id: `activity-${Date.now()}`,
+        title: title,
+        dueDate: timestamp,
+      };
+      
+      setNotifications((prev) => {
+        // Evitar duplicados
+        const exists = prev.some((n) => n.id === newNotification.id);
+        if (exists) return prev;
+        return [newNotification, ...prev];
+      });
+      setNotificationCount((prev) => prev + 1);
+    };
+    
+    window.addEventListener('activityCompleted', handleActivityCompleted);
+    
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('activityCompleted', handleActivityCompleted);
+    };
   }, [user]);
+
+  // Efecto para detectar scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      setIsScrolled(scrollPosition > 10);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   return (
     <Box
@@ -297,9 +337,15 @@ const Header: React.FC = () => {
           xs: '100vw',
           sm: '100%' // El contenedor en MainLayout ya maneja el ancho
         },
-        bgcolor: theme.palette.background.default,
-        pl: { xs: 1, sm: 0 },
-        pr: { xs: 1, sm: 2.5 },
+        bgcolor: isScrolled 
+          ? (theme.palette.mode === 'dark' 
+              ? 'rgba(18, 22, 35, 0.8)' 
+              : 'rgba(255, 255, 255, 0.8)')
+          : theme.palette.background.default,
+        backdropFilter: isScrolled ? 'blur(10px)' : 'none',
+        WebkitBackdropFilter: isScrolled ? 'blur(10px)' : 'none', // Para Safari
+        pl: { xs: 1, sm: 1.5 },
+        pr: { xs: 1, sm: 6.5 },
         pt: { xs: 1, sm: 1.25 },
         pb: { xs: 1, sm: 1.25 },
         display: 'flex',
@@ -316,17 +362,8 @@ const Header: React.FC = () => {
         zIndex: { xs: 1400, sm: 1300 },
         marginLeft: 0,
         marginRight: 0,
-        boxShadow: { 
-          xs: theme.palette.mode === 'dark' 
-            ? '0 2px 8px rgba(0, 0, 0, 0.4)' 
-            : '0 2px 4px rgba(0, 0, 0, 0.15)',
-          sm: 'none'
-        },
         borderBottom: { xs: `1px solid ${theme.palette.divider}`, sm: 'none' },
-        transition: { 
-          xs: 'none',
-          sm: 'left 0.2s cubic-bezier(0.4, 0, 0.2, 1), width 0.2s cubic-bezier(0.4, 0, 0.2, 1)' 
-        },
+        transition: 'all 0.3s ease', // Transición suave para todos los cambios
       }}
     >
       {/* Botón de menú - Solo visible en móviles */}
@@ -710,6 +747,24 @@ const Header: React.FC = () => {
           </IconButton>
         </Tooltip>
 
+        {/* Icono de Configuración */}
+        <Tooltip title="Configuración">
+          <IconButton
+            size="small"
+            onClick={() => setSettingsDrawerOpen(true)}
+            sx={{ 
+              bgcolor: 'transparent', 
+              borderRadius: 1, 
+              width: 40,
+              height: 40,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+              },
+            }}
+          >
+            <Settings sx={{ fontSize: 24, color: '#637381' }} />
+          </IconButton>
+        </Tooltip>
 
         {/* Avatar con dropdown */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, cursor: 'pointer', ml: 1 }} onClick={handleMenu}>
@@ -1232,11 +1287,6 @@ const Header: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      <ProfileModal 
-        open={profileModalOpen} 
-        onClose={() => setProfileModalOpen(false)}
-        onSuccess={(message) => setSuccessMessage(message)}
-      />
       <Snackbar
         open={!!successMessage}
         autoHideDuration={4000}
@@ -1251,6 +1301,12 @@ const Header: React.FC = () => {
           {successMessage}
         </Alert>
       </Snackbar>
+
+      {/* Settings Drawer */}
+      <SettingsDrawer 
+        open={settingsDrawerOpen} 
+        onClose={() => setSettingsDrawerOpen(false)} 
+      />
     </Box>
   );
 };

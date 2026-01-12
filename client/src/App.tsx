@@ -34,7 +34,6 @@ const Pipeline = lazy(() => import('./pages/Pipeline'));
 const Reports = lazy(() => import('./pages/Reports'));
 const ReportDetail = lazy(() => import('./pages/ReportDetail'));
 const Calendar = lazy(() => import('./pages/Calendar'));
-const Settings = lazy(() => import('./pages/Settings'));
 const Privacy = lazy(() => import('./pages/Privacy'));
 const Terms = lazy(() => import('./pages/Terms'));
 const Landing = lazy(() => import('./pages/Landing'));
@@ -287,7 +286,6 @@ const AppContent: React.FC = () => {
                 <Route path="/profile" element={<Navigate to="/login" replace />} />
                 <Route path="/users" element={<Navigate to="/login" replace />} />
                 <Route path="/reports" element={<Navigate to="/login" replace />} />
-                <Route path="/settings" element={<Navigate to="/login" replace />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </>
             ) : (
@@ -481,16 +479,6 @@ const AppContent: React.FC = () => {
                       }
                       return <Navigate to="/" replace />;
                     })()
-                  }
-                />
-                <Route
-                  path="/settings"
-                  element={
-                    <SidebarProvider>
-                      <MainLayout>
-                        <Settings />
-                      </MainLayout>
-                    </SidebarProvider>
                   }
                 />
                 <Route path="*" element={

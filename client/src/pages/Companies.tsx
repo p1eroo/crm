@@ -10,6 +10,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Drawer,
   MenuItem,
   Chip,
   CircularProgress,
@@ -37,9 +38,10 @@ import { pageStyles } from '../theme/styles';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
+import { FormDrawer } from '../components/FormDrawer';
 import empresaLogo from '../assets/empresa.png';
 import RichTextEditor from '../components/RichTextEditor';
-import { UnifiedTable } from '../components/UnifiedTable';
+import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from '../components/UnifiedTable';
 
 interface Company {
   id: number;
@@ -81,8 +83,6 @@ const Companies: React.FC = () => {
     linkedin: '',
     companyname: '',
     phone: '',
-    phone2: '',
-    phone3: '',
     email: '',
     leadSource: '',
     lifecycleStage: 'lead',
@@ -130,7 +130,7 @@ const Companies: React.FC = () => {
   const [ownerFilterExpanded, setOwnerFilterExpanded] = useState(false);
   const [countryFilterExpanded, setCountryFilterExpanded] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(7);
+  const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [expandedCompanyId, setExpandedCompanyId] = useState<number | null>(null);
   
@@ -972,8 +972,6 @@ const Companies: React.FC = () => {
         linkedin: (company as any).linkedin || '',
         companyname: company.companyname || '',
         phone: company.phone || '',
-        phone2: (company as any).phone2 || '',
-        phone3: (company as any).phone3 || '',
         email: (company as any).email || '',
         leadSource: (company as any).leadSource || '',
         lifecycleStage: company.lifecycleStage,
@@ -993,8 +991,6 @@ const Companies: React.FC = () => {
         linkedin: '',
         companyname: '',
         phone: '',
-        phone2: '',
-        phone3: '',
         email: '',
         leadSource: '',
         lifecycleStage: 'lead',
@@ -1717,7 +1713,6 @@ const Companies: React.FC = () => {
     <Box sx={{ 
       bgcolor: theme.palette.background.default, 
       minHeight: '100vh',
-      pb: { xs: 2, sm: 3, md: 4 },
     }}>
 
       {/* Indicador de filtros por columna activos */}
@@ -3295,124 +3290,115 @@ const Companies: React.FC = () => {
       )}
       </Box>
 
-      <Dialog 
-        open={open} 
-        onClose={handleClose} 
-        maxWidth="sm" 
-        fullWidth
-        BackdropProps={{
-          sx: {
-            backdropFilter: 'blur(4px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          }
-        }}
+      <FormDrawer
+        open={open}
+        onClose={handleClose}
+        title={editingCompany ? 'Editar Empresa' : 'Nueva Empresa'}
+        onSubmit={handleSubmit}
+        submitLabel={editingCompany ? 'Actualizar' : 'Crear'}
       >
-        <DialogTitle>
-          {editingCompany ? 'Editar Empresa' : 'Nueva Empresa'}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            {/* RUC y Tipo de Contribuyente en la primera fila */}
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                label="RUC"
-                value={formData.ruc}
-                onChange={async (e) => {
-                  const value = e.target.value.replace(/\D/g, ''); // Solo números
-                  // Limitar a 11 dígitos
-                  const limitedValue = value.slice(0, 11);
-                  const currentName = formData.name; // Obtener el nombre actual del estado
-                  setFormData({ ...formData, ruc: limitedValue });
-                  setRucError('');
-                  
-                  // Si el RUC tiene exactamente 11 dígitos, validar inmediatamente
-                  if (limitedValue.length === 11) {
-                    // NO limpiar el error aquí, dejar que la validación lo maneje
-                    // Validar RUC inmediatamente sin esperar debounce
-                    if (editingCompany && editingCompany.ruc === limitedValue.trim()) {
-                      setRucValidationError('');
-                    } else {
-                      try {
-                        const response = await api.get('/companies', {
-                          params: { search: limitedValue.trim(), limit: 50 },
-                        });
-                        
-                        const companies = response.data.companies || response.data || [];
-                        // Buscar coincidencia exacta por RUC
-                        const exactMatch = companies.find((c: Company) => c.ruc === limitedValue.trim());
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {/* Título de sección */}
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: theme.palette.text.primary }}>
+              Información Básica
+            </Typography>
+            {/* RUC */}
+            <TextField
+              label="RUC"
+              value={formData.ruc}
+              onChange={async (e) => {
+                const value = e.target.value.replace(/\D/g, ''); // Solo números
+                // Limitar a 11 dígitos
+                const limitedValue = value.slice(0, 11);
+                const currentName = formData.name; // Obtener el nombre actual del estado
+                setFormData({ ...formData, ruc: limitedValue });
+                setRucError('');
+                
+                // Si el RUC tiene exactamente 11 dígitos, validar inmediatamente
+                if (limitedValue.length === 11) {
+                  // NO limpiar el error aquí, dejar que la validación lo maneje
+                  // Validar RUC inmediatamente sin esperar debounce
+                  if (editingCompany && editingCompany.ruc === limitedValue.trim()) {
+                    setRucValidationError('');
+                  } else {
+                    try {
+                      const response = await api.get('/companies', {
+                        params: { search: limitedValue.trim(), limit: 50 },
+                      });
+                      
+                      const companies = response.data.companies || response.data || [];
+                      // Buscar coincidencia exacta por RUC
+                      const exactMatch = companies.find((c: Company) => c.ruc === limitedValue.trim());
 
-                        if (exactMatch) {
-                          setRucValidationError('Ya existe una empresa con este RUC');
-                        } else {
-                          setRucValidationError('');
-                        }
-                      } catch (error: any) {
-                        console.error('Error validando RUC:', error);
+                      if (exactMatch) {
+                        setRucValidationError('Ya existe una empresa con este RUC');
+                      } else {
                         setRucValidationError('');
                       }
+                    } catch (error: any) {
+                      console.error('Error validando RUC:', error);
+                      setRucValidationError('');
                     }
-                    
-                    // Validar nombre con debounce si tiene contenido
-                    if (currentName && currentName.trim() !== '') {
-                      validateAllFields(currentName, limitedValue);
-                    }
-                  } else {
-                    // Si tiene menos de 11 dígitos, limpiar el error y usar validación normal
-                    setRucValidationError('');
+                  }
+                  
+                  // Validar nombre con debounce si tiene contenido
+                  if (currentName && currentName.trim() !== '') {
                     validateAllFields(currentName, limitedValue);
                   }
-                }}
-                error={!!rucError || !!rucValidationError}
-                helperText={rucError || rucValidationError}
-                inputProps={{ maxLength: 11 }}
-                InputLabelProps={{ shrink: true }}
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={handleSearchRuc}
-                        disabled={loadingRuc || !formData.ruc || formData.ruc.length < 11}
-                        sx={{
-                          color: taxiMonterricoColors.green,
-                          '&:hover': {
-                            bgcolor: `${taxiMonterricoColors.green}15`,
-                          },
-                          '&.Mui-disabled': {
-                            color: theme.palette.text.disabled,
-                          },
-                        }}
-                      >
-                        {loadingRuc ? (
-                          <CircularProgress size={20} />
-                        ) : (
-                          <Search />
-                        )}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  flex: '2 1 0%',
-                  minWidth: 0,
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
-                  }
-                }}
-              />
-              <TextField
-                label="Razón social"
-                value={formData.companyname}
-                onChange={(e) => setFormData({ ...formData, companyname: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: '3 1 0%',
-                  minWidth: 0,
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
-                  }
-                }}
-              />
-            </Box>
+                } else {
+                  // Si tiene menos de 11 dígitos, limpiar el error y usar validación normal
+                  setRucValidationError('');
+                  validateAllFields(currentName, limitedValue);
+                }
+              }}
+              error={!!rucError || !!rucValidationError}
+              helperText={rucError || rucValidationError}
+              inputProps={{ maxLength: 11 }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={handleSearchRuc}
+                      disabled={loadingRuc || !formData.ruc || formData.ruc.length < 11}
+                      sx={{
+                        color: taxiMonterricoColors.green,
+                        '&:hover': {
+                          bgcolor: `${taxiMonterricoColors.green}15`,
+                        },
+                        '&.Mui-disabled': {
+                          color: theme.palette.text.disabled,
+                        },
+                      }}
+                    >
+                      {loadingRuc ? (
+                        <CircularProgress size={20} />
+                      ) : (
+                        <Search />
+                      )}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+              fullWidth
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            {/* Razón social */}
+            <TextField
+              label="Razón social"
+              value={formData.companyname}
+              onChange={(e) => setFormData({ ...formData, companyname: e.target.value })}
+              fullWidth
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            {/* Nombre comercial */}
             <TextField
               label="Nombre comercial"
               value={formData.name}
@@ -3429,96 +3415,145 @@ const Companies: React.FC = () => {
               }}
               error={!!nameError}
               helperText={nameError}
-              InputLabelProps={{ shrink: true }}
+              fullWidth
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 1.5,
                 }
               }}
             />
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                label="Dominio"
-                value={formData.domain}
-                onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
-                  }
-                }}
-              />
-              <TextField
-                label="LinkedIn"
-                value={formData.linkedin}
-                onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-                placeholder="https://www.linkedin.com/company/..."
-                sx={{
-                  flex: 1,
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
-                  }
-                }}
-              />
-            </Box>
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                label="Teléfono"
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
-                  }
-                }}
-              />
-              <TextField
-                label="Teléfono 2"
-                value={formData.phone2}
-                onChange={(e) => setFormData({ ...formData, phone2: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
-                  }
-                }}
-              />
-              <TextField
-                label="Teléfono 3"
-                value={formData.phone3}
-                onChange={(e) => setFormData({ ...formData, phone3: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
-                  }
-                }}
-              />
-            </Box>
+            {/* Teléfono */}
+            <TextField
+              label="Teléfono"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              fullWidth
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            {/* Dirección */}
+            <TextField
+              label="Dirección"
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              multiline
+              rows={2}
+              fullWidth
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            {/* Distrito */}
+            <TextField
+              label="Distrito"
+              value={formData.city}
+              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+              fullWidth
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            {/* Provincia */}
+            <TextField
+              label="Provincia"
+              value={formData.state}
+              onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+              fullWidth
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            {/* Departamento */}
+            <TextField
+              label="Departamento"
+              value={formData.country}
+              onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+              fullWidth
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            {/* Título de sección */}
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, mt: 1, color: theme.palette.text.primary }}>
+              Información Comercial
+            </Typography>
+            {/* Dominio */}
+            <TextField
+              label="Dominio"
+              value={formData.domain}
+              onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
+              fullWidth
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            {/* LinkedIn */}
+            <TextField
+              label="LinkedIn"
+              value={formData.linkedin}
+              onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
+              placeholder="https://www.linkedin.com/company/..."
+              fullWidth
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                }
+              }}
+            />
+            {/* Correo */}
             <TextField
               label="Correo"
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              InputLabelProps={{ shrink: true }}
+              fullWidth
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 1.5,
                 }
               }}
             />
+            {/* Origen de lead */}
             <TextField
               select
               label="Origen de lead"
               value={formData.leadSource || ''}
               onChange={(e) => setFormData({ ...formData, leadSource: e.target.value })}
-              InputLabelProps={{ shrink: true }}
+              fullWidth
+              SelectProps={{
+                MenuProps: {
+                  disableScrollLock: true,
+                  disablePortal: true,
+                  PaperProps: {
+                    sx: {
+                      maxHeight: 300,
+                      zIndex: '2000 !important',
+                      position: 'absolute',
+                    },
+                  },
+                  anchorOrigin: {
+                    vertical: 'bottom',
+                    horizontal: 'left',
+                  },
+                  transformOrigin: {
+                    vertical: 'top',
+                    horizontal: 'left',
+                  },
+                },
+              }}
               sx={{
                 '& .MuiOutlinedInput-root': {
                   borderRadius: 1.5,
@@ -3532,78 +3567,34 @@ const Companies: React.FC = () => {
               <MenuItem value="feria">Feria</MenuItem>
               <MenuItem value="masivo">Masivo</MenuItem>
             </TextField>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Checkbox
-                checked={formData.isRecoveredClient}
-                onChange={(e) => setFormData({ ...formData, isRecoveredClient: e.target.checked })}
-                sx={{
-                  color: taxiMonterricoColors.green,
-                  '&.Mui-checked': {
-                    color: taxiMonterricoColors.green,
-                  },
-                }}
-              />
-              <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
-                Cliente Recuperado
-              </Typography>
-            </Box>
-            <TextField
-              label="Dirección"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              multiline
-              rows={2}
-              InputLabelProps={{ shrink: true }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            />
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                label="Distrito"
-                value={formData.city}
-                onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
-                  }
-                }}
-              />
-              <TextField
-                label="Provincia"
-                value={formData.state}
-                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
-                  }
-                }}
-              />
-              <TextField
-                label="Departamento"
-                value={formData.country}
-                onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
-                  }
-                }}
-              />
-            </Box>
+            {/* Etapa del Ciclo de Vida */}
             <TextField
               select
               label="Etapa del Ciclo de Vida"
               value={formData.lifecycleStage}
               onChange={(e) => setFormData({ ...formData, lifecycleStage: e.target.value })}
-              InputLabelProps={{ shrink: true }}
+              fullWidth
+              SelectProps={{
+                MenuProps: {
+                  disableScrollLock: true,
+                  disablePortal: true,
+                  PaperProps: {
+                    sx: {
+                      maxHeight: 300,
+                      zIndex: '2000 !important',
+                      position: 'absolute',
+                    },
+                  },
+                  anchorOrigin: {
+                    vertical: 'bottom',
+                    horizontal: 'left',
+                  },
+                  transformOrigin: {
+                    vertical: 'top',
+                    horizontal: 'left',
+                  },
+                },
+              }}
             >
               <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
               <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
@@ -3620,78 +3611,36 @@ const Companies: React.FC = () => {
               <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
               <MenuItem value="activo">Activo</MenuItem>
             </TextField>
+            {/* Facturación */}
             <TextField
               fullWidth
               type="number"
               label="Facturación"
               value={formData.estimatedRevenue}
               onChange={(e) => setFormData({ ...formData, estimatedRevenue: e.target.value })}
-              InputLabelProps={{ shrink: true }}
               InputProps={{
                 startAdornment: <InputAdornment position="start">S/</InputAdornment>,
               }}
             />
+            {/* Cliente Recuperado */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Checkbox
+                checked={formData.isRecoveredClient}
+                onChange={(e) => setFormData({ ...formData, isRecoveredClient: e.target.checked })}
+                sx={{
+                  color: taxiMonterricoColors.green,
+                  '&.Mui-checked': {
+                    color: taxiMonterricoColors.green,
+                  },
+                }}
+              />
+              <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
+                Cliente Recuperado
+              </Typography>
+            </Box>
             
-            {/* Mensaje de deuda SUNAT */}
-            {rucDebts !== null && (
-              <Box sx={{ 
-                mt: 1.5, 
-                p: 1.5, 
-                borderRadius: 1,
-                bgcolor: rucDebts.tiene_deudas 
-                  ? (theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.15)' : 'rgba(244, 67, 54, 0.08)')
-                  : (theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.15)' : 'rgba(76, 175, 80, 0.08)'),
-                border: `1px solid ${rucDebts.tiene_deudas 
-                  ? (theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.3)' : 'rgba(244, 67, 54, 0.2)')
-                  : (theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.3)' : 'rgba(76, 175, 80, 0.2)')}`,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-              }}>
-                {loadingDebts ? (
-                  <>
-                    <CircularProgress size={16} />
-                    <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                      Consultando deudas...
-                    </Typography>
-                  </>
-                ) : (
-                  <>
-                    {rucDebts.tiene_deudas ? (
-                      <>
-                        <Warning sx={{ color: '#f44336', fontSize: 20 }} />
-                        <Box sx={{ flex: 1 }}>
-                          <Typography variant="body2" sx={{ fontWeight: 600, color: '#f44336', mb: 0.5 }}>
-                            La empresa presenta deuda en SUNAT
-                          </Typography>
-                          {rucDebts.total_deuda && (
-                            <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                              Total: S/ {rucDebts.total_deuda.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </Typography>
-                          )}
-                        </Box>
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle sx={{ color: '#4caf50', fontSize: 20 }} />
-                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#4caf50' }}>
-                          La empresa no presenta deuda en SUNAT
-                        </Typography>
-                      </>
-                    )}
-                  </>
-                )}
-              </Box>
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancelar</Button>
-          <Button onClick={handleSubmit} variant="contained">
-            {editingCompany ? 'Actualizar' : 'Crear'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </Box>
+      </FormDrawer>
 
       {/* Modal de Confirmación de Eliminación */}
       <Dialog

@@ -120,6 +120,7 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
         display: "flex",
         flexDirection: "column",
         mt: 2,
+        border: "none",
       }}
     >
       <Typography

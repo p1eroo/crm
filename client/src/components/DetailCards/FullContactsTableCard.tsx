@@ -122,6 +122,7 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
         display: 'flex',
         flexDirection: 'column',
         mt: 2,
+        border: "none",
       }}
     >
       <Typography

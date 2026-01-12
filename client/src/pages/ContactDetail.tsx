@@ -4166,7 +4166,7 @@ const ContactDetail: React.FC = () => {
             component="button"
             onClick={() => {
               setEmailConnectModalOpen(false);
-              navigate("/settings");
+              navigate("/profile");
             }}
             sx={{
               color: theme.palette.mode === "dark" ? "#64B5F6" : "#1976d2",
@@ -4242,17 +4242,6 @@ const ContactDetail: React.FC = () => {
             flexDirection: "column",
             overflow: "hidden",
             borderRadius: 4,
-            animation: "fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-            "@keyframes fadeInScale": {
-              "0%": {
-                opacity: 0,
-                transform: "translate(-50%, -50%) scale(0.95)",
-              },
-              "100%": {
-                opacity: 1,
-                transform: "translate(-50%, -50%) scale(1)",
-              },
-            },
           }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -4464,15 +4453,6 @@ const ContactDetail: React.FC = () => {
                 ? "rgba(0, 0, 0, 0.7)"
                 : "rgba(0, 0, 0, 0.5)",
             zIndex: 1499,
-            animation: "fadeIn 0.3s ease-out",
-            "@keyframes fadeIn": {
-              "0%": {
-                opacity: 0,
-              },
-              "100%": {
-                opacity: 1,
-              },
-            },
           }}
           onClick={() => setNoteOpen(false)}
         />
@@ -5324,17 +5304,6 @@ const ContactDetail: React.FC = () => {
               display: "flex",
               flexDirection: "column",
               overflow: "hidden",
-              animation: "fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-              "@keyframes fadeInScale": {
-                "0%": {
-                  opacity: 0,
-                  transform: "translate(-50%, -50%) scale(0.9)",
-                },
-                "100%": {
-                  opacity: 1,
-                  transform: "translate(-50%, -50%) scale(1)",
-                },
-              },
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -5606,7 +5575,6 @@ const ContactDetail: React.FC = () => {
               bottom: 0,
               backgroundColor: "rgba(0, 0, 0, 0.5)",
               zIndex: 1499,
-              animation: "fadeIn 0.3s ease-out",
             }}
             onClick={() => setCallOpen(false)}
           />
@@ -5619,6 +5587,10 @@ const ContactDetail: React.FC = () => {
         onClose={() => setTaskOpen(false)}
         maxWidth={false}
         fullWidth={false}
+        TransitionProps={{
+          appear: false,
+          timeout: 0,
+        }}
         PaperProps={{
           sx: {
             borderRadius: 2,
@@ -5626,6 +5598,12 @@ const ContactDetail: React.FC = () => {
             width: "560px",
             maxWidth: "90vw",
           },
+        }}
+        BackdropProps={{
+          sx: {
+            transition: 'none',
+          },
+          transitionDuration: 0,
         }}
       >
         <Box
@@ -6803,17 +6781,6 @@ const ContactDetail: React.FC = () => {
               display: "flex",
               flexDirection: "column",
               overflow: "hidden",
-              animation: "fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-              "@keyframes fadeInScale": {
-                "0%": {
-                  opacity: 0,
-                  transform: "translate(-50%, -50%) scale(0.9)",
-                },
-                "100%": {
-                  opacity: 1,
-                  transform: "translate(-50%, -50%) scale(1)",
-                },
-              },
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -7124,7 +7091,6 @@ const ContactDetail: React.FC = () => {
               bottom: 0,
               backgroundColor: "rgba(0, 0, 0, 0.5)",
               zIndex: 1499,
-              animation: "fadeIn 0.3s ease-out",
             }}
             onClick={() => setMeetingOpen(false)}
           />

@@ -20,6 +20,9 @@ import {
   TableHead,
   TableRow,
   Chip,
+  Select,
+  MenuItem,
+  useTheme,
 } from '@mui/material';
 import {
   Visibility,
@@ -34,6 +37,7 @@ import {
   Person,
   CheckCircle,
   CloudOff,
+  ExpandMore,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import api from '../config/api';
@@ -63,6 +67,7 @@ function TabPanel(props: TabPanelProps) {
 
 const Profile: React.FC = () => {
   const { user, setUser } = useAuth();
+  const theme = useTheme();
   const [tabValue, setTabValue] = useState(0);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -77,6 +82,21 @@ const Profile: React.FC = () => {
     dateFormat: 'es-ES',
     avatar: '',
   });
+  const [countryCode, setCountryCode] = useState('+51');
+
+  const countries = [
+    { code: '+51', iso: 'PE', name: 'Perú' },
+    { code: '+1', iso: 'US', name: 'Estados Unidos' },
+    { code: '+52', iso: 'MX', name: 'México' },
+    { code: '+54', iso: 'AR', name: 'Argentina' },
+    { code: '+55', iso: 'BR', name: 'Brasil' },
+    { code: '+56', iso: 'CL', name: 'Chile' },
+    { code: '+57', iso: 'CO', name: 'Colombia' },
+  ];
+
+  const getCountryByCode = (code: string) => {
+    return countries.find(c => c.code === code) || countries[0];
+  };
 
   // Seguridad
   const [currentPassword, setCurrentPassword] = useState('');
@@ -261,22 +281,87 @@ const Profile: React.FC = () => {
   const handleAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      // Aquí se implementaría la subida de imagen
+      // Validar tamaño del archivo (máximo 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setMessage({ type: 'error', text: 'La imagen es demasiado grande. Por favor, selecciona una imagen menor a 5MB.' });
+        return;
+      }
+
+      // Validar tipo de archivo
+      if (!file.type.startsWith('image/')) {
+        setMessage({ type: 'error', text: 'Por favor, selecciona un archivo de imagen válido.' });
+        return;
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
-        setProfileData({ ...profileData, avatar: reader.result as string });
+        const result = reader.result as string;
+        
+        // Comprimir imagen si es necesario
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 400;
+          const MAX_HEIGHT = 400;
+          
+          let width = img.width;
+          let height = img.height;
+          
+          // Redimensionar si es necesario
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            // Convertir a base64 con calidad reducida (0.8 = 80% calidad)
+            const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+            setProfileData({ ...profileData, avatar: compressedBase64 });
+            setMessage({ type: 'success', text: 'Imagen cargada correctamente' });
+            setTimeout(() => setMessage(null), 3000);
+          }
+        };
+        
+        img.onerror = () => {
+          setMessage({ type: 'error', text: 'Error al procesar la imagen' });
+        };
+        
+        img.src = result;
       };
+      
+      reader.onerror = () => {
+        setMessage({ type: 'error', text: 'Error al leer el archivo' });
+      };
+      
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleAvatarDelete = () => {
+    setProfileData({ ...profileData, avatar: '' });
+    setMessage({ type: 'success', text: 'Foto eliminada correctamente' });
+    setTimeout(() => setMessage(null), 3000);
   };
 
   return (
     <Box sx={{ maxWidth: 1200, mx: 'auto', pb: { xs: 2, sm: 3, md: 4 } }}>
       <Box sx={{ mb: 2 }}>
-        <Typography variant="h4" sx={{ mb: 1, fontWeight: 700, color: '#1a1a1a' }}>
+        <Typography variant="h4" sx={{ mb: 1, fontWeight: 700, color: theme.palette.text.primary }}>
           General
         </Typography>
-        <Typography variant="body1" sx={{ color: '#757575', fontSize: '0.9375rem' }}>
+        <Typography variant="body1" sx={{ color: theme.palette.text.secondary, fontSize: '0.9375rem' }}>
           Estas preferencias solo se aplican a ti.
         </Typography>
       </Box>
@@ -284,7 +369,9 @@ const Profile: React.FC = () => {
       <Paper 
         sx={{ 
           mb: 3,
-          boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 2px 12px rgba(0,0,0,0.3)' 
+            : '0 2px 12px rgba(0,0,0,0.08)',
           borderRadius: 2,
           overflow: 'hidden',
         }}
@@ -343,54 +430,59 @@ const Profile: React.FC = () => {
         <TabPanel value={tabValue} index={0}>
           <Box
             sx={{
-              bgcolor: 'white',
+              bgcolor: theme.palette.background.paper,
               borderRadius: 2,
               p: { xs: 2.5, sm: 3 },
             }}
           >
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 4 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center', px: 2, pt: 2, pb: 2 }}>
               <Box 
                 sx={{ 
                   display: 'flex', 
-                  flexDirection: 'column', 
+                  flexDirection: 'row', 
                   alignItems: 'center', 
-                  flex: { md: '0 0 280px' },
-                  p: 3,
-                  bgcolor: '#f8f9fa',
-                  borderRadius: 2,
-                  border: '1px solid #e9ecef',
+                  justifyContent: 'center',
+                  width: '100%',
+                  maxWidth: 500,
+                  gap: 1.5,
                 }}
               >
                 <Avatar
                   src={profileData.avatar}
                   sx={{ 
-                    width: 120, 
-                    height: 120, 
-                    mb: 2,
-                    fontSize: '2.5rem',
+                    width: 100, 
+                    height: 100, 
+                    fontSize: '2rem',
                     bgcolor: taxiMonterricoColors.green,
+                    flexShrink: 0,
                   }}
                 >
                   {profileData.firstName?.[0]}{profileData.lastName?.[0]}
                 </Avatar>
                 <Button
-                  variant="outlined"
                   component="label"
-                  startIcon={<Edit />}
-                  size="medium"
+                  variant="outlined"
+                  size="small"
                   sx={{
+                    bgcolor: 'transparent',
+                    color: taxiMonterricoColors.green,
+                    borderColor: 'divider',
+                    fontWeight: 600,
                     textTransform: 'none',
+                    fontSize: '0.8125rem',
+                    px: 2,
+                    py: 0.75,
                     borderRadius: 2,
-                    px: 2.5,
-                    borderColor: '#d0d0d0',
-                    color: '#1a1a1a',
+                    minWidth: 120,
                     '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? `${taxiMonterricoColors.green}15` 
+                        : `${taxiMonterricoColors.green}08`,
                       borderColor: taxiMonterricoColors.green,
-                      bgcolor: `${taxiMonterricoColors.green}10`,
                     },
                   }}
                 >
-                  Cambiar imagen
+                  Cambiar foto
                   <input
                     type="file"
                     hidden
@@ -398,42 +490,164 @@ const Profile: React.FC = () => {
                     onChange={handleAvatarChange}
                   />
                 </Button>
-                <Typography variant="caption" sx={{ mt: 1.5, color: '#9e9e9e' }}>
-                  Imagen de perfil
-                </Typography>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={handleAvatarDelete}
+                  sx={{
+                    bgcolor: 'transparent',
+                    color: theme.palette.error.main,
+                    borderColor: 'divider',
+                    fontWeight: 600,
+                    textTransform: 'none',
+                    fontSize: '0.8125rem',
+                    px: 2,
+                    py: 0.75,
+                    borderRadius: 2,
+                    minWidth: 120,
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? `${theme.palette.error.main}15` 
+                        : `${theme.palette.error.main}08`,
+                      borderColor: theme.palette.error.main,
+                    },
+                  }}
+                >
+                  Eliminar
+                </Button>
               </Box>
-              <Box sx={{ flex: 1 }}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+              <Box sx={{ width: '100%', maxWidth: 500, display: 'flex', justifyContent: 'center' }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, width: '100%', maxWidth: 400 }}>
+                  <Box sx={{ display: 'flex', gap: 2.5, width: '100%' }}>
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Nombre"
+                      value={profileData.firstName}
+                      onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 1.5,
+                          fontSize: '0.875rem',
+                        },
+                        '& .MuiInputLabel-root': {
+                          fontSize: '0.875rem',
+                        }
+                      }}
+                    />
+                    <TextField
+                      fullWidth
+                      size="small"
+                      label="Apellidos"
+                      value={profileData.lastName}
+                      onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          borderRadius: 1.5,
+                          fontSize: '0.875rem',
+                        },
+                        '& .MuiInputLabel-root': {
+                          fontSize: '0.875rem',
+                        }
+                      }}
+                    />
+                  </Box>
                   <TextField
                     fullWidth
-                    label="Nombre"
-                    value={profileData.firstName}
-                    onChange={(e) => setProfileData({ ...profileData, firstName: e.target.value })}
+                    size="small"
+                    label="Correo electrónico"
+                    value={profileData.email}
+                    disabled
                     sx={{
                       '& .MuiOutlinedInput-root': {
                         borderRadius: 1.5,
+                        fontSize: '0.875rem',
+                      },
+                      '& .MuiInputLabel-root': {
+                        fontSize: '0.875rem',
                       }
                     }}
                   />
                   <TextField
                     fullWidth
-                    label="Apellidos"
-                    value={profileData.lastName}
-                    onChange={(e) => setProfileData({ ...profileData, lastName: e.target.value })}
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        borderRadius: 1.5,
-                      }
-                    }}
-                  />
-                  <TextField
-                    fullWidth
+                    size="small"
                     label="Número de teléfono"
                     value={profileData.phone}
                     onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                    placeholder="900 000 000"
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment 
+                          position="start" 
+                          sx={{ 
+                            mr: 0,
+                            borderRight: 1,
+                            borderColor: 'divider',
+                            pr: 1.5,
+                            height: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                          }}
+                        >
+                          <Select
+                            id="country-code-select"
+                            name="country-code"
+                            value={countryCode}
+                            onChange={(e) => setCountryCode(e.target.value)}
+                            size="small"
+                            variant="standard"
+                            disableUnderline
+                            renderValue={(value) => {
+                              const country = getCountryByCode(value);
+                              return (
+                                <Typography sx={{ fontSize: '0.875rem', color: 'text.primary' }}>
+                                  {country.code}
+                                </Typography>
+                              );
+                            }}
+                            sx={{
+                              minWidth: 'auto',
+                              width: 'fit-content',
+                              fontSize: '0.875rem',
+                              color: 'text.primary',
+                              '& .MuiSelect-select': {
+                                py: 0,
+                                px: 0.5,
+                                pr: 2.5,
+                                display: 'flex',
+                                alignItems: 'center',
+                                minWidth: 'auto',
+                              },
+                              '& .MuiSelect-icon': {
+                                color: 'text.secondary',
+                                right: 0,
+                                fontSize: '1rem',
+                              },
+                            }}
+                            IconComponent={ExpandMore}
+                          >
+                            {countries.map((country) => (
+                              <MenuItem key={country.code} value={country.code}>
+                                <Typography sx={{ fontSize: '0.875rem' }}>
+                                  {country.code}
+                                </Typography>
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </InputAdornment>
+                      ),
+                    }}
                     sx={{
                       '& .MuiOutlinedInput-root': {
                         borderRadius: 1.5,
+                        fontSize: '0.875rem',
+                        pl: 0,
+                        '& .MuiInputBase-input': {
+                          pl: 2,
+                        },
+                      },
+                      '& .MuiInputLabel-root': {
+                        fontSize: '0.875rem',
                       }
                     }}
                   />
@@ -441,14 +655,19 @@ const Profile: React.FC = () => {
                     variant="contained"
                     onClick={handleProfileUpdate}
                     disabled={loading}
+                    size="small"
                     sx={{ 
                       mt: 2,
+                      mb: 2,
                       textTransform: 'none',
                       borderRadius: 2,
-                      px: 3,
-                      py: 1.5,
+                      px: 2.5,
+                      py: 1,
                       bgcolor: taxiMonterricoColors.green,
                       fontWeight: 600,
+                      fontSize: '0.8125rem',
+                      alignSelf: 'center',
+                      minWidth: 180,
                       '&:hover': {
                         bgcolor: taxiMonterricoColors.greenDark,
                       },
@@ -466,18 +685,20 @@ const Profile: React.FC = () => {
         <TabPanel value={tabValue} index={1}>
           <Box
             sx={{
-              bgcolor: 'white',
+              bgcolor: theme.palette.background.paper,
               borderRadius: 2,
               p: 4,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-              border: '1px solid #e0e0e0',
+              boxShadow: theme.palette.mode === 'dark' 
+                ? '0 2px 8px rgba(0,0,0,0.3)' 
+                : '0 2px 8px rgba(0,0,0,0.08)',
+              border: `1px solid ${theme.palette.divider}`,
             }}
           >
             <Box sx={{ mb: 3 }}>
-              <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: '#1a1a1a' }}>
+              <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: theme.palette.text.primary }}>
                 Correo
               </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7, color: '#757575' }}>
+              <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.7 }}>
                 Conecta tus cuentas personales de correo electrónico para registrar, hacer seguimiento, enviar y recibir correos.
               </Typography>
             </Box>
@@ -496,10 +717,14 @@ const Profile: React.FC = () => {
                   px: 3,
                   py: 1.5,
                   borderRadius: 2,
-                  boxShadow: emailConnected ? 'none' : '0 4px 12px rgba(255, 107, 53, 0.3)',
+                  boxShadow: emailConnected ? 'none' : theme.palette.mode === 'dark'
+                    ? '0 4px 12px rgba(255, 107, 53, 0.4)'
+                    : '0 4px 12px rgba(255, 107, 53, 0.3)',
                   '&:hover': {
                     bgcolor: emailConnected ? taxiMonterricoColors.greenDark : '#E55A2B',
-                    boxShadow: emailConnected ? 'none' : '0 6px 16px rgba(255, 107, 53, 0.4)',
+                    boxShadow: emailConnected ? 'none' : theme.palette.mode === 'dark'
+                      ? '0 6px 16px rgba(255, 107, 53, 0.5)'
+                      : '0 6px 16px rgba(255, 107, 53, 0.4)',
                   },
                   '&.Mui-disabled': {
                     bgcolor: taxiMonterricoColors.green,
@@ -516,16 +741,18 @@ const Profile: React.FC = () => {
                   onClick={handleEmailDisconnect}
                   startIcon={<CloudOff />}
                   sx={{
-                    borderColor: '#d32f2f',
-                    color: '#d32f2f',
+                    borderColor: theme.palette.error.main,
+                    color: theme.palette.error.main,
                     fontWeight: 600,
                     textTransform: 'none',
                     px: 3,
                     py: 1.5,
                     borderRadius: 2,
                     '&:hover': {
-                      borderColor: '#c62828',
-                      bgcolor: '#ffebee',
+                      borderColor: theme.palette.error.dark,
+                      bgcolor: theme.palette.mode === 'dark'
+                        ? `${theme.palette.error.main}15`
+                        : `${theme.palette.error.main}08`,
                     },
                   }}
                 >
@@ -540,16 +767,16 @@ const Profile: React.FC = () => {
         <TabPanel value={tabValue} index={2}>
           <Box
             sx={{
-              bgcolor: 'white',
+              bgcolor: theme.palette.background.paper,
               borderRadius: 2,
               p: 4,
             }}
           >
             <Box sx={{ mb: 3 }}>
-              <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: '#1a1a1a' }}>
+              <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: theme.palette.text.primary }}>
                 Llamadas
               </Typography>
-              <Typography variant="body2" sx={{ color: '#757575', lineHeight: 1.7 }}>
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, lineHeight: 1.7 }}>
                 Configura tus preferencias de llamadas telefónicas.
               </Typography>
             </Box>
@@ -557,7 +784,6 @@ const Profile: React.FC = () => {
               severity="info"
               sx={{
                 borderRadius: 2,
-                bgcolor: '#e3f2fd',
               }}
             >
               La configuración de llamadas estará disponible próximamente.
@@ -569,16 +795,16 @@ const Profile: React.FC = () => {
         <TabPanel value={tabValue} index={3}>
           <Box
             sx={{
-              bgcolor: 'white',
+              bgcolor: theme.palette.background.paper,
               borderRadius: 2,
               p: 4,
             }}
           >
             <Box sx={{ mb: 3 }}>
-              <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: '#1a1a1a' }}>
+              <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: theme.palette.text.primary }}>
                 Calendario
               </Typography>
-              <Typography variant="body2" sx={{ color: '#757575', lineHeight: 1.7 }}>
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, lineHeight: 1.7 }}>
                 Conecta tu calendario para sincronizar eventos y reuniones.
               </Typography>
             </Box>
@@ -586,7 +812,6 @@ const Profile: React.FC = () => {
               severity="info"
               sx={{
                 borderRadius: 2,
-                bgcolor: '#e3f2fd',
               }}
             >
               La configuración de calendario estará disponible próximamente.
@@ -598,16 +823,16 @@ const Profile: React.FC = () => {
         <TabPanel value={tabValue} index={4}>
           <Box
             sx={{
-              bgcolor: 'white',
+              bgcolor: theme.palette.background.paper,
               borderRadius: 2,
               p: 4,
             }}
           >
             <Box sx={{ mb: 3 }}>
-              <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: '#1a1a1a' }}>
+              <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: theme.palette.text.primary }}>
                 Tareas
               </Typography>
-              <Typography variant="body2" sx={{ color: '#757575', lineHeight: 1.7 }}>
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, lineHeight: 1.7 }}>
                 Configura tus preferencias de tareas y recordatorios.
               </Typography>
             </Box>
@@ -615,7 +840,6 @@ const Profile: React.FC = () => {
               severity="info"
               sx={{
                 borderRadius: 2,
-                bgcolor: '#e3f2fd',
               }}
             >
               La configuración de tareas estará disponible próximamente.
@@ -627,16 +851,16 @@ const Profile: React.FC = () => {
         <TabPanel value={tabValue} index={5}>
           <Box
             sx={{
-              bgcolor: 'white',
+              bgcolor: theme.palette.background.paper,
               borderRadius: 2,
               p: 4,
             }}
           >
             <Box sx={{ mb: 4 }}>
-              <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: '#1a1a1a' }}>
+              <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: theme.palette.text.primary }}>
                 Seguridad
               </Typography>
-              <Typography variant="body2" sx={{ color: '#757575', lineHeight: 1.7 }}>
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, lineHeight: 1.7 }}>
                 Establece preferencias relacionadas con el inicio de sesión y la seguridad de tu cuenta personal.
               </Typography>
             </Box>
@@ -644,7 +868,7 @@ const Profile: React.FC = () => {
             <Divider sx={{ my: 4 }} />
 
             <Box sx={{ mb: 4 }}>
-              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#1a1a1a' }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
                 Dirección de correo electrónico
               </Typography>
               <TextField
@@ -665,11 +889,13 @@ const Profile: React.FC = () => {
                   textTransform: 'none',
                   borderRadius: 2,
                   px: 2.5,
-                  borderColor: '#d0d0d0',
-                  color: '#1a1a1a',
+                  borderColor: theme.palette.divider,
+                  color: theme.palette.text.primary,
                   '&:hover': {
                     borderColor: taxiMonterricoColors.green,
-                    bgcolor: `${taxiMonterricoColors.green}10`,
+                    bgcolor: theme.palette.mode === 'dark'
+                      ? `${taxiMonterricoColors.green}15`
+                      : `${taxiMonterricoColors.green}10`,
                   },
                 }}
               >
@@ -680,11 +906,11 @@ const Profile: React.FC = () => {
             <Divider sx={{ my: 4 }} />
 
             <Box sx={{ mb: 4 }}>
-              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#1a1a1a' }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
                 Contraseña
               </Typography>
               {passwordLastReset && (
-                <Typography variant="body2" sx={{ mb: 2, color: '#757575' }}>
+                <Typography variant="body2" sx={{ mb: 2, color: theme.palette.text.secondary }}>
                   Restablecido por última vez el {passwordLastReset}
                 </Typography>
               )}
@@ -786,31 +1012,31 @@ const Profile: React.FC = () => {
             <Divider sx={{ my: 4 }} />
 
             <Box sx={{ mb: 4 }}>
-              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#1a1a1a' }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
                 Retirada
               </Typography>
-              <Typography variant="body2" sx={{ mb: 2.5, color: '#757575', lineHeight: 1.7 }}>
+              <Typography variant="body2" sx={{ mb: 2.5, color: theme.palette.text.secondary, lineHeight: 1.7 }}>
                 Si no usas una contraseña para iniciar sesión en más de 90 días, el sistema la eliminará.
               </Typography>
               <TableContainer
                 sx={{
                   borderRadius: 2,
-                  border: '1px solid #e0e0e0',
+                  border: `1px solid ${theme.palette.divider}`,
                 }}
               >
                 <Table size="small">
                   <TableHead>
-                    <TableRow sx={{ bgcolor: '#f5f5f5' }}>
-                      <TableCell sx={{ fontWeight: 600, color: '#1a1a1a' }}>ESTADO</TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: '#1a1a1a' }}>FECHA DE RETIRADA</TableCell>
+                    <TableRow sx={{ bgcolor: theme.palette.action.hover }}>
+                      <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary }}>ESTADO</TableCell>
+                      <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary }}>FECHA DE RETIRADA</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     <TableRow>
                       <TableCell>
-                        <Chip label="Inelegible" size="small" sx={{ bgcolor: '#e0e0e0', color: '#1a1a1a' }} />
+                        <Chip label="Inelegible" size="small" sx={{ bgcolor: theme.palette.action.hover, color: theme.palette.text.primary }} />
                       </TableCell>
-                      <TableCell sx={{ color: '#757575' }}>Ninguna</TableCell>
+                      <TableCell sx={{ color: theme.palette.text.secondary }}>Ninguna</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
@@ -820,7 +1046,7 @@ const Profile: React.FC = () => {
             <Divider sx={{ my: 4 }} />
 
             <Box sx={{ mb: 4 }}>
-              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#1a1a1a' }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
                 Número de teléfono de confianza
               </Typography>
               <Link 
@@ -838,7 +1064,7 @@ const Profile: React.FC = () => {
               >
                 Agrega un número de teléfono de confianza
               </Link>
-              <Typography variant="body2" sx={{ color: '#757575', lineHeight: 1.7 }}>
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, lineHeight: 1.7 }}>
                 Agrega un número de teléfono utilizado para verificar ocasionalmente tu identidad y recibir otras alertas relacionadas con la seguridad. Este número de teléfono nunca se utilizará para fines de ventas o marketing.
               </Typography>
             </Box>
@@ -846,7 +1072,7 @@ const Profile: React.FC = () => {
             <Divider sx={{ my: 4 }} />
 
             <Box>
-              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: '#1a1a1a' }}>
+              <Typography variant="subtitle1" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>
                 Claves de acceso
               </Typography>
               <Link 
@@ -870,16 +1096,16 @@ const Profile: React.FC = () => {
         <TabPanel value={tabValue} index={6}>
           <Box
             sx={{
-              bgcolor: 'white',
+              bgcolor: theme.palette.background.paper,
               borderRadius: 2,
               p: 4,
             }}
           >
             <Box sx={{ mb: 3 }}>
-              <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: '#1a1a1a' }}>
+              <Typography variant="h5" sx={{ mb: 1.5, fontWeight: 600, color: theme.palette.text.primary }}>
                 Automatización
               </Typography>
-              <Typography variant="body2" sx={{ color: '#757575', lineHeight: 1.7 }}>
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, lineHeight: 1.7 }}>
                 Configura tus preferencias de automatización y flujos de trabajo.
               </Typography>
             </Box>
@@ -887,7 +1113,6 @@ const Profile: React.FC = () => {
               severity="info"
               sx={{
                 borderRadius: 2,
-                bgcolor: '#e3f2fd',
               }}
             >
               La configuración de automatización estará disponible próximamente.

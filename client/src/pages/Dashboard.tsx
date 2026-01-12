@@ -3269,68 +3269,6 @@ const Dashboard: React.FC = () => {
           </Box>
         </DialogContent>
       </Dialog>
-
-      {/* Modal Fullscreen - Pipeline de Ventas */}
-      <Dialog
-        open={maximizedPipeline}
-        onClose={() => setMaximizedPipeline(false)}
-        fullScreen
-        PaperProps={{
-          sx: {
-            bgcolor: theme.palette.background.default,
-          },
-        }}
-      >
-        <DialogTitle sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          pb: 2,
-        }}>
-          <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
-            Pipeline de Ventas
-          </Typography>
-          <IconButton
-            onClick={() => setMaximizedPipeline(false)}
-            sx={{
-              color: theme.palette.text.secondary,
-              '&:hover': {
-                bgcolor: theme.palette.action.hover,
-              },
-            }}
-          >
-            <ArrowOutward sx={{ transform: 'rotate(180deg)' }} />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ p: 4 }}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }, gap: 3 }}>
-            {[
-              { label: 'Propuesta Económica', count: pipelineData.propuestaEconomica.count, value: pipelineData.propuestaEconomica.value, color: '#8B5CF6' },
-              { label: 'Negociación', count: pipelineData.negociacion.count, value: pipelineData.negociacion.value, color: '#F59E0B' },
-              { label: 'Cierre Ganado', count: pipelineData.cierreGanado.count, value: pipelineData.cierreGanado.value, color: '#10B981' },
-              { label: 'Total', count: pipelineData.propuestaEconomica.count + pipelineData.negociacion.count + pipelineData.cierreGanado.count, value: pipelineData.total, color: theme.palette.text.primary },
-            ].map((stage: { label: string; count: number; value: number; color: string }, index: number) => (
-              <Card key={index} sx={{ 
-                borderRadius: 2, 
-                bgcolor: theme.palette.background.paper,
-                border: `1px solid ${theme.palette.divider}`,
-                p: 3,
-              }}>
-                <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, fontSize: '1.25rem' }}>
-                  {stage.label}
-                </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, mb: 1, color: stage.color }}>
-                  {stage.count}
-                </Typography>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                  S/ {stage.value.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </Typography>
-              </Card>
-            ))}
-          </Box>
-        </DialogContent>
-      </Dialog>
       
       <Snackbar
         open={!!successMessage}

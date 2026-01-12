@@ -89,7 +89,7 @@ const RecentActivitiesCard: React.FC<RecentActivitiesCardProps> = ({
       borderRadius: 2,
       boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
       bgcolor: theme.palette.background.paper,
-      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.15)'}`,
+      border: "none",
     }}>
       <CardContent>
         <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: theme.palette.text.primary }}>

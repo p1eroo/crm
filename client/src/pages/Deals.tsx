@@ -32,6 +32,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import negocioLogo from '../assets/negocio.png';
+import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from '../components/UnifiedTable';
 
 interface Deal {
   id: number;
@@ -75,14 +76,14 @@ const Deals: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [stageMenuAnchor, setStageMenuAnchor] = useState<{ [key: number]: HTMLElement | null }>({});
   const [updatingStage, setUpdatingStage] = useState<{ [key: number]: boolean }>({});
-  const [viewMode, setViewMode] = useState<'list' | 'funnel'>('funnel'); // Modo de vista: lista o funnel
+  const [viewMode, setViewMode] = useState<'list' | 'funnel'>('list'); // Modo de vista: lista o funnel
   const [filterDrawerOpen, setFilterDrawerOpen] = useState(false);
   const [selectedStages, setSelectedStages] = useState<string[]>([]);
   const [selectedOwnerFilters, setSelectedOwnerFilters] = useState<(string | number)[]>([]);
   const [stagesExpanded, setStagesExpanded] = useState(false);
   const [ownerFilterExpanded, setOwnerFilterExpanded] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(7);
+  const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
   const [importing, setImporting] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   
@@ -743,180 +744,10 @@ const Deals: React.FC = () => {
     <Box sx={{ 
       bgcolor: theme.palette.background.default, 
       minHeight: '100vh',
-      pb: { xs: 2, sm: 3, md: 4 },
       width: '100%',
       maxWidth: '100%',
         overflow: 'hidden',
       }}>
-      {/* Header principal - fuera del contenedor */}
-      <Box sx={{ pt: 0, pb: 2, mb: 2 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box>
-              <Typography variant="h4" sx={pageStyles.pageTitle}>
-                Negocios
-              </Typography>
-            </Box>
-          </Box>
-          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-            <FormControl size="small" sx={{ minWidth: 130 }}>
-                <Select
-                  id="deals-sort-select"
-                  name="deals-sort"
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  displayEmpty
-                  sx={pageStyles.select}
-                >
-                  <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
-                  <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
-                  <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
-                  <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
-                </Select>
-              </FormControl>
-            <Tooltip title={importing ? 'Importando...' : 'Importar'}>
-              <IconButton
-                size="small"
-                onClick={handleImportFromExcel}
-                disabled={importing}
-                sx={pageStyles.outlinedIconButton}
-              >
-                <UploadFile sx={{ fontSize: 18 }} />
-              </IconButton>
-            </Tooltip>
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
-            <Tooltip title="Exportar">
-              <IconButton
-                size="small"
-                onClick={handleExportToExcel}
-                sx={pageStyles.outlinedIconButton}
-              >
-                <FileDownload sx={{ fontSize: 18 }} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"}>
-              <IconButton
-                size="small"
-                onClick={() => setShowColumnFilters(!showColumnFilters)}
-                sx={{
-                  border: `1px solid ${showColumnFilters ? theme.palette.primary.main : theme.palette.divider}`,
-                  borderRadius: 1,
-                  bgcolor: showColumnFilters 
-                    ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
-                    : 'transparent',
-                  color: showColumnFilters ? theme.palette.primary.main : theme.palette.text.secondary,
-                  p: { xs: 0.75, sm: 0.875 },
-                  '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? 'rgba(25, 118, 210, 0.3)' 
-                      : 'rgba(25, 118, 210, 0.15)',
-                  },
-                }}
-              >
-                <ViewColumn sx={{ fontSize: { xs: 18, sm: 20 } }} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Filtros avanzados">
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  setFilterAnchorEl(e.currentTarget);
-                  // Si no hay reglas, agregar una inicial
-                  if (filterRules.length === 0) {
-                    setFilterRules([{
-                      id: `filter-${Date.now()}`,
-                      column: 'name',
-                      operator: 'contains',
-                      value: '',
-                    }]);
-                  }
-                }}
-                sx={{
-                  border: `1px solid ${filterRules.length > 0 ? theme.palette.primary.main : theme.palette.divider}`,
-                  borderRadius: 1,
-                  bgcolor: filterRules.length > 0 
-                    ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
-                    : 'transparent',
-                  color: filterRules.length > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
-                  p: { xs: 0.75, sm: 0.875 },
-                  '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? 'rgba(25, 118, 210, 0.3)' 
-                      : 'rgba(25, 118, 210, 0.15)',
-                    borderColor: theme.palette.primary.main,
-                  },
-                }}
-              >
-                <FilterList sx={{ fontSize: { xs: 18, sm: 20 } }} />
-              </IconButton>
-            </Tooltip>
-            <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mr: 1 }}>
-              <Tooltip title="Ver lista" arrow>
-                <IconButton
-                  onClick={() => setViewMode('list')}
-                  sx={{
-                    bgcolor: viewMode === 'list' 
-                      ? taxiMonterricoColors.green 
-                      : theme.palette.background.paper,
-                    color: viewMode === 'list' 
-                      ? 'white' 
-                      : theme.palette.text.secondary,
-                    borderRadius: 1.5,
-                    p: 0.875,
-                    '&:hover': {
-                      bgcolor: viewMode === 'list' 
-                        ? taxiMonterricoColors.greenDark 
-                        : theme.palette.action.hover,
-                    },
-                  }}
-                >
-                  <ViewList />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Ver funnel" arrow>
-                <IconButton
-                  onClick={() => setViewMode('funnel')}
-                  sx={{
-                    bgcolor: viewMode === 'funnel' 
-                      ? taxiMonterricoColors.green 
-                      : theme.palette.background.paper,
-                    color: viewMode === 'funnel' 
-                      ? 'white' 
-                      : theme.palette.text.secondary,
-                    borderRadius: 1.5,
-                    p: 0.875,
-                    '&:hover': {
-                      bgcolor: viewMode === 'funnel' 
-                        ? taxiMonterricoColors.greenDark 
-                        : theme.palette.action.hover,
-                    },
-                  }}
-                >
-                  <AccountTree />
-                </IconButton>
-              </Tooltip>
-            </Box>
-            <Tooltip title="Nuevo Negocio">
-              <IconButton
-                size="small"
-                onClick={() => handleOpen()}
-                sx={{
-                  bgcolor: taxiMonterricoColors.green,
-                  color: 'white',
-                  '&:hover': {
-                    bgcolor: taxiMonterricoColors.greenDark,
-                  },
-                  borderRadius: 1.5,
-                  p: 0.875,
-                  boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
-                }}
-              >
-                <Add sx={{ fontSize: 18 }} />
-              </IconButton>
-            </Tooltip>
-            </Box>
-          </Box>
-        </Box>
 
       {/* Indicador de filtros por columna activos */}
       {Object.values(columnFilters).some(v => v) && (
@@ -990,29 +821,173 @@ const Deals: React.FC = () => {
       {/* Contenedor principal con layout flex para tabla y panel de filtros */}
       {viewMode === 'list' && (
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', md: 'row' } }}>
-        {/* Contenido principal (tabla completa con header y filas) */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          {/* Header de la tabla */}
-          <Box
-            component="div"
-          sx={{ 
-              bgcolor: theme.palette.mode === "dark" 
-              ? "rgba(255, 255, 255, 0.05)" 
-              : "#f4f6f8",
-              borderRadius: '8px 8px 0 0',
-              overflow: 'hidden',
-              display: 'grid',
-              gridTemplateColumns: { xs: 'repeat(6, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 1fr 0.7fr' },
-              columnGap: { xs: 1, md: 1.5 },
-              minWidth: { xs: 800, md: 'auto' },
-            maxWidth: '100%',
-              width: '100%',
-              px: { xs: 1, md: 1.5 },
-              py: { xs: 1.5, md: 2 },
-              mb: 2,
-              boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
-            }}
-          >
+        {/* Contenido principal usando UnifiedTable */}
+        <UnifiedTable
+          title="Negocios"
+          actions={
+            <>
+              <FormControl size="small" sx={{ minWidth: 130 }}>
+                <Select
+                  id="deals-sort-select"
+                  name="deals-sort"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  displayEmpty
+                  sx={pageStyles.select}
+                >
+                  <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
+                  <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
+                  <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
+                  <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
+                </Select>
+              </FormControl>
+              <Tooltip title={importing ? 'Importando...' : 'Importar'}>
+                <IconButton
+                  size="small"
+                  onClick={handleImportFromExcel}
+                  disabled={importing}
+                  sx={pageStyles.outlinedIconButton}
+                >
+                  <UploadFile sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
+              <Tooltip title="Exportar">
+                <IconButton
+                  size="small"
+                  onClick={handleExportToExcel}
+                  sx={pageStyles.outlinedIconButton}
+                >
+                  <FileDownload sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"}>
+                <IconButton
+                  size="small"
+                  onClick={() => setShowColumnFilters(!showColumnFilters)}
+                  sx={{
+                    border: `1px solid ${showColumnFilters ? theme.palette.primary.main : theme.palette.divider}`,
+                    borderRadius: 1,
+                    bgcolor: showColumnFilters 
+                      ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
+                      : 'transparent',
+                    color: showColumnFilters ? theme.palette.primary.main : theme.palette.text.secondary,
+                    p: { xs: 0.75, sm: 0.875 },
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(25, 118, 210, 0.3)' 
+                        : 'rgba(25, 118, 210, 0.15)',
+                    },
+                  }}
+                >
+                  <ViewColumn sx={{ fontSize: { xs: 18, sm: 20 } }} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Filtros avanzados">
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    setFilterAnchorEl(e.currentTarget);
+                    if (filterRules.length === 0) {
+                      setFilterRules([{
+                        id: `filter-${Date.now()}`,
+                        column: 'name',
+                        operator: 'contains',
+                        value: '',
+                      }]);
+                    }
+                  }}
+                  sx={{
+                    border: `1px solid ${filterRules.length > 0 ? theme.palette.primary.main : theme.palette.divider}`,
+                    borderRadius: 1,
+                    bgcolor: filterRules.length > 0 
+                      ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
+                      : 'transparent',
+                    color: filterRules.length > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
+                    p: { xs: 0.75, sm: 0.875 },
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(25, 118, 210, 0.3)' 
+                        : 'rgba(25, 118, 210, 0.15)',
+                      borderColor: theme.palette.primary.main,
+                    },
+                  }}
+                >
+                  <FilterList sx={{ fontSize: { xs: 18, sm: 20 } }} />
+                </IconButton>
+              </Tooltip>
+              <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mr: 1 }}>
+                <Tooltip title="Ver lista" arrow>
+                  <IconButton
+                    onClick={() => setViewMode('list')}
+                    sx={{
+                      bgcolor: taxiMonterricoColors.green,
+                      color: 'white',
+                      borderRadius: 1.5,
+                      p: 0.875,
+                      '&:hover': {
+                        bgcolor: taxiMonterricoColors.greenDark,
+                      },
+                    }}
+                  >
+                    <ViewList />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Ver funnel" arrow>
+                  <IconButton
+                    onClick={() => setViewMode('funnel')}
+                    sx={{
+                      bgcolor: theme.palette.background.paper,
+                      color: theme.palette.text.secondary,
+                      borderRadius: 1.5,
+                      p: 0.875,
+                      '&:hover': {
+                        bgcolor: theme.palette.action.hover,
+                      },
+                    }}
+                  >
+                    <AccountTree />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              <Tooltip title="Nuevo Negocio">
+                <IconButton
+                  size="small"
+                  onClick={() => handleOpen()}
+                  sx={{
+                    bgcolor: taxiMonterricoColors.green,
+                    color: 'white',
+                    '&:hover': {
+                      bgcolor: taxiMonterricoColors.greenDark,
+                    },
+                    borderRadius: 1.5,
+                    p: 0.875,
+                    boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
+                  }}
+                >
+                  <Add sx={{ fontSize: 18 }} />
+                </IconButton>
+              </Tooltip>
+            </>
+          }
+          header={
+            <Box
+              component="div"
+              sx={{ 
+                bgcolor: theme.palette.mode === "dark" 
+                ? "rgba(255, 255, 255, 0.05)" 
+                : "#f4f6f8",
+                overflow: 'hidden',
+                display: 'grid',
+                gridTemplateColumns: { xs: 'repeat(6, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 1fr 0.7fr' },
+                columnGap: { xs: 1, md: 1.5 },
+                minWidth: { xs: 800, md: 'auto' },
+                maxWidth: '100%',
+                width: '100%',
+                px: { xs: 1, md: 1.5 },
+                py: { xs: 1.5, md: 2 },
+              }}
+            >
             <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
                 <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Nombre del Negocio</Typography>
@@ -1151,10 +1126,10 @@ const Deals: React.FC = () => {
                   Acciones
             </Box>
           </Box>
-
-          {/* Filas de negocios */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {paginatedDeals.map((deal) => (
+          }
+          rows={
+            <>
+            {paginatedDeals.map((deal, index) => (
               <Box
                   key={deal.id}
                 component="div"
@@ -1162,7 +1137,6 @@ const Deals: React.FC = () => {
                   sx={{ 
                   bgcolor: getStageCardColor(deal.stage),
                   cursor: 'pointer',
-                  transition: 'all 0.2s ease',
                   display: 'grid',
                   gridTemplateColumns: { xs: 'repeat(6, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 1fr 0.7fr' },
                   columnGap: { xs: 1, md: 1.5 },
@@ -1174,11 +1148,14 @@ const Deals: React.FC = () => {
                   boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
                   px: { xs: 1, md: 1.5 },
                   py: { xs: 0.5, md: 0.75 },
+                  borderBottom: index < paginatedDeals.length - 1
+                    ? (theme.palette.mode === 'light' 
+                      ? '1px solid rgba(0, 0, 0, 0.08)' 
+                      : '1px solid rgba(255, 255, 255, 0.1)')
+                    : 'none',
                   '&:hover': {
                     bgcolor: getStageCardColor(deal.stage),
                     opacity: 0.9,
-                    boxShadow: theme.palette.mode === 'dark' ? '0 2px 6px rgba(0,0,0,0.3)' : '0 2px 6px rgba(0,0,0,0.1)',
-                    transform: 'translateY(-1px)',
                   },
                 }}
               >
@@ -1419,7 +1396,84 @@ const Deals: React.FC = () => {
                 </Box>
               </Box>
             ))}
-            {paginatedDeals.length === 0 && (
+            </>
+          }
+          pagination={
+            filteredDeals.length > 0 ? (
+              <>
+                {/* Rows per page selector */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
+                    Filas por página:
+                  </Typography>
+                  <Select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    size="small"
+                    sx={{
+                      fontSize: '0.8125rem',
+                      height: '32px',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: theme.palette.divider,
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: theme.palette.text.secondary,
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: taxiMonterricoColors.green,
+                      },
+                    }}
+                  >
+                    <MenuItem value={5}>5</MenuItem>
+                    <MenuItem value={7}>7</MenuItem>
+                    <MenuItem value={10}>10</MenuItem>
+                    <MenuItem value={20}>20</MenuItem>
+                    <MenuItem value={50}>50</MenuItem>
+                  </Select>
+                </Box>
+
+                {/* Información de paginación y navegación */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
+                    {startIndex + 1}-{Math.min(endIndex, filteredDeals.length)} de {filteredDeals.length}
+                  </Typography>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <IconButton
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      size="small"
+                      sx={{
+                        color: currentPage === 1 ? theme.palette.action.disabled : theme.palette.text.secondary,
+                        '&:hover': {
+                          bgcolor: currentPage === 1 ? 'transparent' : theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      <ChevronLeft />
+                    </IconButton>
+                    <IconButton
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      size="small"
+                      sx={{
+                        color: currentPage === totalPages ? theme.palette.action.disabled : theme.palette.text.secondary,
+                        '&:hover': {
+                          bgcolor: currentPage === totalPages ? 'transparent' : theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      <ChevronRight />
+                    </IconButton>
+                  </Box>
+                </Box>
+              </>
+            ) : null
+          }
+          emptyState={
+            paginatedDeals.length === 0 ? (
               <Box sx={pageStyles.emptyState}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                   <AttachMoney sx={{ fontSize: 48, color: theme.palette.text.disabled }} />
@@ -1428,98 +1482,9 @@ const Deals: React.FC = () => {
                   </Typography>
                 </Box>
               </Box>
-            )}
-          </Box>
-
-          {/* Paginación */}
-          {filteredDeals.length > 0 && (
-            <Box
-              sx={{
-                bgcolor: theme.palette.background.paper,
-                borderRadius: '0 0 8px 8px',
-                boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
-                px: { xs: 1, md: 2 },
-                py: { xs: 1, md: 1.5 },
-                mt: 2,
-                mb: 2,
-                display: 'flex',
-                flexDirection: { xs: 'column', md: 'row' },
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: { xs: 1.5, md: 2 },
-              }}
-            >
-              {/* Rows per page selector */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
-                  Filas por página:
-                </Typography>
-                <Select
-                  value={itemsPerPage}
-                  onChange={(e) => {
-                    setItemsPerPage(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                  size="small"
-                  sx={{
-                    fontSize: '0.8125rem',
-                    height: '32px',
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme.palette.divider,
-                    },
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                      borderColor: theme.palette.text.secondary,
-                    },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: taxiMonterricoColors.green,
-                    },
-                  }}
-                >
-                  <MenuItem value={5}>5</MenuItem>
-                  <MenuItem value={7}>7</MenuItem>
-                  <MenuItem value={10}>10</MenuItem>
-                  <MenuItem value={20}>20</MenuItem>
-                  <MenuItem value={50}>50</MenuItem>
-                </Select>
-              </Box>
-
-              {/* Información de paginación y navegación */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
-                  {startIndex + 1}-{Math.min(endIndex, filteredDeals.length)} de {filteredDeals.length}
-                </Typography>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <IconButton
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                    disabled={currentPage === 1}
-                    size="small"
-                    sx={{
-                      color: currentPage === 1 ? theme.palette.action.disabled : theme.palette.text.secondary,
-                      '&:hover': {
-                        bgcolor: currentPage === 1 ? 'transparent' : theme.palette.action.hover,
-                      },
-                    }}
-                  >
-                    <ChevronLeft />
-                  </IconButton>
-                  <IconButton
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                    disabled={currentPage === totalPages}
-                    size="small"
-                    sx={{
-                      color: currentPage === totalPages ? theme.palette.action.disabled : theme.palette.text.secondary,
-                      '&:hover': {
-                        bgcolor: currentPage === totalPages ? 'transparent' : theme.palette.action.hover,
-                      },
-                    }}
-                  >
-                    <ChevronRight />
-                  </IconButton>
-                </Box>
-              </Box>
-            </Box>
-          )}
-        </Box>
+            ) : null
+          }
+        />
 
         {/* Panel de Filtros Lateral */}
         {filterDrawerOpen && (

@@ -15,6 +15,7 @@ interface ActivityAttributes {
   companyId?: number;
   dealId?: number;
   taskId?: number;
+  completed?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -31,6 +32,7 @@ export class Activity extends Model<ActivityAttributes, ActivityCreationAttribut
   public companyId?: number;
   public dealId?: number;
   public taskId?: number;
+  public completed?: boolean;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
@@ -98,6 +100,11 @@ Activity.init(
         model: 'tasks',
         key: 'id',
       },
+    },
+    completed: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: false,
     },
   },
   {
