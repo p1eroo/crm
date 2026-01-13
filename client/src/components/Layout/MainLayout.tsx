@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, useTheme, useMediaQuery, IconButton } from '@mui/material';
-import { ChevronLeft, ChevronRight, KeyboardArrowLeft, KeyboardArrowRight } from '@mui/icons-material';
+import { KeyboardArrowLeft, KeyboardArrowRight } from '@mui/icons-material';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useSidebar } from '../../context/SidebarContext';
@@ -60,7 +60,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               position: 'fixed',
               left: open ? (collapsed ? 89 - 14 : 299 - 14) : -14, // Centrado en el borde: drawerWidth - mitad del ancho del botón (28px)
               top: { xs: 0, sm: 22 },
-              zIndex: 1500, // Por encima del sidebar
+              zIndex: 1300, // Por encima del sidebar
               width: 28,
               height: 28,
               bgcolor: theme.palette.background.default,

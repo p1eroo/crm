@@ -27,7 +27,6 @@ import {
 import {
   Visibility,
   VisibilityOff,
-  Edit,
   Email,
   Phone,
   CalendarToday,

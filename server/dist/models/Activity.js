@@ -68,6 +68,11 @@ Activity.init({
             key: 'id',
         },
     },
+    completed: {
+        type: sequelize_1.DataTypes.BOOLEAN,
+        allowNull: true,
+        defaultValue: false,
+    },
 }, {
     sequelize: database_1.sequelize,
     tableName: 'activities',

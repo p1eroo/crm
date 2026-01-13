@@ -38,8 +38,8 @@ import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { FormDrawer } from '../components/FormDrawer';
-import empresaLogo from '../assets/empresa.png';
 import RichTextEditor from '../components/RichTextEditor';
+import { Building2 } from "lucide-react";
 import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from '../components/UnifiedTable';
 
 interface Company {
@@ -186,15 +186,6 @@ const Companies: React.FC = () => {
   });
   const [showColumnFilters, setShowColumnFilters] = useState(false);
 
-  // Función para obtener iniciales
-  const getInitials = (name: string) => {
-    if (!name) return '--';
-    const words = name.trim().split(' ');
-    if (words.length >= 2) {
-      return `${words[0][0]}${words[1][0]}`.toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
-  };
   // Función para obtener el label del origen de lead
   const getLeadSourceLabel = (source?: string) => {
     const labels: { [key: string]: string } = {
@@ -2214,18 +2205,18 @@ const Companies: React.FC = () => {
                 <Box sx={{ py: 0, px: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 }, width: '100%' }}>
                       <Avatar
-                        src={empresaLogo}
+                        src={(company as any).logo || undefined}
                         sx={{
                           width: { xs: 32, md: 40 },
                           height: { xs: 32, md: 40 },
-                          bgcolor: empresaLogo ? 'transparent' : taxiMonterricoColors.green,
+                          bgcolor: (company as any).logo ? 'transparent' : '#0d9394',
                           fontSize: { xs: '0.75rem', md: '0.875rem' },
                           fontWeight: 600,
                           boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
                           flexShrink: 0,
                         }}
                       >
-                        {!empresaLogo && getInitials(company.name)}
+                        {!(company as any).logo && <Building2 size={20} color="white" />}
                       </Avatar>
                       <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography 
@@ -2595,17 +2586,17 @@ const Companies: React.FC = () => {
                   >
                     {/* Avatar/Logo */}
                     <Avatar
-                      src={empresaLogo}
+                      src={(company as any).logo || undefined}
                       sx={{
                         width: 60,
                         height: 60,
-                        bgcolor: empresaLogo ? 'transparent' : taxiMonterricoColors.green,
+                        bgcolor: (company as any).logo ? 'transparent' : '#0d9394',
                         fontSize: '1.25rem',
                         fontWeight: 600,
                         boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                       }}
                     >
-                      {!empresaLogo && getInitials(company.name)}
+                      {!(company as any).logo && <Building2 size={30} color="white" />}
                     </Avatar>
 
                     {/* Nombre */}

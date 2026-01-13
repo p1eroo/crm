@@ -4,10 +4,7 @@ import { formatDatePeru } from "../utils/dateUtils";
 import {
   Box,
   Typography,
-  Paper,
-  Avatar,
   Button,
-  Chip,
   Divider,
   IconButton,
   CircularProgress,
@@ -18,7 +15,6 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  Alert,
   Menu,
   MenuItem,
   Tabs,
@@ -34,15 +30,12 @@ import {
   RadioGroup,
   Radio,
   FormControlLabel,
-  Tooltip,
 } from "@mui/material";
 import {
-  Note,
   Phone,
   Person,
   Business,
   CalendarToday,
-  Assignment,
   Search,
   MoreVert,
   Close,
@@ -63,13 +56,6 @@ import {
   FormatAlignCenter,
   FormatAlignRight,
   FormatAlignJustify,
-  KeyboardArrowRight,
-  KeyboardArrowDown,
-  Flag,
-  DonutSmall,
-  AccessTime,
-  AutoAwesome,
-  History,
 } from "@mui/icons-material";
 import api from "../config/api";
 import axios from "axios";
@@ -86,9 +72,21 @@ import {
   FullActivitiesTableCard,
   ActivityDetailDialog,
   ActivitiesTabContent,
+  GeneralDescriptionTab,
 } from "../components/DetailCards";
+import type { GeneralInfoCard } from "../components/DetailCards";
 import { useAuth } from "../context/AuthContext";
-import negocioLogo from "../assets/negocio.png";
+import DetailPageLayout from "../components/Layout/DetailPageLayout";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCalendar, faClock } from "@fortawesome/free-regular-svg-icons";
+import { library } from "@fortawesome/fontawesome-svg-core";
+import { far } from "@fortawesome/free-regular-svg-icons";
+import { fas } from "@fortawesome/free-solid-svg-icons";
+import { faHandshake } from "@fortawesome/free-solid-svg-icons";
+import { faUser as faUserRegular } from "@fortawesome/free-regular-svg-icons";
+
+library.add(far);
+library.add(fas);
 
 interface DealDetailData {
   id: number;
@@ -196,12 +194,6 @@ const DealDetail: React.FC = () => {
   const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState<null | HTMLElement>(
     null
   );
-  const [actionsMenuAnchorEl, setActionsMenuAnchorEl] =
-    useState<null | HTMLElement>(null);
-  const [moreOptionsMenuAnchorEl, setMoreOptionsMenuAnchorEl] =
-    useState<null | HTMLElement>(null);
-  const [copilotOpen, setCopilotOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [activeFormats, setActiveFormats] = useState({
@@ -216,14 +208,10 @@ const DealDetail: React.FC = () => {
     useState<HTMLElement | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [successMessage, setSuccessMessage] = useState("");
-  const [activeTab, setActiveTab] = useState(0);
   const [activitySearch, setActivitySearch] = useState("");
   const [companySearch, setCompanySearch] = useState("");
   const [dealSearch, setDealSearch] = useState("");
   const [contactSearch, setContactSearch] = useState("");
-  const [, setAddCompanyMenuAnchor] = useState<null | HTMLElement>(null);
-  const [, setAddContactMenuAnchor] = useState<null | HTMLElement>(null);
   const [companySortField, setCompanySortField] = useState<
     "name" | "domain" | "phone"
   >("name");
@@ -1274,17 +1262,6 @@ const DealDetail: React.FC = () => {
     return `S/ ${value.toFixed(0)}`;
   };
 
-  const handleOpenNote = () => {
-    setNoteData({ subject: "", description: "" });
-    setNoteOpen(true);
-    // Inicializar asociaciones
-    setSelectedCompaniesForNote([]);
-    setSelectedContactsForNote([]);
-    setSelectedAssociationsForNote([]);
-    setExcludedCompaniesForNote([]);
-    setExcludedContactsForNote([]);
-  };
-
   const handleSaveNote = async () => {
     if (!noteData.description.trim()) {
       return;
@@ -1319,7 +1296,6 @@ const DealDetail: React.FC = () => {
 
       await api.post("/activities/notes", activityData);
 
-      setSuccessMessage("Nota creada exitosamente");
       setNoteOpen(false);
       setNoteData({ subject: "", description: "" });
       setSelectedCompaniesForNote([]);
@@ -1328,24 +1304,11 @@ const DealDetail: React.FC = () => {
       setExcludedCompaniesForNote([]);
       setExcludedContactsForNote([]);
       fetchActivities();
-      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error: any) {
       console.error("Error saving note:", error);
-      const errorMessage =
-        error.response?.data?.error ||
-        error.response?.data?.message ||
-        error.message ||
-        "Error desconocido";
-      setSuccessMessage(`Error al crear la nota: ${errorMessage}`);
-      setTimeout(() => setSuccessMessage(""), 5000);
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleOpenCall = () => {
-    setCallData({ subject: "", description: "", duration: "" });
-    setCallOpen(true);
   };
 
   const handleSaveCall = async () => {
@@ -1362,29 +1325,14 @@ const DealDetail: React.FC = () => {
         contactId: deal?.Contact?.id,
         companyId: deal?.Company?.id,
       });
-      setSuccessMessage("Llamada registrada exitosamente");
       setCallOpen(false);
       setCallData({ subject: "", description: "", duration: "" });
       fetchDeal(); // Actualizar actividades
-      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
       console.error("Error saving call:", error);
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleOpenTask = () => {
-    setTaskData({
-      title: "",
-      description: "",
-      priority: "medium",
-      dueDate: "",
-      type: "todo",
-    });
-    setSelectedDate(null);
-    setCurrentMonth(new Date());
-    setTaskOpen(true);
   };
 
   const handleOpenDatePicker = (event: React.MouseEvent<HTMLElement>) => {
@@ -1542,11 +1490,6 @@ const DealDetail: React.FC = () => {
         dueDate: taskData.dueDate || undefined,
         dealId: id,
       });
-      setSuccessMessage(
-        (taskData.type === "meeting" ? "Reunión" : "Tarea") +
-          " creada exitosamente" +
-          (taskData.dueDate ? " y sincronizada con Google Calendar" : "")
-      );
       setTaskOpen(false);
       setTaskData({
         title: "",
@@ -1556,11 +1499,8 @@ const DealDetail: React.FC = () => {
         type: "todo",
       });
       fetchActivities();
-      setTimeout(() => setSuccessMessage(""), 3000);
     } catch (error) {
       console.error("Error saving task:", error);
-      setSuccessMessage("Error al crear la tarea");
-      setTimeout(() => setSuccessMessage(""), 3000);
     } finally {
       setSaving(false);
     }
@@ -1588,945 +1528,172 @@ const DealDetail: React.FC = () => {
     );
   }
 
-  return (
-    <Box
-      sx={{
-        bgcolor: theme.palette.background.default,
-        minHeight: "100vh",
-        pb: { xs: 2, sm: 3, md: 4 },
-      }}
-    >
-      {/* Título de la página */}
-      <Box
-        sx={{
-          pt: { xs: 2, sm: 3 },
-          pb: 2,
-          px: { xs: 2, sm: 3, md: 4 },
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 1.5,
-        }}
-      >
-        {/* Lado izquierdo: Botón de regresar y título */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <IconButton
-            onClick={() => navigate("/deals")}
-            sx={{
-              color: theme.palette.text.secondary,
-              "&:hover": {
-                bgcolor: theme.palette.action.hover,
-                color: theme.palette.text.primary,
-              },
-            }}
-          >
-            <ChevronLeft />
-          </IconButton>
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 500,
-              color: theme.palette.text.primary,
-              fontSize: { xs: "1.125rem", sm: "1.25rem", md: "1.5rem" },
-            }}
-          >
-            Información del negocio
-          </Typography>
-        </Box>
+    // Preparar campos de detalles
+    const detailFields = [
+      {
+        label: 'Monto',
+        value: deal ? formatCurrency(deal.amount || 0) : 'No disponible',
+      },
+      {
+        label: 'Etapa',
+        value: deal ? getStageLabel(deal.stage) : 'No disponible',
+      },
+      {
+        label: 'Fecha de cierre',
+        value: deal?.closeDate
+          ? new Date(deal.closeDate).toLocaleDateString('es-ES', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            })
+          : 'No disponible',
+      },
+      {
+        label: 'Prioridad',
+        value: deal?.priority
+          ? deal.priority === 'baja'
+            ? 'Baja'
+            : deal.priority === 'media'
+            ? 'Media'
+            : 'Alta'
+          : 'No disponible',
+      },
+      {
+        label: 'Propietario',
+        value: deal?.Owner
+          ? `${deal.Owner.firstName || ''} ${deal.Owner.lastName || ''}`.trim() ||
+            deal.Owner.email ||
+            'Sin nombre'
+          : 'No asignado',
+      },
+    ];
+  
+    // Preparar botones de actividades (botones circulares verdes como en CompanyDetail)
+        // Preparar botones de actividades (array de objetos como espera DetailPageLayout)
+        const activityButtons = [
+          {
+            icon: ['fas', 'note-sticky'],
+            tooltip: 'Crear nota',
+            onClick: () => handleCreateActivity('note'),
+          },
+          {
+            icon: ['fas', 'phone'],
+            tooltip: 'Hacer llamada',
+            onClick: () => handleCreateActivity('call'),
+          },
+          {
+            icon: ['fas', 'thumbtack'],
+            tooltip: 'Crear tarea',
+            onClick: () => handleCreateActivity('task'),
+          },
+          {
+            icon: ['fas', 'calendar-week'],
+            tooltip: 'Programar reunión',
+            onClick: () => handleCreateActivity('meeting'),
+          },
+        ];
+  
+    // Preparar cards de información general
+    const generalInfoCards: GeneralInfoCard[] = [
+      {
+        label: 'Fecha de creación',
+        value: deal?.createdAt
+          ? `${new Date(deal.createdAt).toLocaleDateString('es-ES', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            })} ${new Date(deal.createdAt).toLocaleTimeString('es-ES', {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}`
+          : 'No disponible',
+        icon: faCalendar,
+        iconBgColor: '#0d939429',
+        iconColor: '#0d9394',
+      },
+      {
+        label: 'Etapa del negocio',
+        value: deal?.stage ? getStageLabel(deal.stage) : 'No disponible',
+        icon: ['fas', 'arrows-rotate'],
+        iconBgColor: '#e4f6d6',
+        iconColor: '#56ca00',
+        showArrow: true,
+      },
+      {
+        label: 'Última actividad',
+        value: activities.length > 0 && activities[0].createdAt
+          ? new Date(activities[0].createdAt).toLocaleDateString('es-ES', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            })
+          : 'No hay actividades',
+        icon: faClock,
+        iconBgColor: '#fff3d6',
+        iconColor: '#ffb400',
+      },
+      {
+        label: 'Propietario del negocio',
+        value: deal?.Owner
+          ? deal.Owner.firstName || deal.Owner.lastName
+            ? `${deal.Owner.firstName || ''} ${deal.Owner.lastName || ''}`.trim()
+            : deal.Owner.email || 'Sin nombre'
+          : 'No asignado',
+        icon: faUserRegular,
+        iconBgColor: '#daf2ff',
+        iconColor: '#16b1ff',
+      },
+    ];
 
-        {/* Lado derecho: Breadcrumb */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 0.5,
-            color: theme.palette.text.secondary,
-          }}
-        >
-          <Typography
-            component="span"
-            onClick={() => navigate("/deals")}
+    // Preparar contenido del Tab 0 (Descripción General)
+    const tab0Content = (
+      <GeneralDescriptionTab
+        generalInfoCards={generalInfoCards}
+        linkedCards={[
+          { component: <RecentActivitiesCard activities={activities} /> },
+          { component: <LinkedContactsCard contacts={dealContacts || []} /> },
+          { component: <LinkedCompaniesCard companies={dealCompanies || []} /> },
+          { component: <LinkedDealsCard deals={dealDeals || []} /> },
+        ]}
+        linkedCardsGridColumns={{ xs: '1fr' }}
+      />
+    );
+  
+    // Preparar contenido del Tab 1 (Información Avanzada)
+    const tab1Content = (
+      <>
+        {/* Card de Descripción - Solo visible cuando hay descripción */}
+        {deal?.description && (
+          <Card
             sx={{
-              fontSize: { xs: "0.75rem", sm: "0.875rem" },
-              cursor: "pointer",
-              color: theme.palette.text.secondary,
-              "&:hover": {
-                color: theme.palette.text.primary,
-                textDecoration: "underline",
-              },
-            }}
-          >
-            Negocios
-          </Typography>
-          <KeyboardArrowRight
-            sx={{
-              fontSize: { xs: 16, sm: 18 },
-              color: theme.palette.text.disabled,
-            }}
-          />
-          <Typography
-            component="span"
-            sx={{
-              fontSize: { xs: "0.75rem", sm: "0.875rem" },
-              color: theme.palette.text.primary,
-              fontWeight: 500,
-            }}
-          >
-            {deal?.name}
-          </Typography>
-        </Box>
-      </Box>
-
-      {successMessage && (
-        <Alert
-          severity="success"
-          sx={{ mb: 2, mx: { xs: 2, sm: 3, md: 4 } }}
-          onClose={() => setSuccessMessage("")}
-        >
-          {successMessage}
-        </Alert>
-      )}
-
-      {/* Contenido principal */}
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: { xs: "column", md: "row" },
-          flex: 1,
-          overflow: { xs: "visible", md: "hidden" },
-          minHeight: { xs: "auto", md: 0 },
-          gap: 2,
-          px: { xs: 2, sm: 3, md: 4 },
-        }}
-      >
-        {/* Columna Principal - Descripción y Actividades */}
-        <Box
-          sx={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          {/* DealHeader */}
-          <Paper
-            elevation={0}
-            sx={{
-              borderRadius: 3,
-              px: 2.5,
-              pt: 2.5,
-              pb: 1.5,
-              mb: 2,
+              borderRadius: 2,
+              boxShadow:
+                theme.palette.mode === 'dark'
+                  ? '0 2px 8px rgba(0,0,0,0.3)'
+                  : '0 2px 8px rgba(0,0,0,0.1)',
               bgcolor: theme.palette.background.paper,
-              border: `1px solid ${theme.palette.divider}`,
-              display: "flex",
-              flexDirection: "column",
-              gap: 1.5,
+              px: 2,
+              py: 2,
+              display: 'flex',
+              flexDirection: 'column',
+              mb: 2,
             }}
           >
-            {/* Parte superior: Avatar + Info a la izquierda, Botones a la derecha */}
-            <Box
+            <Typography
+              variant="body2"
               sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 2,
+                color: theme.palette.text.primary,
+                whiteSpace: 'pre-wrap',
               }}
             >
-              {/* Izquierda: Avatar + Nombre + Subtítulo */}
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 2,
-                  flex: 1,
-                  minWidth: 0,
-                }}
-              >
-                <Avatar
-                  src={negocioLogo}
-                  sx={{
-                    width: 56,
-                    height: 56,
-                    bgcolor: negocioLogo
-                      ? "transparent"
-                      : taxiMonterricoColors.green,
-                    fontSize: "1.25rem",
-                    fontWeight: 600,
-                  }}
-                >
-                  {!negocioLogo && getInitials(deal.name)}
-                </Avatar>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography
-                    variant="h6"
-                    sx={{ fontWeight: 600, fontSize: "1.25rem", mb: 0.5 }}
-                  >
-                    {deal.name}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ fontSize: "0.875rem" }}
-                  >
-                    {formatCurrency(deal.amount || 0)}{" "}
-                    {deal.closeDate
-                      ? `• ${new Date(deal.closeDate).toLocaleDateString(
-                          "es-ES",
-                          { day: "numeric", month: "short", year: "numeric" }
-                        )}`
-                      : ""}
-                  </Typography>
-                </Box>
-              </Box>
-
-              {/* Derecha: Etapa + Menú desplegable de acciones */}
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                <Chip
-                  label={getStageLabel(deal.stage)}
-                  size="small"
-                  sx={{
-                    height: 24,
-                    fontSize: "0.75rem",
-                    bgcolor:
-                      theme.palette.mode === "dark"
-                        ? "rgba(46, 125, 50, 0.2)"
-                        : "rgba(46, 125, 50, 0.1)",
-                    color: taxiMonterricoColors.green,
-                    fontWeight: 500,
-                  }}
-                />
-                <Tooltip title="Acciones">
-                  <IconButton
-                    onClick={(e) => setActionsMenuAnchorEl(e.currentTarget)}
-                    sx={{
-                      color: theme.palette.text.secondary,
-                      "&:hover": {
-                        bgcolor: theme.palette.action.hover,
-                        color: theme.palette.text.primary,
-                      },
-                    }}
-                  >
-                    <KeyboardArrowDown />
-                  </IconButton>
-                </Tooltip>
-                <Menu
-                  anchorEl={actionsMenuAnchorEl}
-                  open={Boolean(actionsMenuAnchorEl)}
-                  onClose={() => setActionsMenuAnchorEl(null)}
-                  anchorOrigin={{
-                    vertical: "bottom",
-                    horizontal: "right",
-                  }}
-                  transformOrigin={{
-                    vertical: "top",
-                    horizontal: "right",
-                  }}
-                  PaperProps={{
-                    sx: {
-                      mt: 1,
-                      borderRadius: 2,
-                      boxShadow:
-                        theme.palette.mode === "dark"
-                          ? "0 4px 20px rgba(0,0,0,0.5)"
-                          : "0 4px 20px rgba(0,0,0,0.15)",
-                      bgcolor: theme.palette.background.paper,
-                    },
-                  }}
-                >
-                  <MenuItem
-                    onClick={() => {
-                      handleOpenNote();
-                      setActionsMenuAnchorEl(null);
-                    }}
-                    sx={{
-                      py: 1.5,
-                      px: 2,
-                      "&:hover": {
-                        bgcolor: theme.palette.action.hover,
-                      },
-                    }}
-                  >
-                    <Note
-                      sx={{
-                        fontSize: 20,
-                        mr: 1.5,
-                        color: theme.palette.text.secondary,
-                      }}
-                    />
-                    <Typography
-                      variant="body2"
-                      sx={{ color: theme.palette.text.primary }}
-                    >
-                      Crear nota
-                    </Typography>
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      handleOpenCall();
-                      setActionsMenuAnchorEl(null);
-                    }}
-                    sx={{
-                      py: 1.5,
-                      px: 2,
-                      "&:hover": {
-                        bgcolor: theme.palette.action.hover,
-                      },
-                    }}
-                  >
-                    <Phone
-                      sx={{
-                        fontSize: 20,
-                        mr: 1.5,
-                        color: theme.palette.text.secondary,
-                      }}
-                    />
-                    <Typography
-                      variant="body2"
-                      sx={{ color: theme.palette.text.primary }}
-                    >
-                      Llamar
-                    </Typography>
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      handleOpenTask();
-                      setActionsMenuAnchorEl(null);
-                    }}
-                    sx={{
-                      py: 1.5,
-                      px: 2,
-                      "&:hover": {
-                        bgcolor: theme.palette.action.hover,
-                      },
-                    }}
-                  >
-                    <Assignment
-                      sx={{
-                        fontSize: 20,
-                        mr: 1.5,
-                        color: theme.palette.text.secondary,
-                      }}
-                    />
-                    <Typography
-                      variant="body2"
-                      sx={{ color: theme.palette.text.primary }}
-                    >
-                      Crear tarea
-                    </Typography>
-                  </MenuItem>
-                </Menu>
-                <Tooltip title="Más opciones">
-                  <IconButton
-                    onClick={(e) => setMoreOptionsMenuAnchorEl(e.currentTarget)}
-                    sx={{
-                      color: theme.palette.text.secondary,
-                      "&:hover": {
-                        bgcolor: theme.palette.action.hover,
-                        color: theme.palette.text.primary,
-                      },
-                    }}
-                  >
-                    <MoreVert />
-                  </IconButton>
-                </Tooltip>
-                <Menu
-                  anchorEl={moreOptionsMenuAnchorEl}
-                  open={Boolean(moreOptionsMenuAnchorEl)}
-                  onClose={() => setMoreOptionsMenuAnchorEl(null)}
-                  TransitionProps={{
-                    timeout: 200,
-                  }}
-                  PaperProps={{
-                    sx: {
-                      mt: 1,
-                      borderRadius: 2,
-                      boxShadow:
-                        theme.palette.mode === "dark"
-                          ? "0 4px 20px rgba(0,0,0,0.5)"
-                          : "0 4px 20px rgba(0,0,0,0.15)",
-                      bgcolor: theme.palette.background.paper,
-                      animation: "slideDown 0.2s ease",
-                      "@keyframes slideDown": {
-                        "0%": {
-                          opacity: 0,
-                          transform: "translateY(-10px)",
-                        },
-                        "100%": {
-                          opacity: 1,
-                          transform: "translateY(0)",
-                        },
-                      },
-                    },
-                  }}
-                >
-                  <MenuItem
-                    onClick={() => {
-                      // TODO: Implementar edición
-                      setMoreOptionsMenuAnchorEl(null);
-                    }}
-                    sx={{
-                      transition: "all 0.15s ease",
-                      "&:hover": {
-                        backgroundColor: theme.palette.action.hover,
-                        transform: "translateX(4px)",
-                      },
-                    }}
-                  >
-                    Editar
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      // TODO: Implementar eliminación
-                      setMoreOptionsMenuAnchorEl(null);
-                    }}
-                    sx={{
-                      transition: "all 0.15s ease",
-                      "&:hover": {
-                        backgroundColor: theme.palette.action.hover,
-                        transform: "translateX(4px)",
-                      },
-                    }}
-                  >
-                    Eliminar
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      // TODO: Implementar duplicación
-                      setMoreOptionsMenuAnchorEl(null);
-                    }}
-                    sx={{
-                      transition: "all 0.15s ease",
-                      "&:hover": {
-                        backgroundColor: theme.palette.action.hover,
-                        transform: "translateX(4px)",
-                      },
-                    }}
-                  >
-                    Duplicar
-                  </MenuItem>
-                </Menu>
-              </Box>
-            </Box>
-
-            {/* Línea separadora */}
-            <Divider
-              sx={{
-                borderColor:
-                  theme.palette.mode === "dark"
-                    ? "rgba(255, 255, 255, 0.08)"
-                    : "rgba(0, 0, 0, 0.08)",
-              }}
-            />
-
-            {/* Parte inferior: Chips */}
-            <Box
-              sx={{
-                display: "flex",
-                gap: 1,
-                flexWrap: "wrap",
-                alignItems: "center",
-              }}
-            >
-              {deal.closeDate && (
-                <Chip
-                  icon={<CalendarToday sx={{ fontSize: 14 }} />}
-                  label={`Cierre: ${new Date(deal.closeDate).toLocaleDateString(
-                    "es-ES",
-                    { day: "numeric", month: "short", year: "numeric" }
-                  )}`}
-                  size="small"
-                  sx={{
-                    height: 24,
-                    fontSize: "0.75rem",
-                    bgcolor:
-                      theme.palette.mode === "dark"
-                        ? "rgba(255, 255, 255, 0.05)"
-                        : "#FFFFFF",
-                    border: `1px solid ${theme.palette.divider}`,
-                    "& .MuiChip-icon": {
-                      color: theme.palette.text.secondary,
-                    },
-                  }}
-                />
-              )}
-              {deal.Owner && (
-                <Chip
-                  icon={<Person sx={{ fontSize: 14 }} />}
-                  label={`${deal.Owner.firstName} ${deal.Owner.lastName}`}
-                  size="small"
-                  sx={{
-                    height: 24,
-                    fontSize: "0.75rem",
-                    bgcolor:
-                      theme.palette.mode === "dark"
-                        ? "rgba(255, 255, 255, 0.05)"
-                        : "#FFFFFF",
-                    border: `1px solid ${theme.palette.divider}`,
-                    "& .MuiChip-icon": {
-                      color: theme.palette.text.secondary,
-                    },
-                  }}
-                />
-              )}
-              <Chip
-                icon={
-                  <Flag
-                    sx={{
-                      fontSize: 14,
-                      color:
-                        (deal.priority || "baja") === "baja"
-                          ? taxiMonterricoColors.green
-                          : (deal.priority || "baja") === "media"
-                          ? "#F59E0B"
-                          : "#EF4444",
-                    }}
-                  />
-                }
-                label={
-                  deal.priority === "baja"
-                    ? "Baja"
-                    : deal.priority === "media"
-                    ? "Media"
-                    : deal.priority === "alta"
-                    ? "Alta"
-                    : "Baja"
-                }
-                size="small"
-                sx={{
-                  height: 24,
-                  fontSize: "0.75rem",
-                  bgcolor:
-                    theme.palette.mode === "dark"
-                      ? "rgba(255, 255, 255, 0.05)"
-                      : "#FFFFFF",
-                  border: `1px solid ${theme.palette.divider}`,
-                  color:
-                    (deal.priority || "baja") === "baja"
-                      ? taxiMonterricoColors.green
-                      : (deal.priority || "baja") === "media"
-                      ? "#F59E0B"
-                      : "#EF4444",
-                  fontWeight: 500,
-                  "& .MuiChip-icon": {
-                    color:
-                      (deal.priority || "baja") === "baja"
-                        ? taxiMonterricoColors.green
-                        : (deal.priority || "baja") === "media"
-                        ? "#F59E0B"
-                        : "#EF4444",
-                  },
-                }}
-              />
-            </Box>
-          </Paper>
-
-          {/* Tabs estilo barra de filtros */}
-          <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-            <Card
-              sx={{
-                borderRadius: 2,
-                boxShadow:
-                  theme.palette.mode === "dark"
-                    ? "0 2px 8px rgba(0,0,0,0.3)"
-                    : "0 2px 8px rgba(0,0,0,0.1)",
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 0.5,
-                display: "flex",
-                alignItems: "center",
-                flex: 1,
-                border: `1px solid ${
-                  theme.palette.mode === "dark"
-                    ? "rgba(255,255,255,0.15)"
-                    : "rgba(0,0,0,0.15)"
-                }`,
-              }}
-            >
-              <Tabs
-                value={activeTab}
-                onChange={(e, newValue) => setActiveTab(newValue)}
-                sx={{
-                  minHeight: "auto",
-                  flex: 1,
-                  "& .MuiTabs-flexContainer": {
-                    gap: 0,
-                    justifyContent: "flex-start",
-                  },
-                  "& .MuiTabs-indicator": {
-                    backgroundColor: taxiMonterricoColors.green,
-                    height: 2,
-                  },
-                  "& .MuiTab-root": {
-                    textTransform: "none",
-                    fontSize: "0.875rem",
-                    fontWeight: 500,
-                    minHeight: 40,
-                    height: 40,
-                    paddingX: 3,
-                    bgcolor: "transparent",
-                    color: theme.palette.text.secondary,
-                    transition: "all 0.2s ease",
-                    position: "relative",
-                    "&.Mui-selected": {
-                      bgcolor: "transparent",
-                      color: theme.palette.text.primary,
-                      fontWeight: 700,
-                    },
-                    "&:hover": {
-                      bgcolor: "transparent",
-                      color: theme.palette.text.primary,
-                    },
-                    "&:not(:last-child)::after": {
-                      content: '""',
-                      position: "absolute",
-                      right: 0,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      width: "1px",
-                      height: "60%",
-                      backgroundColor: theme.palette.divider,
-                    },
-                  },
-                }}
-              >
-                <Tab label="Resumen" />
-                <Tab label="Información Avanzada" />
-                <Tab label="Actividades" />
-              </Tabs>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  ml: 1,
-                  pl: 1,
-                  borderLeft: `1px solid ${theme.palette.divider}`,
-                  gap: 0.5,
-                }}
-              >
-                <Tooltip title="Registro de Cambios">
-                  <IconButton
-                    onClick={() => setHistoryOpen(!historyOpen)}
-                    size="small"
-                    sx={{
-                      color: historyOpen
-                        ? "#2196F3"
-                        : theme.palette.text.secondary,
-                      "&:hover": {
-                        bgcolor: "transparent",
-                      },
-                    }}
-                  >
-                    <History />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Copiloto IA">
-                  <IconButton
-                    onClick={() => setCopilotOpen(!copilotOpen)}
-                    size="small"
-                    sx={{
-                      color: copilotOpen
-                        ? taxiMonterricoColors.green
-                        : theme.palette.text.secondary,
-                      "&:hover": {
-                        bgcolor: "transparent",
-                      },
-                    }}
-                  >
-                    <AutoAwesome />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-            </Card>
-          </Box>
-
-          {/* Tab Resumen */}
-          {activeTab === 0 && (
-            <>
-              {/* Cards de Fecha de Creación, Etapa del Negocio, Última Actividad y Propietario */}
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    sm: "repeat(2, 1fr)",
-                    md: "repeat(4, 1fr)",
-                  },
-                  gap: 2,
-                  mb: 2,
-                }}
-              >
-                <Card
-                  sx={{
-                    width: "100%",
-                    p: 2,
-                    bgcolor: theme.palette.background.paper,
-                    border: `1px solid ${
-                      theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.15)"
-                        : "rgba(0,0,0,0.15)"
-                    }`,
-                    borderRadius: 1.5,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    textAlign: "left",
-                  }}
-                >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                      mb: 1,
-                    }}
-                  >
-                    <CalendarToday
-                      sx={{ fontSize: 18, color: theme.palette.text.secondary }}
-                    />
-                    <Typography
-                      variant="subtitle2"
-                      sx={{
-                        fontWeight: 600,
-                        color: theme.palette.text.primary,
-                      }}
-                    >
-                      Fecha de creación
-                    </Typography>
-                  </Box>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ fontSize: "0.875rem" }}
-                  >
-                    {deal.createdAt
-                      ? `${new Date(deal.createdAt).toLocaleDateString(
-                          "es-ES",
-                          {
-                            day: "numeric",
-                            month: "long",
-                            year: "numeric",
-                          }
-                        )} ${new Date(deal.createdAt).toLocaleTimeString(
-                          "es-ES",
-                          {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          }
-                        )}`
-                      : "No disponible"}
-                  </Typography>
-                </Card>
-
-                <Card
-                  sx={{
-                    width: "100%",
-                    p: 2,
-                    bgcolor: theme.palette.background.paper,
-                    border: `1px solid ${
-                      theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.15)"
-                        : "rgba(0,0,0,0.15)"
-                    }`,
-                    borderRadius: 1.5,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    textAlign: "left",
-                  }}
-                >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                      mb: 1,
-                    }}
-                  >
-                    <DonutSmall
-                      sx={{ fontSize: 18, color: theme.palette.text.secondary }}
-                    />
-                    <Typography
-                      variant="subtitle2"
-                      sx={{
-                        fontWeight: 600,
-                        color: theme.palette.text.primary,
-                      }}
-                    >
-                      Etapa del negocio
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                    <KeyboardArrowRight
-                      sx={{ fontSize: 16, color: theme.palette.text.secondary }}
-                    />
-                    <Typography
-                      variant="body2"
-                      color="text.secondary"
-                      sx={{ fontSize: "0.875rem" }}
-                    >
-                      {deal.stage ? getStageLabel(deal.stage) : "No disponible"}
-                    </Typography>
-                  </Box>
-                </Card>
-
-                <Card
-                  sx={{
-                    width: "100%",
-                    p: 2,
-                    bgcolor: theme.palette.background.paper,
-                    border: `1px solid ${
-                      theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.15)"
-                        : "rgba(0,0,0,0.15)"
-                    }`,
-                    borderRadius: 1.5,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    textAlign: "left",
-                  }}
-                >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                      mb: 1,
-                    }}
-                  >
-                    <AccessTime
-                      sx={{ fontSize: 18, color: theme.palette.text.secondary }}
-                    />
-                    <Typography
-                      variant="subtitle2"
-                      sx={{
-                        fontWeight: 600,
-                        color: theme.palette.text.primary,
-                      }}
-                    >
-                      Última actividad
-                    </Typography>
-                  </Box>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ fontSize: "0.875rem" }}
-                  >
-                    {activities.length > 0 && activities[0].createdAt
-                      ? new Date(activities[0].createdAt).toLocaleDateString(
-                          "es-ES",
-                          {
-                            day: "numeric",
-                            month: "long",
-                            year: "numeric",
-                          }
-                        )
-                      : "No hay actividades"}
-                  </Typography>
-                </Card>
-
-                <Card
-                  sx={{
-                    width: "100%",
-                    p: 2,
-                    bgcolor: theme.palette.background.paper,
-                    border: `1px solid ${
-                      theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.15)"
-                        : "rgba(0,0,0,0.15)"
-                    }`,
-                    borderRadius: 1.5,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    textAlign: "left",
-                  }}
-                >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 1,
-                      mb: 1,
-                    }}
-                  >
-                    <Person
-                      sx={{ fontSize: 18, color: theme.palette.text.secondary }}
-                    />
-                    <Typography
-                      variant="subtitle2"
-                      sx={{
-                        fontWeight: 600,
-                        color: theme.palette.text.primary,
-                      }}
-                    >
-                      Propietario del negocio
-                    </Typography>
-                  </Box>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ fontSize: "0.875rem" }}
-                  >
-                    {deal.Owner
-                      ? deal.Owner.firstName || deal.Owner.lastName
-                        ? `${deal.Owner.firstName || ""} ${
-                            deal.Owner.lastName || ""
-                          }`.trim()
-                        : deal.Owner.email || "Sin nombre"
-                      : "No asignado"}
-                  </Typography>
-                </Card>
-              </Box>
-
-              {/* Grid 2x2 para Actividades Recientes, Contactos, Empresas y Negocios */}
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" },
-                  gap: 2,
-                  mb: 2,
-                }}
-              >
-                <RecentActivitiesCard activities={activities} />
-                <LinkedContactsCard contacts={dealContacts || []} />
-                <LinkedCompaniesCard companies={dealCompanies || []} />
-                <LinkedDealsCard deals={dealDeals || []} />
-              </Box>
-            </>
-          )}
-
-          {/* Card de Descripción - Solo visible en pestaña Información Avanzada */}
-          {activeTab === 1 && deal.description && (
-            <Card
-              sx={{
-                borderRadius: 2,
-                boxShadow:
-                  theme.palette.mode === "dark"
-                    ? "0 2px 8px rgba(0,0,0,0.3)"
-                    : "0 2px 8px rgba(0,0,0,0.1)",
-                bgcolor: theme.palette.background.paper,
-                px: 2,
-                py: 2,
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              {/* Vista de Descripción */}
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      color: theme.palette.text.primary,
-                      whiteSpace: "pre-wrap",
-                    }}
-                  >
-                    {deal.description}
-                  </Typography>
-            </Card>
-          )}
-
-          {/* Card de Actividades Recientes - Solo visible en pestaña Información Avanzada cuando no hay descripción */}
-          {activeTab === 1 && !deal.description && (
+              {deal.description}
+            </Typography>
+          </Card>
+        )}
+  
+        {/* Card de Actividades Recientes - Solo visible cuando no hay descripción */}
+        {!deal?.description && (
+          <Box sx={{ mb: 2 }}>
             <FullActivitiesTableCard
               activities={activities}
               searchValue={activitySearch}
@@ -2534,159 +1701,191 @@ const DealDetail: React.FC = () => {
               onCreateActivity={handleCreateActivity}
               onActivityClick={setExpandedActivity}
               onToggleComplete={(activityId, completed) => {
-                                    setCompletedActivities((prev) => ({
-                                      ...prev,
+                setCompletedActivities((prev) => ({
+                  ...prev,
                   [activityId]: completed,
-                                    }));
-                                  }}
+                }));
+              }}
               completedActivities={completedActivities}
               getActivityTypeLabel={getActivityTypeLabel}
             />
-          )}
+          </Box>
+        )}
+  
+        {/* Cards de Contactos, Empresas, Negocios */}
+        <FullContactsTableCard
+          contacts={dealContacts || []}
+          searchValue={contactSearch}
+          onSearchChange={setContactSearch}
+          onAddExisting={() => {
+            setContactDialogTab('existing');
+            const existingContactIds = (dealContacts || []).map((c: any) => c.id);
+            setSelectedExistingContacts(existingContactIds);
+            setAddContactDialogOpen(true);
+            fetchAllContacts();
+          }}
+          onAddNew={() => {
+            setContactDialogTab('create');
+            setAddContactDialogOpen(true);
+          }}
+          onRemove={async (contactId, contactName) => {
+            if (
+              window.confirm(
+                `¿Estás seguro de que deseas eliminar el contacto "${contactName}" de este negocio?`
+              )
+            ) {
+              try {
+                await api.delete(`/deals/${id}/contacts/${contactId}`);
+                fetchDeal();
+              } catch (error: any) {
+                console.error('Error al eliminar contacto:', error);
+                alert(
+                  error.response?.data?.error ||
+                    'Error al eliminar el contacto'
+                );
+              }
+            }
+          }}
+          showActions={true}
+          getContactInitials={(firstName, lastName) =>
+            getInitials(firstName, lastName)
+          }
+          onCopyToClipboard={handleCopyToClipboard}
+        />
+  
+        <FullCompaniesTableCard
+          companies={dealCompanies || []}
+          searchValue={companySearch}
+          onSearchChange={setCompanySearch}
+          onAddExisting={() => {
+            setCompanyDialogTab('existing');
+            const existingCompanyIds = (dealCompanies || []).map(
+              (c: any) => c.id
+            );
+            setSelectedExistingCompanies(existingCompanyIds);
+            setAddCompanyDialogOpen(true);
+            fetchAllCompanies();
+          }}
+          onAddNew={() => {
+            setCompanyDialogTab('create');
+            setAddCompanyDialogOpen(true);
+          }}
+          onRemove={handleRemoveCompanyClick}
+          showActions={true}
+          onCopyToClipboard={handleCopyToClipboard}
+          sortField={companySortField}
+          sortOrder={companySortOrder}
+          onSort={handleSortCompanies}
+        />
+  
+        <FullDealsTableCard
+          deals={dealDeals || []}
+          searchValue={dealSearch}
+          onSearchChange={setDealSearch}
+          onAddExisting={() => {
+            setDealDialogTab('existing');
+            const existingDealIds = (dealDeals || []).map((d: any) => d.id);
+            setSelectedExistingDeals(existingDealIds);
+            setAddDealDialogOpen(true);
+            fetchAllDeals();
+          }}
+          onAddNew={() => {
+            setDealDialogTab('create');
+            setDealFormData({
+              name: '',
+              amount: '',
+              stage: 'lead',
+              closeDate: '',
+              priority: 'baja' as 'baja' | 'media' | 'alta',
+              companyId: deal?.Company?.id?.toString() || '',
+              contactId: deal?.Contact?.id?.toString() || '',
+              ownerId: user?.id || null,
+            });
+            if (allCompanies.length === 0) {
+              fetchAllCompanies();
+            }
+            if (allContacts.length === 0) {
+              fetchAllContacts();
+            }
+            setAddDealDialogOpen(true);
+          }}
+          onRemove={handleRemoveDealClick}
+          showActions={true}
+          getInitials={getInitials}
+          getStageLabel={getStageLabel}
+          sortField={dealSortField}
+          sortOrder={dealSortOrder}
+          onSort={handleSortDeals}
+        />
+      </>
+    );
+  
+    // Preparar contenido del Tab 2 (Actividades)
+    const tab2Content = (
+      <ActivitiesTabContent
+        activities={activities}
+        activitySearch={activitySearch}
+        onSearchChange={setActivitySearch}
+        onCreateActivity={(type) =>
+          handleCreateActivity(type as 'note' | 'task' | 'email' | 'call' | 'meeting')
+        }
+        onActivityClick={setExpandedActivity}
+        onToggleComplete={(activityId, completed) => {
+          setCompletedActivities((prev) => ({
+            ...prev,
+            [activityId]: completed,
+          }));
+        }}
+        completedActivities={completedActivities}
+        getActivityTypeLabel={getActivityTypeLabel}
+        getActivityStatusColor={getActivityStatusColor}
+        emptyMessage="No hay actividades registradas para este negocio. Crea una nueva actividad para comenzar."
+      />
+    );
+  
+    // Preparar activity logs (necesitas implementar fetchActivityLogs si no existe)
+    const activityLogs: any[] = []; // Por ahora vacío, puedes implementarlo después
+    const loadingLogs = false;
 
-          {/* Cards de Contactos, Empresas, Negocios y Tickets - Solo en pestaña Información Avanzada */}
-          {activeTab === 1 && (
-            <>
-              {/* Card de Contactos*/}
-              <FullContactsTableCard
-                contacts={dealContacts || []}
-                searchValue={contactSearch}
-                onSearchChange={setContactSearch}
-                onAddExisting={() => {
-                  setAddContactMenuAnchor(null);
-                  setContactDialogTab("existing");
-                  const existingContactIds = (dealContacts || []).map(
-                    (c: any) => c.id
-                  );
-                  setSelectedExistingContacts(existingContactIds);
-                  setAddContactDialogOpen(true);
-                  fetchAllContacts();
-                }}
-                onAddNew={() => {
-                  setAddContactMenuAnchor(null);
-                  setContactDialogTab("create");
-                  setAddContactDialogOpen(true);
-                }}
-                onRemove={async (contactId, contactName) => {
-                  if (
-                    window.confirm(
-                      `¿Estás seguro de que deseas eliminar el contacto "${contactName}" de este negocio?`
-                    )
-                  ) {
-                    try {
-                      await api.delete(`/deals/${id}/contacts/${contactId}`);
-                      fetchDeal();
-                    } catch (error: any) {
-                      console.error("Error al eliminar contacto:", error);
-                      alert(
-                        error.response?.data?.error ||
-                          "Error al eliminar el contacto"
-                      );
-                    }
-                  }
-                }}
-                showActions={true}
-                getContactInitials={(firstName, lastName) => getInitials(firstName, lastName)}
-                onCopyToClipboard={handleCopyToClipboard}
-              />
-
-              {/* Card de Empresas */}
-              <FullCompaniesTableCard
-                companies={dealCompanies || []}
-                searchValue={companySearch}
-                onSearchChange={setCompanySearch}
-                onAddExisting={() => {
-                  setAddCompanyMenuAnchor(null);
-                  setCompanyDialogTab("existing");
-                  const existingCompanyIds = (dealCompanies || []).map(
-                    (c: any) => c.id
-                  );
-                  setSelectedExistingCompanies(existingCompanyIds);
-                  setAddCompanyDialogOpen(true);
-                  fetchAllCompanies();
-                }}
-                onAddNew={() => {
-                  setAddCompanyMenuAnchor(null);
-                  setCompanyDialogTab("create");
-                  setAddCompanyDialogOpen(true);
-                }}
-                onRemove={handleRemoveCompanyClick}
-                showActions={true}
-                onCopyToClipboard={handleCopyToClipboard}
-                sortField={companySortField}
-                sortOrder={companySortOrder}
-                onSort={handleSortCompanies}
-              />
-
-              {/* Card de Negocios */}
-              <FullDealsTableCard
-                deals={dealDeals || []}
-                searchValue={dealSearch}
-                onSearchChange={setDealSearch}
-                onAddExisting={() => {
-                  setDealDialogTab("existing");
-                  const existingDealIds = (dealDeals || []).map(
-                    (d: any) => d.id
-                  );
-                  setSelectedExistingDeals(existingDealIds);
-                  setAddDealDialogOpen(true);
-                  fetchAllDeals();
-                }}
-                onAddNew={() => {
-                  setDealDialogTab("create");
-                  setDealFormData({
-                    name: "",
-                    amount: "",
-                    stage: "lead",
-                    closeDate: "",
-                    priority: "baja" as "baja" | "media" | "alta",
-                    companyId: deal?.Company?.id?.toString() || "",
-                    contactId: deal?.Contact?.id?.toString() || "",
-                    ownerId: user?.id || null,
-                  });
-                  if (allCompanies.length === 0) {
-                    fetchAllCompanies();
-                  }
-                  if (allContacts.length === 0) {
-                    fetchAllContacts();
-                  }
-                  setAddDealDialogOpen(true);
-                }}
-                onRemove={handleRemoveDealClick}
-                showActions={true}
-                getInitials={getInitials}
-                getStageLabel={getStageLabel}
-                sortField={dealSortField}
-                sortOrder={dealSortOrder}
-                onSort={handleSortDeals}
-              />
-            </>
-          )}
-
-          {/* Tab Actividades */}
-          {activeTab === 2 && (
-            <>
-              <ActivitiesTabContent
-                activities={activities}
-                activitySearch={activitySearch}
-                onSearchChange={setActivitySearch}
-                onCreateActivity={(type) => handleCreateActivity(type as "note" | "task" | "email" | "call" | "meeting")}
-                onActivityClick={setExpandedActivity}
-                onToggleComplete={(activityId, completed) => {
-                  setCompletedActivities((prev) => ({
-                    ...prev,
-                    [activityId]: completed,
-                  }));
-                }}
-                completedActivities={completedActivities}
-                getActivityTypeLabel={getActivityTypeLabel}
-                getActivityStatusColor={getActivityStatusColor}
-                emptyMessage="No hay actividades registradas para este negocio. Crea una nueva actividad para comenzar."
-              />
-            </>
-          )}
-        </Box>
-      </Box>
+    return (
+      <>
+        <DetailPageLayout
+          pageTitle="Información del negocio"
+          breadcrumbItems={[
+            { label: 'Negocios', path: '/deals' },
+            { label: deal?.name || '' },
+          ]}
+          onBack={() => navigate('/deals')}
+          avatarIcon={<FontAwesomeIcon icon={faHandshake} style={{ fontSize: 60, color: 'white' }} />}
+          avatarBgColor="#0d9394"
+          entityName={deal?.name || ''}
+          entitySubtitle={
+            deal
+              ? `${formatCurrency(deal.amount || 0)}${
+                  deal.closeDate
+                    ? ` • ${new Date(deal.closeDate).toLocaleDateString(
+                        'es-ES',
+                        {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        }
+                      )}`
+                    : ''
+                }`
+              : 'Sin información adicional'
+          }
+          activityButtons={activityButtons}
+          detailFields={detailFields}
+          activityLogs={activityLogs}
+          loadingLogs={loadingLogs}
+          tab0Content={tab0Content}
+          tab1Content={tab1Content}
+          tab2Content={tab2Content}
+          loading={loading}
+        />
+  
+        {/* MANTENER TODOS LOS MODALES Y DIALOGS DESDE AQUÍ */}
 
       {/* Dialog para agregar/crear negocios relacionados */}
       <Dialog
@@ -7053,7 +6252,7 @@ const DealDetail: React.FC = () => {
         onClose={() => setExpandedActivity(null)}
         getActivityTypeLabel={getActivityTypeLabel}
                   />
-                </Box>
+                </>
   );
 };
 

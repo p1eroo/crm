@@ -31,8 +31,9 @@ import { pageStyles } from '../theme/styles';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
-import negocioLogo from '../assets/negocio.png';
 import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from '../components/UnifiedTable';
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faHandshake } from "@fortawesome/free-solid-svg-icons";
 
 interface Deal {
   id: number;
@@ -1162,18 +1163,18 @@ const Deals: React.FC = () => {
                 <Box sx={{ py: { xs: 0.5, md: 0.75 }, px: { xs: 0.75, md: 1 }, display: 'flex', alignItems: 'center' }}>
                   <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: { xs: 1, md: 1.5 }, width: '100%' }}>
                       <Avatar
-                        src={negocioLogo}
+                        src={(deal as any).logo || undefined}
                         sx={{
                           width: { xs: 32, md: 40 },
                           height: { xs: 32, md: 40 },
-                          bgcolor: negocioLogo ? 'transparent' : taxiMonterricoColors.green,
+                          bgcolor: (deal as any).logo ? 'transparent' : '#0d9394',
                           fontSize: { xs: '0.75rem', md: '0.875rem' },
                           fontWeight: 600,
                           boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
                           flexShrink: 0,
                         }}
                       >
-                        {!negocioLogo && getInitials(deal.name, undefined)}
+                        {!(deal as any).logo && <FontAwesomeIcon icon={faHandshake} style={{ fontSize: 20, color: 'white' }} />}
                       </Avatar>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography 

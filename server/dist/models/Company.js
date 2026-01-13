@@ -29,14 +29,6 @@ Company.init({
         type: sequelize_1.DataTypes.STRING,
         allowNull: true,
     },
-    phone2: {
-        type: sequelize_1.DataTypes.STRING,
-        allowNull: true,
-    },
-    phone3: {
-        type: sequelize_1.DataTypes.STRING,
-        allowNull: true,
-    },
     email: {
         type: sequelize_1.DataTypes.STRING,
         allowNull: true,

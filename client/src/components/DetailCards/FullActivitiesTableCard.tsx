@@ -1,5 +1,5 @@
 // client/src/components/DetailCards/FullActivitiesTableCard.tsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Card,
   Typography,
@@ -12,6 +12,7 @@ import {
   Checkbox,
   Chip,
   useTheme,
+  IconButton,
 } from '@mui/material';
 import {
   Search,
@@ -19,6 +20,8 @@ import {
   KeyboardArrowDown,
   Close,
   Comment,
+  ChevronLeft,
+  ChevronRight,
 } from '@mui/icons-material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { library } from '@fortawesome/fontawesome-svg-core';
@@ -74,6 +77,10 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
   const [selectedActivityTypes, setSelectedActivityTypes] = useState<string[]>([]);
   const [selectedTimeRange, setSelectedTimeRange] = useState('Todo hasta ahora');
   const activityFilterChipRef = useRef<HTMLDivElement>(null);
+  
+  // Estado de paginación
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   const defaultGetActivityTypeLabel = (type: string) => {
     const typeMap: { [key: string]: string } = {
@@ -197,6 +204,25 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
       return activityDate >= startDate;
     });
   }
+
+  // Resetear a página 1 cuando cambian los filtros
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchValue, selectedActivityTypes, selectedTimeRange]);
+
+  // Calcular paginación
+  const totalPages = Math.ceil(filteredActivities.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedActivities = filteredActivities.slice(startIndex, endIndex);
+
+  const handlePreviousPage = () => {
+    setCurrentPage((prev) => Math.max(1, prev - 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(totalPages, prev + 1));
+  };
 
   return (
     <Card
@@ -744,139 +770,212 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
           </Typography>
         </Box>
       ) : (
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 0.5,
-          }}
-        >
-          {filteredActivities.map((activity) => {
-            const isCompleted = completedActivities[activity.id] || false;
-            return (
-              <Box
-                key={activity.id}
-                onClick={() => onActivityClick && onActivityClick(activity)}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 1.5,
-                  py: 1,
-                  px: 1.5,
-                  borderRadius: 1,
-                  cursor: onActivityClick ? 'pointer' : 'default',
-                  transition: 'all 0.15s ease',
-                  borderBottom: `1px solid ${theme.palette.divider}`,
-                  '&:hover': {
-                    bgcolor: theme.palette.action.hover,
-                  },
-                  '&:last-child': {
-                    borderBottom: 'none',
-                  },
-                }}
-              >
-                {/* Checkbox */}
-                {onToggleComplete && (
-                  <Checkbox
-                    checked={isCompleted}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      handleToggleComplete(activity.id, e.target.checked);
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    size="small"
-                    sx={{
-                      p: 0,
-                      '& .MuiSvgIcon-root': {
-                        fontSize: 20,
-                      },
-                    }}
-                  />
-                )}
-
-                {/* Icono */}
+        <>
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 0.5,
+            }}
+          >
+            {paginatedActivities.map((activity) => {
+              const isCompleted = completedActivities[activity.id] || false;
+              return (
                 <Box
+                  key={activity.id}
+                  onClick={() => onActivityClick && onActivityClick(activity)}
                   sx={{
                     display: 'flex',
                     alignItems: 'center',
-                    flexShrink: 0,
+                    gap: 1.5,
+                    py: 1,
+                    px: 1.5,
+                    borderRadius: 1,
+                    cursor: onActivityClick ? 'pointer' : 'default',
+                    transition: 'all 0.15s ease',
+                    borderBottom: `1px solid ${theme.palette.divider}`,
+                    '&:hover': {
+                      bgcolor: theme.palette.action.hover,
+                    },
+                    '&:last-child': {
+                      borderBottom: 'none',
+                    },
                   }}
                 >
-                  {getActivityIconCompact(activity.type)}
+                  {/* Checkbox */}
+                  {onToggleComplete && (
+                    <Checkbox
+                      checked={isCompleted}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        handleToggleComplete(activity.id, e.target.checked);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      size="small"
+                      sx={{
+                        p: 0,
+                        '& .MuiSvgIcon-root': {
+                          fontSize: 20,
+                        },
+                      }}
+                    />
+                  )}
+
+                  {/* Icono */}
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      flexShrink: 0,
+                    }}
+                  >
+                    {getActivityIconCompact(activity.type)}
+                  </Box>
+
+                  {/* Título */}
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      flex: 1,
+                      fontWeight: 500,
+                      fontSize: '0.875rem',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      textDecoration: isCompleted ? 'line-through' : 'none',
+                      opacity: isCompleted ? 0.6 : 1,
+                      color: theme.palette.text.primary,
+                    }}
+                  >
+                    {activity.subject || activity.title || 'Sin título'}
+                  </Typography>
+
+                  {/* Usuario */}
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: theme.palette.text.secondary,
+                      fontSize: '0.813rem',
+                      whiteSpace: 'nowrap',
+                      minWidth: 100,
+                      textAlign: 'center',
+                    }}
+                  >
+                    {activity.User
+                      ? `${activity.User.firstName} ${activity.User.lastName}`
+                      : '-'}
+                  </Typography>
+
+                  {/* Fecha */}
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: theme.palette.text.secondary,
+                      fontSize: '0.813rem',
+                      whiteSpace: 'nowrap',
+                      minWidth: 85,
+                      textAlign: 'center',
+                    }}
+                  >
+                    {activity.createdAt
+                      ? new Date(activity.createdAt).toLocaleDateString('es-ES', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                      : '-'}
+                  </Typography>
+
+                  {/* Tipo como chip */}
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: getTypeColor(activity.type),
+                      fontWeight: 600,
+                      fontSize: '0.75rem',
+                      textTransform: 'uppercase',
+                      minWidth: 60,
+                      textAlign: 'right',
+                    }}
+                  >
+                    {getActivityTypeLabelFn(activity.type || '')}
+                  </Typography>
                 </Box>
+              );
+            })}
+          </Box>
 
-                {/* Título */}
-                <Typography
-                  variant="body2"
-                  sx={{
-                    flex: 1,
-                    fontWeight: 500,
-                    fontSize: '0.875rem',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    textDecoration: isCompleted ? 'line-through' : 'none',
-                    opacity: isCompleted ? 0.6 : 1,
-                    color: theme.palette.text.primary,
-                  }}
-                >
-                  {activity.subject || activity.title || 'Sin título'}
-                </Typography>
+          {/* Paginación - Solo se muestra si hay más de 5 actividades */}
+          {filteredActivities.length > itemsPerPage && (
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 1,
+                mt: 2,
+              }}
+            >
+              <IconButton
+                onClick={handlePreviousPage}
+                disabled={currentPage === 1}
+                size="small"
+                sx={{
+                  color:
+                    currentPage === 1
+                      ? theme.palette.text.disabled
+                      : taxiMonterricoColors.green,
+                  '&:hover': {
+                    backgroundColor:
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(46, 125, 50, 0.1)'
+                        : 'rgba(46, 125, 50, 0.05)',
+                  },
+                  '&.Mui-disabled': {
+                    color: theme.palette.text.disabled,
+                  },
+                }}
+              >
+                <ChevronLeft />
+              </IconButton>
 
-                {/* Usuario */}
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: theme.palette.text.secondary,
-                    fontSize: '0.813rem',
-                    whiteSpace: 'nowrap',
-                    minWidth: 100,
-                    textAlign: 'center',
-                  }}
-                >
-                  {activity.User
-                    ? `${activity.User.firstName} ${activity.User.lastName}`
-                    : '-'}
-                </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: theme.palette.text.primary,
+                  minWidth: '60px',
+                  textAlign: 'center',
+                  fontSize: '0.875rem',
+                }}
+              >
+                {currentPage} / {totalPages}
+              </Typography>
 
-                {/* Fecha */}
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: theme.palette.text.secondary,
-                    fontSize: '0.813rem',
-                    whiteSpace: 'nowrap',
-                    minWidth: 85,
-                    textAlign: 'center',
-                  }}
-                >
-                  {activity.createdAt
-                    ? new Date(activity.createdAt).toLocaleDateString('es-ES', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric',
-                      })
-                    : '-'}
-                </Typography>
-
-                {/* Tipo como chip */}
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: getTypeColor(activity.type),
-                    fontWeight: 600,
-                    fontSize: '0.75rem',
-                    textTransform: 'uppercase',
-                    minWidth: 60,
-                    textAlign: 'right',
-                  }}
-                >
-                  {getActivityTypeLabelFn(activity.type || '')}
-                </Typography>
-              </Box>
-            );
-          })}
-        </Box>
+              <IconButton
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages}
+                size="small"
+                sx={{
+                  color:
+                    currentPage === totalPages
+                      ? theme.palette.text.disabled
+                      : taxiMonterricoColors.green,
+                  '&:hover': {
+                    backgroundColor:
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(46, 125, 50, 0.1)'
+                        : 'rgba(46, 125, 50, 0.05)',
+                  },
+                  '&.Mui-disabled': {
+                    color: theme.palette.text.disabled,
+                  },
+                }}
+              >
+                <ChevronRight />
+              </IconButton>
+            </Box>
+          )}
+        </>
       )}
     </Card>
   );

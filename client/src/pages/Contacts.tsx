@@ -68,8 +68,9 @@ import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import * as XLSX from "xlsx";
 import { FormDrawer } from "../components/FormDrawer";
-import contactLogo from "../assets/contact.png";
 import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from "../components/UnifiedTable";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faUserTie } from "@fortawesome/free-solid-svg-icons";
 
 interface Contact {
   id: number;
@@ -1169,10 +1170,6 @@ const Contacts: React.FC = () => {
     return labels[stage] || stage;
   };
 
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName?.[0] || ""}${lastName?.[0] || ""}`.toUpperCase();
-  };
-
   const stageOptions = [
     { value: 'lead_inactivo', label: 'Lead Inactivo' },
     { value: 'cliente_perdido', label: 'Cliente perdido' },
@@ -1815,21 +1812,20 @@ const Contacts: React.FC = () => {
                     }}
                   >
                     <Avatar
-                      src={contactLogo}
+                      src={contact?.avatar || undefined}
                       sx={{
                         width: 48,
                         height: 48,
-                        bgcolor: contactLogo
-                          ? "transparent"
-                          : taxiMonterricoColors.green,
+                        bgcolor: contact?.avatar ? "transparent" : "#0d9394",
                         fontSize: "1rem",
                         fontWeight: 600,
                         boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
                         flexShrink: 0,
                       }}
                     >
-                      {!contactLogo &&
-                        getInitials(contact.firstName, contact.lastName)}
+                      {!contact?.avatar && (
+                        <FontAwesomeIcon icon={faUserTie} style={{ fontSize: 24, color: 'white' }} />
+                      )}
                     </Avatar>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography
@@ -2044,21 +2040,20 @@ const Contacts: React.FC = () => {
                     }}
                   >
                     <Avatar
-                      src={contactLogo}
+                      src={contact?.avatar || undefined}
                       sx={{
                         width: { sm: 32, md: 40 },
                         height: { sm: 32, md: 40 },
-                        bgcolor: contactLogo
-                          ? "transparent"
-                          : taxiMonterricoColors.green,
+                        bgcolor: contact?.avatar ? "transparent" : "#0d9394",
                         fontSize: { sm: "0.75rem", md: "0.875rem" },
                         fontWeight: 600,
                         boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
                         flexShrink: 0,
                       }}
                     >
-                      {!contactLogo &&
-                        getInitials(contact.firstName, contact.lastName)}
+                      {!contact?.avatar && (
+                        <FontAwesomeIcon icon={faUserTie} style={{ fontSize: 20, color: 'white' }} />
+                      )}
                     </Avatar>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       <Typography
@@ -3403,10 +3398,7 @@ const Contacts: React.FC = () => {
                       sx={{
                         width: 120,
                         height: 120,
-                        bgcolor:
-                          previewContact.avatar || contactLogo
-                            ? "transparent"
-                            : taxiMonterricoColors.green,
+                        bgcolor: previewContact.avatar ? "transparent" : "#0d9394",
                         fontSize: "3rem",
                         transition: "all 0.3s ease",
                         cursor: "pointer",
@@ -3415,14 +3407,11 @@ const Contacts: React.FC = () => {
                           boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
                         },
                       }}
-                      src={previewContact.avatar || contactLogo}
+                      src={previewContact.avatar || undefined}
                     >
-                      {!previewContact.avatar &&
-                        !contactLogo &&
-                        getInitials(
-                          previewContact.firstName,
-                          previewContact.lastName
-                        )}
+                      {!previewContact.avatar && (
+                        <FontAwesomeIcon icon={faUserTie} style={{ fontSize: 60, color: 'white' }} />
+                      )}
                     </Avatar>
                     <CheckCircle
                       sx={{

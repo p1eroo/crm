@@ -4,7 +4,6 @@ import {
   Box,
   Typography,
   Paper,
-  Avatar,
   Button,
   Chip,
   Divider,
@@ -26,11 +25,8 @@ import {
   InputAdornment,
   RadioGroup,
   Radio,
-  Tooltip,
-  Card,
   useTheme,
   Drawer,
-  useMediaQuery,
   Popover,
   FormControl,
   List,
@@ -41,7 +37,6 @@ import {
 } from "@mui/material";
 import {
   MoreVert,
-  Note,
   Email,
   Phone,
   Event,
@@ -49,10 +44,8 @@ import {
   Close,
   KeyboardArrowLeft,
   Search,
-  KeyboardArrowRight,
   CalendarToday,
   Person,
-  TaskAlt,
   FormatBold,
   FormatItalic,
   FormatUnderlined,
@@ -70,12 +63,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Business,
-  History,
-  Dashboard,
-  Info,
-  Timeline,
 } from "@mui/icons-material";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendar, faClock } from "@fortawesome/free-regular-svg-icons";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { far } from "@fortawesome/free-regular-svg-icons";
@@ -95,7 +83,10 @@ import {
   FullActivitiesTableCard,
   ActivityDetailDialog,
   ActivitiesTabContent,
+  GeneralDescriptionTab,
 } from "../components/DetailCards";
+import type { GeneralInfoCard } from "../components/DetailCards";
+import DetailPageLayout from "../components/Layout/DetailPageLayout";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import { Building2 } from "lucide-react";
@@ -155,8 +146,6 @@ const CompanyDetail: React.FC = () => {
   const theme = useTheme();
   const [company, setCompany] = useState<CompanyDetailData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tabValue, setTabValue] = useState(0);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [associatedDeals, setAssociatedDeals] = useState<any[]>([]);
   const [associatedContacts, setAssociatedContacts] = useState<any[]>([]);
   const [associatedTickets, setAssociatedTickets] = useState<any[]>([]);
@@ -787,10 +776,6 @@ const CompanyDetail: React.FC = () => {
     return labels[stage] || stage;
   };
 
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
   const handleOpenEditDialog = () => {
     if (company) {
       setEditFormData({
@@ -815,7 +800,6 @@ const CompanyDetail: React.FC = () => {
       setEditDialogOpen(true);
       setErrorMessage("");
     }
-    setAnchorEl(null);
   };
 
   const handleCloseEditDialog = () => {
@@ -2175,1408 +2159,403 @@ const CompanyDetail: React.FC = () => {
     );
   }
 
-  return (
-    <Box
-      sx={{
-      bgcolor: theme.palette.background.default,
-        minHeight: "100vh",
-      mt: { xs: 2, sm: 3, md: 0 },
-      pb: { xs: 2, sm: 3, md: 4 },
-        display: "flex",
-        flexDirection: "column",
+  // Preparar campos de detalles
+const detailFields = [
+  {
+    label: 'RUC',
+    value: company?.ruc || '--',
+    show: !!company?.ruc,
+  },
+  {
+    label: 'Email',
+    value: company?.email || '--',
+    show: !!company?.email,
+  },
+  {
+    label: 'Teléfono',
+    value: company?.phone || '--',
+    show: !!company?.phone,
+  },
+  {
+    label: 'Dirección',
+    value: company?.address || company?.city || '--',
+    show: !!(company?.address || company?.city),
+  },
+  {
+    label: 'País',
+    value: company?.country || '--',
+    show: !!company?.country,
+  },
+  {
+    label: 'Etapa',
+    value: (
+      <Chip
+        label={getStageLabel(company?.lifecycleStage || '')}
+        size="small"
+        sx={{
+          height: 24,
+          fontSize: '0.75rem',
+          bgcolor:
+            theme.palette.mode === 'dark'
+              ? 'rgba(46, 125, 50, 0.2)'
+              : 'rgba(46, 125, 50, 0.1)',
+          color: taxiMonterricoColors.green,
+          fontWeight: 500,
+        }}
+      />
+    ),
+    show: !!company?.lifecycleStage,
+  },
+  {
+    label: 'Propietario',
+    value: company?.Owner
+      ? `${company.Owner.firstName || ''} ${company.Owner.lastName || ''}`.trim() || company.Owner.email || 'Sin nombre'
+      : '--',
+    show: !!company?.Owner,
+  },
+];
+
+// Preparar botones de actividades
+const activityButtons = [
+  {
+    icon: ['fas', 'note-sticky'],
+    tooltip: 'Crear nota',
+    onClick: () => handleCreateActivity('note'),
+  },
+  {
+    icon: ['fas', 'phone'],
+    tooltip: 'Hacer llamada',
+    onClick: () => handleCreateActivity('call'),
+  },
+  {
+    icon: ['fas', 'thumbtack'],
+    tooltip: 'Crear tarea',
+    onClick: () => handleCreateActivity('task'),
+  },
+  {
+    icon: ['fas', 'calendar-week'],
+    tooltip: 'Programar reunión',
+    onClick: () => handleCreateActivity('meeting'),
+  },
+];
+
+// Preparar cards de información general
+const generalInfoCards: GeneralInfoCard[] = [
+  {
+    label: 'Fecha de creación',
+    value: company?.createdAt
+      ? `${new Date(company.createdAt).toLocaleDateString("es-ES", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        })} ${new Date(company.createdAt).toLocaleTimeString("es-ES", {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}`
+      : "No disponible",
+    icon: faCalendar,
+    iconBgColor: "#0d939429",
+    iconColor: "#0d9394",
+  },
+  {
+    label: 'Etapa del ciclo de vida',
+    value: company?.lifecycleStage
+      ? getStageLabel(company.lifecycleStage)
+      : "No disponible",
+    icon: ['fas', 'arrows-rotate'],
+    iconBgColor: "#e4f6d6",
+    iconColor: "#56ca00",
+    showArrow: true,
+  },
+  {
+    label: 'Última actividad',
+    value: activities.length > 0 && activities[0].createdAt
+      ? new Date(activities[0].createdAt).toLocaleDateString("es-ES", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        })
+      : "No hay actividades",
+    icon: faClock,
+    iconBgColor: "#fff3d6",
+    iconColor: "#ffb400",
+  },
+  {
+    label: 'Propietario del registro',
+    value: company?.Owner
+      ? company.Owner.firstName || company.Owner.lastName
+        ? `${company.Owner.firstName || ""} ${
+            company.Owner.lastName || ""
+          }`.trim()
+        : company.Owner.email || "Sin nombre"
+      : "No asignado",
+    icon: ['far', 'user'],
+    iconBgColor: "#daf2ff",
+    iconColor: "#16b1ff",
+  },
+];
+
+// Preparar contenido del Tab 0 (Descripción General)
+const tab0Content = (
+  <GeneralDescriptionTab
+    generalInfoCards={generalInfoCards}
+    linkedCards={[
+      { component: <RecentActivitiesCard activities={activities} /> },
+      { component: <LinkedContactsCard contacts={associatedContacts || []} /> },
+      { component: <LinkedDealsCard deals={associatedDeals || []} /> },
+      { component: <LinkedTicketsCard tickets={associatedTickets || []} /> },
+    ]}
+    linkedCardsGridColumns={{ xs: '1fr' }}
+  />
+);
+
+// Preparar contenido del Tab 1 (Información Avanzada)
+const tab1Content = (
+  <Box>
+    <FullActivitiesTableCard
+      activities={activities}
+      searchValue={activitySearch}
+      onSearchChange={setActivitySearch}
+      onCreateActivity={(type) => handleCreateActivity(type as string)}
+      onActivityClick={setExpandedActivity}
+      onToggleComplete={async (activityId, completed) => {
+        try {
+          setCompletedActivities((prev) => ({
+            ...prev,
+            [activityId]: completed,
+          }));
+          await api.put(`/activities/${activityId}`, {
+            completed: completed,
+          });
+          if (completed) {
+            const activity = activities.find((a: any) => a.id === activityId);
+            const activityName = activity?.subject || activity?.title || 'la actividad';
+            setSuccessMessage(`Se completó ${activityName}`);
+            setTimeout(() => setSuccessMessage(""), 3000);
+            const notificationEvent = new CustomEvent('activityCompleted', {
+              detail: {
+                type: 'activity',
+                title: `Se completó ${activityName}`,
+                activityId: activityId,
+                activityName: activityName,
+                timestamp: new Date().toISOString(),
+              },
+            });
+            window.dispatchEvent(notificationEvent);
+          }
+        } catch (error) {
+          console.error('Error al actualizar el estado de la actividad:', error);
+          setCompletedActivities((prev) => ({
+            ...prev,
+            [activityId]: !completed,
+          }));
+        }
       }}
-    >
-      {/* Título de la página */}
+      completedActivities={completedActivities}
+      getActivityTypeLabel={getActivityTypeLabel}
+    />
+
+    <FullContactsTableCard
+      contacts={associatedContacts || []}
+      searchValue={contactSearch}
+      onSearchChange={setContactSearch}
+      onAddExisting={() => {
+        handleOpenAddContactDialog();
+      }}
+      onAddNew={() => {
+        handleOpenAddContactDialog();
+      }}
+      showActions={true}
+      onRemove={(contactId, contactName) =>
+        handleRemoveContactClick(contactId, contactName || "")
+      }
+      getContactInitials={getContactInitials}
+      onCopyToClipboard={handleCopyToClipboard}
+      sortField={contactSortField}
+      sortOrder={contactSortOrder}
+      onSort={handleSortContacts}
+    />
+
+    <FullDealsTableCard
+      deals={associatedDeals || []}
+      searchValue={dealSearch}
+      onSearchChange={setDealSearch}
+      onAddExisting={() => {
+        setDealFormData({
+          name: "",
+          amount: "",
+          stage: "lead",
+          closeDate: "",
+          priority: "baja" as "baja" | "media" | "alta",
+          companyId: company?.id?.toString() || "",
+          contactId: "",
+        });
+        if (allCompanies.length === 0) {
+          fetchAllCompanies();
+        }
+        if (allContacts.length === 0) {
+          fetchAllContacts();
+        }
+        setAddDealOpen(true);
+      }}
+      onAddNew={() => {
+        setDealFormData({
+          name: "",
+          amount: "",
+          stage: "lead",
+          closeDate: "",
+          priority: "baja" as "baja" | "media" | "alta",
+          companyId: company?.id?.toString() || "",
+          contactId: "",
+        });
+        if (allCompanies.length === 0) {
+          fetchAllCompanies();
+        }
+        if (allContacts.length === 0) {
+          fetchAllContacts();
+        }
+        setAddDealOpen(true);
+      }}
+      showActions={true}
+      onRemove={(dealId, dealName) =>
+        handleRemoveDealClick(dealId, dealName || "")
+      }
+      getInitials={(name: string) => {
+        return name
+          ? name.split(" ").length >= 2
+            ? `${name.split(" ")[0][0]}${name.split(" ")[1][0]}`.toUpperCase()
+            : name.substring(0, 2).toUpperCase()
+          : "--";
+      }}
+      getStageLabel={getStageLabel}
+      sortField={dealSortField}
+      sortOrder={dealSortOrder}
+      onSort={handleSortDeals}
+    />
+
+    <FullTicketsTableCard
+      tickets={associatedTickets || []}
+      searchValue={ticketSearch}
+      onSearchChange={setTicketSearch}
+      onAdd={() => setAddTicketOpen(true)}
+      showActions={true}
+      onRemove={(ticketId: number, ticketName?: string) =>
+        handleRemoveTicketClick(ticketId, ticketName || "")
+      }
+    />
+  </Box>
+);
+
+// Preparar contenido del Tab 2 (Actividades)
+const tab2Content = (
+  <ActivitiesTabContent
+    activities={activities}
+    activitySearch={activitySearch}
+    onSearchChange={setActivitySearch}
+    onCreateActivity={(type) => handleCreateActivity(type as string)}
+    onActivityClick={setExpandedActivity}
+    onToggleComplete={async (activityId, completed) => {
+      try {
+        setCompletedActivities((prev) => ({
+          ...prev,
+          [activityId]: completed,
+        }));
+        await api.put(`/activities/${activityId}`, {
+          completed: completed,
+        });
+        if (completed) {
+          const activity = activities.find((a: any) => a.id === activityId);
+          const activityName = activity?.subject || activity?.title || 'la actividad';
+          setSuccessMessage(`Se completó ${activityName}`);
+          setTimeout(() => setSuccessMessage(""), 3000);
+          const notificationEvent = new CustomEvent('activityCompleted', {
+            detail: {
+              type: 'activity',
+              title: `Se completó ${activityName}`,
+              activityId: activityId,
+              activityName: activityName,
+              timestamp: new Date().toISOString(),
+            },
+          });
+          window.dispatchEvent(notificationEvent);
+        }
+      } catch (error) {
+        console.error('Error al actualizar el estado de la actividad:', error);
+        setCompletedActivities((prev) => ({
+          ...prev,
+          [activityId]: !completed,
+        }));
+      }
+    }}
+    completedActivities={completedActivities}
+    getActivityTypeLabel={getActivityTypeLabel}
+    getActivityStatusColor={getActivityStatusColor}
+    emptyMessage="No hay actividades registradas para esta empresa. Crea una nueva actividad para comenzar."
+  />
+);
+
+  return (  
+  <>
+    <DetailPageLayout
+      pageTitle="Información de la empresa"
+      breadcrumbItems={[
+        { label: 'Empresas', path: '/companies' },
+        { label: company?.name || '' },
+      ]}
+      onBack={() => navigate('/companies')}
+      avatarIcon={<Building2 size={60} color="white" />}
+      avatarBgColor="#0d9394"
+      entityName={company?.name || ''}
+      entitySubtitle={company?.domain || 'Sin información adicional'}
+      activityButtons={activityButtons}
+      detailFields={detailFields}
+      onEditDetails={handleOpenEditDialog}
+      activityLogs={activityLogs}
+      loadingLogs={loadingLogs}
+      tab0Content={tab0Content}
+      tab1Content={tab1Content}
+      tab2Content={tab2Content}
+      loading={loading}
+    />
+
+    {/* Botón flotante para abrir el Drawer de Registros Asociados */}
+    {!summaryExpanded && (
       <Box
         sx={{
-        pt: { xs: 2, sm: 1 }, 
-        pb: 2, 
-        px: { xs: 2, sm: 3, md: 4 },
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-        gap: 1.5,
+          position: "fixed",
+          right: 0,
+          top: "50%",
+          transform: "translateY(-50%)",
+          zIndex: 1000,
+          display: { xs: "none", lg: "flex" },
         }}
       >
-        {/* Lado izquierdo: Botón de regresar y título */}
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <IconButton
-            onClick={() => navigate("/companies")}
-            sx={{
-              color: theme.palette.text.secondary,
-              "&:hover": {
-                bgcolor: theme.palette.action.hover,
-                color: theme.palette.text.primary,
-              },
-            }}
-          >
-            <ChevronLeft />
-          </IconButton>
-          <Typography
-            variant="h4"
-            sx={{
-              fontWeight: 500,
-              color: theme.palette.text.primary,
-              fontSize: { xs: "1.125rem", sm: "1.25rem", md: "1.5rem" },
-            }}
-          >
-            Información de la empresa
-          </Typography>
-        </Box>
-
-        {/* Lado derecho: Breadcrumb */}
-        <Box
+        <IconButton
+          onClick={() => setSummaryExpanded(true)}
           sx={{
-            display: "flex",
-            alignItems: "center",
-          gap: 0.5,
-          color: theme.palette.text.secondary,
+            backgroundColor:
+              theme.palette.mode === "dark"
+                ? "rgba(46, 125, 50, 0.8)"
+                : "rgba(46, 125, 50, 0.1)",
+            color: "#2E7D32",
+            borderRadius: "8px 0 0 8px",
+            width: 40,
+            height: 80,
+            transition: "all 0.2s ease",
+            "&:hover": {
+              backgroundColor:
+                theme.palette.mode === "dark"
+                  ? "rgba(46, 125, 50, 0.9)"
+                  : "rgba(46, 125, 50, 0.15)",
+            },
           }}
         >
-          <Typography
-            component="span"
-            onClick={() => navigate("/companies")}
-            sx={{
-              fontSize: { xs: "0.75rem", sm: "0.875rem" },
-              cursor: "pointer",
-              color: theme.palette.text.secondary,
-              "&:hover": {
-                color: theme.palette.text.primary,
-                textDecoration: "underline",
-              },
-            }}
-          >
-            Empresas
-          </Typography>
-          <KeyboardArrowRight
-            sx={{
-              fontSize: { xs: 16, sm: 18 },
-              color: theme.palette.text.disabled,
-            }}
-          />
-          <Typography
-            component="span"
-            sx={{
-              fontSize: { xs: "0.75rem", sm: "0.875rem" },
-              color: theme.palette.text.primary,
-              fontWeight: 500,
-            }}
-          >
-            {company?.name}
-          </Typography>
-        </Box>
+          <KeyboardArrowLeft sx={{ fontSize: 24 }} />
+        </IconButton>
       </Box>
+    )}
 
-      {/* Contenido principal */}
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: { xs: "column", md: "row" },
-        flex: 1,
-          overflow: { xs: "visible", md: "visible" },
-          minHeight: { xs: "auto", md: 0 },
-        gap: 2,
-        px: { xs: 2, sm: 3, md: 4 },
-        }}
-      >
-            <Menu 
-              anchorEl={anchorEl} 
-              open={Boolean(anchorEl)} 
-              onClose={handleMenuClose}
-              TransitionProps={{
-                timeout: 200,
-              }}
-              PaperProps={{
-                sx: {
-                  mt: 1,
-                  borderRadius: 2,
-              boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-              animation: "slideDown 0.2s ease",
-              "@keyframes slideDown": {
-                "0%": {
-                      opacity: 0,
-                  transform: "translateY(-10px)",
-                    },
-                "100%": {
-                      opacity: 1,
-                  transform: "translateY(0)",
-                    },
-                  },
-                },
-              }}
-            >
-              <MenuItem 
-                onClick={handleOpenEditDialog}
-                sx={{
-              transition: "all 0.15s ease",
-              "&:hover": {
-                backgroundColor: "rgba(46, 125, 50, 0.08)",
-                transform: "translateX(4px)",
-                  },
-                }}
-              >
-                Editar
-              </MenuItem>
-              <MenuItem 
-                onClick={handleMenuClose}
-                sx={{
-              transition: "all 0.15s ease",
-              "&:hover": {
-                backgroundColor: "rgba(46, 125, 50, 0.08)",
-                transform: "translateX(4px)",
-                  },
-                }}
-              >
-                Eliminar
-              </MenuItem>
-              <MenuItem 
-                onClick={handleMenuClose}
-                sx={{
-              transition: "all 0.15s ease",
-              "&:hover": {
-                backgroundColor: "rgba(46, 125, 50, 0.08)",
-                transform: "translateX(4px)",
-                  },
-                }}
-              >
-                Duplicar
-              </MenuItem>
-            </Menu>
-
-        {/* Columna Principal - Layout de dos columnas */}
-        <Box
-          sx={{
-                flex: 1,
-            display: "flex",
-            flexDirection: { xs: "column", md: "row" },
-            gap: 3,
-            alignItems: "flex-start",
-          }}
-        >
-          {/* Columna Izquierda: Información de la empresa */}
-          <Box
-            sx={{
-              width: { xs: "100%", md: 400 },
-              flexShrink: 0,
-            }}
-          >
-            {/* CompanyHeader */}
-            <Paper
-              elevation={0}
-              sx={{
-                borderRadius: 3,
-                px: 2.5,
-                pt: 6,
-                pb: 2.5,
-                mb: 2,
-                  bgcolor: theme.palette.background.paper,
-              border: "none",
-              boxShadow: theme.palette.mode === "dark"
-                ? "0 2px 8px rgba(0,0,0,0.3)"
-                : "0 2px 8px rgba(0,0,0,0.1)",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 2,
-              }}
-            >
-            {/* Avatar centrado con icono Building2 */}
-            <Avatar
-              sx={{
-                width: 120,
-                height: 120,
-                bgcolor: "#0d9394",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                borderRadius: 3,
-              }}
-            >
-              <Building2 size={60} color="white" />
-            </Avatar>
-
-            {/* Nombre centrado */}
-            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.5 }}>
-              <Typography
-                variant="h6"
-                sx={{ fontWeight: 600, fontSize: "1.25rem", textAlign: "center" }}
-              >
-                {company.name}
-              </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ fontSize: "0.875rem", textAlign: "center" }}
-              >
-                {company.domain || "Sin información adicional"}
-              </Typography>
-            </Box>
-
-            {/* Botones de crear actividades */}
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "center",
-                gap: 2,
-                mt: 1,
-                mb: -1,
-              }}
-            >
-              <Tooltip title="Crear nota">
-                <IconButton
-                  onClick={() => handleCreateActivity("note")}
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    bgcolor: "rgb(76, 175, 80)",
-                    color: "white",
-                    "&:hover": {
-                      bgcolor: "rgb(69, 160, 73)",
-                    },
-                  }}
-                >
-                  <FontAwesomeIcon icon={['fas', 'note-sticky']} style={{ fontSize: 20 }} />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Hacer llamada">
-                <IconButton
-                  onClick={() => handleCreateActivity("call")}
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    bgcolor: "rgb(76, 175, 80)",
-                    color: "white",
-                    "&:hover": {
-                      bgcolor: "rgb(69, 160, 73)",
-                    },
-                  }}
-                >
-                  <FontAwesomeIcon icon={['fas', 'phone']} style={{ fontSize: 20 }} />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Crear tarea">
-                <IconButton
-                  onClick={() => handleCreateActivity("task")}
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    bgcolor: "rgb(76, 175, 80)",
-                    color: "white",
-                    "&:hover": {
-                      bgcolor: "rgb(69, 160, 73)",
-                    },
-                  }}
-                >
-                  <FontAwesomeIcon icon={['fas', 'thumbtack']} style={{ fontSize: 20 }} />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Programar reunión">
-                <IconButton
-                  onClick={() => handleCreateActivity("meeting")}
-                  sx={{
-                    width: 48,
-                    height: 48,
-                    bgcolor: "rgb(76, 175, 80)",
-                    color: "white",
-                    "&:hover": {
-                      bgcolor: "rgb(69, 160, 73)",
-                    },
-                  }}
-                >
-                  <FontAwesomeIcon icon={['fas', 'calendar-week']} style={{ fontSize: 20 }} />
-                </IconButton>
-              </Tooltip>
-            </Box>
-            
-            {/* Sección Detalles */}
-            <Box
-              sx={{
-                width: "100%",
-                display: "flex",
-                flexDirection: "column",
-                gap: 1.5,
-                mt: 1,
-              }}
-            >
-              {/* Título Detalles */}
-              <Typography
-                variant="subtitle1"
-                sx={{
-                  fontWeight: 600,
-                  fontSize: "1rem",
-                  color: theme.palette.text.primary,
-                }}
-              >
-                Detalles
-              </Typography>
-
-              {/* Línea separadora */}
-              <Divider
-                sx={{
-                  width: "100%",
-                  borderColor:
-                    theme.palette.mode === "dark"
-                      ? "rgba(255, 255, 255, 0.08)"
-                      : "rgba(0, 0, 0, 0.08)",
-                }}
-              />
-
-              {/* Lista de detalles */}
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 1.5,
-                  width: "100%",
-                }}
-              >
-                {/* RUC */}
-                {company.ruc && (
-                  <Box>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontSize: "0.875rem",
-                        color: theme.palette.text.secondary,
-                        mb: 0.25,
-                      }}
-                    >
-                      RUC:
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontSize: "0.875rem",
-                        color: theme.palette.text.primary,
-                      }}
-                    >
-                      {company.ruc}
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* Email */}
-                {company.email && (
-                  <Box>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontSize: "0.875rem",
-                        color: theme.palette.text.secondary,
-                        mb: 0.25,
-                      }}
-                    >
-                      Email:
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontSize: "0.875rem",
-                        color: theme.palette.text.primary,
-                      }}
-                    >
-                      {company.email}
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* Teléfono */}
-                {company.phone && (
-                  <Box>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontSize: "0.875rem",
-                        color: theme.palette.text.secondary,
-                        mb: 0.25,
-                      }}
-                    >
-                      Teléfono:
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontSize: "0.875rem",
-                        color: theme.palette.text.primary,
-                      }}
-                    >
-                      {company.phone}
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* Dirección */}
-                {(company.address || company.city) && (
-                  <Box>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontSize: "0.875rem",
-                        color: theme.palette.text.secondary,
-                        mb: 0.25,
-                      }}
-                    >
-                      Dirección:
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontSize: "0.875rem",
-                        color: theme.palette.text.primary,
-                      }}
-                    >
-                      {company.address || company.city || "--"}
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* País */}
-                {company.country && (
-                  <Box>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontSize: "0.875rem",
-                        color: theme.palette.text.secondary,
-                        mb: 0.25,
-                      }}
-                    >
-                      País:
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontSize: "0.875rem",
-                        color: theme.palette.text.primary,
-                      }}
-                    >
-                      {company.country}
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* Etapa del ciclo de vida */}
-                {company.lifecycleStage && (
-                  <Box>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontSize: "0.875rem",
-                        color: theme.palette.text.secondary,
-                        mb: 0.25,
-                      }}
-                    >
-                      Etapa:
-                    </Typography>
-                    <Chip
-                      label={getStageLabel(company.lifecycleStage)}
-                      size="small"
-                      sx={{
-                        height: 24,
-                        fontSize: "0.75rem",
-                        bgcolor:
-                          theme.palette.mode === "dark"
-                            ? "rgba(46, 125, 50, 0.2)"
-                            : "rgba(46, 125, 50, 0.1)",
-                        color: taxiMonterricoColors.green,
-                        fontWeight: 500,
-                      }}
-                    />
-                  </Box>
-                )}
-
-                {/* Propietario */}
-                {company.Owner && (
-                  <Box>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontSize: "0.875rem",
-                        color: theme.palette.text.secondary,
-                        mb: 0.25,
-                      }}
-                    >
-                      Propietario:
-                    </Typography>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontSize: "0.875rem",
-                        color: theme.palette.text.primary,
-                      }}
-                    >
-                      {company.Owner.firstName || company.Owner.lastName
-                        ? `${company.Owner.firstName || ""} ${
-                            company.Owner.lastName || ""
-                          }`.trim()
-                        : company.Owner.email || "Sin nombre"}
-                    </Typography>
-                  </Box>
-                )}
-              </Box>
-
-              {/* Botón Editar */}
-              <Button
-                onClick={handleOpenEditDialog}
-                variant="contained"
-                fullWidth
-                sx={{
-                  mt: 2,
-                  py: 1,
-                  borderRadius: 2,
-                  textTransform: "none",
-                  fontSize: "0.9375rem",
-                  fontWeight: 600,
-                  background: "#4caf50",
-                  color: "white",
-                  
-                }}
-              >
-                Editar Detalles
-              </Button>
-            </Box>
-          </Paper>
-
-          {/* Card Independiente: Historial */}
-          <Paper
-            elevation={0}
-  
-            sx={{
-              borderRadius: 3,
-              px: 2.5,
-              pt: 3,
-              pb: 2.5,
-              mt: 3,
-              bgcolor: theme.palette.background.paper,
-              border: "none",
-              boxShadow: theme.palette.mode === "dark"
-                ? "0 2px 8px rgba(0,0,0,0.3)"
-                : "0 2px 8px rgba(0,0,0,0.1)",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
-              <Box
-                sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: 1.5,
-                  bgcolor:
-                    theme.palette.mode === "dark"
-                      ? "rgba(33, 150, 243, 0.2)"
-                      : "rgba(33, 150, 243, 0.1)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                }}
-              >
-                <History sx={{ fontSize: 20, color: "#2196F3" }} />
-              </Box>
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography
-                  variant="subtitle2"
-                  sx={{ fontWeight: 700, mb: 0.5, fontSize: "0.875rem" }}
-                >
-                  Registro de Cambios
-                </Typography>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ fontSize: "0.8125rem", lineHeight: 1.5 }}
-                >
-                  Historial de actividades y modificaciones recientes
-                </Typography>
-              </Box>
-            </Box>
-            
-            {/* Lista de logs */}
-            <Box
-              sx={{
-                overflowY: "auto",
-                maxHeight: 280,
-                mt: 1,
-                "&::-webkit-scrollbar": {
-                  width: 6,
-                },
-                "&::-webkit-scrollbar-track": {
-                  backgroundColor: "transparent",
-                },
-                "&::-webkit-scrollbar-thumb": {
-                  backgroundColor:
-                    theme.palette.mode === "dark"
-                      ? "rgba(255,255,255,0.2)"
-                      : "rgba(0,0,0,0.2)",
-                  borderRadius: 3,
-                },
-              }}
-            >
-              {loadingLogs ? (
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "center",
-                    py: 2,
-                  }}
-                >
-                  <CircularProgress size={20} />
-                </Box>
-              ) : activityLogs.length === 0 ? (
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{
-                    fontSize: "0.75rem",
-                    textAlign: "center",
-                    py: 2,
-                    fontStyle: "italic",
-                  }}
-                >
-                  No hay registros disponibles
-                </Typography>
-              ) : (
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 1.5,
-                  }}
-                >
-                  {activityLogs.map((log, index) => {
-                    const renderIcon = () => {
-                      switch (log.iconType) {
-                        case "note":
-                          return <Note sx={{ fontSize: 16 }} />;
-                        case "email":
-                          return <Email sx={{ fontSize: 16 }} />;
-                        case "call":
-                          return <Phone sx={{ fontSize: 16 }} />;
-                        case "meeting":
-                          return <Event sx={{ fontSize: 16 }} />;
-                        case "task":
-                          return <TaskAlt sx={{ fontSize: 16 }} />;
-                        case "company":
-                          return <Business sx={{ fontSize: 16 }} />;
-                        default:
-                          return <History sx={{ fontSize: 16 }} />;
-                      }
-                    };
-
-                    return (
-                      <Box
-                        key={log.id}
-                        sx={{
-                          display: "flex",
-                          gap: 1,
-                          alignItems: "flex-start",
-                          pb: index < activityLogs.length - 1 ? 1.5 : 0,
-                          borderBottom:
-                            index < activityLogs.length - 1
-                              ? `1px solid ${
-                                  theme.palette.mode === "dark"
-                                    ? "rgba(255,255,255,0.08)"
-                                    : "rgba(0,0,0,0.08)"
-                                }`
-                              : "none",
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: 1,
-                            bgcolor:
-                              theme.palette.mode === "dark"
-                                ? "rgba(33, 150, 243, 0.15)"
-                                : "rgba(33, 150, 243, 0.1)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
-                            mt: 0.25,
-                          }}
-                        >
-                          {renderIcon()}
-                        </Box>
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              fontSize: "0.75rem",
-                              fontWeight: 500,
-                              mb: 0.25,
-                            }}
-                          >
-                            {log.description}
-                          </Typography>
-                          <Box
-                            sx={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 0.75,
-                              flexWrap: "wrap",
-                            }}
-                          >
-                            {log.user && (
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  fontSize: "0.6875rem",
-                                  color: theme.palette.text.secondary,
-                                }}
-                              >
-                                {log.user.firstName} {log.user.lastName}
-                              </Typography>
-                            )}
-                            {log.timestamp && (
-                              <>
-                                {log.user && (
-                                  <Typography
-                                    variant="caption"
-                                    sx={{
-                                      fontSize: "0.6875rem",
-                                      color: theme.palette.text.disabled,
-                                    }}
-                                  >
-                                    •
-                                  </Typography>
-                                )}
-                                <Typography
-                                  variant="caption"
-                                  sx={{
-                                    fontSize: "0.6875rem",
-                                    color: theme.palette.text.secondary,
-                                  }}
-                                >
-                                  {new Date(
-                                    log.timestamp
-                                  ).toLocaleDateString("es-ES", {
-                                    day: "2-digit",
-                                    month: "short",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
-                                </Typography>
-                              </>
-                            )}
-                          </Box>
-                        </Box>
-                      </Box>
-                    );
-                  })}
-                </Box>
-              )}
-            </Box>
-          </Paper>
-          </Box>
-
-          {/* Columna Derecha: Tabs y contenido */}
-          <Box
-            sx={{
-              flex: 1,
-              minWidth: 0,
-            }}
-          >
-          {/* Tabs estilo botones */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
-            <Button
-              onClick={() => setTabValue(0)}
-              startIcon={<Dashboard />}
-              sx={{
-                textTransform: "none",
-                fontSize: "0.875rem",
-                fontWeight: 500,
-                borderRadius: 2,
-                px: 2,
-                py: 1,
-                minHeight: 40,
-                bgcolor: tabValue === 0 ? "#4caf50" : "transparent",
-                color: tabValue === 0 ? "white" : theme.palette.text.secondary,
-                "&:hover": {
-                  bgcolor: tabValue === 0 ? "#45a049" : theme.palette.action.hover,
-                },
-                "& .MuiButton-startIcon": {
-                  marginRight: 1,
-                },
-              }}
-            >
-              Descripción General
-            </Button>
-            <Button
-              onClick={() => setTabValue(1)}
-              startIcon={<Info />}
-              sx={{
-                textTransform: "none",
-                fontSize: "0.875rem",
-                fontWeight: 500,
-                borderRadius: 2,
-                px: 2,
-                py: 1,
-                minHeight: 40,
-                bgcolor: tabValue === 1 ? "#4caf50" : "transparent",
-                color: tabValue === 1 ? "white" : theme.palette.text.secondary,
-                "&:hover": {
-                  bgcolor: tabValue === 1 ? "#45a049" : theme.palette.action.hover,
-                },
-                "& .MuiButton-startIcon": {
-                  marginRight: 1,
-                },
-              }}
-            >
-              Información Avanzada
-            </Button>
-            <Button
-              onClick={() => setTabValue(2)}
-              startIcon={<Timeline />}
-              sx={{
-                textTransform: "none",
-                fontSize: "0.875rem",
-                fontWeight: 500,
-                borderRadius: 2,
-                px: 2,
-                py: 1,
-                minHeight: 40,
-                bgcolor: tabValue === 2 ? "#4caf50" : "transparent",
-                color: tabValue === 2 ? "white" : theme.palette.text.secondary,
-                "&:hover": {
-                  bgcolor: tabValue === 2 ? "#45a049" : theme.palette.action.hover,
-                },
-                "& .MuiButton-startIcon": {
-                  marginRight: 1,
-                },
-              }}
-            >
-              Actividades
-            </Button>
-          </Box>
-
-          {/* Tab Descripción General - Cards pequeñas y Actividades Recientes */}
-          {tabValue === 0 && (
-            <>
-              {/* Cards de Fecha de Creación, Etapa del Ciclo de Vida, Última Actividad y Propietario */}
-              <Box
-                sx={{
-                  display: "grid",
-                  gridTemplateColumns: {
-                    xs: "1fr",
-                    sm: "repeat(2, 1fr)",
-                  },
-                  gap: 3,
-                  mb: 2,
-                }}
-              >
-              <Card
-                sx={{
-                    width: "100%",
-                  p: 3,
-                    bgcolor: theme.palette.background.paper,
-                    border: "none",
-                    boxShadow: theme.palette.mode === "dark"
-                      ? "0 2px 8px rgba(0,0,0,0.3)"
-                      : "0 2px 8px rgba(0,0,0,0.1)",
-                  borderRadius: 1.5,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    textAlign: "left",
-                  }}
-                >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "flex-start",
-                      gap: 2,
-                      mb: 1,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: "10%",
-                        bgcolor: "#0d939429",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <FontAwesomeIcon 
-                        icon={faCalendar} 
-                        style={{ fontSize: 22, color: "#0d9394" }}
-                      />
-                    </Box>
-                    <Typography
-                      variant="subtitle1"
-                      sx={{
-                        fontWeight: 600,
-                        color: theme.palette.text.primary,
-                        fontSize: "1rem",
-                        textAlign: "left",
-                      }}
-                    >
-                  Fecha de creación
-                </Typography>
-                  </Box>
-                  <Typography
-                    variant="body1"
-                    color="text.secondary"
-                    sx={{ fontSize: "0.9375rem", fontWeight: 500 }}
-                  >
-                  {company.createdAt
-                      ? `${new Date(company.createdAt).toLocaleDateString(
-                          "es-ES",
-                          {
-                            day: "numeric",
-                            month: "long",
-                            year: "numeric",
-                          }
-                        )} ${new Date(company.createdAt).toLocaleTimeString(
-                          "es-ES",
-                          {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          }
-                        )}`
-                      : "No disponible"}
-                </Typography>
-              </Card>
-
-              <Card
-                sx={{
-                    width: "100%",
-                  p: 3,
-                    bgcolor: theme.palette.background.paper,
-                    border: "none",
-                    boxShadow: theme.palette.mode === "dark"
-                      ? "0 2px 8px rgba(0,0,0,0.3)"
-                      : "0 2px 8px rgba(0,0,0,0.1)",
-                  borderRadius: 1.5,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    textAlign: "left",
-                  }}
-                >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "flex-start",
-                      gap: 2,
-                      mb: 1,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: "10%",
-                        bgcolor: "#e4f6d6",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <FontAwesomeIcon 
-                        icon={['fas', 'arrows-rotate']} 
-                        style={{ fontSize: 22, color: "#56ca00" }}
-                      />
-                    </Box>
-                    <Typography
-                      variant="subtitle1"
-                      sx={{
-                        fontWeight: 600,
-                        color: theme.palette.text.primary,
-                        fontSize: "1rem",
-                        textAlign: "left",
-                      }}
-                    >
-                  Etapa del ciclo de vida
-                </Typography>
-                  </Box>
-                  <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                    <KeyboardArrowRight
-                      sx={{ fontSize: 20, color: theme.palette.text.secondary }}
-                    />
-                    <Typography
-                      variant="body1"
-                      color="text.secondary"
-                      sx={{ fontSize: "0.9375rem", fontWeight: 500 }}
-                    >
-                      {company.lifecycleStage
-                        ? getStageLabel(company.lifecycleStage)
-                        : "No disponible"}
-                </Typography>
-                  </Box>
-              </Card>
-
-              <Card
-                sx={{
-                    width: "100%",
-                  p: 3,
-                    bgcolor: theme.palette.background.paper,
-                    border: "none",
-                    boxShadow: theme.palette.mode === "dark"
-                      ? "0 2px 8px rgba(0,0,0,0.3)"
-                      : "0 2px 8px rgba(0,0,0,0.1)",
-                  borderRadius: 1.5,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    textAlign: "left",
-                  }}
-                >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "flex-start",
-                      gap: 2,
-                      mb: 1,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: "10%",
-                        bgcolor: "#fff3d6",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <FontAwesomeIcon 
-                        icon={faClock} 
-                        style={{ fontSize: 22, color: "#ffb400" }}
-                      />
-                    </Box>
-                    <Typography
-                      variant="subtitle1"
-                      sx={{
-                        fontWeight: 600,
-                        color: theme.palette.text.primary,
-                        fontSize: "1rem",
-                        textAlign: "left",
-                      }}
-                    >
-                  Última actividad
-                </Typography>
-                  </Box>
-                  <Typography
-                    variant="body1"
-                    color="text.secondary"
-                    sx={{ fontSize: "0.9375rem", fontWeight: 500 }}
-                  >
-                  {activities.length > 0 && activities[0].createdAt
-                      ? new Date(activities[0].createdAt).toLocaleDateString(
-                          "es-ES",
-                          {
-                            day: "numeric",
-                            month: "long",
-                            year: "numeric",
-                          }
-                        )
-                      : "No hay actividades"}
-                </Typography>
-              </Card>
-
-                <Card
-                      sx={{
-                    width: "100%",
-                    p: 3,
-                          bgcolor: theme.palette.background.paper,
-                      border: "none",
-                      boxShadow: theme.palette.mode === "dark"
-                        ? "0 2px 8px rgba(0,0,0,0.3)"
-                        : "0 2px 8px rgba(0,0,0,0.1)",
-                    borderRadius: 1.5,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "flex-start",
-                    textAlign: "left",
-                  }}
-                          >
-                            <Box
-                              sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "flex-start",
-                      gap: 2,
-                      mb: 1,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: "10%",
-                        bgcolor: "#daf2ff",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <FontAwesomeIcon 
-                        icon={['far', 'user']} 
-                        style={{ fontSize: 22, color: "#16b1ff" }}
-                      />
-                    </Box>
-                              <Typography 
-                      variant="subtitle1"
-                                sx={{ 
-                                  fontWeight: 600, 
-                                  color: theme.palette.text.primary,
-                                  fontSize: "1rem",
-                                  textAlign: "left",
-                                }}
-                              >
-                      Propietario del registro
-                              </Typography>
-                  </Box>
-                              <Typography 
-                    variant="body1"
-                    color="text.secondary"
-                    sx={{ fontSize: "0.9375rem", fontWeight: 500 }}
-                  >
-                    {company.Owner
-                      ? company.Owner.firstName || company.Owner.lastName
-                        ? `${company.Owner.firstName || ""} ${
-                            company.Owner.lastName || ""
-                          }`.trim()
-                        : company.Owner.email || "Sin nombre"
-                      : "No asignado"}
-                              </Typography>
-                </Card>
-                    </Box>
-
-              {/* Grid 2x2 para Actividades Recientes, Contactos, Negocios y Tickets */}
-              <Box
-                        sx={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr",
-                  gap: 3,
-                  mt: 3,
-                  mb: 2,
-                }}
-              >
-                <RecentActivitiesCard activities={activities} />
-                <LinkedContactsCard contacts={associatedContacts || []} />
-                <LinkedDealsCard deals={associatedDeals || []} />
-                <LinkedTicketsCard tickets={associatedTickets || []} />
-              </Box>
-            </>
-          )}
-
-          {/* Pestaña Información Avanzada */}
-          {tabValue === 1 && (
-            <Box>
-                {/* Card de Actividades Recientes */}
-                <FullActivitiesTableCard
-                  activities={activities}
-                  searchValue={activitySearch}
-                  onSearchChange={setActivitySearch}
-                  onCreateActivity={(type) => handleCreateActivity(type as string)}
-                  onActivityClick={setExpandedActivity}
-                  onToggleComplete={async (activityId, completed) => {
-                    try {
-                      // Actualizar el estado local inmediatamente para feedback visual
-                      setCompletedActivities((prev) => ({
-                        ...prev,
-                        [activityId]: completed,
-                      }));
-                      
-                      // Guardar en el backend
-                      await api.put(`/activities/${activityId}`, {
-                        completed: completed,
-                      });
-                      
-                      // Mostrar notificación de éxito y agregar a notificaciones del header
-                      if (completed) {
-                        const activity = activities.find((a: any) => a.id === activityId);
-                        const activityName = activity?.subject || activity?.title || 'la actividad';
-                        setSuccessMessage(`Se completó ${activityName}`);
-                        setTimeout(() => setSuccessMessage(""), 3000);
-                        
-                        // Disparar evento personalizado para agregar notificación en el header
-                        const notificationEvent = new CustomEvent('activityCompleted', {
-                          detail: {
-                            type: 'activity',
-                            title: `Se completó ${activityName}`,
-                            activityId: activityId,
-                            activityName: activityName,
-                            timestamp: new Date().toISOString(),
-                          },
-                        });
-                        window.dispatchEvent(notificationEvent);
-                      }
-                    } catch (error) {
-                      console.error('Error al actualizar el estado de la actividad:', error);
-                      // Revertir el cambio si falla
-                      setCompletedActivities((prev) => ({
-                        ...prev,
-                        [activityId]: !completed,
-                      }));
-                    }
-                  }}
-                  completedActivities={completedActivities}
-                  getActivityTypeLabel={getActivityTypeLabel}
-                />
-
-                {/* Contactos */}
-                <FullContactsTableCard
-                  contacts={associatedContacts || []}
-                  searchValue={contactSearch}
-                  onSearchChange={setContactSearch}
-                  onAddExisting={() => {
-                    handleOpenAddContactDialog();
-                  }}
-                  onAddNew={() => {
-                    handleOpenAddContactDialog();
-                  }}
-                  showActions={true}
-                  onRemove={(contactId, contactName) =>
-                    handleRemoveContactClick(contactId, contactName || "")
-                  }
-                  getContactInitials={getContactInitials}
-                  onCopyToClipboard={handleCopyToClipboard}
-                  sortField={contactSortField}
-                  sortOrder={contactSortOrder}
-                  onSort={handleSortContacts}
-                />
-
-                {/* Negocios */}
-                <FullDealsTableCard
-                  deals={associatedDeals || []}
-                  searchValue={dealSearch}
-                  onSearchChange={setDealSearch}
-                  onAddExisting={() => {
-                    setDealFormData({
-                      name: "",
-                      amount: "",
-                      stage: "lead",
-                      closeDate: "",
-                      priority: "baja" as "baja" | "media" | "alta",
-                      companyId: company?.id?.toString() || "",
-                      contactId: "",
-                    });
-                          if (allCompanies.length === 0) {
-                            fetchAllCompanies();
-                          }
-                          if (allContacts.length === 0) {
-                            fetchAllContacts();
-                          }
-                          setAddDealOpen(true);
-                        }}
-                  onAddNew={() => {
-                    setDealFormData({
-                      name: "",
-                      amount: "",
-                      stage: "lead",
-                      closeDate: "",
-                      priority: "baja" as "baja" | "media" | "alta",
-                      companyId: company?.id?.toString() || "",
-                      contactId: "",
-                    });
-                    if (allCompanies.length === 0) {
-                      fetchAllCompanies();
-                    }
-                    if (allContacts.length === 0) {
-                      fetchAllContacts();
-                    }
-                    setAddDealOpen(true);
-                  }}
-                  showActions={true}
-                  onRemove={(dealId, dealName) =>
-                    handleRemoveDealClick(dealId, dealName || "")
-                  }
-                  getInitials={(name: string) => {
-                    return name
-                      ? name.split(" ").length >= 2
-                        ? `${name.split(" ")[0][0]}${name.split(" ")[1][0]}`.toUpperCase()
-                        : name.substring(0, 2).toUpperCase()
-                      : "--";
-                  }}
-                  getStageLabel={getStageLabel}
-                  sortField={dealSortField}
-                  sortOrder={dealSortOrder}
-                  onSort={handleSortDeals}
-                />
-
-                {/* Tickets */}
-                <FullTicketsTableCard
-                  tickets={associatedTickets || []}
-                  searchValue={ticketSearch}
-                  onSearchChange={setTicketSearch}
-                  onAdd={() => setAddTicketOpen(true)}
-                  showActions={true}
-                  onRemove={(ticketId: number, ticketName?: string) =>
-                    handleRemoveTicketClick(ticketId, ticketName || "")
-                  }
-                />
-            </Box>
-          )}
-
-          {/* Pestaña Actividades */}
-          {tabValue === 2 && (
-            <ActivitiesTabContent
-              activities={activities}
-              activitySearch={activitySearch}
-              onSearchChange={setActivitySearch}
-              onCreateActivity={(type) => handleCreateActivity(type as string)}
-              onActivityClick={setExpandedActivity}
-              onToggleComplete={async (activityId, completed) => {
-                try {
-                  // Actualizar el estado local inmediatamente para feedback visual
-                  setCompletedActivities((prev) => ({
-                    ...prev,
-                    [activityId]: completed,
-                  }));
-                  
-                  // Guardar en el backend
-                  await api.put(`/activities/${activityId}`, {
-                    completed: completed,
-                  });
-                  
-                  // Mostrar notificación de éxito y agregar a notificaciones del header
-                  if (completed) {
-                    const activity = activities.find((a: any) => a.id === activityId);
-                    const activityName = activity?.subject || activity?.title || 'la actividad';
-                    setSuccessMessage(`Se completó ${activityName}`);
-                    setTimeout(() => setSuccessMessage(""), 3000);
-                    
-                    // Disparar evento personalizado para agregar notificación en el header
-                    const notificationEvent = new CustomEvent('activityCompleted', {
-                      detail: {
-                        type: 'activity',
-                        title: `Se completó ${activityName}`,
-                        activityId: activityId,
-                        activityName: activityName,
-                        timestamp: new Date().toISOString(),
-                      },
-                    });
-                    window.dispatchEvent(notificationEvent);
-                  }
-                } catch (error) {
-                  console.error('Error al actualizar el estado de la actividad:', error);
-                  // Revertir el cambio si falla
-                  setCompletedActivities((prev) => ({
-                    ...prev,
-                    [activityId]: !completed,
-                  }));
-                }
-              }}
-              completedActivities={completedActivities}
-              getActivityTypeLabel={getActivityTypeLabel}
-              getActivityStatusColor={getActivityStatusColor}
-              emptyMessage="No hay actividades registradas para esta empresa. Crea una nueva actividad para comenzar."
-            />
-          )}
-          </Box>
-        </Box>
-      </Box>
+    {/* MANTENER TODOS LOS MODALES Y DIALOGS DESDE AQUÍ */}
 
       {/* Botón flotante para abrir el Drawer de Registros Asociados */}
       {!summaryExpanded && (
@@ -8672,7 +7651,7 @@ const CompanyDetail: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
-    </Box>
+    </>
   );
 };
 

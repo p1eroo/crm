@@ -1,0 +1,796 @@
+import React, { ReactNode, useState } from 'react';
+import {
+  Box,
+  Typography,
+  Paper,
+  Avatar,
+  Button,
+  Divider,
+  IconButton,
+  Tooltip,
+  useTheme,
+  CircularProgress,
+} from '@mui/material';
+import {
+  ChevronLeft,
+  KeyboardArrowRight,
+  History,
+  Dashboard,
+  Info,
+  Timeline,
+  Note,
+  Email,
+  Phone,
+  Event,
+  TaskAlt,
+  Business,
+} from '@mui/icons-material';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+  faNoteSticky, 
+  faPhone, 
+  faThumbtack, 
+  faCalendarWeek 
+} from '@fortawesome/free-solid-svg-icons';
+
+// Mapeo de nombres de iconos a objetos de FontAwesome
+const iconMap: { [key: string]: any } = {
+  'note-sticky': faNoteSticky,
+  'phone': faPhone,
+  'thumbtack': faThumbtack,
+  'calendar-week': faCalendarWeek,
+};
+
+interface DetailField {
+  label: string;
+  value: string | ReactNode;
+  show?: boolean;
+}
+
+interface ActivityLog {
+  id: string | number;
+  description: string;
+  iconType?: string;
+  user?: {
+    firstName: string;
+    lastName: string;
+  };
+  timestamp?: string;
+}
+
+interface DetailPageLayoutProps {
+  // Header
+  pageTitle: string;
+  breadcrumbItems: Array<{ label: string; path?: string }>;
+  onBack: () => void;
+
+  // Sidebar izquierdo
+  avatarIcon: ReactNode;
+  avatarBgColor?: string;
+  entityName: string;
+  entitySubtitle?: string;
+
+  // Botones de actividades
+  activityButtons?: Array<{
+    icon: any;
+    tooltip: string;
+    onClick: () => void;
+  }>;
+
+  // Detalles
+  detailFields: DetailField[];
+  onEditDetails?: () => void;
+  editButtonText?: string;
+
+  // Historial
+  activityLogs?: ActivityLog[];
+  loadingLogs?: boolean;
+
+  // Contenido de tabs
+  tab0Content: ReactNode;
+  tab1Content: ReactNode;
+  tab2Content: ReactNode;
+
+  // Loading
+  loading?: boolean;
+}
+
+const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
+  pageTitle,
+  breadcrumbItems,
+  onBack,
+  avatarIcon,
+  avatarBgColor = '#0d9394',
+  entityName,
+  entitySubtitle,
+  activityButtons = [],
+  detailFields,
+  onEditDetails,
+  editButtonText = 'Editar Detalles',
+  activityLogs = [],
+  loadingLogs = false,
+  tab0Content,
+  tab1Content,
+  tab2Content,
+  loading = false,
+}) => {
+  const theme = useTheme();
+  const [tabValue, setTabValue] = useState(0);
+
+  const renderLogIcon = (iconType?: string) => {
+    switch (iconType) {
+      case 'note':
+        return <Note sx={{ fontSize: 16 }} />;
+      case 'email':
+        return <Email sx={{ fontSize: 16 }} />;
+      case 'call':
+        return <Phone sx={{ fontSize: 16 }} />;
+      case 'meeting':
+        return <Event sx={{ fontSize: 16 }} />;
+      case 'task':
+        return <TaskAlt sx={{ fontSize: 16 }} />;
+      case 'company':
+        return <Business sx={{ fontSize: 16 }} />;
+      default:
+        return <History sx={{ fontSize: 16 }} />;
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box
+        display="flex"
+        justifyContent="center"
+        alignItems="center"
+        minHeight="400px"
+      >
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return (
+    <Box
+      sx={{
+        bgcolor: theme.palette.background.default,
+        minHeight: '100vh',
+        mt: { xs: 2, sm: 3, md: 0 },
+        pb: { xs: 2, sm: 3, md: 4 },
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      {/* Título de la página */}
+      <Box
+        sx={{
+          pt: { xs: 2, sm: 1 },
+          pb: 2,
+          px: { xs: 2, sm: 3, md: 4 },
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 1.5,
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <IconButton
+            onClick={onBack}
+            sx={{
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+                color: theme.palette.text.primary,
+              },
+            }}
+          >
+            <ChevronLeft />
+          </IconButton>
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 500,
+              color: theme.palette.text.primary,
+              fontSize: { xs: '1.125rem', sm: '1.25rem', md: '1.5rem' },
+            }}
+          >
+            {pageTitle}
+          </Typography>
+        </Box>
+
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5,
+            color: theme.palette.text.secondary,
+          }}
+        >
+          {breadcrumbItems.map((item, index) => (
+            <React.Fragment key={index}>
+              {index > 0 && (
+                <KeyboardArrowRight
+                  sx={{
+                    fontSize: { xs: 16, sm: 18 },
+                    color: theme.palette.text.disabled,
+                  }}
+                />
+              )}
+              {item.path ? (
+                <Typography
+                  component="span"
+                  onClick={() => {
+                    if (item.path) window.location.href = item.path;
+                  }}
+                  sx={{
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    cursor: 'pointer',
+                    color: theme.palette.text.secondary,
+                    '&:hover': {
+                      color: theme.palette.text.primary,
+                      textDecoration: 'underline',
+                    },
+                  }}
+                >
+                  {item.label}
+                </Typography>
+              ) : (
+                <Typography
+                  component="span"
+                  sx={{
+                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                    color: theme.palette.text.primary,
+                    fontWeight: 500,
+                  }}
+                >
+                  {item.label}
+                </Typography>
+              )}
+            </React.Fragment>
+          ))}
+        </Box>
+      </Box>
+
+      {/* Contenido principal */}
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          flex: 1,
+          overflow: { xs: 'visible', md: 'visible' },
+          minHeight: { xs: 'auto', md: 0 },
+          gap: 2,
+          px: { xs: 2, sm: 3, md: 4 },
+        }}
+      >
+        <Box
+          sx={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: { xs: 'column', md: 'row' },
+            gap: 3,
+            alignItems: 'flex-start',
+          }}
+        >
+          {/* Columna Izquierda: Información del registro */}
+          <Box
+            sx={{
+              width: { xs: '100%', md: 400 },
+              flexShrink: 0,
+            }}
+          >
+            {/* Header Card */}
+            <Paper
+              elevation={0}
+              sx={{
+                borderRadius: 3,
+                px: 2.5,
+                pt: 6,
+                pb: 2.5,
+                mb: 2,
+                bgcolor: theme.palette.background.paper,
+                border: 'none',
+                boxShadow:
+                  theme.palette.mode === 'dark'
+                    ? '0 2px 8px rgba(0,0,0,0.3)'
+                    : '0 2px 8px rgba(0,0,0,0.1)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 2,
+              }}
+            >
+              <Avatar
+                sx={{
+                  width: 120,
+                  height: 120,
+                  bgcolor: avatarBgColor,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 3,
+                }}
+              >
+                {avatarIcon}
+              </Avatar>
+
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 0.5,
+                }}
+              >
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: '1.25rem',
+                    textAlign: 'center',
+                  }}
+                >
+                  {entityName}
+                </Typography>
+                {entitySubtitle && (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ fontSize: '0.875rem', textAlign: 'center' }}
+                  >
+                    {entitySubtitle}
+                  </Typography>
+                )}
+              </Box>
+
+              {activityButtons.length > 0 && (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    gap: 2,
+                    mt: 1,
+                    mb: -1,
+                  }}
+                >
+                  {activityButtons.map((button, index) => (
+                    <Tooltip key={index} title={button.tooltip}>
+                      <IconButton
+                        onClick={button.onClick}
+                        sx={{
+                          width: 48,
+                          height: 48,
+                          bgcolor: 'rgb(76, 175, 80)',
+                          color: 'white',
+                          '&:hover': {
+                            bgcolor: 'rgb(69, 160, 73)',
+                          },
+                        }}
+                      >
+                        <FontAwesomeIcon
+                          icon={typeof button.icon === 'string' 
+                            ? iconMap[button.icon] || faNoteSticky
+                            : Array.isArray(button.icon) && button.icon.length === 2
+                            ? iconMap[button.icon[1]] || faNoteSticky
+                            : button.icon || faNoteSticky}
+                          style={{ fontSize: 20 }}
+                        />
+                      </IconButton>
+                    </Tooltip>
+                  ))}
+                </Box>
+              )}
+
+              <Box
+                sx={{
+                  width: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 1.5,
+                  mt: 1,
+                }}
+              >
+                <Typography
+                  variant="subtitle1"
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: '1rem',
+                    color: theme.palette.text.primary,
+                  }}
+                >
+                  Detalles
+                </Typography>
+
+                <Divider
+                  sx={{
+                    width: '100%',
+                    borderColor:
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.08)'
+                        : 'rgba(0, 0, 0, 0.08)',
+                  }}
+                />
+
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 1.5,
+                    width: '100%',
+                  }}
+                >
+                  {detailFields
+                    .filter((field) => field.show !== false)
+                    .map((field, index) => (
+                      <Box key={index}>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontSize: '0.875rem',
+                            color: theme.palette.text.secondary,
+                            mb: 0.25,
+                          }}
+                        >
+                          {field.label}:
+                        </Typography>
+                        {typeof field.value === 'string' ? (
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontSize: '0.875rem',
+                              color: theme.palette.text.primary,
+                            }}
+                          >
+                            {field.value}
+                          </Typography>
+                        ) : (
+                          field.value
+                        )}
+                      </Box>
+                    ))}
+                </Box>
+              </Box>
+
+              {onEditDetails && (
+                <Button
+                  onClick={onEditDetails}
+                  variant="contained"
+                  fullWidth
+                  sx={{
+                    mt: 2,
+                    py: 1,
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    fontSize: '0.9375rem',
+                    fontWeight: 600,
+                    background: '#4caf50',
+                    color: 'white',
+                  }}
+                >
+                  {editButtonText}
+                </Button>
+              )}
+            </Paper>
+
+            {/* Card de Historial */}
+            <Paper
+              elevation={0}
+              sx={{
+                borderRadius: 3,
+                px: 2.5,
+                pt: 3,
+                pb: 2.5,
+                mt: 3,
+                bgcolor: theme.palette.background.paper,
+                border: 'none',
+                boxShadow:
+                  theme.palette.mode === 'dark'
+                    ? '0 2px 8px rgba(0,0,0,0.3)'
+                    : '0 2px 8px rgba(0,0,0,0.1)',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
+                <Box
+                  sx={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 1.5,
+                    bgcolor:
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(33, 150, 243, 0.2)'
+                        : 'rgba(33, 150, 243, 0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <History sx={{ fontSize: 20, color: '#2196F3' }} />
+                </Box>
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem' }}
+                  >
+                    Registro de Cambios
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}
+                  >
+                    Historial de actividades y modificaciones recientes
+                  </Typography>
+                </Box>
+              </Box>
+
+              <Box
+                sx={{
+                  overflowY: 'auto',
+                  maxHeight: 280,
+                  mt: 1,
+                  '&::-webkit-scrollbar': {
+                    width: 6,
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    backgroundColor: 'transparent',
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    backgroundColor:
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(255,255,255,0.2)'
+                        : 'rgba(0,0,0,0.2)',
+                    borderRadius: 3,
+                  },
+                }}
+              >
+                {loadingLogs ? (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      py: 2,
+                    }}
+                  >
+                    <CircularProgress size={20} />
+                  </Box>
+                ) : activityLogs.length === 0 ? (
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{
+                      fontSize: '0.75rem',
+                      textAlign: 'center',
+                      py: 2,
+                      fontStyle: 'italic',
+                    }}
+                  >
+                    No hay registros disponibles
+                  </Typography>
+                ) : (
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 1.5,
+                    }}
+                  >
+                    {activityLogs.map((log, index) => (
+                      <Box
+                        key={log.id}
+                        sx={{
+                          display: 'flex',
+                          gap: 1,
+                          alignItems: 'flex-start',
+                          pb: index < activityLogs.length - 1 ? 1.5 : 0,
+                          borderBottom:
+                            index < activityLogs.length - 1
+                              ? `1px solid ${
+                                  theme.palette.mode === 'dark'
+                                    ? 'rgba(255,255,255,0.08)'
+                                    : 'rgba(0,0,0,0.08)'
+                                }`
+                              : 'none',
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 1,
+                            bgcolor:
+                              theme.palette.mode === 'dark'
+                                ? 'rgba(33, 150, 243, 0.15)'
+                                : 'rgba(33, 150, 243, 0.1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                            mt: 0.25,
+                          }}
+                        >
+                          {renderLogIcon(log.iconType)}
+                        </Box>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              mb: 0.25,
+                            }}
+                          >
+                            {log.description}
+                          </Typography>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 0.75,
+                              flexWrap: 'wrap',
+                            }}
+                          >
+                            {log.user && (
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  fontSize: '0.6875rem',
+                                  color: theme.palette.text.secondary,
+                                }}
+                              >
+                                {log.user.firstName} {log.user.lastName}
+                              </Typography>
+                            )}
+                            {log.timestamp && (
+                              <>
+                                {log.user && (
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      fontSize: '0.6875rem',
+                                      color: theme.palette.text.disabled,
+                                    }}
+                                  >
+                                    •
+                                  </Typography>
+                                )}
+                                <Typography
+                                  variant="caption"
+                                  sx={{
+                                    fontSize: '0.6875rem',
+                                    color: theme.palette.text.secondary,
+                                  }}
+                                >
+                                  {new Date(log.timestamp).toLocaleDateString(
+                                    'es-ES',
+                                    {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    }
+                                  )}
+                                </Typography>
+                              </>
+                            )}
+                          </Box>
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </Box>
+            </Paper>
+          </Box>
+
+          {/* Columna Derecha: Tabs y contenido */}
+          <Box
+            sx={{
+              flex: 1,
+              minWidth: 0,
+            }}
+          >
+            {/* Tabs */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <Button
+                onClick={() => setTabValue(0)}
+                startIcon={<Dashboard />}
+                sx={{
+                  textTransform: 'none',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  borderRadius: 2,
+                  px: 2,
+                  py: 1,
+                  minHeight: 40,
+                  bgcolor: tabValue === 0 ? '#4caf50' : 'transparent',
+                  color:
+                    tabValue === 0
+                      ? 'white'
+                      : theme.palette.text.secondary,
+                  '&:hover': {
+                    bgcolor:
+                      tabValue === 0
+                        ? '#45a049'
+                        : theme.palette.action.hover,
+                  },
+                  '& .MuiButton-startIcon': {
+                    marginRight: 1,
+                  },
+                }}
+              >
+                Descripción General
+              </Button>
+              <Button
+                onClick={() => setTabValue(1)}
+                startIcon={<Info />}
+                sx={{
+                  textTransform: 'none',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  borderRadius: 2,
+                  px: 2,
+                  py: 1,
+                  minHeight: 40,
+                  bgcolor: tabValue === 1 ? '#4caf50' : 'transparent',
+                  color:
+                    tabValue === 1
+                      ? 'white'
+                      : theme.palette.text.secondary,
+                  '&:hover': {
+                    bgcolor:
+                      tabValue === 1
+                        ? '#45a049'
+                        : theme.palette.action.hover,
+                  },
+                  '& .MuiButton-startIcon': {
+                    marginRight: 1,
+                  },
+                }}
+              >
+                Información Avanzada
+              </Button>
+              <Button
+                onClick={() => setTabValue(2)}
+                startIcon={<Timeline />}
+                sx={{
+                  textTransform: 'none',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  borderRadius: 2,
+                  px: 2,
+                  py: 1,
+                  minHeight: 40,
+                  bgcolor: tabValue === 2 ? '#4caf50' : 'transparent',
+                  color:
+                    tabValue === 2
+                      ? 'white'
+                      : theme.palette.text.secondary,
+                  '&:hover': {
+                    bgcolor:
+                      tabValue === 2
+                        ? '#45a049'
+                        : theme.palette.action.hover,
+                  },
+                  '& .MuiButton-startIcon': {
+                    marginRight: 1,
+                  },
+                }}
+              >
+                Actividades
+              </Button>
+            </Box>
+
+            {/* Contenido del tab seleccionado */}
+            {tabValue === 0 && tab0Content}
+            {tabValue === 1 && tab1Content}
+            {tabValue === 2 && tab2Content}
+          </Box>
+        </Box>
+      </Box>
+    </Box>
+  );
+};
+
+export default DetailPageLayout;

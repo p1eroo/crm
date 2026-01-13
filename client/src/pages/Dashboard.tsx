@@ -16,19 +16,12 @@ import {
   useTheme,
   Snackbar,
   Alert,
-  Divider,
-  Tooltip,
 } from '@mui/material';
 import {
   Download,
-  People,
-  AccountBalance,
-  AttachMoney,
   Close,
-  LocalOffer,
   TrendingUp,
   TrendingDown,
-  Groups,
   CalendarToday,
   Assessment,
   ArrowOutward,
@@ -134,7 +127,6 @@ const Dashboard: React.FC = () => {
   const [maximizedAdvisors, setMaximizedAdvisors] = useState(false);
   const [maximizedWeeklySales, setMaximizedWeeklySales] = useState(false);
   const [maximizedSales, setMaximizedSales] = useState(false);
-  const [maximizedPipeline, setMaximizedPipeline] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   
   // Generar lista de meses
@@ -891,39 +883,6 @@ const Dashboard: React.FC = () => {
   }
   
   const monthlyBudget = currentMonthData?.amount || 0;
-
-  // Calcular valores del Pipeline de Ventas
-  const pipelineData = (() => {
-    const propuestaEconomica = stats.deals.byStage?.find(
-      (d: any) => d.stage === 'propuesta_economica'
-    ) || { total: 0, count: 0 };
-    
-    const negociacion = stats.deals.byStage?.find(
-      (d: any) => d.stage === 'negociacion'
-    ) || { total: 0, count: 0 };
-    
-    const cierreGanado = stats.deals.byStage?.find(
-      (d: any) => d.stage === 'cierre_ganado' || d.stage === 'won' || d.stage === 'closed won'
-    ) || { total: 0, count: 0 };
-    
-    const total = (propuestaEconomica.total || 0) + (negociacion.total || 0) + (cierreGanado.total || 0);
-    
-    return {
-      propuestaEconomica: {
-        value: typeof propuestaEconomica.total === 'number' ? propuestaEconomica.total : parseFloat(propuestaEconomica.total || 0),
-        count: typeof propuestaEconomica.count === 'number' ? propuestaEconomica.count : parseInt(propuestaEconomica.count || 0),
-      },
-      negociacion: {
-        value: typeof negociacion.total === 'number' ? negociacion.total : parseFloat(negociacion.total || 0),
-        count: typeof negociacion.count === 'number' ? negociacion.count : parseInt(negociacion.count || 0),
-      },
-      cierreGanado: {
-        value: typeof cierreGanado.total === 'number' ? cierreGanado.total : parseFloat(cierreGanado.total || 0),
-        count: typeof cierreGanado.count === 'number' ? cierreGanado.count : parseInt(cierreGanado.count || 0),
-      },
-      total,
-    };
-  })();
 
   // Calcular presupuesto del mes seleccionado (para mostrar en el gráfico)
   const selectedMonthBudget = selectedMonth !== null && (stats.payments?.budgets || stats.payments?.monthly)
