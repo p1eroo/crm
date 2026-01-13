@@ -865,9 +865,12 @@ const Companies: React.FC = () => {
           state: (row['Estado/Provincia'] || '').toString().trim() || undefined,
           country: (row['País'] || '').toString().trim() || undefined,
           lifecycleStage: (row['Etapa'] || 'lead').toString().trim() || 'lead',
-          estimatedRevenue: row['Facturación'] 
-            ? parseFloat((row['Facturación'] || '').toString().replace(/[^\d.-]/g, '')) || undefined
-            : undefined,
+          estimatedRevenue: (() => {
+            const facturacionValue = row['Facturación'] || row['Potencial de Facturación Estimado'];
+            return facturacionValue
+              ? parseFloat(facturacionValue.toString().replace(/[^\d.-]/g, '')) || undefined
+              : undefined;
+          })(),
           isRecoveredClient: isRecoveredClient,
           ownerId: ownerId || undefined,
         };
@@ -898,42 +901,98 @@ const Companies: React.FC = () => {
           }));
         } catch (error: any) {
           console.error('Error creating company:', error);
-          errorCount++;
           
-          // Capturar el mensaje de error de diferentes fuentes
-          let errorMessage = 'Error desconocido';
-          
-          if (error.response?.data?.error) {
-            // Error del backend (ya viene en español normalmente)
-            errorMessage = error.response.data.error;
-          } else if (error.errors && Array.isArray(error.errors) && error.errors.length > 0) {
-            // Errores de validación de Sequelize (múltiples errores)
-            errorMessage = error.errors.map((e: any) => translateError(e.message)).join(', ');
-          } else if (error.message) {
-            // Mensaje de error general - traducir
-            errorMessage = translateError(error.message);
-          } else if (error.original?.message) {
-            // Error original de la base de datos - traducir
-            errorMessage = translateError(error.original.message);
+          // Verificar si es un error de empresa duplicada y tiene facturación para actualizar
+          if (
+            error.response?.status === 400 &&
+            error.response?.data?.error === 'Ya existe una empresa con este nombre' &&
+            error.response?.data?.existingCompanyId &&
+            companyData.estimatedRevenue !== undefined &&
+            companyData.estimatedRevenue !== null
+          ) {
+            // Si la empresa existe y tiene facturación, actualizar solo ese campo
+            try {
+              await api.put(`/companies/${error.response.data.existingCompanyId}`, {
+                estimatedRevenue: companyData.estimatedRevenue,
+              });
+              successCount++;
+              
+              // Actualizar progreso como éxito
+              const currentSuccess = successCount;
+              const currentErrors = errorCount;
+              const currentIndex = i + 1;
+              setImportProgress(prev => ({
+                ...prev,
+                current: currentIndex,
+                total: companiesToCreate.length,
+                success: currentSuccess,
+                errors: currentErrors,
+              }));
+              continue; // Continuar con la siguiente empresa
+            } catch (updateError: any) {
+              // Si falla la actualización, contar como error
+              errorCount++;
+              let updateErrorMessage = 'Error al actualizar facturación';
+              if (updateError.response?.data?.error) {
+                updateErrorMessage = updateError.response.data.error;
+              }
+              
+              const currentSuccess = successCount;
+              const currentErrors = errorCount;
+              const currentIndex = i + 1;
+              const companyName = companyData.name || companyData.companyname || 'Empresa sin nombre';
+              
+              setImportProgress(prev => ({
+                ...prev,
+                current: currentIndex,
+                total: companiesToCreate.length,
+                success: currentSuccess,
+                errors: currentErrors,
+                errorList: [...prev.errorList, { 
+                  name: companyName, 
+                  error: updateErrorMessage 
+                }],
+              }));
+            }
+          } else {
+            // Manejo de error normal (empresa no existe o no tiene facturación)
+            errorCount++;
+            
+            // Capturar el mensaje de error de diferentes fuentes
+            let errorMessage = 'Error desconocido';
+            
+            if (error.response?.data?.error) {
+              // Error del backend (ya viene en español normalmente)
+              errorMessage = error.response.data.error;
+            } else if (error.errors && Array.isArray(error.errors) && error.errors.length > 0) {
+              // Errores de validación de Sequelize (múltiples errores)
+              errorMessage = error.errors.map((e: any) => translateError(e.message)).join(', ');
+            } else if (error.message) {
+              // Mensaje de error general - traducir
+              errorMessage = translateError(error.message);
+            } else if (error.original?.message) {
+              // Error original de la base de datos - traducir
+              errorMessage = translateError(error.original.message);
+            }
+            
+            // Capturar valores actuales para evitar problemas de closure
+            const currentSuccess = successCount;
+            const currentErrors = errorCount;
+            const currentIndex = i + 1;
+            const companyName = companyData.name || companyData.companyname || 'Empresa sin nombre';
+            
+            setImportProgress(prev => ({
+              ...prev,
+              current: currentIndex,
+              total: companiesToCreate.length,
+              success: currentSuccess,
+              errors: currentErrors,
+              errorList: [...prev.errorList, { 
+                name: companyName, 
+                error: errorMessage 
+              }],
+            }));
           }
-          
-          // Capturar valores actuales para evitar problemas de closure
-          const currentSuccess = successCount;
-          const currentErrors = errorCount;
-          const currentIndex = i + 1;
-          const companyName = companyData.name || companyData.companyname || 'Empresa sin nombre';
-          
-          setImportProgress(prev => ({
-            ...prev,
-            current: currentIndex,
-            total: companiesToCreate.length,
-            success: currentSuccess,
-            errors: currentErrors,
-            errorList: [...prev.errorList, { 
-              name: companyName, 
-              error: errorMessage 
-            }],
-          }));
         }
       }
 
