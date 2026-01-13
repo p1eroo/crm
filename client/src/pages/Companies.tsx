@@ -75,6 +75,7 @@ const Companies: React.FC = () => {
   const [editingCompany, setEditingCompany] = useState<Company | null>(null);
   const [search] = useState('');
   const [sortBy, setSortBy] = useState('newest');
+  const [totalCompanies, setTotalCompanies] = useState(0);
   const [formData, setFormData] = useState({
     name: '',
     domain: '',
@@ -184,6 +185,9 @@ const Companies: React.FC = () => {
     etapa: '',
     cr: '',
   });
+  
+  // Estado para filtros de columna con debounce (espera 500ms después de que el usuario deje de escribir)
+  const [debouncedColumnFilters, setDebouncedColumnFilters] = useState(columnFilters);
   const [showColumnFilters, setShowColumnFilters] = useState(false);
 
   // Función para obtener el label del origen de lead
@@ -581,28 +585,97 @@ const Companies: React.FC = () => {
   const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
   const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
+  // Función helper para sanitizar valores null/undefined
+  const safeValue = (value: any, fallback: string = '--'): string => {
+    if (value === null || value === undefined || value === 'null' || value === 'undefined' || value === '') {
+      return fallback;
+    }
+    return String(value);
+  };
+
   const fetchCompanies = useCallback(async () => {
     try {
       setLoading(true);
-      const params: any = {};
+      const params: any = {
+        page: currentPage,
+        limit: itemsPerPage,
+      };
       
+      // Búsqueda general
       if (search) {
-        // Con búsqueda: usar límite normal del servidor
         params.search = search;
-        params.limit = 50;
-      } else {
-        // Sin búsqueda: cargar todas las empresas (hasta 40,000)
-        params.limit = 40000;
+      }
+      
+      // Filtros por etapas
+      if (selectedStages.length > 0) {
+        params.stages = selectedStages;
+      }
+      
+      // Filtros por países
+      if (selectedCountries.length > 0) {
+        params.countries = selectedCountries;
+      }
+      
+      // Filtros por propietarios
+      if (selectedOwnerFilters.length > 0) {
+        params.owners = selectedOwnerFilters.map(f => 
+          f === 'me' ? 'me' : f === 'unassigned' ? 'unassigned' : String(f)
+        );
+      }
+      
+      // Ordenamiento
+      params.sortBy = sortBy;
+      
+      // Filtros por columna (usar los valores con debounce)
+      if (debouncedColumnFilters.nombre) params.filterNombre = debouncedColumnFilters.nombre;
+      if (debouncedColumnFilters.propietario) params.filterPropietario = debouncedColumnFilters.propietario;
+      if (debouncedColumnFilters.telefono) params.filterTelefono = debouncedColumnFilters.telefono;
+      if (debouncedColumnFilters.correo) params.filterCorreo = debouncedColumnFilters.correo;
+      if (debouncedColumnFilters.origenLead) params.filterOrigenLead = debouncedColumnFilters.origenLead;
+      if (debouncedColumnFilters.etapa) params.filterEtapa = debouncedColumnFilters.etapa;
+      if (debouncedColumnFilters.cr) params.filterCR = debouncedColumnFilters.cr;
+      
+      // Filtros avanzados
+      if (filterRules.length > 0) {
+        params.filterRules = JSON.stringify(filterRules);
       }
       
       const response = await api.get('/companies', { params });
-      setCompanies(response.data.companies || response.data);
+      const companiesData = response.data.companies || response.data;
+      
+      // Sanitizar valores null antes de guardar
+      const sanitizedCompanies = companiesData.map((company: any) => ({
+        ...company,
+        domain: company.domain || null,
+        companyname: company.companyname || null,
+        phone: company.phone || null,
+        leadSource: company.leadSource || null,
+        city: company.city || null,
+        state: company.state || null,
+        country: company.country || null,
+        estimatedRevenue: company.estimatedRevenue || null,
+        Owner: company.Owner || null,
+      }));
+      
+      setCompanies(sanitizedCompanies);
+      setTotalCompanies(response.data.total || 0);
     } catch (error) {
       console.error('Error fetching companies:', error);
+      setCompanies([]);
+      setTotalCompanies(0);
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [search, currentPage, itemsPerPage, selectedStages, selectedCountries, selectedOwnerFilters, sortBy, filterRules, debouncedColumnFilters]);
+
+  // Debounce para filtros de columna (esperar 500ms después de que el usuario deje de escribir)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedColumnFilters(columnFilters);
+    }, 500); // Esperar 500ms después de que el usuario deje de escribir
+
+    return () => clearTimeout(timer);
+  }, [columnFilters]);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -1592,157 +1665,29 @@ const Companies: React.FC = () => {
     }
   };
 
-  // Filtrar y ordenar empresas
-  const filteredCompanies = companies
-    .filter((company) => {
-      // Filtro por etapas
-      if (selectedStages.length > 0) {
-        if (!selectedStages.includes(company.lifecycleStage || 'lead')) {
-          return false;
-        }
-      }
-      
-      // Filtro por países
-      if (selectedCountries.length > 0) {
-        if (!company.country || !selectedCountries.includes(company.country)) {
-          return false;
-        }
-      }
-      
-      // Filtro por propietarios
-      if (selectedOwnerFilters.length > 0) {
-        let matches = false;
-        for (const filter of selectedOwnerFilters) {
-          if (filter === 'me') {
-            if (company.ownerId === user?.id) {
-              matches = true;
-              break;
-            }
-          } else if (filter === 'unassigned') {
-            if (!company.ownerId) {
-              matches = true;
-              break;
-            }
-          } else {
-            if (company.ownerId === filter) {
-              matches = true;
-              break;
-            }
-          }
-        }
-        if (!matches) return false;
-      }
+  // Los datos ya vienen filtrados y ordenados del servidor
+  // Solo aplicamos filtros adicionales que requieren lógica del cliente
+  // (como búsqueda por nombre del propietario que requiere el join)
+  const filteredCompanies = companies.filter((company) => {
+    // Filtro por nombre del propietario (requiere join, se hace en cliente)
+    if (columnFilters.propietario) {
+      const ownerName = company.Owner ? `${company.Owner.firstName} ${company.Owner.lastName}` : '';
+      if (!ownerName.toLowerCase().includes(columnFilters.propietario.toLowerCase())) return false;
+    }
+    
+    // Filtro por correo (si viene del servidor, pero por seguridad lo verificamos aquí también)
+    if (columnFilters.correo && (company as any).email) {
+      if (!(company as any).email.toLowerCase().includes(columnFilters.correo.toLowerCase())) return false;
+    }
+    
+    return true;
+  });
 
-      // Aplicar filtros de reglas avanzadas
-      for (const rule of filterRules) {
-        if (!rule.value) continue; // Saltar reglas sin valor
-
-        let matches = false;
-        const ruleValue = rule.value.toLowerCase();
-
-        switch (rule.column) {
-          case 'name':
-            matches = applyOperator(company.name || '', rule.operator, ruleValue);
-            break;
-          case 'companyname':
-            matches = applyOperator(company.companyname || '', rule.operator, ruleValue);
-            break;
-          case 'phone':
-            matches = applyOperator(company.phone || '', rule.operator, ruleValue);
-            break;
-          case 'email':
-            matches = applyOperator(company.email || '', rule.operator, ruleValue);
-            break;
-          case 'leadSource':
-            const leadSourceLabel = getLeadSourceLabel(company.leadSource);
-            matches = applyOperator(leadSourceLabel, rule.operator, ruleValue);
-            break;
-          case 'country':
-            matches = applyOperator(company.country || '', rule.operator, ruleValue);
-            break;
-          case 'lifecycleStage':
-            const stageLabel = getStageLabel(company.lifecycleStage || 'lead');
-            matches = applyOperator(stageLabel, rule.operator, ruleValue);
-            break;
-          case 'owner':
-            const ownerName = company.Owner ? `${company.Owner.firstName} ${company.Owner.lastName}` : '';
-            matches = applyOperator(ownerName, rule.operator, ruleValue);
-            break;
-          default:
-            matches = true;
-        }
-
-        if (!matches) return false;
-      }
-
-      // Aplicar filtros por columna
-      if (columnFilters.nombre) {
-        if (!company.name.toLowerCase().includes(columnFilters.nombre.toLowerCase())) return false;
-      }
-      if (columnFilters.propietario) {
-        const ownerName = company.Owner ? `${company.Owner.firstName} ${company.Owner.lastName}` : '';
-        if (!ownerName.toLowerCase().includes(columnFilters.propietario.toLowerCase())) return false;
-      }
-      if (columnFilters.telefono) {
-        if (!company.phone?.toLowerCase().includes(columnFilters.telefono.toLowerCase())) return false;
-      }
-      if (columnFilters.correo) {
-        if (!company.email?.toLowerCase().includes(columnFilters.correo.toLowerCase())) return false;
-      }
-      if (columnFilters.origenLead) {
-        const leadSourceLabel = getLeadSourceLabel(company.leadSource);
-        if (!leadSourceLabel.toLowerCase().includes(columnFilters.origenLead.toLowerCase())) return false;
-      }
-      if (columnFilters.etapa) {
-        const stageLabel = getStageLabel(company.lifecycleStage || 'lead');
-        if (!stageLabel.toLowerCase().includes(columnFilters.etapa.toLowerCase())) return false;
-      }
-      if (columnFilters.cr) {
-        const filterValue = columnFilters.cr.toLowerCase().trim();
-        const isRecoveredClient = (company as any).isRecoveredClient || false;
-        
-        // Verificar si el filtro busca "sí" o "no"
-        const buscaSi = ['sí', 'si', 'yes', 's', '1', 'x', '✓', 'true'].includes(filterValue);
-        const buscaNo = ['no', 'not', '0', 'false', 'n'].includes(filterValue);
-        
-        if (buscaSi && !isRecoveredClient) return false;
-        if (buscaNo && isRecoveredClient) return false;
-        if (!buscaSi && !buscaNo) {
-          // Si no coincide con ningún patrón conocido, no filtrar
-          return true;
-        }
-      }
-      
-      // Filtro por búsqueda
-      if (!search) return true;
-      const searchLower = search.toLowerCase();
-      return (
-        company.name.toLowerCase().includes(searchLower) ||
-        company.companyname?.toLowerCase().includes(searchLower) ||
-        company.phone?.toLowerCase().includes(searchLower) ||
-        company.domain?.toLowerCase().includes(searchLower)
-      );
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'newest':
-          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-        case 'oldest':
-          return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
-        case 'name':
-          return a.name.localeCompare(b.name);
-        case 'nameDesc':
-          return b.name.localeCompare(a.name);
-        default:
-          return 0;
-      }
-    });
-
-  // Calcular paginación
-  const totalPages = Math.ceil(filteredCompanies.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedCompanies = filteredCompanies.slice(startIndex, endIndex);
+  // Calcular paginación usando el total del servidor
+  // Nota: Los filtros del cliente se aplican sobre los datos ya paginados del servidor
+  // Para filtros más complejos, deberían implementarse en el servidor
+  const totalPages = Math.ceil(totalCompanies / itemsPerPage);
+  const paginatedCompanies = filteredCompanies; // Ya viene paginado del servidor
 
   // Resetear a la página 1 cuando cambien los filtros
   React.useEffect(() => {
@@ -2353,7 +2298,7 @@ const Companies: React.FC = () => {
                           month: 'short', 
                           year: 'numeric' 
                         })
-                      : '--'}
+                      : safeValue(company.updatedAt)}
                   </Typography>
                 </Box>
                 {/* Nueva columna: Propietario */}
@@ -2412,9 +2357,9 @@ const Companies: React.FC = () => {
                       maxWidth: { xs: '120px', md: '150px' },
                       width: '100%',
                     }}
-                    title={(company as any).email || '--'}
+                    title={safeValue((company as any).email)}
                   >
-                    {(company as any).email || '--'}
+                    {safeValue((company as any).email)}
                   </Typography>
                 </Box>
                 <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
@@ -2861,7 +2806,7 @@ const Companies: React.FC = () => {
               {/* Información de paginación y navegación */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
-                  {startIndex + 1}-{Math.min(endIndex, filteredCompanies.length)} de {filteredCompanies.length}
+                  {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, totalCompanies)} de {totalCompanies}
                 </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <IconButton

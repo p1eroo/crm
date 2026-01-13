@@ -5,12 +5,13 @@ import { User } from '../models/User';
 import { Company } from '../models/Company';
 import { ContactCompany } from '../models/ContactCompany';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { apiLimiter, writeLimiter, deleteLimiter } from '../middleware/rateLimiter';
 
 const router = express.Router();
 router.use(authenticateToken);
 
 // Obtener todos los contactos
-router.get('/', async (req: AuthRequest, res) => {
+router.get('/', apiLimiter, async (req: AuthRequest, res) => {
   try {
     const { page = 1, limit = 50, search, lifecycleStage, ownerId } = req.query;
     const offset = (Number(page) - 1) * Number(limit);
@@ -56,7 +57,7 @@ router.get('/', async (req: AuthRequest, res) => {
 });
 
 // Obtener un contacto por ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', apiLimiter, async (req, res) => {
   try {
     // Intentar obtener contact con todas las relaciones
     let contact;
@@ -143,7 +144,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Crear contacto
-router.post('/', async (req: AuthRequest, res) => {
+router.post('/', writeLimiter, async (req: AuthRequest, res) => {
   try {
     // Validar que companyId esté presente
     if (!req.body.companyId) {
@@ -224,7 +225,7 @@ router.post('/', async (req: AuthRequest, res) => {
 });
 
 // Actualizar contacto
-router.put('/:id', async (req: AuthRequest, res) => {
+router.put('/:id', writeLimiter, async (req: AuthRequest, res) => {
   try {
     // Validar que companyId esté presente si se está enviando en el body
     if (req.body.hasOwnProperty('companyId') && !req.body.companyId) {
@@ -318,7 +319,7 @@ router.put('/:id', async (req: AuthRequest, res) => {
 });
 
 // Eliminar contacto
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', deleteLimiter, async (req, res) => {
   try {
     const contact = await Contact.findByPk(req.params.id);
     if (!contact) {
@@ -333,7 +334,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // Agregar empresas asociadas a un contacto
-router.post('/:id/companies', async (req, res) => {
+router.post('/:id/companies', writeLimiter, async (req, res) => {
   try {
     const contact = await Contact.findByPk(req.params.id, {
       include: [
@@ -388,7 +389,7 @@ router.post('/:id/companies', async (req, res) => {
 });
 
 // Eliminar asociación de empresa con contacto
-router.delete('/:id/companies/:companyId', async (req, res) => {
+router.delete('/:id/companies/:companyId', deleteLimiter, async (req, res) => {
   try {
     const contact = await Contact.findByPk(req.params.id);
     if (!contact) {
