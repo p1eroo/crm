@@ -59,10 +59,37 @@ const cleanContact = (contact: any): any => {
 // Obtener todos los contactos
 router.get('/', apiLimiter, async (req: AuthRequest, res) => {
   try {
-    const { page = 1, limit = 50, search, lifecycleStage, ownerId } = req.query;
-    const offset = (Number(page) - 1) * Number(limit);
+    const { 
+      page = 1, 
+      limit: limitParam = 50, 
+      search, 
+      lifecycleStage, 
+      ownerId,
+      // Nuevos parámetros de filtro
+      stages, // Array de etapas: ["lead", "activo"]
+      countries, // Array de países: ["Perú", "Chile"]
+      owners, // Array: ["me", "unassigned", "1", "2"]
+      sortBy = 'newest', // newest, oldest, name, nameDesc
+      // Filtros por columna
+      filterNombre,
+      filterEmpresa,
+      filterTelefono,
+      filterPais,
+      filterEtapa,
+      // Filtros avanzados (JSON string)
+      filterRules,
+    } = req.query;
+    
+    // Limitar el tamaño máximo de página para evitar sobrecarga
+    const maxLimit = 100;
+    const requestedLimit = Number(limitParam);
+    const limit = requestedLimit > maxLimit ? maxLimit : (requestedLimit < 1 ? 50 : requestedLimit);
+    const pageNum = Number(page) < 1 ? 1 : Number(page);
+    const offset = (pageNum - 1) * limit;
 
     const where: any = {};
+    
+    // Búsqueda general
     if (search) {
       const searchStr = typeof search === 'string' ? search : String(search);
       where[Op.or] = [
@@ -73,29 +100,206 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
         { cee: { [Op.eq]: searchStr.trim().toUpperCase() } }, // Búsqueda exacta por CEE
       ];
     }
+    
+    // Filtro por etapas (lifecycleStage) - soporta múltiples valores
     if (lifecycleStage) {
       where.lifecycleStage = lifecycleStage;
+    } else if (stages) {
+      // Si viene como array en query string: ?stages=lead&stages=activo
+      const stagesArray = Array.isArray(stages) ? stages : [stages];
+      if (stagesArray.length > 0) {
+        where.lifecycleStage = { [Op.in]: stagesArray };
+      }
     }
-    if (ownerId) {
-      where.ownerId = ownerId;
+    
+    // Filtro por países
+    if (countries) {
+      const countriesArray = Array.isArray(countries) ? countries : [countries];
+      if (countriesArray.length > 0) {
+        where.country = { [Op.in]: countriesArray };
+      }
+    }
+    
+    // Filtro por propietarios
+    if (owners) {
+      const ownersArray = Array.isArray(owners) ? owners : [owners];
+      const ownerIds: (number | null)[] = [];
+      const hasUnassigned = ownersArray.includes('unassigned');
+      const hasMe = ownersArray.includes('me');
+      
+      ownersArray.forEach((owner: string | any) => {
+        const ownerStr = String(owner);
+        if (ownerStr === 'unassigned') {
+          // Se manejará después
+        } else if (ownerStr === 'me') {
+          if (req.userId) ownerIds.push(req.userId);
+        } else if (!isNaN(Number(ownerStr))) {
+          ownerIds.push(Number(ownerStr));
+        }
+      });
+      
+      if (hasUnassigned && ownerIds.length > 0) {
+        where.ownerId = { [Op.or]: [{ [Op.in]: ownerIds }, { [Op.is]: null }] };
+      } else if (hasUnassigned) {
+        where.ownerId = { [Op.is]: null };
+      } else if (hasMe && ownerIds.length > 1) {
+        where.ownerId = { [Op.in]: ownerIds };
+      } else if (hasMe) {
+        where.ownerId = req.userId || null;
+      } else if (ownerIds.length > 0) {
+        where.ownerId = { [Op.in]: ownerIds };
+      }
+    } else if (ownerId) {
+      // Compatibilidad con el filtro antiguo
+      where.ownerId = ownerId === 'me' ? req.userId : ownerId;
+    }
+    
+    // Filtros por columna
+    if (filterNombre) {
+      const nombreConditions = [
+        { firstName: { [Op.iLike]: `%${filterNombre}%` } },
+        { lastName: { [Op.iLike]: `%${filterNombre}%` } },
+      ];
+      if (where[Op.or]) {
+        where[Op.or] = [...where[Op.or], ...nombreConditions];
+      } else {
+        where[Op.or] = nombreConditions;
+      }
+    }
+    
+    if (filterTelefono) {
+      const telefonoConditions = [
+        { phone: { [Op.iLike]: `%${filterTelefono}%` } },
+        { mobile: { [Op.iLike]: `%${filterTelefono}%` } },
+      ];
+      if (where[Op.or]) {
+        where[Op.or] = [...where[Op.or], ...telefonoConditions];
+      } else {
+        where[Op.or] = telefonoConditions;
+      }
+    }
+    
+    if (filterPais) {
+      where.country = { [Op.iLike]: `%${filterPais}%` };
+    }
+    
+    if (filterEtapa) {
+      where.lifecycleStage = { [Op.iLike]: `%${filterEtapa}%` };
+    }
+    
+    // Filtros avanzados (reglas)
+    let parsedFilterRules: any[] = [];
+    if (filterRules) {
+      try {
+        parsedFilterRules = typeof filterRules === 'string' 
+          ? JSON.parse(filterRules) 
+          : filterRules;
+      } catch (e) {
+        console.warn('Error parsing filterRules:', e);
+      }
+    }
+    
+    // Aplicar filtros avanzados
+    parsedFilterRules.forEach((rule: any) => {
+      if (!rule.value || !rule.column || !rule.operator) return;
+      
+      const ruleValue = String(rule.value);
+      
+      switch (rule.column) {
+        case 'firstName':
+        case 'lastName':
+          if (rule.operator === 'contains') {
+            where[rule.column] = { [Op.iLike]: `%${rule.value}%` };
+          } else if (rule.operator === 'equals') {
+            where[rule.column] = { [Op.iLike]: rule.value };
+          }
+          break;
+        case 'email':
+          if (rule.operator === 'contains') {
+            where.email = { [Op.iLike]: `%${rule.value}%` };
+          }
+          break;
+        case 'phone':
+        case 'mobile':
+          if (rule.operator === 'contains') {
+            where[rule.column] = { [Op.iLike]: `%${rule.value}%` };
+          }
+          break;
+        case 'country':
+          if (rule.operator === 'contains') {
+            where.country = { [Op.iLike]: `%${rule.value}%` };
+          }
+          break;
+        case 'lifecycleStage':
+          if (rule.operator === 'equals') {
+            where.lifecycleStage = rule.value;
+          }
+          break;
+        case 'jobTitle':
+          if (rule.operator === 'contains') {
+            where.jobTitle = { [Op.iLike]: `%${rule.value}%` };
+          }
+          break;
+      }
+    });
+    
+    // Ordenamiento
+    let order: [string, string][] = [['createdAt', 'DESC']];
+    switch (sortBy) {
+      case 'newest':
+        order = [['createdAt', 'DESC']];
+        break;
+      case 'oldest':
+        order = [['createdAt', 'ASC']];
+        break;
+      case 'name':
+        order = [['firstName', 'ASC'], ['lastName', 'ASC']];
+        break;
+      case 'nameDesc':
+        order = [['firstName', 'DESC'], ['lastName', 'DESC']];
+        break;
+    }
+
+    // Configurar includes
+    const includes: any[] = [
+      { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
+    ];
+    
+    // Si hay filtro por empresa, hacer el include requerido
+    if (filterEmpresa) {
+      includes.push({
+        model: Company,
+        as: 'Company',
+        attributes: ['id', 'name'],
+        required: true,
+        where: {
+          name: { [Op.iLike]: `%${filterEmpresa}%` },
+        },
+      });
+    } else {
+      includes.push({
+        model: Company,
+        as: 'Company',
+        attributes: ['id', 'name'],
+        required: false,
+      });
     }
 
     const contacts = await Contact.findAndCountAll({
       where,
-      include: [
-        { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
-        { model: Company, as: 'Company', attributes: ['id', 'name'], required: false },
-      ],
-      limit: Number(limit),
+      include: includes,
+      distinct: true, // Importante para contar correctamente con includes
+      limit,
       offset,
-      order: [['createdAt', 'DESC']],
+      order,
     });
 
     res.json({
       contacts: contacts.rows.map(cleanContact),
       total: contacts.count,
-      page: Number(page),
-      totalPages: Math.ceil(contacts.count / Number(limit)),
+      page: pageNum,
+      limit,
+      totalPages: Math.ceil(contacts.count / limit),
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

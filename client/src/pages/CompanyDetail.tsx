@@ -67,7 +67,8 @@ import {
 import { faCalendar, faClock } from "@fortawesome/free-regular-svg-icons";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { far } from "@fortawesome/free-regular-svg-icons";
-import { fas } from "@fortawesome/free-solid-svg-icons";
+import { fas, faEnvelope } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import api from "../config/api";
 import RichTextEditor from "../components/RichTextEditor";
 import EmailComposer from "../components/EmailComposer";
@@ -2223,6 +2224,11 @@ const activityButtons = [
     onClick: () => handleCreateActivity('note'),
   },
   {
+    icon: faEnvelope,
+    tooltip: 'Enviar correo',
+    onClick: () => setEmailOpen(true),
+  },
+  {
     icon: ['fas', 'phone'],
     tooltip: 'Hacer llamada',
     onClick: () => handleCreateActivity('call'),
@@ -2516,6 +2522,338 @@ const tab2Content = (
       tab1Content={tab1Content}
       tab2Content={tab2Content}
       loading={loading}
+      editDialog={
+        <Dialog
+          open={editDialogOpen}
+          onClose={handleCloseEditDialog}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>Editar Empresa</DialogTitle>
+          <DialogContent>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+              <TextField
+                label="Nombre"
+                value={editFormData.name}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, name: e.target.value })
+                }
+                InputLabelProps={{ shrink: true }}
+                required
+                disabled
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 1.5,
+                  },
+                }}
+              />
+              <TextField
+                label="RUC"
+                value={editFormData.ruc}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, "");
+                  const limitedValue = value.slice(0, 11);
+                  setEditFormData({ ...editFormData, ruc: limitedValue });
+                }}
+                inputProps={{ maxLength: 11 }}
+                InputLabelProps={{ shrink: true }}
+                disabled
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 1.5,
+                  },
+                }}
+              />
+              <Box sx={{ display: "flex", gap: 2 }}>
+                <TextField
+                  label="Dominio"
+                  value={editFormData.domain}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, domain: e.target.value })
+                  }
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 1.5,
+                    },
+                  }}
+                />
+                <TextField
+                  label="LinkedIn"
+                  value={editFormData.linkedin}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, linkedin: e.target.value })
+                  }
+                  InputLabelProps={{ shrink: true }}
+                  placeholder="https://www.linkedin.com/company/..."
+                  sx={{
+                    flex: 1,
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 1.5,
+                    },
+                  }}
+                />
+              </Box>
+              <Box sx={{ display: "flex", gap: 2 }}>
+                <TextField
+                  label="Teléfono"
+                  value={editFormData.phone}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, phone: e.target.value })
+                  }
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 1.5,
+                    },
+                  }}
+                />
+                <TextField
+                  label="Teléfono 2"
+                  value={editFormData.phone2}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, phone2: e.target.value })
+                  }
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 1.5,
+                    },
+                  }}
+                />
+                <TextField
+                  label="Teléfono 3"
+                  value={editFormData.phone3}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, phone3: e.target.value })
+                  }
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 1.5,
+                    },
+                  }}
+                />
+              </Box>
+              <TextField
+                label="Correo"
+                type="email"
+                value={editFormData.email}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, email: e.target.value })
+                }
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 1.5,
+                  },
+                }}
+              />
+              <TextField
+                select
+                label="Origen de lead"
+                value={editFormData.leadSource}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, leadSource: e.target.value })
+                }
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 1.5,
+                  },
+                }}
+              >
+                <MenuItem value="">--</MenuItem>
+                <MenuItem value="referido">Referido</MenuItem>
+                <MenuItem value="base">Base</MenuItem>
+                <MenuItem value="entorno">Entorno</MenuItem>
+                <MenuItem value="feria">Feria</MenuItem>
+                <MenuItem value="masivo">Masivo</MenuItem>
+              </TextField>
+              <TextField
+                label="Potencial de Facturación Estimado"
+                type="number"
+                value={editFormData.estimatedRevenue}
+                onChange={(e) =>
+                  setEditFormData({
+                    ...editFormData,
+                    estimatedRevenue: e.target.value,
+                  })
+                }
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">S/</InputAdornment>
+                  ),
+                }}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 1.5,
+                  },
+                }}
+              />
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={editFormData.isRecoveredClient}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        isRecoveredClient: e.target.checked,
+                      })
+                    }
+                  />
+                }
+                label="Cliente Recuperado"
+              />
+              <TextField
+                label="Razón social"
+                value={editFormData.companyname}
+                onChange={(e) =>
+                  setEditFormData({
+                    ...editFormData,
+                    companyname: e.target.value,
+                  })
+                }
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 1.5,
+                  },
+                }}
+              />
+              <TextField
+                label="Dirección"
+                value={editFormData.address}
+                onChange={(e) =>
+                  setEditFormData({ ...editFormData, address: e.target.value })
+                }
+                multiline
+                rows={2}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 1.5,
+                  },
+                }}
+              />
+              <Box sx={{ display: "flex", gap: 2 }}>
+                <TextField
+                  label="Distrito"
+                  value={editFormData.city}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, city: e.target.value })
+                  }
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 1.5,
+                    },
+                  }}
+                />
+                <TextField
+                  label="Provincia"
+                  value={editFormData.state}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, state: e.target.value })
+                  }
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 1.5,
+                    },
+                  }}
+                />
+                <TextField
+                  label="Departamento"
+                  value={editFormData.country}
+                  onChange={(e) =>
+                    setEditFormData({ ...editFormData, country: e.target.value })
+                  }
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 1.5,
+                    },
+                  }}
+                />
+              </Box>
+              <FormControl fullWidth>
+                <TextField
+                  select
+                  label="Etapa del Ciclo de Vida"
+                  value={editFormData.lifecycleStage}
+                  onChange={(e) =>
+                    setEditFormData({
+                      ...editFormData,
+                      lifecycleStage: e.target.value,
+                    })
+                  }
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 1.5,
+                    },
+                  }}
+                >
+                  <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
+                  <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
+                  <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+                  <MenuItem value="lead">Lead</MenuItem>
+                  <MenuItem value="contacto">Contacto</MenuItem>
+                  <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+                  <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+                  <MenuItem value="propuesta_economica">
+                    Propuesta Económica
+                  </MenuItem>
+                  <MenuItem value="negociacion">Negociación</MenuItem>
+                  <MenuItem value="licitacion">Licitación</MenuItem>
+                  <MenuItem value="licitacion_etapa_final">
+                    Licitación Etapa Final
+                  </MenuItem>
+                  <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+                  <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
+                  <MenuItem value="activo">Activo</MenuItem>
+                </TextField>
+              </FormControl>
+            </Box>
+            {errorMessage && (
+              <Alert
+                severity="error"
+                onClose={() => setErrorMessage("")}
+                sx={{ mx: 2, mb: 2 }}
+              >
+                {errorMessage}
+              </Alert>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseEditDialog} disabled={saving}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleSaveCompany} 
+              variant="contained"
+              disabled={saving || !editFormData.name.trim()}
+              sx={{
+                bgcolor: taxiMonterricoColors.green,
+                "&:hover": {
+                  bgcolor: taxiMonterricoColors.greenDark,
+                },
+              }}
+            >
+              {saving ? "Guardando..." : "Guardar"}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      }
     />
 
     {/* Botón flotante para abrir el Drawer de Registros Asociados */}
@@ -3168,23 +3506,6 @@ const tab2Content = (
                     setNoteData({ ...noteData, description: value })
                   }
                 placeholder="Empieza a escribir para dejar una nota..."
-                onAssociateClick={() => {
-                  setNoteAssociateModalOpen(true);
-                    setSelectedCategory("empresas");
-                    setAssociateSearch("");
-                  // Inicializar selecciones con los valores actuales
-                  setNoteSelectedAssociations({
-                    companies: selectedCompanies,
-                    contacts: selectedContacts,
-                      deals: selectedAssociations
-                        .filter((id: number) => id > 1000 && id < 2000)
-                        .map((id) => id - 1000),
-                      tickets: selectedAssociations
-                        .filter((id: number) => id > 2000)
-                        .map((id) => id - 2000),
-                  });
-                  fetchAssociations();
-                }}
               />
             </Box>
           </Box>
@@ -7109,354 +7430,7 @@ const tab2Content = (
         </DialogActions>
       </Dialog>
 
-      {/* Dialog de Edición de Empresa */}
-      <Dialog 
-        open={editDialogOpen} 
-        onClose={handleCloseEditDialog} 
-        maxWidth="sm" 
-        fullWidth
-        TransitionProps={{
-          appear: false,
-        }}
-        PaperProps={{
-          sx: {
-            zIndex: 2000,
-          },
-        }}
-        BackdropProps={{
-          sx: {
-            backdropFilter: "blur(4px)",
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-            zIndex: 1999,
-            transition: 'none',
-          },
-          transitionDuration: 0,
-        }}
-      >
-        <DialogTitle>Editar Empresa</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
-            <TextField
-              label="Nombre"
-              value={editFormData.name}
-              onChange={(e) =>
-                setEditFormData({ ...editFormData, name: e.target.value })
-              }
-              InputLabelProps={{ shrink: true }}
-              required
-              disabled
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 1.5,
-                },
-              }}
-            />
-            <TextField
-              label="RUC"
-              value={editFormData.ruc}
-              onChange={(e) => {
-                const value = e.target.value.replace(/\D/g, "");
-                const limitedValue = value.slice(0, 11);
-                setEditFormData({ ...editFormData, ruc: limitedValue });
-              }}
-              inputProps={{ maxLength: 11 }}
-              InputLabelProps={{ shrink: true }}
-              disabled
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 1.5,
-                },
-              }}
-            />
-            <Box sx={{ display: "flex", gap: 2 }}>
-              <TextField
-                label="Dominio"
-                value={editFormData.domain}
-                onChange={(e) =>
-                  setEditFormData({ ...editFormData, domain: e.target.value })
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <TextField
-                label="LinkedIn"
-                value={editFormData.linkedin}
-                onChange={(e) =>
-                  setEditFormData({ ...editFormData, linkedin: e.target.value })
-                }
-                InputLabelProps={{ shrink: true }}
-                placeholder="https://www.linkedin.com/company/..."
-                sx={{
-                  flex: 1,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-            </Box>
-            <Box sx={{ display: "flex", gap: 2 }}>
-              <TextField
-                label="Teléfono"
-                value={editFormData.phone}
-                onChange={(e) =>
-                  setEditFormData({ ...editFormData, phone: e.target.value })
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <TextField
-                label="Teléfono 2"
-                value={editFormData.phone2}
-                onChange={(e) =>
-                  setEditFormData({ ...editFormData, phone2: e.target.value })
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <TextField
-                label="Teléfono 3"
-                value={editFormData.phone3}
-                onChange={(e) =>
-                  setEditFormData({ ...editFormData, phone3: e.target.value })
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-            </Box>
-            <TextField
-              label="Correo"
-              type="email"
-              value={editFormData.email}
-              onChange={(e) =>
-                setEditFormData({ ...editFormData, email: e.target.value })
-              }
-              InputLabelProps={{ shrink: true }}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 1.5,
-                },
-              }}
-            />
-            <TextField
-              select
-              label="Origen de lead"
-              value={editFormData.leadSource}
-              onChange={(e) =>
-                setEditFormData({ ...editFormData, leadSource: e.target.value })
-              }
-              InputLabelProps={{ shrink: true }}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 1.5,
-                },
-              }}
-            >
-              <MenuItem value="">--</MenuItem>
-              <MenuItem value="referido">Referido</MenuItem>
-              <MenuItem value="base">Base</MenuItem>
-              <MenuItem value="entorno">Entorno</MenuItem>
-              <MenuItem value="feria">Feria</MenuItem>
-              <MenuItem value="masivo">Masivo</MenuItem>
-            </TextField>
-            <TextField
-              label="Potencial de Facturación Estimado"
-              type="number"
-              value={editFormData.estimatedRevenue}
-              onChange={(e) =>
-                setEditFormData({
-                  ...editFormData,
-                  estimatedRevenue: e.target.value,
-                })
-              }
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">S/</InputAdornment>
-                ),
-              }}
-              InputLabelProps={{ shrink: true }}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 1.5,
-                },
-              }}
-            />
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={editFormData.isRecoveredClient}
-                  onChange={(e) =>
-                    setEditFormData({
-                      ...editFormData,
-                      isRecoveredClient: e.target.checked,
-                    })
-                  }
-                />
-              }
-              label="Cliente Recuperado"
-            />
-            <TextField
-              label="Razón social"
-              value={editFormData.companyname}
-              onChange={(e) =>
-                setEditFormData({
-                  ...editFormData,
-                  companyname: e.target.value,
-                })
-              }
-              InputLabelProps={{ shrink: true }}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 1.5,
-                },
-              }}
-            />
-            <TextField
-              label="Dirección"
-              value={editFormData.address}
-              onChange={(e) =>
-                setEditFormData({ ...editFormData, address: e.target.value })
-              }
-              multiline
-              rows={2}
-              InputLabelProps={{ shrink: true }}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 1.5,
-                },
-              }}
-            />
-            <Box sx={{ display: "flex", gap: 2 }}>
-              <TextField
-                label="Distrito"
-                value={editFormData.city}
-                onChange={(e) =>
-                  setEditFormData({ ...editFormData, city: e.target.value })
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <TextField
-                label="Provincia"
-                value={editFormData.state}
-                onChange={(e) =>
-                  setEditFormData({ ...editFormData, state: e.target.value })
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <TextField
-                label="Departamento"
-                value={editFormData.country}
-                onChange={(e) =>
-                  setEditFormData({ ...editFormData, country: e.target.value })
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  flex: 1,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-            </Box>
-            <FormControl fullWidth>
-              <TextField
-                select
-                label="Etapa del Ciclo de Vida"
-                value={editFormData.lifecycleStage}
-                onChange={(e) =>
-                  setEditFormData({
-                    ...editFormData,
-                    lifecycleStage: e.target.value,
-                  })
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              >
-                <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
-                <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
-                <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
-                <MenuItem value="lead">Lead</MenuItem>
-                <MenuItem value="contacto">Contacto</MenuItem>
-                <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
-                <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-                <MenuItem value="propuesta_economica">
-                  Propuesta Económica
-                </MenuItem>
-                <MenuItem value="negociacion">Negociación</MenuItem>
-                <MenuItem value="licitacion">Licitación</MenuItem>
-                <MenuItem value="licitacion_etapa_final">
-                  Licitación Etapa Final
-                </MenuItem>
-                <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
-                <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
-                <MenuItem value="activo">Activo</MenuItem>
-              </TextField>
-            </FormControl>
-          </Box>
-          {errorMessage && (
-            <Alert
-              severity="error"
-              onClose={() => setErrorMessage("")}
-              sx={{ mx: 2, mb: 2 }}
-            >
-              {errorMessage}
-            </Alert>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseEditDialog} disabled={saving}>
-            Cancelar
-          </Button>
-          <Button 
-            onClick={handleSaveCompany} 
-            variant="contained"
-            disabled={saving || !editFormData.name.trim()}
-            sx={{
-              bgcolor: taxiMonterricoColors.green,
-              "&:hover": {
-                bgcolor: taxiMonterricoColors.greenDark,
-              },
-            }}
-          >
-            {saving ? "Guardando..." : "Guardar"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {/* Dialog de Edición de Empresa - Movido a DetailPageLayout como prop editDialog */}
 
       {/* Dialog para ver detalles de actividad expandida */}
       <ActivityDetailDialog

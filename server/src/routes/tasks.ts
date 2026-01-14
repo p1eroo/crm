@@ -47,10 +47,38 @@ const cleanTask = (task: any): any => {
 // Obtener todas las tareas
 router.get('/', async (req: AuthRequest, res) => {
   try {
-    const { page = 1, limit = 50, status, priority, assignedToId, type, contactId, companyId, dealId } = req.query;
-    const offset = (Number(page) - 1) * Number(limit);
+    const { 
+      page = 1, 
+      limit: limitParam = 50, 
+      status, 
+      priority, 
+      assignedToId, 
+      type, 
+      contactId, 
+      companyId, 
+      dealId,
+      search,
+      sortBy = 'newest', // newest, oldest, name, nameDesc, dueDate
+      // Filtros por columna
+      filterTitulo,
+      filterEstado,
+      filterPrioridad,
+    } = req.query;
+    
+    // Limitar el tamaño máximo de página para evitar sobrecarga
+    const maxLimit = 100;
+    const requestedLimit = Number(limitParam);
+    const limit = requestedLimit > maxLimit ? maxLimit : (requestedLimit < 1 ? 50 : requestedLimit);
+    const pageNum = Number(page) < 1 ? 1 : Number(page);
+    const offset = (pageNum - 1) * limit;
 
     const where: any = {};
+    
+    // Búsqueda general
+    if (search) {
+      where.title = { [Op.iLike]: `%${search}%` };
+    }
+    
     if (status) {
       where.status = status;
     }
@@ -72,6 +100,60 @@ router.get('/', async (req: AuthRequest, res) => {
     if (dealId) {
       where.dealId = dealId;
     }
+    
+    // Filtros por columna
+    if (filterTitulo) {
+      if (where.title) {
+        where.title = { [Op.and]: [
+          where.title,
+          { [Op.iLike]: `%${filterTitulo}%` }
+        ]};
+      } else {
+        where.title = { [Op.iLike]: `%${filterTitulo}%` };
+      }
+    }
+    
+    if (filterEstado) {
+      if (where.status) {
+        // Si ya existe filtro por status, verificar si coincide
+        if (String(where.status).toLowerCase() !== filterEstado.toLowerCase()) {
+          where.status = { [Op.in]: [] }; // No hay coincidencias
+        }
+      } else {
+        where.status = { [Op.iLike]: `%${filterEstado}%` };
+      }
+    }
+    
+    if (filterPrioridad) {
+      if (where.priority) {
+        // Si ya existe filtro por priority, verificar si coincide
+        if (String(where.priority).toLowerCase() !== filterPrioridad.toLowerCase()) {
+          where.priority = { [Op.in]: [] }; // No hay coincidencias
+        }
+      } else {
+        where.priority = { [Op.iLike]: `%${filterPrioridad}%` };
+      }
+    }
+    
+    // Ordenamiento
+    let order: [string, string][] = [['dueDate', 'ASC'], ['createdAt', 'DESC']];
+    switch (sortBy) {
+      case 'newest':
+        order = [['createdAt', 'DESC']];
+        break;
+      case 'oldest':
+        order = [['createdAt', 'ASC']];
+        break;
+      case 'name':
+        order = [['title', 'ASC']];
+        break;
+      case 'nameDesc':
+        order = [['title', 'DESC']];
+        break;
+      case 'dueDate':
+        order = [['dueDate', 'ASC'], ['createdAt', 'DESC']];
+        break;
+    }
 
     const tasks = await Task.findAndCountAll({
       where,
@@ -82,16 +164,18 @@ router.get('/', async (req: AuthRequest, res) => {
         { model: Company, as: 'Company', attributes: ['id', 'name'], required: false },
         { model: Deal, as: 'Deal', attributes: ['id', 'name'], required: false },
       ],
-      limit: Number(limit),
+      distinct: true, // Importante para contar correctamente con includes
+      limit,
       offset,
-      order: [['dueDate', 'ASC'], ['createdAt', 'DESC']],
+      order,
     });
 
     res.json({
       tasks: tasks.rows.map(cleanTask),
       total: tasks.count,
-      page: Number(page),
-      totalPages: Math.ceil(tasks.count / Number(limit)),
+      page: pageNum,
+      limit,
+      totalPages: Math.ceil(tasks.count / limit),
     });
   } catch (error: any) {
     console.error('❌ Error al obtener tareas:', error);

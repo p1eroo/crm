@@ -304,6 +304,31 @@ const ContactDetail: React.FC = () => {
   });
   const [createFollowUpTask, setCreateFollowUpTask] = useState(false);
 
+  // Estados para el diálogo de edición
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    mobile: "",
+    jobTitle: "",
+    address: "",
+    city: "",
+    state: "",
+    country: "",
+    postalCode: "",
+    website: "",
+    facebook: "",
+    twitter: "",
+    github: "",
+    linkedin: "",
+    youtube: "",
+    lifecycleStage: "lead",
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
   // Ya no se necesitan estados de OAuth individual - se usa el token guardado desde Perfil
 
   const fetchContact = useCallback(async () => {
@@ -815,6 +840,102 @@ const ContactDetail: React.FC = () => {
       lead_inactivo: "Lead Inactivo",
     };
     return labels[stage] || stage;
+  };
+
+  // Funciones para el diálogo de edición
+  const handleOpenEditDialog = () => {
+    if (contact) {
+      setEditFormData({
+        firstName: contact.firstName || "",
+        lastName: contact.lastName || "",
+        email: contact.email || "",
+        phone: contact.phone || "",
+        mobile: contact.mobile || "",
+        jobTitle: contact.jobTitle || "",
+        address: contact.address || "",
+        city: contact.city || "",
+        state: contact.state || "",
+        country: contact.country || "",
+        postalCode: contact.postalCode || "",
+        website: contact.website || "",
+        facebook: contact.facebook || "",
+        twitter: contact.twitter || "",
+        github: contact.github || "",
+        linkedin: contact.linkedin || "",
+        youtube: contact.youtube || "",
+        lifecycleStage: contact.lifecycleStage || "lead",
+      });
+      setEditDialogOpen(true);
+      setErrorMessage("");
+    }
+  };
+
+  const handleCloseEditDialog = () => {
+    setEditDialogOpen(false);
+    setEditFormData({
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      mobile: "",
+      jobTitle: "",
+      address: "",
+      city: "",
+      state: "",
+      country: "",
+      postalCode: "",
+      website: "",
+      facebook: "",
+      twitter: "",
+      github: "",
+      linkedin: "",
+      youtube: "",
+      lifecycleStage: "lead",
+    });
+    setErrorMessage("");
+  };
+
+  const handleSubmitEdit = async () => {
+    if (!contact || !editFormData.firstName.trim() || !editFormData.lastName.trim()) {
+      return;
+    }
+    
+    setSavingEdit(true);
+    setErrorMessage("");
+    try {
+      const data = {
+        firstName: editFormData.firstName.trim(),
+        lastName: editFormData.lastName.trim(),
+        email: editFormData.email || null,
+        phone: editFormData.phone || null,
+        mobile: editFormData.mobile || null,
+        jobTitle: editFormData.jobTitle || null,
+        address: editFormData.address || null,
+        city: editFormData.city || null,
+        state: editFormData.state || null,
+        country: editFormData.country || null,
+        postalCode: editFormData.postalCode || null,
+        website: editFormData.website || null,
+        facebook: editFormData.facebook || null,
+        twitter: editFormData.twitter || null,
+        github: editFormData.github || null,
+        linkedin: editFormData.linkedin || null,
+        youtube: editFormData.youtube || null,
+        lifecycleStage: editFormData.lifecycleStage,
+      };
+      
+      await api.put(`/contacts/${contact.id}`, data);
+      
+      // Recargar los datos del contacto
+      await fetchContact();
+      
+      handleCloseEditDialog();
+    } catch (error: any) {
+      console.error('Error updating contact:', error);
+      setErrorMessage(error.response?.data?.error || error.response?.data?.message || 'Error al actualizar el contacto. Por favor, intenta nuevamente.');
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   // Funciones para abrir diálogos
@@ -2217,12 +2338,341 @@ const ContactDetail: React.FC = () => {
           entitySubtitle={contact?.jobTitle || contact?.email || 'Sin información adicional'}
           activityButtons={activityButtons}
           detailFields={detailFields}
+          onEditDetails={handleOpenEditDialog}
           activityLogs={activityLogs}
           loadingLogs={loadingLogs}
           tab0Content={tab0Content}
           tab1Content={tab1Content}
           tab2Content={tab2Content}
           loading={loading}
+          editDialog={
+            <Dialog
+              open={editDialogOpen}
+              onClose={handleCloseEditDialog}
+              maxWidth="sm"
+              fullWidth
+            >
+              <DialogTitle>Editar Contacto</DialogTitle>
+              <DialogContent>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
+                  <Box sx={{ display: "flex", gap: 2 }}>
+                    <TextField
+                      label="Nombre"
+                      value={editFormData.firstName}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, firstName: e.target.value })
+                      }
+                      InputLabelProps={{ shrink: true }}
+                      required
+                      sx={{
+                        flex: 1,
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: 1.5,
+                        },
+                      }}
+                    />
+                    <TextField
+                      label="Apellido"
+                      value={editFormData.lastName}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, lastName: e.target.value })
+                      }
+                      InputLabelProps={{ shrink: true }}
+                      required
+                      sx={{
+                        flex: 1,
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: 1.5,
+                        },
+                      }}
+                    />
+                  </Box>
+                  <TextField
+                    label="Correo"
+                    type="email"
+                    value={editFormData.email}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, email: e.target.value })
+                    }
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 1.5,
+                      },
+                    }}
+                  />
+                  <Box sx={{ display: "flex", gap: 2 }}>
+                    <TextField
+                      label="Teléfono"
+                      value={editFormData.phone}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, phone: e.target.value })
+                      }
+                      InputLabelProps={{ shrink: true }}
+                      sx={{
+                        flex: 1,
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: 1.5,
+                        },
+                      }}
+                    />
+                    <TextField
+                      label="Móvil"
+                      value={editFormData.mobile}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, mobile: e.target.value })
+                      }
+                      InputLabelProps={{ shrink: true }}
+                      sx={{
+                        flex: 1,
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: 1.5,
+                        },
+                      }}
+                    />
+                  </Box>
+                  <TextField
+                    label="Cargo"
+                    value={editFormData.jobTitle}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, jobTitle: e.target.value })
+                    }
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 1.5,
+                      },
+                    }}
+                  />
+                  <TextField
+                    label="Dirección"
+                    value={editFormData.address}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, address: e.target.value })
+                    }
+                    multiline
+                    rows={2}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 1.5,
+                      },
+                    }}
+                  />
+                  <Box sx={{ display: "flex", gap: 2 }}>
+                    <TextField
+                      label="Ciudad"
+                      value={editFormData.city}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, city: e.target.value })
+                      }
+                      InputLabelProps={{ shrink: true }}
+                      sx={{
+                        flex: 1,
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: 1.5,
+                        },
+                      }}
+                    />
+                    <TextField
+                      label="Estado/Provincia"
+                      value={editFormData.state}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, state: e.target.value })
+                      }
+                      InputLabelProps={{ shrink: true }}
+                      sx={{
+                        flex: 1,
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: 1.5,
+                        },
+                      }}
+                    />
+                  </Box>
+                  <Box sx={{ display: "flex", gap: 2 }}>
+                    <TextField
+                      label="País"
+                      value={editFormData.country}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, country: e.target.value })
+                      }
+                      InputLabelProps={{ shrink: true }}
+                      sx={{
+                        flex: 1,
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: 1.5,
+                        },
+                      }}
+                    />
+                    <TextField
+                      label="Código Postal"
+                      value={editFormData.postalCode}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, postalCode: e.target.value })
+                      }
+                      InputLabelProps={{ shrink: true }}
+                      sx={{
+                        flex: 1,
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: 1.5,
+                        },
+                      }}
+                    />
+                  </Box>
+                  <TextField
+                    label="Sitio Web"
+                    value={editFormData.website}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, website: e.target.value })
+                    }
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 1.5,
+                      },
+                    }}
+                  />
+                  <Box sx={{ display: "flex", gap: 2 }}>
+                    <TextField
+                      label="LinkedIn"
+                      value={editFormData.linkedin}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, linkedin: e.target.value })
+                      }
+                      InputLabelProps={{ shrink: true }}
+                      placeholder="https://www.linkedin.com/in/..."
+                      sx={{
+                        flex: 1,
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: 1.5,
+                        },
+                      }}
+                    />
+                    <TextField
+                      label="Facebook"
+                      value={editFormData.facebook}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, facebook: e.target.value })
+                      }
+                      InputLabelProps={{ shrink: true }}
+                      sx={{
+                        flex: 1,
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: 1.5,
+                        },
+                      }}
+                    />
+                  </Box>
+                  <Box sx={{ display: "flex", gap: 2 }}>
+                    <TextField
+                      label="Twitter"
+                      value={editFormData.twitter}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, twitter: e.target.value })
+                      }
+                      InputLabelProps={{ shrink: true }}
+                      sx={{
+                        flex: 1,
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: 1.5,
+                        },
+                      }}
+                    />
+                    <TextField
+                      label="GitHub"
+                      value={editFormData.github}
+                      onChange={(e) =>
+                        setEditFormData({ ...editFormData, github: e.target.value })
+                      }
+                      InputLabelProps={{ shrink: true }}
+                      sx={{
+                        flex: 1,
+                        "& .MuiOutlinedInput-root": {
+                          borderRadius: 1.5,
+                        },
+                      }}
+                    />
+                  </Box>
+                  <TextField
+                    label="YouTube"
+                    value={editFormData.youtube}
+                    onChange={(e) =>
+                      setEditFormData({ ...editFormData, youtube: e.target.value })
+                    }
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 1.5,
+                      },
+                    }}
+                  />
+                  <TextField
+                    select
+                    label="Etapa del Ciclo de Vida"
+                    value={editFormData.lifecycleStage}
+                    onChange={(e) =>
+                      setEditFormData({
+                        ...editFormData,
+                        lifecycleStage: e.target.value,
+                      })
+                    }
+                    InputLabelProps={{ shrink: true }}
+                    sx={{
+                      "& .MuiOutlinedInput-root": {
+                        borderRadius: 1.5,
+                      },
+                    }}
+                  >
+                    <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
+                    <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
+                    <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+                    <MenuItem value="lead">Lead</MenuItem>
+                    <MenuItem value="contacto">Contacto</MenuItem>
+                    <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+                    <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+                    <MenuItem value="propuesta_economica">
+                      Propuesta Económica
+                    </MenuItem>
+                    <MenuItem value="negociacion">Negociación</MenuItem>
+                    <MenuItem value="licitacion">Licitación</MenuItem>
+                    <MenuItem value="licitacion_etapa_final">
+                      Licitación Etapa Final
+                    </MenuItem>
+                    <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+                    <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
+                    <MenuItem value="activo">Activo</MenuItem>
+                  </TextField>
+                </Box>
+                {errorMessage && (
+                  <Alert
+                    severity="error"
+                    onClose={() => setErrorMessage("")}
+                    sx={{ mx: 2, mb: 2 }}
+                  >
+                    {errorMessage}
+                  </Alert>
+                )}
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={handleCloseEditDialog} disabled={savingEdit}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleSubmitEdit} 
+                  variant="contained"
+                  disabled={savingEdit || !editFormData.firstName.trim() || !editFormData.lastName.trim()}
+                  sx={{
+                    bgcolor: taxiMonterricoColors.green,
+                    "&:hover": {
+                      bgcolor: taxiMonterricoColors.greenDark,
+                    },
+                  }}
+                >
+                  {savingEdit ? "Guardando..." : "Guardar"}
+                </Button>
+              </DialogActions>
+            </Dialog>
+          }
         />
   
         {/* MANTENER TODOS LOS MODALES Y DIALOGS DESDE AQUÍ */}
@@ -2509,23 +2959,6 @@ const ContactDetail: React.FC = () => {
                     setNoteData({ ...noteData, description: value })
                   }
                   placeholder="Empieza a escribir para dejar una nota..."
-                  onAssociateClick={() => {
-                    setNoteAssociateModalOpen(true);
-                    setSelectedCategory("empresas");
-                    setAssociateSearch("");
-                    // Inicializar selecciones con los valores actuales
-                    setNoteSelectedAssociations({
-                      companies: selectedCompanies,
-                      contacts: contact?.id ? [contact.id] : [],
-                      deals: selectedAssociations
-                        .filter((id: number) => id > 1000 && id < 2000)
-                        .map((id) => id - 1000),
-                      tickets: selectedAssociations
-                        .filter((id: number) => id > 2000)
-                        .map((id) => id - 2000),
-                    });
-                    fetchAssociations();
-                  }}
                 />
               </Box>
             </Box>

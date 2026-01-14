@@ -30,6 +30,7 @@ import {
   RadioGroup,
   Radio,
   FormControlLabel,
+  Chip,
 } from "@mui/material";
 import {
   Phone,
@@ -56,6 +57,7 @@ import {
   FormatAlignCenter,
   FormatAlignRight,
   FormatAlignJustify,
+  ArrowDropDown,
 } from "@mui/icons-material";
 import api from "../config/api";
 import axios from "axios";
@@ -74,6 +76,7 @@ import {
   ActivitiesTabContent,
   GeneralDescriptionTab,
 } from "../components/DetailCards";
+import { NoteModal } from "../components/ActivityModals";
 import type { GeneralInfoCard } from "../components/DetailCards";
 import { useAuth } from "../context/AuthContext";
 import DetailPageLayout from "../components/Layout/DetailPageLayout";
@@ -143,44 +146,12 @@ const DealDetail: React.FC = () => {
     name: string;
   } | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
-  const [noteData, setNoteData] = useState({ subject: "", description: "" });
   const [callOpen, setCallOpen] = useState(false);
   const [callData, setCallData] = useState({
     subject: "",
     description: "",
     duration: "",
   });
-  // Estados para el modal de asociaciones de nota
-  const [noteAssociateModalOpen, setNoteAssociateModalOpen] = useState(false);
-  const [noteSelectedCategory, setNoteSelectedCategory] = useState("empresas");
-  const [noteAssociateSearch, setNoteAssociateSearch] = useState("");
-  const [noteModalCompanies, setNoteModalCompanies] = useState<any[]>([]);
-  const [noteModalContacts, setNoteModalContacts] = useState<any[]>([]);
-  const [noteModalDeals, setNoteModalDeals] = useState<any[]>([]);
-  const [noteModalTickets, setNoteModalTickets] = useState<any[]>([]);
-  const [noteSelectedAssociations, setNoteSelectedAssociations] = useState<{
-    [key: string]: number[];
-  }>({
-    companies: [],
-    contacts: [],
-    deals: [],
-    tickets: [],
-  });
-  const [noteLoadingAssociations, setNoteLoadingAssociations] = useState(false);
-  const [selectedCompaniesForNote, setSelectedCompaniesForNote] = useState<
-    number[]
-  >([]);
-  const [selectedContactsForNote, setSelectedContactsForNote] = useState<
-    number[]
-  >([]);
-  const [selectedAssociationsForNote, setSelectedAssociationsForNote] =
-    useState<number[]>([]);
-  const [excludedCompaniesForNote, setExcludedCompaniesForNote] = useState<
-    number[]
-  >([]);
-  const [excludedContactsForNote, setExcludedContactsForNote] = useState<
-    number[]
-  >([]);
   const [taskOpen, setTaskOpen] = useState(false);
   const [taskData, setTaskData] = useState({
     title: "",
@@ -190,6 +161,17 @@ const DealDetail: React.FC = () => {
     type: "todo" as string,
   });
   const [saving, setSaving] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    amount: '',
+    stage: 'lead',
+    closeDate: '',
+    priority: 'baja' as 'baja' | 'media' | 'alta',
+    companyId: '',
+    contactId: '',
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
   const descriptionEditorRef = useRef<HTMLDivElement>(null);
   const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState<null | HTMLElement>(
     null
@@ -425,7 +407,23 @@ const DealDetail: React.FC = () => {
         }
       );
 
-      setActivities(allActivities);
+      // Merge inteligente: preservar actividades existentes y agregar nuevas del servidor
+      setActivities((prevActivities) => {
+        // Crear un mapa de IDs existentes para referencia rápida
+        const existingIds = new Set(prevActivities.map((a: any) => a.id));
+        
+        // Agregar actividades nuevas que no estén en el estado actual
+        const newActivities = allActivities.filter((a: any) => !existingIds.has(a.id));
+        
+        // Combinar: mantener las actividades existentes + agregar las nuevas del servidor
+        const merged = [...prevActivities, ...newActivities].sort((a: any, b: any) => {
+          const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
+          const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
+          return dateB - dateA;
+        });
+        
+        return merged;
+      });
     } catch (error) {
       console.error("Error fetching activities:", error);
     }
@@ -613,75 +611,6 @@ const DealDetail: React.FC = () => {
     }
   };
 
-  const fetchAssociationsForNote = async (searchTerm?: string) => {
-    setNoteLoadingAssociations(true);
-    try {
-      if (searchTerm && searchTerm.trim().length > 0) {
-        const [companiesRes, contactsRes, dealsRes, ticketsRes] =
-          await Promise.all([
-            api.get("/companies", {
-              params: { limit: 1000, search: searchTerm },
-            }),
-            api.get("/contacts", {
-              params: { limit: 1000, search: searchTerm },
-            }),
-            api.get("/deals", { params: { limit: 1000, search: searchTerm } }),
-            api.get("/tickets", {
-              params: { limit: 1000, search: searchTerm },
-            }),
-          ]);
-        setNoteModalCompanies(
-          companiesRes.data.companies || companiesRes.data || []
-        );
-        setNoteModalContacts(
-          contactsRes.data.contacts || contactsRes.data || []
-        );
-        setNoteModalDeals(dealsRes.data.deals || dealsRes.data || []);
-        setNoteModalTickets(ticketsRes.data.tickets || ticketsRes.data || []);
-      } else {
-        // Cargar elementos asociados al negocio actual
-        const associatedItems: {
-          companies: any[];
-          contacts: any[];
-          deals: any[];
-          tickets: any[];
-        } = {
-          companies: [],
-          contacts: [],
-          deals: [],
-          tickets: [],
-        };
-
-        // Cargar empresas vinculadas
-        if (dealCompanies && dealCompanies.length > 0) {
-          associatedItems.companies = dealCompanies;
-        } else if (deal?.Company) {
-          associatedItems.companies = [deal.Company];
-        }
-
-        // Cargar contactos vinculados
-        if (dealContacts && dealContacts.length > 0) {
-          associatedItems.contacts = dealContacts;
-        } else if (deal?.Contact) {
-          associatedItems.contacts = [deal.Contact];
-        }
-
-        // El negocio actual siempre está asociado
-        if (deal) {
-          associatedItems.deals = [deal];
-        }
-
-        setNoteModalCompanies(associatedItems.companies);
-        setNoteModalContacts(associatedItems.contacts);
-        setNoteModalDeals(associatedItems.deals);
-        setNoteModalTickets(associatedItems.tickets);
-      }
-    } catch (error) {
-      console.error("Error fetching associations:", error);
-    } finally {
-      setNoteLoadingAssociations(false);
-    }
-  };
 
   const handleCreateContact = async () => {
     try {
@@ -1262,53 +1191,88 @@ const DealDetail: React.FC = () => {
     return `S/ ${value.toFixed(0)}`;
   };
 
-  const handleSaveNote = async () => {
-    if (!noteData.description.trim()) {
+  const handleOpenEditDialog = () => {
+    if (deal) {
+      setEditFormData({
+        name: deal.name || '',
+        amount: deal.amount?.toString() || '',
+        stage: deal.stage || 'lead',
+        closeDate: deal.closeDate ? deal.closeDate.split('T')[0] : '',
+        priority: (deal.priority as 'baja' | 'media' | 'alta') || 'baja',
+        companyId: deal.Company?.id?.toString() || '',
+        contactId: deal.Contact?.id?.toString() || '',
+      });
+      // Cargar companies y contacts si no están cargados
+      if (allCompanies.length === 0) {
+        fetchAllCompanies();
+      }
+      if (allContacts.length === 0) {
+        fetchAllContacts();
+      }
+      setEditDialogOpen(true);
+    }
+  };
+
+  const handleCloseEditDialog = () => {
+    setEditDialogOpen(false);
+    setEditFormData({
+      name: '',
+      amount: '',
+      stage: 'lead',
+      closeDate: '',
+      priority: 'baja' as 'baja' | 'media' | 'alta',
+      companyId: '',
+      contactId: '',
+    });
+  };
+
+  const handleSubmitEdit = async () => {
+    if (!deal || !editFormData.name.trim() || !editFormData.amount.trim()) {
       return;
     }
-    setSaving(true);
-
+    
+    setSavingEdit(true);
     try {
-      // Obtener empresas seleccionadas
-      const companiesToAssociate = selectedCompaniesForNote.filter(
-        (companyId) => !excludedCompaniesForNote.includes(companyId)
-      );
-
-      // Obtener contactos seleccionados
-      const contactsToAssociate = selectedContactsForNote.filter(
-        (contactId) => !excludedContactsForNote.includes(contactId)
-      );
-
-      // Crear nota asociada al negocio actual
-      const activityData: any = {
-        subject: noteData.subject || `Nota para ${deal?.name || "Negocio"}`,
-        description: noteData.description,
-        dealId: id,
+      const data = {
+        name: editFormData.name,
+        amount: parseFloat(editFormData.amount) || 0,
+        stage: editFormData.stage,
+        closeDate: editFormData.closeDate || null,
+        priority: editFormData.priority,
+        companyId: editFormData.companyId ? parseInt(editFormData.companyId) : null,
+        contactId: editFormData.contactId ? parseInt(editFormData.contactId) : null,
       };
-
-      // Agregar asociaciones si existen
-      if (companiesToAssociate.length > 0) {
-        activityData.companyId = companiesToAssociate[0]; // Solo una empresa por nota
-      }
-      if (contactsToAssociate.length > 0) {
-        activityData.contactId = contactsToAssociate[0]; // Solo un contacto por nota
-      }
-
-      await api.post("/activities/notes", activityData);
-
-      setNoteOpen(false);
-      setNoteData({ subject: "", description: "" });
-      setSelectedCompaniesForNote([]);
-      setSelectedContactsForNote([]);
-      setSelectedAssociationsForNote([]);
-      setExcludedCompaniesForNote([]);
-      setExcludedContactsForNote([]);
-      fetchActivities();
-    } catch (error: any) {
-      console.error("Error saving note:", error);
+      
+      await api.put(`/deals/${deal.id}`, data);
+      
+      // Recargar los datos del deal
+      const response = await api.get(`/deals/${deal.id}`);
+      setDeal(response.data);
+      
+      handleCloseEditDialog();
+    } catch (error) {
+      console.error('Error updating deal:', error);
+      alert('Error al actualizar el negocio. Por favor, intenta nuevamente.');
     } finally {
-      setSaving(false);
+      setSavingEdit(false);
     }
+  };
+
+  const handleNoteSave = (newActivity: any) => {
+    // Agregar la actividad inmediatamente al estado para que aparezca de inmediato
+    setActivities((prevActivities) => {
+      // Verificar que no esté ya en la lista (evitar duplicados)
+      const exists = prevActivities.some((a: any) => a.id === newActivity.id);
+      if (exists) return prevActivities;
+      
+      // Agregar al inicio de la lista y ordenar por fecha (más reciente primero)
+      const updated = [newActivity, ...prevActivities].sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+      });
+      return updated;
+    });
   };
 
   const handleSaveCall = async () => {
@@ -1395,7 +1359,6 @@ const DealDetail: React.FC = () => {
   ) => {
     setCreateActivityMenuAnchor(null);
     if (type === "note") {
-      setNoteData({ subject: "", description: "" });
       setNoteOpen(true);
     } else if (type === "task") {
       setTaskData({
@@ -1877,12 +1840,134 @@ const DealDetail: React.FC = () => {
           }
           activityButtons={activityButtons}
           detailFields={detailFields}
+          onEditDetails={handleOpenEditDialog}
+          editButtonText="Editar Negocio"
           activityLogs={activityLogs}
           loadingLogs={loadingLogs}
           tab0Content={tab0Content}
           tab1Content={tab1Content}
           tab2Content={tab2Content}
           loading={loading}
+          editDialog={
+            <Dialog
+              open={editDialogOpen}
+              onClose={handleCloseEditDialog}
+              maxWidth="sm"
+              fullWidth
+            >
+              <DialogTitle>Editar Negocio</DialogTitle>
+              <DialogContent>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                  <TextField
+                    label="Nombre"
+                    value={editFormData.name}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    required
+                    fullWidth
+                  />
+                  <TextField
+                    label="Monto"
+                    type="number"
+                    value={editFormData.amount}
+                    onChange={(e) => setEditFormData({ ...editFormData, amount: e.target.value })}
+                    required
+                    fullWidth
+                  />
+                  <TextField
+                    select
+                    label="Etapa"
+                    value={editFormData.stage}
+                    onChange={(e) => setEditFormData({ ...editFormData, stage: e.target.value })}
+                    fullWidth
+                  >
+                    {stageOptions.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <TextField
+                    label="Fecha de Cierre"
+                    type="date"
+                    value={editFormData.closeDate}
+                    onChange={(e) => setEditFormData({ ...editFormData, closeDate: e.target.value })}
+                    InputLabelProps={{ shrink: true }}
+                    fullWidth
+                  />
+                  <TextField
+                    select
+                    label="Prioridad"
+                    value={editFormData.priority}
+                    onChange={(e) => setEditFormData({ ...editFormData, priority: e.target.value as 'baja' | 'media' | 'alta' })}
+                    fullWidth
+                  >
+                    <MenuItem value="baja">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#20B2AA' }} />
+                        Baja
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="media">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#F59E0B' }} />
+                        Media
+                      </Box>
+                    </MenuItem>
+                    <MenuItem value="alta">
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#EF4444' }} />
+                        Alta
+                      </Box>
+                    </MenuItem>
+                  </TextField>
+                  <TextField
+                    select
+                    label="Empresa"
+                    value={editFormData.companyId}
+                    onChange={(e) => setEditFormData({ ...editFormData, companyId: e.target.value })}
+                    fullWidth
+                  >
+                    <MenuItem value="">
+                      <em>Ninguna</em>
+                    </MenuItem>
+                    {allCompanies.map((company) => (
+                      <MenuItem key={company.id} value={company.id.toString()}>
+                        {company.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <TextField
+                    select
+                    label="Contacto"
+                    value={editFormData.contactId}
+                    onChange={(e) => setEditFormData({ ...editFormData, contactId: e.target.value })}
+                    fullWidth
+                  >
+                    <MenuItem value="">
+                      <em>Ninguno</em>
+                    </MenuItem>
+                    {allContacts.map((contact) => (
+                      <MenuItem key={contact.id} value={contact.id.toString()}>
+                        {contact.firstName} {contact.lastName}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </Box>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={handleCloseEditDialog} disabled={savingEdit}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleSubmitEdit} 
+                  variant="contained"
+                  disabled={savingEdit || !editFormData.name.trim() || !editFormData.amount.trim()}
+                >
+                  {savingEdit ? 'Guardando...' : 'Actualizar'}
+                </Button>
+              </DialogActions>
+            </Dialog>
+          }
         />
   
         {/* MANTENER TODOS LOS MODALES Y DIALOGS DESDE AQUÍ */}
@@ -4003,1078 +4088,29 @@ const DealDetail: React.FC = () => {
       )}
 
       {/* Modal de crear nota */}
-      {noteOpen && (
-        <>
-          <Box
-            sx={{
-              position: "fixed",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              width: { xs: "95vw", sm: "700px" },
-              maxWidth: { xs: "95vw", sm: "90vw" },
-              height: "85vh",
-              backgroundColor:
-                theme.palette.mode === "dark"
-                  ? "#1F2937"
-                  : theme.palette.background.paper,
-              boxShadow:
-                theme.palette.mode === "dark"
-                  ? "0 20px 60px rgba(0,0,0,0.5)"
-                  : "0 20px 60px rgba(0,0,0,0.12)",
-              zIndex: 1500,
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-              borderRadius: 4,
-              animation: "fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-              "@keyframes fadeInScale": {
-                "0%": {
-                  opacity: 0,
-                  transform: "translate(-50%, -50%) scale(0.95)",
-                },
-                "100%": {
-                  opacity: 1,
-                  transform: "translate(-50%, -50%) scale(1)",
-                },
-              },
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Encabezado personalizado */}
-            <Box
-              sx={{
-                px: 3,
-                py: 2,
-                backgroundColor: "transparent",
-                color: theme.palette.text.primary,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <Typography
-                  variant="h6"
-                  sx={{
-                    color: theme.palette.text.primary,
-                    fontWeight: 600,
-                    fontSize: "1.25rem",
-                    letterSpacing: "-0.02em",
-                  }}
-                >
-                  Nota
-                </Typography>
-              </Box>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-                <IconButton
-                  sx={{
-                    color: theme.palette.text.secondary,
-                    "&:hover": {
-                      backgroundColor: theme.palette.error.main + "15",
-                      color: theme.palette.error.main,
-                    },
-                    transition: "all 0.2s ease",
-                  }}
-                  size="small"
-                  onClick={() => setNoteOpen(false)}
-                >
-                  <Close fontSize="small" />
-                </IconButton>
-              </Box>
-            </Box>
-
-            <Box
-              sx={{
-                flexGrow: 1,
-                display: "flex",
-                flexDirection: "row",
-                p: 3,
-                overflow: "hidden",
-                gap: 3,
-              }}
-            >
-              {/* Columna Izquierda: Editor */}
-              <Box
-                sx={{
-                  flex: 1,
-                  display: "flex",
-                  flexDirection: "column",
-                  minWidth: 0,
-                }}
-              >
-                {/* Editor de texto enriquecido con barra de herramientas integrada */}
-                <Box
-                  sx={{
-                    flexGrow: 1,
-                    display: "flex",
-                    flexDirection: "column",
-                    border: `1px solid ${
-                      theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.1)"
-                        : theme.palette.divider
-                    }`,
-                    borderRadius: 2,
-                    overflow: "hidden",
-                    minHeight: "300px",
-                    backgroundColor:
-                      theme.palette.mode === "dark"
-                        ? "#1F2937"
-                        : theme.palette.background.paper,
-                    transition: "all 0.2s ease",
-                  }}
-                >
-                  <RichTextEditor
-                    value={noteData.description}
-                    onChange={(value: string) =>
-                      setNoteData({ ...noteData, description: value })
-                    }
-                    placeholder="Empieza a escribir para dejar una nota..."
-                    onAssociateClick={() => {
-                      setNoteAssociateModalOpen(true);
-                      setNoteSelectedCategory("empresas");
-                      setNoteAssociateSearch("");
-                      setNoteSelectedAssociations({
-                        companies: selectedCompaniesForNote,
-                        contacts: selectedContactsForNote,
-                        deals: selectedAssociationsForNote
-                          .filter((id: number) => id > 1000 && id < 2000)
-                          .map((id) => id - 1000),
-                        tickets: selectedAssociationsForNote
-                          .filter((id: number) => id > 2000)
-                          .map((id) => id - 2000),
-                      });
-                      fetchAssociationsForNote();
-                    }}
-                  />
-                </Box>
-              </Box>
-            </Box>
-
-            {/* Footer con botones */}
-            <Box
-              sx={{
-                px: 3,
-                py: 2.5,
-                borderTop: `1px solid ${
-                  theme.palette.mode === "dark"
-                    ? "rgba(255,255,255,0.1)"
-                    : theme.palette.divider
-                }`,
-                backgroundColor:
-                  theme.palette.mode === "dark"
-                    ? "#1F2937"
-                    : theme.palette.background.paper,
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: 2,
-              }}
-            >
-              <Button
-                onClick={() => setNoteOpen(false)}
-                variant="outlined"
-                sx={{
-                  textTransform: "none",
-                  px: 3,
-                  py: 1,
-                  color: theme.palette.text.secondary,
-                  borderColor: theme.palette.divider,
-                  fontWeight: 600,
-                  borderRadius: 2,
-                  "&:hover": {
-                    backgroundColor: theme.palette.action.hover,
-                    borderColor: theme.palette.text.secondary,
-                    transform: "translateY(-1px)",
-                  },
-                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleSaveNote}
-                variant="contained"
-                disabled={saving || !noteData.description.trim()}
-                sx={{
-                  textTransform: "none",
-                  px: 4,
-                  py: 1.25,
-                  backgroundColor: saving
-                    ? theme.palette.action.disabledBackground
-                    : taxiMonterricoColors.green,
-                  color: "white",
-                  fontWeight: 600,
-                  borderRadius: 2,
-                  boxShadow: saving
-                    ? "none"
-                    : `0 4px 12px ${taxiMonterricoColors.green}40`,
-                  "&:hover": {
-                    backgroundColor: saving
-                      ? theme.palette.action.disabledBackground
-                      : taxiMonterricoColors.greenDark,
-                    boxShadow: saving
-                      ? "none"
-                      : `0 6px 16px ${taxiMonterricoColors.green}50`,
-                    transform: "translateY(-2px)",
-                  },
-                  "&:active": {
-                    transform: "translateY(0)",
-                  },
-                  "&.Mui-disabled": {
-                    backgroundColor: theme.palette.action.disabledBackground,
-                    color: theme.palette.action.disabled,
-                    boxShadow: "none",
-                  },
-                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                }}
-              >
-                {saving ? "Guardando..." : "Crear nota"}
-              </Button>
-            </Box>
-          </Box>
-          {/* Overlay de fondo cuando la ventana está abierta */}
-          <Box
-            sx={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor:
-                theme.palette.mode === "dark"
-                  ? "rgba(0, 0, 0, 0.7)"
-                  : "rgba(0, 0, 0, 0.5)",
-              zIndex: 1499,
-              animation: "fadeIn 0.3s ease-out",
-              "@keyframes fadeIn": {
-                "0%": {
-                  opacity: 0,
-                },
-                "100%": {
-                  opacity: 1,
-                },
-              },
-            }}
-            onClick={() => setNoteOpen(false)}
-          />
-        </>
-      )}
-
-      {/* Modal de Asociados para Nota */}
-      <Dialog
-        open={noteAssociateModalOpen}
-        onClose={() => setNoteAssociateModalOpen(false)}
-        maxWidth="sm"
-        fullWidth={false}
-        sx={{ zIndex: 1600 }}
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            maxHeight: "80vh",
-            width: "700px",
-            maxWidth: "90vw",
-          },
+      <NoteModal
+        open={noteOpen}
+        onClose={() => setNoteOpen(false)}
+        entityType="deal"
+        entityId={id || ""}
+        entityName={deal?.name || "Sin nombre"}
+        user={user}
+        onSave={handleNoteSave}
+        relatedEntities={{
+          companies: dealCompanies && dealCompanies.length > 0 
+            ? dealCompanies 
+            : deal?.Company 
+            ? [deal.Company] 
+            : [],
+          contacts: dealContacts && dealContacts.length > 0 
+            ? dealContacts 
+            : deal?.Contact 
+            ? [deal.Contact] 
+            : [],
+          deals: deal ? [deal] : [],
+          tickets: [],
         }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            height: "500px",
-          }}
-        >
-          {/* Panel izquierdo - Categorías */}
-          <Box
-            sx={{
-              width: 160,
-              borderRight: `1px solid ${theme.palette.divider}`,
-              backgroundColor:
-                theme.palette.mode === "dark" ? "#1e1e1e" : "#fafafa",
-              overflowY: "auto",
-            }}
-          >
-            <List sx={{ p: 0 }}>
-              <ListItem disablePadding>
-                <ListItemButton
-                  selected={noteSelectedCategory === "seleccionados"}
-                  onClick={() => setNoteSelectedCategory("seleccionados")}
-                  sx={{
-                    py: 1.5,
-                    px: 2,
-                    "&.Mui-selected": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(76, 175, 80, 0.3)"
-                          : "rgba(76, 175, 80, 0.15)",
-                      color:
-                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
-                      "&:hover": {
-                        backgroundColor:
-                          theme.palette.mode === "dark"
-                            ? "rgba(76, 175, 80, 0.4)"
-                            : "rgba(76, 175, 80, 0.2)",
-                      },
-                    },
-                  }}
-                >
-                  <ListItemText
-                    primary="Seleccionados"
-                    secondary={
-                      Object.values(noteSelectedAssociations).flat().length
-                    }
-                    primaryTypographyProps={{
-                      fontSize: "0.875rem",
-                      fontWeight: 500,
-                    }}
-                    secondaryTypographyProps={{ fontSize: "0.75rem" }}
-                  />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton
-                  selected={noteSelectedCategory === "empresas"}
-                  onClick={() => setNoteSelectedCategory("empresas")}
-                  sx={{
-                    py: 1.5,
-                    px: 2,
-                    "&.Mui-selected": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(76, 175, 80, 0.3)"
-                          : "rgba(76, 175, 80, 0.15)",
-                      color:
-                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
-                      "&:hover": {
-                        backgroundColor:
-                          theme.palette.mode === "dark"
-                            ? "rgba(76, 175, 80, 0.4)"
-                            : "rgba(76, 175, 80, 0.2)",
-                      },
-                    },
-                  }}
-                >
-                  <ListItemText
-                    primary="Empresas"
-                    secondary={noteModalCompanies.length}
-                    primaryTypographyProps={{
-                      fontSize: "0.875rem",
-                      fontWeight: 500,
-                    }}
-                    secondaryTypographyProps={{ fontSize: "0.75rem" }}
-                  />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton
-                  selected={noteSelectedCategory === "contactos"}
-                  onClick={() => setNoteSelectedCategory("contactos")}
-                  sx={{
-                    py: 1.5,
-                    px: 2,
-                    "&.Mui-selected": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(76, 175, 80, 0.3)"
-                          : "rgba(76, 175, 80, 0.15)",
-                      color:
-                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
-                      "&:hover": {
-                        backgroundColor:
-                          theme.palette.mode === "dark"
-                            ? "rgba(76, 175, 80, 0.4)"
-                            : "rgba(76, 175, 80, 0.2)",
-                      },
-                    },
-                  }}
-                >
-                  <ListItemText
-                    primary="Contactos"
-                    secondary={noteModalContacts.length}
-                    primaryTypographyProps={{
-                      fontSize: "0.875rem",
-                      fontWeight: 500,
-                    }}
-                    secondaryTypographyProps={{ fontSize: "0.75rem" }}
-                  />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton
-                  selected={noteSelectedCategory === "negocios"}
-                  onClick={() => setNoteSelectedCategory("negocios")}
-                  sx={{
-                    py: 1.5,
-                    px: 2,
-                    "&.Mui-selected": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(76, 175, 80, 0.3)"
-                          : "rgba(76, 175, 80, 0.15)",
-                      color:
-                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
-                      "&:hover": {
-                        backgroundColor:
-                          theme.palette.mode === "dark"
-                            ? "rgba(76, 175, 80, 0.4)"
-                            : "rgba(76, 175, 80, 0.2)",
-                      },
-                    },
-                  }}
-                >
-                  <ListItemText
-                    primary="Negocios"
-                    secondary={noteModalDeals.length}
-                    primaryTypographyProps={{
-                      fontSize: "0.875rem",
-                      fontWeight: 500,
-                    }}
-                    secondaryTypographyProps={{ fontSize: "0.75rem" }}
-                  />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton
-                  selected={noteSelectedCategory === "tickets"}
-                  onClick={() => setNoteSelectedCategory("tickets")}
-                  sx={{
-                    py: 1.5,
-                    px: 2,
-                    "&.Mui-selected": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(76, 175, 80, 0.3)"
-                          : "rgba(76, 175, 80, 0.15)",
-                      color:
-                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
-                      "&:hover": {
-                        backgroundColor:
-                          theme.palette.mode === "dark"
-                            ? "rgba(76, 175, 80, 0.4)"
-                            : "rgba(76, 175, 80, 0.2)",
-                      },
-                    },
-                  }}
-                >
-                  <ListItemText
-                    primary="Tickets"
-                    secondary={noteModalTickets.length}
-                    primaryTypographyProps={{
-                      fontSize: "0.875rem",
-                      fontWeight: 500,
-                    }}
-                    secondaryTypographyProps={{ fontSize: "0.75rem" }}
-                  />
-                </ListItemButton>
-              </ListItem>
-            </List>
-          </Box>
-
-          {/* Panel derecho - Contenido */}
-          <Box
-            sx={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-            }}
-          >
-            {/* Header */}
-            <Box
-              sx={{
-                p: 2,
-                borderBottom: `1px solid ${theme.palette.divider}`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <Typography
-                variant="h6"
-                sx={{ fontWeight: 600, fontSize: "1rem" }}
-              >
-                Asociar
-              </Typography>
-              <IconButton
-                onClick={() => setNoteAssociateModalOpen(false)}
-                size="small"
-              >
-                <Close />
-              </IconButton>
-            </Box>
-
-            {/* Búsqueda */}
-            <Box
-              sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  border: `1px solid ${theme.palette.divider}`,
-                  borderRadius: 1,
-                  px: 1.5,
-                  py: 0.75,
-                  backgroundColor:
-                    theme.palette.mode === "dark" ? "#2a2a2a" : "#f5f5f5",
-                }}
-              >
-                <Search
-                  sx={{
-                    color: theme.palette.text.secondary,
-                    mr: 1,
-                    fontSize: 20,
-                  }}
-                />
-                <InputBase
-                  placeholder="Buscar asociaciones actuales"
-                  value={noteAssociateSearch}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setNoteAssociateSearch(value);
-                    if (value.trim().length > 0) {
-                      fetchAssociationsForNote(value);
-                    } else {
-                      fetchAssociationsForNote();
-                    }
-                  }}
-                  sx={{
-                    flex: 1,
-                    fontSize: "0.875rem",
-                    "& input": {
-                      py: 0.5,
-                    },
-                  }}
-                />
-              </Box>
-            </Box>
-
-            {/* Contenido */}
-            <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
-              {noteLoadingAssociations ? (
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    height: "100%",
-                  }}
-                >
-                  <CircularProgress />
-                </Box>
-              ) : (
-                <>
-                  {noteSelectedCategory === "empresas" && (
-                    <Box>
-                      <Typography
-                        variant="subtitle2"
-                        sx={{ fontWeight: 600, mb: 1, fontSize: "0.875rem" }}
-                      >
-                        Empresas
-                      </Typography>
-                      <List sx={{ p: 0 }}>
-                        {noteModalCompanies
-                          .filter(
-                            (company: any) =>
-                              !noteAssociateSearch ||
-                              company.name
-                                ?.toLowerCase()
-                                .includes(noteAssociateSearch.toLowerCase()) ||
-                              company.domain
-                                ?.toLowerCase()
-                                .includes(noteAssociateSearch.toLowerCase())
-                          )
-                          .map((company: any) => (
-                            <ListItem key={company.id} disablePadding>
-                              <ListItemButton
-                                sx={{ py: 0.75, px: 1 }}
-                                onClick={() => {
-                                  const current =
-                                    noteSelectedAssociations.companies || [];
-                                  if (current.includes(company.id)) {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      companies: current.filter(
-                                        (id) => id !== company.id
-                                      ),
-                                    });
-                                  } else {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      companies: [...current, company.id],
-                                    });
-                                  }
-                                }}
-                              >
-                                <Checkbox
-                                  checked={
-                                    noteSelectedAssociations.companies?.includes(
-                                      company.id
-                                    ) || false
-                                  }
-                                  size="small"
-                                  sx={{ p: 0.5, mr: 1 }}
-                                />
-                                <ListItemText
-                                  primary={company.name}
-                                  secondary={company.domain}
-                                  primaryTypographyProps={{
-                                    fontSize: "0.875rem",
-                                  }}
-                                  secondaryTypographyProps={{
-                                    fontSize: "0.75rem",
-                                  }}
-                                />
-                              </ListItemButton>
-                            </ListItem>
-                          ))}
-                      </List>
-                    </Box>
-                  )}
-
-                  {noteSelectedCategory === "contactos" && (
-                    <Box>
-                      <Typography
-                        variant="subtitle2"
-                        sx={{ fontWeight: 600, mb: 1, fontSize: "0.875rem" }}
-                      >
-                        Contactos
-                      </Typography>
-                      <List sx={{ p: 0 }}>
-                        {noteModalContacts
-                          .filter(
-                            (contactItem: any) =>
-                              !noteAssociateSearch ||
-                              `${contactItem.firstName} ${contactItem.lastName}`
-                                .toLowerCase()
-                                .includes(noteAssociateSearch.toLowerCase()) ||
-                              contactItem.email
-                                ?.toLowerCase()
-                                .includes(noteAssociateSearch.toLowerCase())
-                          )
-                          .map((contactItem: any) => (
-                            <ListItem key={contactItem.id} disablePadding>
-                              <ListItemButton
-                                sx={{ py: 0.75, px: 1 }}
-                                onClick={() => {
-                                  const current =
-                                    noteSelectedAssociations.contacts || [];
-                                  if (current.includes(contactItem.id)) {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      contacts: current.filter(
-                                        (id) => id !== contactItem.id
-                                      ),
-                                    });
-                                  } else {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      contacts: [...current, contactItem.id],
-                                    });
-                                  }
-                                }}
-                              >
-                                <Checkbox
-                                  checked={
-                                    noteSelectedAssociations.contacts?.includes(
-                                      contactItem.id
-                                    ) || false
-                                  }
-                                  size="small"
-                                  sx={{ p: 0.5, mr: 1 }}
-                                />
-                                <ListItemText
-                                  primary={`${contactItem.firstName} ${contactItem.lastName}`}
-                                  secondary={contactItem.email}
-                                  primaryTypographyProps={{
-                                    fontSize: "0.875rem",
-                                  }}
-                                  secondaryTypographyProps={{
-                                    fontSize: "0.75rem",
-                                  }}
-                                />
-                              </ListItemButton>
-                            </ListItem>
-                          ))}
-                      </List>
-                    </Box>
-                  )}
-
-                  {noteSelectedCategory === "negocios" && (
-                    <Box>
-                      <Typography
-                        variant="subtitle2"
-                        sx={{ fontWeight: 600, mb: 1, fontSize: "0.875rem" }}
-                      >
-                        Negocios
-                      </Typography>
-                      <List sx={{ p: 0 }}>
-                        {noteModalDeals
-                          .filter(
-                            (dealItem: any) =>
-                              !noteAssociateSearch ||
-                              dealItem.name
-                                ?.toLowerCase()
-                                .includes(noteAssociateSearch.toLowerCase())
-                          )
-                          .map((dealItem: any) => (
-                            <ListItem key={dealItem.id} disablePadding>
-                              <ListItemButton
-                                sx={{ py: 0.75, px: 1 }}
-                                onClick={() => {
-                                  const current =
-                                    noteSelectedAssociations.deals || [];
-                                  if (current.includes(dealItem.id)) {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      deals: current.filter(
-                                        (id) => id !== dealItem.id
-                                      ),
-                                    });
-                                  } else {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      deals: [...current, dealItem.id],
-                                    });
-                                  }
-                                }}
-                              >
-                                <Checkbox
-                                  checked={
-                                    noteSelectedAssociations.deals?.includes(
-                                      dealItem.id
-                                    ) || false
-                                  }
-                                  size="small"
-                                  sx={{ p: 0.5, mr: 1 }}
-                                />
-                                <ListItemText
-                                  primary={dealItem.name}
-                                  secondary={`${
-                                    dealItem.amount
-                                      ? `S/ ${dealItem.amount.toLocaleString("es-ES")}`
-                                      : ""
-                                  } ${dealItem.stage || ""}`}
-                                  primaryTypographyProps={{
-                                    fontSize: "0.875rem",
-                                  }}
-                                  secondaryTypographyProps={{
-                                    fontSize: "0.75rem",
-                                  }}
-                                />
-                              </ListItemButton>
-                            </ListItem>
-                          ))}
-                      </List>
-                    </Box>
-                  )}
-
-                  {noteSelectedCategory === "tickets" && (
-                    <Box>
-                      <Typography
-                        variant="subtitle2"
-                        sx={{ fontWeight: 600, mb: 1, fontSize: "0.875rem" }}
-                      >
-                        Tickets
-                      </Typography>
-                      <List sx={{ p: 0 }}>
-                        {noteModalTickets
-                          .filter(
-                            (ticket: any) =>
-                              !noteAssociateSearch ||
-                              ticket.subject
-                                ?.toLowerCase()
-                                .includes(noteAssociateSearch.toLowerCase())
-                          )
-                          .map((ticket: any) => (
-                            <ListItem key={ticket.id} disablePadding>
-                              <ListItemButton
-                                sx={{ py: 0.75, px: 1 }}
-                                onClick={() => {
-                                  const current =
-                                    noteSelectedAssociations.tickets || [];
-                                  if (current.includes(ticket.id)) {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      tickets: current.filter(
-                                        (id) => id !== ticket.id
-                                      ),
-                                    });
-                                  } else {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      tickets: [...current, ticket.id],
-                                    });
-                                  }
-                                }}
-                              >
-                                <Checkbox
-                                  checked={
-                                    noteSelectedAssociations.tickets?.includes(
-                                      ticket.id
-                                    ) || false
-                                  }
-                                  size="small"
-                                  sx={{ p: 0.5, mr: 1 }}
-                                />
-                                <ListItemText
-                                  primary={ticket.subject}
-                                  secondary={ticket.description}
-                                  primaryTypographyProps={{
-                                    fontSize: "0.875rem",
-                                  }}
-                                  secondaryTypographyProps={{
-                                    fontSize: "0.75rem",
-                                  }}
-                                />
-                              </ListItemButton>
-                            </ListItem>
-                          ))}
-                      </List>
-                    </Box>
-                  )}
-
-                  {noteSelectedCategory === "seleccionados" && (
-                    <Box>
-                      <Typography
-                        variant="subtitle2"
-                        sx={{ fontWeight: 600, mb: 1, fontSize: "0.875rem" }}
-                      >
-                        Seleccionados (
-                        {Object.values(noteSelectedAssociations).flat().length})
-                      </Typography>
-                      {Object.values(noteSelectedAssociations).flat().length ===
-                      0 ? (
-                        <Typography
-                          variant="body2"
-                          sx={{ color: theme.palette.text.secondary, py: 2 }}
-                        >
-                          No hay elementos seleccionados
-                        </Typography>
-                      ) : (
-                        <List sx={{ p: 0 }}>
-                          {noteSelectedAssociations.companies?.map(
-                            (companyId) => {
-                              const company = noteModalCompanies.find(
-                                (c: any) => c.id === companyId
-                              );
-                              if (!company) return null;
-                              return (
-                                <ListItem key={companyId} disablePadding>
-                                  <ListItemButton
-                                    sx={{ py: 0.75, px: 1 }}
-                                    onClick={() => {
-                                      setNoteSelectedAssociations({
-                                        ...noteSelectedAssociations,
-                                        companies:
-                                          noteSelectedAssociations.companies.filter(
-                                            (id) => id !== companyId
-                                          ),
-                                      });
-                                    }}
-                                  >
-                                    <Checkbox
-                                      checked={true}
-                                      size="small"
-                                      sx={{ p: 0.5, mr: 1 }}
-                                    />
-                                    <Business
-                                      sx={{
-                                        fontSize: 18,
-                                        mr: 1,
-                                        color: theme.palette.text.secondary,
-                                      }}
-                                    />
-                                    <ListItemText
-                                      primary={company.name}
-                                      secondary={company.domain}
-                                      primaryTypographyProps={{
-                                        fontSize: "0.875rem",
-                                      }}
-                                      secondaryTypographyProps={{
-                                        fontSize: "0.75rem",
-                                      }}
-                                    />
-                                  </ListItemButton>
-                                </ListItem>
-                              );
-                            }
-                          )}
-                          {noteSelectedAssociations.contacts?.map(
-                            (contactId) => {
-                              const contactItem = noteModalContacts.find(
-                                (c: any) => c.id === contactId
-                              );
-                              if (!contactItem) return null;
-                              return (
-                                <ListItem key={contactId} disablePadding>
-                                  <ListItemButton
-                                    sx={{ py: 0.75, px: 1 }}
-                                    onClick={() => {
-                                      setNoteSelectedAssociations({
-                                        ...noteSelectedAssociations,
-                                        contacts:
-                                          noteSelectedAssociations.contacts.filter(
-                                            (id) => id !== contactId
-                                          ),
-                                      });
-                                    }}
-                                  >
-                                    <Checkbox
-                                      checked={true}
-                                      size="small"
-                                      sx={{ p: 0.5, mr: 1 }}
-                                    />
-                                    <Person
-                                      sx={{
-                                        fontSize: 18,
-                                        mr: 1,
-                                        color: theme.palette.text.secondary,
-                                      }}
-                                    />
-                                    <ListItemText
-                                      primary={`${contactItem.firstName} ${contactItem.lastName}`}
-                                      secondary={contactItem.email}
-                                      primaryTypographyProps={{
-                                        fontSize: "0.875rem",
-                                      }}
-                                      secondaryTypographyProps={{
-                                        fontSize: "0.75rem",
-                                      }}
-                                    />
-                                  </ListItemButton>
-                                </ListItem>
-                              );
-                            }
-                          )}
-                          {noteSelectedAssociations.deals?.map((dealId) => {
-                            const dealItem = noteModalDeals.find(
-                              (d: any) => d.id === dealId
-                            );
-                            if (!dealItem) return null;
-                            return (
-                              <ListItem key={dealId} disablePadding>
-                                <ListItemButton
-                                  sx={{ py: 0.75, px: 1 }}
-                                  onClick={() => {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      deals:
-                                        noteSelectedAssociations.deals.filter(
-                                          (id) => id !== dealId
-                                        ),
-                                    });
-                                  }}
-                                >
-                                  <Checkbox
-                                    checked={true}
-                                    size="small"
-                                    sx={{ p: 0.5, mr: 1 }}
-                                  />
-                                  <ListItemText
-                                    primary={dealItem.name}
-                                    secondary={`${
-                                      dealItem.amount
-                                        ? `S/ ${dealItem.amount.toLocaleString("es-ES")}`
-                                        : ""
-                                    } ${dealItem.stage || ""}`}
-                                    primaryTypographyProps={{
-                                      fontSize: "0.875rem",
-                                    }}
-                                    secondaryTypographyProps={{
-                                      fontSize: "0.75rem",
-                                    }}
-                                  />
-                                </ListItemButton>
-                              </ListItem>
-                            );
-                          })}
-                          {noteSelectedAssociations.tickets?.map((ticketId) => {
-                            const ticket = noteModalTickets.find(
-                              (t: any) => t.id === ticketId
-                            );
-                            if (!ticket) return null;
-                            return (
-                              <ListItem key={ticketId} disablePadding>
-                                <ListItemButton
-                                  sx={{ py: 0.75, px: 1 }}
-                                  onClick={() => {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      tickets:
-                                        noteSelectedAssociations.tickets.filter(
-                                          (id) => id !== ticketId
-                                        ),
-                                    });
-                                  }}
-                                >
-                                  <Checkbox
-                                    checked={true}
-                                    size="small"
-                                    sx={{ p: 0.5, mr: 1 }}
-                                  />
-                                  <ListItemText
-                                    primary={ticket.subject}
-                                    secondary={ticket.description}
-                                    primaryTypographyProps={{
-                                      fontSize: "0.875rem",
-                                    }}
-                                    secondaryTypographyProps={{
-                                      fontSize: "0.75rem",
-                                    }}
-                                  />
-                                </ListItemButton>
-                              </ListItem>
-                            );
-                          })}
-                        </List>
-                      )}
-                    </Box>
-                  )}
-                </>
-              )}
-            </Box>
-          </Box>
-        </Box>
-        <DialogActions
-          sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}
-        >
-          <Button
-            onClick={() => setNoteAssociateModalOpen(false)}
-            sx={{ textTransform: "none" }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={() => {
-              // Aplicar las selecciones a los estados principales
-              setSelectedCompaniesForNote(
-                noteSelectedAssociations.companies || []
-              );
-              setSelectedContactsForNote(
-                noteSelectedAssociations.contacts || []
-              );
-              // Convertir deals y tickets a la estructura esperada
-              const dealIds = (noteSelectedAssociations.deals || []).map(
-                (id) => 1000 + id
-              );
-              const ticketIds = (noteSelectedAssociations.tickets || []).map(
-                (id) => 2000 + id
-              );
-              setSelectedAssociationsForNote([...dealIds, ...ticketIds]);
-              setNoteAssociateModalOpen(false);
-            }}
-            variant="contained"
-            sx={{
-              textTransform: "none",
-              backgroundColor: taxiMonterricoColors.green,
-              "&:hover": {
-                backgroundColor: taxiMonterricoColors.greenDark,
-              },
-            }}
-          >
-            Guardar
-          </Button>
-        </DialogActions>
-      </Dialog>
+      />
 
       {/* Dialog para crear tarea */}
       <Dialog

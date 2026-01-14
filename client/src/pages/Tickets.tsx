@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -75,7 +75,7 @@ interface Ticket {
 const Tickets: React.FC = () => {
   const theme = useTheme();
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -83,9 +83,9 @@ const Tickets: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(7);
+  const [totalTickets, setTotalTickets] = useState(0);
 
-  // Calcular estadísticas
-  const totalTickets = tickets.length;
+  // Calcular estadísticas (solo de los tickets visibles en la página actual)
   const openTickets = tickets.filter(t => t.status === 'open').length;
   const resolvedTickets = tickets.filter(t => t.status === 'resolved' || t.status === 'closed').length;
 
@@ -198,48 +198,44 @@ const Tickets: React.FC = () => {
     };
   }, []);
 
-  const fetchTickets = async () => {
+  const fetchTickets = useCallback(async () => {
     try {
-      const response = await api.get('/tickets');
-      setTickets(response.data.tickets || response.data || []);
+      setLoading(true);
+      const params: any = {
+        page: currentPage,
+        limit: itemsPerPage,
+      };
+      
+      // Búsqueda general
+      if (search) {
+        params.search = search;
+      }
+      
+      // Ordenamiento
+      params.sortBy = sortBy;
+      
+      const response = await api.get('/tickets', { params });
+      const ticketsData = response.data.tickets || response.data || [];
+      
+      setTickets(ticketsData);
+      setTotalTickets(response.data.total || 0);
     } catch (error) {
       console.error('Error fetching tickets:', error);
+      setTickets([]);
+      setTotalTickets(0);
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, currentPage, itemsPerPage, sortBy]);
 
-  // Filtrar tickets según búsqueda
-  const filteredTickets = tickets.filter((ticket) => {
-    const matchesSearch = search === '' || 
-      ticket.subject.toLowerCase().includes(search.toLowerCase()) ||
-      (ticket.Contact && `${ticket.Contact.firstName} ${ticket.Contact.lastName}`.toLowerCase().includes(search.toLowerCase())) ||
-      (ticket.AssignedTo && `${ticket.AssignedTo.firstName} ${ticket.AssignedTo.lastName}`.toLowerCase().includes(search.toLowerCase()));
-    return matchesSearch;
-  }).sort((a, b) => {
-    switch (sortBy) {
-      case 'newest':
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return dateB - dateA;
-      case 'oldest':
-        const dateAOld = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateBOld = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return dateAOld - dateBOld;
-      case 'name':
-        return a.subject.localeCompare(b.subject);
-      case 'nameDesc':
-        return b.subject.localeCompare(a.subject);
-      default:
-        return 0;
-    }
-  });
+  useEffect(() => {
+    fetchTickets();
+  }, [fetchTickets]);
 
-  // Calcular paginación
-  const totalPages = Math.ceil(filteredTickets.length / itemsPerPage);
+  // Calcular paginación desde el servidor
+  const totalPages = Math.ceil(totalTickets / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedTickets = filteredTickets.slice(startIndex, endIndex);
+  const endIndex = Math.min(startIndex + itemsPerPage, totalTickets);
 
   // Resetear página cuando cambien los filtros
   useEffect(() => {
@@ -565,7 +561,7 @@ const Tickets: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {paginatedTickets.length === 0 ? (
+                {tickets.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} sx={{ py: 8, textAlign: 'center', border: 'none' }}>
                       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
@@ -601,7 +597,7 @@ const Tickets: React.FC = () => {
                             No hay tickets registrados
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            {filteredTickets.length === 0 && tickets.length === 0
+                            {tickets.length === 0 && !loading
                               ? 'Crea tu primer ticket para comenzar a gestionar el soporte a tus clientes.'
                               : 'No se encontraron tickets que coincidan con tu búsqueda.'}
                           </Typography>
@@ -610,7 +606,7 @@ const Tickets: React.FC = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedTickets.map((ticket) => (
+                  tickets.map((ticket) => (
                     <TableRow 
                       key={ticket.id} 
                       hover
@@ -792,7 +788,7 @@ const Tickets: React.FC = () => {
           </TableContainer>
 
           {/* Paginación */}
-          {filteredTickets.length > 0 && (
+          {totalTickets > 0 && (
             <Box
               sx={{
                 bgcolor: theme.palette.background.paper,
@@ -838,7 +834,7 @@ const Tickets: React.FC = () => {
 
               {/* Pagination info */}
               <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                {startIndex + 1}-{Math.min(endIndex, filteredTickets.length)} de {filteredTickets.length}
+                {startIndex + 1}-{endIndex} de {totalTickets}
               </Typography>
 
               {/* Pagination controls */}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -74,6 +74,7 @@ const Tasks: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(7);
+  const [totalTasks, setTotalTasks] = useState(0);
 
   // Calcular estadísticas
   const today = new Date();
@@ -96,79 +97,10 @@ const Tasks: React.FC = () => {
   const pendingTasks = tasks.filter(t => t.status === 'not started').length;
   const completedTasks = tasks.filter(t => t.status === 'completed').length;
 
-  // Filtrar tareas según el filtro activo y búsqueda
-  const filteredTasks = tasks.filter(t => {
-    // Aplicar filtro de categoría
-    if (activeFilter) {
-      switch (activeFilter) {
-        case 'overdue':
-          if (!t.dueDate) return false;
-          const dueDate = new Date(t.dueDate);
-          dueDate.setHours(0, 0, 0, 0);
-          if (dueDate >= today || t.status === 'completed') return false;
-          break;
-        case 'dueToday':
-          if (!t.dueDate) return false;
-          const dueDateToday = new Date(t.dueDate);
-          dueDateToday.setHours(0, 0, 0, 0);
-          if (dueDateToday.getTime() !== today.getTime()) return false;
-          break;
-        case 'pending':
-          if (t.status !== 'not started') return false;
-          break;
-        case 'completed':
-          if (t.status !== 'completed') return false;
-          break;
-        default:
-          break;
-      }
-    }
-    
-    // Aplicar búsqueda
-    if (search) {
-      const searchLower = search.toLowerCase();
-      const titleMatch = (t.title || t.subject || '').toLowerCase().includes(searchLower);
-      const typeMatch = t.type?.toLowerCase().includes(searchLower);
-      const statusMatch = t.status?.toLowerCase().includes(searchLower);
-      const priorityMatch = t.priority?.toLowerCase().includes(searchLower);
-      const assignedMatch = (t.AssignedTo || t.User) 
-        ? `${t.AssignedTo?.firstName || t.User?.firstName || ''} ${t.AssignedTo?.lastName || t.User?.lastName || ''}`.toLowerCase().includes(searchLower)
-        : false;
-      
-      if (!titleMatch && !typeMatch && !statusMatch && !priorityMatch && !assignedMatch) {
-        return false;
-      }
-    }
-    
-    return true;
-  }).sort((a, b) => {
-    switch (sortBy) {
-      case 'newest':
-        const dateA = (a as any).createdAt ? new Date((a as any).createdAt).getTime() : 
-                      a.dueDate ? new Date(a.dueDate).getTime() : 0;
-        const dateB = (b as any).createdAt ? new Date((b as any).createdAt).getTime() : 
-                      b.dueDate ? new Date(b.dueDate).getTime() : 0;
-        return dateB - dateA;
-      case 'oldest':
-        const dateAOld = (a as any).createdAt ? new Date((a as any).createdAt).getTime() : 
-                         a.dueDate ? new Date(a.dueDate).getTime() : 0;
-        const dateBOld = (b as any).createdAt ? new Date((b as any).createdAt).getTime() : 
-                         b.dueDate ? new Date(b.dueDate).getTime() : 0;
-        return dateAOld - dateBOld;
-      case 'name':
-        return (a.title || a.subject || '').localeCompare(b.title || b.subject || '');
-      case 'nameDesc':
-        return (b.title || b.subject || '').localeCompare(a.title || a.subject || '');
-      default:
-        return 0;
-    }
-  });
-
-  // Calcular paginación
-  const totalPages = Math.ceil(filteredTasks.length / itemsPerPage);
+  // Calcular paginación desde el servidor
+  const totalPages = Math.ceil(totalTasks / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedTasks = filteredTasks.slice(startIndex, endIndex);
+  const endIndex = Math.min(startIndex + itemsPerPage, totalTasks);
 
   // Resetear a la página 1 cuando cambien los filtros
   useEffect(() => {
@@ -234,59 +166,71 @@ const Tasks: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchTasks();
-    fetchUsers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, user]);
-
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
-      // Obtener tareas desde /tasks
-      const tasksResponse = await api.get('/tasks');
-      const tasksFromTasks = (tasksResponse.data.tasks || tasksResponse.data || []).map((task: Task) => ({
+      setLoading(true);
+      const params: any = {
+        page: currentPage,
+        limit: itemsPerPage,
+      };
+      
+      // Búsqueda general
+      if (search) {
+        params.search = search;
+      }
+      
+      // Filtro por categoría (activeFilter)
+      if (activeFilter) {
+        switch (activeFilter) {
+          case 'overdue':
+            // Filtrar por tareas vencidas (se manejará en el servidor con dueDate)
+            params.status = 'not completed'; // Excluir completadas
+            break;
+          case 'dueToday':
+            // Filtrar por tareas de hoy (se manejará en el servidor)
+            params.status = 'not completed';
+            break;
+          case 'pending':
+            params.status = 'not started';
+            break;
+          case 'completed':
+            params.status = 'completed';
+            break;
+        }
+      }
+      
+      // Ordenamiento
+      params.sortBy = sortBy;
+      
+      // Obtener tareas desde /tasks con paginación del servidor
+      const tasksResponse = await api.get('/tasks', { params });
+      const tasksData = tasksResponse.data.tasks || tasksResponse.data || [];
+      
+      const tasksFromTasks = tasksData.map((task: Task) => ({
         ...task,
         isActivity: false,
       }));
 
-      // Obtener actividades de tipo 'task' desde /activities
-      const activitiesResponse = await api.get('/activities', {
-        params: { type: 'task' },
-      });
-      const tasksFromActivities = (activitiesResponse.data.activities || activitiesResponse.data || []).map((activity: any) => ({
-        id: activity.id,
-        title: activity.subject || activity.description || 'Sin título',
-        subject: activity.subject,
-        description: activity.description || '', // Incluir descripción para poder editarla
-        type: activity.type,
-        status: 'not started', // Valor por defecto para actividades
-        priority: 'medium', // Valor por defecto para actividades
-        dueDate: activity.dueDate,
-        createdAt: activity.createdAt,
-        User: activity.User,
-        isActivity: true,
-      }));
-
-      // Combinar ambas listas
-      const allTasks = [...tasksFromTasks, ...tasksFromActivities];
-      
-      // Ordenar por fecha de creación (más recientes primero)
-      // Las actividades tienen createdAt, las tareas también deberían tenerlo
-      allTasks.sort((a: any, b: any) => {
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 
-                      a.dueDate ? new Date(a.dueDate).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 
-                      b.dueDate ? new Date(b.dueDate).getTime() : 0;
-        return dateB - dateA;
-      });
-
-      setTasks(allTasks);
+      // Por ahora, mantener solo tareas con paginación del servidor
+      // Las actividades se pueden agregar después si es necesario
+      setTasks(tasksFromTasks);
+      setTotalTasks(tasksResponse.data.total || 0);
     } catch (error) {
       console.error('Error fetching tasks:', error);
+      setTasks([]);
+      setTotalTasks(0);
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, currentPage, itemsPerPage, activeFilter, sortBy]);
+
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [user]);
 
   const handleOpen = (task?: Task) => {
     if (task) {
@@ -732,7 +676,7 @@ const Tasks: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {paginatedTasks.length === 0 ? (
+              {tasks.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} sx={{ py: 8, textAlign: 'center', border: 'none' }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
@@ -768,7 +712,7 @@ const Tasks: React.FC = () => {
                           No hay tareas registradas
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {filteredTasks.length === 0 && tasks.length === 0
+                          {tasks.length === 0 && !loading
                             ? 'Crea tu primera tarea para comenzar a organizar tu trabajo.'
                             : 'No se encontraron tareas que coincidan con tu búsqueda.'}
                         </Typography>
@@ -777,7 +721,7 @@ const Tasks: React.FC = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedTasks.map((task) => (
+                tasks.map((task) => (
                 <TableRow 
                   key={task.id}
                   hover
@@ -947,7 +891,7 @@ const Tasks: React.FC = () => {
         </TableContainer>
 
         {/* Paginación */}
-        {filteredTasks.length > 0 && (
+        {totalTasks > 0 && (
           <Box
             sx={{
               bgcolor: theme.palette.background.paper,
@@ -1000,7 +944,7 @@ const Tasks: React.FC = () => {
             {/* Información de paginación y navegación */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
-                {startIndex + 1}-{Math.min(endIndex, filteredTasks.length)} de {filteredTasks.length}
+                {startIndex + 1}-{endIndex} de {totalTasks}
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <IconButton

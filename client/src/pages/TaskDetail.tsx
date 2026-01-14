@@ -5539,22 +5539,6 @@ const TaskDetail: React.FC = () => {
                     setNoteData({ ...noteData, description: value })
                   }
                   placeholder="Empieza a escribir para dejar una nota..."
-                  onAssociateClick={() => {
-                    setNoteAssociateModalOpen(true);
-                    setNoteSelectedCategory("empresas");
-                    setNoteAssociateSearch("");
-                    setNoteSelectedAssociations({
-                      companies: selectedCompaniesForNote,
-                      contacts: selectedContactsForNote,
-                      deals: selectedAssociationsForNote
-                        .filter((id: number) => id > 1000 && id < 2000)
-                        .map((id) => id - 1000),
-                      tickets: selectedAssociationsForNote
-                        .filter((id: number) => id > 2000)
-                        .map((id) => id - 2000),
-                    });
-                    fetchAssociationsForNote();
-                  }}
                 />
               </Box>
             </Box>

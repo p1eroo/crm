@@ -81,6 +81,7 @@ interface DetailPageLayoutProps {
   detailFields: DetailField[];
   onEditDetails?: () => void;
   editButtonText?: string;
+  editDialog?: ReactNode;
 
   // Historial
   activityLogs?: ActivityLog[];
@@ -107,6 +108,7 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
   detailFields,
   onEditDetails,
   editButtonText = 'Editar Detalles',
+  editDialog,
   activityLogs = [],
   loadingLogs = false,
   tab0Content,
@@ -789,6 +791,9 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
           </Box>
         </Box>
       </Box>
+      
+      {/* Dialog de edición */}
+      {editDialog}
     </Box>
   );
 };

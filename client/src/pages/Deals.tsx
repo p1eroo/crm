@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   Box,
   Typography,
@@ -58,7 +58,7 @@ const Deals: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
-  const [search] = useState('');
+  const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [formData, setFormData] = useState({
     name: '',
@@ -85,6 +85,7 @@ const Deals: React.FC = () => {
   const [ownerFilterExpanded, setOwnerFilterExpanded] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
+  const [totalDeals, setTotalDeals] = useState(0);
   const [importing, setImporting] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   
@@ -116,6 +117,7 @@ const Deals: React.FC = () => {
     contacto: '',
     empresa: '',
   });
+  const [debouncedColumnFilters, setDebouncedColumnFilters] = useState(columnFilters);
   const [showColumnFilters, setShowColumnFilters] = useState(false);
   
   // Etapas del pipeline
@@ -179,132 +181,15 @@ const Deals: React.FC = () => {
     return option ? option.label : stage;
   };
 
-  // Filtrar deals según los filtros activos
-  const filteredDeals = deals
-    .filter((deal) => {
-      // Filtro por etapas
-      if (selectedStages.length > 0) {
-        if (!selectedStages.includes(deal.stage)) {
-          return false;
-        }
-      }
-
-      // Filtro por propietarios
-      if (selectedOwnerFilters.length > 0) {
-        let matches = false;
-        for (const filter of selectedOwnerFilters) {
-          if (filter === 'me') {
-            if (deal.Owner?.id === user?.id) {
-              matches = true;
-              break;
-            }
-          } else if (filter === 'unassigned') {
-            if (!deal.Owner || deal.Owner.id === null || deal.Owner.id === undefined) {
-              matches = true;
-              break;
-            }
-          } else {
-            if (deal.Owner?.id === filter) {
-              matches = true;
-              break;
-            }
-          }
-        }
-        if (!matches) return false;
-      }
-
-      // Aplicar filtros de reglas avanzadas
-      for (const rule of filterRules) {
-        if (!rule.value) continue; // Saltar reglas sin valor
-
-        let matches = false;
-        const ruleValue = rule.value.toLowerCase();
-
-        switch (rule.column) {
-          case 'name':
-            matches = applyOperator(deal.name || '', rule.operator, ruleValue);
-            break;
-          case 'amount':
-            const amountStr = deal.amount?.toString() || '0';
-            matches = applyOperator(amountStr, rule.operator, ruleValue);
-            break;
-          case 'stage':
-            const stageLabel = getStageLabel(deal.stage || 'lead');
-            matches = applyOperator(stageLabel, rule.operator, ruleValue);
-            break;
-          case 'contact':
-            const contactName = deal.Contact ? `${deal.Contact.firstName} ${deal.Contact.lastName}` : '';
-            matches = applyOperator(contactName, rule.operator, ruleValue);
-            break;
-          case 'company':
-            matches = applyOperator(deal.Company?.name || '', rule.operator, ruleValue);
-            break;
-          case 'owner':
-            const ownerName = deal.Owner ? `${deal.Owner.firstName} ${deal.Owner.lastName}` : '';
-            matches = applyOperator(ownerName, rule.operator, ruleValue);
-            break;
-          default:
-            matches = true;
-        }
-
-        if (!matches) return false;
-      }
-
-      // Aplicar filtros por columna
-      if (columnFilters.nombre) {
-        if (!deal.name.toLowerCase().includes(columnFilters.nombre.toLowerCase())) return false;
-      }
-      if (columnFilters.monto) {
-        const amountStr = deal.amount?.toString() || '0';
-        if (!amountStr.toLowerCase().includes(columnFilters.monto.toLowerCase())) return false;
-      }
-      if (columnFilters.etapa) {
-        const stageLabel = getStageLabel(deal.stage || 'lead');
-        if (!stageLabel.toLowerCase().includes(columnFilters.etapa.toLowerCase())) return false;
-      }
-      if (columnFilters.contacto) {
-        const contactName = deal.Contact ? `${deal.Contact.firstName} ${deal.Contact.lastName}` : '';
-        if (!contactName.toLowerCase().includes(columnFilters.contacto.toLowerCase())) return false;
-      }
-      if (columnFilters.empresa) {
-        if (!deal.Company?.name?.toLowerCase().includes(columnFilters.empresa.toLowerCase())) return false;
-      }
-
-      // Filtro por búsqueda
-      if (!search) return true;
-      const searchLower = search.toLowerCase();
-      return (
-        deal.name.toLowerCase().includes(searchLower) ||
-        deal.Contact?.firstName?.toLowerCase().includes(searchLower) ||
-        deal.Contact?.lastName?.toLowerCase().includes(searchLower) ||
-        deal.Company?.name?.toLowerCase().includes(searchLower)
-      );
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'newest':
-          return new Date(b.closeDate || 0).getTime() - new Date(a.closeDate || 0).getTime();
-        case 'oldest':
-          return new Date(a.closeDate || 0).getTime() - new Date(b.closeDate || 0).getTime();
-        case 'name':
-          return a.name.localeCompare(b.name);
-        case 'nameDesc':
-          return b.name.localeCompare(a.name);
-        default:
-          return 0;
-      }
-    });
-
-  // Calcular paginación
-  const totalPages = Math.ceil(filteredDeals.length / itemsPerPage);
+  // Calcular paginación desde el servidor
+  const totalPages = Math.ceil(totalDeals / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedDeals = filteredDeals.slice(startIndex, endIndex);
+  const endIndex = Math.min(startIndex + itemsPerPage, totalDeals);
 
   // Resetear a la página 1 cuando cambien los filtros
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedStages, selectedOwnerFilters, search, sortBy, filterRules, columnFilters]);
+  }, [selectedStages, selectedOwnerFilters, search, sortBy, filterRules, debouncedColumnFilters]);
 
 
   // Función para obtener iniciales
@@ -431,20 +316,80 @@ const Deals: React.FC = () => {
     return theme.palette.background.paper;
   };
 
+  // Debounce para filtros de columna (esperar 500ms después de que el usuario deje de escribir)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedColumnFilters(columnFilters);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [columnFilters]);
+
+  const fetchDeals = useCallback(async () => {
+    try {
+      setLoading(true);
+      const params: any = {
+        page: currentPage,
+        limit: itemsPerPage,
+      };
+      
+      // Búsqueda general
+      if (search) {
+        params.search = search;
+      }
+      
+      // Filtros por etapas
+      if (selectedStages.length > 0) {
+        params.stages = selectedStages;
+      }
+      
+      // Filtros por propietarios
+      if (selectedOwnerFilters.length > 0) {
+        params.owners = selectedOwnerFilters.map(f => 
+          f === 'me' ? 'me' : f === 'unassigned' ? 'unassigned' : String(f)
+        );
+      }
+      
+      // Ordenamiento
+      params.sortBy = sortBy;
+      
+      // Filtros por columna (usar los valores con debounce)
+      if (debouncedColumnFilters.nombre) params.filterNombre = debouncedColumnFilters.nombre;
+      if (debouncedColumnFilters.contacto) params.filterContacto = debouncedColumnFilters.contacto;
+      if (debouncedColumnFilters.empresa) params.filterEmpresa = debouncedColumnFilters.empresa;
+      if (debouncedColumnFilters.etapa) params.filterEtapa = debouncedColumnFilters.etapa;
+      
+      // Filtros avanzados
+      if (filterRules.length > 0) {
+        params.filterRules = JSON.stringify(filterRules);
+      }
+      
+      const response = await api.get('/deals', { params });
+      const dealsData = response.data.deals || response.data || [];
+      
+      setDeals(dealsData);
+      setTotalDeals(response.data.total || 0);
+    } catch (error: any) {
+      console.error('Error fetching deals:', error);
+      setDeals([]);
+      setTotalDeals(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [search, currentPage, itemsPerPage, selectedStages, selectedOwnerFilters, sortBy, filterRules, debouncedColumnFilters]);
+
+  useEffect(() => {
+    fetchDeals();
+  }, [fetchDeals]);
+
   useEffect(() => {
     const abortController = new AbortController();
     let isMounted = true;
 
     const fetchData = async () => {
       try {
-        setLoading(true);
-        
-        // Realizar todas las peticiones en paralelo con cancelación
-        const [dealsRes, companiesRes, contactsRes, usersRes] = await Promise.all([
-          api.get('/deals', { 
-            params: { limit: 10000 },
-            signal: abortController.signal 
-          }),
+        // Realizar peticiones en paralelo con cancelación
+        const [companiesRes, contactsRes, usersRes] = await Promise.all([
           api.get('/companies', { 
             params: { limit: 1000 },
             signal: abortController.signal 
@@ -460,7 +405,6 @@ const Deals: React.FC = () => {
 
         // Solo actualizar estado si el componente sigue montado
         if (isMounted) {
-          setDeals(dealsRes.data.deals || dealsRes.data || []);
           setCompanies(companiesRes.data.companies || companiesRes.data || []);
           setContacts(contactsRes.data.contacts || contactsRes.data || []);
           setUsers(usersRes.data || []);
@@ -472,10 +416,6 @@ const Deals: React.FC = () => {
         }
         if (isMounted) {
           console.error('Error fetching data:', error);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
         }
       }
     };
@@ -489,21 +429,9 @@ const Deals: React.FC = () => {
     };
   }, []); // Solo cargar datos una vez al montar el componente
 
-  const fetchDeals = async () => {
-    setLoading(true);
-    try {
-      // Cargar todos los deals sin filtros del servidor (el filtrado se hace en el cliente)
-      const response = await api.get('/deals', { params: { limit: 10000 } });
-      setDeals(response.data.deals || response.data || []);
-    } catch (error) {
-      console.error('Error fetching deals:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleExportToExcel = () => {
-    const exportData = filteredDeals.map((deal) => ({
+    const exportData = deals.map((deal) => ({
       'Nombre': deal.name || '--',
       'Monto': deal.amount ? `S/ ${deal.amount.toLocaleString()}` : '--',
       'Etapa': getStageLabel(deal.stage) || '--',
@@ -1176,7 +1104,7 @@ const Deals: React.FC = () => {
           }
           rows={
             <>
-            {paginatedDeals.map((deal, index) => (
+            {deals.map((deal, index) => (
               <Box
                   key={deal.id}
                 component="div"
@@ -1195,7 +1123,7 @@ const Deals: React.FC = () => {
                   boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
                   px: { xs: 1, md: 1.5 },
                   py: { xs: 0.5, md: 0.75 },
-                  borderBottom: index < paginatedDeals.length - 1
+                  borderBottom: index < deals.length - 1
                     ? (theme.palette.mode === 'light' 
                       ? '1px solid rgba(0, 0, 0, 0.08)' 
                       : '1px solid rgba(255, 255, 255, 0.1)')
@@ -1446,7 +1374,7 @@ const Deals: React.FC = () => {
             </>
           }
           pagination={
-            filteredDeals.length > 0 ? (
+            totalDeals > 0 ? (
               <>
                 {/* Rows per page selector */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -1485,7 +1413,7 @@ const Deals: React.FC = () => {
                 {/* Información de paginación y navegación */}
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
-                    {startIndex + 1}-{Math.min(endIndex, filteredDeals.length)} de {filteredDeals.length}
+                    {startIndex + 1}-{endIndex} de {totalDeals}
                   </Typography>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                     <IconButton
@@ -1520,7 +1448,7 @@ const Deals: React.FC = () => {
             ) : null
           }
           emptyState={
-            paginatedDeals.length === 0 ? (
+            deals.length === 0 ? (
               <Box sx={pageStyles.emptyState}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
                   <AttachMoney sx={{ fontSize: 48, color: theme.palette.text.disabled }} />
@@ -1898,7 +1826,7 @@ const Deals: React.FC = () => {
                 }}
               >
             {stages.map((stage) => {
-              const stageDeals = filteredDeals.filter((deal) => deal.stage === stage.id);
+              const stageDeals = deals.filter((deal) => deal.stage === stage.id);
               const stageTotal = stageDeals.reduce((sum, deal) => sum + (parseAmount(deal.amount) || 0), 0);
               const dealsCount = stageDeals.length;
 

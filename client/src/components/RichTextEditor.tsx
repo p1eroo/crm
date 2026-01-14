@@ -23,7 +23,6 @@ import {
   Link as LinkIcon,
   TableChart,
   AttachFile,
-  PersonAdd,
   FormatAlignLeft,
   FormatAlignCenter,
   FormatAlignRight,
@@ -34,10 +33,9 @@ interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
-  onAssociateClick?: () => void;
 }
 
-const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeholder = 'Empieza a escribir...', onAssociateClick }) => {
+const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeholder = 'Empieza a escribir...' }) => {
   const theme = useTheme();
   const editorRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -817,21 +815,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
           title="Adjuntar archivo"
         >
           <AttachFile fontSize="small" />
-        </IconButton>
-        <IconButton
-          size="small"
-          sx={{ 
-            p: 0.75,
-            color: theme.palette.text.secondary,
-            '&:hover': {
-              backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.action.hover,
-              color: theme.palette.text.primary,
-            }
-          }}
-          title="Asociado"
-          onClick={onAssociateClick}
-        >
-          <PersonAdd fontSize="small" />
         </IconButton>
       </Box>
 

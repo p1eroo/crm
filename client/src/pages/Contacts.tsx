@@ -125,7 +125,7 @@ const Contacts: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | null>(null);
-  const [search] = useState("");
+  const [search, setSearch] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewContact, setPreviewContact] = useState<Contact | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -133,6 +133,7 @@ const Contacts: React.FC = () => {
   const [loadingActivities, setLoadingActivities] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
+  const [totalContacts, setTotalContacts] = useState(0);
   const [activeTab] = useState(0);
   const [sortBy, setSortBy] = useState("newest");
   const [formData, setFormData] = useState({
@@ -223,6 +224,7 @@ const Contacts: React.FC = () => {
     pais: '',
     etapa: '',
   });
+  const [debouncedColumnFilters, setDebouncedColumnFilters] = useState(columnFilters);
   const [showColumnFilters, setShowColumnFilters] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState<{ [key: number]: boolean }>({});
 
@@ -247,28 +249,6 @@ const Contacts: React.FC = () => {
     { value: 'endsWith', label: 'termina con' },
   ];
 
-  const fetchUsers = useCallback(async () => {
-    // Verificar nuevamente el rol antes de hacer la petición
-    if (user?.role !== "admin") {
-      setUsers([]);
-      return;
-    }
-
-    try {
-      const response = await api.get("/users");
-      setUsers(response.data || []);
-    } catch (error: any) {
-      // Si es un error de permisos (403), no mostrar error en consola
-      // Solo usuarios admin pueden acceder a /users
-      if (error.response?.status === 403 || error.isPermissionError) {
-        // Silenciar el error, simplemente no cargar usuarios
-        setUsers([]);
-        return;
-      }
-      console.error("Error fetching users:", error);
-      setUsers([]);
-    }
-  }, [user?.role]);
 
   const handleExportToExcel = () => {
     // Preparar los datos para exportar
@@ -483,17 +463,73 @@ const Contacts: React.FC = () => {
     }
   };
 
+  // Debounce para filtros de columna (esperar 500ms después de que el usuario deje de escribir)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedColumnFilters(columnFilters);
+    }, 500); // Esperar 500ms después de que el usuario deje de escribir
+
+    return () => clearTimeout(timer);
+  }, [columnFilters]);
+
   const fetchContacts = useCallback(async () => {
     try {
-      const params = search ? { search } : {};
-      const response = await api.get("/contacts", { params });
-      setContacts(response.data.contacts || response.data);
-    } catch (error) {
-      console.error("Error fetching contacts:", error);
+      setLoading(true);
+      const params: any = {
+        page: currentPage,
+        limit: itemsPerPage,
+      };
+      
+      // Búsqueda general
+      if (search) {
+        params.search = search;
+      }
+      
+      // Filtros por etapas
+      if (selectedStages.length > 0) {
+        params.stages = selectedStages;
+      }
+      
+      // Filtros por países
+      if (selectedCountries.length > 0) {
+        params.countries = selectedCountries;
+      }
+      
+      // Filtros por propietarios
+      if (selectedOwnerFilters.length > 0) {
+        params.owners = selectedOwnerFilters.map(f => 
+          f === 'me' ? 'me' : f === 'unassigned' ? 'unassigned' : String(f)
+        );
+      }
+      
+      // Ordenamiento
+      params.sortBy = sortBy;
+      
+      // Filtros por columna (usar los valores con debounce)
+      if (debouncedColumnFilters.nombre) params.filterNombre = debouncedColumnFilters.nombre;
+      if (debouncedColumnFilters.empresa) params.filterEmpresa = debouncedColumnFilters.empresa;
+      if (debouncedColumnFilters.telefono) params.filterTelefono = debouncedColumnFilters.telefono;
+      if (debouncedColumnFilters.pais) params.filterPais = debouncedColumnFilters.pais;
+      if (debouncedColumnFilters.etapa) params.filterEtapa = debouncedColumnFilters.etapa;
+      
+      // Filtros avanzados
+      if (filterRules.length > 0) {
+        params.filterRules = JSON.stringify(filterRules);
+      }
+      
+      const response = await api.get('/contacts', { params });
+      const contactsData = response.data.contacts || response.data || [];
+      
+      setContacts(contactsData);
+      setTotalContacts(response.data.total || 0);
+    } catch (error: any) {
+      console.error('Error fetching contacts:', error);
+      setContacts([]);
+      setTotalContacts(0);
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [search, currentPage, itemsPerPage, selectedStages, selectedCountries, selectedOwnerFilters, sortBy, filterRules, debouncedColumnFilters]);
 
   const fetchCompanies = useCallback(async () => {
     try {
@@ -507,75 +543,36 @@ const Contacts: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    const abortController = new AbortController();
-    let isMounted = true;
-
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        
-        // Preparar peticiones
-        const requests: Promise<any>[] = [
-          api.get("/contacts", { 
-            params: search ? { search } : {},
-            signal: abortController.signal 
-          }),
-          api.get("/companies", { 
-            signal: abortController.signal 
-          })
-        ];
-
-        // Solo agregar petición de usuarios si es admin
-        if (user?.role === "admin") {
-          requests.push(
-            api.get("/users", { 
-              signal: abortController.signal 
-            })
-          );
-        }
-
-        const responses = await Promise.all(requests);
-
-        // Solo actualizar estado si el componente sigue montado
-        if (isMounted) {
-          setContacts(responses[0].data.contacts || responses[0].data);
-          setCompanies(responses[1].data.companies || responses[1].data || []);
-          
-          // Si se obtuvo usuarios, actualizarlos
-          if (user?.role === "admin" && responses[2]) {
-            setUsers(responses[2].data || []);
-          }
-        }
-      } catch (error: any) {
-        // Ignorar errores de cancelación
-        if (error.name === 'CanceledError' || error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
-          return;
-        }
-        if (isMounted) {
-          // Manejar error de usuarios (403 es normal si no es admin)
-          if (error.config?.url?.includes('/users') && error.response?.status === 403) {
-            setUsers([]);
-          } else {
-            console.error("Error fetching data:", error);
-          }
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-          setLoadingCompanies(false);
-        }
+  const fetchUsers = useCallback(async () => {
+    try {
+      const response = await api.get('/users');
+      setUsers(response.data || []);
+    } catch (error: any) {
+      // Si es un error 403, el usuario no tiene permisos para ver usuarios (no es admin)
+      // Esto es normal y no debería mostrar un error
+      if (error.response?.status === 403) {
+        console.log('Usuario no tiene permisos para ver usuarios (no es admin)');
+        setUsers([]);
+      } else {
+        console.error('Error fetching users:', error);
+        setUsers([]);
       }
-    };
+    }
+  }, []);
 
-    fetchData();
+  useEffect(() => {
+    fetchContacts();
+  }, [fetchContacts]);
 
-    // Cleanup: cancelar peticiones al desmontar
-    return () => {
-      isMounted = false;
-      abortController.abort();
-    };
-  }, [fetchContacts, fetchUsers, fetchCompanies, user?.role, search]);
+  useEffect(() => {
+    fetchCompanies();
+  }, [fetchCompanies]);
+
+  useEffect(() => {
+    if (user?.role === "admin") {
+      fetchUsers();
+    }
+  }, [fetchUsers, user?.role]);
 
   const handleOpen = (contact?: Contact) => {
     setFormErrors({});
@@ -1279,204 +1276,15 @@ const Contacts: React.FC = () => {
     }
   };
 
-  // Función auxiliar para aplicar operadores
-  const applyOperator = (fieldValue: string, operator: string, filterValue: string): boolean => {
-    const fieldLower = fieldValue.toLowerCase();
-    const filterLower = filterValue.toLowerCase();
-    switch (operator) {
-      case 'contains':
-        return fieldLower.includes(filterLower);
-      case 'equals':
-        return fieldLower === filterLower;
-      case 'notEquals':
-        return fieldLower !== filterLower;
-      case 'startsWith':
-        return fieldLower.startsWith(filterLower);
-      case 'endsWith':
-        return fieldLower.endsWith(filterLower);
-      default:
-        return true;
-    }
-  };
-
-  // Filtrar y ordenar contactos
-  const filteredContacts = contacts
-    .filter((contact) => {
-      // Filtro por tab (0 = Todos, 1 = Activos)
-      if (activeTab === 1) {
-        const activeStages = ["cierre_ganado"];
-        if (!activeStages.includes(contact.lifecycleStage)) {
-          return false;
-        }
-      }
-
-      // Filtro por etapas
-      if (selectedStages.length > 0) {
-        if (!selectedStages.includes(contact.lifecycleStage || "lead")) {
-          return false;
-        }
-      }
-
-      // Filtro por países
-      if (selectedCountries.length > 0) {
-        if (!contact.country || !selectedCountries.includes(contact.country)) {
-          return false;
-        }
-      }
-
-      // Filtro por propietarios (del panel de filtros)
-      if (selectedOwnerFilters.length > 0) {
-        let matches = false;
-        for (const filter of selectedOwnerFilters) {
-          if (filter === "me") {
-            if (contact.ownerId === user?.id) {
-              matches = true;
-              break;
-            }
-          } else if (filter === "unassigned") {
-            if (contact.ownerId === null || contact.ownerId === undefined) {
-              matches = true;
-              break;
-            }
-          } else {
-            if (contact.ownerId === filter) {
-              matches = true;
-              break;
-            }
-          }
-        }
-        if (!matches) return false;
-      }
-
-      // Filtro por propietario (legacy, mantener por compatibilidad)
-      if (selectedOwnerFilter !== null) {
-        if (selectedOwnerFilter === "me") {
-          if (contact.ownerId !== user?.id) {
-            return false;
-          }
-        } else if (selectedOwnerFilter === "unassigned") {
-          if (contact.ownerId !== null && contact.ownerId !== undefined) {
-            return false;
-          }
-        } else if (selectedOwnerFilter === "deactivated") {
-          // Todos los propietarios desactivados y eliminados
-          // Por ahora, no hay lógica para esto, se puede implementar después
-          return true;
-        } else {
-          if (contact.ownerId !== selectedOwnerFilter) {
-            return false;
-          }
-        }
-      }
-
-      // Aplicar filtros de reglas
-      for (const rule of filterRules) {
-        if (!rule.value) continue; // Saltar reglas sin valor
-
-        let matches = false;
-        const ruleValue = rule.value.toLowerCase();
-
-        switch (rule.column) {
-          case 'firstName':
-            matches = applyOperator(contact.firstName || '', rule.operator, ruleValue);
-            break;
-          case 'lastName':
-            matches = applyOperator(contact.lastName || '', rule.operator, ruleValue);
-            break;
-          case 'email':
-            matches = applyOperator(contact.email || '', rule.operator, ruleValue);
-            break;
-          case 'phone':
-            const phoneValue = contact.phone || contact.mobile || '';
-            matches = applyOperator(phoneValue, rule.operator, ruleValue);
-            break;
-          case 'company':
-            const companyName = contact.Company?.name || contact.Companies?.[0]?.name || '';
-            matches = applyOperator(companyName, rule.operator, ruleValue);
-            break;
-          case 'country':
-            matches = applyOperator(contact.country || '', rule.operator, ruleValue);
-            break;
-          case 'lifecycleStage':
-            const stageLabel = getStageLabel(contact.lifecycleStage || 'lead');
-            matches = applyOperator(stageLabel, rule.operator, ruleValue);
-            break;
-          case 'jobTitle':
-            matches = applyOperator(contact.jobTitle || '', rule.operator, ruleValue);
-            break;
-          default:
-            matches = true;
-        }
-
-        if (!matches) return false;
-      }
-
-      // Aplicar filtros por columna
-      if (columnFilters.nombre) {
-        const fullName = `${contact.firstName} ${contact.lastName}`.toLowerCase();
-        if (!fullName.includes(columnFilters.nombre.toLowerCase())) return false;
-      }
-      if (columnFilters.empresa) {
-        const companyName = contact.Company?.name || contact.Companies?.[0]?.name || '';
-        if (!companyName.toLowerCase().includes(columnFilters.empresa.toLowerCase())) return false;
-      }
-      if (columnFilters.telefono) {
-        const phoneValue = contact.phone || contact.mobile || '';
-        if (!phoneValue.toLowerCase().includes(columnFilters.telefono.toLowerCase())) return false;
-      }
-      if (columnFilters.pais) {
-        if (!contact.country?.toLowerCase().includes(columnFilters.pais.toLowerCase())) return false;
-      }
-      if (columnFilters.etapa) {
-        const stageLabel = getStageLabel(contact.lifecycleStage || 'lead');
-        if (!stageLabel.toLowerCase().includes(columnFilters.etapa.toLowerCase())) return false;
-      }
-
-      // Filtro por búsqueda
-      if (!search) return true;
-      const searchLower = search.toLowerCase();
-      return (
-        contact.firstName.toLowerCase().includes(searchLower) ||
-        contact.lastName.toLowerCase().includes(searchLower) ||
-        contact.email.toLowerCase().includes(searchLower) ||
-        contact.phone?.toLowerCase().includes(searchLower)
-      );
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "newest":
-          return (
-            new Date(b.createdAt || 0).getTime() -
-            new Date(a.createdAt || 0).getTime()
-          );
-        case "oldest":
-          return (
-            new Date(a.createdAt || 0).getTime() -
-            new Date(b.createdAt || 0).getTime()
-          );
-        case "name":
-          return `${a.firstName} ${a.lastName}`.localeCompare(
-            `${b.firstName} ${b.lastName}`
-          );
-        case "nameDesc":
-          return `${b.firstName} ${b.lastName}`.localeCompare(
-            `${a.firstName} ${a.lastName}`
-          );
-        default:
-          return 0;
-      }
-    });
-
-  // Calcular paginación
-  const totalPages = Math.ceil(filteredContacts.length / itemsPerPage);
+  // Calcular paginación desde el servidor
+  const totalPages = Math.ceil(totalContacts / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedContacts = filteredContacts.slice(startIndex, endIndex);
+  const endIndex = Math.min(startIndex + itemsPerPage, totalContacts);
 
   // Resetear a la página 1 cuando cambien los filtros
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedStages, selectedCountries, selectedOwnerFilters, search, sortBy, filterRules, columnFilters]);
+  }, [selectedStages, selectedCountries, selectedOwnerFilters, search, sortBy, filterRules, debouncedColumnFilters]);
 
   if (loading) {
     return (
@@ -1822,7 +1630,7 @@ const Contacts: React.FC = () => {
         }
         rows={
           <>
-          {paginatedContacts.map((contact) => (
+          {contacts.map((contact) => (
               <Box
                 key={contact.id}
                 component="div"
@@ -2364,7 +2172,7 @@ const Contacts: React.FC = () => {
             </>
         }
         emptyState={
-          paginatedContacts.length === 0 ? (
+          contacts.length === 0 ? (
             <Box sx={pageStyles.emptyState}>
               <Box
                 sx={{
@@ -2397,7 +2205,7 @@ const Contacts: React.FC = () => {
           ) : undefined
         }
         pagination={
-          filteredContacts.length > 0 ? (
+          totalContacts > 0 ? (
             <>
               {/* Rows per page selector */}
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -2450,8 +2258,8 @@ const Contacts: React.FC = () => {
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {startIndex + 1}-{Math.min(endIndex, filteredContacts.length)}{" "}
-                  de {filteredContacts.length}
+                  {startIndex + 1}-{endIndex}{" "}
+                  de {totalContacts}
                 </Typography>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                   <IconButton

@@ -62,21 +62,117 @@ const transformDeal = (deal: any) => {
 // Obtener todos los deals
 router.get('/', apiLimiter, async (req: AuthRequest, res) => {
   try {
-    const { page = 1, limit = 50, search, stage, ownerId, pipelineId, contactId, companyId } = req.query;
-    const offset = (Number(page) - 1) * Number(limit);
+    const { 
+      page = 1, 
+      limit: limitParam = 50, 
+      search, 
+      stage, 
+      ownerId, 
+      pipelineId, 
+      contactId, 
+      companyId,
+      // Nuevos parámetros de filtro
+      stages, // Array de etapas
+      owners, // Array: ["me", "unassigned", "1", "2"]
+      sortBy = 'newest', // newest, oldest, name, nameDesc
+      // Filtros por columna
+      filterNombre,
+      filterContacto,
+      filterEmpresa,
+      filterEtapa,
+    } = req.query;
+    
+    // Limitar el tamaño máximo de página para evitar sobrecarga
+    const maxLimit = 100;
+    const requestedLimit = Number(limitParam);
+    const limit = requestedLimit > maxLimit ? maxLimit : (requestedLimit < 1 ? 50 : requestedLimit);
+    const pageNum = Number(page) < 1 ? 1 : Number(page);
+    const offset = (pageNum - 1) * limit;
 
     const where: any = {};
+    
+    // Búsqueda general
     if (search) {
       where.name = { [Op.iLike]: `%${search}%` };
     }
+    
+    // Filtro por etapas (stage) - soporta múltiples valores
     if (stage) {
       where.stage = stage;
+    } else if (stages) {
+      const stagesArray = Array.isArray(stages) ? stages : [stages];
+      if (stagesArray.length > 0) {
+        where.stage = { [Op.in]: stagesArray };
+      }
     }
-    if (ownerId) {
-      where.ownerId = ownerId;
+    
+    // Filtro por propietarios
+    if (owners) {
+      const ownersArray = Array.isArray(owners) ? owners : [owners];
+      const ownerIds: (number | null)[] = [];
+      const hasUnassigned = ownersArray.includes('unassigned');
+      const hasMe = ownersArray.includes('me');
+      
+      ownersArray.forEach((owner: string | any) => {
+        const ownerStr = String(owner);
+        if (ownerStr === 'unassigned') {
+          // Se manejará después
+        } else if (ownerStr === 'me') {
+          if (req.userId) ownerIds.push(req.userId);
+        } else if (!isNaN(Number(ownerStr))) {
+          ownerIds.push(Number(ownerStr));
+        }
+      });
+      
+      if (hasUnassigned && ownerIds.length > 0) {
+        where.ownerId = { [Op.or]: [{ [Op.in]: ownerIds }, { [Op.is]: null }] };
+      } else if (hasUnassigned) {
+        where.ownerId = { [Op.is]: null };
+      } else if (hasMe && ownerIds.length > 1) {
+        where.ownerId = { [Op.in]: ownerIds };
+      } else if (hasMe) {
+        where.ownerId = req.userId || null;
+      } else if (ownerIds.length > 0) {
+        where.ownerId = { [Op.in]: ownerIds };
+      }
+    } else if (ownerId) {
+      // Compatibilidad con el filtro antiguo
+      where.ownerId = ownerId === 'me' ? req.userId : ownerId;
     }
+    
     if (pipelineId) {
       where.pipelineId = pipelineId;
+    }
+    
+    // Filtros por columna
+    if (filterNombre) {
+      if (where.name) {
+        // Si ya existe búsqueda por nombre, combinarla
+        where.name = { [Op.and]: [
+          where.name,
+          { [Op.iLike]: `%${filterNombre}%` }
+        ]};
+      } else {
+        where.name = { [Op.iLike]: `%${filterNombre}%` };
+      }
+    }
+    
+    if (filterEtapa) {
+      // Si ya existe filtro por stage, combinarlo
+      if (where.stage) {
+        if (typeof where.stage === 'object' && where.stage[Op.in]) {
+          // Ya es un array, filtrar los que coincidan
+          const stagesArray = Array.isArray(where.stage[Op.in]) ? where.stage[Op.in] : [where.stage[Op.in]];
+          where.stage = { [Op.in]: stagesArray.filter((s: string) => s.toLowerCase().includes(filterEtapa.toLowerCase())) };
+        } else {
+          // Es un valor único, verificar si coincide
+          if (!String(where.stage).toLowerCase().includes(filterEtapa.toLowerCase())) {
+            where.stage = { [Op.in]: [] }; // No hay coincidencias
+          }
+        }
+      } else {
+        where.stage = { [Op.iLike]: `%${filterEtapa}%` };
+      }
     }
 
     // Manejar contactId: buscar tanto en relación uno-a-muchos como muchos-a-muchos
@@ -139,16 +235,78 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
       }
     }
 
+    // Configurar includes
+    const includes: any[] = [
+      { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
+    ];
+    
+    // Si hay filtro por contacto, hacer el include requerido
+    if (filterContacto) {
+      includes.push({
+        model: Contact,
+        as: 'Contact',
+        attributes: ['id', 'firstName', 'lastName', 'email'],
+        required: true,
+        where: {
+          [Op.or]: [
+            { firstName: { [Op.iLike]: `%${filterContacto}%` } },
+            { lastName: { [Op.iLike]: `%${filterContacto}%` } },
+          ],
+        },
+      });
+    } else {
+      includes.push({
+        model: Contact,
+        as: 'Contact',
+        attributes: ['id', 'firstName', 'lastName', 'email'],
+        required: false,
+      });
+    }
+    
+    // Si hay filtro por empresa, hacer el include requerido
+    if (filterEmpresa) {
+      includes.push({
+        model: Company,
+        as: 'Company',
+        attributes: ['id', 'name'],
+        required: true,
+        where: {
+          name: { [Op.iLike]: `%${filterEmpresa}%` },
+        },
+      });
+    } else {
+      includes.push({
+        model: Company,
+        as: 'Company',
+        attributes: ['id', 'name'],
+        required: false,
+      });
+    }
+    
+    // Ordenamiento
+    let order: [string, string][] = [['createdAt', 'DESC']];
+    switch (sortBy) {
+      case 'newest':
+        order = [['createdAt', 'DESC']];
+        break;
+      case 'oldest':
+        order = [['createdAt', 'ASC']];
+        break;
+      case 'name':
+        order = [['name', 'ASC']];
+        break;
+      case 'nameDesc':
+        order = [['name', 'DESC']];
+        break;
+    }
+
     const deals = await Deal.findAndCountAll({
       where,
-      include: [
-        { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
-        { model: Contact, as: 'Contact', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
-        { model: Company, as: 'Company', attributes: ['id', 'name'], required: false },
-      ],
-      limit: Number(limit),
+      include: includes,
+      distinct: true, // Importante para contar correctamente con includes
+      limit,
       offset,
-      order: [['createdAt', 'DESC']],
+      order,
     });
 
     const transformedDeals = deals.rows.map(deal => transformDeal(deal));
@@ -156,8 +314,9 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
     res.json({
       deals: transformedDeals,
       total: deals.count,
-      page: Number(page),
-      totalPages: Math.ceil(deals.count / Number(limit)),
+      page: pageNum,
+      limit,
+      totalPages: Math.ceil(deals.count / limit),
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

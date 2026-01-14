@@ -43,12 +43,37 @@ const cleanTicket = (ticket: any): any => {
 // Obtener todos los tickets
 router.get('/', async (req: AuthRequest, res) => {
   try {
-    const { page = 1, limit = 50, status, priority, assignedToId, contactId, companyId } = req.query;
-    const offset = (Number(page) - 1) * Number(limit);
+    const { 
+      page = 1, 
+      limit: limitParam = 50, 
+      status, 
+      priority, 
+      assignedToId, 
+      contactId, 
+      companyId,
+      search,
+      sortBy = 'newest', // newest, oldest, name, nameDesc
+      // Filtros por columna
+      filterAsunto,
+      filterEstado,
+      filterPrioridad,
+    } = req.query;
+    
+    // Limitar el tamaño máximo de página para evitar sobrecarga
+    const maxLimit = 100;
+    const requestedLimit = Number(limitParam);
+    const limit = requestedLimit > maxLimit ? maxLimit : (requestedLimit < 1 ? 50 : requestedLimit);
+    const pageNum = Number(page) < 1 ? 1 : Number(page);
+    const offset = (pageNum - 1) * limit;
 
     const where: any = {};
+    
+    // Búsqueda general
+    if (search) {
+      where.subject = { [Op.iLike]: `%${search}%` };
+    }
+    
     // Solo agregar filtros de status y priority si las columnas existen
-    // Si no existen, estos filtros causarán errores, así que los omitimos
     try {
       if (status) {
         where.status = status;
@@ -59,6 +84,7 @@ router.get('/', async (req: AuthRequest, res) => {
     } catch (e) {
       // Ignorar errores de filtros de status/priority
     }
+    
     if (assignedToId) {
       where.assignedToId = assignedToId;
     }
@@ -68,6 +94,65 @@ router.get('/', async (req: AuthRequest, res) => {
     if (companyId) {
       // Solo filtrar por companyId si se proporciona, y debe ser exactamente ese ID (no null)
       where.companyId = companyId;
+    }
+    
+    // Filtros por columna
+    if (filterAsunto) {
+      if (where.subject) {
+        where.subject = { [Op.and]: [
+          where.subject,
+          { [Op.iLike]: `%${filterAsunto}%` }
+        ]};
+      } else {
+        where.subject = { [Op.iLike]: `%${filterAsunto}%` };
+      }
+    }
+    
+    if (filterEstado) {
+      try {
+        if (where.status) {
+          // Si ya existe filtro por status, verificar si coincide
+          if (String(where.status).toLowerCase() !== String(filterEstado).toLowerCase()) {
+            where.status = { [Op.in]: [] }; // No hay coincidencias
+          }
+        } else {
+          where.status = { [Op.iLike]: `%${String(filterEstado)}%` };
+        }
+      } catch (e) {
+        // Ignorar si la columna no existe
+      }
+    }
+    
+    if (filterPrioridad) {
+      try {
+        if (where.priority) {
+          // Si ya existe filtro por priority, verificar si coincide
+          if (String(where.priority).toLowerCase() !== String(filterPrioridad).toLowerCase()) {
+            where.priority = { [Op.in]: [] }; // No hay coincidencias
+          }
+        } else {
+          where.priority = { [Op.iLike]: `%${String(filterPrioridad)}%` };
+        }
+      } catch (e) {
+        // Ignorar si la columna no existe
+      }
+    }
+    
+    // Ordenamiento
+    let order: [string, string][] = [['createdAt', 'DESC']];
+    switch (sortBy) {
+      case 'newest':
+        order = [['createdAt', 'DESC']];
+        break;
+      case 'oldest':
+        order = [['createdAt', 'ASC']];
+        break;
+      case 'name':
+        order = [['subject', 'ASC']];
+        break;
+      case 'nameDesc':
+        order = [['subject', 'DESC']];
+        break;
     }
 
     const tickets = await Ticket.findAndCountAll({
@@ -79,16 +164,18 @@ router.get('/', async (req: AuthRequest, res) => {
         { model: Company, as: 'Company', attributes: ['id', 'name'], required: false },
         { model: Deal, as: 'Deal', attributes: ['id', 'name'], required: false },
       ],
-      limit: Number(limit),
+      distinct: true, // Importante para contar correctamente con includes
+      limit,
       offset,
-      order: [['createdAt', 'DESC']],
+      order,
     });
 
     res.json({
       tickets: tickets.rows.map(cleanTicket),
       total: tickets.count,
-      page: Number(page),
-      totalPages: Math.ceil(tickets.count / Number(limit)),
+      page: pageNum,
+      limit,
+      totalPages: Math.ceil(tickets.count / limit),
     });
   } catch (error: any) {
     console.error('❌ Error al obtener tickets:', error);
