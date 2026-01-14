@@ -160,7 +160,42 @@ const Tickets: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchTickets();
+    const abortController = new AbortController();
+    let isMounted = true;
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/tickets', {
+          signal: abortController.signal
+        });
+        
+        // Solo actualizar estado si el componente sigue montado
+        if (isMounted) {
+          setTickets(response.data.tickets || response.data || []);
+        }
+      } catch (error: any) {
+        // Ignorar errores de cancelación
+        if (error.name === 'CanceledError' || error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
+          return;
+        }
+        if (isMounted) {
+          console.error('Error fetching tickets:', error);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchData();
+
+    // Cleanup: cancelar peticiones al desmontar
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
   }, []);
 
   const fetchTickets = async () => {

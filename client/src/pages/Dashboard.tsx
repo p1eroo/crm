@@ -71,7 +71,6 @@ interface DashboardStats {
       userId: number;
       firstName: string;
       lastName: string;
-      email: string;
       totalDeals: number;
       wonDeals: number;
       wonDealsValue?: number;
@@ -97,20 +96,10 @@ interface DashboardStats {
   };
 }
 
-interface Task {
-  id: number;
-  title: string;
-  type?: string;
-  status: string;
-  dueDate?: string;
-  priority?: string;
-}
-
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const theme = useTheme();
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear.toString());
@@ -223,12 +212,8 @@ const Dashboard: React.FC = () => {
   }, [selectedYear, selectedMonth, user]);
 
   // Recargar estadísticas cuando cambia el año o mes seleccionado
-  useEffect(() => {
-    // Solo hacer llamadas si el usuario está autenticado
-    if (user) {
-      fetchStats();
-    }
-  }, [fetchStats, user]);
+  // NOTA: Este useEffect fue eliminado porque fetchStats() ya maneja esto
+  // El useEffect de abajo (línea 450) llama a fetchStats() que tiene la misma lógica
 
   // Obtener deals ganados diarios cuando se selecciona un mes
   useEffect(() => {
@@ -327,53 +312,12 @@ const Dashboard: React.FC = () => {
 
 
 
-  const fetchTasks = useCallback(async () => {
-    // Verificar autenticación antes de hacer la llamada
-    const token = localStorage.getItem('token');
-    if (!user || !token) {
-      console.log('⚠️ Usuario no autenticado, omitiendo fetchTasks');
-      setTasks([]);
-      return;
-    }
-
-    try {
-      console.log('📋 Iniciando fetchTasks...');
-      console.log('📋 Token disponible para fetchTasks:', token ? 'Sí' : 'No');
-      
-      const response = await api.get('/tasks?limit=10');
-      
-      // Validar que la respuesta sea un array válido
-      let tasksData: any[] = [];
-      if (Array.isArray(response.data)) {
-        tasksData = response.data;
-      } else if (response.data?.tasks && Array.isArray(response.data.tasks)) {
-        tasksData = response.data.tasks;
-      } else if (response.data && typeof response.data === 'object') {
-        // Si es un objeto pero no tiene la propiedad tasks, usar array vacío
-        tasksData = [];
-      }
-      setTasks(tasksData.slice(0, 5)); // Limitar a 5 tareas para el dashboard
-    } catch (error: any) {
-      console.error('❌ Error fetching tasks:', error);
-      console.error('❌ Error status:', error.response?.status);
-      
-      // Si es un error de autenticación, no hacer nada (el interceptor manejará la redirección)
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        console.error('❌ Error de autenticación en fetchTasks');
-        throw error; // Re-lanzar para que el interceptor lo maneje
-      }
-      
-      setTasks([]);
-    }
-  }, [user]);
-
   useEffect(() => {
     // Solo hacer llamadas si el usuario está autenticado
     if (user) {
       fetchStats();
-      fetchTasks();
     }
-  }, [fetchStats, user, fetchTasks]);
+  }, [fetchStats, user]);
 
   // const handleTaskToggle = async (taskId: number, currentStatus: string) => {
   //   try {
@@ -490,7 +434,6 @@ const Dashboard: React.FC = () => {
     if (stats.deals.userPerformance && stats.deals.userPerformance.length > 0) {
       const kpiAreaData = stats.deals.userPerformance.map((user) => ({
         Usuario: `${user.firstName} ${user.lastName}`,
-        Email: user.email || '',
         'KPI (%)': user.performance.toFixed(1),
         'Deals Totales': user.totalDeals || 0,
         'Deals Ganados': user.wonDeals || 0,
@@ -499,7 +442,6 @@ const Dashboard: React.FC = () => {
       const wsKPIArea = XLSX.utils.json_to_sheet(kpiAreaData);
       wsKPIArea['!cols'] = [
         { wch: 25 },
-        { wch: 30 },
         { wch: 12 },
         { wch: 15 },
         { wch: 15 },
@@ -515,7 +457,6 @@ const Dashboard: React.FC = () => {
         .map((user, index) => ({
           Ranking: index + 1,
           Usuario: `${user.firstName} ${user.lastName}`,
-          Email: user.email || '',
           'Ventas': user.wonDeals || 0,
           'Total Vendido': user.wonDealsValue || 0,
         }));
@@ -523,8 +464,7 @@ const Dashboard: React.FC = () => {
       wsAdvisors['!cols'] = [
         { wch: 10 },
         { wch: 25 },
-        { wch: 30 },
-        { wch: 12 },
+        { wch: 15 },
         { wch: 18 },
       ];
       XLSX.utils.book_append_sheet(wb, wsAdvisors, 'Ventas por Asesor');

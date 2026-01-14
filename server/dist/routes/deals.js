@@ -13,6 +13,7 @@ const DealContact_1 = require("../models/DealContact");
 const DealCompany_1 = require("../models/DealCompany");
 const DealDeal_1 = require("../models/DealDeal");
 const auth_1 = require("../middleware/auth");
+const rateLimiter_1 = require("../middleware/rateLimiter");
 const router = express_1.default.Router();
 router.use(auth_1.authenticateToken);
 // Función helper para transformar deals y asegurar que amount sea un número
@@ -24,7 +25,7 @@ const transformDeal = (deal) => {
     };
 };
 // Obtener todos los deals
-router.get('/', async (req, res) => {
+router.get('/', rateLimiter_1.apiLimiter, async (req, res) => {
     try {
         const { page = 1, limit = 50, search, stage, ownerId, pipelineId, contactId, companyId } = req.query;
         const offset = (Number(page) - 1) * Number(limit);
@@ -116,7 +117,7 @@ router.get('/', async (req, res) => {
     }
 });
 // Obtener un deal por ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', rateLimiter_1.apiLimiter, async (req, res) => {
     try {
         const deal = await Deal_1.Deal.findByPk(req.params.id, {
             include: [
@@ -187,7 +188,7 @@ router.get('/:id', async (req, res) => {
     }
 });
 // Crear deal
-router.post('/', async (req, res) => {
+router.post('/', rateLimiter_1.writeLimiter, async (req, res) => {
     try {
         const dealData = {
             ...req.body,
@@ -208,7 +209,7 @@ router.post('/', async (req, res) => {
     }
 });
 // Actualizar deal
-router.put('/:id', async (req, res) => {
+router.put('/:id', rateLimiter_1.writeLimiter, async (req, res) => {
     try {
         const deal = await Deal_1.Deal.findByPk(req.params.id);
         if (!deal) {
@@ -237,7 +238,7 @@ router.put('/:id', async (req, res) => {
     }
 });
 // Eliminar deal
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', rateLimiter_1.deleteLimiter, async (req, res) => {
     try {
         const deal = await Deal_1.Deal.findByPk(req.params.id);
         if (!deal) {
@@ -251,7 +252,7 @@ router.delete('/:id', async (req, res) => {
     }
 });
 // Agregar contactos a un deal
-router.post('/:id/contacts', async (req, res) => {
+router.post('/:id/contacts', rateLimiter_1.writeLimiter, async (req, res) => {
     try {
         const deal = await Deal_1.Deal.findByPk(req.params.id);
         if (!deal) {
@@ -286,7 +287,7 @@ router.post('/:id/contacts', async (req, res) => {
     }
 });
 // Eliminar contactos de un deal
-router.delete('/:id/contacts/:contactId', async (req, res) => {
+router.delete('/:id/contacts/:contactId', rateLimiter_1.deleteLimiter, async (req, res) => {
     try {
         const deal = await Deal_1.Deal.findByPk(req.params.id);
         if (!deal) {
@@ -327,7 +328,7 @@ router.delete('/:id/contacts/:contactId', async (req, res) => {
     }
 });
 // Agregar empresas a un deal
-router.post('/:id/companies', async (req, res) => {
+router.post('/:id/companies', rateLimiter_1.writeLimiter, async (req, res) => {
     try {
         const deal = await Deal_1.Deal.findByPk(req.params.id);
         if (!deal) {
@@ -359,7 +360,7 @@ router.post('/:id/companies', async (req, res) => {
     }
 });
 // Eliminar empresa de un deal
-router.delete('/:id/companies/:companyId', async (req, res) => {
+router.delete('/:id/companies/:companyId', rateLimiter_1.deleteLimiter, async (req, res) => {
     try {
         const deal = await Deal_1.Deal.findByPk(req.params.id);
         if (!deal) {

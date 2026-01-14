@@ -7,14 +7,43 @@ import { apiLimiter, writeLimiter, deleteLimiter, sensitiveUserOperationLimiter 
 
 const router = express.Router();
 
+// Función para limpiar usuarios eliminando campos null y objetos relacionados null
+const cleanUser = (user: any): any => {
+  const userJson = user.toJSON ? user.toJSON() : user;
+  const cleaned: any = {
+    id: userJson.id,
+    email: userJson.email,
+    usuario: userJson.usuario,
+    firstName: userJson.firstName,
+    lastName: userJson.lastName,
+    roleId: userJson.roleId,
+    isActive: userJson.isActive,
+    createdAt: userJson.createdAt,
+    updatedAt: userJson.updatedAt,
+    // Transformar role
+    role: userJson.Role?.name || userJson.role || '',
+  };
+
+  // Solo incluir campos opcionales si no son null
+  if (userJson.avatar != null) cleaned.avatar = userJson.avatar;
+  if (userJson.phone != null) cleaned.phone = userJson.phone;
+  if (userJson.language != null) cleaned.language = userJson.language;
+  if (userJson.dateFormat != null) cleaned.dateFormat = userJson.dateFormat;
+  
+  // Incluir Role solo si existe (no incluir si es null)
+  if (userJson.Role != null) {
+    cleaned.Role = userJson.Role;
+  }
+
+  // NO incluir googleAccessToken ni googleRefreshToken por seguridad
+  // (aunque no se usan en el frontend, es mejor no enviarlos)
+
+  return cleaned;
+};
+
 // Función helper para transformar usuarios y asegurar que el campo 'role' esté presente
 const transformUser = (user: any) => {
-  const userJson = user.toJSON ? user.toJSON() : user;
-  return {
-    ...userJson,
-    role: userJson.Role?.name || userJson.role || '',
-    Role: userJson.Role, // Mantener también el objeto Role completo por si se necesita
-  };
+  return cleanUser(user);
 };
 
 // Todas las rutas requieren autenticación y rol de administrador

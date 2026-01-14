@@ -30,7 +30,6 @@ const TaskDetail = lazy(() => import('./pages/TaskDetail'));
 const Tickets = lazy(() => import('./pages/Tickets'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Users = lazy(() => import('./pages/Users'));
-const Pipeline = lazy(() => import('./pages/Pipeline'));
 const Reports = lazy(() => import('./pages/Reports'));
 const ReportDetail = lazy(() => import('./pages/ReportDetail'));
 const Calendar = lazy(() => import('./pages/Calendar'));
@@ -282,7 +281,6 @@ const AppContent: React.FC = () => {
                 <Route path="/tasks" element={<Navigate to="/login" replace />} />
                 <Route path="/tickets" element={<Navigate to="/login" replace />} />
                 <Route path="/calendar" element={<Navigate to="/login" replace />} />
-                <Route path="/pipeline" element={<Navigate to="/login" replace />} />
                 <Route path="/profile" element={<Navigate to="/login" replace />} />
                 <Route path="/users" element={<Navigate to="/login" replace />} />
                 <Route path="/reports" element={<Navigate to="/login" replace />} />
@@ -411,16 +409,6 @@ const AppContent: React.FC = () => {
                     <SidebarProvider>
                       <MainLayout>
                         <Calendar />
-                      </MainLayout>
-                    </SidebarProvider>
-                  }
-                />
-                <Route
-                  path="/pipeline"
-                  element={
-                    <SidebarProvider>
-                      <MainLayout>
-                        <Pipeline />
                       </MainLayout>
                     </SidebarProvider>
                   }

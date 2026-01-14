@@ -34,7 +34,6 @@ import { Add, Delete, Search, Visibility, UploadFile, FileDownload, FilterList, 
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
-import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { FormDrawer } from '../components/FormDrawer';
@@ -66,7 +65,6 @@ interface Company {
 
 const Companies: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -695,9 +693,98 @@ const Companies: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetchCompanies();
-    fetchUsers();
-  }, [fetchCompanies, fetchUsers]);
+    const abortController = new AbortController();
+    let isMounted = true;
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        // Realizar peticiones en paralelo con cancelación
+        const [companiesRes, usersRes] = await Promise.all([
+          api.get('/companies', { 
+            params: {
+              page: currentPage,
+              limit: itemsPerPage,
+              ...(search && { search }),
+              ...(selectedStages.length > 0 && { stages: selectedStages }),
+              ...(selectedCountries.length > 0 && { countries: selectedCountries }),
+              ...(selectedOwnerFilters.length > 0 && { 
+                owners: selectedOwnerFilters.map(f => 
+                  f === 'me' ? 'me' : f === 'unassigned' ? 'unassigned' : String(f)
+                )
+              }),
+              sortBy,
+              ...(debouncedColumnFilters.nombre && { filterNombre: debouncedColumnFilters.nombre }),
+              ...(debouncedColumnFilters.propietario && { filterPropietario: debouncedColumnFilters.propietario }),
+              ...(debouncedColumnFilters.telefono && { filterTelefono: debouncedColumnFilters.telefono }),
+              ...(debouncedColumnFilters.correo && { filterCorreo: debouncedColumnFilters.correo }),
+              ...(debouncedColumnFilters.origenLead && { filterOrigenLead: debouncedColumnFilters.origenLead }),
+              ...(debouncedColumnFilters.etapa && { filterEtapa: debouncedColumnFilters.etapa }),
+              ...(debouncedColumnFilters.cr && { filterCR: debouncedColumnFilters.cr }),
+              ...(filterRules.length > 0 && { filterRules: JSON.stringify(filterRules) }),
+            },
+            signal: abortController.signal 
+          }),
+          api.get('/users', { 
+            signal: abortController.signal 
+          })
+        ]);
+
+        // Solo actualizar estado si el componente sigue montado
+        if (isMounted) {
+          const companiesData = companiesRes.data.companies || companiesRes.data;
+          const sanitizedCompanies = companiesData.map((company: any) => ({
+            ...company,
+            domain: company.domain || null,
+            companyname: company.companyname || null,
+            phone: company.phone || null,
+            leadSource: company.leadSource || null,
+            city: company.city || null,
+            state: company.state || null,
+            country: company.country || null,
+            estimatedRevenue: company.estimatedRevenue || null,
+            Owner: company.Owner || null,
+          }));
+          setCompanies(sanitizedCompanies);
+          setTotalCompanies(companiesRes.data.total || 0);
+          
+          // Manejar usuarios
+          if (usersRes.data) {
+            setUsers(usersRes.data || []);
+          }
+        }
+      } catch (error: any) {
+        // Ignorar errores de cancelación
+        if (error.name === 'CanceledError' || error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
+          return;
+        }
+        if (isMounted) {
+          // Manejar error de usuarios (403 es normal si no es admin)
+          if (error.config?.url?.includes('/users') && error.response?.status === 403) {
+            console.log('Usuario no tiene permisos para ver usuarios (no es admin)');
+            setUsers([]);
+          } else {
+            console.error('Error fetching data:', error);
+            setCompanies([]);
+            setTotalCompanies(0);
+          }
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    // Solo hacer fetch si hay dependencias válidas
+    fetchData();
+
+    // Cleanup: cancelar peticiones al desmontar
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
+  }, [currentPage, itemsPerPage, search, selectedStages, selectedCountries, selectedOwnerFilters, sortBy, filterRules, debouncedColumnFilters]);
 
   // Limpiar timeouts al desmontar el componente
   useEffect(() => {
@@ -1644,26 +1731,6 @@ const Companies: React.FC = () => {
     { value: 'startsWith', label: 'empieza con' },
     { value: 'endsWith', label: 'termina con' },
   ];
-
-  // Función auxiliar para aplicar operadores
-  const applyOperator = (fieldValue: string, operator: string, filterValue: string): boolean => {
-    const fieldLower = fieldValue.toLowerCase();
-    const filterLower = filterValue.toLowerCase();
-    switch (operator) {
-      case 'contains':
-        return fieldLower.includes(filterLower);
-      case 'equals':
-        return fieldLower === filterLower;
-      case 'notEquals':
-        return fieldLower !== filterLower;
-      case 'startsWith':
-        return fieldLower.startsWith(filterLower);
-      case 'endsWith':
-        return fieldLower.endsWith(filterLower);
-      default:
-        return true;
-    }
-  };
 
   // Los datos ya vienen filtrados y ordenados del servidor
   // Solo aplicamos filtros adicionales que requieren lógica del cliente

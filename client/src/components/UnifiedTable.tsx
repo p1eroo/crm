@@ -40,31 +40,33 @@ export const UnifiedTable: React.FC<UnifiedTableProps> = ({
         }}
       >
         {/* Fila superior con título y acciones */}
-        <Box
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            px: { xs: 1.5, md: 2 },
-            py: { xs: 1.25, md: 1.5 },
-            borderBottom: theme.palette.mode === 'light' 
-              ? '1px solid rgba(0, 0, 0, 0.08)' 
-              : '1px solid rgba(255, 255, 255, 0.1)',
-          }}
-        >
-          <Typography variant="h5" sx={{ 
-            fontWeight: 600, 
-            fontSize: { xs: '1rem', md: '1.25rem' },
-            color: theme.palette.text.primary,
-          }}>
-            {title}
-          </Typography>
-          {actions && (
-            <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-              {actions}
-            </Box>
-          )}
-        </Box>
+        {(title || actions) && (
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              px: { xs: 1.5, md: 2 },
+              py: { xs: 1.25, md: 1.5 },
+              borderBottom: theme.palette.mode === 'light' 
+                ? '1px solid rgba(0, 0, 0, 0.08)' 
+                : '1px solid rgba(255, 255, 255, 0.1)',
+            }}
+          >
+            <Typography variant="h5" sx={{ 
+              fontWeight: 600, 
+              fontSize: { xs: '1rem', md: '1.25rem' },
+              color: theme.palette.text.primary,
+            }}>
+              {title}
+            </Typography>
+            {actions && (
+              <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                {actions}
+              </Box>
+            )}
+          </Box>
+        )}
 
         {/* Header de la tabla */}
         {header}

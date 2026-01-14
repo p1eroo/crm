@@ -116,6 +116,10 @@ api.interceptors.request.use(
       }
     }
     
+    // NOTA: La verificación del caché se hace en el interceptor de response
+    // para evitar problemas con la estructura de respuestas de axios.
+    // El caché se guarda automáticamente y estará disponible en la próxima carga de página.
+    
     // Agregar token de autenticación si existe
     const token = localStorage.getItem('token');
 

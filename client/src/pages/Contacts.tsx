@@ -508,13 +508,74 @@ const Contacts: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    fetchContacts();
-    fetchCompanies();
-    // Solo intentar obtener usuarios si el usuario actual es admin
-    if (user?.role === "admin") {
-      fetchUsers();
-    }
-  }, [fetchContacts, fetchUsers, fetchCompanies, user?.role]);
+    const abortController = new AbortController();
+    let isMounted = true;
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Preparar peticiones
+        const requests: Promise<any>[] = [
+          api.get("/contacts", { 
+            params: search ? { search } : {},
+            signal: abortController.signal 
+          }),
+          api.get("/companies", { 
+            signal: abortController.signal 
+          })
+        ];
+
+        // Solo agregar petición de usuarios si es admin
+        if (user?.role === "admin") {
+          requests.push(
+            api.get("/users", { 
+              signal: abortController.signal 
+            })
+          );
+        }
+
+        const responses = await Promise.all(requests);
+
+        // Solo actualizar estado si el componente sigue montado
+        if (isMounted) {
+          setContacts(responses[0].data.contacts || responses[0].data);
+          setCompanies(responses[1].data.companies || responses[1].data || []);
+          
+          // Si se obtuvo usuarios, actualizarlos
+          if (user?.role === "admin" && responses[2]) {
+            setUsers(responses[2].data || []);
+          }
+        }
+      } catch (error: any) {
+        // Ignorar errores de cancelación
+        if (error.name === 'CanceledError' || error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
+          return;
+        }
+        if (isMounted) {
+          // Manejar error de usuarios (403 es normal si no es admin)
+          if (error.config?.url?.includes('/users') && error.response?.status === 403) {
+            setUsers([]);
+          } else {
+            console.error("Error fetching data:", error);
+          }
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+          setLoadingCompanies(false);
+        }
+      }
+    };
+
+    fetchData();
+
+    // Cleanup: cancelar peticiones al desmontar
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
+  }, [fetchContacts, fetchUsers, fetchCompanies, user?.role, search]);
 
   const handleOpen = (contact?: Contact) => {
     setFormErrors({});

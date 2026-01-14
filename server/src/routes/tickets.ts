@@ -10,6 +10,36 @@ import { authenticateToken, AuthRequest } from '../middleware/auth';
 const router = express.Router();
 router.use(authenticateToken);
 
+// Función para limpiar tickets eliminando campos null y objetos relacionados null
+const cleanTicket = (ticket: any): any => {
+  const ticketData = ticket.toJSON ? ticket.toJSON() : ticket;
+  const cleaned: any = {
+    id: ticketData.id,
+    subject: ticketData.subject,
+    status: ticketData.status,
+    priority: ticketData.priority,
+    assignedToId: ticketData.assignedToId,
+    createdById: ticketData.createdById,
+    createdAt: ticketData.createdAt,
+    updatedAt: ticketData.updatedAt,
+  };
+
+  // Solo incluir campos opcionales si no son null
+  if (ticketData.description != null) cleaned.description = ticketData.description;
+  if (ticketData.contactId != null) cleaned.contactId = ticketData.contactId;
+  if (ticketData.companyId != null) cleaned.companyId = ticketData.companyId;
+  if (ticketData.dealId != null) cleaned.dealId = ticketData.dealId;
+
+  // Solo incluir relaciones si existen
+  if (ticketData.AssignedTo) cleaned.AssignedTo = ticketData.AssignedTo;
+  if (ticketData.CreatedBy) cleaned.CreatedBy = ticketData.CreatedBy;
+  if (ticketData.Contact) cleaned.Contact = ticketData.Contact;
+  if (ticketData.Company) cleaned.Company = ticketData.Company;
+  if (ticketData.Deal) cleaned.Deal = ticketData.Deal;
+
+  return cleaned;
+};
+
 // Obtener todos los tickets
 router.get('/', async (req: AuthRequest, res) => {
   try {
@@ -55,7 +85,7 @@ router.get('/', async (req: AuthRequest, res) => {
     });
 
     res.json({
-      tickets: tickets.rows,
+      tickets: tickets.rows.map(cleanTicket),
       total: tickets.count,
       page: Number(page),
       totalPages: Math.ceil(tickets.count / Number(limit)),
@@ -91,7 +121,7 @@ router.get('/', async (req: AuthRequest, res) => {
         });
         
         return res.json({
-          tickets: tickets.rows,
+          tickets: tickets.rows.map(cleanTicket),
           total: tickets.count,
           page: Number(fallbackPage),
           totalPages: Math.ceil(tickets.count / Number(fallbackLimit)),
@@ -128,7 +158,7 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Ticket no encontrado' });
     }
 
-    res.json(ticket);
+    res.json(cleanTicket(ticket));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -154,7 +184,7 @@ router.post('/', async (req: AuthRequest, res) => {
       ],
     });
 
-    res.status(201).json(newTicket);
+    res.status(201).json(cleanTicket(newTicket));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -179,7 +209,7 @@ router.put('/:id', async (req, res) => {
       ],
     });
 
-    res.json(updatedTicket);
+    res.json(cleanTicket(updatedTicket));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

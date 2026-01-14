@@ -11,10 +11,11 @@ const Deal_1 = require("../models/Deal");
 const Task_1 = require("../models/Task");
 const User_1 = require("../models/User");
 const auth_1 = require("../middleware/auth");
+const rateLimiter_1 = require("../middleware/rateLimiter");
 const router = express_1.default.Router();
 router.use(auth_1.authenticateToken);
 // Búsqueda global
-router.get('/global', async (req, res) => {
+router.get('/global', rateLimiter_1.searchLimiter, async (req, res) => {
     try {
         const { q, limit = 10 } = req.query;
         if (!q || typeof q !== 'string' || q.trim().length === 0) {

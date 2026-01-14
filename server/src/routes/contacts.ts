@@ -10,6 +10,52 @@ import { apiLimiter, writeLimiter, deleteLimiter } from '../middleware/rateLimit
 const router = express.Router();
 router.use(authenticateToken);
 
+// Función para limpiar contactos eliminando campos null y objetos relacionados null
+const cleanContact = (contact: any): any => {
+  const contactData = contact.toJSON ? contact.toJSON() : contact;
+  const cleaned: any = {
+    id: contactData.id,
+    firstName: contactData.firstName,
+    lastName: contactData.lastName,
+    email: contactData.email,
+    lifecycleStage: contactData.lifecycleStage,
+    createdAt: contactData.createdAt,
+    updatedAt: contactData.updatedAt,
+  };
+
+  // Solo incluir campos opcionales si no son null
+  if (contactData.dni != null) cleaned.dni = contactData.dni;
+  if (contactData.cee != null) cleaned.cee = contactData.cee;
+  if (contactData.phone != null) cleaned.phone = contactData.phone;
+  if (contactData.mobile != null) cleaned.mobile = contactData.mobile;
+  if (contactData.jobTitle != null) cleaned.jobTitle = contactData.jobTitle;
+  if (contactData.companyId != null) cleaned.companyId = contactData.companyId;
+  if (contactData.ownerId != null) cleaned.ownerId = contactData.ownerId;
+  if (contactData.address != null) cleaned.address = contactData.address;
+  if (contactData.city != null) cleaned.city = contactData.city;
+  if (contactData.state != null) cleaned.state = contactData.state;
+  if (contactData.country != null) cleaned.country = contactData.country;
+  if (contactData.postalCode != null) cleaned.postalCode = contactData.postalCode;
+  if (contactData.website != null) cleaned.website = contactData.website;
+  if (contactData.facebook != null) cleaned.facebook = contactData.facebook;
+  if (contactData.twitter != null) cleaned.twitter = contactData.twitter;
+  if (contactData.github != null) cleaned.github = contactData.github;
+  if (contactData.linkedin != null) cleaned.linkedin = contactData.linkedin;
+  if (contactData.youtube != null) cleaned.youtube = contactData.youtube;
+  if (contactData.leadStatus != null) cleaned.leadStatus = contactData.leadStatus;
+  if (contactData.tags != null && Array.isArray(contactData.tags) && contactData.tags.length > 0) cleaned.tags = contactData.tags;
+  if (contactData.notes != null) cleaned.notes = contactData.notes;
+
+  // Solo incluir relaciones si existen
+  if (contactData.Owner) cleaned.Owner = contactData.Owner;
+  if (contactData.Company) cleaned.Company = contactData.Company;
+  if (contactData.Companies && Array.isArray(contactData.Companies) && contactData.Companies.length > 0) {
+    cleaned.Companies = contactData.Companies;
+  }
+
+  return cleaned;
+};
+
 // Obtener todos los contactos
 router.get('/', apiLimiter, async (req: AuthRequest, res) => {
   try {
@@ -46,7 +92,7 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
     });
 
     res.json({
-      contacts: contacts.rows,
+      contacts: contacts.rows.map(cleanContact),
       total: contacts.count,
       page: Number(page),
       totalPages: Math.ceil(contacts.count / Number(limit)),
@@ -120,14 +166,14 @@ router.get('/:id', apiLimiter, async (req, res) => {
         contactData.Companies = [];
       }
 
-      return res.json(contactData);
+      return res.json(cleanContact(contactData));
     }
 
     if (!contact) {
       return res.status(404).json({ error: 'Contacto no encontrado' });
     }
 
-    res.json(contact);
+    res.json(cleanContact(contact));
   } catch (error: any) {
     console.error('Error fetching contact:', error);
     console.error('Error stack:', error.stack);
@@ -218,7 +264,7 @@ router.post('/', writeLimiter, async (req: AuthRequest, res) => {
       ],
     });
 
-    res.status(201).json(newContact);
+    res.status(201).json(cleanContact(newContact));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -312,7 +358,7 @@ router.put('/:id', writeLimiter, async (req: AuthRequest, res) => {
       ],
     });
 
-    res.json(updatedContact);
+    res.json(cleanContact(updatedContact));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -380,7 +426,7 @@ router.post('/:id/companies', writeLimiter, async (req, res) => {
       ],
     });
 
-    res.json(updatedContact);
+    res.json(cleanContact(updatedContact));
   } catch (error: any) {
     console.error('Error adding companies to contact:', error);
     console.error('Error stack:', error.stack);
@@ -410,7 +456,7 @@ router.delete('/:id/companies/:companyId', deleteLimiter, async (req, res) => {
       ],
     });
 
-    res.json(updatedContact);
+    res.json(cleanContact(updatedContact));
   } catch (error: any) {
     console.error('Error removing company association:', error);
     console.error('Error stack:', error.stack);

@@ -34,6 +34,7 @@ import emailRoutes from './routes/emails';
 import googleRoutes from './routes/calendar';
 import reportRoutes from './routes/reports';
 import searchRoutes from './routes/search';
+import { setCacheHeaders } from './middleware/cacheHeaders';
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '5000', 10);
@@ -105,6 +106,9 @@ app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.url} from ${req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress}`);
   next();
 });
+
+// Middleware para agregar headers de caché HTTP
+app.use('/api', setCacheHeaders);
 
 // Routes
 app.use('/api/auth', authRoutes);

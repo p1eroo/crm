@@ -9,42 +9,61 @@ import { apiLimiter, writeLimiter, deleteLimiter, heavyOperationLimiter } from '
 const router = express.Router();
 router.use(authenticateToken);
 
-// Función helper para sanitizar valores null/undefined
-const sanitizeValue = (value: any): any => {
-  if (value === null || value === undefined || value === 'null' || value === 'undefined') {
-    return null;
+// Función para limpiar empresas eliminando campos null y objetos relacionados null
+const cleanCompany = (company: any, includeSensitive: boolean = false): any => {
+  const companyData = company.toJSON ? company.toJSON() : company;
+  const cleaned: any = {
+    id: companyData.id,
+    name: companyData.name || '',
+    lifecycleStage: companyData.lifecycleStage || 'lead',
+    createdAt: companyData.createdAt,
+    updatedAt: companyData.updatedAt,
+  };
+
+  // Solo incluir campos opcionales si no son null
+  if (companyData.domain != null) cleaned.domain = companyData.domain;
+  if (companyData.companyname != null) cleaned.companyname = companyData.companyname;
+  if (companyData.phone != null) cleaned.phone = companyData.phone;
+  if (companyData.leadSource != null) cleaned.leadSource = companyData.leadSource;
+  if (companyData.city != null) cleaned.city = companyData.city;
+  if (companyData.state != null) cleaned.state = companyData.state;
+  if (companyData.country != null) cleaned.country = companyData.country;
+  if (companyData.estimatedRevenue != null) cleaned.estimatedRevenue = companyData.estimatedRevenue;
+  if (companyData.isRecoveredClient != null) cleaned.isRecoveredClient = companyData.isRecoveredClient;
+  if (companyData.ownerId != null) cleaned.ownerId = companyData.ownerId;
+  if (companyData.linkedin != null) cleaned.linkedin = companyData.linkedin;
+  if (companyData.numberOfEmployees != null) cleaned.numberOfEmployees = companyData.numberOfEmployees;
+
+  // Solo incluir datos sensibles si se solicita explícitamente (para detalle completo)
+  if (includeSensitive) {
+    if (companyData.email != null) cleaned.email = companyData.email;
+    if (companyData.ruc != null) cleaned.ruc = companyData.ruc;
+    if (companyData.address != null) cleaned.address = companyData.address;
+    if (companyData.idClienteEmpresa != null) cleaned.idClienteEmpresa = companyData.idClienteEmpresa;
   }
-  return value;
+
+  // Solo incluir relaciones si existen
+  if (companyData.Owner) {
+    cleaned.Owner = {
+      id: companyData.Owner.id,
+      firstName: companyData.Owner.firstName || '',
+      lastName: companyData.Owner.lastName || '',
+    };
+    // Solo incluir email del Owner si se solicita explícitamente
+    if (includeSensitive && companyData.Owner.email) {
+      cleaned.Owner.email = companyData.Owner.email;
+    }
+  }
+  if (companyData.Contacts && Array.isArray(companyData.Contacts) && companyData.Contacts.length > 0) {
+    cleaned.Contacts = companyData.Contacts;
+  }
+
+  return cleaned;
 };
 
 // Función para transformar empresa para lista (sin datos sensibles)
 const transformCompanyForList = (company: any): any => {
-  const companyData = company.toJSON ? company.toJSON() : company;
-  
-  return {
-    id: companyData.id,
-    name: companyData.name || '',
-    domain: sanitizeValue(companyData.domain),
-    companyname: sanitizeValue(companyData.companyname),
-    phone: sanitizeValue(companyData.phone), // Solo teléfono básico, no datos sensibles
-    // NO incluir: email, ruc, address (datos sensibles)
-    leadSource: sanitizeValue(companyData.leadSource),
-    city: sanitizeValue(companyData.city),
-    state: sanitizeValue(companyData.state),
-    country: sanitizeValue(companyData.country),
-    lifecycleStage: companyData.lifecycleStage || 'lead',
-    estimatedRevenue: sanitizeValue(companyData.estimatedRevenue),
-    isRecoveredClient: companyData.isRecoveredClient || false,
-    ownerId: sanitizeValue(companyData.ownerId),
-    createdAt: companyData.createdAt,
-    updatedAt: companyData.updatedAt,
-    Owner: companyData.Owner ? {
-      id: companyData.Owner.id,
-      firstName: companyData.Owner.firstName || '',
-      lastName: companyData.Owner.lastName || '',
-      // NO incluir email del propietario en la lista
-    } : null
-  };
+  return cleanCompany(company, false);
 };
 
 // Obtener todas las empresas
@@ -354,7 +373,7 @@ router.get('/:id', apiLimiter, async (req, res) => {
       return res.status(404).json({ error: 'Empresa no encontrada' });
     }
 
-    res.json(company);
+    res.json(cleanCompany(company, true));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -412,7 +431,7 @@ router.post('/', writeLimiter, async (req: AuthRequest, res) => {
       ],
     });
 
-    res.status(201).json(newCompany);
+    res.status(201).json(cleanCompany(newCompany, true));
   } catch (error: any) {
     console.error('Error creating company:', error);
     res.status(500).json({ error: error.message });
@@ -457,7 +476,7 @@ router.put('/:id', writeLimiter, async (req, res) => {
       ],
     });
 
-    res.json(updatedCompany);
+    res.json(cleanCompany(updatedCompany, true));
   } catch (error: any) {
     console.error('Error updating company:', error);
     console.error('Error stack:', error.stack);
@@ -527,7 +546,7 @@ router.post('/:id/contacts', writeLimiter, async (req, res) => {
       ],
     });
 
-    res.json(updatedCompany);
+    res.json(cleanCompany(updatedCompany, true));
   } catch (error: any) {
     console.error('Error adding contacts to company:', error);
     console.error('Error stack:', error.stack);
@@ -556,7 +575,7 @@ router.delete('/:id/contacts/:contactId', deleteLimiter, async (req, res) => {
       ],
     });
 
-    res.json(updatedCompany);
+    res.json(cleanCompany(updatedCompany, true));
   } catch (error: any) {
     console.error('Error removing contact association:', error);
     console.error('Error stack:', error.stack);

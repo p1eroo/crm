@@ -8,6 +8,7 @@ const sequelize_1 = require("sequelize");
 const User_1 = require("../models/User");
 const Role_1 = require("../models/Role");
 const auth_1 = require("../middleware/auth");
+const rateLimiter_1 = require("../middleware/rateLimiter");
 const router = express_1.default.Router();
 // Función helper para transformar usuarios y asegurar que el campo 'role' esté presente
 const transformUser = (user) => {
@@ -22,7 +23,7 @@ const transformUser = (user) => {
 router.use(auth_1.authenticateToken);
 router.use((0, auth_1.requireRole)('admin'));
 // Listar todos los usuarios
-router.get('/', async (req, res) => {
+router.get('/', rateLimiter_1.apiLimiter, async (req, res) => {
     try {
         const users = await User_1.User.findAll({
             attributes: { exclude: ['password'] },
@@ -37,7 +38,7 @@ router.get('/', async (req, res) => {
     }
 });
 // Obtener un usuario por ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', rateLimiter_1.apiLimiter, async (req, res) => {
     try {
         const user = await User_1.User.findByPk(req.params.id, {
             attributes: { exclude: ['password'] },
@@ -53,7 +54,7 @@ router.get('/:id', async (req, res) => {
     }
 });
 // Actualizar rol de usuario
-router.put('/:id/role', async (req, res) => {
+router.put('/:id/role', rateLimiter_1.sensitiveUserOperationLimiter, async (req, res) => {
     try {
         const { role } = req.body;
         if (!role) {
@@ -98,7 +99,7 @@ router.put('/:id/role', async (req, res) => {
     }
 });
 // Actualizar estado activo/inactivo de usuario
-router.put('/:id/status', async (req, res) => {
+router.put('/:id/status', rateLimiter_1.sensitiveUserOperationLimiter, async (req, res) => {
     try {
         const { isActive } = req.body;
         if (typeof isActive !== 'boolean') {
@@ -140,7 +141,7 @@ router.put('/:id/status', async (req, res) => {
     }
 });
 // Actualizar información de usuario
-router.put('/:id', async (req, res) => {
+router.put('/:id', rateLimiter_1.writeLimiter, async (req, res) => {
     try {
         const { firstName, lastName, email, phone } = req.body;
         const user = await User_1.User.findByPk(req.params.id);
@@ -182,7 +183,7 @@ router.put('/:id', async (req, res) => {
     }
 });
 // Eliminar usuario
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', rateLimiter_1.deleteLimiter, async (req, res) => {
     try {
         const user = await User_1.User.findByPk(req.params.id, {
             include: [{ model: Role_1.Role, as: 'Role' }],

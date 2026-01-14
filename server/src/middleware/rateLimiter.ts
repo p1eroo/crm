@@ -26,13 +26,13 @@ export const registerLimiter = rateLimit({
 // Rate limiter para endpoints autenticados (menos restrictivo)
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // máximo 100 requests por ventana
+  max: 500, // máximo 500 requests por ventana (aumentado para permitir navegación fluida)
   message: {
     error: 'Demasiadas solicitudes. Por favor, intenta nuevamente en 15 minutos.',
   },
   standardHeaders: true,
   legacyHeaders: false,
-  skipSuccessfulRequests: false,
+  skipSuccessfulRequests: true, // Solo contar peticiones fallidas, no las exitosas
 });
 
 // Rate limiter para operaciones pesadas (importación, etc.)

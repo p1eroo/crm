@@ -155,6 +155,30 @@ const Deals: React.FC = () => {
     return `S/ ${value.toFixed(0)}`;
   };
 
+  // Opciones de etapa según las imágenes proporcionadas
+  const stageOptions = [
+    { value: 'lead_inactivo', label: 'Lead Inactivo' },
+    { value: 'cliente_perdido', label: 'Cliente perdido' },
+    { value: 'cierre_perdido', label: 'Cierre Perdido' },
+    { value: 'lead', label: 'Lead' },
+    { value: 'contacto', label: 'Contacto' },
+    { value: 'reunion_agendada', label: 'Reunión Agendada' },
+    { value: 'reunion_efectiva', label: 'Reunión Efectiva' },
+    { value: 'propuesta_economica', label: 'Propuesta Económica' },
+    { value: 'negociacion', label: 'Negociación' },
+    { value: 'licitacion', label: 'Licitación' },
+    { value: 'licitacion_etapa_final', label: 'Licitación Etapa Final' },
+    { value: 'cierre_ganado', label: 'Cierre Ganado' },
+    { value: 'firma_contrato', label: 'Firma de Contrato' },
+    { value: 'activo', label: 'Activo' },
+  ];
+
+  // Función para obtener el label de la etapa
+  const getStageLabel = (stage: string) => {
+    const option = stageOptions.find(opt => opt.value === stage);
+    return option ? option.label : stage;
+  };
+
   // Filtrar deals según los filtros activos
   const filteredDeals = deals
     .filter((deal) => {
@@ -308,30 +332,6 @@ const Deals: React.FC = () => {
     console.log('Preview deal:', deal);
   };
 
-  // Opciones de etapa según las imágenes proporcionadas
-  const stageOptions = [
-    { value: 'lead_inactivo', label: 'Lead Inactivo' },
-    { value: 'cliente_perdido', label: 'Cliente perdido' },
-    { value: 'cierre_perdido', label: 'Cierre Perdido' },
-    { value: 'lead', label: 'Lead' },
-    { value: 'contacto', label: 'Contacto' },
-    { value: 'reunion_agendada', label: 'Reunión Agendada' },
-    { value: 'reunion_efectiva', label: 'Reunión Efectiva' },
-    { value: 'propuesta_economica', label: 'Propuesta Económica' },
-    { value: 'negociacion', label: 'Negociación' },
-    { value: 'licitacion', label: 'Licitación' },
-    { value: 'licitacion_etapa_final', label: 'Licitación Etapa Final' },
-    { value: 'cierre_ganado', label: 'Cierre Ganado' },
-    { value: 'firma_contrato', label: 'Firma de Contrato' },
-    { value: 'activo', label: 'Activo' },
-  ];
-
-  // Función para obtener el label de la etapa
-  const getStageLabel = (stage: string) => {
-    const option = stageOptions.find(opt => opt.value === stage);
-    return option ? option.label : stage;
-  };
-
   // Opciones de columnas disponibles
   const columnOptions = [
     { value: 'name', label: 'Nombre' },
@@ -432,38 +432,62 @@ const Deals: React.FC = () => {
   };
 
   useEffect(() => {
-    fetchDeals();
-    fetchCompanies();
-    fetchContacts();
-    fetchUsers();
+    const abortController = new AbortController();
+    let isMounted = true;
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // Realizar todas las peticiones en paralelo con cancelación
+        const [dealsRes, companiesRes, contactsRes, usersRes] = await Promise.all([
+          api.get('/deals', { 
+            params: { limit: 10000 },
+            signal: abortController.signal 
+          }),
+          api.get('/companies', { 
+            params: { limit: 1000 },
+            signal: abortController.signal 
+          }),
+          api.get('/contacts', { 
+            params: { limit: 1000 },
+            signal: abortController.signal 
+          }),
+          api.get('/users', { 
+            signal: abortController.signal 
+          })
+        ]);
+
+        // Solo actualizar estado si el componente sigue montado
+        if (isMounted) {
+          setDeals(dealsRes.data.deals || dealsRes.data || []);
+          setCompanies(companiesRes.data.companies || companiesRes.data || []);
+          setContacts(contactsRes.data.contacts || contactsRes.data || []);
+          setUsers(usersRes.data || []);
+        }
+      } catch (error: any) {
+        // Ignorar errores de cancelación
+        if (error.name === 'CanceledError' || error.name === 'AbortError' || error.code === 'ERR_CANCELED') {
+          return;
+        }
+        if (isMounted) {
+          console.error('Error fetching data:', error);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchData();
+
+    // Cleanup: cancelar peticiones al desmontar
+    return () => {
+      isMounted = false;
+      abortController.abort();
+    };
   }, []); // Solo cargar datos una vez al montar el componente
-
-  const fetchUsers = async () => {
-    try {
-      const response = await api.get('/users');
-      setUsers(response.data || []);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-    }
-  };
-
-  const fetchCompanies = async () => {
-    try {
-      const response = await api.get('/companies', { params: { limit: 1000 } });
-      setCompanies(response.data.companies || response.data || []);
-    } catch (error) {
-      console.error('Error fetching companies:', error);
-    }
-  };
-
-  const fetchContacts = async () => {
-    try {
-      const response = await api.get('/contacts', { params: { limit: 1000 } });
-      setContacts(response.data.contacts || response.data || []);
-    } catch (error) {
-      console.error('Error fetching contacts:', error);
-    }
-  };
 
   const fetchDeals = async () => {
     setLoading(true);
@@ -819,165 +843,187 @@ const Deals: React.FC = () => {
         </Box>
       )}
 
+      {/* Barra de herramientas compartida - se muestra siempre */}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 2,
+          p: 2,
+          mb: 0,
+        }}
+      >
+        <Typography variant="h5" sx={{ fontWeight: 600 }}>
+          Negocios
+        </Typography>
+        
+        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+          <FormControl size="small" sx={{ minWidth: 130 }}>
+            <Select
+              id="deals-sort-select"
+              name="deals-sort"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              displayEmpty
+              sx={pageStyles.select}
+            >
+              <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
+              <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
+              <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
+              <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
+            </Select>
+          </FormControl>
+          
+          <Tooltip title={importing ? 'Importando...' : 'Importar'}>
+            <IconButton
+              size="small"
+              onClick={handleImportFromExcel}
+              disabled={importing}
+              sx={pageStyles.outlinedIconButton}
+            >
+              <UploadFile sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
+          
+          <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
+          
+          <Tooltip title="Exportar">
+            <IconButton
+              size="small"
+              onClick={handleExportToExcel}
+              sx={pageStyles.outlinedIconButton}
+            >
+              <FileDownload sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
+          
+          <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"}>
+            <IconButton
+              size="small"
+              onClick={() => setShowColumnFilters(!showColumnFilters)}
+              sx={{
+                border: `1px solid ${showColumnFilters ? theme.palette.primary.main : theme.palette.divider}`,
+                borderRadius: 1,
+                bgcolor: showColumnFilters 
+                  ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
+                  : 'transparent',
+                color: showColumnFilters ? theme.palette.primary.main : theme.palette.text.secondary,
+                p: { xs: 0.75, sm: 0.875 },
+                '&:hover': {
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(25, 118, 210, 0.3)' 
+                    : 'rgba(25, 118, 210, 0.15)',
+                },
+              }}
+            >
+              <ViewColumn sx={{ fontSize: { xs: 18, sm: 20 } }} />
+            </IconButton>
+          </Tooltip>
+          
+          <Tooltip title="Filtros avanzados">
+            <IconButton
+              size="small"
+              onClick={(e) => {
+                setFilterAnchorEl(e.currentTarget);
+                if (filterRules.length === 0) {
+                  setFilterRules([{
+                    id: `filter-${Date.now()}`,
+                    column: 'name',
+                    operator: 'contains',
+                    value: '',
+                  }]);
+                }
+              }}
+              sx={{
+                border: `1px solid ${filterRules.length > 0 ? theme.palette.primary.main : theme.palette.divider}`,
+                borderRadius: 1,
+                bgcolor: filterRules.length > 0 
+                  ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
+                  : 'transparent',
+                color: filterRules.length > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
+                p: { xs: 0.75, sm: 0.875 },
+                '&:hover': {
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(25, 118, 210, 0.3)' 
+                    : 'rgba(25, 118, 210, 0.15)',
+                  borderColor: theme.palette.primary.main,
+                },
+              }}
+            >
+              <FilterList sx={{ fontSize: { xs: 18, sm: 20 } }} />
+            </IconButton>
+          </Tooltip>
+          
+          <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+            <Tooltip title="Ver lista" arrow>
+              <IconButton
+                onClick={() => setViewMode('list')}
+                sx={{
+                  bgcolor: viewMode === 'list' ? taxiMonterricoColors.green : theme.palette.background.paper,
+                  color: viewMode === 'list' ? 'white' : theme.palette.text.secondary,
+                  borderRadius: 1.5,
+                  p: 0.875,
+                  '&:hover': {
+                    bgcolor: viewMode === 'list' ? taxiMonterricoColors.greenDark : theme.palette.action.hover,
+                  },
+                }}
+              >
+                <ViewList />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Ver funnel" arrow>
+              <IconButton
+                onClick={() => setViewMode('funnel')}
+                sx={{
+                  bgcolor: viewMode === 'funnel' ? taxiMonterricoColors.green : theme.palette.background.paper,
+                  color: viewMode === 'funnel' ? 'white' : theme.palette.text.secondary,
+                  borderRadius: 1.5,
+                  p: 0.875,
+                  '&:hover': {
+                    bgcolor: viewMode === 'funnel' ? taxiMonterricoColors.greenDark : theme.palette.action.hover,
+                  },
+                }}
+              >
+                <AccountTree />
+              </IconButton>
+            </Tooltip>
+          </Box>
+          
+          <Tooltip title="Nuevo Negocio">
+            <IconButton
+              size="small"
+              onClick={() => handleOpen()}
+              sx={{
+                bgcolor: taxiMonterricoColors.green,
+                color: 'white',
+                '&:hover': {
+                  bgcolor: taxiMonterricoColors.greenDark,
+                },
+                borderRadius: 1.5,
+                p: 0.875,
+                boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
+              }}
+            >
+              <Add sx={{ fontSize: 18 }} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </Box>
+
       {/* Contenedor principal con layout flex para tabla y panel de filtros */}
       {viewMode === 'list' && (
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', md: 'row' } }}>
         {/* Contenido principal usando UnifiedTable */}
         <UnifiedTable
-          title="Negocios"
-          actions={
-            <>
-              <FormControl size="small" sx={{ minWidth: 130 }}>
-                <Select
-                  id="deals-sort-select"
-                  name="deals-sort"
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  displayEmpty
-                  sx={pageStyles.select}
-                >
-                  <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
-                  <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
-                  <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
-                  <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
-                </Select>
-              </FormControl>
-              <Tooltip title={importing ? 'Importando...' : 'Importar'}>
-                <IconButton
-                  size="small"
-                  onClick={handleImportFromExcel}
-                  disabled={importing}
-                  sx={pageStyles.outlinedIconButton}
-                >
-                  <UploadFile sx={{ fontSize: 18 }} />
-                </IconButton>
-              </Tooltip>
-              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
-              <Tooltip title="Exportar">
-                <IconButton
-                  size="small"
-                  onClick={handleExportToExcel}
-                  sx={pageStyles.outlinedIconButton}
-                >
-                  <FileDownload sx={{ fontSize: 18 }} />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"}>
-                <IconButton
-                  size="small"
-                  onClick={() => setShowColumnFilters(!showColumnFilters)}
-                  sx={{
-                    border: `1px solid ${showColumnFilters ? theme.palette.primary.main : theme.palette.divider}`,
-                    borderRadius: 1,
-                    bgcolor: showColumnFilters 
-                      ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
-                      : 'transparent',
-                    color: showColumnFilters ? theme.palette.primary.main : theme.palette.text.secondary,
-                    p: { xs: 0.75, sm: 0.875 },
-                    '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' 
-                        ? 'rgba(25, 118, 210, 0.3)' 
-                        : 'rgba(25, 118, 210, 0.15)',
-                    },
-                  }}
-                >
-                  <ViewColumn sx={{ fontSize: { xs: 18, sm: 20 } }} />
-                </IconButton>
-              </Tooltip>
-              <Tooltip title="Filtros avanzados">
-                <IconButton
-                  size="small"
-                  onClick={(e) => {
-                    setFilterAnchorEl(e.currentTarget);
-                    if (filterRules.length === 0) {
-                      setFilterRules([{
-                        id: `filter-${Date.now()}`,
-                        column: 'name',
-                        operator: 'contains',
-                        value: '',
-                      }]);
-                    }
-                  }}
-                  sx={{
-                    border: `1px solid ${filterRules.length > 0 ? theme.palette.primary.main : theme.palette.divider}`,
-                    borderRadius: 1,
-                    bgcolor: filterRules.length > 0 
-                      ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
-                      : 'transparent',
-                    color: filterRules.length > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
-                    p: { xs: 0.75, sm: 0.875 },
-                    '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' 
-                        ? 'rgba(25, 118, 210, 0.3)' 
-                        : 'rgba(25, 118, 210, 0.15)',
-                      borderColor: theme.palette.primary.main,
-                    },
-                  }}
-                >
-                  <FilterList sx={{ fontSize: { xs: 18, sm: 20 } }} />
-                </IconButton>
-              </Tooltip>
-              <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mr: 1 }}>
-                <Tooltip title="Ver lista" arrow>
-                  <IconButton
-                    onClick={() => setViewMode('list')}
-                    sx={{
-                      bgcolor: taxiMonterricoColors.green,
-                      color: 'white',
-                      borderRadius: 1.5,
-                      p: 0.875,
-                      '&:hover': {
-                        bgcolor: taxiMonterricoColors.greenDark,
-                      },
-                    }}
-                  >
-                    <ViewList />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Ver funnel" arrow>
-                  <IconButton
-                    onClick={() => setViewMode('funnel')}
-                    sx={{
-                      bgcolor: theme.palette.background.paper,
-                      color: theme.palette.text.secondary,
-                      borderRadius: 1.5,
-                      p: 0.875,
-                      '&:hover': {
-                        bgcolor: theme.palette.action.hover,
-                      },
-                    }}
-                  >
-                    <AccountTree />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-              <Tooltip title="Nuevo Negocio">
-                <IconButton
-                  size="small"
-                  onClick={() => handleOpen()}
-                  sx={{
-                    bgcolor: taxiMonterricoColors.green,
-                    color: 'white',
-                    '&:hover': {
-                      bgcolor: taxiMonterricoColors.greenDark,
-                    },
-                    borderRadius: 1.5,
-                    p: 0.875,
-                    boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
-                  }}
-                >
-                  <Add sx={{ fontSize: 18 }} />
-                </IconButton>
-              </Tooltip>
-            </>
-          }
+          title=""
+          actions={null}
           header={
             <Box
               component="div"
               sx={{ 
-                bgcolor: theme.palette.mode === "dark" 
-                ? "rgba(255, 255, 255, 0.05)" 
-                : "#f4f6f8",
+                bgcolor: "#ffffff",
                 overflow: 'hidden',
                 display: 'grid',
                 gridTemplateColumns: { xs: 'repeat(6, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 1fr 0.7fr' },
@@ -1803,54 +1849,54 @@ const Deals: React.FC = () => {
               maxWidth: '100%',
               overflow: 'hidden',
               position: 'relative',
-              height: 'calc(100vh - 200px)',
-              maxHeight: 'calc(100vh - 200px)',
+              height: 'calc(100vh - 300px)',
+              maxHeight: 'calc(100vh - 300px)',
             }}
           >
-            <Box
-              className="pipeline-scroll-container"
-              sx={{
-                display: 'flex',
-                gap: 1.5,
-                overflowX: 'scroll',
-                overflowY: 'hidden',
-                pb: 3,
-                width: '100%',
-                height: '100%',
-                position: 'relative',
-                scrollbarWidth: 'thin',
-                scrollbarColor: `${theme.palette.mode === 'dark' ? '#757575' : '#9e9e9e'} ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'}`,
-                WebkitOverflowScrolling: 'touch',
-                // Estilos para la barra de desplazamiento horizontal - siempre visible
-                '&::-webkit-scrollbar': {
-                  height: 16,
-                  display: 'block !important',
-                  WebkitAppearance: 'none',
-                  appearance: 'none',
-                },
-                '&::-webkit-scrollbar-track': {
-                  background: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
-                  borderRadius: 8,
-                  marginTop: 1,
-                  marginBottom: 1,
-                  border: `1px solid ${theme.palette.divider}`,
-                },
-                '&::-webkit-scrollbar-thumb': {
-                  background: theme.palette.mode === 'dark' ? '#9e9e9e' : '#757575',
-                  borderRadius: 8,
-                  border: `2px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
-                  minHeight: 24,
-                  '&:hover': {
-                    background: theme.palette.mode === 'dark' ? '#bdbdbd' : '#9e9e9e',
+              <Box
+                className="pipeline-scroll-container"
+                sx={{
+                  display: 'flex',
+                  gap: 1.5,
+                  overflowX: 'scroll',
+                  overflowY: 'hidden',
+                  pb: 3,
+                  width: '100%',
+                  height: '100%',
+                  position: 'relative',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: `${theme.palette.mode === 'dark' ? '#757575' : '#9e9e9e'} ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'}`,
+                  WebkitOverflowScrolling: 'touch',
+                  // Estilos para la barra de desplazamiento horizontal - siempre visible
+                  '&::-webkit-scrollbar': {
+                    height: 16,
+                    display: 'block !important',
+                    WebkitAppearance: 'none',
+                    appearance: 'none',
                   },
-                },
-                '&::-webkit-scrollbar-corner': {
-                  background: 'transparent',
-                },
-                // Forzar visibilidad en Firefox
-                scrollbarGutter: 'stable',
-              }}
-            >
+                  '&::-webkit-scrollbar-track': {
+                    background: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                    borderRadius: 8,
+                    marginTop: 1,
+                    marginBottom: 1,
+                    border: `1px solid ${theme.palette.divider}`,
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    background: theme.palette.mode === 'dark' ? '#9e9e9e' : '#757575',
+                    borderRadius: 8,
+                    border: `2px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
+                    minHeight: 24,
+                    '&:hover': {
+                      background: theme.palette.mode === 'dark' ? '#bdbdbd' : '#9e9e9e',
+                    },
+                  },
+                  '&::-webkit-scrollbar-corner': {
+                    background: 'transparent',
+                  },
+                  // Forzar visibilidad en Firefox
+                  scrollbarGutter: 'stable',
+                }}
+              >
             {stages.map((stage) => {
               const stageDeals = filteredDeals.filter((deal) => deal.stage === stage.id);
               const stageTotal = stageDeals.reduce((sum, deal) => sum + (parseAmount(deal.amount) || 0), 0);
@@ -1865,8 +1911,8 @@ const Deals: React.FC = () => {
                     width: 300,
                     display: 'flex',
                     flexDirection: 'column',
-                    height: 'calc(100vh - 200px)',
-                    maxHeight: 'calc(100vh - 200px)',
+                    height: 'calc(100vh - 300px)',
+                    maxHeight: 'calc(100vh - 300px)',
                     overflow: 'hidden',
                     borderRadius: 2,
                     bgcolor: getStageCardColor(stage.id),

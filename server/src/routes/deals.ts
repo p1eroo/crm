@@ -14,13 +14,49 @@ import { apiLimiter, writeLimiter, deleteLimiter } from '../middleware/rateLimit
 const router = express.Router();
 router.use(authenticateToken);
 
-// Función helper para transformar deals y asegurar que amount sea un número
-const transformDeal = (deal: any) => {
+// Función para limpiar deals eliminando campos null y objetos relacionados null
+const cleanDeal = (deal: any): any => {
   const dealJson = deal.toJSON ? deal.toJSON() : deal;
-  return {
-    ...dealJson,
+  const cleaned: any = {
+    id: dealJson.id,
+    name: dealJson.name,
     amount: typeof dealJson.amount === 'string' ? parseFloat(dealJson.amount) : (Number(dealJson.amount) || 0),
+    stage: dealJson.stage,
+    ownerId: dealJson.ownerId,
+    pipelineId: dealJson.pipelineId,
+    createdAt: dealJson.createdAt,
+    updatedAt: dealJson.updatedAt,
   };
+
+  // Solo incluir campos opcionales si no son null
+  if (dealJson.closeDate != null) cleaned.closeDate = dealJson.closeDate;
+  if (dealJson.probability != null) cleaned.probability = dealJson.probability;
+  if (dealJson.priority != null) cleaned.priority = dealJson.priority;
+  if (dealJson.contactId != null) cleaned.contactId = dealJson.contactId;
+  if (dealJson.companyId != null) cleaned.companyId = dealJson.companyId;
+  if (dealJson.description != null) cleaned.description = dealJson.description;
+  if (dealJson.tags != null && Array.isArray(dealJson.tags) && dealJson.tags.length > 0) cleaned.tags = dealJson.tags;
+
+  // Solo incluir relaciones si existen
+  if (dealJson.Owner) cleaned.Owner = dealJson.Owner;
+  if (dealJson.Contact) cleaned.Contact = dealJson.Contact;
+  if (dealJson.Company) cleaned.Company = dealJson.Company;
+  if (dealJson.Contacts && Array.isArray(dealJson.Contacts) && dealJson.Contacts.length > 0) {
+    cleaned.Contacts = dealJson.Contacts;
+  }
+  if (dealJson.Companies && Array.isArray(dealJson.Companies) && dealJson.Companies.length > 0) {
+    cleaned.Companies = dealJson.Companies;
+  }
+  if (dealJson.Deals && Array.isArray(dealJson.Deals) && dealJson.Deals.length > 0) {
+    cleaned.Deals = dealJson.Deals;
+  }
+
+  return cleaned;
+};
+
+// Función helper para transformar deals y asegurar que amount sea un número (mantener compatibilidad)
+const transformDeal = (deal: any) => {
+  return cleanDeal(deal);
 };
 
 // Obtener todos los deals
