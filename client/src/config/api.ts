@@ -79,7 +79,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // Timeout de 10 segundos
+  timeout: 600000, // Timeout de 10 minutos para operaciones largas (bulk imports)
 });
 
 // Interceptor para actualizar la URL dinámicamente y agregar el token antes de cada petición

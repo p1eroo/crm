@@ -302,43 +302,6 @@ const Contacts: React.FC = () => {
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = XLSX.utils.sheet_to_json(firstSheet) as any[];
 
-      // Función helper para buscar o crear empresa
-      const getOrCreateCompany = async (
-        companyName: string
-      ): Promise<number | null> => {
-        if (!companyName || !companyName.trim()) {
-          return null;
-        }
-
-        try {
-          // Buscar empresa existente
-          const searchResponse = await api.get("/companies", {
-            params: { search: companyName.trim(), limit: 100 },
-          });
-          const companies =
-            searchResponse.data.companies || searchResponse.data || [];
-          const existingCompany = companies.find(
-            (c: any) =>
-              c.name.toLowerCase().trim() === companyName.toLowerCase().trim()
-          );
-
-          if (existingCompany) {
-            return existingCompany.id;
-          }
-
-          // Si no existe, crear la empresa
-          const newCompanyResponse = await api.post("/companies", {
-            name: companyName.trim(),
-            lifecycleStage: "lead",
-            ownerId: user?.id || null,
-          });
-          return newCompanyResponse.data.id;
-        } catch (error) {
-          console.error("Error al buscar/crear empresa:", error);
-          return null;
-        }
-      };
-
       // Procesar cada fila y crear contactos
       const contactsToCreate = [];
 
@@ -369,11 +332,8 @@ const Contacts: React.FC = () => {
           }
         }
 
-        // Obtener o crear la empresa
+        // Obtener el nombre de la empresa (el backend lo buscará o creará)
         const companyName = (row["Empresa"] || "").toString().trim();
-        const companyId = companyName
-          ? await getOrCreateCompany(companyName)
-          : null;
 
         // Solo agregar si tiene nombre o email
         if (firstName || (row["Correo"] || "").toString().trim()) {
@@ -391,7 +351,7 @@ const Contacts: React.FC = () => {
             country: (row["País"] || "").toString().trim() || undefined,
             lifecycleStage:
               (row["Etapa"] || "lead").toString().trim() || "lead",
-            companyId: companyId, // Incluir companyId
+            companyId: companyName || undefined, // Pasar el nombre de la empresa, el backend lo manejará
           });
         }
       }
@@ -402,31 +362,40 @@ const Contacts: React.FC = () => {
         total: contactsToCreate.length,
       }));
 
-      // Crear contactos en el backend con progreso
-      let successCount = 0;
-      let errorCount = 0;
+      // Usar endpoint bulk para importación masiva
+      try {
+        const response = await api.post('/contacts/bulk', {
+          contacts: contactsToCreate,
+          batchSize: 1000, // Procesar en lotes de 1000
+        });
 
-      for (let i = 0; i < contactsToCreate.length; i++) {
-        const contactData = contactsToCreate[i];
-        try {
-          await api.post("/contacts", contactData);
-          successCount++;
-          setImportProgress({
-            current: i + 1,
-            total: contactsToCreate.length,
-            success: successCount,
-            errors: errorCount,
-          });
-        } catch (error) {
-          console.error("Error creating contact:", error);
-          errorCount++;
-          setImportProgress({
-            current: i + 1,
-            total: contactsToCreate.length,
-            success: successCount,
-            errors: errorCount,
-          });
+        console.log('Respuesta del backend:', response.data); // Debug
+
+        const { successCount = 0, errorCount = 0, results = [] } = response.data || {};
+
+        console.log('successCount:', successCount, 'errorCount:', errorCount); // Debug
+
+        setImportProgress({
+          current: contactsToCreate.length,
+          total: contactsToCreate.length,
+          success: successCount || 0,
+          errors: errorCount || 0,
+        });
+      } catch (error: any) {
+        console.error('Error en importación masiva:', error);
+        console.error('Error response:', error.response?.data); // Debug
+        
+        let errorMessage = 'Error al procesar la importación masiva';
+        if (error.response?.data?.error) {
+          errorMessage = error.response.data.error;
+        } else if (error.message) {
+          errorMessage = error.message;
         }
+
+        setImportProgress((prev) => ({
+          ...prev,
+          errors: prev.errors + 1,
+        }));
       }
 
       // Limpiar el input

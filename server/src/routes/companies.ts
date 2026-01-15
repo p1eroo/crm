@@ -995,14 +995,23 @@ router.post('/bulk', heavyOperationLimiter, async (req: AuthRequest, res) => {
       });
     }
 
-    res.status(200).json({
-      success: true,
+    console.log('[BULK IMPORT] Resumen final:', {
       total: companies.length,
       successCount,
       errorCount,
       updateCount,
       createCount: successCount - updateCount,
-      results,
+      resultsCount: results.length,
+    });
+
+    res.status(200).json({
+      success: true,
+      total: companies.length,
+      successCount: successCount || 0,
+      errorCount: errorCount || 0,
+      updateCount: updateCount || 0,
+      createCount: (successCount || 0) - (updateCount || 0),
+      results: results || [],
     });
   } catch (error: any) {
     console.error('Error en importación masiva:', error);

@@ -1011,11 +1011,14 @@ const Companies: React.FC = () => {
 
       // Usar endpoint bulk para importación masiva
       try {
-        // Actualizar progreso mientras se procesa
+        // Mostrar que está procesando (actualizar progreso inicial)
         setImportProgress(prev => ({
           ...prev,
-          current: companiesToCreate.length,
+          current: 0,
           total: companiesToCreate.length,
+          success: 0,
+          errors: 0,
+          errorList: [],
         }));
 
         const response = await api.post('/companies/bulk', {
@@ -1023,26 +1026,31 @@ const Companies: React.FC = () => {
           batchSize: 1000, // Procesar en lotes de 1000
         });
 
-        const { successCount, errorCount, results } = response.data;
+        console.log('Respuesta del backend:', response.data); // Debug
+
+        const { successCount = 0, errorCount = 0, results = [] } = response.data || {};
 
         // Procesar resultados y actualizar progreso
-        const errorList = results
+        const errorList = (results || [])
           .filter((r: any) => !r.success)
           .map((r: any) => ({
             name: r.name || 'Sin nombre',
             error: r.error || 'Error desconocido',
           }));
 
+        console.log('successCount:', successCount, 'errorCount:', errorCount); // Debug
+
         setImportProgress(prev => ({
           ...prev,
           current: companiesToCreate.length,
           total: companiesToCreate.length,
-          success: successCount,
-          errors: errorCount,
+          success: successCount || 0,
+          errors: errorCount || 0,
           errorList,
         }));
       } catch (error: any) {
         console.error('Error en importación masiva:', error);
+        console.error('Error response:', error.response?.data); // Debug
         
         let errorMessage = 'Error al procesar la importación masiva';
         if (error.response?.data?.error) {
@@ -1053,8 +1061,10 @@ const Companies: React.FC = () => {
 
         setImportProgress(prev => ({
           ...prev,
-          errors: prev.errors + 1,
-          errorList: [...prev.errorList, {
+          current: companiesToCreate.length,
+          total: companiesToCreate.length,
+          errors: (error.response?.data?.errorCount || 0) + 1,
+          errorList: [...(prev.errorList || []), {
             name: 'Importación masiva',
             error: errorMessage,
           }],

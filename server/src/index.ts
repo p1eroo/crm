@@ -41,6 +41,9 @@ import { setCacheHeaders } from './middleware/cacheHeaders';
 const app = express();
 const PORT = parseInt(process.env.PORT || '5000', 10);
 
+// Aumentar timeout para operaciones largas (importaciones masivas)
+app.timeout = 600000; // 10 minutos
+
 // Función para obtener la IP local
 const getLocalIP = (): string => {
   const interfaces = os.networkInterfaces();
