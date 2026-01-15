@@ -540,6 +540,35 @@ const Deals: React.FC = () => {
     setEditingDeal(null);
   };
 
+  // Handlers memoizados para evitar re-renders innecesarios
+  const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, name: e.target.value }));
+  }, []);
+
+  const handleAmountChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, amount: e.target.value }));
+  }, []);
+
+  const handleStageFormChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, stage: e.target.value }));
+  }, []);
+
+  const handleCloseDateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, closeDate: e.target.value }));
+  }, []);
+
+  const handlePriorityChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, priority: e.target.value as 'baja' | 'media' | 'alta' }));
+  }, []);
+
+  const handleCompanyIdChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, companyId: e.target.value }));
+  }, []);
+
+  const handleContactIdChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, contactId: e.target.value }));
+  }, []);
+
   const handleSubmit = async () => {
     try {
       const data = {
@@ -951,7 +980,7 @@ const Deals: React.FC = () => {
             <Box
               component="div"
               sx={{ 
-                bgcolor: "#ffffff",
+                bgcolor: theme.palette.background.paper,
                 overflow: 'hidden',
                 display: 'grid',
                 gridTemplateColumns: { xs: 'repeat(6, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 1fr 0.7fr' },
@@ -2155,21 +2184,21 @@ const Deals: React.FC = () => {
             <TextField
               label="Nombre"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={handleNameChange}
               required
             />
             <TextField
               label="Monto"
               type="number"
               value={formData.amount}
-              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              onChange={handleAmountChange}
               required
             />
             <TextField
               select
               label="Etapa"
               value={formData.stage}
-              onChange={(e) => setFormData({ ...formData, stage: e.target.value })}
+              onChange={handleStageFormChange}
             >
               {stageOptions.map((option) => (
                 <MenuItem key={option.value} value={option.value}>
@@ -2181,14 +2210,14 @@ const Deals: React.FC = () => {
               label="Fecha de Cierre"
               type="date"
               value={formData.closeDate}
-              onChange={(e) => setFormData({ ...formData, closeDate: e.target.value })}
+              onChange={handleCloseDateChange}
               InputLabelProps={{ shrink: true }}
             />
             <TextField
               select
               label="Prioridad"
               value={formData.priority}
-              onChange={(e) => setFormData({ ...formData, priority: e.target.value as 'baja' | 'media' | 'alta' })}
+              onChange={handlePriorityChange}
             >
               <MenuItem value="baja">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -2213,7 +2242,7 @@ const Deals: React.FC = () => {
               select
               label="Empresa"
               value={formData.companyId}
-              onChange={(e) => setFormData({ ...formData, companyId: e.target.value })}
+              onChange={handleCompanyIdChange}
               fullWidth
             >
               <MenuItem value="">
@@ -2229,7 +2258,7 @@ const Deals: React.FC = () => {
               select
               label="Contacto"
               value={formData.contactId}
-              onChange={(e) => setFormData({ ...formData, contactId: e.target.value })}
+              onChange={handleContactIdChange}
               fullWidth
             >
               <MenuItem value="">

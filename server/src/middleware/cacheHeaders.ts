@@ -19,6 +19,9 @@ export const setCacheHeaders = (req: Request, res: Response, next: NextFunction)
     '/tasks',
     '/events',
     '/tickets',
+    '/contacts', // Los contactos cambian frecuentemente (crear, editar, eliminar)
+    '/companies', // Las empresas cambian frecuentemente (crear, editar, eliminar)
+    '/deals', // Los negocios cambian frecuentemente (crear, editar, eliminar)
   ];
   
   const shouldNotCache = noCacheEndpoints.some(endpoint => url.includes(endpoint));
@@ -34,9 +37,6 @@ export const setCacheHeaders = (req: Request, res: Response, next: NextFunction)
   // Endpoints con datos que cambian poco - cachear por más tiempo
   const longCacheEndpoints = [
     '/users',
-    '/companies',
-    '/contacts',
-    '/deals',
   ];
   
   const shouldLongCache = longCacheEndpoints.some(endpoint => url.includes(endpoint));

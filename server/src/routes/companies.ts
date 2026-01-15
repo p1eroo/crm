@@ -373,7 +373,34 @@ router.get('/:id', apiLimiter, async (req, res) => {
       return res.status(404).json({ error: 'Empresa no encontrada' });
     }
 
-    res.json(cleanCompany(company, true));
+    // Obtener también los contactos vinculados por companyId (relación uno-a-muchos)
+    const contactsByCompanyId = await Contact.findAll({
+      where: { companyId: req.params.id },
+      attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+    });
+
+    // Combinar ambos tipos de contactos, eliminando duplicados
+    const companyData: any = company.toJSON(); // Usar 'any' para permitir propiedades de relaciones
+    const manyToManyContacts = companyData.Contacts || [];
+    const oneToManyContacts = contactsByCompanyId.map(c => c.toJSON());
+    
+    // Crear un Map para eliminar duplicados por ID
+    const contactsMap = new Map();
+    
+    // Primero agregar los de muchos-a-muchos
+    manyToManyContacts.forEach((contact: any) => {
+      contactsMap.set(contact.id, contact);
+    });
+    
+    // Luego agregar los de uno-a-muchos (sobrescribirán si hay duplicados)
+    oneToManyContacts.forEach((contact: any) => {
+      contactsMap.set(contact.id, contact);
+    });
+    
+    // Convertir el Map a array
+    companyData.Contacts = Array.from(contactsMap.values());
+
+    res.json(cleanCompany(companyData, true));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -387,6 +414,24 @@ router.post('/', writeLimiter, async (req: AuthRequest, res) => {
       // Asignar automáticamente el usuario actual como propietario del registro
       ownerId: req.body.ownerId || req.userId || null,
     };
+
+    // Validar que el nombre sea requerido
+    if (!companyData.name || !companyData.name.trim()) {
+      return res.status(400).json({ 
+        error: 'El nombre de la empresa es requerido',
+        field: 'name',
+      });
+    }
+
+    // Validar y convertir estimatedRevenue si viene como string vacío o null
+    if (companyData.estimatedRevenue !== undefined) {
+      if (companyData.estimatedRevenue === '' || companyData.estimatedRevenue === null) {
+        companyData.estimatedRevenue = null;
+      } else if (typeof companyData.estimatedRevenue === 'string') {
+        const parsed = parseFloat(companyData.estimatedRevenue);
+        companyData.estimatedRevenue = isNaN(parsed) ? null : parsed;
+      }
+    }
 
     // Validar que no exista una empresa con el mismo nombre (case-insensitive)
     if (companyData.name) {
@@ -448,6 +493,14 @@ router.put('/:id', writeLimiter, async (req, res) => {
 
     // Preparar los datos para actualizar, manejando campos especiales
     const updateData: any = { ...req.body };
+    
+    // Validar que el nombre sea requerido si se está actualizando
+    if (updateData.name !== undefined && (!updateData.name || !updateData.name.trim())) {
+      return res.status(400).json({ 
+        error: 'El nombre de la empresa es requerido',
+        field: 'name',
+      });
+    }
     
     // Si leadSource viene, asegurarse de que se mapee correctamente
     if (updateData.leadSource !== undefined) {

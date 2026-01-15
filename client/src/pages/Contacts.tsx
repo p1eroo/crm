@@ -774,8 +774,8 @@ const Contacts: React.FC = () => {
     }
   };
 
-  // Función para validar email en tiempo real
-  const validateEmail = async (email: string) => {
+  // Función para validar email en tiempo real - OPTIMIZADA con useCallback
+  const validateEmail = useCallback(async (email: string) => {
     if (emailValidationTimeoutRef.current) {
       clearTimeout(emailValidationTimeoutRef.current);
     }
@@ -797,6 +797,7 @@ const Contacts: React.FC = () => {
       return;
     }
 
+    // Debounce aumentado a 1500ms para reducir llamadas a la API
     const timeoutId = setTimeout(async () => {
       try {
         const response = await api.get("/contacts", {
@@ -817,13 +818,13 @@ const Contacts: React.FC = () => {
       } catch (error) {
         setEmailValidationError("");
       }
-    }, 500);
+    }, 1500);
 
     emailValidationTimeoutRef.current = timeoutId;
-  };
+  }, [editingContact]);
 
-  // Función para validar DNI en tiempo real
-  const validateDni = async (dni: string) => {
+  // Función para validar DNI en tiempo real - OPTIMIZADA con useCallback
+  const validateDni = useCallback(async (dni: string) => {
     if (dniValidationTimeoutRef.current) {
       clearTimeout(dniValidationTimeoutRef.current);
     }
@@ -838,28 +839,8 @@ const Contacts: React.FC = () => {
       return;
     }
 
-    // Si tiene exactamente 8 dígitos, validar inmediatamente
+    // Solo validar cuando tenga exactamente 8 dígitos, con debounce
     if (dni.length === 8) {
-      try {
-        const response = await api.get("/contacts", {
-          params: { search: dni.trim(), limit: 50 },
-        });
-
-        const contacts = response.data.contacts || response.data || [];
-        const exactMatch = contacts.find(
-          (c: Contact) => (c as any).dni === dni.trim()
-        );
-
-        if (exactMatch) {
-          setDniValidationError("Ya existe un contacto con este DNI");
-        } else {
-          setDniValidationError("");
-        }
-      } catch (error) {
-        setDniValidationError("");
-      }
-    } else {
-      // Si tiene menos de 8 dígitos, usar debounce
       const timeoutId = setTimeout(async () => {
         try {
           const response = await api.get("/contacts", {
@@ -879,14 +860,16 @@ const Contacts: React.FC = () => {
         } catch (error) {
           setDniValidationError("");
         }
-      }, 500);
-
+      }, 1000); // Debounce de 1000ms incluso cuando tiene 8 dígitos
+      
       dniValidationTimeoutRef.current = timeoutId;
+    } else {
+      setDniValidationError("");
     }
-  };
+  }, [editingContact]);
 
-  // Función para validar CEE en tiempo real
-  const validateCee = async (cee: string) => {
+  // Función para validar CEE en tiempo real - OPTIMIZADA con useCallback
+  const validateCee = useCallback(async (cee: string) => {
     if (ceeValidationTimeoutRef.current) {
       clearTimeout(ceeValidationTimeoutRef.current);
     }
@@ -902,28 +885,8 @@ const Contacts: React.FC = () => {
       return;
     }
 
-    // Si tiene exactamente 12 caracteres, validar inmediatamente
+    // Solo validar cuando tenga exactamente 12 caracteres, con debounce
     if (ceeUpper.length === 12) {
-      try {
-        const response = await api.get("/contacts", {
-          params: { search: ceeUpper, limit: 50 },
-        });
-
-        const contacts = response.data.contacts || response.data || [];
-        const exactMatch = contacts.find(
-          (c: Contact) => (c as any).cee === ceeUpper
-        );
-
-        if (exactMatch) {
-          setCeeValidationError("Ya existe un contacto con este CEE");
-        } else {
-          setCeeValidationError("");
-        }
-      } catch (error) {
-        setCeeValidationError("");
-      }
-    } else {
-      // Si tiene menos de 12 caracteres, usar debounce
       const timeoutId = setTimeout(async () => {
         try {
           const response = await api.get("/contacts", {
@@ -943,11 +906,68 @@ const Contacts: React.FC = () => {
         } catch (error) {
           setCeeValidationError("");
         }
-      }, 500);
-
+      }, 1000); // Debounce de 1000ms
+      
       ceeValidationTimeoutRef.current = timeoutId;
+    } else {
+      setCeeValidationError("");
     }
-  };
+  }, [editingContact]);
+
+  // Handlers memoizados para evitar re-renders innecesarios
+  const handleFirstNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData((prev) => ({ ...prev, firstName: value }));
+    if (formErrors.firstName) {
+      setFormErrors((prev) => ({ ...prev, firstName: "" }));
+    }
+  }, [formErrors.firstName]);
+
+  const handleLastNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData((prev) => ({ ...prev, lastName: value }));
+    if (formErrors.lastName) {
+      setFormErrors((prev) => ({ ...prev, lastName: "" }));
+    }
+  }, [formErrors.lastName]);
+
+  const handleEmailChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newEmail = e.target.value;
+    setFormData((prev) => ({ ...prev, email: newEmail }));
+    if (formErrors.email) {
+      setFormErrors((prev) => ({ ...prev, email: "" }));
+    }
+    // Validar email solo si tiene formato válido
+    if (newEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+      validateEmail(newEmail);
+    } else {
+      setEmailValidationError("");
+    }
+  }, [formErrors.email, validateEmail]);
+
+  const handlePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, phone: e.target.value }));
+  }, []);
+
+  const handleAddressChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, address: e.target.value }));
+  }, []);
+
+  const handleCityChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, city: e.target.value }));
+  }, []);
+
+  const handleStateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, state: e.target.value }));
+  }, []);
+
+  const handleCountryChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, country: e.target.value }));
+  }, []);
+
+  const handleJobTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, jobTitle: e.target.value }));
+  }, []);
 
   const handleClose = () => {
     setOpen(false);
@@ -1093,13 +1113,25 @@ const Contacts: React.FC = () => {
     }
 
     try {
-      // Preparar los datos para enviar, convirtiendo companyId a número
+      // Validar que companyId esté presente y sea válido
+      if (!formData.companyId || formData.companyId.trim() === '') {
+        setFormErrors({ ...formErrors, companyId: 'La empresa principal es requerida' });
+        return;
+      }
+
+      const companyIdNum = parseInt(formData.companyId, 10);
+      if (isNaN(companyIdNum)) {
+        setFormErrors({ ...formErrors, companyId: 'El ID de empresa no es válido' });
+        return;
+      }
+
+      // Preparar los datos para enviar
       const submitData = {
         ...formData,
-        companyId: formData.companyId
-          ? parseInt(formData.companyId)
-          : undefined,
+        companyId: companyIdNum,
       };
+
+      console.log('📤 Enviando datos:', submitData);
 
       if (editingContact) {
         await api.put(`/contacts/${editingContact.id}`, submitData);
@@ -1109,8 +1141,10 @@ const Contacts: React.FC = () => {
       setFormErrors({});
       handleClose();
       fetchContacts();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving contact:", error);
+      const errorMessage = error.response?.data?.error || 'Error al guardar el contacto';
+      alert(errorMessage);
     }
   };
 
@@ -2876,15 +2910,7 @@ const Contacts: React.FC = () => {
             <TextField
               label="Nombre"
               value={formData.firstName}
-              onChange={(e) => {
-                setFormData((prev) => ({
-                  ...prev,
-                  firstName: e.target.value,
-                }));
-                if (formErrors.firstName) {
-                  setFormErrors((prev) => ({ ...prev, firstName: "" }));
-                }
-              }}
+              onChange={handleFirstNameChange}
               error={!!formErrors.firstName}
               helperText={formErrors.firstName}
               fullWidth
@@ -2898,15 +2924,7 @@ const Contacts: React.FC = () => {
             <TextField
               label="Apellido"
               value={formData.lastName}
-              onChange={(e) => {
-                setFormData((prev) => ({
-                  ...prev,
-                  lastName: e.target.value,
-                }));
-                if (formErrors.lastName) {
-                  setFormErrors((prev) => ({ ...prev, lastName: "" }));
-                }
-              }}
+              onChange={handleLastNameChange}
               error={!!formErrors.lastName}
               helperText={formErrors.lastName}
               fullWidth
@@ -2922,15 +2940,7 @@ const Contacts: React.FC = () => {
               label="Email"
               type="email"
               value={formData.email}
-              onChange={async (e) => {
-                const newEmail = e.target.value;
-                setFormData((prev) => ({ ...prev, email: newEmail }));
-                if (formErrors.email) {
-                  setFormErrors((prev) => ({ ...prev, email: "" }));
-                }
-                // Validar email en tiempo real
-                validateEmail(newEmail);
-              }}
+              onChange={handleEmailChange}
               error={!!formErrors.email || !!emailValidationError}
               helperText={formErrors.email || emailValidationError}
               fullWidth
@@ -2944,9 +2954,7 @@ const Contacts: React.FC = () => {
             <TextField
               label="Teléfono"
               value={formData.phone}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, phone: e.target.value }))
-              }
+              onChange={handlePhoneChange}
               fullWidth
               sx={{
                 "& .MuiOutlinedInput-root": {
@@ -2959,9 +2967,7 @@ const Contacts: React.FC = () => {
             <TextField
               label="Dirección"
               value={formData.address}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, address: e.target.value }))
-              }
+              onChange={handleAddressChange}
               multiline
               rows={2}
               fullWidth
@@ -2976,9 +2982,7 @@ const Contacts: React.FC = () => {
             <TextField
               label="Distrito"
               value={formData.city}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, city: e.target.value }))
-              }
+              onChange={handleCityChange}
               fullWidth
               sx={{
                 "& .MuiOutlinedInput-root": {
@@ -2990,9 +2994,7 @@ const Contacts: React.FC = () => {
             <TextField
               label="Provincia"
               value={formData.state}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, state: e.target.value }))
-              }
+              onChange={handleStateChange}
               fullWidth
               sx={{
                 "& .MuiOutlinedInput-root": {
@@ -3004,9 +3006,7 @@ const Contacts: React.FC = () => {
             <TextField
               label="Departamento"
               value={formData.country}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, country: e.target.value }))
-              }
+              onChange={handleCountryChange}
               fullWidth
               sx={{
                 "& .MuiOutlinedInput-root": {

@@ -59,6 +59,9 @@ const cleanContact = (contact: any): any => {
 // Obtener todos los contactos
 router.get('/', apiLimiter, async (req: AuthRequest, res) => {
   try {
+    console.log('📥 Iniciando GET /contacts');
+    console.log('📥 Query params:', req.query);
+    
     const { 
       page = 1, 
       limit: limitParam = 50, 
@@ -79,6 +82,8 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
       // Filtros avanzados (JSON string)
       filterRules,
     } = req.query;
+    
+    console.log('📥 Parámetros procesados:', { page, limitParam, search, sortBy });
     
     // Limitar el tamaño máximo de página para evitar sobrecarga
     const maxLimit = 100;
@@ -260,49 +265,120 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
         break;
     }
 
-    // Configurar includes
+    // Configurar includes - solo Owner, Company se carga manualmente para evitar problemas con NULL
     const includes: any[] = [
       { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
     ];
     
-    // Si hay filtro por empresa, hacer el include requerido
+    // Si hay filtro por empresa, agregar condición al where en lugar de usar include
     if (filterEmpresa) {
-      includes.push({
-        model: Company,
-        as: 'Company',
-        attributes: ['id', 'name'],
-        required: true,
+      // Buscar IDs de empresas que coincidan con el filtro
+      const matchingCompanies = await Company.findAll({
         where: {
           name: { [Op.iLike]: `%${filterEmpresa}%` },
         },
+        attributes: ['id'],
       });
-    } else {
-      includes.push({
-        model: Company,
-        as: 'Company',
-        attributes: ['id', 'name'],
-        required: false,
-      });
+      const companyIds = matchingCompanies.map(c => c.id);
+      if (companyIds.length > 0) {
+        where.companyId = { [Op.in]: companyIds };
+      } else {
+        // Si no hay empresas que coincidan, devolver lista vacía
+        return res.json({
+          contacts: [],
+          total: 0,
+          page: pageNum,
+          limit,
+          totalPages: 0,
+        });
+      }
     }
 
-    const contacts = await Contact.findAndCountAll({
-      where,
-      include: includes,
-      distinct: true, // Importante para contar correctamente con includes
-      limit,
-      offset,
-      order,
-    });
+    let contacts;
+    try {
+      contacts = await Contact.findAndCountAll({
+        where,
+        include: includes,
+        distinct: true,
+        limit,
+        offset,
+        order,
+      });
+      
+      console.log(`✅ Consulta exitosa, ${contacts.rows.length} contactos encontrados`);
+      
+      // Cargar Company manualmente para cada contacto que tenga companyId
+      const contactsWithCompany = await Promise.all(
+        contacts.rows.map(async (contact: any) => {
+          const contactData = contact.toJSON();
+          if (contactData.companyId) {
+            try {
+              const company = await Company.findByPk(contactData.companyId, {
+                attributes: ['id', 'name'],
+              });
+              contactData.Company = company;
+            } catch (companyError) {
+              console.warn(`⚠️ No se pudo cargar Company para contacto ${contactData.id}:`, companyError);
+              contactData.Company = null;
+            }
+          } else {
+            contactData.Company = null;
+          }
+          return contactData;
+        })
+      );
+      
+      contacts.rows = contactsWithCompany as any;
+    } catch (queryError: any) {
+      console.error('❌ Error en consulta de contactos:', queryError);
+      console.error('❌ Stack trace:', queryError.stack);
+      console.error('❌ Error name:', queryError.name);
+      console.error('❌ Error message:', queryError.message);
+      console.error('❌ Error original:', queryError.original);
+      throw queryError;
+    }
 
+    console.log('📤 Preparando respuesta, total contactos:', contacts.count);
+    
+    // Limpiar contactos uno por uno con manejo de errores
+    const cleanedContacts = [];
+    for (const contact of contacts.rows) {
+      try {
+        cleanedContacts.push(cleanContact(contact));
+      } catch (cleanError: any) {
+        console.error(`⚠️ Error al limpiar contacto ${contact.id}:`, cleanError);
+        // Si falla la limpieza, intentar devolver el contacto sin limpiar
+        try {
+          cleanedContacts.push(contact.toJSON ? contact.toJSON() : contact);
+        } catch (e) {
+          console.error(`❌ Error crítico al procesar contacto ${contact.id}:`, e);
+        }
+      }
+    }
+    
+    console.log('✅ Respuesta lista, enviando', cleanedContacts.length, 'contactos');
+    
     res.json({
-      contacts: contacts.rows.map(cleanContact),
+      contacts: cleanedContacts,
       total: contacts.count,
       page: pageNum,
       limit,
       totalPages: Math.ceil(contacts.count / limit),
     });
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ Error completo al obtener contactos:', error);
+    console.error('❌ Stack trace:', error.stack);
+    console.error('❌ Error name:', error.name);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error original:', error.original);
+    if (error.errors) {
+      console.error('❌ Error errors:', error.errors);
+    }
+    
+    res.status(500).json({ 
+      error: error.message || 'Error al obtener contactos',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 
@@ -396,16 +472,47 @@ router.get('/:id', apiLimiter, async (req, res) => {
 // Crear contacto
 router.post('/', writeLimiter, async (req: AuthRequest, res) => {
   try {
-    // Validar que companyId esté presente
+    console.log('📥 Datos recibidos para crear contacto:', {
+      companyId: req.body.companyId,
+      companyIdType: typeof req.body.companyId,
+      firstName: req.body.firstName,
+      lastName: req.body.lastName,
+      email: req.body.email,
+    });
+
+    // Validar que companyId esté presente y sea un número válido
     if (!req.body.companyId) {
       return res.status(400).json({ error: 'La empresa principal es requerida' });
     }
 
+    const companyId = Number(req.body.companyId);
+    if (isNaN(companyId)) {
+      return res.status(400).json({ error: `El ID de empresa "${req.body.companyId}" no es válido` });
+    }
+
+    // Verificar que la empresa existe
+    const company = await Company.findByPk(companyId);
+    if (!company) {
+      return res.status(400).json({ error: `La empresa con ID ${companyId} no existe en la base de datos` });
+    }
+
     const contactData = {
       ...req.body,
+      companyId: companyId, // Asegurar que sea un número
       // Asignar automáticamente el usuario actual como propietario del contacto
       ownerId: req.body.ownerId || req.userId || null,
     };
+
+    // Validar campos requeridos
+    if (!contactData.firstName || !contactData.firstName.trim()) {
+      return res.status(400).json({ error: 'El nombre es requerido' });
+    }
+    if (!contactData.lastName || !contactData.lastName.trim()) {
+      return res.status(400).json({ error: 'El apellido es requerido' });
+    }
+    if (!contactData.email || !contactData.email.trim()) {
+      return res.status(400).json({ error: 'El email es requerido' });
+    }
 
     // Validar que no exista un contacto con el mismo email (case-insensitive)
     if (contactData.email) {
@@ -460,17 +567,62 @@ router.post('/', writeLimiter, async (req: AuthRequest, res) => {
       }
     }
 
-    const contact = await Contact.create(contactData);
-    const newContact = await Contact.findByPk(contact.id, {
-      include: [
-        { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
-        { model: Company, as: 'Company' },
-      ],
+    console.log('✅ Creando contacto con datos:', {
+      firstName: contactData.firstName,
+      lastName: contactData.lastName,
+      email: contactData.email,
+      companyId: contactData.companyId,
     });
+
+    const contact = await Contact.create(contactData);
+    
+    console.log('✅ Contacto creado con ID:', contact.id);
+
+    // Intentar obtener el contacto con relaciones, pero manejar errores
+    let newContact;
+    try {
+      newContact = await Contact.findByPk(contact.id, {
+        include: [
+          { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
+          { model: Company, as: 'Company', required: false },
+        ],
+      });
+    } catch (includeError: any) {
+      console.error('⚠️ Error al cargar relaciones del contacto:', includeError);
+      // Si falla el include, devolver el contacto sin relaciones
+      newContact = contact;
+    }
 
     res.status(201).json(cleanContact(newContact));
   } catch (error: any) {
-    res.status(500).json({ error: error.message });
+    console.error('❌ Error completo al crear contacto:', error);
+    console.error('❌ Stack trace:', error.stack);
+    console.error('❌ Error name:', error.name);
+    console.error('❌ Error message:', error.message);
+    
+    // Si es un error de validación de Sequelize, devolver mensaje más claro
+    if (error.name === 'SequelizeValidationError') {
+      const messages = error.errors.map((e: any) => e.message).join(', ');
+      return res.status(400).json({ error: `Error de validación: ${messages}` });
+    }
+    
+    // Si es un error de foreign key, la empresa no existe
+    if (error.name === 'SequelizeForeignKeyConstraintError') {
+      return res.status(400).json({ error: 'La empresa especificada no existe o hay un problema con la relación' });
+    }
+    
+    // Si es un error de base de datos
+    if (error.name === 'SequelizeDatabaseError') {
+      return res.status(500).json({ 
+        error: 'Error en la base de datos',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+    
+    res.status(500).json({ 
+      error: error.message || 'Error al crear contacto',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 

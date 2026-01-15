@@ -713,11 +713,20 @@ const DealDetail: React.FC = () => {
       const response = await api.post("/companies", companyData);
       // Asociar la empresa recién creada al deal usando la relación muchos a muchos
       if (id && response.data.id) {
-        await api.post(`/deals/${id}/companies`, {
+        const associateResponse = await api.post(`/deals/${id}/companies`, {
           companyIds: [response.data.id],
         });
+        
+        // Usar la respuesta del POST directamente (optimistic update)
+        if (associateResponse.data?.Companies) {
+          setDealCompanies(associateResponse.data.Companies);
+        }
+        
+        // Actualizar también el deal principal si viene en la respuesta
+        if (associateResponse.data) {
+          setDeal(associateResponse.data);
+        }
       }
-      await fetchDeal();
       setAddCompanyDialogOpen(false);
       setCompanyFormData({
         name: "",
@@ -745,11 +754,20 @@ const DealDetail: React.FC = () => {
       setSaving(true);
       // Asociar todas las empresas seleccionadas al deal usando la relación muchos a muchos
       if (id && selectedExistingCompanies.length > 0) {
-        await api.post(`/deals/${id}/companies`, {
+        const response = await api.post(`/deals/${id}/companies`, {
           companyIds: selectedExistingCompanies,
         });
-        // Recargar el deal para obtener las empresas actualizadas
-        await fetchDeal();
+        
+        // Usar la respuesta del POST directamente (optimistic update)
+        if (response.data?.Companies) {
+          setDealCompanies(response.data.Companies);
+        }
+        
+        // Actualizar también el deal principal si viene en la respuesta
+        if (response.data) {
+          setDeal(response.data);
+        }
+        
         setAddCompanyDialogOpen(false);
         setSelectedExistingCompanies([]);
         setExistingCompaniesSearch("");

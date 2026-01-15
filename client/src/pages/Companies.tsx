@@ -217,7 +217,8 @@ const Companies: React.FC = () => {
   };
 
   // Validar nombre en tiempo real con debounce
-  const validateCompanyName = async (name: string) => {
+  // Función para validar nombre - OPTIMIZADA con useCallback
+  const validateCompanyName = useCallback(async (name: string) => {
     // Limpiar timeout anterior
     if (nameValidationTimeoutRef.current) {
       clearTimeout(nameValidationTimeoutRef.current);
@@ -235,7 +236,7 @@ const Companies: React.FC = () => {
       return;
     }
 
-    // Debounce: esperar 500ms después de que el usuario deje de escribir
+    // Debounce aumentado a 1500ms para reducir llamadas a la API
     nameValidationTimeoutRef.current = setTimeout(async () => {
       try {
         const response = await api.get('/companies', {
@@ -256,11 +257,11 @@ const Companies: React.FC = () => {
         // Si hay error en la validación, no mostrar error al usuario
         setNameError('');
       }
-    }, 500);
-  };
+    }, 1500);
+  }, [editingCompany]);
 
-  // Validar RUC en tiempo real con debounce
-  const validateCompanyRuc = async (ruc: string) => {
+  // Validar RUC en tiempo real - OPTIMIZADA con useCallback
+  const validateCompanyRuc = useCallback(async (ruc: string) => {
     // Limpiar timeout anterior
     if (rucValidationTimeoutRef.current) {
       clearTimeout(rucValidationTimeoutRef.current);
@@ -278,47 +279,9 @@ const Companies: React.FC = () => {
       return;
     }
 
-    // Debounce: esperar 500ms después de que el usuario deje de escribir
-    rucValidationTimeoutRef.current = setTimeout(async () => {
-      try {
-        const response = await api.get('/companies', {
-          params: { search: ruc.trim(), limit: 50 },
-        });
-        
-        const companies = response.data.companies || response.data || [];
-        const exactMatch = companies.find((c: Company) => c.ruc === ruc.trim());
-
-        if (exactMatch) {
-          setRucValidationError('Ya existe una empresa con este RUC');
-        } else {
-          setRucValidationError('');
-        }
-      } catch (error) {
-        // Si hay error en la validación, no mostrar error al usuario
-        setRucValidationError('');
-      }
-    }, 500);
-  };
-
-  // Función para validar ambos campos en paralelo
-  const validateAllFields = async (name: string, ruc: string) => {
-    // Limpiar timeouts anteriores
-    if (nameValidationTimeoutRef.current) {
-      clearTimeout(nameValidationTimeoutRef.current);
-    }
-    if (rucValidationTimeoutRef.current) {
-      clearTimeout(rucValidationTimeoutRef.current);
-    }
-
-    // Si el RUC tiene 11 dígitos, validar inmediatamente sin debounce
-    if (ruc && ruc.trim().length === 11) {
-      // Ejecutar validación del RUC inmediatamente (sin debounce)
-      if (rucValidationTimeoutRef.current) {
-        clearTimeout(rucValidationTimeoutRef.current);
-      }
-      
-      // Validar RUC inmediatamente
-      if (!editingCompany || editingCompany.ruc !== ruc.trim()) {
+    // Debounce aumentado a 1000ms, solo validar cuando tenga 11 dígitos
+    if (ruc.length === 11) {
+      rucValidationTimeoutRef.current = setTimeout(async () => {
         try {
           const response = await api.get('/companies', {
             params: { search: ruc.trim(), limit: 50 },
@@ -333,11 +296,28 @@ const Companies: React.FC = () => {
             setRucValidationError('');
           }
         } catch (error) {
+          // Si hay error en la validación, no mostrar error al usuario
           setRucValidationError('');
         }
-      } else {
-        setRucValidationError('');
-      }
+      }, 1000);
+    } else {
+      setRucValidationError('');
+    }
+  }, [editingCompany]);
+
+  // Función para validar ambos campos en paralelo - OPTIMIZADA con useCallback
+  const validateAllFields = useCallback(async (name: string, ruc: string) => {
+    // Limpiar timeouts anteriores
+    if (nameValidationTimeoutRef.current) {
+      clearTimeout(nameValidationTimeoutRef.current);
+    }
+    if (rucValidationTimeoutRef.current) {
+      clearTimeout(rucValidationTimeoutRef.current);
+    }
+
+    // Si el RUC tiene 11 dígitos, validar con debounce
+    if (ruc && ruc.trim().length === 11) {
+      validateCompanyRuc(ruc);
       
       // Validar nombre con debounce solo si tiene contenido
       if (name && name.trim() !== '') {
@@ -347,10 +327,73 @@ const Companies: React.FC = () => {
       }
     } else {
       // Si el RUC no tiene 11 dígitos, usar las funciones de validación con debounce
-      validateCompanyName(name);
+      if (name && name.trim() !== '') {
+        validateCompanyName(name);
+      } else {
+        setNameError('');
+      }
       validateCompanyRuc(ruc);
     }
-  };
+  }, [editingCompany, validateCompanyName, validateCompanyRuc]);
+
+  // Handlers memoizados para evitar re-renders innecesarios
+  const handleRucChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '');
+    const limitedValue = value.slice(0, 11);
+    setFormData((prev) => ({ ...prev, ruc: limitedValue }));
+    setRucError('');
+    
+    if (limitedValue.length === 11) {
+      validateCompanyRuc(limitedValue);
+      // Validar nombre si tiene contenido
+      if (formData.name && formData.name.trim() !== '') {
+        validateCompanyName(formData.name);
+      }
+    } else {
+      setRucValidationError('');
+      // Validar nombre si tiene contenido
+      if (formData.name && formData.name.trim() !== '') {
+        validateCompanyName(formData.name);
+      }
+    }
+  }, [formData.name, validateCompanyRuc, validateCompanyName]);
+
+  const handleCompanyNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, companyname: e.target.value }));
+  }, []);
+
+  const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const newName = e.target.value;
+    setFormData((prev) => ({ ...prev, name: newName }));
+    if (!newName.trim()) {
+      setNameError('');
+    }
+    validateAllFields(newName, formData.ruc);
+  }, [formData.ruc, validateAllFields]);
+
+  const handlePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, phone: e.target.value }));
+  }, []);
+
+  const handleAddressChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, address: e.target.value }));
+  }, []);
+
+  const handleCityChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, city: e.target.value }));
+  }, []);
+
+  const handleStateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, state: e.target.value }));
+  }, []);
+
+  const handleCountryChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, country: e.target.value }));
+  }, []);
+
+  const handleDomainChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData((prev) => ({ ...prev, domain: e.target.value }));
+  }, []);
 
   // Función para vista previa
   const handlePreview = (company: Company, e?: React.MouseEvent) => {
@@ -1512,6 +1555,13 @@ const Companies: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    // Validar que el nombre sea requerido
+    if (!formData.name || !formData.name.trim()) {
+      setNameError('El nombre de la empresa es requerido');
+      setErrorMessage('Por favor, completa el nombre de la empresa antes de guardar.');
+      return;
+    }
+
     // Validar antes de enviar
     if (nameError) {
       setErrorMessage('Por favor, corrige el error en el nombre antes de guardar.');
@@ -1534,12 +1584,13 @@ const Companies: React.FC = () => {
     } catch (error: any) {
       console.error('Error saving company:', error);
       
-      // Manejar error de empresa duplicada del servidor
+      // Manejar errores del servidor
       if (error.response?.status === 400 && error.response?.data?.error) {
         const errorMessage = error.response.data.error;
         const duplicateField = error.response.data.duplicateField;
+        const field = error.response.data.field;
         
-        if (duplicateField === 'name') {
+        if (field === 'name' || duplicateField === 'name') {
           setNameError(errorMessage);
           // El error ya se muestra en el campo, no necesitamos Snackbar adicional
         } else if (duplicateField === 'ruc') {
@@ -3366,51 +3417,7 @@ const Companies: React.FC = () => {
             <TextField
               label="RUC"
               value={formData.ruc}
-              onChange={async (e) => {
-                const value = e.target.value.replace(/\D/g, ''); // Solo números
-                // Limitar a 11 dígitos
-                const limitedValue = value.slice(0, 11);
-                const currentName = formData.name; // Obtener el nombre actual del estado
-                setFormData({ ...formData, ruc: limitedValue });
-                setRucError('');
-                
-                // Si el RUC tiene exactamente 11 dígitos, validar inmediatamente
-                if (limitedValue.length === 11) {
-                  // NO limpiar el error aquí, dejar que la validación lo maneje
-                  // Validar RUC inmediatamente sin esperar debounce
-                  if (editingCompany && editingCompany.ruc === limitedValue.trim()) {
-                    setRucValidationError('');
-                  } else {
-                    try {
-                      const response = await api.get('/companies', {
-                        params: { search: limitedValue.trim(), limit: 50 },
-                      });
-                      
-                      const companies = response.data.companies || response.data || [];
-                      // Buscar coincidencia exacta por RUC
-                      const exactMatch = companies.find((c: Company) => c.ruc === limitedValue.trim());
-
-                      if (exactMatch) {
-                        setRucValidationError('Ya existe una empresa con este RUC');
-                      } else {
-                        setRucValidationError('');
-                      }
-                    } catch (error: any) {
-                      console.error('Error validando RUC:', error);
-                      setRucValidationError('');
-                    }
-                  }
-                  
-                  // Validar nombre con debounce si tiene contenido
-                  if (currentName && currentName.trim() !== '') {
-                    validateAllFields(currentName, limitedValue);
-                  }
-                } else {
-                  // Si tiene menos de 11 dígitos, limpiar el error y usar validación normal
-                  setRucValidationError('');
-                  validateAllFields(currentName, limitedValue);
-                }
-              }}
+              onChange={handleRucChange}
               error={!!rucError || !!rucValidationError}
               helperText={rucError || rucValidationError}
               inputProps={{ maxLength: 11 }}
@@ -3450,7 +3457,7 @@ const Companies: React.FC = () => {
             <TextField
               label="Razón social"
               value={formData.companyname}
-              onChange={(e) => setFormData({ ...formData, companyname: e.target.value })}
+              onChange={handleCompanyNameChange}
               fullWidth
               sx={{
                 '& .MuiOutlinedInput-root': {
@@ -3462,17 +3469,7 @@ const Companies: React.FC = () => {
             <TextField
               label="Nombre comercial"
               value={formData.name}
-              onChange={(e) => {
-                const newName = e.target.value;
-                const currentRuc = formData.ruc; // Obtener el RUC actual del estado
-                setFormData({ ...formData, name: newName });
-                // Limpiar el error del nombre cuando el usuario empieza a escribir
-                if (!newName.trim()) {
-                  setNameError('');
-                }
-                // Validar ambos campos con los valores actuales
-                validateAllFields(newName, currentRuc);
-              }}
+              onChange={handleNameChange}
               error={!!nameError}
               helperText={nameError}
               fullWidth
@@ -3486,7 +3483,7 @@ const Companies: React.FC = () => {
             <TextField
               label="Teléfono"
               value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              onChange={handlePhoneChange}
               fullWidth
               sx={{
                 '& .MuiOutlinedInput-root': {
@@ -3498,7 +3495,7 @@ const Companies: React.FC = () => {
             <TextField
               label="Dirección"
               value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              onChange={handleAddressChange}
               multiline
               rows={2}
               fullWidth
@@ -3512,7 +3509,7 @@ const Companies: React.FC = () => {
             <TextField
               label="Distrito"
               value={formData.city}
-              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+              onChange={handleCityChange}
               fullWidth
               sx={{
                 '& .MuiOutlinedInput-root': {
@@ -3524,7 +3521,7 @@ const Companies: React.FC = () => {
             <TextField
               label="Provincia"
               value={formData.state}
-              onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+              onChange={handleStateChange}
               fullWidth
               sx={{
                 '& .MuiOutlinedInput-root': {
@@ -3536,7 +3533,7 @@ const Companies: React.FC = () => {
             <TextField
               label="Departamento"
               value={formData.country}
-              onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+              onChange={handleCountryChange}
               fullWidth
               sx={{
                 '& .MuiOutlinedInput-root': {
@@ -3552,7 +3549,7 @@ const Companies: React.FC = () => {
             <TextField
               label="Dominio"
               value={formData.domain}
-              onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
+              onChange={handleDomainChange}
               fullWidth
               sx={{
                 '& .MuiOutlinedInput-root': {
@@ -3746,6 +3743,7 @@ const Companies: React.FC = () => {
         autoHideDuration={4000}
         onClose={() => setErrorMessage(null)}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        sx={{ zIndex: 1700 }}
       >
         <Alert 
           onClose={() => setErrorMessage(null)} 
