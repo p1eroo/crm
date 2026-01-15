@@ -28,9 +28,8 @@ import {
   LinearProgress,
   Checkbox,
   Popover,
-  Card,
 } from '@mui/material';
-import { Add, Delete, Search, Visibility, UploadFile, FileDownload, FilterList, Close, ExpandMore, Remove, Bolt, Edit, Business, ChevronLeft, ChevronRight, MoreVert, ViewColumn, Email, Phone, LocationOn, Link as LinkIcon, Note, Assignment, Event, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered } from '@mui/icons-material';
+import { Add, Delete, Search, Visibility, UploadFile, FileDownload, FilterList, Close, ExpandMore, Remove, Bolt, Edit, Business, ChevronLeft, ChevronRight, MoreVert, ViewColumn, Phone, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
@@ -40,6 +39,8 @@ import { FormDrawer } from '../components/FormDrawer';
 import RichTextEditor from '../components/RichTextEditor';
 import { Building2 } from "lucide-react";
 import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from '../components/UnifiedTable';
+import EntityPreviewDrawer from '../components/EntityPreviewDrawer';
+import { useAuth } from '../context/AuthContext';
 
 interface Company {
   id: number;
@@ -67,6 +68,7 @@ const Companies: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const { user } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -90,6 +92,7 @@ const Companies: React.FC = () => {
     state: '',
     country: '',
     isRecoveredClient: false,
+    ownerId: '',
   });
   const [loadingRuc, setLoadingRuc] = useState(false);
   const [rucError, setRucError] = useState('');
@@ -129,7 +132,8 @@ const Companies: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [expandedCompanyId, setExpandedCompanyId] = useState<number | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewCompany, setPreviewCompany] = useState<Company | null>(null);
   
   // Estados para modales de actividades
   const [noteOpen, setNoteOpen] = useState(false);
@@ -334,7 +338,7 @@ const Companies: React.FC = () => {
       }
       validateCompanyRuc(ruc);
     }
-  }, [editingCompany, validateCompanyName, validateCompanyRuc]);
+  }, [validateCompanyName, validateCompanyRuc]);
 
   // Handlers memoizados para evitar re-renders innecesarios
   const handleRucChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -400,34 +404,15 @@ const Companies: React.FC = () => {
     if (e) {
       e.stopPropagation();
     }
-    // Toggle: si ya está expandido, colapsar; si no, expandir
-    setExpandedCompanyId(expandedCompanyId === company.id ? null : company.id);
+    setPreviewCompany(company);
+    setPreviewOpen(true);
   };
 
-  // Funciones para abrir modales de actividades
-  const handleOpenNote = (companyId: number) => {
-    setActivityCompanyId(companyId);
-    setNoteData({ subject: '', description: '' });
-    setNoteOpen(true);
+  const handleClosePreview = () => {
+    setPreviewOpen(false);
+    setPreviewCompany(null);
   };
 
-  const handleOpenCall = (companyId: number) => {
-    setActivityCompanyId(companyId);
-    setCallData({ subject: '', description: '', duration: '' });
-    setCallOpen(true);
-  };
-
-  const handleOpenTask = (companyId: number) => {
-    setActivityCompanyId(companyId);
-    setTaskData({ title: '', description: '', priority: 'medium', dueDate: '', type: 'todo' });
-    setTaskOpen(true);
-  };
-
-  const handleOpenMeeting = (companyId: number) => {
-    setActivityCompanyId(companyId);
-    setTaskData({ title: '', description: '', priority: 'medium', dueDate: '', type: 'meeting' });
-    setTaskOpen(true);
-  };
 
   // Funciones para guardar actividades
   const handleSaveNote = async () => {
@@ -742,8 +727,9 @@ const Companies: React.FC = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // Realizar peticiones en paralelo con cancelación
-        const [companiesRes, usersRes] = await Promise.all([
+        // Realizar peticiones en paralelo con cancelación usando Promise.allSettled
+        // para que el error de /users no afecte a /companies
+        const [companiesResult, usersResult] = await Promise.allSettled([
           api.get('/companies', { 
             params: {
               page: currentPage,
@@ -775,25 +761,50 @@ const Companies: React.FC = () => {
 
         // Solo actualizar estado si el componente sigue montado
         if (isMounted) {
-          const companiesData = companiesRes.data.companies || companiesRes.data;
-          const sanitizedCompanies = companiesData.map((company: any) => ({
-            ...company,
-            domain: company.domain || null,
-            companyname: company.companyname || null,
-            phone: company.phone || null,
-            leadSource: company.leadSource || null,
-            city: company.city || null,
-            state: company.state || null,
-            country: company.country || null,
-            estimatedRevenue: company.estimatedRevenue || null,
-            Owner: company.Owner || null,
-          }));
-          setCompanies(sanitizedCompanies);
-          setTotalCompanies(companiesRes.data.total || 0);
+          // Manejar respuesta de companies
+          if (companiesResult.status === 'fulfilled') {
+            const companiesRes = companiesResult.value;
+            const companiesData = companiesRes.data.companies || companiesRes.data;
+            const sanitizedCompanies = companiesData.map((company: any) => ({
+              ...company,
+              domain: company.domain || null,
+              companyname: company.companyname || null,
+              phone: company.phone || null,
+              leadSource: company.leadSource || null,
+              city: company.city || null,
+              state: company.state || null,
+              country: company.country || null,
+              estimatedRevenue: company.estimatedRevenue || null,
+              Owner: company.Owner || null,
+            }));
+            setCompanies(sanitizedCompanies);
+            setTotalCompanies(companiesRes.data.total || 0);
+          } else {
+            // Error en companies
+            const error = companiesResult.reason;
+            if (error.name !== 'CanceledError' && error.name !== 'AbortError' && error.code !== 'ERR_CANCELED') {
+              console.error('Error fetching companies:', error);
+              setCompanies([]);
+              setTotalCompanies(0);
+            }
+          }
           
-          // Manejar usuarios
-          if (usersRes.data) {
-            setUsers(usersRes.data || []);
+          // Manejar respuesta de users
+          if (usersResult.status === 'fulfilled') {
+            const usersRes = usersResult.value;
+            if (usersRes.data) {
+              setUsers(usersRes.data || []);
+            }
+          } else {
+            // Error en users (403 es normal si no es admin)
+            const error = usersResult.reason;
+            if (error.response?.status === 403) {
+              console.log('Usuario no tiene permisos para ver usuarios (no es admin)');
+              setUsers([]);
+            } else if (error.name !== 'CanceledError' && error.name !== 'AbortError' && error.code !== 'ERR_CANCELED') {
+              console.error('Error fetching users:', error);
+              setUsers([]);
+            }
           }
         }
       } catch (error: any) {
@@ -802,15 +813,7 @@ const Companies: React.FC = () => {
           return;
         }
         if (isMounted) {
-          // Manejar error de usuarios (403 es normal si no es admin)
-          if (error.config?.url?.includes('/users') && error.response?.status === 403) {
-            console.log('Usuario no tiene permisos para ver usuarios (no es admin)');
-            setUsers([]);
-          } else {
-            console.error('Error fetching data:', error);
-            setCompanies([]);
-            setTotalCompanies(0);
-          }
+          console.error('Error inesperado fetching data:', error);
         }
       } finally {
         if (isMounted) {
@@ -1233,6 +1236,7 @@ const Companies: React.FC = () => {
         state: company.state || '',
         country: company.country || '',
         isRecoveredClient: (company as any).isRecoveredClient || false,
+        ownerId: company.ownerId?.toString() || '',
       });
     } else {
       setEditingCompany(null);
@@ -1252,6 +1256,7 @@ const Companies: React.FC = () => {
         state: '',
         country: '',
         isRecoveredClient: false,
+        ownerId: '',
       });
     }
     setRucError('');
@@ -1544,6 +1549,24 @@ const Companies: React.FC = () => {
     setNameError('');
     setRucValidationError('');
     setErrorMessage(null);
+    setFormData({
+      name: '',
+      domain: '',
+      linkedin: '',
+      companyname: '',
+      phone: '',
+      email: '',
+      leadSource: '',
+      lifecycleStage: 'lead',
+      estimatedRevenue: '',
+      ruc: '',
+      address: '',
+      city: '',
+      state: '',
+      country: '',
+      isRecoveredClient: false,
+      ownerId: '',
+    });
     
     // Limpiar timeouts pendientes
     if (nameValidationTimeoutRef.current) {
@@ -1574,10 +1597,25 @@ const Companies: React.FC = () => {
     }
 
     try {
+      const submitData: any = {
+        ...formData,
+      };
+
+      // Manejar ownerId solo si el usuario tiene permisos (admin o jefe_comercial)
+      if (user && (user.role === 'admin' || user.role === 'jefe_comercial')) {
+        if (formData.ownerId && formData.ownerId.trim() !== '') {
+          submitData.ownerId = Number(formData.ownerId);
+        } else {
+          // Si está vacío, enviar null para que el backend lo maneje
+          submitData.ownerId = null;
+        }
+      }
+      // Si el usuario no tiene permisos, no incluimos ownerId y el backend usará req.userId automáticamente
+
       if (editingCompany) {
-        await api.put(`/companies/${editingCompany.id}`, formData);
+        await api.put(`/companies/${editingCompany.id}`, submitData);
       } else {
-        await api.post('/companies', formData);
+        await api.post('/companies', submitData);
       }
       handleClose();
       fetchCompanies();
@@ -2295,7 +2333,7 @@ const Companies: React.FC = () => {
                     overflow: 'hidden',
                     px: { xs: 1.5, md: 2 },
                     py: { xs: 1.25, md: 1.5 },
-                    borderBottom: index < paginatedCompanies.length - 1 || expandedCompanyId === company.id
+                    borderBottom: index < paginatedCompanies.length - 1
                       ? (theme.palette.mode === 'light' 
                         ? '1px solid rgba(0, 0, 0, 0.08)' 
                         : '1px solid rgba(255, 255, 255, 0.1)')
@@ -2672,199 +2710,6 @@ const Companies: React.FC = () => {
                     </Menu>
                 </Box>
             </Box>
-
-                {/* Vista expandida */}
-                {expandedCompanyId === company.id && (
-                  <Box
-                    sx={{
-                      bgcolor: theme.palette.background.paper,
-                      borderTop: theme.palette.mode === 'light' 
-                        ? '1px solid rgba(0, 0, 0, 0.08)' 
-                        : '1px solid rgba(255, 255, 255, 0.1)',
-                      p: 3,
-                      display: 'flex',
-                      flexDirection: { xs: 'column', md: 'row' },
-                      gap: 3,
-                      overflow: 'visible',
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                {/* Columna Izquierda - Card con información principal */}
-                <Box sx={{ flex: { xs: '1', md: '0 0 300px' }, display: 'flex', flexDirection: 'column', alignSelf: 'flex-start' }}>
-                  <Card
-                    sx={{
-                      bgcolor: theme.palette.background.paper,
-                      border: `1px solid ${theme.palette.divider}`,
-                      borderRadius: 2,
-                      p: 3,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: 2,
-                      width: '100%',
-                      minHeight: 'fit-content',
-                      overflow: 'visible',
-                    }}
-                  >
-                    {/* Avatar/Logo */}
-                    <Avatar
-                      src={(company as any).logo || undefined}
-                      sx={{
-                        width: 60,
-                        height: 60,
-                        bgcolor: (company as any).logo ? 'transparent' : '#0d9394',
-                        fontSize: '1.25rem',
-                        fontWeight: 600,
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                      }}
-                    >
-                      {!(company as any).logo && <Building2 size={30} color="white" />}
-                    </Avatar>
-
-                    {/* Nombre */}
-                    <Box sx={{ textAlign: 'center', width: '100%' }}>
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 1.5, fontSize: '1.125rem' }}>
-                        {company.name}
-                      </Typography>
-                      
-                      {/* Botones de actividades */}
-                      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mt: 1 }}>
-                        <Tooltip title="Crear nota">
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenNote(company.id);
-                            }}
-                            sx={{
-                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
-                              color: theme.palette.text.secondary,
-                              '&:hover': {
-                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
-                              },
-                            }}
-                          >
-                            <Note sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Hacer llamada">
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenCall(company.id);
-                            }}
-                            sx={{
-                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
-                              color: theme.palette.text.secondary,
-                              '&:hover': {
-                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
-                              },
-                            }}
-                          >
-                            <Phone sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Crear tarea">
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenTask(company.id);
-                            }}
-                            sx={{
-                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
-                              color: theme.palette.text.secondary,
-                              '&:hover': {
-                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
-                              },
-                            }}
-                          >
-                            <Assignment sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Programar reunión">
-                          <IconButton
-                            size="small"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenMeeting(company.id);
-                            }}
-                            sx={{
-                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)',
-                              color: theme.palette.text.secondary,
-                              '&:hover': {
-                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
-                              },
-                            }}
-                          >
-                            <Event sx={{ fontSize: 18 }} />
-                          </IconButton>
-                        </Tooltip>
-                      </Box>
-                    </Box>
-
-                    {/* Divider */}
-                    <Divider sx={{ width: '100%', my: 1 }} />
-
-                    {/* Información de contacto */}
-                    <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                      {(company as any).email && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Email sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                            {(company as any).email}
-                          </Typography>
-                        </Box>
-                      )}
-                      {company.phone && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Phone sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                            {company.phone}
-                          </Typography>
-                        </Box>
-                      )}
-                      {(company.address || company.city || company.country) && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <LocationOn sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                            {[company.address, company.city, company.country].filter(Boolean).join(', ') || '--'}
-                          </Typography>
-                        </Box>
-                      )}
-                      {company.domain && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <LinkIcon sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
-                              cursor: 'pointer',
-                              '&:hover': {
-                                textDecoration: 'underline',
-                              },
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const domainUrl = company.domain?.startsWith('http') ? company.domain : `https://${company.domain}`;
-                              window.open(domainUrl, '_blank');
-                            }}
-                          >
-                            {company.domain}
-                          </Typography>
-                        </Box>
-                      )}
-                    </Box>
-                  </Card>
-                </Box>
-
-                {/* Columna Derecha - Contenido adicional (por ahora vacío) */}
-                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {/* Contenido adicional se agregará después */}
-                </Box>
-              </Box>
-            )}
           </React.Fragment>
           ))}
             </>
@@ -3679,6 +3524,43 @@ const Companies: React.FC = () => {
                 startAdornment: <InputAdornment position="start">S/</InputAdornment>,
               }}
             />
+            {/* Propietario - Solo visible para jefe_comercial y admin */}
+            {(user?.role === 'admin' || user?.role === 'jefe_comercial') && (
+              <TextField
+                select
+                label="Propietario"
+                value={formData.ownerId || ''}
+                onChange={(e) => setFormData({ ...formData, ownerId: e.target.value })}
+                fullWidth
+                SelectProps={{
+                  MenuProps: {
+                    disableScrollLock: true,
+                    disablePortal: true,
+                    PaperProps: {
+                      sx: {
+                        maxHeight: 300,
+                        zIndex: '2000 !important',
+                        position: 'absolute',
+                      },
+                    },
+                  },
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  }
+                }}
+              >
+                <MenuItem value="">Sin asignar</MenuItem>
+                {users
+                  .filter((userOption) => userOption.role === 'user')
+                  .map((userOption) => (
+                    <MenuItem key={userOption.id} value={userOption.id.toString()}>
+                      {userOption.firstName} {userOption.lastName}
+                    </MenuItem>
+                  ))}
+              </TextField>
+            )}
             {/* Cliente Recuperado */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Checkbox
@@ -4146,6 +4028,15 @@ const Companies: React.FC = () => {
           {successMessage}
         </Alert>
       </Snackbar>
+
+      {/* Entity Preview Drawer */}
+      <EntityPreviewDrawer
+        open={previewOpen}
+        onClose={handleClosePreview}
+        entityType="company"
+        entityId={previewCompany?.id || null}
+        entityData={previewCompany}
+      />
 
       {/* Modal de Nota - Diseño exacto de CompanyDetail */}
       {noteOpen && (

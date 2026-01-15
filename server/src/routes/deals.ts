@@ -10,6 +10,8 @@ import { DealDeal } from '../models/DealDeal';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { sequelize } from '../config/database';
 import { apiLimiter, writeLimiter, deleteLimiter } from '../middleware/rateLimiter';
+import { getRoleBasedDataFilter, canModifyResource, canDeleteResource } from '../utils/rolePermissions';
+import { logSystemAction, SystemActions, EntityTypes } from '../utils/systemLogger';
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -91,6 +93,10 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
 
     const where: any = {};
     
+    // ⭐ Aplicar filtro automático según rol del usuario
+    const roleFilter = getRoleBasedDataFilter(req.userRole, req.userId);
+    Object.assign(where, roleFilter);
+    
     // Búsqueda general
     if (search) {
       where.name = { [Op.iLike]: `%${search}%` };
@@ -106,8 +112,9 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
       }
     }
     
-    // Filtro por propietarios
-    if (owners) {
+    // Filtro por propietarios (solo para admin y jefe_comercial, otros roles ya tienen filtro RBAC)
+    // Si el usuario NO es admin ni jefe_comercial, el filtro RBAC ya está aplicado y no se debe sobrescribir
+    if ((req.userRole === 'admin' || req.userRole === 'jefe_comercial') && owners) {
       const ownersArray = Array.isArray(owners) ? owners : [owners];
       const ownerIds: (number | null)[] = [];
       const hasUnassigned = ownersArray.includes('unassigned');
@@ -135,10 +142,11 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
       } else if (ownerIds.length > 0) {
         where.ownerId = { [Op.in]: ownerIds };
       }
-    } else if (ownerId) {
-      // Compatibilidad con el filtro antiguo
+    } else if ((req.userRole === 'admin' || req.userRole === 'jefe_comercial') && ownerId) {
+      // Compatibilidad con el filtro antiguo (solo para admin y jefe_comercial)
       where.ownerId = ownerId === 'me' ? req.userId : ownerId;
     }
+    // Si no es admin ni jefe_comercial, el filtro RBAC ya está aplicado y no se sobrescribe
     
     if (pipelineId) {
       where.pipelineId = pipelineId;
@@ -158,20 +166,21 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
     }
     
     if (filterEtapa) {
+      const filterEtapaStr = String(filterEtapa);
       // Si ya existe filtro por stage, combinarlo
       if (where.stage) {
         if (typeof where.stage === 'object' && where.stage[Op.in]) {
           // Ya es un array, filtrar los que coincidan
           const stagesArray = Array.isArray(where.stage[Op.in]) ? where.stage[Op.in] : [where.stage[Op.in]];
-          where.stage = { [Op.in]: stagesArray.filter((s: string) => s.toLowerCase().includes(filterEtapa.toLowerCase())) };
+          where.stage = { [Op.in]: stagesArray.filter((s: string) => s.toLowerCase().includes(filterEtapaStr.toLowerCase())) };
         } else {
           // Es un valor único, verificar si coincide
-          if (!String(where.stage).toLowerCase().includes(filterEtapa.toLowerCase())) {
+          if (!String(where.stage).toLowerCase().includes(filterEtapaStr.toLowerCase())) {
             where.stage = { [Op.in]: [] }; // No hay coincidencias
           }
         }
       } else {
-        where.stage = { [Op.iLike]: `%${filterEtapa}%` };
+        where.stage = { [Op.iLike]: `%${filterEtapaStr}%` };
       }
     }
 
@@ -423,6 +432,18 @@ router.post('/', writeLimiter, async (req: AuthRequest, res) => {
       ],
     });
 
+    // Registrar log
+    if (req.userId) {
+      await logSystemAction(
+        req.userId,
+        SystemActions.CREATE,
+        EntityTypes.DEAL,
+        deal.id,
+        { name: deal.name, amount: deal.amount, stage: deal.stage },
+        req
+      );
+    }
+
     res.status(201).json(transformDeal(newDeal));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -430,11 +451,16 @@ router.post('/', writeLimiter, async (req: AuthRequest, res) => {
 });
 
 // Actualizar deal
-router.put('/:id', writeLimiter, async (req, res) => {
+router.put('/:id', writeLimiter, async (req: AuthRequest, res) => {
   try {
     const deal = await Deal.findByPk(req.params.id);
     if (!deal) {
       return res.status(404).json({ error: 'Deal no encontrado' });
+    }
+
+    // Verificar permisos: solo el propietario o admin puede modificar
+    if (!canModifyResource(req.userRole, req.userId, deal.ownerId)) {
+      return res.status(403).json({ error: 'No tienes permisos para modificar este deal' });
     }
 
     await deal.update(req.body);
@@ -455,6 +481,18 @@ router.put('/:id', writeLimiter, async (req, res) => {
       ],
     });
 
+    // Registrar log
+    if (req.userId && updatedDeal) {
+      await logSystemAction(
+        req.userId,
+        SystemActions.UPDATE,
+        EntityTypes.DEAL,
+        deal.id,
+        { name: updatedDeal.name, changes: req.body },
+        req
+      );
+    }
+
     res.json(transformDeal(updatedDeal));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -462,14 +500,33 @@ router.put('/:id', writeLimiter, async (req, res) => {
 });
 
 // Eliminar deal
-router.delete('/:id', deleteLimiter, async (req, res) => {
+router.delete('/:id', deleteLimiter, async (req: AuthRequest, res) => {
   try {
     const deal = await Deal.findByPk(req.params.id);
     if (!deal) {
       return res.status(404).json({ error: 'Deal no encontrado' });
     }
 
+    // Verificar permisos: solo el propietario o admin puede eliminar
+    if (!canDeleteResource(req.userRole, req.userId, deal.ownerId)) {
+      return res.status(403).json({ error: 'No tienes permisos para eliminar este deal' });
+    }
+
+    const dealName = deal.name;
     await deal.destroy();
+
+    // Registrar log
+    if (req.userId) {
+      await logSystemAction(
+        req.userId,
+        SystemActions.DELETE,
+        EntityTypes.DEAL,
+        parseInt(req.params.id),
+        { name: dealName },
+        req
+      );
+    }
+
     res.json({ message: 'Deal eliminado exitosamente' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

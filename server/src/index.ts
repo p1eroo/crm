@@ -34,6 +34,8 @@ import emailRoutes from './routes/emails';
 import googleRoutes from './routes/calendar';
 import reportRoutes from './routes/reports';
 import searchRoutes from './routes/search';
+import systemLogRoutes from './routes/systemLogs';
+import roleRoutes from './routes/roles';
 import { setCacheHeaders } from './middleware/cacheHeaders';
 
 const app = express();
@@ -128,6 +130,8 @@ app.use('/api/emails', emailRoutes);
 app.use('/api/google', googleRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/system-logs', systemLogRoutes);
+app.use('/api/roles', roleRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -519,7 +523,7 @@ sequelize.authenticate()
     await Subscription.sync({ alter: false });
     
     // Sincronizar el resto de las tablas con alter (excepto Deal que tiene columnas ENUM manuales)
-    const { Deal, User, Role, MonthlyBudget, UserGoogleToken, DealContact, DealCompany, ContactCompany, ...rest } = await import('./models');
+    const { Deal, User, Role, MonthlyBudget, UserGoogleToken, DealContact, DealCompany, ContactCompany, SystemLog, ...rest } = await import('./models');
     
     // Sincronizar Deal sin alter para evitar conflictos con ENUMs
     if (Deal && typeof (Deal as any).sync === 'function') {
@@ -538,7 +542,7 @@ sequelize.authenticate()
     }
     
     // Sincronizar el resto de modelos con alter
-    const modelsToSync = [User, Role, MonthlyBudget, UserGoogleToken].filter(Boolean);
+    const modelsToSync = [User, Role, MonthlyBudget, UserGoogleToken, SystemLog].filter(Boolean);
     for (const Model of modelsToSync) {
       if (Model && typeof (Model as any).sync === 'function') {
         await (Model as any).sync({ alter: true });

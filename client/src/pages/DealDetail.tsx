@@ -1,11 +1,9 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { formatDatePeru } from "../utils/dateUtils";
 import {
   Box,
   Typography,
   Button,
-  Divider,
   IconButton,
   CircularProgress,
   Card,
@@ -15,53 +13,21 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  Menu,
   MenuItem,
   Tabs,
   Tab,
-  Popover,
   Checkbox,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemText,
-  InputBase,
   InputAdornment,
   RadioGroup,
   Radio,
   FormControlLabel,
-  Chip,
 } from "@mui/material";
 import {
-  Phone,
-  Person,
-  Business,
-  CalendarToday,
   Search,
-  MoreVert,
   Close,
-  ChevronLeft,
-  ChevronRight,
-  FormatBold,
-  FormatItalic,
-  FormatUnderlined,
-  FormatStrikethrough,
-  FormatListBulleted,
-  FormatListNumbered,
-  Link as LinkIcon,
-  Image,
-  Code,
-  TableChart,
-  AttachFile,
-  FormatAlignLeft,
-  FormatAlignCenter,
-  FormatAlignRight,
-  FormatAlignJustify,
-  ArrowDropDown,
 } from "@mui/icons-material";
 import api from "../config/api";
 import axios from "axios";
-import RichTextEditor from "../components/RichTextEditor";
 import { taxiMonterricoColors } from "../theme/colors";
 import {
   RecentActivitiesCard,
@@ -76,7 +42,7 @@ import {
   ActivitiesTabContent,
   GeneralDescriptionTab,
 } from "../components/DetailCards";
-import { NoteModal } from "../components/ActivityModals";
+import { NoteModal, CallModal, TaskModal } from "../components/ActivityModals";
 import type { GeneralInfoCard } from "../components/DetailCards";
 import { useAuth } from "../context/AuthContext";
 import DetailPageLayout from "../components/Layout/DetailPageLayout";
@@ -147,20 +113,8 @@ const DealDetail: React.FC = () => {
   } | null>(null);
   const [noteOpen, setNoteOpen] = useState(false);
   const [callOpen, setCallOpen] = useState(false);
-  const [callData, setCallData] = useState({
-    subject: "",
-    description: "",
-    duration: "",
-  });
   const [taskOpen, setTaskOpen] = useState(false);
-  const [taskData, setTaskData] = useState({
-    title: "",
-    description: "",
-    priority: "medium",
-    dueDate: "",
-    type: "todo" as string,
-  });
-  const [saving, setSaving] = useState(false);
+  const [taskType, setTaskType] = useState<"todo" | "meeting">("todo");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({
     name: '',
@@ -172,24 +126,7 @@ const DealDetail: React.FC = () => {
     contactId: '',
   });
   const [savingEdit, setSavingEdit] = useState(false);
-  const descriptionEditorRef = useRef<HTMLDivElement>(null);
-  const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState<null | HTMLElement>(
-    null
-  );
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [activeFormats, setActiveFormats] = useState({
-    bold: false,
-    italic: false,
-    underline: false,
-    strikeThrough: false,
-    unorderedList: false,
-    orderedList: false,
-  });
-  const [datePickerAnchorEl, setDatePickerAnchorEl] =
-    useState<HTMLElement | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [saving, setSaving] = useState(false);
   const [activitySearch, setActivitySearch] = useState("");
   const [companySearch, setCompanySearch] = useState("");
   const [dealSearch, setDealSearch] = useState("");
@@ -359,6 +296,52 @@ const DealDetail: React.FC = () => {
     }
   }, [id]);
 
+  // Función helper para deduplicar notas con el mismo contenido y timestamp similar
+  const deduplicateNotes = useCallback((activities: any[]) => {
+    const noteGroups = new Map<string, any[]>();
+    const otherActivities: any[] = [];
+
+    activities.forEach((activity) => {
+      // Solo deduplicar notas (type === 'note') que tengan dealId
+      if (activity.type === 'note' && activity.dealId) {
+        // Crear una clave única basada en contenido y timestamp
+        const timestamp = new Date(activity.createdAt || 0).getTime();
+        const timeWindow = Math.floor(timestamp / 5000) * 5000; // Agrupar por ventanas de 5 segundos
+        const key = `${activity.description || ''}|${activity.subject || ''}|${activity.userId || ''}|${activity.dealId}|${timeWindow}`;
+        
+        if (!noteGroups.has(key)) {
+          noteGroups.set(key, []);
+        }
+        noteGroups.get(key)!.push(activity);
+      } else {
+        // Mantener otras actividades sin deduplicar
+        otherActivities.push(activity);
+      }
+    });
+
+    // Crear array deduplicado: una nota representativa por grupo
+    const deduplicatedNotes: any[] = [];
+    noteGroups.forEach((group) => {
+      if (group.length > 0) {
+        // Usar la primera nota como representativa
+        const representative = { ...group[0] };
+        // Agregar información sobre el grupo si hay múltiples notas
+        if (group.length > 1) {
+          representative._deduplicatedCount = group.length;
+          representative._deduplicatedGroup = group.map((n: any) => n.id);
+        }
+        deduplicatedNotes.push(representative);
+      }
+    });
+
+    // Combinar notas deduplicadas con otras actividades y ordenar
+    return [...deduplicatedNotes, ...otherActivities].sort((a: any, b: any) => {
+      const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
+      const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
+      return dateB - dateA;
+    });
+  }, []);
+
   const fetchActivities = useCallback(async () => {
     if (!id) return;
 
@@ -407,13 +390,16 @@ const DealDetail: React.FC = () => {
         }
       );
 
+      // Aplicar deduplicación
+      const deduplicatedActivities = deduplicateNotes(allActivities);
+
       // Merge inteligente: preservar actividades existentes y agregar nuevas del servidor
       setActivities((prevActivities) => {
         // Crear un mapa de IDs existentes para referencia rápida
         const existingIds = new Set(prevActivities.map((a: any) => a.id));
         
         // Agregar actividades nuevas que no estén en el estado actual
-        const newActivities = allActivities.filter((a: any) => !existingIds.has(a.id));
+        const newActivities = deduplicatedActivities.filter((a: any) => !existingIds.has(a.id));
         
         // Combinar: mantener las actividades existentes + agregar las nuevas del servidor
         const merged = [...prevActivities, ...newActivities].sort((a: any, b: any) => {
@@ -422,12 +408,13 @@ const DealDetail: React.FC = () => {
           return dateB - dateA;
         });
         
-        return merged;
+        // Aplicar deduplicación al resultado final también
+        return deduplicateNotes(merged);
       });
     } catch (error) {
       console.error("Error fetching activities:", error);
     }
-  }, [id]);
+  }, [id, deduplicateNotes]);
 
   // Funciones helper para los logs
   const getActivityDescription = (activity: any) => {
@@ -516,64 +503,6 @@ const DealDetail: React.FC = () => {
     }
   }, [id, fetchActivityLogs]);
 
-  useEffect(() => {
-    if (descriptionEditorRef.current && taskOpen) {
-      if (taskData.description !== descriptionEditorRef.current.innerHTML) {
-        descriptionEditorRef.current.innerHTML = taskData.description || "";
-      }
-    }
-  }, [taskData.description, taskOpen]);
-
-  const updateActiveFormats = useCallback(() => {
-    if (descriptionEditorRef.current) {
-      setActiveFormats({
-        bold: document.queryCommandState("bold"),
-        italic: document.queryCommandState("italic"),
-        underline: document.queryCommandState("underline"),
-        strikeThrough: document.queryCommandState("strikeThrough"),
-        unorderedList: document.queryCommandState("insertUnorderedList"),
-        orderedList: document.queryCommandState("insertOrderedList"),
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    const editor = descriptionEditorRef.current;
-    if (!editor || !taskOpen) return;
-
-    const handleSelectionChange = () => {
-      updateActiveFormats();
-    };
-
-    const handleMouseUp = () => {
-      updateActiveFormats();
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (
-        e.key &&
-        (e.key === "ArrowLeft" ||
-          e.key === "ArrowRight" ||
-          e.key === "ArrowUp" ||
-          e.key === "ArrowDown" ||
-          e.key === "Shift" ||
-          e.key === "Control" ||
-          e.key === "Meta")
-      ) {
-        updateActiveFormats();
-      }
-    };
-
-    document.addEventListener("selectionchange", handleSelectionChange);
-    editor.addEventListener("mouseup", handleMouseUp);
-    editor.addEventListener("keyup", handleKeyUp as EventListener);
-
-    return () => {
-      document.removeEventListener("selectionchange", handleSelectionChange);
-      editor.removeEventListener("mouseup", handleMouseUp);
-      editor.removeEventListener("keyup", handleKeyUp as EventListener);
-    };
-  }, [updateActiveFormats, taskOpen]);
 
   const fetchAllCompanies = async () => {
     try {
@@ -1276,7 +1205,7 @@ const DealDetail: React.FC = () => {
     }
   };
 
-  const handleNoteSave = (newActivity: any) => {
+  const handleNoteSave = useCallback((newActivity: any) => {
     // Agregar la actividad inmediatamente al estado para que aparezca de inmediato
     setActivities((prevActivities) => {
       // Verificar que no esté ya en la lista (evitar duplicados)
@@ -1289,88 +1218,13 @@ const DealDetail: React.FC = () => {
         const dateB = new Date(b.createdAt || 0).getTime();
         return dateB - dateA;
       });
-      return updated;
+      
+      // Aplicar deduplicación al resultado final
+      return deduplicateNotes(updated);
     });
-  };
+  }, [deduplicateNotes]);
 
-  const handleSaveCall = async () => {
-    if (!callData.subject.trim()) {
-      return;
-    }
-    setSaving(true);
-    try {
-      // Crear actividad de llamada asociada al deal
-      await api.post("/activities/calls", {
-        subject: callData.subject,
-        description: callData.description,
-        dealId: id,
-        contactId: deal?.Contact?.id,
-        companyId: deal?.Company?.id,
-      });
-      setCallOpen(false);
-      setCallData({ subject: "", description: "", duration: "" });
-      fetchDeal(); // Actualizar actividades
-    } catch (error) {
-      console.error("Error saving call:", error);
-    } finally {
-      setSaving(false);
-    }
-  };
 
-  const handleOpenDatePicker = (event: React.MouseEvent<HTMLElement>) => {
-    if (taskData.dueDate) {
-      // Parsear el string YYYY-MM-DD como fecha local para evitar problemas de UTC
-      const dateMatch = taskData.dueDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
-      if (dateMatch) {
-        const year = parseInt(dateMatch[1], 10);
-        const month = parseInt(dateMatch[2], 10) - 1; // Los meses en Date son 0-11
-        const day = parseInt(dateMatch[3], 10);
-        const date = new Date(year, month, day);
-        setSelectedDate(date);
-        setCurrentMonth(date);
-      } else {
-        const date = new Date(taskData.dueDate);
-        setSelectedDate(date);
-        setCurrentMonth(date);
-      }
-    } else {
-      const today = new Date();
-      setSelectedDate(null);
-      setCurrentMonth(today);
-    }
-    setDatePickerAnchorEl(event.currentTarget);
-  };
-
-  const handleDateSelect = (year: number, month: number, day: number) => {
-    // Crear fecha para mostrar en el calendario (mes es 1-12, pero Date usa 0-11)
-    const date = new Date(year, month - 1, day);
-    setSelectedDate(date);
-    // Formatear directamente como YYYY-MM-DD sin conversiones de zona horaria
-    const formattedDate = `${year}-${String(month).padStart(2, "0")}-${String(
-      day
-    ).padStart(2, "0")}`;
-    setTaskData({ ...taskData, dueDate: formattedDate });
-    setDatePickerAnchorEl(null);
-  };
-
-  const handleClearDate = () => {
-    setSelectedDate(null);
-    setTaskData({ ...taskData, dueDate: "" });
-    setDatePickerAnchorEl(null);
-  };
-
-  const handleToday = () => {
-    // Obtener la fecha actual en hora de Perú
-    const today = new Date();
-    const peruToday = new Date(
-      today.toLocaleString("en-US", { timeZone: "America/Lima" })
-    );
-    const year = peruToday.getFullYear();
-    const month = peruToday.getMonth() + 1; // getMonth() devuelve 0-11, necesitamos 1-12
-    const day = peruToday.getDate();
-    // Usar la misma función handleDateSelect con los valores directos
-    handleDateSelect(year, month, day);
-  };
 
   const handleCreateActivity = (
     type: "note" | "task" | "email" | "call" | "meeting"
@@ -1379,113 +1233,16 @@ const DealDetail: React.FC = () => {
     if (type === "note") {
       setNoteOpen(true);
     } else if (type === "task") {
-      setTaskData({
-        title: "",
-        description: "",
-        priority: "medium",
-        dueDate: "",
-        type: "todo",
-      });
+      setTaskType("todo");
       setTaskOpen(true);
     } else if (type === "meeting") {
-      setTaskData({
-        title: "",
-        description: "",
-        priority: "medium",
-        dueDate: "",
-        type: "meeting",
-      });
+      setTaskType("meeting");
       setTaskOpen(true);
     } else if (type === "call") {
       setCallOpen(true);
     }
   };
 
-  const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
-
-    const prevMonthLastDay = new Date(year, month, 0).getDate();
-
-    const days: Array<{ day: number; isCurrentMonth: boolean }> = [];
-
-    // Días del mes anterior
-    // Si el mes empieza en domingo (0), no hay días del mes anterior
-    // Si empieza en lunes (1), hay 1 día del mes anterior, etc.
-    for (let i = 0; i < startingDayOfWeek; i++) {
-      const dayNumber = prevMonthLastDay - startingDayOfWeek + i + 1;
-      days.push({ day: dayNumber, isCurrentMonth: false });
-    }
-
-    // Días del mes actual
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push({ day: i, isCurrentMonth: true });
-    }
-
-    // Completar hasta 42 días (6 semanas) con días del siguiente mes
-    const remainingDays = 42 - days.length;
-    for (let i = 1; i <= remainingDays; i++) {
-      days.push({ day: i, isCurrentMonth: false });
-    }
-
-    return days;
-  };
-
-  const formatDateDisplay = (dateString: string) => {
-    return formatDatePeru(dateString);
-  };
-
-  const monthNames = [
-    "Enero",
-    "Febrero",
-    "Marzo",
-    "Abril",
-    "Mayo",
-    "Junio",
-    "Julio",
-    "Agosto",
-    "Septiembre",
-    "Octubre",
-    "Noviembre",
-    "Diciembre",
-  ];
-
-  const weekDays = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"];
-
-  const handleSaveTask = async () => {
-    if (!taskData.title.trim()) {
-      return;
-    }
-    setSaving(true);
-    try {
-      await api.post("/tasks", {
-        title: taskData.title,
-        description: taskData.description,
-        type: taskData.type || "todo",
-        status: "not started",
-        priority: taskData.priority || "medium",
-        dueDate: taskData.dueDate || undefined,
-        dealId: id,
-      });
-      setTaskOpen(false);
-      setTaskData({
-        title: "",
-        description: "",
-        priority: "medium",
-        dueDate: "",
-        type: "todo",
-      });
-      fetchActivities();
-    } catch (error) {
-      console.error("Error saving task:", error);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -1559,7 +1316,7 @@ const DealDetail: React.FC = () => {
           },
           {
             icon: ['fas', 'phone'],
-            tooltip: 'Hacer llamada',
+            tooltip: 'Llamada',
             onClick: () => handleCreateActivity('call'),
           },
           {
@@ -3789,321 +3546,32 @@ const DealDetail: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Ventana flotante de Llamada */}
-      {callOpen && (
-        <>
-          <Box
-            sx={{
-              position: "fixed",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              width: "600px",
-              maxWidth: "95vw",
-              maxHeight: "90vh",
-              backgroundColor: theme.palette.background.paper,
-              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
-              borderRadius: 4,
-              zIndex: 1500,
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-              animation: "fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-              "@keyframes fadeInScale": {
-                "0%": {
-                  opacity: 0,
-                  transform: "translate(-50%, -50%) scale(0.9)",
-                },
-                "100%": {
-                  opacity: 1,
-                  transform: "translate(-50%, -50%) scale(1)",
-                },
-              },
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Box
-              sx={{
-                backgroundColor: "transparent",
-                color: theme.palette.text.primary,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                minHeight: { xs: "64px", md: "72px" },
-                px: { xs: 3, md: 4 },
-              }}
-            >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: "50%",
-                    backgroundColor: `${taxiMonterricoColors.green}15`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Phone
-                    sx={{ fontSize: 20, color: taxiMonterricoColors.green }}
-                  />
-                </Box>
-                <Typography
-                  variant="h5"
-                  sx={{
-                    color: theme.palette.text.primary,
-                    fontWeight: 700,
-                    fontSize: { xs: "1.1rem", md: "1.25rem" },
-                    letterSpacing: "-0.02em",
-                  }}
-                >
-                  Llamada
-                </Typography>
-              </Box>
-              <IconButton
-                sx={{
-                  color: theme.palette.text.secondary,
-                  transition: "all 0.2s ease",
-                  "&:hover": {
-                    backgroundColor: theme.palette.action.hover,
-                    color: theme.palette.text.primary,
-                    transform: "rotate(90deg)",
-                  },
-                }}
-                size="medium"
-                onClick={() => setCallOpen(false)}
-              >
-                <Close />
-              </IconButton>
-            </Box>
-
-            <Box
-              sx={{
-                flexGrow: 1,
-                display: "flex",
-                flexDirection: "column",
-                p: { xs: 3, md: 4 },
-                overflow: "hidden",
-                overflowY: "auto",
-                gap: 3,
-                "&::-webkit-scrollbar": {
-                  width: "8px",
-                },
-                "&::-webkit-scrollbar-track": {
-                  backgroundColor: "transparent",
-                  borderRadius: "4px",
-                },
-                "&::-webkit-scrollbar-thumb": {
-                  backgroundColor:
-                    theme.palette.mode === "dark"
-                      ? "rgba(255,255,255,0.2)"
-                      : "rgba(0,0,0,0.2)",
-                  borderRadius: "4px",
-                  "&:hover": {
-                    backgroundColor:
-                      theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.3)"
-                        : "rgba(0,0,0,0.3)",
-                  },
-                  transition: "background-color 0.2s ease",
-                },
-              }}
-            >
-              <TextField
-                label="Asunto"
-                value={callData.subject}
-                onChange={(e) =>
-                  setCallData({ ...callData, subject: e.target.value })
-                }
-                required
-                fullWidth
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    "& fieldset": {
-                      borderWidth: "2px",
-                      borderColor: theme.palette.divider,
-                    },
-                    "&:hover fieldset": {
-                      borderColor: taxiMonterricoColors.green,
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: taxiMonterricoColors.green,
-                      borderWidth: "2px",
-                    },
-                  },
-                  "& .MuiInputLabel-root": {
-                    fontWeight: 500,
-                    "&.Mui-focused": {
-                      color: taxiMonterricoColors.green,
-                    },
-                  },
-                }}
-              />
-              <TextField
-                label="Duración (minutos)"
-                type="number"
-                value={callData.duration}
-                onChange={(e) =>
-                  setCallData({ ...callData, duration: e.target.value })
-                }
-                fullWidth
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    "& fieldset": {
-                      borderWidth: "2px",
-                      borderColor: theme.palette.divider,
-                    },
-                    "&:hover fieldset": {
-                      borderColor: taxiMonterricoColors.green,
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: taxiMonterricoColors.green,
-                      borderWidth: "2px",
-                    },
-                  },
-                  "& .MuiInputLabel-root": {
-                    fontWeight: 500,
-                    "&.Mui-focused": {
-                      color: taxiMonterricoColors.green,
-                    },
-                  },
-                }}
-              />
-              <TextField
-                label="Notas de la llamada"
-                multiline
-                rows={8}
-                value={callData.description}
-                onChange={(e) =>
-                  setCallData({ ...callData, description: e.target.value })
-                }
-                fullWidth
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    "& fieldset": {
-                      borderWidth: "2px",
-                      borderColor: theme.palette.divider,
-                    },
-                    "&:hover fieldset": {
-                      borderColor: taxiMonterricoColors.green,
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: taxiMonterricoColors.green,
-                      borderWidth: "2px",
-                    },
-                  },
-                  "& .MuiInputLabel-root": {
-                    fontWeight: 500,
-                    "&.Mui-focused": {
-                      color: taxiMonterricoColors.green,
-                    },
-                  },
-                }}
-              />
-            </Box>
-
-            <Box
-              sx={{
-                p: 3,
-                borderTop: `1px solid ${theme.palette.divider}`,
-                backgroundColor: theme.palette.background.paper,
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: 2,
-              }}
-            >
-              <Button
-                onClick={() => setCallOpen(false)}
-                variant="outlined"
-                sx={{
-                  textTransform: "none",
-                  color: theme.palette.text.secondary,
-                  borderColor: theme.palette.divider,
-                  fontWeight: 600,
-                  px: 3,
-                  py: 1,
-                  borderRadius: 2,
-                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                  "&:hover": {
-                    bgcolor: theme.palette.action.hover,
-                    borderColor: theme.palette.text.secondary,
-                    transform: "translateY(-1px)",
-                  },
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleSaveCall}
-                variant="contained"
-                disabled={saving || !callData.subject.trim()}
-                sx={{
-                  textTransform: "none",
-                  bgcolor: saving
-                    ? theme.palette.action.disabledBackground
-                    : taxiMonterricoColors.green,
-                  color: "white",
-                  fontWeight: 600,
-                  px: 4,
-                  py: 1,
-                  borderRadius: 2,
-                  boxShadow: saving
-                    ? "none"
-                    : `0 4px 12px ${taxiMonterricoColors.green}40`,
-                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                  "&:hover": {
-                    bgcolor: saving
-                      ? theme.palette.action.disabledBackground
-                      : taxiMonterricoColors.greenDark,
-                    boxShadow: saving
-                      ? "none"
-                      : `0 6px 16px ${taxiMonterricoColors.green}50`,
-                    transform: "translateY(-2px)",
-                  },
-                  "&:active": {
-                    transform: "translateY(0)",
-                  },
-                  "&.Mui-disabled": {
-                    bgcolor: theme.palette.action.disabledBackground,
-                    color: theme.palette.action.disabled,
-                    boxShadow: "none",
-                  },
-                }}
-              >
-                {saving ? "Guardando..." : "Guardar"}
-              </Button>
-            </Box>
-          </Box>
-          <Box
-            sx={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: "rgba(0, 0, 0, 0.5)",
-              zIndex: 1499,
-              animation: "fadeIn 0.3s ease-out",
-              "@keyframes fadeIn": {
-                "0%": {
-                  opacity: 0,
-                },
-                "100%": {
-                  opacity: 1,
-                },
-              },
-            }}
-            onClick={() => setCallOpen(false)}
-          />
-        </>
-      )}
+      {/* Modal de crear llamada */}
+      <CallModal
+        open={callOpen}
+        onClose={() => setCallOpen(false)}
+        entityType="deal"
+        entityId={id || ""}
+        entityName={deal?.name || "Sin nombre"}
+        user={user}
+        onSave={(newActivity) => {
+          // Agregar la actividad inmediatamente al estado
+          setActivities((prevActivities) => {
+            const exists = prevActivities.some((a: any) => a.id === newActivity.id);
+            if (exists) return prevActivities;
+            return [newActivity, ...prevActivities].sort((a: any, b: any) => {
+              const dateA = new Date(a.createdAt || 0).getTime();
+              const dateB = new Date(b.createdAt || 0).getTime();
+              return dateB - dateA;
+            });
+          });
+          fetchActivities(); // Actualizar actividades
+        }}
+        relatedEntityIds={{
+          contactId: deal?.Contact?.id,
+          companyId: deal?.Company?.id,
+        }}
+      />
 
       {/* Modal de crear nota */}
       <NoteModal
@@ -4130,1174 +3598,43 @@ const DealDetail: React.FC = () => {
         }}
       />
 
-      {/* Dialog para crear tarea */}
-      <Dialog
+      {/* Modal de crear tarea */}
+      <TaskModal
         open={taskOpen}
         onClose={() => setTaskOpen(false)}
-        maxWidth={false}
-        fullWidth={false}
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            maxHeight: "90vh",
-            width: "560px",
-            maxWidth: "90vw",
-          },
+        entityType="deal"
+        entityId={id || ""}
+        entityName={deal?.name || "Sin nombre"}
+        user={user}
+        taskType={taskType}
+        onSave={(newTask) => {
+          // Convertir la tarea a formato de actividad para agregarla a la lista
+          const taskAsActivity = {
+            id: newTask.id,
+            type: newTask.type === "meeting" ? "meeting" : "task",
+            subject: newTask.title,
+            description: newTask.description,
+            dueDate: newTask.dueDate,
+            createdAt: newTask.createdAt,
+            User: newTask.CreatedBy || newTask.AssignedTo,
+            isTask: true,
+            status: newTask.status,
+            priority: newTask.priority,
+            dealId: newTask.dealId,
+          };
+          // Agregar la actividad inmediatamente al estado
+          setActivities((prevActivities) => {
+            const exists = prevActivities.some((a: any) => a.id === newTask.id);
+            if (exists) return prevActivities;
+            return [taskAsActivity, ...prevActivities].sort((a: any, b: any) => {
+              const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
+              const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
+              return dateB - dateA;
+            });
+          });
+          fetchActivities(); // Actualizar actividades
         }}
-      >
-        <Box
-          sx={{
-            backgroundColor: "transparent",
-            color: theme.palette.text.primary,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            minHeight: 48,
-            px: 2,
-            pt: 1.5,
-            pb: 0.5,
-          }}
-        >
-          <Typography
-            variant="h5"
-            sx={{
-              color: theme.palette.text.primary,
-              fontWeight: 700,
-              fontSize: "1rem",
-              letterSpacing: "-0.02em",
-            }}
-          >
-            {taskData.type === "meeting" ? "Reunión" : "Tarea"}
-          </Typography>
-          <IconButton
-            sx={{
-              color: theme.palette.text.secondary,
-              transition: "all 0.2s ease",
-              "&:hover": {
-                backgroundColor: theme.palette.action.hover,
-                color: theme.palette.text.primary,
-                transform: "rotate(90deg)",
-              },
-            }}
-            size="medium"
-            onClick={() => setTaskOpen(false)}
-          >
-            <Close />
-          </IconButton>
-        </Box>
-
-        <DialogContent sx={{ px: 2, pb: 1, pt: 0.5 }}>
-          <TextField
-            label="Título"
-            value={taskData.title}
-            onChange={(e) =>
-              setTaskData({ ...taskData, title: e.target.value })
-            }
-            fullWidth
-            InputLabelProps={{
-              shrink: !!taskData.title,
-            }}
-            sx={{
-              mb: 1.5,
-              "& .MuiOutlinedInput-root": {
-                borderRadius: 0.5,
-                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                fontSize: "0.75rem",
-                "& fieldset": {
-                  borderWidth: 0,
-                  border: "none",
-                  top: 0,
-                },
-                "&:hover fieldset": {
-                  border: "none",
-                },
-                "&.Mui-focused fieldset": {
-                  borderWidth: "2px !important",
-                  borderColor: `${taxiMonterricoColors.orange} !important`,
-                  borderStyle: "solid !important",
-                  top: 0,
-                },
-              },
-              "& .MuiOutlinedInput-notchedOutline": {
-                borderWidth: "0px !important",
-                "& legend": {
-                  width: 0,
-                  display: "none",
-                },
-              },
-              "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline":
-                {
-                  borderWidth: "2px !important",
-                  borderColor: `${taxiMonterricoColors.green} !important`,
-                  borderStyle: "solid !important",
-                  "& legend": {
-                    width: 0,
-                    display: "none",
-                  },
-                },
-              "& .MuiInputLabel-root": {
-                fontWeight: 500,
-                position: "absolute",
-                left: 12,
-                top: "50%",
-                transform: "translateY(-50%)",
-                pointerEvents: "none",
-                zIndex: 0,
-                backgroundColor: "transparent",
-                padding: 0,
-                margin: 0,
-                fontSize: "0.75rem",
-                "&.Mui-focused": {
-                  color: taxiMonterricoColors.orange,
-                  transform: "translateY(-50%)",
-                  backgroundColor: "transparent",
-                },
-                "&.MuiInputLabel-shrink": {
-                  display: "none",
-                },
-              },
-              "& .MuiInputBase-input": {
-                position: "relative",
-                zIndex: 1,
-                fontSize: "0.75rem",
-                py: 1,
-              },
-            }}
-          />
-          <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
-            <Box sx={{ flex: 1 }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  mb: 0.75,
-                  color: theme.palette.text.secondary,
-                  fontWeight: 500,
-                  fontSize: "0.75rem",
-                }}
-              >
-                Prioridad
-              </Typography>
-              <TextField
-                select
-                value={taskData.priority}
-                onChange={(e) =>
-                  setTaskData({ ...taskData, priority: e.target.value })
-                }
-                fullWidth
-                SelectProps={{
-                  MenuProps: {
-                    PaperProps: {
-                      sx: {
-                        borderRadius: 2,
-                        mt: 1,
-                      },
-                    },
-                  },
-                }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 0.5,
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    fontSize: "0.75rem",
-                    "& fieldset": {
-                      borderWidth: "2px",
-                      borderColor: theme.palette.divider,
-                    },
-                    "&:hover fieldset": {
-                      borderColor: taxiMonterricoColors.orange,
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: taxiMonterricoColors.orange,
-                      borderWidth: "2px",
-                    },
-                  },
-                  "& .MuiInputBase-input": {
-                    fontSize: "0.75rem",
-                    py: 1,
-                  },
-                  "& .MuiInputLabel-root": {
-                    fontWeight: 500,
-                    fontSize: "0.75rem",
-                    "&.Mui-focused": {
-                      color: taxiMonterricoColors.orange,
-                    },
-                  },
-                }}
-              >
-                <MenuItem value="low" sx={{ fontSize: "0.75rem", py: 0.75 }}>
-                  Baja
-                </MenuItem>
-                <MenuItem value="medium" sx={{ fontSize: "0.75rem", py: 0.75 }}>
-                  Media
-                </MenuItem>
-                <MenuItem value="high" sx={{ fontSize: "0.75rem", py: 0.75 }}>
-                  Alta
-                </MenuItem>
-                <MenuItem value="urgent" sx={{ fontSize: "0.75rem", py: 0.75 }}>
-                  Urgente
-                </MenuItem>
-              </TextField>
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  mb: 0.75,
-                  color: theme.palette.text.secondary,
-                  fontWeight: 500,
-                  fontSize: "0.75rem",
-                }}
-              >
-                Fecha límite
-              </Typography>
-              <TextField
-                value={
-                  taskData.dueDate ? formatDateDisplay(taskData.dueDate) : ""
-                }
-                onClick={handleOpenDatePicker}
-                fullWidth
-                InputProps={{
-                  readOnly: true,
-                  endAdornment: (
-                    <IconButton
-                      size="small"
-                      onClick={handleOpenDatePicker}
-                      sx={{
-                        color: theme.palette.text.secondary,
-                        mr: 0.5,
-                        "&:hover": {
-                          backgroundColor: "transparent",
-                          color: taxiMonterricoColors.orange,
-                        },
-                      }}
-                    >
-                      <CalendarToday sx={{ fontSize: 18 }} />
-                    </IconButton>
-                  ),
-                }}
-                sx={{
-                  cursor: "pointer",
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 0.5,
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    fontSize: "0.75rem",
-                    "& fieldset": {
-                      borderWidth: "2px",
-                      borderColor: theme.palette.divider,
-                    },
-                    "&:hover fieldset": {
-                      borderColor: taxiMonterricoColors.orange,
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: taxiMonterricoColors.orange,
-                      borderWidth: "2px",
-                    },
-                  },
-                  "& .MuiInputBase-input": {
-                    fontSize: "0.75rem",
-                    py: 1,
-                    cursor: "pointer",
-                  },
-                  "& .MuiInputLabel-root": {
-                    fontWeight: 500,
-                    fontSize: "0.75rem",
-                    "&.Mui-focused": {
-                      color: taxiMonterricoColors.orange,
-                    },
-                  },
-                }}
-              />
-            </Box>
-          </Box>
-          <Divider sx={{ my: 1.5 }} />
-          <Box sx={{ position: "relative" }}>
-            <Box
-              ref={descriptionEditorRef}
-              contentEditable
-              suppressContentEditableWarning
-              onInput={(e) => {
-                const html = (e.target as HTMLElement).innerHTML;
-                if (html !== taskData.description) {
-                  setTaskData({ ...taskData, description: html });
-                }
-              }}
-              sx={{
-                minHeight: "150px",
-                maxHeight: "250px",
-                overflowY: "auto",
-                pt: 0,
-                pb: 1.5,
-                px: 1,
-                borderRadius: 0.5,
-                border: "none",
-                outline: "none",
-                fontSize: "0.75rem",
-                lineHeight: 1.5,
-                color: theme.palette.text.primary,
-                "&:empty:before": {
-                  content: '"Descripción"',
-                  color: theme.palette.text.disabled,
-                },
-                "&::-webkit-scrollbar": {
-                  width: "6px",
-                },
-                "&::-webkit-scrollbar-track": {
-                  backgroundColor: "transparent",
-                },
-                "&::-webkit-scrollbar-thumb": {
-                  backgroundColor:
-                    theme.palette.mode === "dark"
-                      ? "rgba(255,255,255,0.2)"
-                      : "rgba(0,0,0,0.2)",
-                  borderRadius: "3px",
-                },
-              }}
-            />
-            <Box
-              sx={{
-                position: "absolute",
-                bottom: 0.5,
-                left: 4,
-                right: 4,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 0.5,
-                backgroundColor: "transparent",
-                borderRadius: 1,
-                p: 0.5,
-                border: "none",
-              }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0.5,
-                  flexWrap: "nowrap",
-                }}
-              >
-                <IconButton
-                  size="small"
-                  sx={{
-                    p: 0.25,
-                    minWidth: 28,
-                    height: 28,
-                    backgroundColor: activeFormats.bold
-                      ? theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.15)"
-                        : "#e0e0e0"
-                      : "transparent",
-                    "&:hover": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
-                    },
-                  }}
-                  onClick={() => {
-                    document.execCommand("bold");
-                    updateActiveFormats();
-                  }}
-                  title="Negrita"
-                >
-                  <FormatBold sx={{ fontSize: 16 }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  sx={{
-                    p: 0.25,
-                    minWidth: 28,
-                    height: 28,
-                    backgroundColor: activeFormats.italic
-                      ? theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.15)"
-                        : "#e0e0e0"
-                      : "transparent",
-                    "&:hover": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
-                    },
-                  }}
-                  onClick={() => {
-                    document.execCommand("italic");
-                    updateActiveFormats();
-                  }}
-                  title="Cursiva"
-                >
-                  <FormatItalic sx={{ fontSize: 16 }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  sx={{
-                    p: 0.25,
-                    minWidth: 28,
-                    height: 28,
-                    backgroundColor: activeFormats.underline
-                      ? theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.15)"
-                        : "#e0e0e0"
-                      : "transparent",
-                    "&:hover": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
-                    },
-                  }}
-                  onClick={() => {
-                    document.execCommand("underline");
-                    updateActiveFormats();
-                  }}
-                  title="Subrayado"
-                >
-                  <FormatUnderlined sx={{ fontSize: 16 }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  sx={{
-                    p: 0.25,
-                    minWidth: 28,
-                    height: 28,
-                    backgroundColor: activeFormats.strikeThrough
-                      ? theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.15)"
-                        : "#e0e0e0"
-                      : "transparent",
-                    "&:hover": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
-                    },
-                  }}
-                  onClick={() => {
-                    document.execCommand("strikeThrough");
-                    updateActiveFormats();
-                  }}
-                  title="Tachado"
-                >
-                  <FormatStrikethrough sx={{ fontSize: 16 }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  sx={{ p: 0.25, minWidth: 28, height: 28 }}
-                  onClick={(e) => setMoreMenuAnchorEl(e.currentTarget)}
-                  title="Más opciones"
-                >
-                  <MoreVert sx={{ fontSize: 16 }} />
-                </IconButton>
-                <Menu
-                  anchorEl={moreMenuAnchorEl}
-                  open={Boolean(moreMenuAnchorEl)}
-                  onClose={() => setMoreMenuAnchorEl(null)}
-                >
-                  <MenuItem
-                    onClick={() => {
-                      document.execCommand("justifyLeft");
-                      setMoreMenuAnchorEl(null);
-                    }}
-                    sx={{
-                      py: 0.75,
-                      px: 1,
-                      minWidth: "auto",
-                      justifyContent: "center",
-                    }}
-                    title="Alinear izquierda"
-                  >
-                    <FormatAlignLeft sx={{ fontSize: 16 }} />
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      document.execCommand("justifyCenter");
-                      setMoreMenuAnchorEl(null);
-                    }}
-                    sx={{
-                      py: 0.75,
-                      px: 1,
-                      minWidth: "auto",
-                      justifyContent: "center",
-                    }}
-                    title="Alinear centro"
-                  >
-                    <FormatAlignCenter sx={{ fontSize: 16 }} />
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      document.execCommand("justifyRight");
-                      setMoreMenuAnchorEl(null);
-                    }}
-                    sx={{
-                      py: 0.75,
-                      px: 1,
-                      minWidth: "auto",
-                      justifyContent: "center",
-                    }}
-                    title="Alinear derecha"
-                  >
-                    <FormatAlignRight sx={{ fontSize: 16 }} />
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      document.execCommand("justifyFull");
-                      setMoreMenuAnchorEl(null);
-                    }}
-                    sx={{
-                      py: 0.75,
-                      px: 1,
-                      minWidth: "auto",
-                      justifyContent: "center",
-                    }}
-                    title="Justificar"
-                  >
-                    <FormatAlignJustify sx={{ fontSize: 16 }} />
-                  </MenuItem>
-                </Menu>
-                <Divider
-                  orientation="vertical"
-                  flexItem
-                  sx={{ mx: 0.5, height: "20px" }}
-                />
-                <IconButton
-                  size="small"
-                  sx={{
-                    p: 0.25,
-                    minWidth: 28,
-                    height: 28,
-                    backgroundColor: activeFormats.unorderedList
-                      ? theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.15)"
-                        : "#e0e0e0"
-                      : "transparent",
-                    "&:hover": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
-                    },
-                  }}
-                  onClick={() => {
-                    document.execCommand("insertUnorderedList");
-                    updateActiveFormats();
-                  }}
-                  title="Lista con viñetas"
-                >
-                  <FormatListBulleted sx={{ fontSize: 16 }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  sx={{
-                    p: 0.25,
-                    minWidth: 28,
-                    height: 28,
-                    backgroundColor: activeFormats.orderedList
-                      ? theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.15)"
-                        : "#e0e0e0"
-                      : "transparent",
-                    "&:hover": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
-                    },
-                  }}
-                  onClick={() => {
-                    document.execCommand("insertOrderedList");
-                    updateActiveFormats();
-                  }}
-                  title="Lista numerada"
-                >
-                  <FormatListNumbered sx={{ fontSize: 16 }} />
-                </IconButton>
-                <Divider
-                  orientation="vertical"
-                  flexItem
-                  sx={{ mx: 0.5, height: "20px" }}
-                />
-                <IconButton
-                  size="small"
-                  sx={{ p: 0.25, minWidth: 28, height: 28 }}
-                  onClick={() => {
-                    const url = prompt("URL:");
-                    if (url) {
-                      document.execCommand("createLink", false, url);
-                    }
-                  }}
-                  title="Insertar enlace"
-                >
-                  <LinkIcon sx={{ fontSize: 16 }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  sx={{ p: 0.25, minWidth: 28, height: 28 }}
-                  onClick={() => imageInputRef.current?.click()}
-                  title="Insertar imagen"
-                >
-                  <Image sx={{ fontSize: 16 }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  sx={{ p: 0.25, minWidth: 28, height: 28 }}
-                  onClick={() => {
-                    const code = prompt("Ingresa el código:");
-                    if (code && descriptionEditorRef.current) {
-                      const selection = window.getSelection();
-                      let range: Range | null = null;
-
-                      if (selection && selection.rangeCount > 0) {
-                        range = selection.getRangeAt(0);
-                      } else {
-                        range = document.createRange();
-                        range.selectNodeContents(descriptionEditorRef.current);
-                        range.collapse(false);
-                      }
-
-                      if (range) {
-                        const pre = document.createElement("pre");
-                        pre.style.backgroundColor =
-                          theme.palette.mode === "dark" ? "#1e1e1e" : "#f5f5f5";
-                        pre.style.color = theme.palette.text.primary;
-                        pre.style.padding = "8px";
-                        pre.style.borderRadius = "4px";
-                        pre.style.fontFamily = "monospace";
-                        pre.style.fontSize = "0.75rem";
-                        pre.textContent = code;
-
-                        range.deleteContents();
-                        range.insertNode(pre);
-                        range.setStartAfter(pre);
-                        range.collapse(true);
-                        if (selection) {
-                          selection.removeAllRanges();
-                          selection.addRange(range);
-                        }
-                        setTaskData({
-                          ...taskData,
-                          description: descriptionEditorRef.current.innerHTML,
-                        });
-                      }
-                    }
-                  }}
-                  title="Insertar código"
-                >
-                  <Code sx={{ fontSize: 16 }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  sx={{ p: 0.25, minWidth: 28, height: 28 }}
-                  onClick={() => {
-                    const rows = prompt("Número de filas:", "3");
-                    const cols = prompt("Número de columnas:", "3");
-                    if (rows && cols && descriptionEditorRef.current) {
-                      const table = document.createElement("table");
-                      table.style.borderCollapse = "collapse";
-                      table.style.width = "100%";
-                      table.style.border = "1px solid #ccc";
-                      table.style.margin = "8px 0";
-
-                      for (let i = 0; i < parseInt(rows); i++) {
-                        const tr = document.createElement("tr");
-                        for (let j = 0; j < parseInt(cols); j++) {
-                          const td = document.createElement("td");
-                          td.style.border = "1px solid #ccc";
-                          td.style.padding = "8px";
-                          td.innerHTML = "&nbsp;";
-                          tr.appendChild(td);
-                        }
-                        table.appendChild(tr);
-                      }
-
-                      const selection = window.getSelection();
-                      if (selection && selection.rangeCount > 0) {
-                        const range = selection.getRangeAt(0);
-                        range.deleteContents();
-                        range.insertNode(table);
-                        range.setStartAfter(table);
-                        range.collapse(true);
-                        selection.removeAllRanges();
-                        selection.addRange(range);
-                        setTaskData({
-                          ...taskData,
-                          description: descriptionEditorRef.current.innerHTML,
-                        });
-                      }
-                    }
-                  }}
-                  title="Insertar tabla"
-                >
-                  <TableChart sx={{ fontSize: 16 }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  sx={{ p: 0.25, minWidth: 28, height: 28 }}
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Adjuntar archivo"
-                >
-                  <AttachFile sx={{ fontSize: 16 }} />
-                </IconButton>
-              </Box>
-            </Box>
-          </Box>
-          {/* Input oculto para seleccionar archivos de imagen */}
-          <input
-            ref={imageInputRef}
-            type="file"
-            accept="image/*"
-            style={{ display: "none" }}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (!file || !descriptionEditorRef.current) return;
-
-              if (!file.type.startsWith("image/")) {
-                alert("Por favor, selecciona un archivo de imagen válido.");
-                return;
-              }
-
-              const reader = new FileReader();
-              reader.onload = (event) => {
-                const dataUrl = event.target?.result as string;
-                if (dataUrl) {
-                  descriptionEditorRef.current?.focus();
-
-                  const selection = window.getSelection();
-                  let range: Range | null = null;
-
-                  if (selection && selection.rangeCount > 0) {
-                    range = selection.getRangeAt(0);
-                  } else if (descriptionEditorRef.current) {
-                    range = document.createRange();
-                    range.selectNodeContents(descriptionEditorRef.current);
-                    range.collapse(false);
-                    if (selection) {
-                      selection.removeAllRanges();
-                      selection.addRange(range);
-                    }
-                  }
-
-                  if (range) {
-                    const img = document.createElement("img");
-                    img.src = dataUrl;
-                    img.style.maxWidth = "100%";
-                    img.style.height = "auto";
-                    img.alt = file.name;
-
-                    range.insertNode(img);
-                    range.setStartAfter(img);
-                    range.collapse(true);
-                    if (selection) {
-                      selection.removeAllRanges();
-                      selection.addRange(range);
-                    }
-
-                    if (descriptionEditorRef.current) {
-                      setTaskData({
-                        ...taskData,
-                        description: descriptionEditorRef.current.innerHTML,
-                      });
-                    }
-                  }
-                }
-              };
-
-              reader.onerror = () => {
-                alert("Error al leer el archivo de imagen.");
-              };
-
-              reader.readAsDataURL(file);
-
-              if (imageInputRef.current) {
-                imageInputRef.current.value = "";
-              }
-            }}
-          />
-          {/* Input oculto para adjuntar archivos */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            style={{ display: "none" }}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (!file || !descriptionEditorRef.current) return;
-
-              const reader = new FileReader();
-              reader.onload = (event) => {
-                const dataUrl = event.target?.result as string;
-                if (dataUrl) {
-                  descriptionEditorRef.current?.focus();
-
-                  const selection = window.getSelection();
-                  let range: Range | null = null;
-
-                  if (selection && selection.rangeCount > 0) {
-                    range = selection.getRangeAt(0);
-                  } else if (descriptionEditorRef.current) {
-                    range = document.createRange();
-                    range.selectNodeContents(descriptionEditorRef.current);
-                    range.collapse(false);
-                    if (selection) {
-                      selection.removeAllRanges();
-                      selection.addRange(range);
-                    }
-                  }
-
-                  if (range) {
-                    const link = document.createElement("a");
-                    link.href = dataUrl;
-                    link.download = file.name;
-                    link.textContent = `📎 ${file.name}`;
-                    link.style.display = "inline-block";
-                    link.style.margin = "4px";
-                    link.style.padding = "4px 8px";
-                    link.style.backgroundColor =
-                      theme.palette.mode === "dark" ? "#2a2a2a" : "#f5f5f5";
-                    link.style.borderRadius = "4px";
-                    link.style.textDecoration = "none";
-                    link.style.color = theme.palette.text.primary;
-
-                    range.insertNode(link);
-                    range.setStartAfter(link);
-                    range.collapse(true);
-                    if (selection) {
-                      selection.removeAllRanges();
-                      selection.addRange(range);
-                    }
-
-                    if (descriptionEditorRef.current) {
-                      setTaskData({
-                        ...taskData,
-                        description: descriptionEditorRef.current.innerHTML,
-                      });
-                    }
-                  }
-                }
-              };
-
-              reader.onerror = () => {
-                alert("Error al leer el archivo.");
-              };
-
-              reader.readAsDataURL(file);
-
-              if (fileInputRef.current) {
-                fileInputRef.current.value = "";
-              }
-            }}
-          />
-        </DialogContent>
-        <Box sx={{ px: 2 }}>
-          <Divider sx={{ mt: 0.25, mb: 1.5 }} />
-        </Box>
-        <DialogActions sx={{ px: 2, pb: 1.5, pt: 0.5, gap: 0.75 }}>
-          <Button
-            onClick={() => setTaskOpen(false)}
-            size="small"
-            sx={{
-              textTransform: "none",
-              color: theme.palette.text.secondary,
-              fontWeight: 500,
-              px: 2,
-              py: 0.5,
-              fontSize: "0.75rem",
-              "&:hover": {
-                bgcolor: theme.palette.action.hover,
-              },
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSaveTask}
-            variant="contained"
-            size="small"
-            disabled={saving || !taskData.title.trim()}
-            sx={{
-              textTransform: "none",
-              fontWeight: 500,
-              px: 2,
-              py: 0.5,
-              fontSize: "0.75rem",
-              bgcolor: taskData.title.trim()
-                ? taxiMonterricoColors.green
-                : theme.palette.action.disabledBackground,
-              color: "white",
-              "&:hover": {
-                bgcolor: taskData.title.trim()
-                  ? taxiMonterricoColors.green
-                  : theme.palette.action.disabledBackground,
-                opacity: 0.9,
-              },
-              "&:disabled": {
-                bgcolor: theme.palette.action.disabledBackground,
-                color: theme.palette.action.disabled,
-              },
-            }}
-          >
-            {saving ? "Guardando..." : "Guardar"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Date Picker Popover */}
-      <Popover
-        open={Boolean(datePickerAnchorEl)}
-        anchorEl={datePickerAnchorEl}
-        onClose={() => setDatePickerAnchorEl(null)}
-        anchorOrigin={{
-          vertical: "bottom",
-          horizontal: "left",
-        }}
-        transformOrigin={{
-          vertical: "top",
-          horizontal: "left",
-        }}
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            overflow: "hidden",
-            boxShadow:
-              theme.palette.mode === "dark"
-                ? "0 8px 32px rgba(0,0,0,0.4)"
-                : "0 8px 32px rgba(0,0,0,0.12)",
-            mt: 0.5,
-            maxWidth: 280,
-          },
-        }}
-      >
-        <Box sx={{ p: 2, bgcolor: theme.palette.background.paper }}>
-          {/* Header con mes y año */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              mb: 3,
-              pb: 2,
-              borderBottom: `1px solid ${theme.palette.divider}`,
-            }}
-          >
-            <IconButton
-              size="small"
-              onClick={() => {
-                const newDate = new Date(currentMonth);
-                newDate.setMonth(newDate.getMonth() - 1);
-                setCurrentMonth(newDate);
-              }}
-              sx={{
-                color: theme.palette.text.secondary,
-                border: `1px solid ${theme.palette.divider}`,
-                "&:hover": {
-                  bgcolor: theme.palette.action.hover,
-                  borderColor: taxiMonterricoColors.green,
-                  color: taxiMonterricoColors.green,
-                },
-              }}
-            >
-              <ChevronLeft />
-            </IconButton>
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 600,
-                fontSize: "0.95rem",
-                color: theme.palette.text.primary,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-            </Typography>
-            <IconButton
-              size="small"
-              onClick={() => {
-                const newDate = new Date(currentMonth);
-                newDate.setMonth(newDate.getMonth() + 1);
-                setCurrentMonth(newDate);
-              }}
-              sx={{
-                color: theme.palette.text.secondary,
-                border: `1px solid ${theme.palette.divider}`,
-                "&:hover": {
-                  bgcolor: theme.palette.action.hover,
-                  borderColor: taxiMonterricoColors.green,
-                  color: taxiMonterricoColors.green,
-                },
-              }}
-            >
-              <ChevronRight />
-            </IconButton>
-          </Box>
-
-          {/* Días de la semana */}
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "repeat(7, 1fr)",
-              gap: 0.5,
-              mb: 1.5,
-            }}
-          >
-            {weekDays.map((day) => (
-              <Typography
-                key={day}
-                variant="caption"
-                sx={{
-                  textAlign: "center",
-                  fontWeight: 600,
-                  color: theme.palette.text.secondary,
-                  fontSize: "0.7rem",
-                  py: 0.5,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                {day}
-              </Typography>
-            ))}
-          </Box>
-
-          {/* Calendario */}
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "repeat(7, 1fr)",
-              gap: 0.5,
-              mb: 1.5,
-            }}
-          >
-            {getDaysInMonth(currentMonth).map((item, index) => {
-              let year = currentMonth.getFullYear();
-              let month = currentMonth.getMonth();
-
-              if (!item.isCurrentMonth) {
-                if (index < 7) {
-                  month = month - 1;
-                  if (month < 0) {
-                    month = 11;
-                    year = year - 1;
-                  }
-                } else {
-                  month = month + 1;
-                  if (month > 11) {
-                    month = 0;
-                    year = year + 1;
-                  }
-                }
-              }
-
-              const date = new Date(year, month, item.day);
-
-              const isSelected =
-                selectedDate &&
-                item.isCurrentMonth &&
-                date.toDateString() === selectedDate.toDateString();
-              const isToday =
-                item.isCurrentMonth &&
-                date.toDateString() === new Date().toDateString();
-
-              return (
-                <Box
-                  key={`${item.isCurrentMonth ? "current" : "other"}-${
-                    item.day
-                  }-${index}`}
-                  onClick={() => {
-                    if (item.isCurrentMonth) {
-                      handleDateSelect(year, month + 1, item.day);
-                    }
-                  }}
-                  sx={{
-                    aspectRatio: "1",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: 2,
-                    cursor: item.isCurrentMonth ? "pointer" : "default",
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    bgcolor: isSelected
-                      ? taxiMonterricoColors.green
-                      : isToday
-                      ? `${taxiMonterricoColors.green}20`
-                      : "transparent",
-                    color: isSelected
-                      ? "white"
-                      : isToday
-                      ? taxiMonterricoColors.green
-                      : item.isCurrentMonth
-                      ? theme.palette.text.primary
-                      : theme.palette.text.disabled,
-                    fontWeight: isSelected ? 700 : isToday ? 600 : 400,
-                    fontSize: "0.75rem",
-                    position: "relative",
-                    minHeight: "28px",
-                    minWidth: "28px",
-                    "&:hover": {
-                      bgcolor: item.isCurrentMonth
-                        ? isSelected
-                          ? taxiMonterricoColors.green
-                          : `${taxiMonterricoColors.green}15`
-                        : "transparent",
-                      transform:
-                        item.isCurrentMonth && !isSelected
-                          ? "scale(1.05)"
-                          : "none",
-                    },
-                    opacity: item.isCurrentMonth ? 1 : 0.35,
-                  }}
-                >
-                  {item.day}
-                </Box>
-              );
-            })}
-          </Box>
-
-          {/* Botones de acción */}
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              mt: 1.5,
-              pt: 1.5,
-              borderTop: `1px solid ${theme.palette.divider}`,
-              gap: 1,
-            }}
-          >
-            <Button
-              onClick={handleClearDate}
-              sx={{
-                textTransform: "none",
-                color: theme.palette.text.secondary,
-                fontWeight: 500,
-                px: 1.5,
-                py: 0.5,
-                borderRadius: 1,
-                "&:hover": {
-                  bgcolor: theme.palette.action.hover,
-                  color: theme.palette.text.primary,
-                },
-              }}
-            >
-              Borrar
-            </Button>
-            <Button
-              onClick={handleToday}
-              sx={{
-                textTransform: "none",
-                color: taxiMonterricoColors.green,
-                fontWeight: 600,
-                px: 1.5,
-                py: 0.5,
-                borderRadius: 1,
-                "&:hover": {
-                  bgcolor: `${taxiMonterricoColors.green}15`,
-                },
-              }}
-            >
-              Hoy
-            </Button>
-          </Box>
-        </Box>
-      </Popover>
+      />
 
       {/* Dialog para ver detalles de actividad expandida */}
       <ActivityDetailDialog

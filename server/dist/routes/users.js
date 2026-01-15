@@ -10,18 +10,46 @@ const Role_1 = require("../models/Role");
 const auth_1 = require("../middleware/auth");
 const rateLimiter_1 = require("../middleware/rateLimiter");
 const router = express_1.default.Router();
+// Función para limpiar usuarios eliminando campos null y objetos relacionados null
+const cleanUser = (user) => {
+    const userJson = user.toJSON ? user.toJSON() : user;
+    const cleaned = {
+        id: userJson.id,
+        email: userJson.email,
+        usuario: userJson.usuario,
+        firstName: userJson.firstName,
+        lastName: userJson.lastName,
+        roleId: userJson.roleId,
+        isActive: userJson.isActive,
+        createdAt: userJson.createdAt,
+        updatedAt: userJson.updatedAt,
+        // Transformar role
+        role: userJson.Role?.name || userJson.role || '',
+    };
+    // Solo incluir campos opcionales si no son null
+    if (userJson.avatar != null)
+        cleaned.avatar = userJson.avatar;
+    if (userJson.phone != null)
+        cleaned.phone = userJson.phone;
+    if (userJson.language != null)
+        cleaned.language = userJson.language;
+    if (userJson.dateFormat != null)
+        cleaned.dateFormat = userJson.dateFormat;
+    // Incluir Role solo si existe (no incluir si es null)
+    if (userJson.Role != null) {
+        cleaned.Role = userJson.Role;
+    }
+    // NO incluir googleAccessToken ni googleRefreshToken por seguridad
+    // (aunque no se usan en el frontend, es mejor no enviarlos)
+    return cleaned;
+};
 // Función helper para transformar usuarios y asegurar que el campo 'role' esté presente
 const transformUser = (user) => {
-    const userJson = user.toJSON ? user.toJSON() : user;
-    return {
-        ...userJson,
-        role: userJson.Role?.name || userJson.role || '',
-        Role: userJson.Role, // Mantener también el objeto Role completo por si se necesita
-    };
+    return cleanUser(user);
 };
 // Todas las rutas requieren autenticación y rol de administrador
 router.use(auth_1.authenticateToken);
-router.use((0, auth_1.requireRole)('admin'));
+router.use((0, auth_1.requireRole)('admin', 'jefe_comercial'));
 // Listar todos los usuarios
 router.get('/', rateLimiter_1.apiLimiter, async (req, res) => {
     try {

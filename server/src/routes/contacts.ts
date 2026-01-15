@@ -6,6 +6,8 @@ import { Company } from '../models/Company';
 import { ContactCompany } from '../models/ContactCompany';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { apiLimiter, writeLimiter, deleteLimiter } from '../middleware/rateLimiter';
+import { getRoleBasedDataFilter, canModifyResource, canDeleteResource } from '../utils/rolePermissions';
+import { logSystemAction, SystemActions, EntityTypes } from '../utils/systemLogger';
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -94,16 +96,31 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
 
     const where: any = {};
     
+    // ⭐ Aplicar filtro automático según rol del usuario
+    const roleFilter = getRoleBasedDataFilter(req.userRole, req.userId);
+    Object.assign(where, roleFilter);
+    
     // Búsqueda general
     if (search) {
       const searchStr = typeof search === 'string' ? search : String(search);
-      where[Op.or] = [
+      const searchConditions = [
         { firstName: { [Op.iLike]: `%${searchStr}%` } },
         { lastName: { [Op.iLike]: `%${searchStr}%` } },
         { email: { [Op.iLike]: `%${searchStr}%` } },
         { dni: { [Op.eq]: searchStr.trim() } }, // Búsqueda exacta por DNI
         { cee: { [Op.eq]: searchStr.trim().toUpperCase() } }, // Búsqueda exacta por CEE
       ];
+      
+      // Si ya hay un filtro ownerId (filtro RBAC), combinarlo con AND
+      if (where.ownerId) {
+        where[Op.and] = [
+          { ownerId: where.ownerId },
+          { [Op.or]: searchConditions }
+        ];
+        delete where.ownerId; // Eliminar el ownerId del nivel superior
+      } else {
+        where[Op.or] = searchConditions;
+      }
     }
     
     // Filtro por etapas (lifecycleStage) - soporta múltiples valores
@@ -125,8 +142,9 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
       }
     }
     
-    // Filtro por propietarios
-    if (owners) {
+    // Filtro por propietarios (solo para admin y jefe_comercial, otros roles ya tienen filtro RBAC)
+    // Si el usuario NO es admin ni jefe_comercial, el filtro RBAC ya está aplicado y no se debe sobrescribir
+    if ((req.userRole === 'admin' || req.userRole === 'jefe_comercial') && owners) {
       const ownersArray = Array.isArray(owners) ? owners : [owners];
       const ownerIds: (number | null)[] = [];
       const hasUnassigned = ownersArray.includes('unassigned');
@@ -154,10 +172,11 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
       } else if (ownerIds.length > 0) {
         where.ownerId = { [Op.in]: ownerIds };
       }
-    } else if (ownerId) {
-      // Compatibilidad con el filtro antiguo
+    } else if ((req.userRole === 'admin' || req.userRole === 'jefe_comercial') && ownerId) {
+      // Compatibilidad con el filtro antiguo (solo para admin y jefe_comercial)
       where.ownerId = ownerId === 'me' ? req.userId : ownerId;
     }
+    // Si no es admin ni jefe_comercial, el filtro RBAC ya está aplicado y no se sobrescribe
     
     // Filtros por columna
     if (filterNombre) {
@@ -593,6 +612,18 @@ router.post('/', writeLimiter, async (req: AuthRequest, res) => {
       newContact = contact;
     }
 
+    // Registrar log
+    if (req.userId) {
+      await logSystemAction(
+        req.userId,
+        SystemActions.CREATE,
+        EntityTypes.CONTACT,
+        contact.id,
+        { firstName: contact.firstName, lastName: contact.lastName, email: contact.email },
+        req
+      );
+    }
+
     res.status(201).json(cleanContact(newContact));
   } catch (error: any) {
     console.error('❌ Error completo al crear contacto:', error);
@@ -714,6 +745,18 @@ router.put('/:id', writeLimiter, async (req: AuthRequest, res) => {
       ],
     });
 
+    // Registrar log
+    if (req.userId && updatedContact) {
+      await logSystemAction(
+        req.userId,
+        SystemActions.UPDATE,
+        EntityTypes.CONTACT,
+        contact.id,
+        { firstName: updatedContact.firstName, lastName: updatedContact.lastName, changes: contactData },
+        req
+      );
+    }
+
     res.json(cleanContact(updatedContact));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -721,14 +764,33 @@ router.put('/:id', writeLimiter, async (req: AuthRequest, res) => {
 });
 
 // Eliminar contacto
-router.delete('/:id', deleteLimiter, async (req, res) => {
+router.delete('/:id', deleteLimiter, async (req: AuthRequest, res) => {
   try {
     const contact = await Contact.findByPk(req.params.id);
     if (!contact) {
       return res.status(404).json({ error: 'Contacto no encontrado' });
     }
 
+    // Verificar permisos: solo el propietario o admin puede eliminar
+    if (!canDeleteResource(req.userRole, req.userId, contact.ownerId)) {
+      return res.status(403).json({ error: 'No tienes permisos para eliminar este contacto' });
+    }
+
+    const contactName = `${contact.firstName} ${contact.lastName}`;
     await contact.destroy();
+
+    // Registrar log
+    if (req.userId) {
+      await logSystemAction(
+        req.userId,
+        SystemActions.DELETE,
+        EntityTypes.CONTACT,
+        parseInt(req.params.id),
+        { name: contactName, email: contact.email },
+        req
+      );
+    }
+
     res.json({ message: 'Contacto eliminado exitosamente' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

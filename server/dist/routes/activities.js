@@ -12,6 +12,41 @@ const Deal_1 = require("../models/Deal");
 const auth_1 = require("../middleware/auth");
 const router = express_1.default.Router();
 router.use(auth_1.authenticateToken);
+// Función para limpiar actividades eliminando campos null y objetos relacionados null
+const cleanActivity = (activity) => {
+    const activityData = activity.toJSON ? activity.toJSON() : activity;
+    const cleaned = {
+        id: activityData.id,
+        type: activityData.type,
+        subject: activityData.subject,
+        userId: activityData.userId,
+        createdAt: activityData.createdAt,
+        updatedAt: activityData.updatedAt,
+    };
+    // Solo incluir campos opcionales si no son null
+    if (activityData.description != null)
+        cleaned.description = activityData.description;
+    if (activityData.contactId != null)
+        cleaned.contactId = activityData.contactId;
+    if (activityData.companyId != null)
+        cleaned.companyId = activityData.companyId;
+    if (activityData.dealId != null)
+        cleaned.dealId = activityData.dealId;
+    if (activityData.taskId != null)
+        cleaned.taskId = activityData.taskId;
+    if (activityData.completed != null)
+        cleaned.completed = activityData.completed;
+    // Solo incluir relaciones si existen
+    if (activityData.User)
+        cleaned.User = activityData.User;
+    if (activityData.Contact)
+        cleaned.Contact = activityData.Contact;
+    if (activityData.Company)
+        cleaned.Company = activityData.Company;
+    if (activityData.Deal)
+        cleaned.Deal = activityData.Deal;
+    return cleaned;
+};
 // Obtener todas las actividades
 router.get('/', async (req, res) => {
     try {
@@ -46,7 +81,7 @@ router.get('/', async (req, res) => {
             order: [['createdAt', 'DESC']],
         });
         res.json({
-            activities: activities.rows,
+            activities: activities.rows.map(cleanActivity),
             total: activities.count,
             page: Number(page),
             totalPages: Math.ceil(activities.count / Number(limit)),
@@ -89,7 +124,7 @@ router.post('/notes', async (req, res) => {
         };
         const activity = await Activity_1.Activity.create(activityData);
         const newActivity = await createActivityWithIncludes(activity);
-        res.status(201).json(newActivity);
+        res.status(201).json(cleanActivity(newActivity));
     }
     catch (error) {
         console.error('❌ Error al crear nota:', error);
@@ -114,7 +149,7 @@ router.post('/emails', async (req, res) => {
         };
         const activity = await Activity_1.Activity.create(activityData);
         const newActivity = await createActivityWithIncludes(activity);
-        res.status(201).json(newActivity);
+        res.status(201).json(cleanActivity(newActivity));
     }
     catch (error) {
         console.error('❌ Error al crear email:', error);
@@ -139,7 +174,7 @@ router.post('/calls', async (req, res) => {
         };
         const activity = await Activity_1.Activity.create(activityData);
         const newActivity = await createActivityWithIncludes(activity);
-        res.status(201).json(newActivity);
+        res.status(201).json(cleanActivity(newActivity));
     }
     catch (error) {
         console.error('❌ Error al crear llamada:', error);
@@ -171,7 +206,7 @@ router.post('/', async (req, res) => {
         };
         const activity = await Activity_1.Activity.create(activityData);
         const newActivity = await createActivityWithIncludes(activity);
-        res.status(201).json(newActivity);
+        res.status(201).json(cleanActivity(newActivity));
     }
     catch (error) {
         console.error('❌ Error al crear actividad:', error);
@@ -201,7 +236,7 @@ router.get('/:id', async (req, res) => {
         if (!activity) {
             return res.status(404).json({ error: 'Actividad no encontrada' });
         }
-        res.json(activity);
+        res.json(cleanActivity(activity));
     }
     catch (error) {
         res.status(500).json({ error: error.message });

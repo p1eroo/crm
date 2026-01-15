@@ -6,6 +6,8 @@ import { Contact } from '../models/Contact';
 import { Company } from '../models/Company';
 import { Deal } from '../models/Deal';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
+import { getRoleBasedDataFilter } from '../utils/rolePermissions';
+import { logSystemAction, SystemActions, EntityTypes } from '../utils/systemLogger';
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -67,6 +69,13 @@ router.get('/', async (req: AuthRequest, res) => {
     const offset = (pageNum - 1) * limit;
 
     const where: any = {};
+    
+    // ⭐ Aplicar filtro automático según rol del usuario
+    // Tickets usa assignedToId en lugar de ownerId
+    const roleFilter = getRoleBasedDataFilter(req.userRole, req.userId);
+    if (roleFilter.ownerId !== undefined) {
+      where.assignedToId = roleFilter.ownerId;
+    }
     
     // Búsqueda general
     if (search) {
@@ -271,6 +280,18 @@ router.post('/', async (req: AuthRequest, res) => {
       ],
     });
 
+    // Registrar log
+    if (req.userId) {
+      await logSystemAction(
+        req.userId,
+        SystemActions.CREATE,
+        EntityTypes.TICKET,
+        ticket.id,
+        { subject: ticket.subject, status: ticket.status, priority: ticket.priority },
+        req
+      );
+    }
+
     res.status(201).json(cleanTicket(newTicket));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -278,11 +299,19 @@ router.post('/', async (req: AuthRequest, res) => {
 });
 
 // Actualizar ticket
-router.put('/:id', async (req, res) => {
+router.put('/:id', async (req: AuthRequest, res) => {
   try {
     const ticket = await Ticket.findByPk(req.params.id);
     if (!ticket) {
       return res.status(404).json({ error: 'Ticket no encontrado' });
+    }
+
+    // Verificar permisos: solo el asignado, creador o admin puede modificar
+    const canModify = req.userRole === 'admin' || 
+                      ticket.assignedToId === req.userId || 
+                      ticket.createdById === req.userId;
+    if (!canModify) {
+      return res.status(403).json({ error: 'No tienes permisos para modificar este ticket' });
     }
 
     await ticket.update(req.body);
@@ -296,6 +325,22 @@ router.put('/:id', async (req, res) => {
       ],
     });
 
+    // Registrar log
+    if (req.userId && updatedTicket) {
+      await logSystemAction(
+        req.userId,
+        SystemActions.UPDATE,
+        EntityTypes.TICKET,
+        ticket.id,
+        { subject: updatedTicket.subject, changes: req.body },
+        req
+      );
+    }
+
+    if (!updatedTicket) {
+      return res.status(404).json({ error: 'Ticket no encontrado después de actualizar' });
+    }
+
     res.json(cleanTicket(updatedTicket));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -303,14 +348,36 @@ router.put('/:id', async (req, res) => {
 });
 
 // Eliminar ticket
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', async (req: AuthRequest, res) => {
   try {
     const ticket = await Ticket.findByPk(req.params.id);
     if (!ticket) {
       return res.status(404).json({ error: 'Ticket no encontrado' });
     }
 
+    // Verificar permisos: solo el asignado, creador o admin puede eliminar
+    const canDelete = req.userRole === 'admin' || 
+                      ticket.assignedToId === req.userId || 
+                      ticket.createdById === req.userId;
+    if (!canDelete) {
+      return res.status(403).json({ error: 'No tienes permisos para eliminar este ticket' });
+    }
+
+    const ticketSubject = ticket.subject;
     await ticket.destroy();
+
+    // Registrar log
+    if (req.userId) {
+      await logSystemAction(
+        req.userId,
+        SystemActions.DELETE,
+        EntityTypes.TICKET,
+        parseInt(req.params.id),
+        { subject: ticketSubject },
+        req
+      );
+    }
+
     res.json({ message: 'Ticket eliminado exitosamente' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

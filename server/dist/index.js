@@ -69,6 +69,9 @@ const emails_1 = __importDefault(require("./routes/emails"));
 const calendar_1 = __importDefault(require("./routes/calendar"));
 const reports_1 = __importDefault(require("./routes/reports"));
 const search_1 = __importDefault(require("./routes/search"));
+const systemLogs_1 = __importDefault(require("./routes/systemLogs"));
+const roles_1 = __importDefault(require("./routes/roles"));
+const cacheHeaders_1 = require("./middleware/cacheHeaders");
 const app = (0, express_1.default)();
 const PORT = parseInt(process.env.PORT || '5000', 10);
 // Función para obtener la IP local
@@ -132,6 +135,8 @@ app.use((req, res, next) => {
     console.log(`${new Date().toISOString()} - ${req.method} ${req.url} from ${req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress}`);
     next();
 });
+// Middleware para agregar headers de caché HTTP
+app.use('/api', cacheHeaders_1.setCacheHeaders);
 // Routes
 app.use('/api/auth', auth_1.default);
 app.use('/api/users', users_1.default);
@@ -150,6 +155,8 @@ app.use('/api/emails', emails_1.default);
 app.use('/api/google', calendar_1.default);
 app.use('/api/reports', reports_1.default);
 app.use('/api/search', search_1.default);
+app.use('/api/system-logs', systemLogs_1.default);
+app.use('/api/roles', roles_1.default);
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', message: 'CRM API is running' });
@@ -513,7 +520,7 @@ database_1.sequelize.authenticate()
     await Payment.sync({ alter: false });
     await Subscription.sync({ alter: false });
     // Sincronizar el resto de las tablas con alter (excepto Deal que tiene columnas ENUM manuales)
-    const { Deal, User, Role, MonthlyBudget, UserGoogleToken, DealContact, DealCompany, ContactCompany, ...rest } = await Promise.resolve().then(() => __importStar(require('./models')));
+    const { Deal, User, Role, MonthlyBudget, UserGoogleToken, DealContact, DealCompany, ContactCompany, SystemLog, ...rest } = await Promise.resolve().then(() => __importStar(require('./models')));
     // Sincronizar Deal sin alter para evitar conflictos con ENUMs
     if (Deal && typeof Deal.sync === 'function') {
         await Deal.sync({ alter: false });
@@ -529,7 +536,7 @@ database_1.sequelize.authenticate()
         await ContactCompany.sync({ alter: true });
     }
     // Sincronizar el resto de modelos con alter
-    const modelsToSync = [User, Role, MonthlyBudget, UserGoogleToken].filter(Boolean);
+    const modelsToSync = [User, Role, MonthlyBudget, UserGoogleToken, SystemLog].filter(Boolean);
     for (const Model of modelsToSync) {
         if (Model && typeof Model.sync === 'function') {
             await Model.sync({ alter: true });

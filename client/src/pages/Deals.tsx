@@ -28,12 +28,12 @@ import { Add, Delete, AttachMoney, Visibility, ViewList, AccountTree, CalendarTo
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
-import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from '../components/UnifiedTable';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faHandshake } from "@fortawesome/free-solid-svg-icons";
+import EntityPreviewDrawer from '../components/EntityPreviewDrawer';
 
 interface Deal {
   id: number;
@@ -52,13 +52,12 @@ interface Deal {
 
 const Deals: React.FC = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const theme = useTheme();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
-  const [search, setSearch] = useState('');
+  const [search] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [formData, setFormData] = useState({
     name: '',
@@ -119,6 +118,8 @@ const Deals: React.FC = () => {
   });
   const [debouncedColumnFilters, setDebouncedColumnFilters] = useState(columnFilters);
   const [showColumnFilters, setShowColumnFilters] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewDeal, setPreviewDeal] = useState<Deal | null>(null);
   
   // Etapas del pipeline
   const stages = [
@@ -213,8 +214,13 @@ const Deals: React.FC = () => {
 
   // Función para vista previa
   const handlePreview = (deal: Deal) => {
-    // Navegar a detalles del deal si existe la ruta
-    console.log('Preview deal:', deal);
+    setPreviewDeal(deal);
+    setPreviewOpen(true);
+  };
+
+  const handleClosePreview = () => {
+    setPreviewOpen(false);
+    setPreviewDeal(null);
   };
 
   // Opciones de columnas disponibles
@@ -235,26 +241,6 @@ const Deals: React.FC = () => {
     { value: 'startsWith', label: 'empieza con' },
     { value: 'endsWith', label: 'termina con' },
   ];
-
-  // Función auxiliar para aplicar operadores
-  const applyOperator = (fieldValue: string, operator: string, filterValue: string): boolean => {
-    const fieldLower = fieldValue.toLowerCase();
-    const filterLower = filterValue.toLowerCase();
-    switch (operator) {
-      case 'contains':
-        return fieldLower.includes(filterLower);
-      case 'equals':
-        return fieldLower === filterLower;
-      case 'notEquals':
-        return fieldLower !== filterLower;
-      case 'startsWith':
-        return fieldLower.startsWith(filterLower);
-      case 'endsWith':
-        return fieldLower.endsWith(filterLower);
-      default:
-        return true;
-    }
-  };
 
   // Función para obtener el color de la etapa (para el texto del chip)
   const getStageColor = (stage: string) => {
@@ -2449,6 +2435,15 @@ const Deals: React.FC = () => {
           )}
         </Box>
       </Popover>
+
+      {/* Entity Preview Drawer */}
+      <EntityPreviewDrawer
+        open={previewOpen}
+        onClose={handleClosePreview}
+        entityType="deal"
+        entityId={previewDeal?.id || null}
+        entityData={previewDeal}
+      />
 
       {/* Modal de Confirmación de Eliminación */}
       <Dialog

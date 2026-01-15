@@ -27,8 +27,6 @@ import {
   Search, 
   Notifications,
   Person,
-  Business,
-  AttachMoney,
   Assignment,
   DarkMode,
   LightMode,

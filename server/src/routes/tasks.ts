@@ -7,6 +7,8 @@ import { Company } from '../models/Company';
 import { Deal } from '../models/Deal';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { createTaskEvent, updateTaskEvent, deleteTaskEvent, createMeetingEvent, deleteCalendarEvent } from '../services/googleCalendar';
+import { getRoleBasedDataFilter, canModifyResource, canDeleteResource } from '../utils/rolePermissions';
+import { logSystemAction, SystemActions, EntityTypes } from '../utils/systemLogger';
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -74,6 +76,13 @@ router.get('/', async (req: AuthRequest, res) => {
 
     const where: any = {};
     
+    // ⭐ Aplicar filtro automático según rol del usuario
+    // Tasks usa assignedToId en lugar de ownerId
+    const roleFilter = getRoleBasedDataFilter(req.userRole, req.userId);
+    if (roleFilter.ownerId !== undefined) {
+      where.assignedToId = roleFilter.ownerId;
+    }
+    
     // Búsqueda general
     if (search) {
       where.title = { [Op.iLike]: `%${search}%` };
@@ -114,24 +123,26 @@ router.get('/', async (req: AuthRequest, res) => {
     }
     
     if (filterEstado) {
+      const filterEstadoStr = String(filterEstado);
       if (where.status) {
         // Si ya existe filtro por status, verificar si coincide
-        if (String(where.status).toLowerCase() !== filterEstado.toLowerCase()) {
+        if (String(where.status).toLowerCase() !== filterEstadoStr.toLowerCase()) {
           where.status = { [Op.in]: [] }; // No hay coincidencias
         }
       } else {
-        where.status = { [Op.iLike]: `%${filterEstado}%` };
+        where.status = { [Op.iLike]: `%${filterEstadoStr}%` };
       }
     }
     
     if (filterPrioridad) {
+      const filterPrioridadStr = String(filterPrioridad);
       if (where.priority) {
         // Si ya existe filtro por priority, verificar si coincide
-        if (String(where.priority).toLowerCase() !== filterPrioridad.toLowerCase()) {
+        if (String(where.priority).toLowerCase() !== filterPrioridadStr.toLowerCase()) {
           where.priority = { [Op.in]: [] }; // No hay coincidencias
         }
       } else {
-        where.priority = { [Op.iLike]: `%${filterPrioridad}%` };
+        where.priority = { [Op.iLike]: `%${filterPrioridadStr}%` };
       }
     }
     
@@ -288,6 +299,18 @@ router.post('/', async (req: AuthRequest, res) => {
       }
     }
 
+    // Registrar log
+    if (req.userId) {
+      await logSystemAction(
+        req.userId,
+        SystemActions.CREATE,
+        EntityTypes.TASK,
+        task.id,
+        { title: task.title, type: task.type, status: task.status },
+        req
+      );
+    }
+
     res.status(201).json(cleanTask(newTask));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -295,7 +318,7 @@ router.post('/', async (req: AuthRequest, res) => {
 });
 
 // Actualizar tarea
-router.put('/:id', async (req, res) => {
+router.put('/:id', async (req: AuthRequest, res) => {
   try {
     const task = await Task.findByPk(req.params.id, {
       include: [
@@ -309,6 +332,14 @@ router.put('/:id', async (req, res) => {
     
     if (!task) {
       return res.status(404).json({ error: 'Tarea no encontrada' });
+    }
+
+    // Verificar permisos: solo el asignado, creador o admin puede modificar
+    const canModify = req.userRole === 'admin' || 
+                      task.assignedToId === req.userId || 
+                      task.createdById === req.userId;
+    if (!canModify) {
+      return res.status(403).json({ error: 'No tienes permisos para modificar esta tarea' });
     }
 
     const hadEventId = !!task.googleCalendarEventId;
@@ -370,6 +401,18 @@ router.put('/:id', async (req, res) => {
       }
     }
 
+    // Registrar log
+    if (req.userId) {
+      await logSystemAction(
+        req.userId,
+        SystemActions.UPDATE,
+        EntityTypes.TASK,
+        task.id,
+        { title: task.title, changes: req.body },
+        req
+      );
+    }
+
     res.json(cleanTask(task));
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -377,11 +420,19 @@ router.put('/:id', async (req, res) => {
 });
 
 // Eliminar tarea
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', async (req: AuthRequest, res) => {
   try {
     const task = await Task.findByPk(req.params.id);
     if (!task) {
       return res.status(404).json({ error: 'Tarea no encontrada' });
+    }
+
+    // Verificar permisos: solo el asignado, creador o admin puede eliminar
+    const canDelete = req.userRole === 'admin' || 
+                      task.assignedToId === req.userId || 
+                      task.createdById === req.userId;
+    if (!canDelete) {
+      return res.status(403).json({ error: 'No tienes permisos para eliminar esta tarea' });
     }
 
     // Eliminar tarea de Google Tasks si existe
@@ -395,7 +446,21 @@ router.delete('/:id', async (req, res) => {
       }
     }
 
+    const taskTitle = task.title;
     await task.destroy();
+
+    // Registrar log
+    if (req.userId) {
+      await logSystemAction(
+        req.userId,
+        SystemActions.DELETE,
+        EntityTypes.TASK,
+        parseInt(req.params.id),
+        { title: taskTitle },
+        req
+      );
+    }
+
     res.json({ message: 'Tarea eliminada exitosamente' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

@@ -16,6 +16,8 @@ import {
   AdminPanelSettings,
   Assessment,
   CalendarToday,
+  History,
+  Security,
 } from '@mui/icons-material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartPie, faIndustry, faHandHoldingDollar } from '@fortawesome/free-solid-svg-icons';
@@ -48,6 +50,11 @@ const mainMenuItems = [
   { text: 'Reportes', icon: <Assessment />, path: '/reports', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   // { text: 'Campañas', icon: <Campaign />, path: '/campaigns' },
   // { text: 'Automatizaciones', icon: <Timeline />, path: '/automations' },
+];
+
+const adminMenuItems = [
+  { text: 'Logs del Sistema', icon: <History />, path: '/system-logs', roles: ['admin'] },
+  { text: 'Roles y Permisos', icon: <Security />, path: '/roles-permissions', roles: ['admin'] },
 ];
 
 
@@ -341,6 +348,116 @@ const mainMenuItems = [
               </Typography>
             )}
           </ListItemButton>
+        )}
+
+        {/* Opción de Logs del Sistema - Solo visible para admins */}
+        {(() => {
+          const userRole = user?.role;
+          return userRole === 'admin';
+        })() && (
+          adminMenuItems
+            .filter((item) => {
+              const userRole = user?.role;
+              if (item.roles && item.roles.length > 0) {
+                return userRole && item.roles.includes(userRole);
+              }
+              return true;
+            })
+            .map((item) => {
+              const isSelected = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
+              return (
+                <ListItemButton
+                  key={item.text}
+                  selected={isSelected}
+                  onClick={() => navigate(item.path)}
+                  sx={{
+                    minHeight: collapsed ? 64 : 44,
+                    borderRadius: 1,
+                    flexDirection: collapsed ? 'column' : 'row',
+                    justifyContent: collapsed ? 'center' : 'flex-start',
+                    alignItems: 'center',
+                    px: collapsed ? 1 : 2,
+                    py: collapsed ? 1 : 0.875,
+                    mb: 0,
+                    mt: 0,
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&.Mui-selected': {
+                      background: theme.palette.mode === 'dark' 
+                        ? '#1a2e2a' 
+                        : 'rgba(91, 228, 155, 0.1)',
+                      color: '#5be49b',
+                      boxShadow: 'none',
+                      '&:hover': {
+                        background: theme.palette.mode === 'dark' 
+                          ? '#1a2e2a' 
+                          : 'rgba(91, 228, 155, 0.1)',
+                        boxShadow: 'none',
+                      },
+                    },
+                    '&:hover': {
+                      ...(isSelected ? {
+                        background: theme.palette.mode === 'dark' 
+                          ? '#1a2e2a' 
+                          : 'rgba(91, 228, 155, 0.1)',
+                      } : {
+                        backgroundColor: theme.palette.action.hover,
+                      }),
+                    },
+                    '&:not(.Mui-selected)': {
+                      color: theme.palette.text.secondary,
+                      backgroundColor: 'transparent',
+                    },
+                  }}
+                >
+                  <ListItemIcon
+                    sx={{
+                      minWidth: collapsed ? 'auto' : 36,
+                      justifyContent: 'center',
+                      margin: collapsed ? '0 0 4px 0' : 0,
+                      color: isSelected 
+                        ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
+                        : '#637381',
+                      '& svg': {
+                        fontSize: 20,
+                      },
+                    }}
+                  >
+                    {item.icon}
+                  </ListItemIcon>
+                  {!collapsed && (
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontSize: '0.875rem',
+                        fontWeight: isSelected ? 600 : 400,
+                        color: isSelected 
+                          ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
+                          : '#5a5c61',
+                        ml: 0.8,
+                      }}
+                    >
+                      {item.text}
+                    </Typography>
+                  )}
+                  {collapsed && (
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontSize: '0.625rem',
+                        fontWeight: isSelected ? 600 : 400,
+                        color: isSelected 
+                          ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
+                          : '#5a5c61',
+                        textAlign: 'center',
+                        mt: 0.25,
+                      }}
+                    >
+                      {item.text}
+                    </Typography>
+                  )}
+                </ListItemButton>
+              );
+            })
         )}
       </List>
       

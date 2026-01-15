@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UserGoogleToken = exports.MonthlyBudget = exports.DealDeal = exports.DealCompany = exports.DealContact = exports.ContactCompany = exports.Payment = exports.Subscription = exports.Ticket = exports.Automation = exports.Campaign = exports.Activity = exports.Task = exports.Deal = exports.Company = exports.Contact = exports.Role = exports.User = void 0;
+exports.SystemLog = exports.UserGoogleToken = exports.MonthlyBudget = exports.DealDeal = exports.DealCompany = exports.DealContact = exports.ContactCompany = exports.Payment = exports.Subscription = exports.Ticket = exports.Automation = exports.Campaign = exports.Activity = exports.Task = exports.Deal = exports.Company = exports.Contact = exports.Role = exports.User = void 0;
 // Export all models
 var User_1 = require("./User");
 Object.defineProperty(exports, "User", { enumerable: true, get: function () { return User_1.User; } });
@@ -38,6 +38,8 @@ var MonthlyBudget_1 = require("./MonthlyBudget");
 Object.defineProperty(exports, "MonthlyBudget", { enumerable: true, get: function () { return MonthlyBudget_1.MonthlyBudget; } });
 var UserGoogleToken_1 = require("./UserGoogleToken");
 Object.defineProperty(exports, "UserGoogleToken", { enumerable: true, get: function () { return UserGoogleToken_1.UserGoogleToken; } });
+var SystemLog_1 = require("./SystemLog");
+Object.defineProperty(exports, "SystemLog", { enumerable: true, get: function () { return SystemLog_1.SystemLog; } });
 // Import all models to ensure they are registered
 // Importar modelos base primero
 require("./Role");
@@ -60,6 +62,7 @@ require("./Subscription");
 require("./Payment");
 require("./MonthlyBudget");
 require("./UserGoogleToken");
+require("./SystemLog");
 // Inicializar relaciones muchos-a-muchos después de que todos los modelos estén cargados
 const Contact_2 = require("./Contact");
 const Company_2 = require("./Company");

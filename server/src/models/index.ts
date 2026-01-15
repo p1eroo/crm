@@ -17,6 +17,7 @@ export { DealCompany } from './DealCompany';
 export { DealDeal } from './DealDeal';
 export { MonthlyBudget } from './MonthlyBudget';
 export { UserGoogleToken } from './UserGoogleToken';
+export { SystemLog } from './SystemLog';
 
 // Import all models to ensure they are registered
 // Importar modelos base primero
@@ -40,6 +41,7 @@ import './Subscription';
 import './Payment';
 import './MonthlyBudget';
 import './UserGoogleToken';
+import './SystemLog';
 
 // Inicializar relaciones muchos-a-muchos después de que todos los modelos estén cargados
 import { Contact } from './Contact';

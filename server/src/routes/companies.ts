@@ -5,6 +5,8 @@ import { Contact } from '../models/Contact';
 import { User } from '../models/User';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { apiLimiter, writeLimiter, deleteLimiter, heavyOperationLimiter } from '../middleware/rateLimiter';
+import { getRoleBasedDataFilter, canModifyResource, canDeleteResource } from '../utils/rolePermissions';
+import { logSystemAction, SystemActions, EntityTypes } from '../utils/systemLogger';
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -68,7 +70,24 @@ const transformCompanyForList = (company: any): any => {
 
 // Obtener todas las empresas
 router.get('/', apiLimiter, async (req: AuthRequest, res) => {
+  console.log(`[COMPANIES] GET / - req.userId:`, req.userId, 'req.userRole:', req.userRole);
+  console.log(`[COMPANIES] Headers authorization:`, req.headers.authorization ? 'Presente' : 'Ausente');
+  
   try {
+    // Validar que el usuario esté autenticado
+    if (!req.userId) {
+      console.error('[ERROR] req.userId es undefined en GET /companies');
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+    
+    if (!req.userRole) {
+      console.error('[ERROR] req.userRole es undefined en GET /companies para userId:', req.userId);
+      // No retornar error aquí, solo loguear - el middleware debería haber establecido el rol
+    }
+    
+    // El middleware authenticateToken ya establece req.userRole correctamente
+    // No necesitamos código adicional aquí, igual que en contacts.ts y deals.ts
+    
     const { 
       page = 1, 
       limit: limitParam = 50, 
@@ -100,26 +119,52 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
     const pageNum = Number(page) < 1 ? 1 : Number(page);
     const offset = (pageNum - 1) * limit;
 
+    // Aplicar filtro RBAC primero (igual que en contacts y deals)
+    const roleFilter = getRoleBasedDataFilter(req.userRole, req.userId);
+    
+    console.log(`[RBAC] GET /companies - Usuario: ${req.userId}, Rol: ${req.userRole}, Filtro:`, roleFilter);
+    
+    // Construir el objeto where empezando con el filtro RBAC
     const where: any = {};
+    Object.assign(where, roleFilter);
     
     // Búsqueda general
     if (search) {
       const searchStr = typeof search === 'string' ? search : String(search);
-      where[Op.or] = [
+      const searchConditions = [
         { name: { [Op.iLike]: `%${searchStr}%` } },
         { domain: { [Op.iLike]: `%${searchStr}%` } },
         { companyname: { [Op.iLike]: `%${searchStr}%` } },
       ];
+      
+      // Si ya hay un filtro ownerId (filtro RBAC), combinarlo con AND
+      if (where.ownerId) {
+        where[Op.and] = [
+          { ownerId: where.ownerId },
+          { [Op.or]: searchConditions }
+        ];
+        delete where.ownerId; // Eliminar el ownerId del nivel superior
+      } else {
+        where[Op.or] = searchConditions;
+      }
     }
+    
+    // Helper function para agregar condiciones al where (maneja Op.and si existe)
+    const addCondition = (condition: any) => {
+      if (where[Op.and]) {
+        where[Op.and].push(condition);
+      } else {
+        Object.assign(where, condition);
+      }
+    };
     
     // Filtro por etapas (lifecycleStage) - soporta múltiples valores
     if (lifecycleStage) {
-      where.lifecycleStage = lifecycleStage;
+      addCondition({ lifecycleStage });
     } else if (stages) {
-      // Si viene como array en query string: ?stages=lead&stages=activo
       const stagesArray = Array.isArray(stages) ? stages : [stages];
       if (stagesArray.length > 0) {
-        where.lifecycleStage = { [Op.in]: stagesArray };
+        addCondition({ lifecycleStage: { [Op.in]: stagesArray } });
       }
     }
     
@@ -127,12 +172,13 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
     if (countries) {
       const countriesArray = Array.isArray(countries) ? countries : [countries];
       if (countriesArray.length > 0) {
-        where.country = { [Op.in]: countriesArray };
+        addCondition({ country: { [Op.in]: countriesArray } });
       }
     }
     
-    // Filtro por propietarios
-    if (owners) {
+    // Filtro por propietarios (solo para admin y jefe_comercial)
+    // Si el usuario NO es admin ni jefe_comercial, el filtro RBAC ya está aplicado y no se sobrescribe
+    if ((req.userRole === 'admin' || req.userRole === 'jefe_comercial') && owners) {
       const ownersArray = Array.isArray(owners) ? owners : [owners];
       const ownerIds: (number | null)[] = [];
       const hasUnassigned = ownersArray.includes('unassigned');
@@ -149,42 +195,72 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
         }
       });
       
+      let newOwnerFilter: any;
       if (hasUnassigned && ownerIds.length > 0) {
-        where.ownerId = { [Op.or]: [{ [Op.in]: ownerIds }, { [Op.is]: null }] };
+        newOwnerFilter = { [Op.or]: [{ [Op.in]: ownerIds }, { [Op.is]: null }] };
       } else if (hasUnassigned) {
-        where.ownerId = { [Op.is]: null };
+        newOwnerFilter = { [Op.is]: null };
       } else if (hasMe && ownerIds.length > 1) {
-        where.ownerId = { [Op.in]: ownerIds };
+        newOwnerFilter = { [Op.in]: ownerIds };
       } else if (hasMe) {
-        where.ownerId = req.userId || null;
+        newOwnerFilter = req.userId || null;
       } else if (ownerIds.length > 0) {
-        where.ownerId = { [Op.in]: ownerIds };
+        newOwnerFilter = { [Op.in]: ownerIds };
       }
-    } else if (ownerId) {
-      // Compatibilidad con el filtro antiguo
-      where.ownerId = ownerId === 'me' ? req.userId : ownerId;
+      
+      if (newOwnerFilter !== undefined) {
+        // Si hay Op.and, necesitamos reemplazar el ownerId dentro del Op.and
+        if (where[Op.and]) {
+          // Buscar y reemplazar el ownerId en el array Op.and
+          const ownerIndex = where[Op.and].findIndex((cond: any) => cond.ownerId !== undefined);
+          if (ownerIndex !== -1) {
+            where[Op.and][ownerIndex] = { ownerId: newOwnerFilter };
+          } else {
+            where[Op.and].push({ ownerId: newOwnerFilter });
+          }
+        } else {
+          where.ownerId = newOwnerFilter;
+        }
+      }
+    } else if ((req.userRole === 'admin' || req.userRole === 'jefe_comercial') && ownerId) {
+      // Compatibilidad con el filtro antiguo (solo para admin y jefe_comercial)
+      const newOwnerFilter = ownerId === 'me' ? req.userId : ownerId;
+      if (where[Op.and]) {
+        const ownerIndex = where[Op.and].findIndex((cond: any) => cond.ownerId !== undefined);
+        if (ownerIndex !== -1) {
+          where[Op.and][ownerIndex] = { ownerId: newOwnerFilter };
+        } else {
+          where[Op.and].push({ ownerId: newOwnerFilter });
+        }
+      } else {
+        where.ownerId = newOwnerFilter;
+      }
     }
-    
-    if (companyname) {
-      where.companyname = companyname;
-    }
+    // Si no es admin ni jefe_comercial, el filtro RBAC ya está aplicado y no se sobrescribe
     
     // Filtros por columna
+    if (companyname) {
+      addCondition({ companyname });
+    }
+    
     if (filterNombre) {
-      where.name = { [Op.iLike]: `%${filterNombre}%` };
+      addCondition({ name: { [Op.iLike]: `%${filterNombre}%` } });
     }
     
     if (filterTelefono) {
-      where.phone = { [Op.iLike]: `%${filterTelefono}%` };
+      addCondition({ phone: { [Op.iLike]: `%${filterTelefono}%` } });
+    }
+    
+    if (filterCorreo) {
+      addCondition({ email: { [Op.iLike]: `%${filterCorreo}%` } });
     }
     
     if (filterOrigenLead) {
-      where.leadSource = { [Op.iLike]: `%${filterOrigenLead}%` };
+      addCondition({ leadSource: { [Op.iLike]: `%${filterOrigenLead}%` } });
     }
     
     if (filterEtapa) {
-      // Buscar por el valor exacto del enum
-      where.lifecycleStage = { [Op.iLike]: `%${filterEtapa}%` };
+      addCondition({ lifecycleStage: { [Op.iLike]: `%${filterEtapa}%` } });
     }
     
     if (filterCR !== undefined) {
@@ -193,9 +269,9 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
       const buscaNo = ['no', 'not', '0', 'false', 'n'].includes(filterCRValue);
       
       if (buscaSi) {
-        where.isRecoveredClient = true;
+        addCondition({ isRecoveredClient: true });
       } else if (buscaNo) {
-        where.isRecoveredClient = false;
+        addCondition({ isRecoveredClient: false });
       }
     }
     
@@ -215,51 +291,64 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
     parsedFilterRules.forEach((rule: any) => {
       if (!rule.value || !rule.column || !rule.operator) return;
       
-      const ruleValue = String(rule.value);
-      
+      let condition: any = {};
       switch (rule.column) {
         case 'name':
           if (rule.operator === 'contains') {
-            where.name = { [Op.iLike]: `%${rule.value}%` };
+            condition = { name: { [Op.iLike]: `%${rule.value}%` } };
           } else if (rule.operator === 'equals') {
-            where.name = { [Op.iLike]: rule.value };
+            condition = { name: { [Op.iLike]: rule.value } };
           } else if (rule.operator === 'startsWith') {
-            where.name = { [Op.iLike]: `${rule.value}%` };
+            condition = { name: { [Op.iLike]: `${rule.value}%` } };
           } else if (rule.operator === 'endsWith') {
-            where.name = { [Op.iLike]: `%${rule.value}` };
+            condition = { name: { [Op.iLike]: `%${rule.value}` } };
           } else if (rule.operator === 'notEquals') {
-            where.name = { [Op.notILike]: rule.value };
+            condition = { name: { [Op.notILike]: rule.value } };
           }
           break;
         case 'companyname':
           if (rule.operator === 'contains') {
-            where.companyname = { [Op.iLike]: `%${rule.value}%` };
+            condition = { companyname: { [Op.iLike]: `%${rule.value}%` } };
           } else if (rule.operator === 'equals') {
-            where.companyname = { [Op.iLike]: rule.value };
+            condition = { companyname: { [Op.iLike]: rule.value } };
           }
           break;
         case 'phone':
           if (rule.operator === 'contains') {
-            where.phone = { [Op.iLike]: `%${rule.value}%` };
+            condition = { phone: { [Op.iLike]: `%${rule.value}%` } };
           }
           break;
         case 'leadSource':
           if (rule.operator === 'contains') {
-            where.leadSource = { [Op.iLike]: `%${rule.value}%` };
+            condition = { leadSource: { [Op.iLike]: `%${rule.value}%` } };
           }
           break;
         case 'country':
           if (rule.operator === 'contains') {
-            where.country = { [Op.iLike]: `%${rule.value}%` };
+            condition = { country: { [Op.iLike]: `%${rule.value}%` } };
           }
           break;
         case 'lifecycleStage':
           if (rule.operator === 'equals') {
-            where.lifecycleStage = rule.value;
+            condition = { lifecycleStage: rule.value };
           }
           break;
       }
+      
+      if (Object.keys(condition).length > 0) {
+        addCondition(condition);
+      }
     });
+    
+    // Debug: mostrar el objeto where completo
+    console.log('[DEBUG] Objeto where completo:', JSON.stringify(where, null, 2));
+    console.log('[DEBUG] where tiene Op.and?', !!where[Op.and]);
+    console.log('[DEBUG] where está vacío?', Object.keys(where).length === 0);
+    
+    // Si where está completamente vacío, asegurarse de que sea un objeto válido
+    if (Object.keys(where).length === 0) {
+      console.log('[DEBUG] where está vacío, usando {}');
+    }
     
     // Ordenamiento
     let order: [string, string][] = [['createdAt', 'DESC']];
@@ -278,9 +367,11 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
         break;
     }
 
+    
     // Intentar obtener companies con la relación Owner
     let companies;
     try {
+      console.log('[DEBUG] Ejecutando Company.findAndCountAll con where:', JSON.stringify(where, null, 2));
       companies = await Company.findAndCountAll({
         where,
         include: [
@@ -296,7 +387,11 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
         order,
         distinct: true, // Importante para contar correctamente con includes
       });
+      console.log(`[DEBUG] Query exitosa: ${companies.count} empresas encontradas, ${companies.rows.length} en esta página`);
     } catch (includeError: any) {
+      console.error('[ERROR] Error en Company.findAndCountAll:', includeError);
+      console.error('[ERROR] Stack:', includeError.stack);
+      console.error('[ERROR] Message:', includeError.message);
       // Si falla por problemas con la relación Owner, intentar sin el include
       console.warn('⚠️ Error con relación Owner, intentando sin include:', includeError.message);
       companies = await Company.findAndCountAll({
@@ -347,14 +442,23 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
       totalPages: Math.ceil(companies.count / limit),
     });
   } catch (error: any) {
-    console.error('Error fetching companies:', error);
+    console.error('❌ Error completo al obtener empresas:', error);
+    console.error('❌ Stack trace:', error.stack);
+    console.error('❌ Error name:', error.name);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error original:', error.original);
+    if (error.errors) {
+      console.error('❌ Error errors:', error.errors);
+    }
+    
     // No exponer detalles del error en producción
     const errorMessage = process.env.NODE_ENV === 'development' 
       ? error.message 
       : 'Error al obtener empresas';
     
     res.status(500).json({ 
-      error: errorMessage
+      error: errorMessage,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
@@ -476,6 +580,18 @@ router.post('/', writeLimiter, async (req: AuthRequest, res) => {
       ],
     });
 
+    // Registrar log
+    if (req.userId) {
+      await logSystemAction(
+        req.userId,
+        SystemActions.CREATE,
+        EntityTypes.COMPANY,
+        company.id,
+        { name: company.name },
+        req
+      );
+    }
+
     res.status(201).json(cleanCompany(newCompany, true));
   } catch (error: any) {
     console.error('Error creating company:', error);
@@ -484,11 +600,16 @@ router.post('/', writeLimiter, async (req: AuthRequest, res) => {
 });
 
 // Actualizar empresa
-router.put('/:id', writeLimiter, async (req, res) => {
+router.put('/:id', writeLimiter, async (req: AuthRequest, res) => {
   try {
     const company = await Company.findByPk(req.params.id);
     if (!company) {
       return res.status(404).json({ error: 'Empresa no encontrada' });
+    }
+
+    // Verificar permisos: solo el propietario o admin puede modificar
+    if (!canModifyResource(req.userRole, req.userId, company.ownerId)) {
+      return res.status(403).json({ error: 'No tienes permisos para modificar esta empresa' });
     }
 
     // Preparar los datos para actualizar, manejando campos especiales
@@ -529,6 +650,22 @@ router.put('/:id', writeLimiter, async (req, res) => {
       ],
     });
 
+    if (!updatedCompany) {
+      return res.status(404).json({ error: 'Empresa no encontrada después de la actualización' });
+    }
+
+    // Registrar log
+    if (req.userId) {
+      await logSystemAction(
+        req.userId,
+        SystemActions.UPDATE,
+        EntityTypes.COMPANY,
+        company.id,
+        { name: updatedCompany.name, changes: updateData },
+        req
+      );
+    }
+
     res.json(cleanCompany(updatedCompany, true));
   } catch (error: any) {
     console.error('Error updating company:', error);
@@ -539,14 +676,33 @@ router.put('/:id', writeLimiter, async (req, res) => {
 });
 
 // Eliminar empresa
-router.delete('/:id', deleteLimiter, async (req, res) => {
+router.delete('/:id', deleteLimiter, async (req: AuthRequest, res) => {
   try {
     const company = await Company.findByPk(req.params.id);
     if (!company) {
       return res.status(404).json({ error: 'Empresa no encontrada' });
     }
 
+    // Verificar permisos: solo el propietario o admin puede eliminar
+    if (!canDeleteResource(req.userRole, req.userId, company.ownerId)) {
+      return res.status(403).json({ error: 'No tienes permisos para eliminar esta empresa' });
+    }
+
+    const companyName = company.name;
     await company.destroy();
+
+    // Registrar log
+    if (req.userId) {
+      await logSystemAction(
+        req.userId,
+        SystemActions.DELETE,
+        EntityTypes.COMPANY,
+        parseInt(req.params.id),
+        { name: companyName },
+        req
+      );
+    }
+
     res.json({ message: 'Empresa eliminada exitosamente' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

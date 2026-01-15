@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -34,6 +33,7 @@ import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
 import { useAuth } from '../context/AuthContext';
+import EntityPreviewDrawer from '../components/EntityPreviewDrawer';
 
 interface Task {
   id: number;
@@ -49,7 +49,6 @@ interface Task {
 }
 
 const Tasks: React.FC = () => {
-  const navigate = useNavigate();
   const theme = useTheme();
   const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -75,6 +74,8 @@ const Tasks: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(7);
   const [totalTasks, setTotalTasks] = useState(0);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewTask, setPreviewTask] = useState<Task | null>(null);
 
   // Calcular estadísticas
   const today = new Date();
@@ -130,10 +131,16 @@ const Tasks: React.FC = () => {
 
   // Función para vista previa
   const handlePreview = (task: Task) => {
-    navigate(`/tasks/${task.id}`);
+    setPreviewTask(task);
+    setPreviewOpen(true);
   };
 
-  const fetchUsers = async () => {
+  const handleClosePreview = () => {
+    setPreviewOpen(false);
+    setPreviewTask(null);
+  };
+
+  const fetchUsers = useCallback(async () => {
     try {
       // Solo usuarios admin pueden ver la lista completa de usuarios
       if (user?.role === 'admin') {
@@ -164,7 +171,7 @@ const Tasks: React.FC = () => {
         setUsers([]);
       }
     }
-  };
+  }, [user]);
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -230,7 +237,7 @@ const Tasks: React.FC = () => {
 
   useEffect(() => {
     fetchUsers();
-  }, [user]);
+  }, [fetchUsers]);
 
   const handleOpen = (task?: Task) => {
     if (task) {
@@ -1112,6 +1119,15 @@ const Tasks: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Entity Preview Drawer */}
+      <EntityPreviewDrawer
+        open={previewOpen}
+        onClose={handleClosePreview}
+        entityType="task"
+        entityId={previewTask?.id || null}
+        entityData={previewTask}
+      />
     </Box>
   );
 };

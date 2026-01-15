@@ -10,46 +10,93 @@ const Contact_1 = require("../models/Contact");
 const User_1 = require("../models/User");
 const auth_1 = require("../middleware/auth");
 const rateLimiter_1 = require("../middleware/rateLimiter");
+const rolePermissions_1 = require("../utils/rolePermissions");
+const systemLogger_1 = require("../utils/systemLogger");
 const router = express_1.default.Router();
 router.use(auth_1.authenticateToken);
-// Función helper para sanitizar valores null/undefined
-const sanitizeValue = (value) => {
-    if (value === null || value === undefined || value === 'null' || value === 'undefined') {
-        return null;
-    }
-    return value;
-};
-// Función para transformar empresa para lista (sin datos sensibles)
-const transformCompanyForList = (company) => {
+// Función para limpiar empresas eliminando campos null y objetos relacionados null
+const cleanCompany = (company, includeSensitive = false) => {
     const companyData = company.toJSON ? company.toJSON() : company;
-    return {
+    const cleaned = {
         id: companyData.id,
         name: companyData.name || '',
-        domain: sanitizeValue(companyData.domain),
-        companyname: sanitizeValue(companyData.companyname),
-        phone: sanitizeValue(companyData.phone), // Solo teléfono básico, no datos sensibles
-        // NO incluir: email, ruc, address (datos sensibles)
-        leadSource: sanitizeValue(companyData.leadSource),
-        city: sanitizeValue(companyData.city),
-        state: sanitizeValue(companyData.state),
-        country: sanitizeValue(companyData.country),
         lifecycleStage: companyData.lifecycleStage || 'lead',
-        estimatedRevenue: sanitizeValue(companyData.estimatedRevenue),
-        isRecoveredClient: companyData.isRecoveredClient || false,
-        ownerId: sanitizeValue(companyData.ownerId),
         createdAt: companyData.createdAt,
         updatedAt: companyData.updatedAt,
-        Owner: companyData.Owner ? {
+    };
+    // Solo incluir campos opcionales si no son null
+    if (companyData.domain != null)
+        cleaned.domain = companyData.domain;
+    if (companyData.companyname != null)
+        cleaned.companyname = companyData.companyname;
+    if (companyData.phone != null)
+        cleaned.phone = companyData.phone;
+    if (companyData.leadSource != null)
+        cleaned.leadSource = companyData.leadSource;
+    if (companyData.city != null)
+        cleaned.city = companyData.city;
+    if (companyData.state != null)
+        cleaned.state = companyData.state;
+    if (companyData.country != null)
+        cleaned.country = companyData.country;
+    if (companyData.estimatedRevenue != null)
+        cleaned.estimatedRevenue = companyData.estimatedRevenue;
+    if (companyData.isRecoveredClient != null)
+        cleaned.isRecoveredClient = companyData.isRecoveredClient;
+    if (companyData.ownerId != null)
+        cleaned.ownerId = companyData.ownerId;
+    if (companyData.linkedin != null)
+        cleaned.linkedin = companyData.linkedin;
+    if (companyData.numberOfEmployees != null)
+        cleaned.numberOfEmployees = companyData.numberOfEmployees;
+    // Solo incluir datos sensibles si se solicita explícitamente (para detalle completo)
+    if (includeSensitive) {
+        if (companyData.email != null)
+            cleaned.email = companyData.email;
+        if (companyData.ruc != null)
+            cleaned.ruc = companyData.ruc;
+        if (companyData.address != null)
+            cleaned.address = companyData.address;
+        if (companyData.idClienteEmpresa != null)
+            cleaned.idClienteEmpresa = companyData.idClienteEmpresa;
+    }
+    // Solo incluir relaciones si existen
+    if (companyData.Owner) {
+        cleaned.Owner = {
             id: companyData.Owner.id,
             firstName: companyData.Owner.firstName || '',
             lastName: companyData.Owner.lastName || '',
-            // NO incluir email del propietario en la lista
-        } : null
-    };
+        };
+        // Solo incluir email del Owner si se solicita explícitamente
+        if (includeSensitive && companyData.Owner.email) {
+            cleaned.Owner.email = companyData.Owner.email;
+        }
+    }
+    if (companyData.Contacts && Array.isArray(companyData.Contacts) && companyData.Contacts.length > 0) {
+        cleaned.Contacts = companyData.Contacts;
+    }
+    return cleaned;
+};
+// Función para transformar empresa para lista (sin datos sensibles)
+const transformCompanyForList = (company) => {
+    return cleanCompany(company, false);
 };
 // Obtener todas las empresas
 router.get('/', rateLimiter_1.apiLimiter, async (req, res) => {
+    console.log(`[COMPANIES] GET / - req.userId:`, req.userId, 'req.userRole:', req.userRole);
+    console.log(`[COMPANIES] Headers authorization:`, req.headers.authorization ? 'Presente' : 'Ausente');
     try {
+        // Validar que el usuario esté autenticado
+        if (!req.userId) {
+            console.error('[ERROR] req.userId es undefined en GET /companies');
+            return res.status(401).json({ error: 'Usuario no autenticado' });
+        }
+        if (!req.userRole) {
+            console.error('[ERROR] req.userRole es undefined en GET /companies para userId:', req.userId);
+            // No retornar error aquí, solo loguear - el middleware debería haber establecido el rol
+        }
+        // El middleware authenticateToken ya establece req.userRole correctamente
+        // No necesitamos código adicional aquí, igual que en contacts.ts y deals.ts
         const { page = 1, limit: limitParam = 50, search, lifecycleStage, ownerId, companyname, 
         // Nuevos parámetros de filtro
         stages, // Array de etapas: ["lead", "activo"]
@@ -66,36 +113,61 @@ router.get('/', rateLimiter_1.apiLimiter, async (req, res) => {
         const limit = requestedLimit > maxLimit ? maxLimit : (requestedLimit < 1 ? 50 : requestedLimit);
         const pageNum = Number(page) < 1 ? 1 : Number(page);
         const offset = (pageNum - 1) * limit;
+        // Aplicar filtro RBAC primero (igual que en contacts y deals)
+        const roleFilter = (0, rolePermissions_1.getRoleBasedDataFilter)(req.userRole, req.userId);
+        console.log(`[RBAC] GET /companies - Usuario: ${req.userId}, Rol: ${req.userRole}, Filtro:`, roleFilter);
+        // Construir el objeto where empezando con el filtro RBAC
         const where = {};
+        Object.assign(where, roleFilter);
         // Búsqueda general
         if (search) {
             const searchStr = typeof search === 'string' ? search : String(search);
-            where[sequelize_1.Op.or] = [
+            const searchConditions = [
                 { name: { [sequelize_1.Op.iLike]: `%${searchStr}%` } },
                 { domain: { [sequelize_1.Op.iLike]: `%${searchStr}%` } },
                 { companyname: { [sequelize_1.Op.iLike]: `%${searchStr}%` } },
             ];
+            // Si ya hay un filtro ownerId (filtro RBAC), combinarlo con AND
+            if (where.ownerId) {
+                where[sequelize_1.Op.and] = [
+                    { ownerId: where.ownerId },
+                    { [sequelize_1.Op.or]: searchConditions }
+                ];
+                delete where.ownerId; // Eliminar el ownerId del nivel superior
+            }
+            else {
+                where[sequelize_1.Op.or] = searchConditions;
+            }
         }
+        // Helper function para agregar condiciones al where (maneja Op.and si existe)
+        const addCondition = (condition) => {
+            if (where[sequelize_1.Op.and]) {
+                where[sequelize_1.Op.and].push(condition);
+            }
+            else {
+                Object.assign(where, condition);
+            }
+        };
         // Filtro por etapas (lifecycleStage) - soporta múltiples valores
         if (lifecycleStage) {
-            where.lifecycleStage = lifecycleStage;
+            addCondition({ lifecycleStage });
         }
         else if (stages) {
-            // Si viene como array en query string: ?stages=lead&stages=activo
             const stagesArray = Array.isArray(stages) ? stages : [stages];
             if (stagesArray.length > 0) {
-                where.lifecycleStage = { [sequelize_1.Op.in]: stagesArray };
+                addCondition({ lifecycleStage: { [sequelize_1.Op.in]: stagesArray } });
             }
         }
         // Filtro por países
         if (countries) {
             const countriesArray = Array.isArray(countries) ? countries : [countries];
             if (countriesArray.length > 0) {
-                where.country = { [sequelize_1.Op.in]: countriesArray };
+                addCondition({ country: { [sequelize_1.Op.in]: countriesArray } });
             }
         }
-        // Filtro por propietarios
-        if (owners) {
+        // Filtro por propietarios (solo para admin y jefe_comercial)
+        // Si el usuario NO es admin ni jefe_comercial, el filtro RBAC ya está aplicado y no se sobrescribe
+        if ((req.userRole === 'admin' || req.userRole === 'jefe_comercial') && owners) {
             const ownersArray = Array.isArray(owners) ? owners : [owners];
             const ownerIds = [];
             const hasUnassigned = ownersArray.includes('unassigned');
@@ -113,52 +185,84 @@ router.get('/', rateLimiter_1.apiLimiter, async (req, res) => {
                     ownerIds.push(Number(ownerStr));
                 }
             });
+            let newOwnerFilter;
             if (hasUnassigned && ownerIds.length > 0) {
-                where.ownerId = { [sequelize_1.Op.or]: [{ [sequelize_1.Op.in]: ownerIds }, { [sequelize_1.Op.is]: null }] };
+                newOwnerFilter = { [sequelize_1.Op.or]: [{ [sequelize_1.Op.in]: ownerIds }, { [sequelize_1.Op.is]: null }] };
             }
             else if (hasUnassigned) {
-                where.ownerId = { [sequelize_1.Op.is]: null };
+                newOwnerFilter = { [sequelize_1.Op.is]: null };
             }
             else if (hasMe && ownerIds.length > 1) {
-                where.ownerId = { [sequelize_1.Op.in]: ownerIds };
+                newOwnerFilter = { [sequelize_1.Op.in]: ownerIds };
             }
             else if (hasMe) {
-                where.ownerId = req.userId || null;
+                newOwnerFilter = req.userId || null;
             }
             else if (ownerIds.length > 0) {
-                where.ownerId = { [sequelize_1.Op.in]: ownerIds };
+                newOwnerFilter = { [sequelize_1.Op.in]: ownerIds };
+            }
+            if (newOwnerFilter !== undefined) {
+                // Si hay Op.and, necesitamos reemplazar el ownerId dentro del Op.and
+                if (where[sequelize_1.Op.and]) {
+                    // Buscar y reemplazar el ownerId en el array Op.and
+                    const ownerIndex = where[sequelize_1.Op.and].findIndex((cond) => cond.ownerId !== undefined);
+                    if (ownerIndex !== -1) {
+                        where[sequelize_1.Op.and][ownerIndex] = { ownerId: newOwnerFilter };
+                    }
+                    else {
+                        where[sequelize_1.Op.and].push({ ownerId: newOwnerFilter });
+                    }
+                }
+                else {
+                    where.ownerId = newOwnerFilter;
+                }
             }
         }
-        else if (ownerId) {
-            // Compatibilidad con el filtro antiguo
-            where.ownerId = ownerId === 'me' ? req.userId : ownerId;
+        else if ((req.userRole === 'admin' || req.userRole === 'jefe_comercial') && ownerId) {
+            // Compatibilidad con el filtro antiguo (solo para admin y jefe_comercial)
+            const newOwnerFilter = ownerId === 'me' ? req.userId : ownerId;
+            if (where[sequelize_1.Op.and]) {
+                const ownerIndex = where[sequelize_1.Op.and].findIndex((cond) => cond.ownerId !== undefined);
+                if (ownerIndex !== -1) {
+                    where[sequelize_1.Op.and][ownerIndex] = { ownerId: newOwnerFilter };
+                }
+                else {
+                    where[sequelize_1.Op.and].push({ ownerId: newOwnerFilter });
+                }
+            }
+            else {
+                where.ownerId = newOwnerFilter;
+            }
         }
-        if (companyname) {
-            where.companyname = companyname;
-        }
+        // Si no es admin ni jefe_comercial, el filtro RBAC ya está aplicado y no se sobrescribe
         // Filtros por columna
+        if (companyname) {
+            addCondition({ companyname });
+        }
         if (filterNombre) {
-            where.name = { [sequelize_1.Op.iLike]: `%${filterNombre}%` };
+            addCondition({ name: { [sequelize_1.Op.iLike]: `%${filterNombre}%` } });
         }
         if (filterTelefono) {
-            where.phone = { [sequelize_1.Op.iLike]: `%${filterTelefono}%` };
+            addCondition({ phone: { [sequelize_1.Op.iLike]: `%${filterTelefono}%` } });
+        }
+        if (filterCorreo) {
+            addCondition({ email: { [sequelize_1.Op.iLike]: `%${filterCorreo}%` } });
         }
         if (filterOrigenLead) {
-            where.leadSource = { [sequelize_1.Op.iLike]: `%${filterOrigenLead}%` };
+            addCondition({ leadSource: { [sequelize_1.Op.iLike]: `%${filterOrigenLead}%` } });
         }
         if (filterEtapa) {
-            // Buscar por el valor exacto del enum
-            where.lifecycleStage = { [sequelize_1.Op.iLike]: `%${filterEtapa}%` };
+            addCondition({ lifecycleStage: { [sequelize_1.Op.iLike]: `%${filterEtapa}%` } });
         }
         if (filterCR !== undefined) {
             const filterCRValue = String(filterCR).toLowerCase().trim();
             const buscaSi = ['sí', 'si', 'yes', 's', '1', 'x', '✓', 'true'].includes(filterCRValue);
             const buscaNo = ['no', 'not', '0', 'false', 'n'].includes(filterCRValue);
             if (buscaSi) {
-                where.isRecoveredClient = true;
+                addCondition({ isRecoveredClient: true });
             }
             else if (buscaNo) {
-                where.isRecoveredClient = false;
+                addCondition({ isRecoveredClient: false });
             }
         }
         // Filtros avanzados (reglas)
@@ -177,55 +281,66 @@ router.get('/', rateLimiter_1.apiLimiter, async (req, res) => {
         parsedFilterRules.forEach((rule) => {
             if (!rule.value || !rule.column || !rule.operator)
                 return;
-            const ruleValue = String(rule.value);
+            let condition = {};
             switch (rule.column) {
                 case 'name':
                     if (rule.operator === 'contains') {
-                        where.name = { [sequelize_1.Op.iLike]: `%${rule.value}%` };
+                        condition = { name: { [sequelize_1.Op.iLike]: `%${rule.value}%` } };
                     }
                     else if (rule.operator === 'equals') {
-                        where.name = { [sequelize_1.Op.iLike]: rule.value };
+                        condition = { name: { [sequelize_1.Op.iLike]: rule.value } };
                     }
                     else if (rule.operator === 'startsWith') {
-                        where.name = { [sequelize_1.Op.iLike]: `${rule.value}%` };
+                        condition = { name: { [sequelize_1.Op.iLike]: `${rule.value}%` } };
                     }
                     else if (rule.operator === 'endsWith') {
-                        where.name = { [sequelize_1.Op.iLike]: `%${rule.value}` };
+                        condition = { name: { [sequelize_1.Op.iLike]: `%${rule.value}` } };
                     }
                     else if (rule.operator === 'notEquals') {
-                        where.name = { [sequelize_1.Op.notILike]: rule.value };
+                        condition = { name: { [sequelize_1.Op.notILike]: rule.value } };
                     }
                     break;
                 case 'companyname':
                     if (rule.operator === 'contains') {
-                        where.companyname = { [sequelize_1.Op.iLike]: `%${rule.value}%` };
+                        condition = { companyname: { [sequelize_1.Op.iLike]: `%${rule.value}%` } };
                     }
                     else if (rule.operator === 'equals') {
-                        where.companyname = { [sequelize_1.Op.iLike]: rule.value };
+                        condition = { companyname: { [sequelize_1.Op.iLike]: rule.value } };
                     }
                     break;
                 case 'phone':
                     if (rule.operator === 'contains') {
-                        where.phone = { [sequelize_1.Op.iLike]: `%${rule.value}%` };
+                        condition = { phone: { [sequelize_1.Op.iLike]: `%${rule.value}%` } };
                     }
                     break;
                 case 'leadSource':
                     if (rule.operator === 'contains') {
-                        where.leadSource = { [sequelize_1.Op.iLike]: `%${rule.value}%` };
+                        condition = { leadSource: { [sequelize_1.Op.iLike]: `%${rule.value}%` } };
                     }
                     break;
                 case 'country':
                     if (rule.operator === 'contains') {
-                        where.country = { [sequelize_1.Op.iLike]: `%${rule.value}%` };
+                        condition = { country: { [sequelize_1.Op.iLike]: `%${rule.value}%` } };
                     }
                     break;
                 case 'lifecycleStage':
                     if (rule.operator === 'equals') {
-                        where.lifecycleStage = rule.value;
+                        condition = { lifecycleStage: rule.value };
                     }
                     break;
             }
+            if (Object.keys(condition).length > 0) {
+                addCondition(condition);
+            }
         });
+        // Debug: mostrar el objeto where completo
+        console.log('[DEBUG] Objeto where completo:', JSON.stringify(where, null, 2));
+        console.log('[DEBUG] where tiene Op.and?', !!where[sequelize_1.Op.and]);
+        console.log('[DEBUG] where está vacío?', Object.keys(where).length === 0);
+        // Si where está completamente vacío, asegurarse de que sea un objeto válido
+        if (Object.keys(where).length === 0) {
+            console.log('[DEBUG] where está vacío, usando {}');
+        }
         // Ordenamiento
         let order = [['createdAt', 'DESC']];
         switch (sortBy) {
@@ -245,6 +360,7 @@ router.get('/', rateLimiter_1.apiLimiter, async (req, res) => {
         // Intentar obtener companies con la relación Owner
         let companies;
         try {
+            console.log('[DEBUG] Ejecutando Company.findAndCountAll con where:', JSON.stringify(where, null, 2));
             companies = await Company_1.Company.findAndCountAll({
                 where,
                 include: [
@@ -260,8 +376,12 @@ router.get('/', rateLimiter_1.apiLimiter, async (req, res) => {
                 order,
                 distinct: true, // Importante para contar correctamente con includes
             });
+            console.log(`[DEBUG] Query exitosa: ${companies.count} empresas encontradas, ${companies.rows.length} en esta página`);
         }
         catch (includeError) {
+            console.error('[ERROR] Error en Company.findAndCountAll:', includeError);
+            console.error('[ERROR] Stack:', includeError.stack);
+            console.error('[ERROR] Message:', includeError.message);
             // Si falla por problemas con la relación Owner, intentar sin el include
             console.warn('⚠️ Error con relación Owner, intentando sin include:', includeError.message);
             companies = await Company_1.Company.findAndCountAll({
@@ -309,13 +429,21 @@ router.get('/', rateLimiter_1.apiLimiter, async (req, res) => {
         });
     }
     catch (error) {
-        console.error('Error fetching companies:', error);
+        console.error('❌ Error completo al obtener empresas:', error);
+        console.error('❌ Stack trace:', error.stack);
+        console.error('❌ Error name:', error.name);
+        console.error('❌ Error message:', error.message);
+        console.error('❌ Error original:', error.original);
+        if (error.errors) {
+            console.error('❌ Error errors:', error.errors);
+        }
         // No exponer detalles del error en producción
         const errorMessage = process.env.NODE_ENV === 'development'
             ? error.message
             : 'Error al obtener empresas';
         res.status(500).json({
-            error: errorMessage
+            error: errorMessage,
+            details: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 });
@@ -331,7 +459,28 @@ router.get('/:id', rateLimiter_1.apiLimiter, async (req, res) => {
         if (!company) {
             return res.status(404).json({ error: 'Empresa no encontrada' });
         }
-        res.json(company);
+        // Obtener también los contactos vinculados por companyId (relación uno-a-muchos)
+        const contactsByCompanyId = await Contact_1.Contact.findAll({
+            where: { companyId: req.params.id },
+            attributes: ['id', 'firstName', 'lastName', 'email', 'phone'],
+        });
+        // Combinar ambos tipos de contactos, eliminando duplicados
+        const companyData = company.toJSON(); // Usar 'any' para permitir propiedades de relaciones
+        const manyToManyContacts = companyData.Contacts || [];
+        const oneToManyContacts = contactsByCompanyId.map(c => c.toJSON());
+        // Crear un Map para eliminar duplicados por ID
+        const contactsMap = new Map();
+        // Primero agregar los de muchos-a-muchos
+        manyToManyContacts.forEach((contact) => {
+            contactsMap.set(contact.id, contact);
+        });
+        // Luego agregar los de uno-a-muchos (sobrescribirán si hay duplicados)
+        oneToManyContacts.forEach((contact) => {
+            contactsMap.set(contact.id, contact);
+        });
+        // Convertir el Map a array
+        companyData.Contacts = Array.from(contactsMap.values());
+        res.json(cleanCompany(companyData, true));
     }
     catch (error) {
         res.status(500).json({ error: error.message });
@@ -345,6 +494,23 @@ router.post('/', rateLimiter_1.writeLimiter, async (req, res) => {
             // Asignar automáticamente el usuario actual como propietario del registro
             ownerId: req.body.ownerId || req.userId || null,
         };
+        // Validar que el nombre sea requerido
+        if (!companyData.name || !companyData.name.trim()) {
+            return res.status(400).json({
+                error: 'El nombre de la empresa es requerido',
+                field: 'name',
+            });
+        }
+        // Validar y convertir estimatedRevenue si viene como string vacío o null
+        if (companyData.estimatedRevenue !== undefined) {
+            if (companyData.estimatedRevenue === '' || companyData.estimatedRevenue === null) {
+                companyData.estimatedRevenue = null;
+            }
+            else if (typeof companyData.estimatedRevenue === 'string') {
+                const parsed = parseFloat(companyData.estimatedRevenue);
+                companyData.estimatedRevenue = isNaN(parsed) ? null : parsed;
+            }
+        }
         // Validar que no exista una empresa con el mismo nombre (case-insensitive)
         if (companyData.name) {
             const existingCompanyByName = await Company_1.Company.findOne({
@@ -383,7 +549,11 @@ router.post('/', rateLimiter_1.writeLimiter, async (req, res) => {
                 { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
             ],
         });
-        res.status(201).json(newCompany);
+        // Registrar log
+        if (req.userId) {
+            await (0, systemLogger_1.logSystemAction)(req.userId, systemLogger_1.SystemActions.CREATE, systemLogger_1.EntityTypes.COMPANY, company.id, { name: company.name }, req);
+        }
+        res.status(201).json(cleanCompany(newCompany, true));
     }
     catch (error) {
         console.error('Error creating company:', error);
@@ -397,8 +567,19 @@ router.put('/:id', rateLimiter_1.writeLimiter, async (req, res) => {
         if (!company) {
             return res.status(404).json({ error: 'Empresa no encontrada' });
         }
+        // Verificar permisos: solo el propietario o admin puede modificar
+        if (!(0, rolePermissions_1.canModifyResource)(req.userRole, req.userId, company.ownerId)) {
+            return res.status(403).json({ error: 'No tienes permisos para modificar esta empresa' });
+        }
         // Preparar los datos para actualizar, manejando campos especiales
         const updateData = { ...req.body };
+        // Validar que el nombre sea requerido si se está actualizando
+        if (updateData.name !== undefined && (!updateData.name || !updateData.name.trim())) {
+            return res.status(400).json({
+                error: 'El nombre de la empresa es requerido',
+                field: 'name',
+            });
+        }
         // Si leadSource viene, asegurarse de que se mapee correctamente
         if (updateData.leadSource !== undefined) {
             updateData.leadSource = updateData.leadSource || null;
@@ -423,7 +604,14 @@ router.put('/:id', rateLimiter_1.writeLimiter, async (req, res) => {
                 { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
             ],
         });
-        res.json(updatedCompany);
+        if (!updatedCompany) {
+            return res.status(404).json({ error: 'Empresa no encontrada después de la actualización' });
+        }
+        // Registrar log
+        if (req.userId) {
+            await (0, systemLogger_1.logSystemAction)(req.userId, systemLogger_1.SystemActions.UPDATE, systemLogger_1.EntityTypes.COMPANY, company.id, { name: updatedCompany.name, changes: updateData }, req);
+        }
+        res.json(cleanCompany(updatedCompany, true));
     }
     catch (error) {
         console.error('Error updating company:', error);
@@ -439,7 +627,16 @@ router.delete('/:id', rateLimiter_1.deleteLimiter, async (req, res) => {
         if (!company) {
             return res.status(404).json({ error: 'Empresa no encontrada' });
         }
+        // Verificar permisos: solo el propietario o admin puede eliminar
+        if (!(0, rolePermissions_1.canDeleteResource)(req.userRole, req.userId, company.ownerId)) {
+            return res.status(403).json({ error: 'No tienes permisos para eliminar esta empresa' });
+        }
+        const companyName = company.name;
         await company.destroy();
+        // Registrar log
+        if (req.userId) {
+            await (0, systemLogger_1.logSystemAction)(req.userId, systemLogger_1.SystemActions.DELETE, systemLogger_1.EntityTypes.COMPANY, parseInt(req.params.id), { name: companyName }, req);
+        }
         res.json({ message: 'Empresa eliminada exitosamente' });
     }
     catch (error) {
@@ -483,7 +680,7 @@ router.post('/:id/contacts', rateLimiter_1.writeLimiter, async (req, res) => {
                 { model: Contact_1.Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
             ],
         });
-        res.json(updatedCompany);
+        res.json(cleanCompany(updatedCompany, true));
     }
     catch (error) {
         console.error('Error adding contacts to company:', error);
@@ -508,7 +705,7 @@ router.delete('/:id/contacts/:contactId', rateLimiter_1.deleteLimiter, async (re
                 { model: Contact_1.Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
             ],
         });
-        res.json(updatedCompany);
+        res.json(cleanCompany(updatedCompany, true));
     }
     catch (error) {
         console.error('Error removing contact association:', error);

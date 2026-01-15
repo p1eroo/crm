@@ -495,24 +495,14 @@ const ReportDetail: React.FC = () => {
                     <TableHead>
                       <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f5f5f5' }}>
                         <TableCell sx={{ fontWeight: 'bold' }}>Etapa</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold' }}>%</TableCell>
-                        {stageStats.weeks?.map((week: number) => (
-                          <TableCell key={week} align="right" sx={{ fontWeight: 'bold' }}>
-                            {week}
-                          </TableCell>
-                        ))}
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>Cantidad</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {stageStats.data?.map((row: any) => (
                         <TableRow key={row.stage} hover>
                           <TableCell>{row.label}</TableCell>
-                          <TableCell>{row.percentage}%</TableCell>
-                          {row.counts?.map((count: number, idx: number) => (
-                            <TableCell key={idx} align="right">
-                              {count}
-                            </TableCell>
-                          ))}
+                          <TableCell align="right">{row.totalCount || 0}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -532,24 +522,16 @@ const ReportDetail: React.FC = () => {
                     <TableHead>
                       <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f5f5f5' }}>
                         <TableCell sx={{ fontWeight: 'bold' }}>Etapa</TableCell>
-                        <TableCell sx={{ fontWeight: 'bold' }}>%</TableCell>
-                        {stageStats.weeks?.map((week: number) => (
-                          <TableCell key={week} align="right" sx={{ fontWeight: 'bold' }}>
-                            {week}
-                          </TableCell>
-                        ))}
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>Valor</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {stageStats.data?.map((row: any) => (
                         <TableRow key={row.stage} hover>
                           <TableCell>{row.label}</TableCell>
-                          <TableCell>{row.percentage}%</TableCell>
-                          {row.values?.map((value: number, idx: number) => (
-                            <TableCell key={idx} align="right">
-                              {value > 0 ? formatCurrency(value) : 'S/ -'}
-                            </TableCell>
-                          ))}
+                          <TableCell align="right">
+                            {row.totalValue > 0 ? formatCurrency(row.totalValue) : 'S/ -'}
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>

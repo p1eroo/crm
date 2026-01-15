@@ -13,7 +13,6 @@ import {
   ListItemText,
   Checkbox,
   InputBase,
-  InputAdornment,
   CircularProgress,
   DialogActions,
   useTheme,
@@ -98,24 +97,6 @@ const NoteModal: React.FC<NoteModalProps> = ({
     number[]
   >([]);
 
-  // Resetear estados cuando se abre/cierra el modal
-  useEffect(() => {
-    if (!open) {
-      setNoteData({ subject: "", description: "" });
-      setSelectedCompaniesForNote([]);
-      setSelectedContactsForNote([]);
-      setSelectedAssociationsForNote([]);
-      setExcludedCompaniesForNote([]);
-      setExcludedContactsForNote([]);
-      setNoteAssociatePopoverAnchor(null);
-      setNoteAssociateSearch("");
-      setNoteSelectedCategory("empresas");
-    } else {
-      // Cargar asociaciones disponibles al abrir el modal
-      fetchAssociationsForNote();
-    }
-  }, [open]);
-
   const fetchAssociationsForNote = useCallback(
     async (searchTerm?: string) => {
       setNoteLoadingAssociations(true);
@@ -170,6 +151,24 @@ const NoteModal: React.FC<NoteModalProps> = ({
     [relatedEntities]
   );
 
+  // Resetear estados cuando se abre/cierra el modal
+  useEffect(() => {
+    if (!open) {
+      setNoteData({ subject: "", description: "" });
+      setSelectedCompaniesForNote([]);
+      setSelectedContactsForNote([]);
+      setSelectedAssociationsForNote([]);
+      setExcludedCompaniesForNote([]);
+      setExcludedContactsForNote([]);
+      setNoteAssociatePopoverAnchor(null);
+      setNoteAssociateSearch("");
+      setNoteSelectedCategory("empresas");
+    } else {
+      // Cargar asociaciones disponibles al abrir el modal
+      fetchAssociationsForNote();
+    }
+  }, [open, fetchAssociationsForNote]);
+
   const handleSaveNote = useCallback(async () => {
     if (!noteData.description.trim()) {
       return;
@@ -187,26 +186,245 @@ const NoteModal: React.FC<NoteModalProps> = ({
         (contactId) => !excludedContactsForNote.includes(contactId)
       );
 
-      // Crear nota asociada a la entidad actual
-      const activityData: any = {
-        subject: noteData.subject || `Nota para ${entityName}`,
-        description: noteData.description,
-        [`${entityType}Id`]: entityId,
-      };
+      // Obtener negocios seleccionados (de selectedAssociationsForNote, donde deals están en el rango 1000-2000)
+      const dealsToAssociate = selectedAssociationsForNote
+        .filter((id: number) => id > 1000 && id < 2000)
+        .map((id) => id - 1000);
 
-      // Agregar asociaciones si existen
-      if (companiesToAssociate.length > 0) {
-        activityData.companyId = companiesToAssociate[0]; // Solo una empresa por nota
+      // Obtener tickets seleccionados (de selectedAssociationsForNote, donde tickets están en el rango 2000+)
+      const ticketsToAssociate = selectedAssociationsForNote
+        .filter((id: number) => id > 2000)
+        .map((id) => id - 2000);
+
+      const activityPromises: Promise<any>[] = [];
+
+      // Lógica diferente según el tipo de entidad
+      if (entityType === "company") {
+        // Si es una empresa, crear una nota por cada empresa seleccionada (o usar la empresa actual)
+        const finalCompanyIds =
+          companiesToAssociate.length > 0
+            ? companiesToAssociate
+            : entityId
+            ? [Number(entityId)]
+            : [];
+
+        if (finalCompanyIds.length === 0) {
+          console.error("Error: No hay empresas seleccionadas");
+          setSaving(false);
+          return;
+        }
+
+        for (const companyId of finalCompanyIds) {
+          // Obtener información de la empresa para el subject
+          let companyName = entityName;
+          try {
+            const companyResponse = await api.get(`/companies/${companyId}`);
+            const companyData = companyResponse.data;
+            companyName = companyData.name || companyName;
+          } catch (e) {
+            console.error(`Error fetching company ${companyId}:`, e);
+          }
+
+          // Si hay negocios seleccionados, crear una nota por cada combinación
+          if (dealsToAssociate.length > 0) {
+            for (const dealId of dealsToAssociate) {
+              if (contactsToAssociate.length > 0) {
+                // Crear una nota para cada combinación de empresa, negocio y contacto
+                for (const contactId of contactsToAssociate) {
+                  activityPromises.push(
+                    api.post("/activities/notes", {
+                      subject: noteData.subject || `Nota para ${companyName}`,
+                      description: noteData.description,
+                      companyId: companyId,
+                      dealId: dealId,
+                      contactId: contactId,
+                    })
+                  );
+                }
+              } else {
+                // Crear nota con empresa y negocio (sin contacto)
+                activityPromises.push(
+                  api.post("/activities/notes", {
+                    subject: noteData.subject || `Nota para ${companyName}`,
+                    description: noteData.description,
+                    companyId: companyId,
+                    dealId: dealId,
+                  })
+                );
+              }
+            }
+          } else if (contactsToAssociate.length > 0) {
+            // Si hay contactos pero no negocios, crear una nota para cada combinación de empresa y contacto
+            for (const contactId of contactsToAssociate) {
+              activityPromises.push(
+                api.post("/activities/notes", {
+                  subject: noteData.subject || `Nota para ${companyName}`,
+                  description: noteData.description,
+                  companyId: companyId,
+                  contactId: contactId,
+                })
+              );
+            }
+          } else {
+            // Crear nota solo con la empresa (sin contacto ni negocio)
+            activityPromises.push(
+              api.post("/activities/notes", {
+                subject: noteData.subject || `Nota para ${companyName}`,
+                description: noteData.description,
+                companyId: companyId,
+              })
+            );
+          }
+
+          // Si hay tickets seleccionados, crear una nota por cada ticket
+          if (ticketsToAssociate.length > 0) {
+            for (const ticketId of ticketsToAssociate) {
+              activityPromises.push(
+                api.post("/activities/notes", {
+                  subject: noteData.subject || `Nota para ${companyName}`,
+                  description: noteData.description,
+                  companyId: companyId,
+                  ticketId: ticketId,
+                })
+              );
+            }
+          }
+        }
+      } else if (entityType === "contact") {
+        // Si es un contacto, crear una nota por cada contacto seleccionado (o usar el contacto actual)
+        const finalContactIds =
+          contactsToAssociate.length > 0
+            ? contactsToAssociate
+            : entityId
+            ? [Number(entityId)]
+            : [];
+
+        if (finalContactIds.length === 0) {
+          console.error("Error: No hay contactos seleccionados");
+          setSaving(false);
+          return;
+        }
+
+        for (const contactId of finalContactIds) {
+          // Obtener información del contacto para el subject
+          let contactName = entityName;
+          try {
+            const contactResponse = await api.get(`/contacts/${contactId}`);
+            const contactData = contactResponse.data;
+            contactName =
+              `${contactData.firstName || ""} ${contactData.lastName || ""}`.trim() ||
+              contactName;
+          } catch (e) {
+            console.error(`Error fetching contact ${contactId}:`, e);
+          }
+
+          if (companiesToAssociate.length > 0) {
+            // Crear una nota para cada combinación de contacto y empresa
+            for (const companyId of companiesToAssociate) {
+              activityPromises.push(
+                api.post("/activities/notes", {
+                  subject: noteData.subject || `Nota para ${contactName}`,
+                  description: noteData.description,
+                  contactId: contactId,
+                  companyId: companyId,
+                })
+              );
+            }
+          } else {
+            // Crear nota solo con el contacto (sin empresa)
+            activityPromises.push(
+              api.post("/activities/notes", {
+                subject: noteData.subject || `Nota para ${contactName}`,
+                description: noteData.description,
+                contactId: contactId,
+              })
+            );
+          }
+        }
+      } else {
+        // Para deal, task, ticket: crear múltiples notas cuando hay múltiples asociaciones
+        const primaryEntityId = Number(entityId);
+        
+        // Si hay empresas seleccionadas, crear una nota por cada empresa
+        if (companiesToAssociate.length > 0) {
+          for (const companyId of companiesToAssociate) {
+            // Obtener información de la empresa para el subject
+            let companyName = entityName;
+            try {
+              const companyResponse = await api.get(`/companies/${companyId}`);
+              const companyData = companyResponse.data;
+              companyName = companyData.name || companyName;
+            } catch (e) {
+              console.error(`Error fetching company ${companyId}:`, e);
+            }
+
+            if (contactsToAssociate.length > 0) {
+              // Crear una nota para cada combinación de empresa y contacto
+              for (const contactId of contactsToAssociate) {
+                const activityData: any = {
+                  subject: noteData.subject || `Nota para ${companyName}`,
+                  description: noteData.description,
+                  [`${entityType}Id`]: primaryEntityId,
+                  companyId: companyId,
+                  contactId: contactId,
+                };
+                activityPromises.push(api.post("/activities/notes", activityData));
+              }
+            } else {
+              // Crear nota solo con la empresa (sin contacto)
+              const activityData: any = {
+                subject: noteData.subject || `Nota para ${companyName}`,
+                description: noteData.description,
+                [`${entityType}Id`]: primaryEntityId,
+                companyId: companyId,
+              };
+              activityPromises.push(api.post("/activities/notes", activityData));
+            }
+          }
+        } else if (contactsToAssociate.length > 0) {
+          // Si hay contactos seleccionados pero no empresas, crear una nota por cada contacto
+          // Incluir el dealId/taskId/ticketId para mantener el contexto completo (será deduplicado en la UI)
+          for (const contactId of contactsToAssociate) {
+            // Obtener información del contacto para el subject
+            let contactName = entityName;
+            try {
+              const contactResponse = await api.get(`/contacts/${contactId}`);
+              const contactData = contactResponse.data;
+              contactName =
+                `${contactData.firstName || ""} ${contactData.lastName || ""}`.trim() ||
+                contactName;
+            } catch (e) {
+              console.error(`Error fetching contact ${contactId}:`, e);
+            }
+
+            const activityData: any = {
+              subject: noteData.subject || `Nota para ${contactName}`,
+              description: noteData.description,
+              [`${entityType}Id`]: primaryEntityId,
+              contactId: contactId,
+            };
+            activityPromises.push(api.post("/activities/notes", activityData));
+          }
+        } else {
+          // Si no hay asociaciones, crear una nota solo con la entidad principal
+          const activityData: any = {
+            subject: noteData.subject || `Nota para ${entityName}`,
+            description: noteData.description,
+            [`${entityType}Id`]: primaryEntityId,
+          };
+          activityPromises.push(api.post("/activities/notes", activityData));
+        }
       }
-      if (contactsToAssociate.length > 0) {
-        activityData.contactId = contactsToAssociate[0]; // Solo un contacto por nota
-      }
 
-      const response = await api.post("/activities/notes", activityData);
-      const newActivity = response.data;
+      // Ejecutar todas las creaciones en paralelo
+      const responses = await Promise.all(activityPromises);
+      const newActivities = responses.map((res) => res.data);
 
-      // Llamar al callback con la nueva actividad
-      onSave(newActivity);
+      // Llamar al callback con todas las actividades creadas
+      // Si solo hay una, llamar onSave una vez; si hay múltiples, llamar para cada una
+      newActivities.forEach((activity) => {
+        onSave(activity);
+      });
 
       // Cerrar modal y resetear estados
       onClose();
@@ -225,6 +443,7 @@ const NoteModal: React.FC<NoteModalProps> = ({
     noteData,
     selectedCompaniesForNote,
     selectedContactsForNote,
+    selectedAssociationsForNote,
     excludedCompaniesForNote,
     excludedContactsForNote,
     entityType,
@@ -698,7 +917,7 @@ const NoteModal: React.FC<NoteModalProps> = ({
         <Box
           sx={{
             px: 3,
-            py: 2.5,
+            py: 1,
             borderTop: `1px solid ${
               theme.palette.mode === "dark"
                 ? "rgba(255,255,255,0.1)"

@@ -5,11 +5,9 @@ import {
   Typography,
   Button,
   Chip,
-  Divider,
   Tabs,
   Tab,
   IconButton,
-  Menu,
   MenuItem,
   CircularProgress,
   Link,
@@ -22,43 +20,16 @@ import {
   Checkbox,
   InputAdornment,
   useTheme,
-  Popover,
-  List,
   ListItem,
   ListItemButton,
   ListItemText,
-  InputBase,
 } from "@mui/material";
 import {
-  MoreVert,
   Email,
-  Phone,
-  Event,
-  Link as LinkIcon,
   Close,
   Search,
-  CalendarToday,
-  ChevronLeft,
-  ChevronRight,
-  FormatBold,
-  FormatItalic,
-  FormatUnderlined,
-  FormatStrikethrough,
-  FormatListBulleted,
-  FormatListNumbered,
-  Image,
-  Code,
-  TableChart,
-  AttachFile,
-  FormatAlignLeft,
-  FormatAlignCenter,
-  FormatAlignRight,
-  FormatAlignJustify,
-  Person,
-  Business,
 } from "@mui/icons-material";
 import api from "../config/api";
-import RichTextEditor from "../components/RichTextEditor";
 import EmailComposer from "../components/EmailComposer";
 import { taxiMonterricoColors } from "../theme/colors";
 import {
@@ -74,18 +45,18 @@ import {
   ActivitiesTabContent,
   GeneralDescriptionTab,
 } from "../components/DetailCards";
+import { NoteModal, CallModal, TaskModal } from "../components/ActivityModals";
 import type { GeneralInfoCard } from "../components/DetailCards";
 import DetailPageLayout from "../components/Layout/DetailPageLayout";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendar, faClock } from "@fortawesome/free-regular-svg-icons";
 import { library } from "@fortawesome/fontawesome-svg-core";
 import { far } from "@fortawesome/free-regular-svg-icons";
-import { fas } from "@fortawesome/free-solid-svg-icons";
+import { fas, faEnvelope } from "@fortawesome/free-solid-svg-icons";
 import { faUserTie } from "@fortawesome/free-solid-svg-icons";
 import { faUser as faUserRegular } from "@fortawesome/free-regular-svg-icons";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
-import { formatDatePeru } from "../utils/dateUtils";
 
 library.add(far);
 library.add(fas);
@@ -220,89 +191,27 @@ const ContactDetail: React.FC = () => {
   });
 
   // Estados para asociaciones en nota
-  const [selectedAssociations, setSelectedAssociations] = useState<number[]>(
-    []
-  );
-  const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
   const [selectedCompanies, setSelectedCompanies] = useState<number[]>([]);
   const [allCompanies, setAllCompanies] = useState<any[]>([]);
+  const [loadingAllCompanies, setLoadingAllCompanies] = useState(false);
   const [allContacts, setAllContacts] = useState<any[]>([]);
   const [, setEmailValue] = useState("");
   const [, setPhoneValue] = useState("");
   const [, setCompanyValue] = useState("");
-  // Estados para elementos excluidos (desmarcados manualmente aunque estén asociados)
-  const [excludedCompanies, setExcludedCompanies] = useState<number[]>([]);
-  const [excludedContacts, setExcludedContacts] = useState<number[]>([]);
-
 
   // Estados para diálogos de acciones
   const [noteOpen, setNoteOpen] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const [callOpen, setCallOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
-  const [meetingOpen, setMeetingOpen] = useState(false);
-  const [noteAssociateModalOpen, setNoteAssociateModalOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState("empresas");
-  const [associateSearch, setAssociateSearch] = useState("");
-  const [noteModalCompanies, setNoteModalCompanies] = useState<any[]>([]);
-  const [noteModalContacts, setNoteModalContacts] = useState<any[]>([]);
-  const [noteModalDeals, setNoteModalDeals] = useState<any[]>([]);
-  const [noteModalTickets, setNoteModalTickets] = useState<any[]>([]);
-  const [noteSelectedAssociations, setNoteSelectedAssociations] = useState<{
-    [key: string]: number[];
-  }>({
-    companies: [],
-    contacts: [],
-    deals: [],
-    tickets: [],
-  });
-  const [loadingAssociations, setLoadingAssociations] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [taskType, setTaskType] = useState<"todo" | "meeting">("todo");
   const [successMessage, setSuccessMessage] = useState("");
   const [warningMessage, setWarningMessage] = useState("");
   const [emailConnectModalOpen, setEmailConnectModalOpen] = useState(false);
   const [connectingEmail, setConnectingEmail] = useState(false);
 
   // Estados para formularios
-  const [noteData, setNoteData] = useState({ subject: "", description: "" });
   const [,] = useState({ subject: "", description: "", to: "" });
-  const [callData, setCallData] = useState({
-    subject: "",
-    description: "",
-    duration: "",
-  });
-  const [taskData, setTaskData] = useState({
-    title: "",
-    description: "",
-    priority: "medium",
-    dueDate: "",
-    type: "todo" as string,
-  });
-  const descriptionEditorRef = React.useRef<HTMLDivElement>(null);
-  const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState<null | HTMLElement>(
-    null
-  );
-  const imageInputRef = React.useRef<HTMLInputElement>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [activeFormats, setActiveFormats] = useState({
-    bold: false,
-    italic: false,
-    underline: false,
-    strikeThrough: false,
-    unorderedList: false,
-    orderedList: false,
-  });
-  const [datePickerAnchorEl, setDatePickerAnchorEl] =
-    useState<HTMLElement | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [meetingData, setMeetingData] = useState({
-    subject: "",
-    description: "",
-    date: "",
-    time: "",
-  });
-  const [createFollowUpTask, setCreateFollowUpTask] = useState(false);
 
   // Estados para el diálogo de edición
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -353,6 +262,52 @@ const ContactDetail: React.FC = () => {
       setLoading(false);
     }
   }, [id]);
+
+  // Función helper para deduplicar notas con el mismo contenido y timestamp similar
+  const deduplicateNotes = useCallback((activities: any[]) => {
+    const noteGroups = new Map<string, any[]>();
+    const otherActivities: any[] = [];
+
+    activities.forEach((activity) => {
+      // Solo deduplicar notas (type === 'note') que tengan contactId
+      if (activity.type === 'note' && activity.contactId) {
+        // Crear una clave única basada en contenido y timestamp
+        const timestamp = new Date(activity.createdAt || 0).getTime();
+        const timeWindow = Math.floor(timestamp / 5000) * 5000; // Agrupar por ventanas de 5 segundos
+        const key = `${activity.description || ''}|${activity.subject || ''}|${activity.userId || ''}|${activity.contactId}|${timeWindow}`;
+        
+        if (!noteGroups.has(key)) {
+          noteGroups.set(key, []);
+        }
+        noteGroups.get(key)!.push(activity);
+      } else {
+        // Mantener otras actividades sin deduplicar
+        otherActivities.push(activity);
+      }
+    });
+
+    // Crear array deduplicado: una nota representativa por grupo
+    const deduplicatedNotes: any[] = [];
+    noteGroups.forEach((group) => {
+      if (group.length > 0) {
+        // Usar la primera nota como representativa
+        const representative = { ...group[0] };
+        // Agregar información sobre el grupo si hay múltiples notas
+        if (group.length > 1) {
+          representative._deduplicatedCount = group.length;
+          representative._deduplicatedGroup = group.map((n: any) => n.id);
+        }
+        deduplicatedNotes.push(representative);
+      }
+    });
+
+    // Combinar notas deduplicadas con otras actividades y ordenar
+    return [...deduplicatedNotes, ...otherActivities].sort((a: any, b: any) => {
+      const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
+      const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
+      return dateB - dateA;
+    });
+  }, []);
 
   const fetchAssociatedRecords = useCallback(async () => {
     try {
@@ -416,7 +371,27 @@ const ContactDetail: React.FC = () => {
         }
       );
 
-      setActivities(allActivities);
+      // Aplicar deduplicación
+      const deduplicatedActivities = deduplicateNotes(allActivities);
+
+      // Merge inteligente: preservar actividades existentes y agregar nuevas del servidor
+      setActivities((prevActivities) => {
+        // Crear un mapa de IDs existentes para referencia rápida
+        const existingIds = new Set(prevActivities.map((a: any) => a.id));
+        
+        // Agregar actividades nuevas que no estén en el estado actual
+        const newActivities = deduplicatedActivities.filter((a: any) => !existingIds.has(a.id));
+        
+        // Combinar: mantener las actividades existentes + agregar las nuevas del servidor
+        const merged = [...prevActivities, ...newActivities].sort((a: any, b: any) => {
+          const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
+          const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
+          return dateB - dateA;
+        });
+        
+        // Aplicar deduplicación al resultado final también
+        return deduplicateNotes(merged);
+      });
 
       // Obtener tickets asociados
       const ticketsResponse = await api.get("/tickets", {
@@ -428,7 +403,7 @@ const ContactDetail: React.FC = () => {
     } catch (error) {
       console.error("Error fetching associated records:", error);
     }
-  }, [id, isRemovingCompany]);
+  }, [id, isRemovingCompany, deduplicateNotes]);
 
   // Funciones helper para los logs
   const getActivityDescription = (activity: any) => {
@@ -515,10 +490,6 @@ const ContactDetail: React.FC = () => {
     if (contact && !isRemovingCompany) {
       fetchAssociatedRecords();
       fetchAllCompanies();
-      // Inicializar asociaciones seleccionadas con los registros relacionados reales
-      if (contact.id) {
-        setSelectedContacts([contact.id]);
-      }
     }
   }, [contact, id, isRemovingCompany, fetchAssociatedRecords]);
 
@@ -553,64 +524,17 @@ const ContactDetail: React.FC = () => {
         });
       }
     }
-
-    // Inicializar negocios seleccionados con los negocios asociados
-    if (associatedDeals.length > 0) {
-      const dealIds = associatedDeals.map((d: any) => 1000 + d.id);
-      setSelectedAssociations((prev) => {
-        // Combinar con las existentes para no perder selecciones manuales, eliminando duplicados
-        const combined = [...prev, ...dealIds];
-        const unique = combined.filter(
-          (id, index) => combined.indexOf(id) === index
-        );
-        // Solo actualizar si hay cambios para evitar loops infinitos
-        if (
-          unique.length !== prev.length ||
-          unique.some((id) => !prev.includes(id))
-        ) {
-          return unique;
-        }
-        return prev;
-      });
-    }
-
-    // Inicializar tickets seleccionados con los tickets asociados
-    if (associatedTickets.length > 0) {
-      const ticketIds = associatedTickets.map((t: any) => 2000 + t.id);
-      setSelectedAssociations((prev) => {
-        // Combinar con las existentes para no perder selecciones manuales, eliminando duplicados
-        const combined = [...prev, ...ticketIds];
-        const unique = combined.filter(
-          (id, index) => combined.indexOf(id) === index
-        );
-        // Solo actualizar si hay cambios para evitar loops infinitos
-        if (
-          unique.length !== prev.length ||
-          unique.some((id) => !prev.includes(id))
-        ) {
-          return unique;
-        }
-        return prev;
-      });
-    }
-
-    // Inicializar contacto seleccionado
-    if (contact?.id) {
-      setSelectedContacts((prev) => {
-        if (!prev.includes(contact.id)) {
-          return [...prev, contact.id];
-        }
-        return prev;
-      });
-    }
-  }, [associatedCompanies, associatedDeals, associatedTickets, contact?.id]);
+  }, [associatedCompanies]);
 
   const fetchAllCompanies = async () => {
     try {
+      setLoadingAllCompanies(true);
       const response = await api.get("/companies", { params: { limit: 1000 } });
       setAllCompanies(response.data.companies || response.data || []);
     } catch (error) {
       console.error("Error fetching all companies:", error);
+    } finally {
+      setLoadingAllCompanies(false);
     }
   };
 
@@ -623,77 +547,6 @@ const ContactDetail: React.FC = () => {
     }
   };
 
-  const fetchAssociations = async (searchTerm?: string) => {
-    setLoadingAssociations(true);
-    try {
-      // Si hay búsqueda, cargar todos los resultados
-      if (searchTerm && searchTerm.trim().length > 0) {
-        const [companiesRes, contactsRes, dealsRes, ticketsRes] =
-          await Promise.all([
-            api.get("/companies", {
-              params: { limit: 1000, search: searchTerm },
-            }),
-            api.get("/contacts", {
-              params: { limit: 1000, search: searchTerm },
-            }),
-            api.get("/deals", { params: { limit: 1000, search: searchTerm } }),
-            api.get("/tickets", {
-              params: { limit: 1000, search: searchTerm },
-            }),
-          ]);
-        setNoteModalCompanies(
-          companiesRes.data.companies || companiesRes.data || []
-        );
-        setNoteModalContacts(
-          contactsRes.data.contacts || contactsRes.data || []
-        );
-        setNoteModalDeals(dealsRes.data.deals || dealsRes.data || []);
-        setNoteModalTickets(ticketsRes.data.tickets || ticketsRes.data || []);
-      } else {
-        // Si no hay búsqueda, solo cargar los vinculados al contacto actual
-        const associatedItems: {
-          companies: any[];
-          contacts: any[];
-          deals: any[];
-          tickets: any[];
-        } = {
-          companies: [],
-          contacts: [],
-          deals: [],
-          tickets: [],
-        };
-
-        // Cargar empresas vinculadas si existen
-        if (contact?.Companies && contact.Companies.length > 0) {
-          associatedItems.companies = contact.Companies;
-        } else if (contact?.Company) {
-          associatedItems.companies = [contact.Company];
-        }
-
-        // El contacto actual siempre está asociado
-        if (contact) {
-          associatedItems.contacts = [contact];
-        }
-
-        // Cargar negocios y tickets asociados si existen
-        if (associatedDeals && associatedDeals.length > 0) {
-          associatedItems.deals = associatedDeals;
-        }
-        if (associatedTickets && associatedTickets.length > 0) {
-          associatedItems.tickets = associatedTickets;
-        }
-
-        setNoteModalCompanies(associatedItems.companies);
-        setNoteModalContacts(associatedItems.contacts);
-        setNoteModalDeals(associatedItems.deals);
-        setNoteModalTickets(associatedItems.tickets);
-      }
-    } catch (error) {
-      console.error("Error fetching associations:", error);
-    } finally {
-      setLoadingAssociations(false);
-    }
-  };
 
   // Opciones de etapa según las imágenes proporcionadas
   const stageOptions = [
@@ -721,7 +574,6 @@ const ContactDetail: React.FC = () => {
         if (emailOpen) setEmailOpen(false);
         if (callOpen) setCallOpen(false);
         if (taskOpen) setTaskOpen(false);
-        if (meetingOpen) setMeetingOpen(false);
       }
     };
 
@@ -729,66 +581,8 @@ const ContactDetail: React.FC = () => {
     return () => {
       window.removeEventListener("keydown", handleEscKey);
     };
-  }, [noteOpen, emailOpen, callOpen, taskOpen, meetingOpen]);
+  }, [noteOpen, emailOpen, callOpen, taskOpen]);
 
-  const updateActiveFormats = useCallback(() => {
-    if (descriptionEditorRef.current) {
-      setActiveFormats({
-        bold: document.queryCommandState("bold"),
-        italic: document.queryCommandState("italic"),
-        underline: document.queryCommandState("underline"),
-        strikeThrough: document.queryCommandState("strikeThrough"),
-        unorderedList: document.queryCommandState("insertUnorderedList"),
-        orderedList: document.queryCommandState("insertOrderedList"),
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    if (descriptionEditorRef.current && taskOpen) {
-      if (taskData.description !== descriptionEditorRef.current.innerHTML) {
-        descriptionEditorRef.current.innerHTML = taskData.description || "";
-      }
-    }
-  }, [taskData.description, taskOpen]);
-
-  useEffect(() => {
-    const editor = descriptionEditorRef.current;
-    if (!editor || !taskOpen) return;
-
-    const handleSelectionChange = () => {
-      updateActiveFormats();
-    };
-
-    const handleMouseUp = () => {
-      updateActiveFormats();
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (
-        e.key &&
-        (e.key === "ArrowLeft" ||
-          e.key === "ArrowRight" ||
-          e.key === "ArrowUp" ||
-          e.key === "ArrowDown" ||
-          e.key === "Shift" ||
-          e.key === "Control" ||
-          e.key === "Meta")
-      ) {
-        updateActiveFormats();
-      }
-    };
-
-    document.addEventListener("selectionchange", handleSelectionChange);
-    editor.addEventListener("mouseup", handleMouseUp);
-    editor.addEventListener("keyup", handleKeyUp as EventListener);
-
-    return () => {
-      document.removeEventListener("selectionchange", handleSelectionChange);
-      editor.removeEventListener("mouseup", handleMouseUp);
-      editor.removeEventListener("keyup", handleKeyUp as EventListener);
-    };
-  }, [updateActiveFormats, taskOpen]);
 
   const getCompanyInitials = (companyName: string) => {
     if (!companyName) return "--";
@@ -940,18 +734,11 @@ const ContactDetail: React.FC = () => {
 
   // Funciones para abrir diálogos
   const handleOpenNote = () => {
-    setNoteData({ subject: "", description: "" });
-    setCreateFollowUpTask(false);
-    // Limpiar y inicializar con solo el contacto actual
-    if (contact?.id) {
-      setSelectedContacts([contact.id]);
-    } else {
-      setSelectedContacts([]);
-    }
-    setSelectedCompanies([]);
-    setExcludedContacts([]);
-    setExcludedCompanies([]);
     setNoteOpen(true);
+  };
+
+  const handleOpenEmail = () => {
+    setEmailOpen(true);
   };
 
   // Ya no se usa login individual de Google - se usa el token guardado desde Perfil
@@ -1003,6 +790,7 @@ const ContactDetail: React.FC = () => {
           ? [contact.Company]
           : [];
 
+      let newActivities: any[] = [];
       if (companies.length > 0) {
         const activityPromises = companies.map((company: any) =>
           api.post("/activities/emails", {
@@ -1012,16 +800,37 @@ const ContactDetail: React.FC = () => {
             companyId: company.id,
           })
         );
-        await Promise.all(activityPromises);
+        const responses = await Promise.all(activityPromises);
+        newActivities = responses.map((res) => res.data);
       } else {
-        await api.post("/activities/emails", {
+        const response = await api.post("/activities/emails", {
           subject: emailData.subject,
           description: emailData.body.replace(/<[^>]*>/g, ""),
           contactId: id,
         });
+        newActivities = [response.data];
       }
 
-      // Actualizar actividades
+      // Actualización optimista: agregar actividades inmediatamente al estado
+      setActivities((prevActivities) => {
+        // Verificar que no estén ya en la lista (evitar duplicados)
+        const existingIds = new Set(prevActivities.map((a: any) => a.id));
+        const activitiesToAdd = newActivities.filter((a: any) => !existingIds.has(a.id));
+        
+        if (activitiesToAdd.length === 0) return prevActivities;
+        
+        // Agregar al inicio de la lista y ordenar por fecha (más reciente primero)
+        const updated = [...activitiesToAdd, ...prevActivities].sort((a: any, b: any) => {
+          const dateA = new Date(a.createdAt || 0).getTime();
+          const dateB = new Date(b.createdAt || 0).getTime();
+          return dateB - dateA;
+        });
+        
+        // Aplicar deduplicación al resultado final
+        return deduplicateNotes(updated);
+      });
+
+      // Actualizar actividades desde el servidor en segundo plano para consistencia eventual
       fetchAssociatedRecords();
     } catch (error: any) {
       // Si el token expiró o no hay token, mostrar mensaje
@@ -1035,298 +844,44 @@ const ContactDetail: React.FC = () => {
   };
 
   const handleOpenCall = () => {
-    setCallData({ subject: "", description: "", duration: "" });
     setCallOpen(true);
   };
 
   const handleOpenTask = () => {
-    setTaskData({
-      title: "",
-      description: "",
-      priority: "medium",
-      dueDate: "",
-      type: "todo",
-    });
-    setSelectedDate(null);
-    setCurrentMonth(new Date());
+    setTaskType("todo");
     setTaskOpen(true);
   };
 
-  const handleOpenDatePicker = (event: React.MouseEvent<HTMLElement>) => {
-    if (taskData.dueDate) {
-      // Parsear el string YYYY-MM-DD como fecha local para evitar problemas de UTC
-      const dateMatch = taskData.dueDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
-      if (dateMatch) {
-        const year = parseInt(dateMatch[1], 10);
-        const month = parseInt(dateMatch[2], 10) - 1; // Los meses en Date son 0-11
-        const day = parseInt(dateMatch[3], 10);
-        const date = new Date(year, month, day);
-        setSelectedDate(date);
-        setCurrentMonth(date);
-      } else {
-        const date = new Date(taskData.dueDate);
-        setSelectedDate(date);
-        setCurrentMonth(date);
-      }
-    } else {
-      const today = new Date();
-      setSelectedDate(null);
-      setCurrentMonth(today);
-    }
-    setDatePickerAnchorEl(event.currentTarget);
-  };
-
-  const handleDateSelect = (year: number, month: number, day: number) => {
-    // Crear fecha para mostrar en el calendario (mes es 1-12, pero Date usa 0-11)
-    const date = new Date(year, month - 1, day);
-    setSelectedDate(date);
-    // Formatear directamente como YYYY-MM-DD sin conversiones de zona horaria
-    const formattedDate = `${year}-${String(month).padStart(2, "0")}-${String(
-      day
-    ).padStart(2, "0")}`;
-    setTaskData({ ...taskData, dueDate: formattedDate });
-    setDatePickerAnchorEl(null);
-  };
-
-  const handleClearDate = () => {
-    setSelectedDate(null);
-    setTaskData({ ...taskData, dueDate: "" });
-    setDatePickerAnchorEl(null);
-  };
-
-  const handleToday = () => {
-    // Obtener la fecha actual en hora de Perú
-    const today = new Date();
-    const peruToday = new Date(
-      today.toLocaleString("en-US", { timeZone: "America/Lima" })
-    );
-    const year = peruToday.getFullYear();
-    const month = peruToday.getMonth() + 1; // getMonth() devuelve 0-11, necesitamos 1-12
-    const day = peruToday.getDate();
-    // Usar la misma función handleDateSelect con los valores directos
-    handleDateSelect(year, month, day);
-  };
-
-  const getDaysInMonth = (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
-
-    const prevMonthLastDay = new Date(year, month, 0).getDate();
-
-    const days: Array<{ day: number; isCurrentMonth: boolean }> = [];
-
-    // Días del mes anterior
-    for (let i = 0; i < startingDayOfWeek; i++) {
-      const dayNumber = prevMonthLastDay - startingDayOfWeek + i + 1;
-      days.push({ day: dayNumber, isCurrentMonth: false });
-    }
-
-    // Días del mes actual
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push({ day: i, isCurrentMonth: true });
-    }
-
-    // Completar hasta 42 días (6 semanas) con días del siguiente mes
-    const remainingDays = 42 - days.length;
-    for (let i = 1; i <= remainingDays; i++) {
-      days.push({ day: i, isCurrentMonth: false });
-    }
-
-    return days;
-  };
-
-  const formatDateDisplay = (dateString: string) => {
-    return formatDatePeru(dateString);
-  };
-
-  const monthNames = [
-    "Enero",
-    "Febrero",
-    "Marzo",
-    "Abril",
-    "Mayo",
-    "Junio",
-    "Julio",
-    "Agosto",
-    "Septiembre",
-    "Octubre",
-    "Noviembre",
-    "Diciembre",
-  ];
-
-  const weekDays = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"];
 
   const handleOpenMeeting = () => {
-    setMeetingData({ subject: "", description: "", date: "", time: "" });
-    setMeetingOpen(true);
+    setTaskType("meeting");
+    setTaskOpen(true);
   };
 
   // Funciones para guardar
-  const handleSaveNote = async () => {
-    if (!noteData.description.trim()) {
-      setSuccessMessage("");
-      return;
-    }
-    setSaving(true);
-
-    // Variables para debugging
-    let contactsToCreateNote: number[] = [];
-    let finalContactIds: number[] = [];
-    let companiesToAssociate: number[] = [];
-
-    try {
-      // Obtener contactos seleccionados (incluyendo el contacto actual si no está excluido)
-      contactsToCreateNote = selectedContacts.filter(
-        (contactId) => !excludedContacts.includes(contactId)
-      );
-
-      // Si no hay contactos seleccionados, usar el contacto actual
-      finalContactIds =
-        contactsToCreateNote.length > 0
-          ? contactsToCreateNote
-          : contact?.id
-          ? [contact.id]
-          : [];
-
-      // Eliminar duplicados para evitar crear múltiples notas
-      finalContactIds = Array.from(new Set(finalContactIds));
-
-      if (finalContactIds.length === 0) {
-        setSuccessMessage("Error: No hay contactos seleccionados");
-        setTimeout(() => setSuccessMessage(""), 3000);
-        setSaving(false);
-        return;
-      }
-
-      // Obtener empresas seleccionadas
-      companiesToAssociate = selectedCompanies.filter(
-        (companyId) => !excludedCompanies.includes(companyId)
-      );
-
-      // Crear notas para cada contacto seleccionado
-      const activityPromises: Promise<any>[] = [];
-
-      for (const contactId of finalContactIds) {
-        // Obtener información del contacto para el subject
-        let contactName = `Contacto ${contactId}`;
-        try {
-          const contactResponse = await api.get(`/contacts/${contactId}`);
-          const contactData = contactResponse.data;
-          contactName =
-            `${contactData.firstName || ""} ${
-              contactData.lastName || ""
-            }`.trim() || contactName;
-        } catch (e) {
-          console.error(`Error fetching contact ${contactId}:`, e);
-        }
-
-        if (companiesToAssociate.length > 0) {
-          // Crear una nota para cada combinación de contacto y empresa
-          for (const companyId of companiesToAssociate) {
-            activityPromises.push(
-              api.post("/activities/notes", {
-                subject: noteData.subject || `Nota para ${contactName}`,
-                description: noteData.description,
-                contactId: contactId,
-                companyId: companyId,
-              })
-            );
-          }
-        } else {
-          // Crear nota solo con el contacto (sin empresa)
-          activityPromises.push(
-            api.post("/activities/notes", {
-              subject: noteData.subject || `Nota para ${contactName}`,
-              description: noteData.description,
-              contactId: contactId,
-            })
-          );
-        }
-      }
-
-      // Ejecutar todas las creaciones en paralelo
-      await Promise.all(activityPromises);
-
-      // Crear tarea de seguimiento si está marcada (solo para el primer contacto)
-      if (createFollowUpTask && finalContactIds.length > 0) {
-        const followUpDate = new Date();
-        followUpDate.setDate(followUpDate.getDate() + 3); // 3 días laborables
-
-        // Obtener nombre del primer contacto
-        let firstContactName = `Contacto ${finalContactIds[0]}`;
-        try {
-          const contactResponse = await api.get(
-            `/contacts/${finalContactIds[0]}`
-          );
-          const contactData = contactResponse.data;
-          firstContactName =
-            `${contactData.firstName || ""} ${
-              contactData.lastName || ""
-            }`.trim() || firstContactName;
-        } catch (e) {
-          console.error(`Error fetching contact ${finalContactIds[0]}:`, e);
-        }
-
-        await api.post("/tasks", {
-          title: `Seguimiento de nota: ${
-            noteData.subject || `Nota para ${firstContactName}`
-          }`,
-          description: `Tarea de seguimiento generada automáticamente por la nota: ${noteData.description}`,
-          type: "todo",
-          status: "not started",
-          priority: "medium",
-          dueDate: followUpDate.toISOString().split("T")[0],
-          contactId: finalContactIds[0],
-        });
-      }
-
-      const noteCount = activityPromises.length;
-      setSuccessMessage(
-        `Nota${noteCount > 1 ? "s" : ""} creada${
-          noteCount > 1 ? "s" : ""
-        } exitosamente${
-          createFollowUpTask ? " y tarea de seguimiento creada" : ""
-        }`
-      );
-      setNoteOpen(false);
-      setNoteData({ subject: "", description: "" });
-      setCreateFollowUpTask(false);
-      setSelectedContacts([]);
-      setSelectedCompanies([]);
-      setExcludedContacts([]);
-      setExcludedCompanies([]);
-      fetchAssociatedRecords(); // Actualizar actividades
-      setTimeout(() => setSuccessMessage(""), 3000);
-    } catch (error: any) {
-      console.error("Error saving note:", error);
-      console.error("Error details:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        selectedContacts,
-        finalContactIds:
-          contactsToCreateNote.length > 0
-            ? contactsToCreateNote
-            : contact?.id
-            ? [contact.id]
-            : [],
-        companiesToAssociate,
+  // Callback para cuando se guarda una nota desde NoteModal
+  const handleNoteSave = useCallback((newActivity: any) => {
+    // Agregar la actividad inmediatamente al estado para que aparezca de inmediato
+    setActivities((prevActivities) => {
+      // Verificar que no esté ya en la lista (evitar duplicados)
+      const exists = prevActivities.some((a: any) => a.id === newActivity.id);
+      if (exists) return prevActivities;
+      
+      // Agregar al inicio de la lista y ordenar por fecha (más reciente primero)
+      const updated = [newActivity, ...prevActivities].sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
       });
-      const errorMessage =
-        error.response?.data?.error ||
-        error.response?.data?.message ||
-        error.message ||
-        "Error desconocido";
-      setSuccessMessage(`Error al crear la nota: ${errorMessage}`);
-      setTimeout(() => setSuccessMessage(""), 5000);
-    } finally {
-      setSaving(false);
-    }
-  };
+      
+      // Aplicar deduplicación al resultado final
+      return deduplicateNotes(updated);
+    });
+    
+    // Actualizar registros asociados después de crear la nota
+    fetchAssociatedRecords();
+  }, [deduplicateNotes, fetchAssociatedRecords]);
+
 
   // const handleSaveEmail = async () => {
   //   if (!emailData.subject.trim()) {
@@ -1373,148 +928,7 @@ const ContactDetail: React.FC = () => {
   //   }
   // };
 
-  const handleSaveCall = async () => {
-    if (!callData.subject.trim()) {
-      return;
-    }
-    setSaving(true);
-    try {
-      // Obtener empresas asociadas al contacto
-      const companies =
-        contact?.Companies && Array.isArray(contact.Companies)
-          ? contact.Companies
-          : contact?.Company
-          ? [contact.Company]
-          : [];
 
-      // Crear una actividad para cada empresa asociada, o solo con contactId si no hay empresas
-      if (companies.length > 0) {
-        // Crear actividad para cada empresa asociada
-        const activityPromises = companies.map((company: any) =>
-          api.post("/activities/calls", {
-            subject: callData.subject,
-            description: callData.description,
-            contactId: id,
-            companyId: company.id,
-          })
-        );
-        await Promise.all(activityPromises);
-      } else {
-        // Si no hay empresas asociadas, crear solo con contactId
-        await api.post("/activities/calls", {
-          subject: callData.subject,
-          description: callData.description,
-          contactId: id,
-        });
-      }
-      setSuccessMessage("Llamada registrada exitosamente");
-      setCallOpen(false);
-      setCallData({ subject: "", description: "", duration: "" });
-      fetchAssociatedRecords(); // Actualizar actividades
-      setTimeout(() => setSuccessMessage(""), 3000);
-    } catch (error) {
-      console.error("Error saving call:", error);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSaveTask = async () => {
-    if (!taskData.title.trim()) {
-      return;
-    }
-    setSaving(true);
-    try {
-      // Obtener empresas asociadas al contacto
-      const companies =
-        contact?.Companies && Array.isArray(contact.Companies)
-          ? contact.Companies
-          : contact?.Company
-          ? [contact.Company]
-          : [];
-
-      // Preparar datos de la tarea
-      const taskPayload = {
-        title: taskData.title,
-        description: taskData.description,
-        type: "todo",
-        status: "not started",
-        priority: taskData.priority || "medium",
-        dueDate: taskData.dueDate || undefined,
-        contactId: id,
-      };
-
-      // Crear una tarea para cada empresa asociada, o solo con contactId si no hay empresas
-      if (companies.length > 0) {
-        // Crear tarea para cada empresa asociada
-        const taskPromises = companies.map((company: any) =>
-          api.post("/tasks", {
-            ...taskPayload,
-            companyId: company.id,
-          })
-        );
-        await Promise.all(taskPromises);
-      } else {
-        // Si no hay empresas asociadas, crear solo con contactId
-        await api.post("/tasks", taskPayload);
-      }
-      setSuccessMessage(
-        "Tarea creada exitosamente" +
-          (taskData.dueDate ? " y sincronizada con Google Calendar" : "")
-      );
-      setTaskOpen(false);
-      setTaskData({
-        title: "",
-        description: "",
-        priority: "medium",
-        dueDate: "",
-        type: "todo",
-      });
-      fetchAssociatedRecords(); // Actualizar actividades
-      setTimeout(() => setSuccessMessage(""), 3000);
-    } catch (error) {
-      console.error("Error saving task:", error);
-      setSuccessMessage("Error al crear la tarea");
-      setTimeout(() => setSuccessMessage(""), 3000);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSaveMeeting = async () => {
-    if (!meetingData.subject.trim()) {
-      return;
-    }
-    setSaving(true);
-    try {
-      const dueDate =
-        meetingData.date && meetingData.time
-          ? new Date(`${meetingData.date}T${meetingData.time}`).toISOString()
-          : undefined;
-
-      await api.post("/tasks", {
-        title: meetingData.subject,
-        description: meetingData.description,
-        type: "meeting",
-        status: "not started",
-        priority: "medium",
-        dueDate: dueDate,
-        contactId: id,
-      });
-      setSuccessMessage(
-        "Reunión creada exitosamente" +
-          (dueDate ? " y sincronizada con Google Calendar" : "")
-      );
-      setMeetingOpen(false);
-      setMeetingData({ subject: "", description: "", date: "", time: "" });
-      fetchAssociatedRecords(); // Actualizar actividades
-      setTimeout(() => setSuccessMessage(""), 3000);
-    } catch (error) {
-      console.error("Error saving meeting:", error);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   // Funciones para la pestaña Descripción
   const handleSearchRuc = async () => {
@@ -1793,12 +1207,7 @@ const ContactDetail: React.FC = () => {
         handleOpenNote();
         break;
       case "email":
-        // Abrir Gmail con el correo del contacto prellenado
-        const email = contact?.email || "";
-        const gmailUrl = `https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(
-          email
-        )}`;
-        window.open(gmailUrl, "_blank");
+        handleOpenEmail();
         break;
       case "call":
         handleOpenCall();
@@ -2101,8 +1510,13 @@ const ContactDetail: React.FC = () => {
         onClick: () => handleOpenNote(),
       },
       {
+        icon: faEnvelope,
+        tooltip: 'Enviar correo',
+        onClick: () => handleOpenEmail(),
+      },
+      {
         icon: ['fas', 'phone'],
-        tooltip: 'Hacer llamada',
+        tooltip: 'Llamada',
         onClick: () => handleOpenCall(),
       },
       {
@@ -2838,1044 +2252,22 @@ const ContactDetail: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Ventana flotante de Nota */}
-      {noteOpen && (
-        <Box
-          sx={{
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
-            width: { xs: "95vw", sm: "700px" },
-            maxWidth: { xs: "95vw", sm: "90vw" },
-            height: "85vh",
-            backgroundColor:
-              theme.palette.mode === "dark"
-                ? "#1F2937"
-                : theme.palette.background.paper,
-            boxShadow:
-              theme.palette.mode === "dark"
-                ? "0 20px 60px rgba(0,0,0,0.5)"
-                : "0 20px 60px rgba(0,0,0,0.12)",
-            zIndex: 1500,
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-            borderRadius: 4,
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Encabezado personalizado */}
-          <Box
-            sx={{
-              px: 3,
-              py: 2,
-              backgroundColor: "transparent",
-              color: theme.palette.text.primary,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <Typography
-                variant="h6"
-                sx={{
-                  color: theme.palette.text.primary,
-                  fontWeight: 600,
-                  fontSize: "1.25rem",
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                Nota
-              </Typography>
-            </Box>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-              <IconButton
-                sx={{
-                  color: theme.palette.text.secondary,
-                  "&:hover": {
-                    backgroundColor: theme.palette.error.main + "15",
-                    color: theme.palette.error.main,
-                  },
-                  transition: "all 0.2s ease",
-                }}
-                size="small"
-                onClick={() => setNoteOpen(false)}
-              >
-                <Close fontSize="small" />
-              </IconButton>
-            </Box>
-          </Box>
-
-          <Box
-            sx={{
-              flexGrow: 1,
-              display: "flex",
-              flexDirection: "row",
-              p: 3,
-              overflow: "hidden",
-              gap: 3,
-            }}
-          >
-            {/* Columna Izquierda: Editor */}
-            <Box
-              sx={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                minWidth: 0,
-              }}
-            >
-              {/* Editor de texto enriquecido con barra de herramientas integrada */}
-              <Box
-                sx={{
-                  flexGrow: 1,
-                  display: "flex",
-                  flexDirection: "column",
-                  border: `1px solid ${
-                    theme.palette.mode === "dark"
-                      ? "rgba(255,255,255,0.1)"
-                      : theme.palette.divider
-                  }`,
-                  borderRadius: 2,
-                  overflow: "hidden",
-                  minHeight: "300px",
-                  backgroundColor:
-                    theme.palette.mode === "dark"
-                      ? "#1F2937"
-                      : theme.palette.background.paper,
-                  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-                  "&:focus-within": {
-                    boxShadow: "none",
-                    borderColor: theme.palette.divider,
-                    transform: "none",
-                  },
-                }}
-              >
-                <RichTextEditor
-                  value={noteData.description}
-                  onChange={(value: string) =>
-                    setNoteData({ ...noteData, description: value })
-                  }
-                  placeholder="Empieza a escribir para dejar una nota..."
-                />
-              </Box>
-            </Box>
-          </Box>
-
-          {/* Footer con botones */}
-          <Box
-            sx={{
-              px: 3,
-              py: 2.5,
-              borderTop: `1px solid ${
-                theme.palette.mode === "dark"
-                  ? "rgba(255,255,255,0.1)"
-                  : theme.palette.divider
-              }`,
-              backgroundColor:
-                theme.palette.mode === "dark"
-                  ? "#1F2937"
-                  : theme.palette.background.paper,
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: 2,
-            }}
-          >
-            <Button
-              onClick={() => setNoteOpen(false)}
-              sx={{
-                textTransform: "none",
-                px: 3.5,
-                py: 1.25,
-                color: theme.palette.text.secondary,
-                fontWeight: 500,
-                borderRadius: 2,
-                "&:hover": {
-                  backgroundColor: theme.palette.action.hover,
-                },
-                transition: "all 0.2s ease",
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSaveNote}
-              variant="contained"
-              disabled={saving || !noteData.description.trim()}
-              sx={{
-                textTransform: "none",
-                px: 4,
-                py: 1.25,
-                backgroundColor: saving
-                  ? theme.palette.action.disabledBackground
-                  : taxiMonterricoColors.orange,
-                fontWeight: 600,
-                borderRadius: 2,
-                boxShadow: saving
-                  ? "none"
-                  : `0 4px 12px ${taxiMonterricoColors.orange}40`,
-                "&:hover": {
-                  backgroundColor: saving
-                    ? theme.palette.action.disabledBackground
-                    : taxiMonterricoColors.orangeDark,
-                  boxShadow: saving
-                    ? "none"
-                    : `0 6px 16px ${taxiMonterricoColors.orange}50`,
-                  transform: "translateY(-1px)",
-                },
-                "&:active": {
-                  transform: "translateY(0)",
-                },
-                "&:disabled": {
-                  backgroundColor: theme.palette.action.disabledBackground,
-                  color: theme.palette.action.disabled,
-                  boxShadow: "none",
-                },
-                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-              }}
-            >
-              {saving ? "Guardando..." : "Crear nota"}
-            </Button>
-          </Box>
-        </Box>
-      )}
-
-      {/* Overlay de fondo cuando la ventana está abierta */}
-      {noteOpen && (
-        <Box
-          sx={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor:
-              theme.palette.mode === "dark"
-                ? "rgba(0, 0, 0, 0.7)"
-                : "rgba(0, 0, 0, 0.5)",
-            zIndex: 1499,
-          }}
-          onClick={() => setNoteOpen(false)}
-        />
-      )}
-
-      {/* Modal de Asociados para Nota */}
-      <Dialog
-        open={noteAssociateModalOpen}
-        onClose={() => setNoteAssociateModalOpen(false)}
-        maxWidth="sm"
-        fullWidth={false}
-        sx={{ zIndex: 1600 }}
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            maxHeight: "80vh",
-            width: "700px",
-            maxWidth: "90vw",
-          },
+      {/* Modal de crear nota */}
+      <NoteModal
+        open={noteOpen}
+        onClose={() => setNoteOpen(false)}
+        entityType="contact"
+        entityId={id || ""}
+        entityName={contact ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim() || contact.email || "Sin nombre" : "Sin nombre"}
+        user={user}
+        onSave={handleNoteSave}
+        relatedEntities={{
+          companies: associatedCompanies || [],
+          contacts: contact ? [contact] : [],
+          deals: associatedDeals || [],
+          tickets: associatedTickets || [],
         }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            height: "500px",
-          }}
-        >
-          {/* Panel izquierdo - Categorías */}
-          <Box
-            sx={{
-              width: 160,
-              borderRight: `1px solid ${theme.palette.divider}`,
-              backgroundColor:
-                theme.palette.mode === "dark" ? "#1e1e1e" : "#fafafa",
-              overflowY: "auto",
-            }}
-          >
-            <List sx={{ p: 0 }}>
-              <ListItem disablePadding>
-                <ListItemButton
-                  selected={selectedCategory === "seleccionados"}
-                  onClick={() => setSelectedCategory("seleccionados")}
-                  sx={{
-                    py: 1.5,
-                    px: 2,
-                    "&.Mui-selected": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(76, 175, 80, 0.3)"
-                          : "rgba(76, 175, 80, 0.15)",
-                      color:
-                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
-                      "&:hover": {
-                        backgroundColor:
-                          theme.palette.mode === "dark"
-                            ? "rgba(76, 175, 80, 0.4)"
-                            : "rgba(76, 175, 80, 0.2)",
-                      },
-                    },
-                  }}
-                >
-                  <ListItemText
-                    primary="Seleccionados"
-                    secondary={
-                      Object.values(noteSelectedAssociations).flat().length
-                    }
-                    primaryTypographyProps={{
-                      fontSize: "0.875rem",
-                      fontWeight: 500,
-                    }}
-                    secondaryTypographyProps={{ fontSize: "0.75rem" }}
-                  />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton
-                  selected={selectedCategory === "empresas"}
-                  onClick={() => setSelectedCategory("empresas")}
-                  sx={{
-                    py: 1.5,
-                    px: 2,
-                    "&.Mui-selected": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(76, 175, 80, 0.3)"
-                          : "rgba(76, 175, 80, 0.15)",
-                      color:
-                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
-                      "&:hover": {
-                        backgroundColor:
-                          theme.palette.mode === "dark"
-                            ? "rgba(76, 175, 80, 0.4)"
-                            : "rgba(76, 175, 80, 0.2)",
-                      },
-                    },
-                  }}
-                >
-                  <ListItemText
-                    primary="Empresas"
-                    secondary={noteModalCompanies.length}
-                    primaryTypographyProps={{
-                      fontSize: "0.875rem",
-                      fontWeight: 500,
-                    }}
-                    secondaryTypographyProps={{ fontSize: "0.75rem" }}
-                  />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton
-                  selected={selectedCategory === "contactos"}
-                  onClick={() => setSelectedCategory("contactos")}
-                  sx={{
-                    py: 1.5,
-                    px: 2,
-                    "&.Mui-selected": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(76, 175, 80, 0.3)"
-                          : "rgba(76, 175, 80, 0.15)",
-                      color:
-                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
-                      "&:hover": {
-                        backgroundColor:
-                          theme.palette.mode === "dark"
-                            ? "rgba(76, 175, 80, 0.4)"
-                            : "rgba(76, 175, 80, 0.2)",
-                      },
-                    },
-                  }}
-                >
-                  <ListItemText
-                    primary="Contactos"
-                    secondary={noteModalContacts.length}
-                    primaryTypographyProps={{
-                      fontSize: "0.875rem",
-                      fontWeight: 500,
-                    }}
-                    secondaryTypographyProps={{ fontSize: "0.75rem" }}
-                  />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton
-                  selected={selectedCategory === "negocios"}
-                  onClick={() => setSelectedCategory("negocios")}
-                  sx={{
-                    py: 1.5,
-                    px: 2,
-                    "&.Mui-selected": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(76, 175, 80, 0.3)"
-                          : "rgba(76, 175, 80, 0.15)",
-                      color:
-                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
-                      "&:hover": {
-                        backgroundColor:
-                          theme.palette.mode === "dark"
-                            ? "rgba(76, 175, 80, 0.4)"
-                            : "rgba(76, 175, 80, 0.2)",
-                      },
-                    },
-                  }}
-                >
-                  <ListItemText
-                    primary="Negocios"
-                    secondary={noteModalDeals.length}
-                    primaryTypographyProps={{
-                      fontSize: "0.875rem",
-                      fontWeight: 500,
-                    }}
-                    secondaryTypographyProps={{ fontSize: "0.75rem" }}
-                  />
-                </ListItemButton>
-              </ListItem>
-              <ListItem disablePadding>
-                <ListItemButton
-                  selected={selectedCategory === "tickets"}
-                  onClick={() => setSelectedCategory("tickets")}
-                  sx={{
-                    py: 1.5,
-                    px: 2,
-                    "&.Mui-selected": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(76, 175, 80, 0.3)"
-                          : "rgba(76, 175, 80, 0.15)",
-                      color:
-                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
-                      "&:hover": {
-                        backgroundColor:
-                          theme.palette.mode === "dark"
-                            ? "rgba(76, 175, 80, 0.4)"
-                            : "rgba(76, 175, 80, 0.2)",
-                      },
-                    },
-                  }}
-                >
-                  <ListItemText
-                    primary="Tickets"
-                    secondary={noteModalTickets.length}
-                    primaryTypographyProps={{
-                      fontSize: "0.875rem",
-                      fontWeight: 500,
-                    }}
-                    secondaryTypographyProps={{ fontSize: "0.75rem" }}
-                  />
-                </ListItemButton>
-              </ListItem>
-            </List>
-          </Box>
-
-          {/* Panel derecho - Contenido */}
-          <Box
-            sx={{
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-            }}
-          >
-            {/* Header */}
-            <Box
-              sx={{
-                p: 2,
-                borderBottom: `1px solid ${theme.palette.divider}`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <Typography
-                variant="h6"
-                sx={{ fontWeight: 600, fontSize: "1rem" }}
-              >
-                Asociar
-              </Typography>
-              <IconButton
-                onClick={() => setNoteAssociateModalOpen(false)}
-                size="small"
-              >
-                <Close />
-              </IconButton>
-            </Box>
-
-            {/* Búsqueda */}
-            <Box
-              sx={{ p: 2, borderBottom: `1px solid ${theme.palette.divider}` }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  border: `1px solid ${theme.palette.divider}`,
-                  borderRadius: 1,
-                  px: 1.5,
-                  py: 0.75,
-                  backgroundColor:
-                    theme.palette.mode === "dark" ? "#2a2a2a" : "#f5f5f5",
-                }}
-              >
-                <Search
-                  sx={{
-                    color: theme.palette.text.secondary,
-                    mr: 1,
-                    fontSize: 20,
-                  }}
-                />
-                <InputBase
-                  placeholder="Buscar asociaciones actuales"
-                  value={associateSearch}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setAssociateSearch(value);
-                    if (value.trim().length > 0) {
-                      fetchAssociations(value);
-                    } else {
-                      fetchAssociations();
-                    }
-                  }}
-                  sx={{
-                    flex: 1,
-                    fontSize: "0.875rem",
-                    "& input": {
-                      py: 0.5,
-                    },
-                  }}
-                />
-              </Box>
-            </Box>
-
-            {/* Contenido */}
-            <Box sx={{ flex: 1, overflowY: "auto", p: 2 }}>
-              {loadingAssociations ? (
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    height: "100%",
-                  }}
-                >
-                  <CircularProgress />
-                </Box>
-              ) : (
-                <>
-                  {selectedCategory === "empresas" && (
-                    <Box>
-                      <Typography
-                        variant="subtitle2"
-                        sx={{ fontWeight: 600, mb: 1, fontSize: "0.875rem" }}
-                      >
-                        Empresas
-                      </Typography>
-                      <List sx={{ p: 0 }}>
-                        {noteModalCompanies
-                          .filter(
-                            (company: any) =>
-                              !associateSearch ||
-                              company.name
-                                ?.toLowerCase()
-                                .includes(associateSearch.toLowerCase()) ||
-                              company.domain
-                                ?.toLowerCase()
-                                .includes(associateSearch.toLowerCase())
-                          )
-                          .map((company: any) => (
-                            <ListItem key={company.id} disablePadding>
-                              <ListItemButton
-                                sx={{ py: 0.75, px: 1 }}
-                                onClick={() => {
-                                  const current =
-                                    noteSelectedAssociations.companies || [];
-                                  if (current.includes(company.id)) {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      companies: current.filter(
-                                        (id: number) => id !== company.id
-                                      ),
-                                    });
-                                  } else {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      companies: [...current, company.id],
-                                    });
-                                  }
-                                }}
-                              >
-                                <Checkbox
-                                  checked={
-                                    noteSelectedAssociations.companies?.includes(
-                                      company.id
-                                    ) || false
-                                  }
-                                  size="small"
-                                  sx={{ p: 0.5, mr: 1 }}
-                                />
-                                <ListItemText
-                                  primary={company.name}
-                                  secondary={company.domain}
-                                  primaryTypographyProps={{
-                                    fontSize: "0.875rem",
-                                  }}
-                                  secondaryTypographyProps={{
-                                    fontSize: "0.75rem",
-                                  }}
-                                />
-                              </ListItemButton>
-                            </ListItem>
-                          ))}
-                      </List>
-                    </Box>
-                  )}
-
-                  {selectedCategory === "contactos" && (
-                    <Box>
-                      <Typography
-                        variant="subtitle2"
-                        sx={{ fontWeight: 600, mb: 1, fontSize: "0.875rem" }}
-                      >
-                        Contactos
-                      </Typography>
-                      <List sx={{ p: 0 }}>
-                        {noteModalContacts
-                          .filter(
-                            (contactItem: any) =>
-                              !associateSearch ||
-                              `${contactItem.firstName} ${contactItem.lastName}`
-                                .toLowerCase()
-                                .includes(associateSearch.toLowerCase()) ||
-                              contactItem.email
-                                ?.toLowerCase()
-                                .includes(associateSearch.toLowerCase())
-                          )
-                          .map((contactItem: any) => (
-                            <ListItem key={contactItem.id} disablePadding>
-                              <ListItemButton
-                                sx={{ py: 0.75, px: 1 }}
-                                onClick={() => {
-                                  const current =
-                                    noteSelectedAssociations.contacts || [];
-                                  if (current.includes(contactItem.id)) {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      contacts: current.filter(
-                                        (id) => id !== contactItem.id
-                                      ),
-                                    });
-                                  } else {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      contacts: [...current, contactItem.id],
-                                    });
-                                  }
-                                }}
-                              >
-                                <Checkbox
-                                  checked={
-                                    noteSelectedAssociations.contacts?.includes(
-                                      contactItem.id
-                                    ) || false
-                                  }
-                                  size="small"
-                                  sx={{ p: 0.5, mr: 1 }}
-                                />
-                                <ListItemText
-                                  primary={`${contactItem.firstName} ${contactItem.lastName}`}
-                                  secondary={contactItem.email}
-                                  primaryTypographyProps={{
-                                    fontSize: "0.875rem",
-                                  }}
-                                  secondaryTypographyProps={{
-                                    fontSize: "0.75rem",
-                                  }}
-                                />
-                              </ListItemButton>
-                            </ListItem>
-                          ))}
-                      </List>
-                    </Box>
-                  )}
-
-                  {selectedCategory === "negocios" && (
-                    <Box>
-                      <Typography
-                        variant="subtitle2"
-                        sx={{ fontWeight: 600, mb: 1, fontSize: "0.875rem" }}
-                      >
-                        Negocios
-                      </Typography>
-                      <List sx={{ p: 0 }}>
-                        {noteModalDeals
-                          .filter(
-                            (deal: any) =>
-                              !associateSearch ||
-                              deal.name
-                                ?.toLowerCase()
-                                .includes(associateSearch.toLowerCase())
-                          )
-                          .map((deal: any) => (
-                            <ListItem key={deal.id} disablePadding>
-                              <ListItemButton
-                                sx={{ py: 0.75, px: 1 }}
-                                onClick={() => {
-                                  const current =
-                                    noteSelectedAssociations.deals || [];
-                                  if (current.includes(deal.id)) {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      deals: current.filter(
-                                        (id) => id !== deal.id
-                                      ),
-                                    });
-                                  } else {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      deals: [...current, deal.id],
-                                    });
-                                  }
-                                }}
-                              >
-                                <Checkbox
-                                  checked={
-                                    noteSelectedAssociations.deals?.includes(
-                                      deal.id
-                                    ) || false
-                                  }
-                                  size="small"
-                                  sx={{ p: 0.5, mr: 1 }}
-                                />
-                                <ListItemText
-                                  primary={deal.name}
-                                  secondary={`${
-                                    deal.amount
-                                      ? `S/ ${deal.amount.toLocaleString(
-                                          "es-ES"
-                                        )}`
-                                      : ""
-                                  } ${deal.stage || ""}`}
-                                  primaryTypographyProps={{
-                                    fontSize: "0.875rem",
-                                  }}
-                                  secondaryTypographyProps={{
-                                    fontSize: "0.75rem",
-                                  }}
-                                />
-                              </ListItemButton>
-                            </ListItem>
-                          ))}
-                      </List>
-                    </Box>
-                  )}
-
-                  {selectedCategory === "tickets" && (
-                    <Box>
-                      <Typography
-                        variant="subtitle2"
-                        sx={{ fontWeight: 600, mb: 1, fontSize: "0.875rem" }}
-                      >
-                        Tickets
-                      </Typography>
-                      <List sx={{ p: 0 }}>
-                        {noteModalTickets
-                          .filter(
-                            (ticket: any) =>
-                              !associateSearch ||
-                              ticket.subject
-                                ?.toLowerCase()
-                                .includes(associateSearch.toLowerCase())
-                          )
-                          .map((ticket: any) => (
-                            <ListItem key={ticket.id} disablePadding>
-                              <ListItemButton
-                                sx={{ py: 0.75, px: 1 }}
-                                onClick={() => {
-                                  const current =
-                                    noteSelectedAssociations.tickets || [];
-                                  if (current.includes(ticket.id)) {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      tickets: current.filter(
-                                        (id) => id !== ticket.id
-                                      ),
-                                    });
-                                  } else {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      tickets: [...current, ticket.id],
-                                    });
-                                  }
-                                }}
-                              >
-                                <Checkbox
-                                  checked={
-                                    noteSelectedAssociations.tickets?.includes(
-                                      ticket.id
-                                    ) || false
-                                  }
-                                  size="small"
-                                  sx={{ p: 0.5, mr: 1 }}
-                                />
-                                <ListItemText
-                                  primary={ticket.subject}
-                                  secondary={ticket.description}
-                                  primaryTypographyProps={{
-                                    fontSize: "0.875rem",
-                                  }}
-                                  secondaryTypographyProps={{
-                                    fontSize: "0.75rem",
-                                  }}
-                                />
-                              </ListItemButton>
-                            </ListItem>
-                          ))}
-                      </List>
-                    </Box>
-                  )}
-
-                  {selectedCategory === "seleccionados" && (
-                    <Box>
-                      <Typography
-                        variant="subtitle2"
-                        sx={{ fontWeight: 600, mb: 1, fontSize: "0.875rem" }}
-                      >
-                        Seleccionados (
-                        {Object.values(noteSelectedAssociations).flat().length})
-                      </Typography>
-                      {Object.values(noteSelectedAssociations).flat().length ===
-                      0 ? (
-                        <Typography
-                          variant="body2"
-                          sx={{ color: theme.palette.text.secondary, py: 2 }}
-                        >
-                          No hay elementos seleccionados
-                        </Typography>
-                      ) : (
-                        <List sx={{ p: 0 }}>
-                          {noteSelectedAssociations.companies?.map(
-                            (companyId) => {
-                              const company = noteModalCompanies.find(
-                                (c: any) => c.id === companyId
-                              );
-                              if (!company) return null;
-                              return (
-                                <ListItem key={companyId} disablePadding>
-                                  <ListItemButton
-                                    sx={{ py: 0.75, px: 1 }}
-                                    onClick={() => {
-                                      setNoteSelectedAssociations({
-                                        ...noteSelectedAssociations,
-                                        companies:
-                                          noteSelectedAssociations.companies.filter(
-                                            (id) => id !== companyId
-                                          ),
-                                      });
-                                    }}
-                                  >
-                                    <Checkbox
-                                      checked={true}
-                                      size="small"
-                                      sx={{ p: 0.5, mr: 1 }}
-                                    />
-                                    <Business
-                                      sx={{
-                                        fontSize: 18,
-                                        mr: 1,
-                                        color: theme.palette.text.secondary,
-                                      }}
-                                    />
-                                    <ListItemText
-                                      primary={company.name}
-                                      secondary={company.domain}
-                                      primaryTypographyProps={{
-                                        fontSize: "0.875rem",
-                                      }}
-                                      secondaryTypographyProps={{
-                                        fontSize: "0.75rem",
-                                      }}
-                                    />
-                                  </ListItemButton>
-                                </ListItem>
-                              );
-                            }
-                          )}
-                          {noteSelectedAssociations.contacts?.map(
-                            (contactId) => {
-                              const contactItem = noteModalContacts.find(
-                                (c: any) => c.id === contactId
-                              );
-                              if (!contactItem) return null;
-                              return (
-                                <ListItem key={contactId} disablePadding>
-                                  <ListItemButton
-                                    sx={{ py: 0.75, px: 1 }}
-                                    onClick={() => {
-                                      setNoteSelectedAssociations({
-                                        ...noteSelectedAssociations,
-                                        contacts:
-                                          noteSelectedAssociations.contacts.filter(
-                                            (id) => id !== contactId
-                                          ),
-                                      });
-                                    }}
-                                  >
-                                    <Checkbox
-                                      checked={true}
-                                      size="small"
-                                      sx={{ p: 0.5, mr: 1 }}
-                                    />
-                                    <Person
-                                      sx={{
-                                        fontSize: 18,
-                                        mr: 1,
-                                        color: theme.palette.text.secondary,
-                                      }}
-                                    />
-                                    <ListItemText
-                                      primary={`${contactItem.firstName} ${contactItem.lastName}`}
-                                      secondary={contactItem.email}
-                                      primaryTypographyProps={{
-                                        fontSize: "0.875rem",
-                                      }}
-                                      secondaryTypographyProps={{
-                                        fontSize: "0.75rem",
-                                      }}
-                                    />
-                                  </ListItemButton>
-                                </ListItem>
-                              );
-                            }
-                          )}
-                          {noteSelectedAssociations.deals?.map((dealId) => {
-                            const deal = noteModalDeals.find(
-                              (d: any) => d.id === dealId
-                            );
-                            if (!deal) return null;
-                            return (
-                              <ListItem key={dealId} disablePadding>
-                                <ListItemButton
-                                  sx={{ py: 0.75, px: 1 }}
-                                  onClick={() => {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      deals:
-                                        noteSelectedAssociations.deals.filter(
-                                          (id) => id !== dealId
-                                        ),
-                                    });
-                                  }}
-                                >
-                                  <Checkbox
-                                    checked={true}
-                                    size="small"
-                                    sx={{ p: 0.5, mr: 1 }}
-                                  />
-                                  <ListItemText
-                                    primary={deal.name}
-                                    secondary={`${
-                                      deal.amount
-                                        ? `S/ ${deal.amount.toLocaleString(
-                                            "es-ES"
-                                          )}`
-                                        : ""
-                                    } ${deal.stage || ""}`}
-                                    primaryTypographyProps={{
-                                      fontSize: "0.875rem",
-                                    }}
-                                    secondaryTypographyProps={{
-                                      fontSize: "0.75rem",
-                                    }}
-                                  />
-                                </ListItemButton>
-                              </ListItem>
-                            );
-                          })}
-                          {noteSelectedAssociations.tickets?.map((ticketId) => {
-                            const ticket = noteModalTickets.find(
-                              (t: any) => t.id === ticketId
-                            );
-                            if (!ticket) return null;
-                            return (
-                              <ListItem key={ticketId} disablePadding>
-                                <ListItemButton
-                                  sx={{ py: 0.75, px: 1 }}
-                                  onClick={() => {
-                                    setNoteSelectedAssociations({
-                                      ...noteSelectedAssociations,
-                                      tickets:
-                                        noteSelectedAssociations.tickets.filter(
-                                          (id) => id !== ticketId
-                                        ),
-                                    });
-                                  }}
-                                >
-                                  <Checkbox
-                                    checked={true}
-                                    size="small"
-                                    sx={{ p: 0.5, mr: 1 }}
-                                  />
-                                  <ListItemText
-                                    primary={ticket.subject}
-                                    secondary={ticket.description}
-                                    primaryTypographyProps={{
-                                      fontSize: "0.875rem",
-                                    }}
-                                    secondaryTypographyProps={{
-                                      fontSize: "0.75rem",
-                                    }}
-                                  />
-                                </ListItemButton>
-                              </ListItem>
-                            );
-                          })}
-                        </List>
-                      )}
-                    </Box>
-                  )}
-                </>
-              )}
-            </Box>
-          </Box>
-        </Box>
-        <DialogActions
-          sx={{ p: 2, borderTop: `1px solid ${theme.palette.divider}` }}
-        >
-          <Button
-            onClick={() => setNoteAssociateModalOpen(false)}
-            sx={{ textTransform: "none" }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={() => {
-              // Aplicar las selecciones a los estados principales
-              setSelectedCompanies(noteSelectedAssociations.companies || []);
-              setSelectedContacts(noteSelectedAssociations.contacts || []);
-              // Convertir deals y tickets a la estructura esperada
-              const dealIds = (noteSelectedAssociations.deals || []).map(
-                (id) => 1000 + id
-              );
-              const ticketIds = (noteSelectedAssociations.tickets || []).map(
-                (id) => 2000 + id
-              );
-              setSelectedAssociations([...dealIds, ...ticketIds]);
-              setNoteAssociateModalOpen(false);
-            }}
-            variant="contained"
-            sx={{
-              textTransform: "none",
-              backgroundColor: taxiMonterricoColors.green,
-              "&:hover": {
-                backgroundColor: taxiMonterricoColors.greenDark,
-              },
-            }}
-          >
-            Guardar
-          </Button>
-        </DialogActions>
-      </Dialog>
+      />
 
       {/* Modal de Email con Gmail API */}
       <EmailComposer
@@ -3888,1817 +2280,540 @@ const ContactDetail: React.FC = () => {
         onSend={handleSendEmail}
       />
 
-      {/* Ventana flotante de Llamada */}
-      {callOpen && (
-        <>
-          <Box
-            sx={{
-              position: "fixed",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              width: "600px",
-              maxWidth: "95vw",
-              maxHeight: "90vh",
-              backgroundColor: theme.palette.background.paper,
-              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
-              borderRadius: 4,
-              zIndex: 1500,
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Box
-              sx={{
-                backgroundColor: "transparent",
-                color: theme.palette.text.primary,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                minHeight: { xs: "64px", md: "72px" },
-                px: { xs: 3, md: 4 },
-              }}
-            >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: "50%",
-                    backgroundColor: `${taxiMonterricoColors.green}15`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Phone
-                    sx={{ fontSize: 20, color: taxiMonterricoColors.green }}
-                  />
-                </Box>
-                <Typography
-                  variant="h5"
-                  sx={{
-                    color: theme.palette.text.primary,
-                    fontWeight: 700,
-                    fontSize: { xs: "1.1rem", md: "1.25rem" },
-                    letterSpacing: "-0.02em",
-                  }}
-                >
-                  Llamada
-                </Typography>
-              </Box>
-              <IconButton
-                sx={{
-                  color: theme.palette.text.secondary,
-                  transition: "all 0.2s ease",
-                  "&:hover": {
-                    backgroundColor: theme.palette.action.hover,
-                    color: theme.palette.text.primary,
-                    transform: "rotate(90deg)",
-                  },
-                }}
-                size="medium"
-                onClick={() => setCallOpen(false)}
-              >
-                <Close />
-              </IconButton>
-            </Box>
+      {/* Modal de crear llamada */}
+      <CallModal
+        open={callOpen}
+        onClose={() => setCallOpen(false)}
+        entityType="contact"
+        entityId={id || ""}
+        entityName={contact ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim() || contact.email || "Sin nombre" : "Sin nombre"}
+        user={user}
+        onSave={(newActivity) => {
+          // Agregar la actividad inmediatamente al estado
+          setActivities((prevActivities) => {
+            const exists = prevActivities.some((a: any) => a.id === newActivity.id);
+            if (exists) return prevActivities;
+            return [newActivity, ...prevActivities].sort((a: any, b: any) => {
+              const dateA = new Date(a.createdAt || 0).getTime();
+              const dateB = new Date(b.createdAt || 0).getTime();
+              return dateB - dateA;
+            });
+          });
+          fetchAssociatedRecords(); // Actualizar actividades
+        }}
+        relatedEntityIds={{
+          companyId: associatedCompanies && associatedCompanies.length > 0 
+            ? associatedCompanies[0].id 
+            : undefined,
+        }}
+      />
 
-            <Box
-              sx={{
-                flexGrow: 1,
-                display: "flex",
-                flexDirection: "column",
-                p: { xs: 3, md: 4 },
-                overflow: "hidden",
-                overflowY: "auto",
-                gap: 3,
-                "&::-webkit-scrollbar": {
-                  width: "8px",
-                },
-                "&::-webkit-scrollbar-track": {
-                  backgroundColor: "transparent",
-                  borderRadius: "4px",
-                },
-                "&::-webkit-scrollbar-thumb": {
-                  backgroundColor:
-                    theme.palette.mode === "dark"
-                      ? "rgba(255,255,255,0.2)"
-                      : "rgba(0,0,0,0.2)",
-                  borderRadius: "4px",
-                  "&:hover": {
-                    backgroundColor:
-                      theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.3)"
-                        : "rgba(0,0,0,0.3)",
-                  },
-                  transition: "background-color 0.2s ease",
-                },
-              }}
-            >
-              <TextField
-                label="Asunto"
-                value={callData.subject}
-                onChange={(e) =>
-                  setCallData({ ...callData, subject: e.target.value })
-                }
-                required
-                fullWidth
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    "& fieldset": {
-                      borderWidth: "2px",
-                      borderColor: theme.palette.divider,
-                    },
-                    "&:hover fieldset": {
-                      borderColor: taxiMonterricoColors.green,
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: taxiMonterricoColors.green,
-                      borderWidth: "2px",
-                    },
-                  },
-                  "& .MuiInputLabel-root": {
-                    fontWeight: 500,
-                    "&.Mui-focused": {
-                      color: taxiMonterricoColors.green,
-                    },
-                  },
-                }}
-              />
-              <TextField
-                label="Duración (minutos)"
-                type="number"
-                value={callData.duration}
-                onChange={(e) =>
-                  setCallData({ ...callData, duration: e.target.value })
-                }
-                fullWidth
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    "& fieldset": {
-                      borderWidth: "2px",
-                      borderColor: theme.palette.divider,
-                    },
-                    "&:hover fieldset": {
-                      borderColor: taxiMonterricoColors.green,
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: taxiMonterricoColors.green,
-                      borderWidth: "2px",
-                    },
-                  },
-                  "& .MuiInputLabel-root": {
-                    fontWeight: 500,
-                    "&.Mui-focused": {
-                      color: taxiMonterricoColors.green,
-                    },
-                  },
-                }}
-              />
-              <TextField
-                label="Notas de la llamada"
-                multiline
-                rows={8}
-                value={callData.description}
-                onChange={(e) =>
-                  setCallData({ ...callData, description: e.target.value })
-                }
-                fullWidth
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    "& fieldset": {
-                      borderWidth: "2px",
-                      borderColor: theme.palette.divider,
-                    },
-                    "&:hover fieldset": {
-                      borderColor: taxiMonterricoColors.green,
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: taxiMonterricoColors.green,
-                      borderWidth: "2px",
-                    },
-                  },
-                  "& .MuiInputLabel-root": {
-                    fontWeight: 500,
-                    "&.Mui-focused": {
-                      color: taxiMonterricoColors.green,
-                    },
-                  },
-                }}
-              />
-            </Box>
-
-            <Box
-              sx={{
-                p: 3,
-                borderTop: `1px solid ${theme.palette.divider}`,
-                backgroundColor: theme.palette.background.paper,
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: 2,
-              }}
-            >
-              <Button
-                onClick={() => setCallOpen(false)}
-                variant="outlined"
-                sx={{
-                  textTransform: "none",
-                  color: theme.palette.text.secondary,
-                  borderColor: theme.palette.divider,
-                  fontWeight: 600,
-                  px: 3,
-                  py: 1,
-                  borderRadius: 2,
-                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                  "&:hover": {
-                    bgcolor: theme.palette.action.hover,
-                    borderColor: theme.palette.text.secondary,
-                    transform: "translateY(-1px)",
-                  },
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleSaveCall}
-                variant="contained"
-                disabled={saving || !callData.subject.trim()}
-                sx={{
-                  textTransform: "none",
-                  bgcolor: saving
-                    ? theme.palette.action.disabledBackground
-                    : taxiMonterricoColors.green,
-                  color: "white",
-                  fontWeight: 600,
-                  px: 4,
-                  py: 1,
-                  borderRadius: 2,
-                  boxShadow: saving
-                    ? "none"
-                    : `0 4px 12px ${taxiMonterricoColors.green}40`,
-                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                  "&:hover": {
-                    bgcolor: saving
-                      ? theme.palette.action.disabledBackground
-                      : taxiMonterricoColors.greenDark,
-                    boxShadow: saving
-                      ? "none"
-                      : `0 6px 16px ${taxiMonterricoColors.green}50`,
-                    transform: "translateY(-2px)",
-                  },
-                  "&:active": {
-                    transform: "translateY(0)",
-                  },
-                  "&.Mui-disabled": {
-                    bgcolor: theme.palette.action.disabledBackground,
-                    color: theme.palette.action.disabled,
-                    boxShadow: "none",
-                  },
-                }}
-              >
-                {saving ? "Guardando..." : "Guardar"}
-              </Button>
-            </Box>
-          </Box>
-          <Box
-            sx={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: "rgba(0, 0, 0, 0.5)",
-              zIndex: 1499,
-            }}
-            onClick={() => setCallOpen(false)}
-          />
-        </>
-      )}
-
-      {/* Dialog de Tarea */}
-      <Dialog
+      {/* Modal de crear tarea/reunión */}
+      <TaskModal
         open={taskOpen}
         onClose={() => setTaskOpen(false)}
-        maxWidth={false}
-        fullWidth={false}
-        TransitionProps={{
-          appear: false,
-          timeout: 0,
+        entityType="contact"
+        entityId={id || ""}
+        entityName={contact ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim() || contact.email || "Sin nombre" : "Sin nombre"}
+        user={user}
+        taskType={taskType}
+        onSave={(newTask) => {
+          const taskAsActivity = {
+            id: newTask.id,
+            type: newTask.type,
+            subject: newTask.title,
+            description: newTask.description,
+            dueDate: newTask.dueDate,
+            createdAt: newTask.createdAt,
+            User: newTask.CreatedBy || newTask.AssignedTo,
+            isTask: true,
+            status: newTask.status,
+            priority: newTask.priority,
+            contactId: newTask.contactId,
+          };
+          // Agregar la actividad inmediatamente al estado
+          setActivities((prevActivities) => {
+            const exists = prevActivities.some((a: any) => a.id === newTask.id);
+            if (exists) return prevActivities;
+            return [taskAsActivity, ...prevActivities].sort((a: any, b: any) => {
+              const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
+              const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
+              return dateB - dateA;
+            });
+          });
+          fetchAssociatedRecords(); // Actualizar actividades
         }}
+      />
+
+      {/* Diálogo para agregar empresa */}
+      <Dialog
+        open={addCompanyOpen}
+        onClose={() => {
+          setAddCompanyOpen(false);
+          setCompanyDialogTab("create");
+          setSelectedExistingCompanies([]);
+          setExistingCompaniesSearch("");
+          setCompanyFormData({
+            name: "",
+            domain: "",
+            phone: "",
+            companyname: "",
+            lifecycleStage: "lead",
+            ruc: "",
+            address: "",
+            city: "",
+            state: "",
+            country: "",
+          });
+          setRucError("");
+        }}
+        maxWidth="sm"
+        fullWidth
         PaperProps={{
           sx: {
             borderRadius: 2,
-            maxHeight: "90vh",
-            width: "560px",
-            maxWidth: "90vw",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
           },
         }}
         BackdropProps={{
           sx: {
-            transition: 'none',
-          },
-          transitionDuration: 0,
-        }}
-      >
-        <Box
-          sx={{
-            backgroundColor: "transparent",
-            color: theme.palette.text.primary,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            minHeight: 48,
-            px: 2,
-            pt: 1.5,
-            pb: 0.5,
-          }}
-        >
-          <Typography
-            variant="h5"
-            sx={{
-              color: theme.palette.text.primary,
-              fontWeight: 700,
-              fontSize: "1rem",
-              letterSpacing: "-0.02em",
-            }}
-          >
-            Tarea
-          </Typography>
-          <IconButton
-            sx={{
-              color: theme.palette.text.secondary,
-              transition: "all 0.2s ease",
-              "&:hover": {
-                backgroundColor: theme.palette.action.hover,
-                color: theme.palette.text.primary,
-                transform: "rotate(90deg)",
-              },
-            }}
-            size="medium"
-            onClick={() => setTaskOpen(false)}
-          >
-            <Close />
-          </IconButton>
-        </Box>
-
-        <DialogContent sx={{ px: 2, pb: 1, pt: 0.5 }}>
-          <TextField
-            label="Título"
-            value={taskData.title}
-            onChange={(e) =>
-              setTaskData({ ...taskData, title: e.target.value })
-            }
-            fullWidth
-            InputLabelProps={{
-              shrink: !!taskData.title,
-            }}
-            sx={{
-              mb: 1.5,
-              "& .MuiOutlinedInput-root": {
-                borderRadius: 0.5,
-                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                fontSize: "0.75rem",
-                "& fieldset": {
-                  borderWidth: 0,
-                  border: "none",
-                  top: 0,
-                },
-                "&:hover fieldset": {
-                  border: "none",
-                },
-                "&.Mui-focused fieldset": {
-                  borderWidth: "2px !important",
-                  borderColor: `${taxiMonterricoColors.orange} !important`,
-                  borderStyle: "solid !important",
-                  top: 0,
-                },
-              },
-              "& .MuiOutlinedInput-notchedOutline": {
-                borderWidth: "0px !important",
-                "& legend": {
-                  width: 0,
-                  display: "none",
-                },
-              },
-              "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline":
-                {
-                  borderWidth: "2px !important",
-                  borderColor: `${taxiMonterricoColors.green} !important`,
-                  borderStyle: "solid !important",
-                  "& legend": {
-                    width: 0,
-                    display: "none",
-                  },
-                },
-              "& .MuiInputLabel-root": {
-                fontWeight: 500,
-                position: "absolute",
-                left: 12,
-                top: "50%",
-                transform: "translateY(-50%)",
-                pointerEvents: "none",
-                zIndex: 0,
-                backgroundColor: "transparent",
-                padding: 0,
-                margin: 0,
-                fontSize: "0.75rem",
-                "&.Mui-focused": {
-                  color: taxiMonterricoColors.orange,
-                  transform: "translateY(-50%)",
-                  backgroundColor: "transparent",
-                },
-                "&.MuiInputLabel-shrink": {
-                  display: "none",
-                },
-              },
-              "& .MuiInputBase-input": {
-                position: "relative",
-                zIndex: 1,
-                fontSize: "0.75rem",
-                py: 1,
-              },
-            }}
-          />
-          <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
-            <Box sx={{ flex: 1 }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  mb: 0.75,
-                  color: theme.palette.text.secondary,
-                  fontWeight: 500,
-                  fontSize: "0.75rem",
-                }}
-              >
-                Prioridad
-              </Typography>
-              <TextField
-                select
-                value={taskData.priority}
-                onChange={(e) =>
-                  setTaskData({ ...taskData, priority: e.target.value })
-                }
-                fullWidth
-                SelectProps={{
-                  MenuProps: {
-                    PaperProps: {
-                      sx: {
-                        borderRadius: 2,
-                        mt: 1,
-                      },
-                    },
-                  },
-                }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 0.5,
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    fontSize: "0.75rem",
-                    "& fieldset": {
-                      borderWidth: "2px",
-                      borderColor: theme.palette.divider,
-                    },
-                    "&:hover fieldset": {
-                      borderColor: taxiMonterricoColors.orange,
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: taxiMonterricoColors.orange,
-                      borderWidth: "2px",
-                    },
-                  },
-                  "& .MuiInputBase-input": {
-                    fontSize: "0.75rem",
-                    py: 1,
-                  },
-                  "& .MuiInputLabel-root": {
-                    fontWeight: 500,
-                    fontSize: "0.75rem",
-                    "&.Mui-focused": {
-                      color: taxiMonterricoColors.orange,
-                    },
-                  },
-                }}
-              >
-                <MenuItem value="low" sx={{ fontSize: "0.75rem", py: 0.75 }}>
-                  Baja
-                </MenuItem>
-                <MenuItem value="medium" sx={{ fontSize: "0.75rem", py: 0.75 }}>
-                  Media
-                </MenuItem>
-                <MenuItem value="high" sx={{ fontSize: "0.75rem", py: 0.75 }}>
-                  Alta
-                </MenuItem>
-                <MenuItem value="urgent" sx={{ fontSize: "0.75rem", py: 0.75 }}>
-                  Urgente
-                </MenuItem>
-              </TextField>
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <Typography
-                variant="body2"
-                sx={{
-                  mb: 0.75,
-                  color: theme.palette.text.secondary,
-                  fontWeight: 500,
-                  fontSize: "0.75rem",
-                }}
-              >
-                Fecha límite
-              </Typography>
-              <TextField
-                value={formatDateDisplay(taskData.dueDate)}
-                onClick={handleOpenDatePicker}
-                fullWidth
-                InputProps={{
-                  readOnly: true,
-                  endAdornment: (
-                    <IconButton
-                      size="small"
-                      onClick={handleOpenDatePicker}
-                      sx={{
-                        color: theme.palette.text.secondary,
-                        mr: 0.5,
-                        "&:hover": {
-                          backgroundColor: "transparent",
-                          color: taxiMonterricoColors.orange,
-                        },
-                      }}
-                    >
-                      <CalendarToday sx={{ fontSize: 18 }} />
-                    </IconButton>
-                  ),
-                }}
-                sx={{
-                  cursor: "pointer",
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 0.5,
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    fontSize: "0.75rem",
-                    "& fieldset": {
-                      borderWidth: "2px",
-                      borderColor: theme.palette.divider,
-                    },
-                    "&:hover fieldset": {
-                      borderColor: taxiMonterricoColors.orange,
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: taxiMonterricoColors.orange,
-                      borderWidth: "2px",
-                    },
-                  },
-                  "& .MuiInputBase-input": {
-                    fontSize: "0.75rem",
-                    py: 1,
-                    cursor: "pointer",
-                  },
-                  "& .MuiInputLabel-root": {
-                    fontWeight: 500,
-                    fontSize: "0.75rem",
-                    "&.Mui-focused": {
-                      color: taxiMonterricoColors.orange,
-                    },
-                  },
-                }}
-              />
-            </Box>
-          </Box>
-          <Divider sx={{ my: 1.5 }} />
-          <Box sx={{ position: "relative" }}>
-            <Box
-              ref={descriptionEditorRef}
-              contentEditable
-              suppressContentEditableWarning
-              onInput={(e) => {
-                const html = (e.target as HTMLElement).innerHTML;
-                if (html !== taskData.description) {
-                  setTaskData({ ...taskData, description: html });
-                }
-              }}
-              sx={{
-                minHeight: "150px",
-                maxHeight: "250px",
-                overflowY: "auto",
-                pt: 0,
-                pb: 1.5,
-                px: 1,
-                borderRadius: 0.5,
-                border: "none",
-                outline: "none",
-                fontSize: "0.75rem",
-                lineHeight: 1.5,
-                color: theme.palette.text.primary,
-                "&:empty:before": {
-                  content: '"Descripción"',
-                  color: theme.palette.text.disabled,
-                },
-                "&::-webkit-scrollbar": {
-                  width: "6px",
-                },
-                "&::-webkit-scrollbar-track": {
-                  backgroundColor: "transparent",
-                },
-                "&::-webkit-scrollbar-thumb": {
-                  backgroundColor:
-                    theme.palette.mode === "dark"
-                      ? "rgba(255,255,255,0.2)"
-                      : "rgba(0,0,0,0.2)",
-                  borderRadius: "3px",
-                },
-              }}
-            />
-            <Box
-              sx={{
-                position: "absolute",
-                bottom: 0.5,
-                left: 4,
-                right: 4,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 0.5,
-                backgroundColor: "transparent",
-                borderRadius: 1,
-                p: 0.5,
-                border: "none",
-              }}
-            >
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 0.5,
-                  flexWrap: "nowrap",
-                }}
-              >
-                <IconButton
-                  size="small"
-                  sx={{
-                    p: 0.25,
-                    minWidth: 28,
-                    height: 28,
-                    backgroundColor: activeFormats.bold
-                      ? theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.15)"
-                        : "#e0e0e0"
-                      : "transparent",
-                    "&:hover": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
-                    },
-                  }}
-                  onClick={() => {
-                    document.execCommand("bold");
-                    updateActiveFormats();
-                  }}
-                  title="Negrita"
-                >
-                  <FormatBold sx={{ fontSize: 16 }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  sx={{
-                    p: 0.25,
-                    minWidth: 28,
-                    height: 28,
-                    backgroundColor: activeFormats.italic
-                      ? theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.15)"
-                        : "#e0e0e0"
-                      : "transparent",
-                    "&:hover": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
-                    },
-                  }}
-                  onClick={() => {
-                    document.execCommand("italic");
-                    updateActiveFormats();
-                  }}
-                  title="Cursiva"
-                >
-                  <FormatItalic sx={{ fontSize: 16 }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  sx={{
-                    p: 0.25,
-                    minWidth: 28,
-                    height: 28,
-                    backgroundColor: activeFormats.underline
-                      ? theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.15)"
-                        : "#e0e0e0"
-                      : "transparent",
-                    "&:hover": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
-                    },
-                  }}
-                  onClick={() => {
-                    document.execCommand("underline");
-                    updateActiveFormats();
-                  }}
-                  title="Subrayado"
-                >
-                  <FormatUnderlined sx={{ fontSize: 16 }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  sx={{
-                    p: 0.25,
-                    minWidth: 28,
-                    height: 28,
-                    backgroundColor: activeFormats.strikeThrough
-                      ? theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.15)"
-                        : "#e0e0e0"
-                      : "transparent",
-                    "&:hover": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
-                    },
-                  }}
-                  onClick={() => {
-                    document.execCommand("strikeThrough");
-                    updateActiveFormats();
-                  }}
-                  title="Tachado"
-                >
-                  <FormatStrikethrough sx={{ fontSize: 16 }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  sx={{ p: 0.25, minWidth: 28, height: 28 }}
-                  onClick={(e) => setMoreMenuAnchorEl(e.currentTarget)}
-                  title="Más opciones"
-                >
-                  <MoreVert sx={{ fontSize: 16 }} />
-                </IconButton>
-                <Menu
-                  anchorEl={moreMenuAnchorEl}
-                  open={Boolean(moreMenuAnchorEl)}
-                  onClose={() => setMoreMenuAnchorEl(null)}
-                >
-                  <MenuItem
-                    onClick={() => {
-                      document.execCommand("justifyLeft");
-                      setMoreMenuAnchorEl(null);
-                    }}
-                    sx={{
-                      py: 0.75,
-                      px: 1,
-                      minWidth: "auto",
-                      justifyContent: "center",
-                    }}
-                    title="Alinear izquierda"
-                  >
-                    <FormatAlignLeft sx={{ fontSize: 16 }} />
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      document.execCommand("justifyCenter");
-                      setMoreMenuAnchorEl(null);
-                    }}
-                    sx={{
-                      py: 0.75,
-                      px: 1,
-                      minWidth: "auto",
-                      justifyContent: "center",
-                    }}
-                    title="Alinear centro"
-                  >
-                    <FormatAlignCenter sx={{ fontSize: 16 }} />
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      document.execCommand("justifyRight");
-                      setMoreMenuAnchorEl(null);
-                    }}
-                    sx={{
-                      py: 0.75,
-                      px: 1,
-                      minWidth: "auto",
-                      justifyContent: "center",
-                    }}
-                    title="Alinear derecha"
-                  >
-                    <FormatAlignRight sx={{ fontSize: 16 }} />
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      document.execCommand("justifyFull");
-                      setMoreMenuAnchorEl(null);
-                    }}
-                    sx={{
-                      py: 0.75,
-                      px: 1,
-                      minWidth: "auto",
-                      justifyContent: "center",
-                    }}
-                    title="Justificar"
-                  >
-                    <FormatAlignJustify sx={{ fontSize: 16 }} />
-                  </MenuItem>
-                </Menu>
-                <Divider
-                  orientation="vertical"
-                  flexItem
-                  sx={{ mx: 0.5, height: "20px" }}
-                />
-                <IconButton
-                  size="small"
-                  sx={{
-                    p: 0.25,
-                    minWidth: 28,
-                    height: 28,
-                    backgroundColor: activeFormats.unorderedList
-                      ? theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.15)"
-                        : "#e0e0e0"
-                      : "transparent",
-                    "&:hover": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
-                    },
-                  }}
-                  onClick={() => {
-                    document.execCommand("insertUnorderedList");
-                    updateActiveFormats();
-                  }}
-                  title="Lista con viñetas"
-                >
-                  <FormatListBulleted sx={{ fontSize: 16 }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  sx={{
-                    p: 0.25,
-                    minWidth: 28,
-                    height: 28,
-                    backgroundColor: activeFormats.orderedList
-                      ? theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.15)"
-                        : "#e0e0e0"
-                      : "transparent",
-                    "&:hover": {
-                      backgroundColor:
-                        theme.palette.mode === "dark"
-                          ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
-                    },
-                  }}
-                  onClick={() => {
-                    document.execCommand("insertOrderedList");
-                    updateActiveFormats();
-                  }}
-                  title="Lista numerada"
-                >
-                  <FormatListNumbered sx={{ fontSize: 16 }} />
-                </IconButton>
-                <Divider
-                  orientation="vertical"
-                  flexItem
-                  sx={{ mx: 0.5, height: "20px" }}
-                />
-                <IconButton
-                  size="small"
-                  sx={{ p: 0.25, minWidth: 28, height: 28 }}
-                  onClick={() => {
-                    const url = prompt("URL:");
-                    if (url) {
-                      document.execCommand("createLink", false, url);
-                    }
-                  }}
-                  title="Insertar enlace"
-                >
-                  <LinkIcon sx={{ fontSize: 16 }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  sx={{ p: 0.25, minWidth: 28, height: 28 }}
-                  onClick={() => imageInputRef.current?.click()}
-                  title="Insertar imagen"
-                >
-                  <Image sx={{ fontSize: 16 }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  sx={{ p: 0.25, minWidth: 28, height: 28 }}
-                  onClick={() => {
-                    const code = prompt("Ingresa el código:");
-                    if (code && descriptionEditorRef.current) {
-                      const selection = window.getSelection();
-                      let range: Range | null = null;
-
-                      if (selection && selection.rangeCount > 0) {
-                        range = selection.getRangeAt(0);
-                      } else {
-                        range = document.createRange();
-                        range.selectNodeContents(descriptionEditorRef.current);
-                        range.collapse(false);
-                      }
-
-                      if (range) {
-                        const pre = document.createElement("pre");
-                        pre.style.backgroundColor =
-                          theme.palette.mode === "dark" ? "#1e1e1e" : "#f5f5f5";
-                        pre.style.color = theme.palette.text.primary;
-                        pre.style.padding = "8px";
-                        pre.style.borderRadius = "4px";
-                        pre.style.fontFamily = "monospace";
-                        pre.style.fontSize = "0.75rem";
-                        pre.textContent = code;
-
-                        range.deleteContents();
-                        range.insertNode(pre);
-                        range.setStartAfter(pre);
-                        range.collapse(true);
-                        if (selection) {
-                          selection.removeAllRanges();
-                          selection.addRange(range);
-                        }
-                        setTaskData({
-                          ...taskData,
-                          description: descriptionEditorRef.current.innerHTML,
-                        });
-                      }
-                    }
-                  }}
-                  title="Insertar código"
-                >
-                  <Code sx={{ fontSize: 16 }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  sx={{ p: 0.25, minWidth: 28, height: 28 }}
-                  onClick={() => {
-                    const rows = prompt("Número de filas:", "3");
-                    const cols = prompt("Número de columnas:", "3");
-                    if (rows && cols && descriptionEditorRef.current) {
-                      const table = document.createElement("table");
-                      table.style.borderCollapse = "collapse";
-                      table.style.width = "100%";
-                      table.style.border = "1px solid #ccc";
-                      table.style.margin = "8px 0";
-
-                      for (let i = 0; i < parseInt(rows); i++) {
-                        const tr = document.createElement("tr");
-                        for (let j = 0; j < parseInt(cols); j++) {
-                          const td = document.createElement("td");
-                          td.style.border = "1px solid #ccc";
-                          td.style.padding = "8px";
-                          td.innerHTML = "&nbsp;";
-                          tr.appendChild(td);
-                        }
-                        table.appendChild(tr);
-                      }
-
-                      const selection = window.getSelection();
-                      if (selection && selection.rangeCount > 0) {
-                        const range = selection.getRangeAt(0);
-                        range.deleteContents();
-                        range.insertNode(table);
-                        range.setStartAfter(table);
-                        range.collapse(true);
-                        selection.removeAllRanges();
-                        selection.addRange(range);
-                        setTaskData({
-                          ...taskData,
-                          description: descriptionEditorRef.current.innerHTML,
-                        });
-                      }
-                    }
-                  }}
-                  title="Insertar tabla"
-                >
-                  <TableChart sx={{ fontSize: 16 }} />
-                </IconButton>
-                <IconButton
-                  size="small"
-                  sx={{ p: 0.25, minWidth: 28, height: 28 }}
-                  onClick={() => fileInputRef.current?.click()}
-                  title="Adjuntar archivo"
-                >
-                  <AttachFile sx={{ fontSize: 16 }} />
-                </IconButton>
-              </Box>
-            </Box>
-          </Box>
-          {/* Input oculto para seleccionar archivos de imagen */}
-          <input
-            ref={imageInputRef}
-            type="file"
-            accept="image/*"
-            style={{ display: "none" }}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (!file || !descriptionEditorRef.current) return;
-
-              if (!file.type.startsWith("image/")) {
-                alert("Por favor, selecciona un archivo de imagen válido.");
-                return;
-              }
-
-              const reader = new FileReader();
-              reader.onload = (event) => {
-                const dataUrl = event.target?.result as string;
-                if (dataUrl) {
-                  descriptionEditorRef.current?.focus();
-
-                  const selection = window.getSelection();
-                  let range: Range | null = null;
-
-                  if (selection && selection.rangeCount > 0) {
-                    range = selection.getRangeAt(0);
-                  } else if (descriptionEditorRef.current) {
-                    range = document.createRange();
-                    range.selectNodeContents(descriptionEditorRef.current);
-                    range.collapse(false);
-                    if (selection) {
-                      selection.removeAllRanges();
-                      selection.addRange(range);
-                    }
-                  }
-
-                  if (range) {
-                    const img = document.createElement("img");
-                    img.src = dataUrl;
-                    img.style.maxWidth = "100%";
-                    img.style.height = "auto";
-                    img.alt = file.name;
-
-                    range.insertNode(img);
-                    range.setStartAfter(img);
-                    range.collapse(true);
-                    if (selection) {
-                      selection.removeAllRanges();
-                      selection.addRange(range);
-                    }
-
-                    if (descriptionEditorRef.current) {
-                      setTaskData({
-                        ...taskData,
-                        description: descriptionEditorRef.current.innerHTML,
-                      });
-                    }
-                  }
-                }
-              };
-
-              reader.onerror = () => {
-                alert("Error al leer el archivo de imagen.");
-              };
-
-              reader.readAsDataURL(file);
-
-              if (imageInputRef.current) {
-                imageInputRef.current.value = "";
-              }
-            }}
-          />
-          {/* Input oculto para adjuntar archivos */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            style={{ display: "none" }}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (!file || !descriptionEditorRef.current) return;
-
-              const reader = new FileReader();
-              reader.onload = (event) => {
-                const dataUrl = event.target?.result as string;
-                if (dataUrl) {
-                  descriptionEditorRef.current?.focus();
-
-                  const selection = window.getSelection();
-                  let range: Range | null = null;
-
-                  if (selection && selection.rangeCount > 0) {
-                    range = selection.getRangeAt(0);
-                  } else if (descriptionEditorRef.current) {
-                    range = document.createRange();
-                    range.selectNodeContents(descriptionEditorRef.current);
-                    range.collapse(false);
-                    if (selection) {
-                      selection.removeAllRanges();
-                      selection.addRange(range);
-                    }
-                  }
-
-                  if (range) {
-                    const link = document.createElement("a");
-                    link.href = dataUrl;
-                    link.download = file.name;
-                    link.textContent = `📎 ${file.name}`;
-                    link.style.display = "inline-block";
-                    link.style.margin = "4px";
-                    link.style.padding = "4px 8px";
-                    link.style.backgroundColor =
-                      theme.palette.mode === "dark" ? "#2a2a2a" : "#f5f5f5";
-                    link.style.borderRadius = "4px";
-                    link.style.textDecoration = "none";
-                    link.style.color = theme.palette.text.primary;
-
-                    range.insertNode(link);
-                    range.setStartAfter(link);
-                    range.collapse(true);
-                    if (selection) {
-                      selection.removeAllRanges();
-                      selection.addRange(range);
-                    }
-
-                    if (descriptionEditorRef.current) {
-                      setTaskData({
-                        ...taskData,
-                        description: descriptionEditorRef.current.innerHTML,
-                      });
-                    }
-                  }
-                }
-              };
-
-              reader.onerror = () => {
-                alert("Error al leer el archivo.");
-              };
-
-              reader.readAsDataURL(file);
-
-              if (fileInputRef.current) {
-                fileInputRef.current.value = "";
-              }
-            }}
-          />
-        </DialogContent>
-        <Box sx={{ px: 2 }}>
-          <Divider sx={{ mt: 0.25, mb: 1.5 }} />
-        </Box>
-        <DialogActions sx={{ px: 2, pb: 1.5, pt: 0.5, gap: 0.75 }}>
-          <Button
-            onClick={() => setTaskOpen(false)}
-            size="small"
-            sx={{
-              textTransform: "none",
-              color: theme.palette.text.secondary,
-              fontWeight: 500,
-              px: 2,
-              py: 0.5,
-              fontSize: "0.75rem",
-              "&:hover": {
-                bgcolor: theme.palette.action.hover,
-              },
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSaveTask}
-            variant="contained"
-            size="small"
-            disabled={saving || !taskData.title.trim()}
-            sx={{
-              textTransform: "none",
-              fontWeight: 500,
-              px: 2,
-              py: 0.5,
-              fontSize: "0.75rem",
-              bgcolor: taskData.title.trim()
-                ? taxiMonterricoColors.green
-                : theme.palette.action.disabledBackground,
-              color: "white",
-              "&:hover": {
-                bgcolor: taskData.title.trim()
-                  ? taxiMonterricoColors.green
-                  : theme.palette.action.disabledBackground,
-                opacity: 0.9,
-              },
-              "&:disabled": {
-                bgcolor: theme.palette.action.disabledBackground,
-                color: theme.palette.action.disabled,
-              },
-            }}
-          >
-            {saving ? "Guardando..." : "Guardar"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Date Picker Popover */}
-      <Popover
-        open={Boolean(datePickerAnchorEl)}
-        anchorEl={datePickerAnchorEl}
-        onClose={() => setDatePickerAnchorEl(null)}
-        anchorOrigin={{
-          vertical: "bottom",
-          horizontal: "left",
-        }}
-        transformOrigin={{
-          vertical: "top",
-          horizontal: "left",
-        }}
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            overflow: "hidden",
-            boxShadow:
-              theme.palette.mode === "dark"
-                ? "0 8px 32px rgba(0,0,0,0.4)"
-                : "0 8px 32px rgba(0,0,0,0.12)",
-            mt: 0.5,
-            maxWidth: 280,
+            backdropFilter: "blur(4px)",
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
           },
         }}
       >
-        <Box sx={{ p: 2, bgcolor: theme.palette.background.paper }}>
-          {/* Header con mes y año */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              mb: 3,
-              pb: 2,
-              borderBottom: `1px solid ${theme.palette.divider}`,
-            }}
-          >
-            <IconButton
-              size="small"
-              onClick={() => {
-                const newDate = new Date(currentMonth);
-                newDate.setMonth(newDate.getMonth() - 1);
-                setCurrentMonth(newDate);
-              }}
-              sx={{
-                color: theme.palette.text.secondary,
-                border: `1px solid ${theme.palette.divider}`,
-                "&:hover": {
-                  bgcolor: theme.palette.action.hover,
-                  borderColor: taxiMonterricoColors.green,
-                  color: taxiMonterricoColors.green,
-                },
-              }}
-            >
-              <ChevronLeft />
-            </IconButton>
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 600,
-                fontSize: "0.95rem",
-                color: theme.palette.text.primary,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-            </Typography>
-            <IconButton
-              size="small"
-              onClick={() => {
-                const newDate = new Date(currentMonth);
-                newDate.setMonth(newDate.getMonth() + 1);
-                setCurrentMonth(newDate);
-              }}
-              sx={{
-                color: theme.palette.text.secondary,
-                border: `1px solid ${theme.palette.divider}`,
-                "&:hover": {
-                  bgcolor: theme.palette.action.hover,
-                  borderColor: taxiMonterricoColors.green,
-                  color: taxiMonterricoColors.green,
-                },
-              }}
-            >
-              <ChevronRight />
-            </IconButton>
-          </Box>
-
-          {/* Días de la semana */}
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "repeat(7, 1fr)",
-              gap: 0.5,
-              mb: 1.5,
-            }}
-          >
-            {weekDays.map((day) => (
-              <Typography
-                key={day}
-                variant="caption"
-                sx={{
-                  textAlign: "center",
-                  fontWeight: 600,
-                  color: theme.palette.text.secondary,
-                  fontSize: "0.7rem",
-                  py: 0.5,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                {day}
-              </Typography>
-            ))}
-          </Box>
-
-          {/* Calendario */}
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "repeat(7, 1fr)",
-              gap: 0.5,
-              mb: 1.5,
-            }}
-          >
-            {getDaysInMonth(currentMonth).map((item, index) => {
-              // Calcular año y mes correctos
-              let year = currentMonth.getFullYear();
-              let month = currentMonth.getMonth();
-
-              if (!item.isCurrentMonth) {
-                if (index < 7) {
-                  // Mes anterior
-                  month = month - 1;
-                  if (month < 0) {
-                    month = 11;
-                    year = year - 1;
-                  }
-                } else {
-                  // Mes siguiente
-                  month = month + 1;
-                  if (month > 11) {
-                    month = 0;
-                    year = year + 1;
-                  }
-                }
+        <DialogContent sx={{ pt: 1 }}>
+          {/* Pestañas */}
+          <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+            <Tabs
+              value={companyDialogTab === "create" ? 0 : 1}
+              onChange={(e, newValue) =>
+                setCompanyDialogTab(newValue === 0 ? "create" : "existing")
               }
-
-              const date = new Date(year, month, item.day);
-
-              const isSelected =
-                selectedDate &&
-                item.isCurrentMonth &&
-                date.toDateString() === selectedDate.toDateString();
-              const isToday =
-                item.isCurrentMonth &&
-                date.toDateString() === new Date().toDateString();
-
-              return (
-                <Box
-                  key={`${item.isCurrentMonth ? "current" : "other"}-${
-                    item.day
-                  }-${index}`}
-                  onClick={() => {
-                    if (item.isCurrentMonth) {
-                      // Pasar directamente año, mes y día para evitar problemas de zona horaria
-                      handleDateSelect(year, month + 1, item.day);
-                    }
-                  }}
-                  sx={{
-                    aspectRatio: "1",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    borderRadius: 2,
-                    cursor: item.isCurrentMonth ? "pointer" : "default",
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    bgcolor: isSelected
-                      ? taxiMonterricoColors.green
-                      : isToday
-                      ? `${taxiMonterricoColors.green}20`
-                      : "transparent",
-                    color: isSelected
-                      ? "white"
-                      : isToday
-                      ? taxiMonterricoColors.green
-                      : item.isCurrentMonth
-                      ? theme.palette.text.primary
-                      : theme.palette.text.disabled,
-                    fontWeight: isSelected ? 700 : isToday ? 600 : 400,
-                    fontSize: "0.75rem",
-                    position: "relative",
-                    minHeight: "28px",
-                    minWidth: "28px",
-                    "&:hover": {
-                      bgcolor: item.isCurrentMonth
-                        ? isSelected
-                          ? taxiMonterricoColors.green
-                          : `${taxiMonterricoColors.green}15`
-                        : "transparent",
-                      transform:
-                        item.isCurrentMonth && !isSelected
-                          ? "scale(1.05)"
-                          : "none",
-                    },
-                    opacity: item.isCurrentMonth ? 1 : 0.35,
-                  }}
-                >
-                  {item.day}
-                </Box>
-              );
-            })}
+            >
+              <Tab label="Crear nueva" />
+              <Tab label="Agregar existente" />
+            </Tabs>
           </Box>
 
-          {/* Botones de acción */}
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              mt: 1.5,
-              pt: 1.5,
-              borderTop: `1px solid ${theme.palette.divider}`,
-              gap: 1,
-            }}
-          >
-            <Button
-              onClick={handleClearDate}
-              sx={{
-                textTransform: "none",
-                color: theme.palette.text.secondary,
-                fontWeight: 500,
-                px: 1.5,
-                py: 0.5,
-                borderRadius: 1,
-                "&:hover": {
-                  bgcolor: theme.palette.action.hover,
-                  color: theme.palette.text.primary,
-                },
-              }}
-            >
-              Borrar
-            </Button>
-            <Button
-              onClick={handleToday}
-              sx={{
-                textTransform: "none",
-                color: taxiMonterricoColors.green,
-                fontWeight: 600,
-                px: 1.5,
-                py: 0.5,
-                borderRadius: 1,
-                "&:hover": {
-                  bgcolor: `${taxiMonterricoColors.green}15`,
-                },
-              }}
-            >
-              Hoy
-            </Button>
-          </Box>
-        </Box>
-      </Popover>
-
-      {/* Ventana flotante de Reunión */}
-      {meetingOpen && (
-        <>
-          <Box
-            sx={{
-              position: "fixed",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              width: "600px",
-              maxWidth: "95vw",
-              maxHeight: "90vh",
-              backgroundColor: theme.palette.background.paper,
-              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
-              borderRadius: 4,
-              zIndex: 1500,
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
+          {companyDialogTab === "create" && (
             <Box
-              sx={{
-                backgroundColor: "transparent",
-                color: theme.palette.text.primary,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                minHeight: { xs: "64px", md: "72px" },
-                px: { xs: 3, md: 4 },
-              }}
+              sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}
             >
-              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: "50%",
-                    backgroundColor: `${taxiMonterricoColors.green}15`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
+              {/* RUC y Tipo de Contribuyente / Industria en la misma fila */}
+              <Box sx={{ display: "flex", gap: 2 }}>
+                <TextField
+                  label="RUC"
+                  value={companyFormData.ruc}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, ""); // Solo números
+                    const limitedValue = value.slice(0, 11);
+                    setCompanyFormData({
+                      ...companyFormData,
+                      ruc: limitedValue,
+                    });
+                    setRucError("");
                   }}
-                >
-                  <Event
-                    sx={{ fontSize: 20, color: taxiMonterricoColors.green }}
-                  />
-                </Box>
-                <Typography
-                  variant="h5"
-                  sx={{
-                    color: theme.palette.text.primary,
-                    fontWeight: 700,
-                    fontSize: { xs: "1.1rem", md: "1.25rem" },
-                    letterSpacing: "-0.02em",
+                  error={!!rucError}
+                  helperText={rucError}
+                  inputProps={{ maxLength: 11 }}
+                  InputLabelProps={{ shrink: true }}
+                  InputProps={{
+                    endAdornment: (
+                      <InputAdornment position="end">
+                        <IconButton
+                          onClick={handleSearchRuc}
+                          disabled={
+                            loadingRuc ||
+                            !companyFormData.ruc ||
+                            companyFormData.ruc.length < 11
+                          }
+                          sx={{
+                            color: taxiMonterricoColors.green,
+                            "&:hover": {
+                              bgcolor: `${taxiMonterricoColors.green}15`,
+                            },
+                            "&.Mui-disabled": {
+                              color: theme.palette.text.disabled,
+                            },
+                          }}
+                        >
+                          {loadingRuc ? (
+                            <CircularProgress size={20} />
+                          ) : (
+                            <Search />
+                          )}
+                        </IconButton>
+                      </InputAdornment>
+                    ),
                   }}
-                >
-                  Reunión
-                </Typography>
+                  sx={{
+                    flex: "2 1 0%",
+                    minWidth: 0,
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 1.5,
+                    },
+                  }}
+                />
+                <TextField
+                  label="Razón social"
+                  value={companyFormData.companyname}
+                  onChange={(e) =>
+                    setCompanyFormData({
+                      ...companyFormData,
+                      companyname: e.target.value,
+                    })
+                  }
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: "3 1 0%",
+                    minWidth: 0,
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 1.5,
+                    },
+                  }}
+                />
               </Box>
-              <IconButton
-                sx={{
-                  color: theme.palette.text.secondary,
-                  transition: "all 0.2s ease",
-                  "&:hover": {
-                    backgroundColor: theme.palette.action.hover,
-                    color: theme.palette.text.primary,
-                    transform: "rotate(90deg)",
-                  },
-                }}
-                size="medium"
-                onClick={() => setMeetingOpen(false)}
-              >
-                <Close />
-              </IconButton>
-            </Box>
-
-            <Box
-              sx={{
-                flexGrow: 1,
-                display: "flex",
-                flexDirection: "column",
-                p: { xs: 3, md: 4 },
-                overflow: "hidden",
-                overflowY: "auto",
-                gap: 3,
-                "&::-webkit-scrollbar": {
-                  width: "8px",
-                },
-                "&::-webkit-scrollbar-track": {
-                  backgroundColor: "transparent",
-                  borderRadius: "4px",
-                },
-                "&::-webkit-scrollbar-thumb": {
-                  backgroundColor:
-                    theme.palette.mode === "dark"
-                      ? "rgba(255,255,255,0.2)"
-                      : "rgba(0,0,0,0.2)",
-                  borderRadius: "4px",
-                  "&:hover": {
-                    backgroundColor:
-                      theme.palette.mode === "dark"
-                        ? "rgba(255,255,255,0.3)"
-                        : "rgba(0,0,0,0.3)",
-                  },
-                  transition: "background-color 0.2s ease",
-                },
-              }}
-            >
               <TextField
-                label="Asunto"
-                value={meetingData.subject}
+                label="Nombre"
+                value={companyFormData.name}
                 onChange={(e) =>
-                  setMeetingData({ ...meetingData, subject: e.target.value })
-                }
-                required
-                fullWidth
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    "& fieldset": {
-                      borderWidth: "2px",
-                      borderColor: theme.palette.divider,
-                    },
-                    "&:hover fieldset": {
-                      borderColor: taxiMonterricoColors.green,
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: taxiMonterricoColors.green,
-                      borderWidth: "2px",
-                    },
-                  },
-                  "& .MuiInputLabel-root": {
-                    fontWeight: 500,
-                    "&.Mui-focused": {
-                      color: taxiMonterricoColors.green,
-                    },
-                  },
-                }}
-              />
-              <TextField
-                label="Descripción"
-                multiline
-                rows={5}
-                value={meetingData.description}
-                onChange={(e) =>
-                  setMeetingData({
-                    ...meetingData,
-                    description: e.target.value,
+                  setCompanyFormData({
+                    ...companyFormData,
+                    name: e.target.value,
                   })
                 }
-                fullWidth
+                InputLabelProps={{ shrink: true }}
                 sx={{
                   "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
-                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                    "& fieldset": {
-                      borderWidth: "2px",
-                      borderColor: theme.palette.divider,
-                    },
-                    "&:hover fieldset": {
-                      borderColor: taxiMonterricoColors.green,
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: taxiMonterricoColors.green,
-                      borderWidth: "2px",
-                    },
+                    borderRadius: 1.5,
                   },
-                  "& .MuiInputLabel-root": {
-                    fontWeight: 500,
-                    "&.Mui-focused": {
-                      color: taxiMonterricoColors.green,
-                    },
+                }}
+              />
+              <TextField
+                label="Dominio"
+                value={companyFormData.domain}
+                onChange={(e) =>
+                  setCompanyFormData({
+                    ...companyFormData,
+                    domain: e.target.value,
+                  })
+                }
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 1.5,
+                  },
+                }}
+              />
+              <TextField
+                label="Teléfono"
+                value={companyFormData.phone}
+                onChange={(e) =>
+                  setCompanyFormData({
+                    ...companyFormData,
+                    phone: e.target.value,
+                  })
+                }
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 1.5,
+                  },
+                }}
+              />
+              <TextField
+                label="Dirección"
+                value={companyFormData.address}
+                onChange={(e) =>
+                  setCompanyFormData({
+                    ...companyFormData,
+                    address: e.target.value,
+                  })
+                }
+                multiline
+                rows={2}
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 1.5,
                   },
                 }}
               />
               <Box sx={{ display: "flex", gap: 2 }}>
                 <TextField
-                  label="Fecha"
-                  type="date"
-                  value={meetingData.date}
+                  label="Distrito"
+                  value={companyFormData.city}
                   onChange={(e) =>
-                    setMeetingData({ ...meetingData, date: e.target.value })
+                    setCompanyFormData({
+                      ...companyFormData,
+                      city: e.target.value,
+                    })
                   }
-                  fullWidth
                   InputLabelProps={{ shrink: true }}
                   sx={{
+                    flex: 1,
                     "& .MuiOutlinedInput-root": {
-                      borderRadius: 2,
-                      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                      "& fieldset": {
-                        borderWidth: "2px",
-                        borderColor: theme.palette.divider,
-                      },
-                      "&:hover fieldset": {
-                        borderColor: taxiMonterricoColors.green,
-                      },
-                      "&.Mui-focused fieldset": {
-                        borderColor: taxiMonterricoColors.green,
-                        borderWidth: "2px",
-                      },
-                    },
-                    "& .MuiInputLabel-root": {
-                      fontWeight: 500,
-                      "&.Mui-focused": {
-                        color: taxiMonterricoColors.green,
-                      },
+                      borderRadius: 1.5,
                     },
                   }}
                 />
                 <TextField
-                  label="Hora"
-                  type="time"
-                  value={meetingData.time}
+                  label="Provincia"
+                  value={companyFormData.state}
                   onChange={(e) =>
-                    setMeetingData({ ...meetingData, time: e.target.value })
+                    setCompanyFormData({
+                      ...companyFormData,
+                      state: e.target.value,
+                    })
                   }
-                  fullWidth
                   InputLabelProps={{ shrink: true }}
                   sx={{
+                    flex: 1,
                     "& .MuiOutlinedInput-root": {
-                      borderRadius: 2,
-                      transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                      "& fieldset": {
-                        borderWidth: "2px",
-                        borderColor: theme.palette.divider,
-                      },
-                      "&:hover fieldset": {
-                        borderColor: taxiMonterricoColors.green,
-                      },
-                      "&.Mui-focused fieldset": {
-                        borderColor: taxiMonterricoColors.green,
-                        borderWidth: "2px",
-                      },
+                      borderRadius: 1.5,
                     },
-                    "& .MuiInputLabel-root": {
-                      fontWeight: 500,
-                      "&.Mui-focused": {
-                        color: taxiMonterricoColors.green,
-                      },
+                  }}
+                />
+                <TextField
+                  label="Departamento"
+                  value={companyFormData.country}
+                  onChange={(e) =>
+                    setCompanyFormData({
+                      ...companyFormData,
+                      country: e.target.value,
+                    })
+                  }
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    flex: 1,
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 1.5,
                     },
                   }}
                 />
               </Box>
+              <TextField
+                select
+                label="Etapa del Ciclo de Vida"
+                value={companyFormData.lifecycleStage}
+                onChange={(e) =>
+                  setCompanyFormData({
+                    ...companyFormData,
+                    lifecycleStage: e.target.value,
+                  })
+                }
+                InputLabelProps={{ shrink: true }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 1.5,
+                  },
+                }}
+              >
+                <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
+                <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
+                <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+                <MenuItem value="lead">Lead</MenuItem>
+                <MenuItem value="contacto">Contacto</MenuItem>
+                <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+                <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+                <MenuItem value="propuesta_economica">
+                  Propuesta Económica
+                </MenuItem>
+                <MenuItem value="negociacion">Negociación</MenuItem>
+                <MenuItem value="licitacion">Licitación</MenuItem>
+                <MenuItem value="licitacion_etapa_final">
+                  Licitación Etapa Final
+                </MenuItem>
+                <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+                <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
+                <MenuItem value="activo">Activo</MenuItem>
+              </TextField>
             </Box>
+          )}
 
-            <Box
+          {companyDialogTab === "existing" && (
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+              {/* Campo de búsqueda */}
+              <TextField
+                size="small"
+                placeholder="Buscar Empresas"
+                value={existingCompaniesSearch}
+                onChange={(e) => setExistingCompaniesSearch(e.target.value)}
+                fullWidth
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <Search sx={{ color: taxiMonterricoColors.green }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  mb: 2,
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 1.5,
+                  },
+                }}
+              />
+
+              {/* Lista de empresas */}
+              <Box sx={{ maxHeight: 400, overflowY: "auto" }}>
+                {loadingAllCompanies ? (
+                  <Box
+                    sx={{ display: "flex", justifyContent: "center", py: 4 }}
+                  >
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : (
+                  allCompanies
+                    .filter((company: any) => {
+                      const isAlreadyAdded = (associatedCompanies || []).some(
+                        (c: any) => c.id === company.id
+                      );
+                      if (isAlreadyAdded) return false;
+                      if (!existingCompaniesSearch.trim()) return true;
+                      const searchLower = existingCompaniesSearch.toLowerCase();
+                      return (
+                        company.name?.toLowerCase().includes(searchLower) ||
+                        company.domain?.toLowerCase().includes(searchLower)
+                      );
+                    })
+                    .map((company: any) => (
+                      <ListItem
+                        key={company.id}
+                        disablePadding
+                        sx={{
+                          mb: 0.5,
+                          borderRadius: 1,
+                          "&:hover": {
+                            bgcolor: theme.palette.action.hover,
+                          },
+                        }}
+                      >
+                        <ListItemButton
+                          onClick={() => {
+                            if (
+                              selectedExistingCompanies.some(
+                                (c: any) => c.id === company.id
+                              )
+                            ) {
+                              setSelectedExistingCompanies(
+                                selectedExistingCompanies.filter(
+                                  (c: any) => c.id !== company.id
+                                )
+                              );
+                            } else {
+                              setSelectedExistingCompanies([
+                                ...selectedExistingCompanies,
+                                company,
+                              ]);
+                            }
+                          }}
+                          sx={{
+                            py: 1,
+                            px: 2,
+                            borderRadius: 1,
+                            "&:hover": {
+                              bgcolor: theme.palette.action.hover,
+                            },
+                          }}
+                        >
+                          <Checkbox
+                            checked={selectedExistingCompanies.some(
+                              (c: any) => c.id === company.id
+                            )}
+                            sx={{
+                              color: theme.palette.text.secondary,
+                              "&.Mui-checked": {
+                                color: taxiMonterricoColors.green,
+                              },
+                            }}
+                          />
+                          <ListItemText
+                            primary={company.name}
+                            secondary={company.domain}
+                            sx={{
+                              "& .MuiListItemText-primary": {
+                                fontWeight: 500,
+                                color: theme.palette.text.primary,
+                              },
+                              "& .MuiListItemText-secondary": {
+                                fontSize: "0.75rem",
+                                color: theme.palette.text.secondary,
+                              },
+                            }}
+                          />
+                        </ListItemButton>
+                      </ListItem>
+                    ))
+                )}
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, py: 2 }}>
+          <Button
+            onClick={() => {
+              setAddCompanyOpen(false);
+              setCompanyDialogTab("create");
+              setSelectedExistingCompanies([]);
+              setExistingCompaniesSearch("");
+              setCompanyFormData({
+                name: "",
+                domain: "",
+                phone: "",
+                companyname: "",
+                lifecycleStage: "lead",
+                ruc: "",
+                address: "",
+                city: "",
+                state: "",
+                country: "",
+              });
+              setRucError("");
+            }}
+            sx={{
+              textTransform: "none",
+              color: theme.palette.text.secondary,
+            }}
+          >
+            Cancelar
+          </Button>
+          {companyDialogTab === "create" ? (
+            <Button
+              onClick={handleAddCompany}
+              variant="contained"
               sx={{
-                p: 3,
-                borderTop: `1px solid ${theme.palette.divider}`,
-                backgroundColor: theme.palette.background.paper,
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: 2,
+                textTransform: "none",
+                bgcolor: taxiMonterricoColors.green,
+                "&:hover": {
+                  bgcolor: taxiMonterricoColors.greenDark,
+                },
               }}
             >
-              <Button
-                onClick={() => setMeetingOpen(false)}
-                variant="outlined"
-                sx={{
-                  textTransform: "none",
-                  color: theme.palette.text.secondary,
-                  borderColor: theme.palette.divider,
-                  fontWeight: 600,
-                  px: 3,
-                  py: 1,
-                  borderRadius: 2,
-                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                  "&:hover": {
-                    bgcolor: theme.palette.action.hover,
-                    borderColor: theme.palette.text.secondary,
-                    transform: "translateY(-1px)",
-                  },
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleSaveMeeting}
-                variant="contained"
-                disabled={saving || !meetingData.subject.trim()}
-                sx={{
-                  textTransform: "none",
-                  bgcolor: saving
-                    ? theme.palette.action.disabledBackground
-                    : taxiMonterricoColors.green,
-                  color: "white",
-                  fontWeight: 600,
-                  px: 4,
-                  py: 1,
-                  borderRadius: 2,
-                  boxShadow: saving
-                    ? "none"
-                    : `0 4px 12px ${taxiMonterricoColors.green}40`,
-                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                  "&:hover": {
-                    bgcolor: saving
-                      ? theme.palette.action.disabledBackground
-                      : taxiMonterricoColors.greenDark,
-                    boxShadow: saving
-                      ? "none"
-                      : `0 6px 16px ${taxiMonterricoColors.green}50`,
-                    transform: "translateY(-2px)",
-                  },
-                  "&:active": {
-                    transform: "translateY(0)",
-                  },
-                  "&.Mui-disabled": {
-                    bgcolor: theme.palette.action.disabledBackground,
-                    color: theme.palette.action.disabled,
-                    boxShadow: "none",
-                  },
-                }}
-              >
-                {saving ? "Guardando..." : "Guardar"}
-              </Button>
-            </Box>
-          </Box>
-          <Box
-            sx={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: "rgba(0, 0, 0, 0.5)",
-              zIndex: 1499,
-            }}
-            onClick={() => setMeetingOpen(false)}
-          />
-        </>
-      )}
+              Crear
+            </Button>
+          ) : (
+            <Button
+              onClick={handleAddExistingCompanies}
+              variant="contained"
+              disabled={selectedExistingCompanies.length === 0}
+              sx={{
+                textTransform: "none",
+                bgcolor: taxiMonterricoColors.green,
+                "&:hover": {
+                  bgcolor: taxiMonterricoColors.greenDark,
+                },
+                "&.Mui-disabled": {
+                  bgcolor: theme.palette.action.disabledBackground,
+                },
+              }}
+            >
+              Agregar ({selectedExistingCompanies.length})
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
 
       {/* Diálogo para agregar empresa */}
       <Dialog

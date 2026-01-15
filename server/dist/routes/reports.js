@@ -112,13 +112,22 @@ router.get('/user/:userId/stage-stats', async (req, res) => {
             }
         });
         // Construir respuesta
-        const result = stages.map(stage => ({
-            stage: stage.value,
-            label: stage.label,
-            percentage: stage.percentage,
-            counts: targetWeeks.map(week => contactCounts[stage.value][week] || 0),
-            values: targetWeeks.map(week => contactValues[stage.value][week] || 0),
-        }));
+        const result = stages.map(stage => {
+            const counts = targetWeeks.map(week => contactCounts[stage.value][week] || 0);
+            const values = targetWeeks.map(week => contactValues[stage.value][week] || 0);
+            // Calcular totales sumando todos los valores de las semanas
+            const totalCount = counts.reduce((sum, count) => sum + count, 0);
+            const totalValue = values.reduce((sum, value) => sum + value, 0);
+            return {
+                stage: stage.value,
+                label: stage.label,
+                percentage: stage.percentage,
+                counts: counts,
+                values: values,
+                totalCount: totalCount,
+                totalValue: totalValue,
+            };
+        });
         res.json({
             weeks: targetWeeks,
             data: result,

@@ -48,7 +48,7 @@ const transformUser = (user: any) => {
 
 // Todas las rutas requieren autenticación y rol de administrador
 router.use(authenticateToken);
-router.use(requireRole('admin'));
+router.use(requireRole('admin', 'jefe_comercial'));
 
 // Listar todos los usuarios
 router.get('/', apiLimiter, async (req: AuthRequest, res: Response) => {

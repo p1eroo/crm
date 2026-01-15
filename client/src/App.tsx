@@ -30,6 +30,8 @@ const TaskDetail = lazy(() => import('./pages/TaskDetail'));
 const Tickets = lazy(() => import('./pages/Tickets'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Users = lazy(() => import('./pages/Users'));
+const SystemLogs = lazy(() => import('./pages/SystemLogs'));
+const RolesAndPermissions = lazy(() => import('./pages/RolesAndPermissions'));
 const Reports = lazy(() => import('./pages/Reports'));
 const ReportDetail = lazy(() => import('./pages/ReportDetail'));
 const Calendar = lazy(() => import('./pages/Calendar'));
@@ -283,6 +285,8 @@ const AppContent: React.FC = () => {
                 <Route path="/calendar" element={<Navigate to="/login" replace />} />
                 <Route path="/profile" element={<Navigate to="/login" replace />} />
                 <Route path="/users" element={<Navigate to="/login" replace />} />
+                <Route path="/system-logs" element={<Navigate to="/login" replace />} />
+                <Route path="/roles-permissions" element={<Navigate to="/login" replace />} />
                 <Route path="/reports" element={<Navigate to="/login" replace />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </>
@@ -433,6 +437,42 @@ const AppContent: React.FC = () => {
                           <SidebarProvider>
                             <MainLayout>
                               <Users />
+                            </MainLayout>
+                          </SidebarProvider>
+                        );
+                      }
+                      return <Navigate to="/" replace />;
+                    })()
+                  }
+                />
+                <Route
+                  path="/system-logs"
+                  element={
+                    (() => {
+                      const userRole = user?.role;
+                      if (userRole === 'admin') {
+                        return (
+                          <SidebarProvider>
+                            <MainLayout>
+                              <SystemLogs />
+                            </MainLayout>
+                          </SidebarProvider>
+                        );
+                      }
+                      return <Navigate to="/" replace />;
+                    })()
+                  }
+                />
+                <Route
+                  path="/roles-permissions"
+                  element={
+                    (() => {
+                      const userRole = user?.role;
+                      if (userRole === 'admin') {
+                        return (
+                          <SidebarProvider>
+                            <MainLayout>
+                              <RolesAndPermissions />
                             </MainLayout>
                           </SidebarProvider>
                         );

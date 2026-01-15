@@ -215,14 +215,13 @@ router.get('/stats', async (req, res) => {
           u.id as "userId",
           u."firstName",
           u."lastName",
-          u.email,
           COUNT(d.id)::integer as "totalDeals",
           COUNT(CASE WHEN d.stage IN ('won', 'closed won', 'cierre_ganado') THEN 1 END)::integer as "wonDeals",
           COALESCE(SUM(CASE WHEN d.stage IN ('won', 'closed won', 'cierre_ganado') THEN d.amount ELSE 0 END), 0)::numeric as "wonDealsValue"
         FROM users u
         INNER JOIN deals d ON u.id = d."ownerId"
         ${whereClause}
-        GROUP BY u.id, u."firstName", u."lastName", u.email
+        GROUP BY u.id, u."firstName", u."lastName"
         HAVING COUNT(d.id) > 0
         ORDER BY "wonDeals" DESC, "totalDeals" DESC
       `, {
@@ -239,7 +238,6 @@ router.get('/stats', async (req, res) => {
                     userId: item.userId,
                     firstName: item.firstName || 'Sin nombre',
                     lastName: item.lastName || '',
-                    email: item.email || '',
                     totalDeals,
                     wonDeals,
                     wonDealsValue,

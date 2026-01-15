@@ -91,10 +91,25 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: 2,
+          borderRadius: 4,
           maxHeight: '90vh',
-          bgcolor: theme.palette.background.paper,
+          bgcolor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
           color: theme.palette.text.primary,
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 20px 60px rgba(0,0,0,0.5)' 
+            : '0 20px 60px rgba(0,0,0,0.12)',
+          border: 'none',
+          animation: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          '@keyframes fadeInScale': {
+            '0%': {
+              opacity: 0,
+              transform: 'scale(0.95)',
+            },
+            '100%': {
+              opacity: 1,
+              transform: 'scale(1)',
+            },
+          },
         },
       }}
     >
@@ -103,20 +118,45 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          pb: 1,
+          px: 3,
+          py: 2,
+          pb: 2,
           borderBottom: `1px solid ${theme.palette.divider}`,
+          bgcolor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
         }}
       >
-        <Typography variant="h6" fontWeight={600}>
+        <Typography 
+          variant="h6" 
+          sx={{
+            fontWeight: 600,
+            fontSize: '1.25rem',
+            letterSpacing: '-0.02em',
+          }}
+        >
           Nuevo Mensaje
         </Typography>
-        <IconButton onClick={handleClose} size="small">
-          <Close />
+        <IconButton 
+          onClick={handleClose} 
+          size="small"
+          sx={{
+            color: theme.palette.text.secondary,
+            '&:hover': {
+              backgroundColor: theme.palette.error.main + '15',
+              color: theme.palette.error.main,
+            },
+            transition: 'all 0.2s ease',
+          }}
+        >
+          <Close fontSize="small" />
         </IconButton>
       </DialogTitle>
 
       <DialogContent sx={{ p: 0, '&.MuiDialogContent-root': { pt: 0 } }}>
-        <Box sx={{ p: 2 }}>
+        <Box sx={{ 
+          px: 3,
+          py: 2,
+          bgcolor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
+        }}>
           {/* Campo Para */}
           <Box sx={{ mb: 2 }}>
             <TextField
@@ -126,8 +166,20 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
               disabled
               size="small"
               sx={{
-                '& .MuiInputBase-root': {
-                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.05)' : '#F5F5F5',
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: theme.palette.mode === 'dark' 
+                    ? 'rgba(255, 255, 255, 0.05)' 
+                    : 'rgba(0, 0, 0, 0.02)',
+                  '& fieldset': {
+                    borderColor: theme.palette.mode === 'dark'
+                      ? 'rgba(255,255,255,0.1)'
+                      : theme.palette.divider,
+                  },
+                  '&:hover fieldset': {
+                    borderColor: theme.palette.mode === 'dark'
+                      ? 'rgba(255,255,255,0.2)'
+                      : theme.palette.divider,
+                  },
                 },
               }}
             />
@@ -142,6 +194,31 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
               fullWidth
               size="small"
               placeholder="Escribe el asunto..."
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  backgroundColor: theme.palette.mode === 'dark' 
+                    ? 'rgba(255, 255, 255, 0.05)' 
+                    : 'rgba(0, 0, 0, 0.02)',
+                  '& fieldset': {
+                    borderColor: theme.palette.mode === 'dark'
+                      ? 'rgba(255,255,255,0.1)'
+                      : theme.palette.divider,
+                  },
+                  '&:hover fieldset': {
+                    borderColor: theme.palette.mode === 'dark'
+                      ? 'rgba(255,255,255,0.2)'
+                      : theme.palette.divider,
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: taxiMonterricoColors.green,
+                  },
+                },
+                '& .MuiInputBase-input': {
+                  fontSize: '1rem',
+                  fontWeight: 500,
+                  py: 1.5,
+                },
+              }}
             />
           </Box>
 
@@ -149,14 +226,19 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
           <Box sx={{ mb: 2 }}>
             <Box
               sx={{
-                border: `1px solid ${theme.palette.divider}`,
-                borderRadius: 1,
+                border: `1px solid ${
+                  theme.palette.mode === 'dark'
+                    ? 'rgba(255,255,255,0.1)'
+                    : theme.palette.divider
+                }`,
+                borderRadius: 2,
                 overflow: 'hidden',
                 minHeight: '300px',
                 maxHeight: '400px',
                 display: 'flex',
                 flexDirection: 'column',
-                bgcolor: theme.palette.background.paper,
+                bgcolor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
+                transition: 'all 0.2s ease',
               }}
             >
               <RichTextEditor
@@ -183,17 +265,36 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
 
       <DialogActions
         sx={{
-          p: 2,
-          borderTop: `1px solid ${theme.palette.divider}`,
+          px: 3,
+          py: 1.5,
+          borderTop: `1px solid ${
+            theme.palette.mode === 'dark'
+              ? 'rgba(255,255,255,0.1)'
+              : theme.palette.divider
+          }`,
           justifyContent: 'flex-end',
+          bgcolor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
         }}
       >
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 2 }}>
           <Button 
             onClick={handleClose} 
             disabled={sending}
+            variant="outlined"
             sx={{
-              color: theme.palette.text.primary,
+              textTransform: 'none',
+              px: 3,
+              py: 0.75,
+              color: theme.palette.text.secondary,
+              borderColor: theme.palette.divider,
+              fontWeight: 600,
+              borderRadius: 2,
+              '&:hover': {
+                borderColor: theme.palette.divider,
+                bgcolor: theme.palette.mode === 'dark' 
+                  ? 'rgba(255,255,255,0.05)' 
+                  : 'rgba(0,0,0,0.02)',
+              },
             }}
           >
             Cancelar
@@ -204,7 +305,12 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
             startIcon={sending ? <CircularProgress size={16} /> : <Send />}
             disabled={sending || !subject.trim() || !body.trim() || body === '<p><br></p>' || body === '<br>' || body === ''}
             sx={{
+              textTransform: 'none',
+              px: 3,
+              py: 0.75,
               bgcolor: taxiMonterricoColors.green,
+              fontWeight: 600,
+              borderRadius: 2,
               '&:hover': { bgcolor: taxiMonterricoColors.greenDark },
             }}
           >
