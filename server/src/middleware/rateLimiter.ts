@@ -3,13 +3,13 @@ import rateLimit from 'express-rate-limit';
 // Rate limiter para endpoints de autenticación (más restrictivo)
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 5, // máximo 5 requests por ventana
+  max: process.env.NODE_ENV === 'production' ? 20 : 5, // Más permisivo en producción (20 vs 5)
   message: {
     error: 'Demasiados intentos de autenticación. Por favor, intenta nuevamente en 15 minutos.',
   },
   standardHeaders: true, // Retorna información de rate limit en headers `RateLimit-*`
   legacyHeaders: false, // Desactiva headers `X-RateLimit-*`
-  skipSuccessfulRequests: false, // Contar todos los requests, incluso los exitosos
+  skipSuccessfulRequests: true, // Solo contar intentos fallidos, no los exitosos
 });
 
 // Rate limiter para registro (un poco menos restrictivo que login)
