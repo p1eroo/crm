@@ -174,6 +174,7 @@ const Contacts: React.FC = () => {
     total: 0,
     success: 0,
     errors: 0,
+    errorList: [] as Array<{ name: string; error: string }>,
   });
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_users, setUsers] = useState<any[]>([]);
@@ -293,7 +294,7 @@ const Contacts: React.FC = () => {
 
     setImporting(true);
     setImportProgressOpen(true);
-    setImportProgress({ current: 0, total: 0, success: 0, errors: 0 });
+    setImportProgress({ current: 0, total: 0, success: 0, errors: 0, errorList: [] });
 
     try {
       // Leer el archivo Excel
@@ -373,6 +374,14 @@ const Contacts: React.FC = () => {
 
         const { successCount = 0, errorCount = 0, results = [] } = response.data || {};
 
+        // Procesar resultados y actualizar progreso
+        const errorList = (results || [])
+          .filter((r: any) => !r.success)
+          .map((r: any) => ({
+            name: r.name || 'Sin nombre',
+            error: r.error || 'Error desconocido',
+          }));
+
         console.log('successCount:', successCount, 'errorCount:', errorCount); // Debug
 
         setImportProgress({
@@ -380,6 +389,7 @@ const Contacts: React.FC = () => {
           total: contactsToCreate.length,
           success: successCount || 0,
           errors: errorCount || 0,
+          errorList,
         });
       } catch (error: any) {
         console.error('Error en importación masiva:', error);
@@ -394,7 +404,13 @@ const Contacts: React.FC = () => {
 
         setImportProgress((prev) => ({
           ...prev,
-          errors: prev.errors + 1,
+          current: contactsToCreate.length,
+          total: contactsToCreate.length,
+          errors: (error.response?.data?.errorCount || 0) + 1,
+          errorList: [...(prev.errorList || []), {
+            name: 'Importación masiva',
+            error: errorMessage,
+          }],
         }));
       }
 
@@ -3430,7 +3446,7 @@ const Contacts: React.FC = () => {
         onClose={() => {
           if (!importing && importProgress.current === importProgress.total) {
             setImportProgressOpen(false);
-            setImportProgress({ current: 0, total: 0, success: 0, errors: 0 });
+            setImportProgress({ current: 0, total: 0, success: 0, errors: 0, errorList: [] });
           }
         }}
         maxWidth="sm"
@@ -3504,12 +3520,31 @@ const Contacts: React.FC = () => {
                     ✓ {importProgress.success} contactos creados exitosamente
                   </Typography>
                   {importProgress.errors > 0 && (
-                    <Typography
-                      variant="body2"
-                      sx={{ color: theme.palette.error.main }}
-                    >
-                      ✗ {importProgress.errors} contactos con errores
-                    </Typography>
+                    <>
+                      <Typography
+                        variant="body2"
+                        sx={{ color: theme.palette.error.main }}
+                      >
+                        ✗ {importProgress.errors} contactos con errores:
+                      </Typography>
+                      {importProgress.errorList && importProgress.errorList.length > 0 && (
+                        <Box sx={{ mt: 1, maxHeight: 200, overflowY: 'auto' }}>
+                          {importProgress.errorList.map((err, index) => (
+                            <Typography
+                              key={index}
+                              variant="body2"
+                              sx={{ 
+                                color: theme.palette.error.main,
+                                fontSize: '0.875rem',
+                                mb: 0.5,
+                              }}
+                            >
+                              • {err.name}: {err.error}
+                            </Typography>
+                          ))}
+                        </Box>
+                      )}
+                    </>
                   )}
                 </Box>
               </Box>
@@ -3526,6 +3561,7 @@ const Contacts: React.FC = () => {
                   total: 0,
                   success: 0,
                   errors: 0,
+                  errorList: [],
                 });
               }}
               variant="contained"
