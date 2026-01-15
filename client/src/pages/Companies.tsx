@@ -954,82 +954,6 @@ const Companies: React.FC = () => {
     return foundUser ? foundUser.id : null;
   };
 
-  // Función para traducir mensajes de error al español
-  const translateError = (errorMessage: string): string => {
-    const errorLower = errorMessage.toLowerCase();
-    
-    // Errores de validación de lifecycleStage
-    if (errorLower.includes('lifecyclestage') || errorLower.includes('lifecycle stage')) {
-      if (errorLower.includes('must be one of')) {
-        return 'Etapa de ciclo de vida no válida. Debe ser una de: lead, contacto, reunión agendada, reunión efectiva, propuesta económica, negociación, licitación, licitación etapa final, cierre ganado, cierre perdido, firma contrato, activo, cliente perdido, lead inactivo';
-      }
-      return 'Etapa de ciclo de vida no válida';
-    }
-    
-    // Errores de ownerId
-    if (errorLower.includes('ownerid') || errorLower.includes('owner id')) {
-      if (errorLower.includes('must be a valid integer') || errorLower.includes('invalid integer')) {
-        return 'El propietario debe ser un número válido';
-      }
-      if (errorLower.includes('foreign key') || errorLower.includes('constraint')) {
-        return 'El propietario especificado no existe';
-      }
-      return 'Error en el campo propietario';
-    }
-    
-    // Errores de estimatedRevenue
-    if (errorLower.includes('estimatedrevenue') || errorLower.includes('estimated revenue')) {
-      if (errorLower.includes('invalid value') || errorLower.includes('cannot convert')) {
-        return 'El valor del potencial de facturación estimado no es válido. Debe ser un número';
-      }
-      return 'Error en el potencial de facturación estimado';
-    }
-    
-    // Errores de nombre
-    if (errorLower.includes('name') && errorLower.includes('cannot be null')) {
-      return 'El nombre de la empresa es requerido';
-    }
-    
-    // Errores de RUC
-    if (errorLower.includes('ruc')) {
-      if (errorLower.includes('duplicate') || errorLower.includes('ya existe')) {
-        return 'Ya existe una empresa con este RUC';
-      }
-      return 'Error en el campo RUC';
-    }
-    
-    // Errores de email
-    if (errorLower.includes('email') || errorLower.includes('correo')) {
-      if (errorLower.includes('invalid') || errorLower.includes('no válido')) {
-        return 'El formato del correo electrónico no es válido';
-      }
-      return 'Error en el campo correo electrónico';
-    }
-    
-    // Errores de foreign key
-    if (errorLower.includes('foreign key') || errorLower.includes('constraint')) {
-      return 'Error de referencia: uno de los valores relacionados no existe';
-    }
-    
-    // Errores de validación general
-    if (errorLower.includes('validation error')) {
-      return 'Error de validación en los datos proporcionados';
-    }
-    
-    // Errores de tipo de dato
-    if (errorLower.includes('cannot convert') || errorLower.includes('invalid value')) {
-      return 'El valor proporcionado no es del tipo correcto';
-    }
-    
-    // Errores de conexión
-    if (errorLower.includes('network') || errorLower.includes('timeout') || errorLower.includes('connection')) {
-      return 'Error de conexión con el servidor. Por favor, intenta nuevamente';
-    }
-    
-    // Si el mensaje ya está en español o no coincide con ningún patrón, devolverlo tal cual
-    return errorMessage;
-  };
-
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -1085,121 +1009,56 @@ const Companies: React.FC = () => {
       // Inicializar el progreso total
       setImportProgress(prev => ({ ...prev, total: companiesToCreate.length }));
 
-      // Crear empresas en el backend con progreso
-      let successCount = 0;
-      let errorCount = 0;
+      // Usar endpoint bulk para importación masiva
+      try {
+        // Actualizar progreso mientras se procesa
+        setImportProgress(prev => ({
+          ...prev,
+          current: companiesToCreate.length,
+          total: companiesToCreate.length,
+        }));
 
-      for (let i = 0; i < companiesToCreate.length; i++) {
-        const companyData = companiesToCreate[i];
-        try {
-          await api.post('/companies', companyData);
-          successCount++;
-          // Capturar valores actuales para evitar problemas de closure
-          const currentSuccess = successCount;
-          const currentErrors = errorCount;
-          const currentIndex = i + 1;
-          setImportProgress(prev => ({
-            ...prev,
-            current: currentIndex,
-            total: companiesToCreate.length,
-            success: currentSuccess,
-            errors: currentErrors,
+        const response = await api.post('/companies/bulk', {
+          companies: companiesToCreate,
+          batchSize: 1000, // Procesar en lotes de 1000
+        });
+
+        const { successCount, errorCount, results } = response.data;
+
+        // Procesar resultados y actualizar progreso
+        const errorList = results
+          .filter((r: any) => !r.success)
+          .map((r: any) => ({
+            name: r.name || 'Sin nombre',
+            error: r.error || 'Error desconocido',
           }));
-        } catch (error: any) {
-          console.error('Error creating company:', error);
-          
-          // Verificar si es un error de empresa duplicada y tiene facturación para actualizar
-          if (
-            error.response?.status === 400 &&
-            error.response?.data?.error === 'Ya existe una empresa con este nombre' &&
-            error.response?.data?.existingCompanyId &&
-            companyData.estimatedRevenue !== undefined &&
-            companyData.estimatedRevenue !== null
-          ) {
-            // Si la empresa existe y tiene facturación, actualizar solo ese campo
-            try {
-              await api.put(`/companies/${error.response.data.existingCompanyId}`, {
-                estimatedRevenue: companyData.estimatedRevenue,
-              });
-              successCount++;
-              
-              // Actualizar progreso como éxito
-              const currentSuccess = successCount;
-              const currentErrors = errorCount;
-              const currentIndex = i + 1;
-              setImportProgress(prev => ({
-                ...prev,
-                current: currentIndex,
-                total: companiesToCreate.length,
-                success: currentSuccess,
-                errors: currentErrors,
-              }));
-              continue; // Continuar con la siguiente empresa
-            } catch (updateError: any) {
-              // Si falla la actualización, contar como error
-              errorCount++;
-              let updateErrorMessage = 'Error al actualizar facturación';
-              if (updateError.response?.data?.error) {
-                updateErrorMessage = updateError.response.data.error;
-              }
-              
-              const currentSuccess = successCount;
-              const currentErrors = errorCount;
-              const currentIndex = i + 1;
-              const companyName = companyData.name || companyData.companyname || 'Empresa sin nombre';
-              
-              setImportProgress(prev => ({
-                ...prev,
-                current: currentIndex,
-                total: companiesToCreate.length,
-                success: currentSuccess,
-                errors: currentErrors,
-                errorList: [...prev.errorList, { 
-                  name: companyName, 
-                  error: updateErrorMessage 
-                }],
-              }));
-            }
-          } else {
-            // Manejo de error normal (empresa no existe o no tiene facturación)
-            errorCount++;
-            
-            // Capturar el mensaje de error de diferentes fuentes
-            let errorMessage = 'Error desconocido';
-            
-            if (error.response?.data?.error) {
-              // Error del backend (ya viene en español normalmente)
-              errorMessage = error.response.data.error;
-            } else if (error.errors && Array.isArray(error.errors) && error.errors.length > 0) {
-              // Errores de validación de Sequelize (múltiples errores)
-              errorMessage = error.errors.map((e: any) => translateError(e.message)).join(', ');
-            } else if (error.message) {
-              // Mensaje de error general - traducir
-              errorMessage = translateError(error.message);
-            } else if (error.original?.message) {
-              // Error original de la base de datos - traducir
-              errorMessage = translateError(error.original.message);
-            }
-            
-            // Capturar valores actuales para evitar problemas de closure
-            const currentSuccess = successCount;
-            const currentErrors = errorCount;
-            const currentIndex = i + 1;
-            const companyName = companyData.name || companyData.companyname || 'Empresa sin nombre';
-            
-            setImportProgress(prev => ({
-              ...prev,
-              current: currentIndex,
-              total: companiesToCreate.length,
-              success: currentSuccess,
-              errors: currentErrors,
-              errorList: [...prev.errorList, { 
-                name: companyName, 
-                error: errorMessage 
-              }],
-            }));
-          }
+
+        setImportProgress(prev => ({
+          ...prev,
+          current: companiesToCreate.length,
+          total: companiesToCreate.length,
+          success: successCount,
+          errors: errorCount,
+          errorList,
+        }));
+      } catch (error: any) {
+        console.error('Error en importación masiva:', error);
+        
+        let errorMessage = 'Error al procesar la importación masiva';
+        if (error.response?.data?.error) {
+          errorMessage = error.response.data.error;
+        } else if (error.message) {
+          errorMessage = error.message;
         }
+
+        setImportProgress(prev => ({
+          ...prev,
+          errors: prev.errors + 1,
+          errorList: [...prev.errorList, {
+            name: 'Importación masiva',
+            error: errorMessage,
+          }],
+        }));
       }
 
       // Limpiar el input

@@ -12,6 +12,7 @@ const auth_1 = require("../middleware/auth");
 const rateLimiter_1 = require("../middleware/rateLimiter");
 const rolePermissions_1 = require("../utils/rolePermissions");
 const systemLogger_1 = require("../utils/systemLogger");
+const database_1 = require("../config/database");
 const router = express_1.default.Router();
 router.use(auth_1.authenticateToken);
 // Función para limpiar empresas eliminando campos null y objetos relacionados null
@@ -711,6 +712,185 @@ router.delete('/:id/contacts/:contactId', rateLimiter_1.deleteLimiter, async (re
         console.error('Error removing contact association:', error);
         console.error('Error stack:', error.stack);
         res.status(500).json({ error: error.message || 'Error al eliminar la asociación' });
+    }
+});
+// Importación masiva de empresas (bulk)
+router.post('/bulk', rateLimiter_1.heavyOperationLimiter, async (req, res) => {
+    try {
+        const { companies, batchSize = 1000 } = req.body;
+        if (!Array.isArray(companies) || companies.length === 0) {
+            return res.status(400).json({ error: 'Se requiere un array de empresas' });
+        }
+        if (batchSize > 5000) {
+            return res.status(400).json({ error: 'El tamaño de lote máximo es 5000' });
+        }
+        const results = [];
+        let successCount = 0;
+        let errorCount = 0;
+        let updateCount = 0;
+        // Procesar en lotes
+        const totalBatches = Math.ceil(companies.length / batchSize);
+        for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+            const startIndex = batchIndex * batchSize;
+            const endIndex = Math.min(startIndex + batchSize, companies.length);
+            const batch = companies.slice(startIndex, endIndex);
+            // Usar transacción para cada lote
+            await database_1.sequelize.transaction(async (t) => {
+                for (let i = 0; i < batch.length; i++) {
+                    const companyData = batch[i];
+                    const globalIndex = startIndex + i;
+                    try {
+                        // Preparar datos de la empresa
+                        const processedData = {
+                            ...companyData,
+                            ownerId: companyData.ownerId || req.userId || null,
+                        };
+                        // Validar nombre requerido
+                        if (!processedData.name || !processedData.name.trim()) {
+                            results.push({
+                                success: false,
+                                error: 'El nombre de la empresa es requerido',
+                                index: globalIndex,
+                                name: companyData.name || 'Sin nombre',
+                            });
+                            errorCount++;
+                            continue;
+                        }
+                        // Validar y convertir estimatedRevenue
+                        if (processedData.estimatedRevenue !== undefined) {
+                            if (processedData.estimatedRevenue === '' || processedData.estimatedRevenue === null) {
+                                processedData.estimatedRevenue = null;
+                            }
+                            else if (typeof processedData.estimatedRevenue === 'string') {
+                                const parsed = parseFloat(processedData.estimatedRevenue);
+                                processedData.estimatedRevenue = isNaN(parsed) ? null : parsed;
+                            }
+                        }
+                        // Verificar si existe empresa con el mismo nombre (case-insensitive)
+                        const existingCompanyByName = await Company_1.Company.findOne({
+                            where: {
+                                name: {
+                                    [sequelize_1.Op.iLike]: processedData.name.trim(),
+                                },
+                            },
+                            transaction: t,
+                        });
+                        if (existingCompanyByName) {
+                            // Si existe y tiene estimatedRevenue, actualizar solo ese campo
+                            if (processedData.estimatedRevenue !== undefined &&
+                                processedData.estimatedRevenue !== null) {
+                                await existingCompanyByName.update({ estimatedRevenue: processedData.estimatedRevenue }, { transaction: t });
+                                const updatedCompany = await Company_1.Company.findByPk(existingCompanyByName.id, {
+                                    include: [
+                                        { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
+                                    ],
+                                    transaction: t,
+                                });
+                                results.push({
+                                    success: true,
+                                    data: cleanCompany(updatedCompany, true),
+                                    index: globalIndex,
+                                    name: processedData.name,
+                                });
+                                successCount++;
+                                updateCount++;
+                                // Registrar log de actualización (fuera de la transacción para no afectarla)
+                                if (req.userId) {
+                                    try {
+                                        await (0, systemLogger_1.logSystemAction)(req.userId, systemLogger_1.SystemActions.UPDATE, systemLogger_1.EntityTypes.COMPANY, existingCompanyByName.id, { name: existingCompanyByName.name, changes: { estimatedRevenue: processedData.estimatedRevenue } }, req);
+                                    }
+                                    catch (logError) {
+                                        console.error('Error al registrar log de actualización:', logError);
+                                        // No afectar la transacción si falla el log
+                                    }
+                                }
+                            }
+                            else {
+                                // Existe pero no hay estimatedRevenue para actualizar
+                                results.push({
+                                    success: false,
+                                    error: 'Ya existe una empresa con este nombre',
+                                    index: globalIndex,
+                                    name: processedData.name,
+                                });
+                                errorCount++;
+                            }
+                            continue;
+                        }
+                        // Verificar si existe empresa con el mismo RUC (si se proporciona)
+                        if (processedData.ruc && processedData.ruc.trim() !== '') {
+                            const existingCompanyByRuc = await Company_1.Company.findOne({
+                                where: {
+                                    ruc: processedData.ruc.trim(),
+                                },
+                                transaction: t,
+                            });
+                            if (existingCompanyByRuc) {
+                                results.push({
+                                    success: false,
+                                    error: 'Ya existe una empresa con este RUC',
+                                    index: globalIndex,
+                                    name: processedData.name,
+                                });
+                                errorCount++;
+                                continue;
+                            }
+                        }
+                        // Crear nueva empresa
+                        const newCompany = await Company_1.Company.create(processedData, { transaction: t });
+                        const createdCompany = await Company_1.Company.findByPk(newCompany.id, {
+                            include: [
+                                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
+                            ],
+                            transaction: t,
+                        });
+                        results.push({
+                            success: true,
+                            data: cleanCompany(createdCompany, true),
+                            index: globalIndex,
+                            name: processedData.name,
+                        });
+                        successCount++;
+                        // Registrar log de creación (fuera de la transacción para no afectarla)
+                        if (req.userId) {
+                            try {
+                                await (0, systemLogger_1.logSystemAction)(req.userId, systemLogger_1.SystemActions.CREATE, systemLogger_1.EntityTypes.COMPANY, newCompany.id, { name: newCompany.name }, req);
+                            }
+                            catch (logError) {
+                                console.error('Error al registrar log de creación:', logError);
+                                // No afectar la transacción si falla el log
+                            }
+                        }
+                    }
+                    catch (error) {
+                        console.error(`Error procesando empresa ${globalIndex}:`, error);
+                        results.push({
+                            success: false,
+                            error: error.message || 'Error desconocido',
+                            index: globalIndex,
+                            name: companyData.name || 'Sin nombre',
+                        });
+                        errorCount++;
+                    }
+                }
+            });
+        }
+        res.status(200).json({
+            success: true,
+            total: companies.length,
+            successCount,
+            errorCount,
+            updateCount,
+            createCount: successCount - updateCount,
+            results,
+        });
+    }
+    catch (error) {
+        console.error('Error en importación masiva:', error);
+        res.status(500).json({
+            error: error.message || 'Error al procesar la importación masiva',
+            success: false,
+        });
     }
 });
 exports.default = router;
