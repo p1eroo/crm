@@ -12,7 +12,6 @@ import {
 } from '@mui/material';
 import {
   Assignment,
-  Support,
   AdminPanelSettings,
   Assessment,
   CalendarToday,
@@ -45,7 +44,7 @@ const mainMenuItems = [
   { text: 'Empresas', icon: <FontAwesomeIcon icon={faIndustry} />, path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Negocios', icon: <FontAwesomeIcon icon={faHandHoldingDollar} />, path: '/deals', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Tareas', icon: <Assignment />, path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Tickets', icon: <Support />, path: '/tickets', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  // { text: 'Tickets', icon: <Support />, path: '/tickets', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Calendario', icon: <CalendarToday />, path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Reportes', icon: <Assessment />, path: '/reports', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   // { text: 'Campañas', icon: <Campaign />, path: '/campaigns' },

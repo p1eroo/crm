@@ -412,6 +412,7 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
                           height: 32,
                           bgcolor: taxiMonterricoColors.green,
                           fontSize: '0.75rem',
+                          color: 'white',
                         }}
                       >
                         {getContactInitials

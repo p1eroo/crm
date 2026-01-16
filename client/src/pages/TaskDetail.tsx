@@ -181,14 +181,12 @@ const TaskDetail: React.FC = () => {
   const [noteModalCompanies, setNoteModalCompanies] = useState<any[]>([]);
   const [noteModalContacts, setNoteModalContacts] = useState<any[]>([]);
   const [noteModalDeals, setNoteModalDeals] = useState<any[]>([]);
-  const [noteModalTickets, setNoteModalTickets] = useState<any[]>([]);
   const [noteSelectedAssociations, setNoteSelectedAssociations] = useState<{
     [key: string]: number[];
   }>({
     companies: [],
     contacts: [],
     deals: [],
-    tickets: [],
   });
   const [noteLoadingAssociations, setNoteLoadingAssociations] = useState(false);
   const [selectedCompaniesForNote, setSelectedCompaniesForNote] = useState<
@@ -248,8 +246,8 @@ const TaskDetail: React.FC = () => {
     "asc"
   );
   const [dealSortField, setDealSortField] = useState<
-    "name" | "amount" | "closeDate" | "stage"
-  >("name");
+    "name" | "amount" | "closeDate" | "stage" | undefined
+  >(undefined);
   const [dealSortOrder, setDealSortOrder] = useState<"asc" | "desc">("asc");
   
   const [addContactDialogOpen, setAddContactDialogOpen] = useState(false);
@@ -1332,7 +1330,7 @@ const TaskDetail: React.FC = () => {
     setNoteLoadingAssociations(true);
     try {
       if (searchTerm && searchTerm.trim().length > 0) {
-        const [companiesRes, contactsRes, dealsRes, ticketsRes] =
+        const [companiesRes, contactsRes, dealsRes /*, ticketsRes*/] =
           await Promise.all([
             api.get("/companies", {
               params: { limit: 1000, search: searchTerm },
@@ -1341,9 +1339,9 @@ const TaskDetail: React.FC = () => {
               params: { limit: 1000, search: searchTerm },
             }),
             api.get("/deals", { params: { limit: 1000, search: searchTerm } }),
-            api.get("/tickets", {
-              params: { limit: 1000, search: searchTerm },
-            }),
+            // api.get("/tickets", {
+            //   params: { limit: 1000, search: searchTerm },
+            // }),
           ]);
         setNoteModalCompanies(
           companiesRes.data.companies || companiesRes.data || []
@@ -1352,19 +1350,19 @@ const TaskDetail: React.FC = () => {
           contactsRes.data.contacts || contactsRes.data || []
         );
         setNoteModalDeals(dealsRes.data.deals || dealsRes.data || []);
-        setNoteModalTickets(ticketsRes.data.tickets || ticketsRes.data || []);
+        // setNoteModalTickets(ticketsRes.data.tickets || ticketsRes.data || []);
       } else {
         // Cargar elementos asociados a la tarea actual
         const associatedItems: {
           companies: any[];
           contacts: any[];
           deals: any[];
-          tickets: any[];
+          // tickets: any[];
         } = {
           companies: [],
           contacts: [],
           deals: [],
-          tickets: [],
+          // tickets: [],
         };
 
         // Cargar empresas vinculadas
@@ -1391,7 +1389,7 @@ const TaskDetail: React.FC = () => {
         setNoteModalCompanies(associatedItems.companies);
         setNoteModalContacts(associatedItems.contacts);
         setNoteModalDeals(associatedItems.deals);
-        setNoteModalTickets(associatedItems.tickets);
+        // setNoteModalTickets(associatedItems.tickets);
       }
     } catch (error) {
       console.error("Error fetching associations:", error);
@@ -5826,7 +5824,7 @@ const TaskDetail: React.FC = () => {
                   />
                 </ListItemButton>
               </ListItem>
-              <ListItem disablePadding>
+              {/* <ListItem disablePadding>
                 <ListItemButton
                   selected={noteSelectedCategory === "tickets"}
                   onClick={() => setNoteSelectedCategory("tickets")}
@@ -5859,7 +5857,7 @@ const TaskDetail: React.FC = () => {
                     secondaryTypographyProps={{ fontSize: "0.75rem" }}
                   />
                 </ListItemButton>
-              </ListItem>
+              </ListItem> */}
             </List>
           </Box>
 
@@ -6164,7 +6162,7 @@ const TaskDetail: React.FC = () => {
                     </Box>
                   )}
 
-                  {noteSelectedCategory === "tickets" && (
+                  {/* {noteSelectedCategory === "tickets" && (
                     <Box>
                       <Typography
                         variant="subtitle2"
@@ -6227,7 +6225,7 @@ const TaskDetail: React.FC = () => {
                           ))}
                       </List>
                     </Box>
-                  )}
+                  )} */}
 
                   {noteSelectedCategory === "seleccionados" && (
                     <Box>
@@ -6386,7 +6384,7 @@ const TaskDetail: React.FC = () => {
                               </ListItem>
                             );
                           })}
-                          {noteSelectedAssociations.tickets?.map((ticketId) => {
+                          {/* {noteSelectedAssociations.tickets?.map((ticketId) => {
                             const ticket = noteModalTickets.find(
                               (t: any) => t.id === ticketId
                             );
@@ -6423,7 +6421,7 @@ const TaskDetail: React.FC = () => {
                                 </ListItemButton>
                               </ListItem>
                             );
-                          })}
+                          })} */}
                         </List>
                       )}
                     </Box>
@@ -6455,10 +6453,10 @@ const TaskDetail: React.FC = () => {
               const dealIds = (noteSelectedAssociations.deals || []).map(
                 (id) => 1000 + id
               );
-              const ticketIds = (noteSelectedAssociations.tickets || []).map(
-                (id) => 2000 + id
-              );
-              setSelectedAssociationsForNote([...dealIds, ...ticketIds]);
+              // const ticketIds = (noteSelectedAssociations.tickets || []).map(
+              //   (id) => 2000 + id
+              // );
+              setSelectedAssociationsForNote([...dealIds /*, ...ticketIds*/]);
               setNoteAssociateModalOpen(false);
             }}
             variant="contained"

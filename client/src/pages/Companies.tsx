@@ -68,6 +68,7 @@ const Companies: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isLargeScreen = useMediaQuery(theme.breakpoints.up('md'));
   const { user } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
@@ -2318,21 +2319,19 @@ const Companies: React.FC = () => {
                 {/* Nueva columna: Propietario */}
                 <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                   {company.Owner ? (
-                    <Typography
-                      variant="body2" 
-                      sx={{ 
-                        color: theme.palette.text.primary,
-                        fontSize: { xs: '0.75rem', md: '0.8125rem' },
-                        fontWeight: 400,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        maxWidth: { xs: '80px', md: '120px' },
-                      }}
-                      title={`${company.Owner.firstName} ${company.Owner.lastName}`}
-                    >
-                      {company.Owner.firstName} {company.Owner.lastName}
-                    </Typography>
+                    <Tooltip title={`${company.Owner.firstName} ${company.Owner.lastName}`} arrow>
+                      <Avatar
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          bgcolor: taxiMonterricoColors.green,
+                          fontSize: '0.75rem',
+                          color: 'white',
+                        }}
+                      >
+                        {company.Owner.firstName?.[0] || ''}{company.Owner.lastName?.[0] || ''}
+                      </Avatar>
+                    </Tooltip>
                   ) : (
                     <Typography 
                       variant="body2" 
@@ -2481,91 +2480,155 @@ const Companies: React.FC = () => {
                   </Typography>
                 </Box>
                 
-                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
-                  <IconButton
-                    size="small"
-                    onClick={(e) => handleActionsMenuOpen(e, company)}
-                    sx={{
-                      color: theme.palette.text.secondary,
-                      padding: 0.5,
-                      '&:hover': {
-                        color: theme.palette.text.primary,
-                        bgcolor: theme.palette.action.hover,
-                      },
-                    }}
-                  >
-                    <MoreVert sx={{ fontSize: '1.25rem' }} />
-                  </IconButton>
-                    <Menu
-                      anchorEl={actionsMenuAnchor[company.id]}
-                      open={Boolean(actionsMenuAnchor[company.id])}
-                      onClose={() => handleActionsMenuClose(company.id)}
-                      onClick={(e) => e.stopPropagation()}
-                      PaperProps={{
-                        sx: {
-                          minWidth: 150,
-                          mt: 0.5,
-                          borderRadius: 1.5,
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                        }
-                      }}
-                      transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-                      anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-                    >
-                      <MenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpen(company);
-                          handleActionsMenuClose(company.id);
-                        }}
+                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: { xs: 0, md: 0.5 }, minWidth: 0, overflow: 'hidden' }}>
+                  {isLargeScreen ? (
+                    <>
+                      <Tooltip title="Editar">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpen(company);
+                          }}
+                          sx={{
+                            color: theme.palette.text.secondary,
+                            padding: 0.5,
+                            '&:hover': {
+                              color: theme.palette.text.primary,
+                              bgcolor: theme.palette.action.hover,
+                            },
+                          }}
+                        >
+                          <Edit sx={{ fontSize: '1.125rem' }} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Ver">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePreview(company, e);
+                          }}
+                          sx={{
+                            color: theme.palette.text.secondary,
+                            padding: 0.5,
+                            '&:hover': {
+                              color: theme.palette.text.primary,
+                              bgcolor: theme.palette.action.hover,
+                            },
+                          }}
+                        >
+                          <Visibility sx={{ fontSize: '1.125rem' }} />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Eliminar">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(company.id);
+                          }}
+                          sx={{
+                            color: '#d32f2f',
+                            padding: 0.5,
+                            '&:hover': {
+                              color: '#d32f2f',
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.15)' : '#ffebee',
+                            },
+                          }}
+                        >
+                          <Delete sx={{ fontSize: '1.125rem' }} />
+                        </IconButton>
+                      </Tooltip>
+                    </>
+                  ) : (
+                    <>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => handleActionsMenuOpen(e, company)}
                         sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1.5,
-                          py: 1.5,
-                        }}
-                      >
-                        <Edit sx={{ fontSize: '1.125rem', color: theme.palette.text.secondary }} />
-                        <Typography variant="body2">Editar</Typography>
-                      </MenuItem>
-                      <MenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handlePreview(company, e);
-                          handleActionsMenuClose(company.id);
-                        }}
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1.5,
-                          py: 1.5,
-                        }}
-                      >
-                        <Visibility sx={{ fontSize: '1.125rem', color: theme.palette.text.secondary }} />
-                        <Typography variant="body2">Ver</Typography>
-                      </MenuItem>
-                      <Divider />
-                      <MenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(company.id);
-                          handleActionsMenuClose(company.id);
-                        }}
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 1.5,
-                          py: 1.5,
-                          color: '#d32f2f',
+                          color: theme.palette.text.secondary,
+                          padding: 0.5,
                           '&:hover': {
-                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.15)' : '#ffebee',
+                            color: theme.palette.text.primary,
+                            bgcolor: theme.palette.action.hover,
                           },
                         }}
                       >
-                        <Delete sx={{ fontSize: '1.125rem' }} />
-                        <Typography variant="body2">Eliminar</Typography>
-                      </MenuItem>
-                    </Menu>
+                        <MoreVert sx={{ fontSize: '1.25rem' }} />
+                      </IconButton>
+                      <Menu
+                        anchorEl={actionsMenuAnchor[company.id]}
+                        open={Boolean(actionsMenuAnchor[company.id])}
+                        onClose={() => handleActionsMenuClose(company.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        PaperProps={{
+                          sx: {
+                            minWidth: 180,
+                            mt: 0.5,
+                            borderRadius: 1.5,
+                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                          }
+                        }}
+                        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                      >
+                        <MenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpen(company);
+                            handleActionsMenuClose(company.id);
+                          }}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.5,
+                            py: 1.5,
+                          }}
+                        >
+                          <Edit sx={{ fontSize: '1.125rem', color: theme.palette.text.secondary }} />
+                          <Typography variant="body2">Editar</Typography>
+                        </MenuItem>
+                        <MenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePreview(company, e);
+                            handleActionsMenuClose(company.id);
+                          }}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.5,
+                            py: 1.5,
+                          }}
+                        >
+                          <Visibility sx={{ fontSize: '1.125rem', color: theme.palette.text.secondary }} />
+                          <Typography variant="body2">Ver</Typography>
+                        </MenuItem>
+                        <Divider />
+                        <MenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(company.id);
+                            handleActionsMenuClose(company.id);
+                          }}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.5,
+                            py: 1.5,
+                            color: '#d32f2f',
+                            '&:hover': {
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.15)' : '#ffebee',
+                            },
+                          }}
+                        >
+                          <Delete sx={{ fontSize: '1.125rem' }} />
+                          <Typography variant="body2">Eliminar</Typography>
+                        </MenuItem>
+                      </Menu>
+                    </>
+                  )}
                 </Box>
             </Box>
           </React.Fragment>

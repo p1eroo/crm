@@ -54,6 +54,9 @@ const cleanContact = (contact: any): any => {
   if (contactData.Companies && Array.isArray(contactData.Companies) && contactData.Companies.length > 0) {
     cleaned.Companies = contactData.Companies;
   }
+  if (contactData.Contacts && Array.isArray(contactData.Contacts) && contactData.Contacts.length > 0) {
+    cleaned.Contacts = contactData.Contacts;
+  }
 
   return cleaned;
 };
@@ -412,6 +415,7 @@ router.get('/:id', async (req, res) => {
           { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
           { model: Company, as: 'Company', required: false }, // Empresa principal (compatibilidad)
           { model: Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname'], required: false }, // Todas las empresas asociadas
+          { model: Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'], required: false }, // Contactos relacionados
         ],
       });
     } catch (includeError: any) {
@@ -463,6 +467,15 @@ router.get('/:id', async (req, res) => {
       } catch (companiesError) {
         console.warn(`⚠️ No se pudieron obtener Companies para contact ${contactData.id}:`, companiesError);
         contactData.Companies = [];
+      }
+
+      // Agregar Contacts relacionados (muchos-a-muchos)
+      try {
+        const contacts = await (contact as any).getContacts();
+        contactData.Contacts = contacts || [];
+      } catch (contactsError) {
+        console.warn(`⚠️ No se pudieron obtener Contacts para contact ${contactData.id}:`, contactsError);
+        contactData.Contacts = [];
       }
 
       return res.json(cleanContact(contactData));
@@ -871,12 +884,100 @@ router.delete('/:id/companies/:companyId', async (req, res) => {
         { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
         { model: Company, as: 'Company' },
         { model: Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname'] },
+        { model: Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
       ],
     });
 
     res.json(cleanContact(updatedContact));
   } catch (error: any) {
     console.error('Error removing company association:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ error: error.message || 'Error al eliminar la asociación' });
+  }
+});
+
+// Agregar contactos asociados a un contacto
+router.post('/:id/contacts', async (req, res) => {
+  try {
+    const contact = await Contact.findByPk(req.params.id, {
+      include: [
+        { model: Contact, as: 'Contacts' },
+      ],
+    });
+    
+    if (!contact) {
+      return res.status(404).json({ error: 'Contacto no encontrado' });
+    }
+
+    const { contactIds } = req.body;
+    if (!Array.isArray(contactIds) || contactIds.length === 0) {
+      return res.status(400).json({ error: 'Se requiere un array de contactIds' });
+    }
+
+    // Verificar que todos los contactos existan
+    const contacts = await Contact.findAll({
+      where: { id: { [Op.in]: contactIds } },
+    });
+
+    if (contacts.length !== contactIds.length) {
+      return res.status(400).json({ error: 'Uno o más contactos no existen' });
+    }
+
+    // Obtener IDs de contactos ya asociados
+    const existingContactIds = ((contact as any).Contacts || []).map((c: any) => c.id);
+    
+    // Filtrar solo los contactos nuevos
+    const newContactIds = contactIds.filter((id: number) => !existingContactIds.includes(id));
+
+    if (newContactIds.length > 0) {
+      // Usar el método add de Sequelize para relaciones muchos-a-muchos
+      await (contact as any).addContacts(newContactIds);
+    }
+
+    // Obtener el contacto actualizado con todos sus contactos relacionados
+    const updatedContact = await Contact.findByPk(contact.id, {
+      include: [
+        { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
+        { model: Company, as: 'Company' },
+        { model: Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname'] },
+        { model: Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+      ],
+    });
+
+    res.json(cleanContact(updatedContact));
+  } catch (error: any) {
+    console.error('Error adding contacts to contact:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ error: error.message || 'Error al asociar los contactos' });
+  }
+});
+
+// Eliminar asociación de contacto con contacto
+router.delete('/:id/contacts/:contactId', async (req, res) => {
+  try {
+    const contact = await Contact.findByPk(req.params.id);
+    if (!contact) {
+      return res.status(404).json({ error: 'Contacto no encontrado' });
+    }
+
+    const contactId = parseInt(req.params.contactId);
+    
+    // Usar el método remove de Sequelize para relaciones muchos-a-muchos
+    await (contact as any).removeContacts([contactId]);
+
+    // Obtener el contacto actualizado
+    const updatedContact = await Contact.findByPk(contact.id, {
+      include: [
+        { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
+        { model: Company, as: 'Company' },
+        { model: Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname'] },
+        { model: Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+      ],
+    });
+
+    res.json(cleanContact(updatedContact));
+  } catch (error: any) {
+    console.error('Error removing contact association:', error);
     console.error('Error stack:', error.stack);
     res.status(500).json({ error: error.message || 'Error al eliminar la asociación' });
   }

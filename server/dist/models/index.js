@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SystemLog = exports.UserGoogleToken = exports.MonthlyBudget = exports.DealDeal = exports.DealCompany = exports.DealContact = exports.ContactCompany = exports.Payment = exports.Subscription = exports.Ticket = exports.Automation = exports.Campaign = exports.Activity = exports.Task = exports.Deal = exports.Company = exports.Contact = exports.Role = exports.User = void 0;
+exports.SystemLog = exports.UserGoogleToken = exports.MonthlyBudget = exports.ContactContact = exports.CompanyCompany = exports.DealDeal = exports.DealCompany = exports.DealContact = exports.ContactCompany = exports.Payment = exports.Subscription = exports.Ticket = exports.Automation = exports.Campaign = exports.Activity = exports.Task = exports.Deal = exports.Company = exports.Contact = exports.Role = exports.User = void 0;
 // Export all models
 var User_1 = require("./User");
 Object.defineProperty(exports, "User", { enumerable: true, get: function () { return User_1.User; } });
@@ -34,6 +34,10 @@ var DealCompany_1 = require("./DealCompany");
 Object.defineProperty(exports, "DealCompany", { enumerable: true, get: function () { return DealCompany_1.DealCompany; } });
 var DealDeal_1 = require("./DealDeal");
 Object.defineProperty(exports, "DealDeal", { enumerable: true, get: function () { return DealDeal_1.DealDeal; } });
+var CompanyCompany_1 = require("./CompanyCompany");
+Object.defineProperty(exports, "CompanyCompany", { enumerable: true, get: function () { return CompanyCompany_1.CompanyCompany; } });
+var ContactContact_1 = require("./ContactContact");
+Object.defineProperty(exports, "ContactContact", { enumerable: true, get: function () { return ContactContact_1.ContactContact; } });
 var MonthlyBudget_1 = require("./MonthlyBudget");
 Object.defineProperty(exports, "MonthlyBudget", { enumerable: true, get: function () { return MonthlyBudget_1.MonthlyBudget; } });
 var UserGoogleToken_1 = require("./UserGoogleToken");
@@ -51,6 +55,8 @@ require("./ContactCompany");
 require("./DealContact");
 require("./DealCompany");
 require("./DealDeal");
+require("./CompanyCompany");
+require("./ContactContact");
 // Luego los demás modelos
 require("./Deal");
 require("./Task");
@@ -68,6 +74,8 @@ const Contact_2 = require("./Contact");
 const Company_2 = require("./Company");
 const Deal_2 = require("./Deal");
 const DealDeal_2 = require("./DealDeal");
+const CompanyCompany_2 = require("./CompanyCompany");
+const ContactContact_2 = require("./ContactContact");
 // Inicializar relaciones muchos-a-muchos
 Contact_2.Contact.belongsToMany(Company_2.Company, {
     through: 'contact_companies',
@@ -118,4 +126,32 @@ Deal_2.Deal.belongsToMany(Deal_2.Deal, {
     foreignKey: 'relatedDealId',
     otherKey: 'dealId',
     as: 'RelatedDeals'
+});
+// Relación muchos-a-muchos entre Company y Company
+Company_2.Company.belongsToMany(Company_2.Company, {
+    through: CompanyCompany_2.CompanyCompany,
+    foreignKey: 'companyId',
+    otherKey: 'relatedCompanyId',
+    as: 'Companies'
+});
+// Relación inversa para obtener empresas que están vinculadas CON esta empresa
+Company_2.Company.belongsToMany(Company_2.Company, {
+    through: CompanyCompany_2.CompanyCompany,
+    foreignKey: 'relatedCompanyId',
+    otherKey: 'companyId',
+    as: 'RelatedCompanies'
+});
+// Relación muchos-a-muchos entre Contact y Contact
+Contact_2.Contact.belongsToMany(Contact_2.Contact, {
+    through: ContactContact_2.ContactContact,
+    foreignKey: 'contactId',
+    otherKey: 'relatedContactId',
+    as: 'Contacts'
+});
+// Relación inversa para obtener contactos que están vinculados CON este contacto
+Contact_2.Contact.belongsToMany(Contact_2.Contact, {
+    through: ContactContact_2.ContactContact,
+    foreignKey: 'relatedContactId',
+    otherKey: 'contactId',
+    as: 'RelatedContacts'
 });

@@ -33,7 +33,6 @@ import {
   Logout,
   Menu as MenuIcon,
   Settings,
-  Support,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { taxiMonterricoColors } from '../../theme/colors';
@@ -91,11 +90,11 @@ const Header: React.FC = () => {
       path: '/tasks', 
       icon: <Assignment />,
     },
-    { 
-      title: 'Tickets', 
-      path: '/tickets', 
-      icon: <Support />,
-    },
+    // { 
+    //   title: 'Tickets', 
+    //   path: '/tickets', 
+    //   icon: <Support />,
+    // },
     { 
       title: 'Calendario', 
       path: '/calendar', 

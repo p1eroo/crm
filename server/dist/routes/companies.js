@@ -75,11 +75,25 @@ const cleanCompany = (company, includeSensitive = false) => {
     if (companyData.Contacts && Array.isArray(companyData.Contacts) && companyData.Contacts.length > 0) {
         cleaned.Contacts = companyData.Contacts;
     }
+    // Incluir empresas relacionadas si existen
+    if (companyData.Companies && Array.isArray(companyData.Companies) && companyData.Companies.length > 0) {
+        cleaned.Companies = companyData.Companies;
+    }
     return cleaned;
 };
 // Función para transformar empresa para lista (sin datos sensibles)
 const transformCompanyForList = (company) => {
     return cleanCompany(company, false);
+};
+// Función para extraer el dominio del email si no está definido
+const extractDomainFromEmail = (companyData) => {
+    // Solo extraer dominio si no está definido y hay un email válido
+    if (!companyData.domain && companyData.email && typeof companyData.email === 'string') {
+        const emailMatch = companyData.email.match(/@(.+)/);
+        if (emailMatch && emailMatch[1]) {
+            companyData.domain = emailMatch[1].toLowerCase().trim();
+        }
+    }
 };
 // Obtener todas las empresas
 router.get('/', async (req, res) => {
@@ -441,6 +455,7 @@ router.get('/:id', async (req, res) => {
             include: [
                 { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
                 { model: Contact_1.Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] }, // Contactos asociados muchos-a-muchos
+                { model: Company_1.Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname', 'ruc'] }, // Empresas relacionadas muchos-a-muchos
             ],
         });
         if (!company) {
@@ -498,6 +513,8 @@ router.post('/', async (req, res) => {
                 companyData.estimatedRevenue = isNaN(parsed) ? null : parsed;
             }
         }
+        // Extraer dominio del email si no está definido
+        extractDomainFromEmail(companyData);
         // Validar que no exista una empresa con el mismo nombre (case-insensitive)
         if (companyData.name) {
             const existingCompanyByName = await Company_1.Company.findOne({
@@ -512,6 +529,23 @@ router.post('/', async (req, res) => {
                     error: 'Ya existe una empresa con este nombre',
                     duplicateField: 'name',
                     existingCompanyId: existingCompanyByName.id,
+                });
+            }
+        }
+        // Validar que no exista una empresa con el mismo dominio (case-insensitive)
+        if (companyData.domain && companyData.domain.trim() !== '') {
+            const existingCompanyByDomain = await Company_1.Company.findOne({
+                where: {
+                    domain: {
+                        [sequelize_1.Op.iLike]: companyData.domain.trim(), // Case-insensitive
+                    },
+                },
+            });
+            if (existingCompanyByDomain) {
+                return res.status(400).json({
+                    error: 'Ya existe una empresa con este dominio',
+                    duplicateField: 'domain',
+                    existingCompanyId: existingCompanyByDomain.id,
                 });
             }
         }
@@ -700,6 +734,78 @@ router.delete('/:id/contacts/:contactId', async (req, res) => {
         res.status(500).json({ error: error.message || 'Error al eliminar la asociación' });
     }
 });
+// Agregar empresas asociadas a una empresa
+router.post('/:id/companies', async (req, res) => {
+    try {
+        const company = await Company_1.Company.findByPk(req.params.id, {
+            include: [
+                { model: Company_1.Company, as: 'Companies' },
+            ],
+        });
+        if (!company) {
+            return res.status(404).json({ error: 'Empresa no encontrada' });
+        }
+        const { companyIds } = req.body;
+        if (!Array.isArray(companyIds) || companyIds.length === 0) {
+            return res.status(400).json({ error: 'Se requiere un array de companyIds' });
+        }
+        // Verificar que todas las empresas existan
+        const companies = await Company_1.Company.findAll({
+            where: { id: { [sequelize_1.Op.in]: companyIds } },
+        });
+        if (companies.length !== companyIds.length) {
+            return res.status(400).json({ error: 'Una o más empresas no existen' });
+        }
+        // Obtener IDs de empresas ya asociadas
+        const existingCompanyIds = (company.Companies || []).map((c) => c.id);
+        // Filtrar solo las empresas nuevas
+        const newCompanyIds = companyIds.filter((id) => !existingCompanyIds.includes(id));
+        if (newCompanyIds.length > 0) {
+            // Usar el método add de Sequelize para relaciones muchos-a-muchos
+            await company.addCompanies(newCompanyIds);
+        }
+        // Obtener la empresa actualizada con todas sus empresas relacionadas
+        const updatedCompany = await Company_1.Company.findByPk(company.id, {
+            include: [
+                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
+                { model: Contact_1.Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+                { model: Company_1.Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname', 'ruc'] },
+            ],
+        });
+        res.json(cleanCompany(updatedCompany, true));
+    }
+    catch (error) {
+        console.error('Error adding companies to company:', error);
+        console.error('Error stack:', error.stack);
+        res.status(500).json({ error: error.message || 'Error al asociar las empresas' });
+    }
+});
+// Eliminar asociación de empresa con empresa
+router.delete('/:id/companies/:companyId', async (req, res) => {
+    try {
+        const company = await Company_1.Company.findByPk(req.params.id);
+        if (!company) {
+            return res.status(404).json({ error: 'Empresa no encontrada' });
+        }
+        const relatedCompanyId = parseInt(req.params.companyId);
+        // Usar el método remove de Sequelize para relaciones muchos-a-muchos
+        await company.removeCompanies([relatedCompanyId]);
+        // Obtener la empresa actualizada
+        const updatedCompany = await Company_1.Company.findByPk(company.id, {
+            include: [
+                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
+                { model: Contact_1.Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+                { model: Company_1.Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname', 'ruc'] },
+            ],
+        });
+        res.json(cleanCompany(updatedCompany, true));
+    }
+    catch (error) {
+        console.error('Error removing company association:', error);
+        console.error('Error stack:', error.stack);
+        res.status(500).json({ error: error.message || 'Error al eliminar la asociación' });
+    }
+});
 // Importación masiva de empresas (bulk)
 router.post('/bulk', async (req, res) => {
     try {
@@ -756,6 +862,8 @@ router.post('/bulk', async (req, res) => {
                         if (processedData.email !== undefined && processedData.email === '') {
                             processedData.email = null;
                         }
+                        // Extraer dominio del email si no está definido
+                        extractDomainFromEmail(processedData);
                         // Verificar si existe empresa con el mismo nombre (case-insensitive)
                         const existingCompanyByName = await Company_1.Company.findOne({
                             where: {
@@ -776,6 +884,27 @@ router.post('/bulk', async (req, res) => {
                             });
                             errorCount++;
                             continue;
+                        }
+                        // Verificar si existe empresa con el mismo dominio (case-insensitive)
+                        if (processedData.domain && processedData.domain.trim() !== '') {
+                            const existingCompanyByDomain = await Company_1.Company.findOne({
+                                where: {
+                                    domain: {
+                                        [sequelize_1.Op.iLike]: processedData.domain.trim(),
+                                    },
+                                },
+                                transaction: t,
+                            });
+                            if (existingCompanyByDomain) {
+                                results.push({
+                                    success: false,
+                                    error: 'Ya existe una empresa con este dominio',
+                                    index: globalIndex,
+                                    name: processedData.name,
+                                });
+                                errorCount++;
+                                continue;
+                            }
                         }
                         // Verificar si existe empresa con el mismo RUC (si se proporciona)
                         if (processedData.ruc && processedData.ruc.trim() !== '') {

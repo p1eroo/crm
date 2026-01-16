@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Card,
   Typography,
@@ -86,15 +86,52 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
       deal.amount?.toString().includes(searchValue)
   );
 
-  // Reset to page 1 when search changes
+  // Ordenar los deals si hay sortField y sortOrder
+  const sortedDeals = useMemo(() => {
+    if (!sortField || !onSort) {
+      return filteredDeals;
+    }
+
+    return [...filteredDeals].sort((a, b) => {
+      let aVal: any;
+      let bVal: any;
+
+      switch (sortField) {
+        case "name":
+          aVal = (a.name || "").toLowerCase();
+          bVal = (b.name || "").toLowerCase();
+          break;
+        case "amount":
+          aVal = typeof a.amount === "number" ? a.amount : parseFloat(String(a.amount || 0));
+          bVal = typeof b.amount === "number" ? b.amount : parseFloat(String(b.amount || 0));
+          break;
+        case "closeDate":
+          aVal = a.closeDate ? new Date(a.closeDate).getTime() : 0;
+          bVal = b.closeDate ? new Date(b.closeDate).getTime() : 0;
+          break;
+        case "stage":
+          aVal = (a.stage || "").toLowerCase();
+          bVal = (b.stage || "").toLowerCase();
+          break;
+        default:
+          return 0;
+      }
+
+      if (aVal < bVal) return sortOrder === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [filteredDeals, sortField, sortOrder, onSort]);
+
+  // Reset to page 1 when search changes or sort changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchValue]);
+  }, [searchValue, sortField, sortOrder]);
 
-  const totalPages = Math.ceil(filteredDeals.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedDeals.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedDeals = filteredDeals.slice(startIndex, endIndex);
+  const paginatedDeals = sortedDeals.slice(startIndex, endIndex);
 
   const handlePreviousPage = () => {
     setCurrentPage((prev) => Math.max(1, prev - 1));
@@ -320,7 +357,7 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
                     {onSort ? (
                       <TableSortLabel
                         active={sortField === "name"}
-                        direction={sortField === "name" ? sortOrder : "asc"}
+                        direction={sortField === "name" ? sortOrder : undefined}
                         onClick={() => onSort("name")}
                         sx={{
                           "& .MuiTableSortLabel-icon": {
@@ -341,7 +378,7 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
                     {onSort ? (
                       <TableSortLabel
                         active={sortField === "amount"}
-                        direction={sortField === "amount" ? sortOrder : "asc"}
+                        direction={sortField === "amount" ? sortOrder : undefined}
                         onClick={() => onSort("amount")}
                         sx={{
                           "& .MuiTableSortLabel-icon": {
@@ -362,7 +399,7 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
                     {onSort ? (
                       <TableSortLabel
                         active={sortField === "closeDate"}
-                        direction={sortField === "closeDate" ? sortOrder : "asc"}
+                        direction={sortField === "closeDate" ? sortOrder : undefined}
                         onClick={() => onSort("closeDate")}
                         sx={{
                           "& .MuiTableSortLabel-icon": {
@@ -373,17 +410,17 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
                           },
                         }}
                       >
-                        FECHA DE CIERRE (GMT-5)
+                        FECHA DE CIERRE
                       </TableSortLabel>
                     ) : (
-                      "FECHA DE CIERRE (GMT-5)"
+                      "FECHA DE CIERRE"
                     )}
                   </TableCell>
                   <TableCell>
                     {onSort ? (
                       <TableSortLabel
                         active={sortField === "stage"}
-                        direction={sortField === "stage" ? sortOrder : "asc"}
+                        direction={sortField === "stage" ? sortOrder : undefined}
                         onClick={() => onSort("stage")}
                         sx={{
                           "& .MuiTableSortLabel-icon": {
@@ -431,6 +468,7 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
                           height: 32,
                           bgcolor: taxiMonterricoColors.green,
                           fontSize: "0.875rem",
+                          color: 'white',
                         }}
                       >
                         {getInitials
@@ -482,7 +520,7 @@ const FullDealsTableCard: React.FC<FullDealsTableCardProps> = ({
                             hour: "2-digit",
                             minute: "2-digit",
                             timeZone: "America/Lima",
-                          }) + " GMT-5"
+                          })
                         : "--"}
                     </Typography>
                   </TableCell>

@@ -468,6 +468,37 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
 
           <MenuItem
             onClick={() => {
+              onCreateActivity('email');
+              setCreateActivityMenuAnchor(null);
+            }}
+            sx={{
+              py: 1.5,
+              px: 2,
+              '&:hover': {
+                backgroundColor: theme.palette.action.hover,
+              },
+            }}
+          >
+            <Comment
+              sx={{
+                marginRight: 2,
+                fontSize: 14,
+                color: taxiMonterricoColors.green,
+              }}
+            />
+            <Typography
+              variant="body2"
+              sx={{
+                flexGrow: 1,
+                color: theme.palette.text.primary,
+              }}
+            >
+              Enviar correo
+            </Typography>
+          </MenuItem>
+
+          <MenuItem
+            onClick={() => {
               onCreateActivity('task');
               setCreateActivityMenuAnchor(null);
             }}
@@ -526,7 +557,7 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
                 color: theme.palette.text.primary,
               }}
             >
-              Hacer llamada telefónica
+              Llamada
             </Typography>
           </MenuItem>
 

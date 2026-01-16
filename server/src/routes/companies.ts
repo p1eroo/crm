@@ -59,6 +59,11 @@ const cleanCompany = (company: any, includeSensitive: boolean = false): any => {
   if (companyData.Contacts && Array.isArray(companyData.Contacts) && companyData.Contacts.length > 0) {
     cleaned.Contacts = companyData.Contacts;
   }
+  
+  // Incluir empresas relacionadas si existen
+  if (companyData.Companies && Array.isArray(companyData.Companies) && companyData.Companies.length > 0) {
+    cleaned.Companies = companyData.Companies;
+  }
 
   return cleaned;
 };
@@ -464,6 +469,7 @@ router.get('/:id', async (req, res) => {
       include: [
         { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
         { model: Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] }, // Contactos asociados muchos-a-muchos
+        { model: Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname', 'ruc'] }, // Empresas relacionadas muchos-a-muchos
       ],
     });
 
@@ -803,6 +809,91 @@ router.delete('/:id/contacts/:contactId', async (req, res) => {
     res.json(cleanCompany(updatedCompany, true));
   } catch (error: any) {
     console.error('Error removing contact association:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ error: error.message || 'Error al eliminar la asociación' });
+  }
+});
+
+// Agregar empresas asociadas a una empresa
+router.post('/:id/companies', async (req, res) => {
+  try {
+    const company = await Company.findByPk(req.params.id, {
+      include: [
+        { model: Company, as: 'Companies' },
+      ],
+    });
+    
+    if (!company) {
+      return res.status(404).json({ error: 'Empresa no encontrada' });
+    }
+
+    const { companyIds } = req.body;
+    if (!Array.isArray(companyIds) || companyIds.length === 0) {
+      return res.status(400).json({ error: 'Se requiere un array de companyIds' });
+    }
+
+    // Verificar que todas las empresas existan
+    const companies = await Company.findAll({
+      where: { id: { [Op.in]: companyIds } },
+    });
+
+    if (companies.length !== companyIds.length) {
+      return res.status(400).json({ error: 'Una o más empresas no existen' });
+    }
+
+    // Obtener IDs de empresas ya asociadas
+    const existingCompanyIds = ((company as any).Companies || []).map((c: any) => c.id);
+    
+    // Filtrar solo las empresas nuevas
+    const newCompanyIds = companyIds.filter((id: number) => !existingCompanyIds.includes(id));
+
+    if (newCompanyIds.length > 0) {
+      // Usar el método add de Sequelize para relaciones muchos-a-muchos
+      await (company as any).addCompanies(newCompanyIds);
+    }
+
+    // Obtener la empresa actualizada con todas sus empresas relacionadas
+    const updatedCompany = await Company.findByPk(company.id, {
+      include: [
+        { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
+        { model: Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname', 'ruc'] },
+      ],
+    });
+
+    res.json(cleanCompany(updatedCompany, true));
+  } catch (error: any) {
+    console.error('Error adding companies to company:', error);
+    console.error('Error stack:', error.stack);
+    res.status(500).json({ error: error.message || 'Error al asociar las empresas' });
+  }
+});
+
+// Eliminar asociación de empresa con empresa
+router.delete('/:id/companies/:companyId', async (req, res) => {
+  try {
+    const company = await Company.findByPk(req.params.id);
+    if (!company) {
+      return res.status(404).json({ error: 'Empresa no encontrada' });
+    }
+
+    const relatedCompanyId = parseInt(req.params.companyId);
+    
+    // Usar el método remove de Sequelize para relaciones muchos-a-muchos
+    await (company as any).removeCompanies([relatedCompanyId]);
+
+    // Obtener la empresa actualizada
+    const updatedCompany = await Company.findByPk(company.id, {
+      include: [
+        { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
+        { model: Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: Company, as: 'Companies', attributes: ['id', 'name', 'domain', 'phone', 'companyname', 'ruc'] },
+      ],
+    });
+
+    res.json(cleanCompany(updatedCompany, true));
+  } catch (error: any) {
+    console.error('Error removing company association:', error);
     console.error('Error stack:', error.stack);
     res.status(500).json({ error: error.message || 'Error al eliminar la asociación' });
   }

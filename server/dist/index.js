@@ -520,23 +520,105 @@ database_1.sequelize.authenticate()
     await Payment.sync({ alter: false });
     await Subscription.sync({ alter: false });
     // Sincronizar el resto de las tablas con alter (excepto Deal que tiene columnas ENUM manuales)
-    const { Deal, User, Role, MonthlyBudget, UserGoogleToken, DealContact, DealCompany, ContactCompany, SystemLog, ...rest } = await Promise.resolve().then(() => __importStar(require('./models')));
+    const { Deal, User, Role, MonthlyBudget, UserGoogleToken, DealContact, DealCompany, ContactCompany, CompanyCompany, ContactContact, SystemLog, ...rest } = await Promise.resolve().then(() => __importStar(require('./models')));
     // Sincronizar Deal sin alter para evitar conflictos con ENUMs
     if (Deal && typeof Deal.sync === 'function') {
         await Deal.sync({ alter: false });
     }
     // Sincronizar tablas de asociación (muchos a muchos)
     if (DealContact && typeof DealContact.sync === 'function') {
-        await DealContact.sync({ alter: true });
+        try {
+            await DealContact.sync({ alter: true });
+        }
+        catch (error) {
+            // Si falla por restricciones, intentar sin alter
+            if (error.name === 'SequelizeUnknownConstraintError' || error.code === '42704') {
+                console.warn('⚠️  Advertencia al sincronizar DealContact con alter, intentando sin alter...');
+                await DealContact.sync({ alter: false });
+            }
+            else {
+                throw error;
+            }
+        }
     }
     if (DealCompany && typeof DealCompany.sync === 'function') {
-        await DealCompany.sync({ alter: true });
+        try {
+            await DealCompany.sync({ alter: true });
+        }
+        catch (error) {
+            // Si falla por restricciones que no existen, intentar sin alter
+            if (error.name === 'SequelizeUnknownConstraintError' || error.code === '42704') {
+                console.warn('⚠️  Advertencia al sincronizar DealCompany con alter, intentando sin alter...');
+                await DealCompany.sync({ alter: false });
+            }
+            else {
+                throw error;
+            }
+        }
     }
     if (ContactCompany && typeof ContactCompany.sync === 'function') {
-        await ContactCompany.sync({ alter: true });
+        try {
+            await ContactCompany.sync({ alter: true });
+        }
+        catch (error) {
+            // Si falla por restricciones, intentar sin alter
+            if (error.name === 'SequelizeUnknownConstraintError' || error.code === '42704') {
+                console.warn('⚠️  Advertencia al sincronizar ContactCompany con alter, intentando sin alter...');
+                await ContactCompany.sync({ alter: false });
+            }
+            else {
+                throw error;
+            }
+        }
+    }
+    if (CompanyCompany && typeof CompanyCompany.sync === 'function') {
+        try {
+            await CompanyCompany.sync({ alter: true });
+        }
+        catch (error) {
+            // Si falla por restricciones que no existen, intentar sin alter
+            if (error.name === 'SequelizeUnknownConstraintError' || error.code === '42704') {
+                console.warn('⚠️  Advertencia al sincronizar CompanyCompany con alter, intentando sin alter...');
+                await CompanyCompany.sync({ alter: false });
+            }
+            else {
+                throw error;
+            }
+        }
+    }
+    if (ContactContact && typeof ContactContact.sync === 'function') {
+        try {
+            await ContactContact.sync({ alter: true });
+        }
+        catch (error) {
+            // Si falla por restricciones que no existen, intentar sin alter
+            if (error.name === 'SequelizeUnknownConstraintError' || error.code === '42704') {
+                console.warn('⚠️  Advertencia al sincronizar ContactContact con alter, intentando sin alter...');
+                await ContactContact.sync({ alter: false });
+            }
+            else {
+                throw error;
+            }
+        }
+    }
+    // Sincronizar User con manejo de errores para restricciones faltantes
+    if (User && typeof User.sync === 'function') {
+        try {
+            await User.sync({ alter: true });
+        }
+        catch (error) {
+            // Si el error es por una restricción que no existe, reintentar sin alter
+            if (error.name === 'SequelizeUnknownConstraintError' || error.parent?.code === '42704') {
+                console.warn(`⚠️  Restricción 'users_roleId_fkey' no encontrada. Reintentando User.sync sin alter: true.`);
+                await User.sync({ alter: false });
+            }
+            else {
+                throw error; // Re-lanzar otros errores
+            }
+        }
     }
     // Sincronizar el resto de modelos con alter
-    const modelsToSync = [User, Role, MonthlyBudget, UserGoogleToken, SystemLog].filter(Boolean);
+    const modelsToSync = [Role, MonthlyBudget, UserGoogleToken, SystemLog].filter(Boolean);
     for (const Model of modelsToSync) {
         if (Model && typeof Model.sync === 'function') {
             await Model.sync({ alter: true });

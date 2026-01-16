@@ -15,6 +15,8 @@ export { ContactCompany } from './ContactCompany';
 export { DealContact } from './DealContact';
 export { DealCompany } from './DealCompany';
 export { DealDeal } from './DealDeal';
+export { CompanyCompany } from './CompanyCompany';
+export { ContactContact } from './ContactContact';
 export { MonthlyBudget } from './MonthlyBudget';
 export { UserGoogleToken } from './UserGoogleToken';
 export { SystemLog } from './SystemLog';
@@ -30,6 +32,8 @@ import './ContactCompany';
 import './DealContact';
 import './DealCompany';
 import './DealDeal';
+import './CompanyCompany';
+import './ContactContact';
 // Luego los demás modelos
 import './Deal';
 import './Task';
@@ -48,6 +52,8 @@ import { Contact } from './Contact';
 import { Company } from './Company';
 import { Deal } from './Deal';
 import { DealDeal } from './DealDeal';
+import { CompanyCompany } from './CompanyCompany';
+import { ContactContact } from './ContactContact';
 
 // Inicializar relaciones muchos-a-muchos
 Contact.belongsToMany(Company, { 
@@ -106,6 +112,38 @@ Deal.belongsToMany(Deal, {
   foreignKey: 'relatedDealId',
   otherKey: 'dealId',
   as: 'RelatedDeals'
+});
+
+// Relación muchos-a-muchos entre Company y Company
+Company.belongsToMany(Company, {
+  through: CompanyCompany,
+  foreignKey: 'companyId',
+  otherKey: 'relatedCompanyId',
+  as: 'Companies'
+});
+
+// Relación inversa para obtener empresas que están vinculadas CON esta empresa
+Company.belongsToMany(Company, {
+  through: CompanyCompany,
+  foreignKey: 'relatedCompanyId',
+  otherKey: 'companyId',
+  as: 'RelatedCompanies'
+});
+
+// Relación muchos-a-muchos entre Contact y Contact
+Contact.belongsToMany(Contact, {
+  through: ContactContact,
+  foreignKey: 'contactId',
+  otherKey: 'relatedContactId',
+  as: 'Contacts'
+});
+
+// Relación inversa para obtener contactos que están vinculados CON este contacto
+Contact.belongsToMany(Contact, {
+  through: ContactContact,
+  foreignKey: 'relatedContactId',
+  otherKey: 'contactId',
+  as: 'RelatedContacts'
 });
 
 

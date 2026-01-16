@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Card,
   Typography,
@@ -91,15 +91,48 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
       company.website?.toLowerCase().includes(searchValue.toLowerCase())
   );
 
-  // Reset to page 1 when search changes
+  // Ordenar las empresas si hay sortField y onSort
+  const sortedCompanies = useMemo(() => {
+    if (!sortField || !onSort) {
+      return filteredCompanies;
+    }
+
+    return [...filteredCompanies].sort((a, b) => {
+      let aVal: any;
+      let bVal: any;
+
+      switch (sortField) {
+        case 'name':
+          aVal = (a.name || '').toLowerCase();
+          bVal = (b.name || '').toLowerCase();
+          break;
+        case 'domain':
+          aVal = (a.domain || '').toLowerCase();
+          bVal = (b.domain || '').toLowerCase();
+          break;
+        case 'phone':
+          aVal = (a.phone || '').toLowerCase();
+          bVal = (b.phone || '').toLowerCase();
+          break;
+        default:
+          return 0;
+      }
+
+      if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [filteredCompanies, sortField, sortOrder, onSort]);
+
+  // Reset to page 1 when search changes or sort changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchValue]);
+  }, [searchValue, sortField, sortOrder]);
 
-  const totalPages = Math.ceil(filteredCompanies.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedCompanies.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedCompanies = filteredCompanies.slice(startIndex, endIndex);
+  const paginatedCompanies = sortedCompanies.slice(startIndex, endIndex);
 
   const handlePreviousPage = () => {
     setCurrentPage((prev) => Math.max(1, prev - 1));
@@ -307,7 +340,7 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
             No hay empresas relacionadas
           </Typography>
         </Box>
-      ) : filteredCompanies.length === 0 ? (
+      ) : sortedCompanies.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 4 }}>
           <Typography variant="body2" color="text.secondary">
             No se encontraron empresas
@@ -323,7 +356,7 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
                     {onSort ? (
                       <TableSortLabel
                         active={sortField === 'name'}
-                        direction={sortField === 'name' ? sortOrder : 'asc'}
+                        direction={sortField === 'name' ? sortOrder : undefined}
                         onClick={() => onSort('name')}
                         sx={{
                           '& .MuiTableSortLabel-icon': {
@@ -344,7 +377,7 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
                     {onSort ? (
                       <TableSortLabel
                         active={sortField === 'domain'}
-                        direction={sortField === 'domain' ? sortOrder : 'asc'}
+                        direction={sortField === 'domain' ? sortOrder : undefined}
                         onClick={() => onSort('domain')}
                         sx={{
                           '& .MuiTableSortLabel-icon': {
@@ -365,7 +398,7 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
                     {onSort ? (
                       <TableSortLabel
                         active={sortField === 'phone'}
-                        direction={sortField === 'phone' ? sortOrder : 'asc'}
+                        direction={sortField === 'phone' ? sortOrder : undefined}
                         onClick={() => onSort('phone')}
                         sx={{
                           '& .MuiTableSortLabel-icon': {
@@ -414,6 +447,7 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
                             ? 'transparent'
                             : taxiMonterricoColors.green,
                           fontSize: '0.875rem',
+                          color: empresaLogo ? 'inherit' : 'white',
                         }}
                       >
                         {!empresaLogo &&
@@ -558,7 +592,7 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
         </TableContainer>
 
         {/* Paginación - Solo se muestra si hay más de 5 empresas */}
-        {filteredCompanies.length > itemsPerPage && (
+        {sortedCompanies.length > itemsPerPage && (
           <Box
             sx={{
               display: 'flex',

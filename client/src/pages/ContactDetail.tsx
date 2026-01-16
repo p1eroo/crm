@@ -5,8 +5,6 @@ import {
   Typography,
   Button,
   Chip,
-  Tabs,
-  Tab,
   IconButton,
   MenuItem,
   CircularProgress,
@@ -17,17 +15,11 @@ import {
   DialogActions,
   TextField,
   Alert,
-  Checkbox,
-  InputAdornment,
   useTheme,
-  ListItem,
-  ListItemButton,
-  ListItemText,
 } from "@mui/material";
 import {
   Email,
   Close,
-  Search,
 } from "@mui/icons-material";
 import api from "../config/api";
 import EmailComposer from "../components/EmailComposer";
@@ -36,16 +28,16 @@ import {
   RecentActivitiesCard,
   LinkedCompaniesCard,
   LinkedDealsCard,
-  LinkedTicketsCard,
+  LinkedContactsCard,
   FullCompaniesTableCard,
   FullDealsTableCard,
-  FullTicketsTableCard,
+  FullContactsTableCard,
   FullActivitiesTableCard,
   ActivityDetailDialog,
   ActivitiesTabContent,
   GeneralDescriptionTab,
 } from "../components/DetailCards";
-import { NoteModal, CallModal, TaskModal } from "../components/ActivityModals";
+import { NoteModal, CallModal, TaskModal, DealModal, CompanyModal, ContactModal } from "../components/ActivityModals";
 import type { GeneralInfoCard } from "../components/DetailCards";
 import DetailPageLayout from "../components/Layout/DetailPageLayout";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -56,7 +48,6 @@ import { fas, faEnvelope } from "@fortawesome/free-solid-svg-icons";
 import { faUserTie } from "@fortawesome/free-solid-svg-icons";
 import { faUser as faUserRegular } from "@fortawesome/free-regular-svg-icons";
 import { useAuth } from "../context/AuthContext";
-import axios from "axios";
 
 library.add(far);
 library.add(fas);
@@ -99,6 +90,13 @@ interface ContactDetailData {
     phone?: string;
     companyname?: string;
   }>;
+  Contacts?: Array<{
+    id: number;
+    firstName: string;
+    lastName: string;
+    email?: string;
+    phone?: string;
+  }>;
   Owner?: {
     id: number;
     firstName: string;
@@ -117,7 +115,7 @@ const ContactDetail: React.FC = () => {
   const [,] = useState<null | HTMLElement>(null);
   const [associatedDeals, setAssociatedDeals] = useState<any[]>([]);
   const [associatedCompanies, setAssociatedCompanies] = useState<any[]>([]);
-  const [associatedTickets, setAssociatedTickets] = useState<any[]>([]);
+  const [associatedContacts, setAssociatedContacts] = useState<any[]>([]);
   const [activities, setActivities] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
@@ -125,8 +123,8 @@ const ContactDetail: React.FC = () => {
   // Estados para búsquedas y filtros
   const [activitySearch, setActivitySearch] = useState("");
   const [companySearch, setCompanySearch] = useState("");
+  const [contactSearch, setContactSearch] = useState("");
   const [dealSearch, setDealSearch] = useState("");
-  const [ticketSearch, setTicketSearch] = useState("");
   const [isRemovingCompany] = useState(false);
 
   // Estados para funcionalidades de notas y actividades
@@ -138,63 +136,32 @@ const ContactDetail: React.FC = () => {
   const [dealSortField, setDealSortField] = useState<'name' | 'amount' | 'closeDate' | 'stage' | undefined>(undefined);
   const [companySortOrder, setCompanySortOrder] = useState<'asc' | 'desc'>('asc');
   const [companySortField, setCompanySortField] = useState<'name' | 'domain' | 'phone' | undefined>(undefined);
+  const [contactSortOrder, setContactSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [contactSortField, setContactSortField] = useState<'firstName' | 'email' | 'phone'>('firstName');
   
   // Estados para diálogos de eliminación
   const [removeCompanyDialogOpen, setRemoveCompanyDialogOpen] = useState(false);
+  const [removeContactDialogOpen, setRemoveContactDialogOpen] = useState(false);
   const [removeDealDialogOpen, setRemoveDealDialogOpen] = useState(false);
-  const [removeTicketDialogOpen, setRemoveTicketDialogOpen] = useState(false);
   const [companyToRemove, setCompanyToRemove] = useState<{ id: number; name: string } | null>(null);
+  const [contactToRemove, setContactToRemove] = useState<{ id: number; name: string } | null>(null);
   const [dealToRemove, setDealToRemove] = useState<{ id: number; name: string } | null>(null);
-  const [ticketToRemove, setTicketToRemove] = useState<{ id: number; name: string } | null>(null);
 
   // Estados para diálogos
   const [addCompanyOpen, setAddCompanyOpen] = useState(false);
+  const [addContactOpen, setAddContactOpen] = useState(false);
   const [addDealOpen, setAddDealOpen] = useState(false);
-  const [addTicketOpen, setAddTicketOpen] = useState(false);
+  const [dealDialogTab, setDealDialogTab] = useState<"create" | "existing">("create");
   const [, setCreateActivityMenuAnchor] =
     useState<null | HTMLElement>(null);
-  const [companyFormData, setCompanyFormData] = useState({
-    name: "",
-    domain: "",
-    phone: "",
-    companyname: "",
-    lifecycleStage: "lead",
-    ruc: "",
-    address: "",
-    city: "",
-    state: "",
-    country: "",
-  });
   const [companyDialogTab, setCompanyDialogTab] = useState<
     "create" | "existing"
   >("create");
-  const [existingCompaniesSearch, setExistingCompaniesSearch] = useState("");
-  const [selectedExistingCompanies, setSelectedExistingCompanies] = useState<
-    number[]
-  >([]);
-  const [loadingRuc, setLoadingRuc] = useState(false);
-  const [rucError, setRucError] = useState("");
-  const [dealFormData, setDealFormData] = useState({
-    name: "",
-    amount: "",
-    stage: "lead",
-    closeDate: "",
-    priority: "baja" as "baja" | "media" | "alta",
-    companyId: "",
-    contactId: "",
-  });
-  const [ticketFormData, setTicketFormData] = useState({
-    subject: "",
-    description: "",
-    status: "new",
-    priority: "medium",
-  });
+  const [contactDialogTab, setContactDialogTab] = useState<
+    "create" | "existing"
+  >("create");
 
   // Estados para asociaciones en nota
-  const [selectedCompanies, setSelectedCompanies] = useState<number[]>([]);
-  const [allCompanies, setAllCompanies] = useState<any[]>([]);
-  const [loadingAllCompanies, setLoadingAllCompanies] = useState(false);
-  const [allContacts, setAllContacts] = useState<any[]>([]);
   const [, setEmailValue] = useState("");
   const [, setPhoneValue] = useState("");
   const [, setCompanyValue] = useState("");
@@ -256,6 +223,13 @@ const ContactDetail: React.FC = () => {
       setCompanyValue(companies.length > 0 ? companies[0].name : "");
       // Actualizar associatedCompanies también
       setAssociatedCompanies(companies);
+      
+      // Actualizar contactos relacionados
+      const contacts =
+        response.data.Contacts && Array.isArray(response.data.Contacts)
+          ? response.data.Contacts
+          : [];
+      setAssociatedContacts(contacts);
     } catch (error) {
       console.error("Error fetching contact:", error);
     } finally {
@@ -332,6 +306,13 @@ const ContactDetail: React.FC = () => {
             ? [updatedContact.Company]
             : [];
         setAssociatedCompanies(companies);
+        
+        // Actualizar contactos relacionados
+        const contacts =
+          updatedContact?.Contacts && Array.isArray(updatedContact.Contacts)
+            ? updatedContact.Contacts
+            : [];
+        setAssociatedContacts(contacts);
       }
 
       // Obtener actividades
@@ -393,13 +374,6 @@ const ContactDetail: React.FC = () => {
         return deduplicateNotes(merged);
       });
 
-      // Obtener tickets asociados
-      const ticketsResponse = await api.get("/tickets", {
-        params: { contactId: id },
-      });
-      setAssociatedTickets(
-        ticketsResponse.data.tickets || ticketsResponse.data || []
-      );
     } catch (error) {
       console.error("Error fetching associated records:", error);
     }
@@ -489,7 +463,6 @@ const ContactDetail: React.FC = () => {
   useEffect(() => {
     if (contact && !isRemovingCompany) {
       fetchAssociatedRecords();
-      fetchAllCompanies();
     }
   }, [contact, id, isRemovingCompany, fetchAssociatedRecords]);
 
@@ -498,73 +471,6 @@ const ContactDetail: React.FC = () => {
       fetchActivityLogs();
     }
   }, [id, fetchActivityLogs]);
-
-  // Actualizar asociaciones seleccionadas cuando cambian los registros relacionados
-  useEffect(() => {
-    // Inicializar empresas seleccionadas con las empresas asociadas
-    if (associatedCompanies.length > 0) {
-      const companyIds = associatedCompanies
-        .map((c: any) => c && c.id)
-        .filter((id: any) => id !== undefined && id !== null);
-      if (companyIds.length > 0) {
-        setSelectedCompanies((prev) => {
-          // Combinar con las existentes para no perder selecciones manuales, eliminando duplicados
-          const combined = [...prev, ...companyIds];
-          const unique = combined.filter(
-            (id, index) => combined.indexOf(id) === index
-          );
-          // Solo actualizar si hay cambios para evitar loops infinitos
-          if (
-            unique.length !== prev.length ||
-            unique.some((id) => !prev.includes(id))
-          ) {
-            return unique;
-          }
-          return prev;
-        });
-      }
-    }
-  }, [associatedCompanies]);
-
-  const fetchAllCompanies = async () => {
-    try {
-      setLoadingAllCompanies(true);
-      const response = await api.get("/companies", { params: { limit: 1000 } });
-      setAllCompanies(response.data.companies || response.data || []);
-    } catch (error) {
-      console.error("Error fetching all companies:", error);
-    } finally {
-      setLoadingAllCompanies(false);
-    }
-  };
-
-  const fetchAllContacts = async () => {
-    try {
-      const response = await api.get("/contacts", { params: { limit: 1000 } });
-      setAllContacts(response.data.contacts || response.data || []);
-    } catch (error) {
-      console.error("Error fetching all contacts:", error);
-    }
-  };
-
-
-  // Opciones de etapa según las imágenes proporcionadas
-  const stageOptions = [
-    { value: "lead_inactivo", label: "Lead Inactivo" },
-    { value: "cliente_perdido", label: "Cliente perdido" },
-    { value: "cierre_perdido", label: "Cierre Perdido" },
-    { value: "lead", label: "Lead" },
-    { value: "contacto", label: "Contacto" },
-    { value: "reunion_agendada", label: "Reunión Agendada" },
-    { value: "reunion_efectiva", label: "Reunión Efectiva" },
-    { value: "propuesta_economica", label: "Propuesta Económica" },
-    { value: "negociacion", label: "Negociación" },
-    { value: "licitacion", label: "Licitación" },
-    { value: "licitacion_etapa_final", label: "Licitación Etapa Final" },
-    { value: "cierre_ganado", label: "Cierre Ganado" },
-    { value: "firma_contrato", label: "Firma de Contrato" },
-    { value: "activo", label: "Activo" },
-  ];
 
   // Manejar tecla ESC para cerrar paneles
   useEffect(() => {
@@ -930,143 +836,6 @@ const ContactDetail: React.FC = () => {
 
 
 
-  // Funciones para la pestaña Descripción
-  const handleSearchRuc = async () => {
-    if (!companyFormData.ruc || companyFormData.ruc.length < 11) {
-      setRucError("El RUC debe tener 11 dígitos");
-      return;
-    }
-
-    setLoadingRuc(true);
-    setRucError("");
-
-    try {
-      // Obtener el token de la API de Factiliza desde variables de entorno
-      const factilizaToken = process.env.REACT_APP_FACTILIZA_TOKEN || "";
-
-      if (!factilizaToken) {
-        setRucError(
-          "Token de API no configurado. Por favor, configure REACT_APP_FACTILIZA_TOKEN"
-        );
-        setLoadingRuc(false);
-        return;
-      }
-
-      const response = await axios.get(
-        `https://api.factiliza.com/v1/ruc/info/${companyFormData.ruc}`,
-        {
-          headers: {
-            Authorization: `Bearer ${factilizaToken}`,
-          },
-        }
-      );
-
-      if (response.data.success && response.data.data) {
-        const data = response.data.data;
-
-        // Actualizar el formulario con los datos obtenidos
-        setCompanyFormData({
-          ...companyFormData,
-          name: data.nombre_o_razon_social || "",
-          companyname: data.tipo_contribuyente || "",
-          address: data.direccion_completa || data.direccion || "",
-          city: data.distrito || "",
-          state: data.provincia || "",
-          country: data.departamento || "Perú",
-        });
-      } else {
-        setRucError("No se encontró información para este RUC");
-      }
-    } catch (error: any) {
-      console.error("Error al buscar RUC:", error);
-      if (error.response?.status === 400) {
-        setRucError("RUC no válido o no encontrado");
-      } else if (error.response?.status === 401) {
-        setRucError("Error de autenticación con la API");
-      } else {
-        setRucError("Error al buscar RUC. Por favor, intente nuevamente");
-      }
-    } finally {
-      setLoadingRuc(false);
-    }
-  };
-
-  const handleAddCompany = async () => {
-    try {
-      await api.post("/companies", {
-        ...companyFormData,
-        // No asociar automáticamente con el contacto - el usuario debe agregarla manualmente
-      });
-      setSuccessMessage("Empresa creada exitosamente");
-      setAddCompanyOpen(false);
-      setCompanyFormData({
-        name: "",
-        domain: "",
-        phone: "",
-        companyname: "",
-        lifecycleStage: "lead",
-        ruc: "",
-        address: "",
-        city: "",
-        state: "",
-        country: "",
-      });
-      setRucError("");
-      setCompanyDialogTab("create");
-      fetchAssociatedRecords();
-      setTimeout(() => setSuccessMessage(""), 3000);
-    } catch (error) {
-      console.error("Error adding company:", error);
-    }
-  };
-
-  const handleAddExistingCompanies = async () => {
-    try {
-      if (selectedExistingCompanies.length === 0) {
-        return;
-      }
-
-      // Agregar empresas usando el nuevo endpoint muchos-a-muchos
-      const response = await api.post(`/contacts/${id}/companies`, {
-        companyIds: selectedExistingCompanies,
-      });
-
-      // Actualizar el contacto y las empresas asociadas
-      setContact(response.data);
-      const companies =
-        response.data.Companies && Array.isArray(response.data.Companies)
-          ? response.data.Companies
-          : response.data.Company
-          ? [response.data.Company]
-          : [];
-      setAssociatedCompanies(companies);
-
-      // También agregar a selectedCompanies para que se cuenten en las asociaciones
-      const newCompanyIds = selectedExistingCompanies.filter(
-        (id: number) => !selectedCompanies.includes(id)
-      );
-      setSelectedCompanies([...selectedCompanies, ...newCompanyIds]);
-
-      setSuccessMessage(
-        `${selectedExistingCompanies.length} empresa(s) agregada(s) exitosamente`
-      );
-
-      setAddCompanyOpen(false);
-      setSelectedExistingCompanies([]);
-      setExistingCompaniesSearch("");
-      setCompanyDialogTab("create");
-
-      setTimeout(() => setSuccessMessage(""), 3000);
-    } catch (error: any) {
-      console.error("Error associating companies:", error);
-      const errorMessage =
-        error.response?.data?.error ||
-        error.message ||
-        "Error al asociar las empresas";
-      setSuccessMessage(errorMessage);
-      setTimeout(() => setSuccessMessage(""), 5000);
-    }
-  };
 
   // const handleOpenAddCompanyDialog = () => {
   //   setCompanyDialogTab('create');
@@ -1148,57 +917,6 @@ const ContactDetail: React.FC = () => {
   //   });
   // };
 
-  const handleAddDeal = async () => {
-    try {
-      await api.post("/deals", {
-        ...dealFormData,
-        amount: parseFloat(dealFormData.amount) || 0,
-        contactId: dealFormData.contactId
-          ? parseInt(dealFormData.contactId)
-          : id,
-        companyId: dealFormData.companyId
-          ? parseInt(dealFormData.companyId)
-          : contact?.Company?.id || contact?.Companies?.[0]?.id,
-      });
-      setSuccessMessage("Negocio agregado exitosamente");
-      setAddDealOpen(false);
-      setDealFormData({
-        name: "",
-        amount: "",
-        stage: "lead",
-        closeDate: "",
-        priority: "baja" as "baja" | "media" | "alta",
-        companyId: "",
-        contactId: "",
-      });
-      fetchAssociatedRecords();
-      setTimeout(() => setSuccessMessage(""), 3000);
-    } catch (error) {
-      console.error("Error adding deal:", error);
-    }
-  };
-
-  const handleAddTicket = async () => {
-    try {
-      await api.post("/tickets", {
-        ...ticketFormData,
-        contactId: id,
-        // No asociar automáticamente con la empresa - el usuario debe agregarla manualmente si lo desea
-      });
-      setSuccessMessage("Ticket creado exitosamente");
-      setAddTicketOpen(false);
-      setTicketFormData({
-        subject: "",
-        description: "",
-        status: "new",
-        priority: "medium",
-      });
-      fetchAssociatedRecords();
-      setTimeout(() => setSuccessMessage(""), 3000);
-    } catch (error) {
-      console.error("Error adding ticket:", error);
-    }
-  };
 
   const handleCreateActivity = (type: string) => {
     setCreateActivityMenuAnchor(null);
@@ -1237,6 +955,53 @@ const ContactDetail: React.FC = () => {
     const isAsc = companySortField === field && companySortOrder === "asc";
     setCompanySortOrder(isAsc ? "desc" : "asc");
     setCompanySortField(field);
+  };
+
+  const handleSortContacts = (field: "firstName" | "email" | "phone") => {
+    const isAsc = contactSortField === field && contactSortOrder === "asc";
+    setContactSortOrder(isAsc ? "desc" : "asc");
+    setContactSortField(field);
+  };
+
+  const getContactInitials = (firstName?: string, lastName?: string) => {
+    if (firstName && lastName) {
+      return `${firstName[0]}${lastName[0]}`.toUpperCase();
+    }
+    if (firstName) {
+      return firstName.substring(0, 2).toUpperCase();
+    }
+    return "--";
+  };
+
+  const handleCopyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setSuccessMessage("Copiado al portapapeles");
+    setTimeout(() => setSuccessMessage(""), 2000);
+  };
+
+  const handleRemoveContactClick = (contactId: number, contactName: string) => {
+    setContactToRemove({ id: contactId, name: contactName });
+    setRemoveContactDialogOpen(true);
+  };
+
+  const handleConfirmRemoveContact = async () => {
+    if (!id || !contactToRemove) return;
+    try {
+      await api.delete(`/contacts/${id}/contacts/${contactToRemove.id}`);
+      setAssociatedContacts((prevContacts) =>
+        prevContacts.filter((contact: any) => contact.id !== contactToRemove.id)
+      );
+      await fetchContact();
+      setRemoveContactDialogOpen(false);
+      setContactToRemove(null);
+    } catch (error: any) {
+      console.error("Error removing contact:", error);
+      const errorMessage =
+        error.response?.data?.error ||
+        error.message ||
+        "Error al eliminar el contacto";
+      alert(errorMessage);
+    }
   };
 
   const getActivityTypeLabel = (type: string) => {
@@ -1343,31 +1108,6 @@ const ContactDetail: React.FC = () => {
         error.response?.data?.error ||
         error.message ||
         "Error al eliminar el negocio";
-      alert(errorMessage);
-    }
-  };
-
-  const handleRemoveTicketClick = (ticketId: number, ticketName: string) => {
-    setTicketToRemove({ id: ticketId, name: ticketName });
-    setRemoveTicketDialogOpen(true);
-  };
-
-  const handleConfirmRemoveTicket = async () => {
-    if (!id || !ticketToRemove) return;
-    try {
-      await api.delete(`/contacts/${id}/tickets/${ticketToRemove.id}`);
-      setAssociatedTickets((prevTickets) =>
-        prevTickets.filter((ticket: any) => ticket.id !== ticketToRemove.id)
-      );
-      await fetchContact();
-      setRemoveTicketDialogOpen(false);
-      setTicketToRemove(null);
-    } catch (error: any) {
-      console.error("Error removing ticket:", error);
-      const errorMessage =
-        error.response?.data?.error ||
-        error.message ||
-        "Error al eliminar el ticket";
       alert(errorMessage);
     }
   };
@@ -1591,9 +1331,10 @@ const ContactDetail: React.FC = () => {
         generalInfoCards={generalInfoCards}
         linkedCards={[
           { component: <RecentActivitiesCard activities={activities} /> },
+          { component: <LinkedContactsCard contacts={associatedContacts || []} /> },
           { component: <LinkedCompaniesCard companies={associatedCompanies || []} /> },
           { component: <LinkedDealsCard deals={associatedDeals} /> },
-          { component: <LinkedTicketsCard tickets={associatedTickets} /> },
+          // { component: <LinkedTicketsCard tickets={associatedTickets} /> },
         ]}
         linkedCardsGridColumns={{ xs: '1fr' }}
       />
@@ -1616,6 +1357,29 @@ const ContactDetail: React.FC = () => {
           }}
           completedActivities={completedActivities}
           getActivityTypeLabel={getActivityTypeLabel}
+        />
+
+        <FullContactsTableCard
+          contacts={associatedContacts || []}
+          searchValue={contactSearch}
+          onSearchChange={setContactSearch}
+          onAddExisting={() => {
+            setContactDialogTab("existing");
+            setAddContactOpen(true);
+          }}
+          onAddNew={() => {
+            setContactDialogTab("create");
+            setAddContactOpen(true);
+          }}
+          showActions={true}
+          onRemove={(contactId, contactName) =>
+            handleRemoveContactClick(contactId, contactName || "")
+          }
+          getContactInitials={getContactInitials}
+          onCopyToClipboard={handleCopyToClipboard}
+          sortField={contactSortField}
+          sortOrder={contactSortOrder}
+          onSort={handleSortContacts}
         />
   
         <FullCompaniesTableCard
@@ -1645,45 +1409,11 @@ const ContactDetail: React.FC = () => {
           searchValue={dealSearch}
           onSearchChange={setDealSearch}
           onAddExisting={() => {
-            setDealFormData({
-              name: "",
-              amount: "",
-              stage: "lead",
-              closeDate: "",
-              priority: "baja" as "baja" | "media" | "alta",
-              companyId:
-                contact?.Company?.id?.toString() ||
-                contact?.Companies?.[0]?.id?.toString() ||
-                "",
-              contactId: id?.toString() || "",
-            });
-            if (allCompanies.length === 0) {
-              fetchAllCompanies();
-            }
-            if (allContacts.length === 0) {
-              fetchAllContacts();
-            }
+            setDealDialogTab("existing");
             setAddDealOpen(true);
           }}
           onAddNew={() => {
-            setDealFormData({
-              name: "",
-              amount: "",
-              stage: "lead",
-              closeDate: "",
-              priority: "baja" as "baja" | "media" | "alta",
-              companyId:
-                contact?.Company?.id?.toString() ||
-                contact?.Companies?.[0]?.id?.toString() ||
-                "",
-              contactId: id?.toString() || "",
-            });
-            if (allCompanies.length === 0) {
-              fetchAllCompanies();
-            }
-            if (allContacts.length === 0) {
-              fetchAllContacts();
-            }
+            setDealDialogTab("create");
             setAddDealOpen(true);
           }}
           showActions={true}
@@ -1703,7 +1433,7 @@ const ContactDetail: React.FC = () => {
           onSort={handleSortDeals}
         />
   
-        <FullTicketsTableCard
+        {/* <FullTicketsTableCard
           tickets={associatedTickets || []}
           searchValue={ticketSearch}
           onSearchChange={setTicketSearch}
@@ -1712,7 +1442,7 @@ const ContactDetail: React.FC = () => {
           onRemove={(ticketId: number, ticketName?: string) =>
             handleRemoveTicketClick(ticketId, ticketName || "")
           }
-        />
+        /> */}
       </>
     );
   
@@ -2263,9 +1993,9 @@ const ContactDetail: React.FC = () => {
         onSave={handleNoteSave}
         relatedEntities={{
           companies: associatedCompanies || [],
-          contacts: contact ? [contact] : [],
+          contacts: contact ? [contact, ...(associatedContacts || [])] : (associatedContacts || []),
           deals: associatedDeals || [],
-          tickets: associatedTickets || [],
+          // tickets: associatedTickets || [],
         }}
       />
 
@@ -2345,1153 +2075,63 @@ const ContactDetail: React.FC = () => {
         }}
       />
 
-      {/* Diálogo para agregar empresa */}
-      <Dialog
+      {/* Modal para agregar/crear empresas relacionadas */}
+      <CompanyModal
         open={addCompanyOpen}
-        onClose={() => {
+        onClose={() => setAddCompanyOpen(false)}
+        entityType="contact"
+        entityId={id || ""}
+        entityName={contact ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim() || contact.email || "Sin nombre" : "Sin nombre"}
+        user={user}
+        initialTab={companyDialogTab}
+        excludedCompanyIds={(associatedCompanies || []).map((c: any) => c.id)}
+        onSave={async () => {
+          await fetchAssociatedRecords();
           setAddCompanyOpen(false);
-          setCompanyDialogTab("create");
-          setSelectedExistingCompanies([]);
-          setExistingCompaniesSearch("");
-          setCompanyFormData({
-            name: "",
-            domain: "",
-            phone: "",
-            companyname: "",
-            lifecycleStage: "lead",
-            ruc: "",
-            address: "",
-            city: "",
-            state: "",
-            country: "",
-          });
-          setRucError("");
         }}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-          },
+      />
+
+      {/* Modal para agregar/crear contactos relacionados */}
+      <ContactModal
+        open={addContactOpen}
+        onClose={() => setAddContactOpen(false)}
+        entityType="contact"
+        entityId={id || ""}
+        entityName={contact ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim() || contact.email || "Sin nombre" : "Sin nombre"}
+        user={user}
+        initialTab={contactDialogTab}
+        defaultCompanyId={contact?.Company?.id || contact?.Companies?.[0]?.id}
+        excludedContactIds={(associatedContacts || []).map((c: any) => c.id)}
+        associatedContacts={associatedContacts || []}
+        onSave={async () => {
+          await fetchAssociatedRecords();
+          setAddContactOpen(false);
+          setSuccessMessage("Contacto agregado exitosamente");
+          setTimeout(() => setSuccessMessage(""), 3000);
         }}
-        BackdropProps={{
-          sx: {
-            backdropFilter: "blur(4px)",
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-          },
-        }}
-      >
-        <DialogContent sx={{ pt: 1 }}>
-          {/* Pestañas */}
-          <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
-            <Tabs
-              value={companyDialogTab === "create" ? 0 : 1}
-              onChange={(e, newValue) =>
-                setCompanyDialogTab(newValue === 0 ? "create" : "existing")
-              }
-            >
-              <Tab label="Crear nueva" />
-              <Tab label="Agregar existente" />
-            </Tabs>
-          </Box>
+      />
 
-          {companyDialogTab === "create" && (
-            <Box
-              sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}
-            >
-              {/* RUC y Tipo de Contribuyente / Industria en la misma fila */}
-              <Box sx={{ display: "flex", gap: 2 }}>
-                <TextField
-                  label="RUC"
-                  value={companyFormData.ruc}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, ""); // Solo números
-                    const limitedValue = value.slice(0, 11);
-                    setCompanyFormData({
-                      ...companyFormData,
-                      ruc: limitedValue,
-                    });
-                    setRucError("");
-                  }}
-                  error={!!rucError}
-                  helperText={rucError}
-                  inputProps={{ maxLength: 11 }}
-                  InputLabelProps={{ shrink: true }}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={handleSearchRuc}
-                          disabled={
-                            loadingRuc ||
-                            !companyFormData.ruc ||
-                            companyFormData.ruc.length < 11
-                          }
-                          sx={{
-                            color: taxiMonterricoColors.green,
-                            "&:hover": {
-                              bgcolor: `${taxiMonterricoColors.green}15`,
-                            },
-                            "&.Mui-disabled": {
-                              color: theme.palette.text.disabled,
-                            },
-                          }}
-                        >
-                          {loadingRuc ? (
-                            <CircularProgress size={20} />
-                          ) : (
-                            <Search />
-                          )}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    flex: "2 1 0%",
-                    minWidth: 0,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-                <TextField
-                  label="Razón social"
-                  value={companyFormData.companyname}
-                  onChange={(e) =>
-                    setCompanyFormData({
-                      ...companyFormData,
-                      companyname: e.target.value,
-                    })
-                  }
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    flex: "3 1 0%",
-                    minWidth: 0,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-              </Box>
-              <TextField
-                label="Nombre"
-                value={companyFormData.name}
-                onChange={(e) =>
-                  setCompanyFormData({
-                    ...companyFormData,
-                    name: e.target.value,
-                  })
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <TextField
-                label="Dominio"
-                value={companyFormData.domain}
-                onChange={(e) =>
-                  setCompanyFormData({
-                    ...companyFormData,
-                    domain: e.target.value,
-                  })
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <TextField
-                label="Teléfono"
-                value={companyFormData.phone}
-                onChange={(e) =>
-                  setCompanyFormData({
-                    ...companyFormData,
-                    phone: e.target.value,
-                  })
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <TextField
-                label="Dirección"
-                value={companyFormData.address}
-                onChange={(e) =>
-                  setCompanyFormData({
-                    ...companyFormData,
-                    address: e.target.value,
-                  })
-                }
-                multiline
-                rows={2}
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <Box sx={{ display: "flex", gap: 2 }}>
-                <TextField
-                  label="Distrito"
-                  value={companyFormData.city}
-                  onChange={(e) =>
-                    setCompanyFormData({
-                      ...companyFormData,
-                      city: e.target.value,
-                    })
-                  }
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    flex: 1,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-                <TextField
-                  label="Provincia"
-                  value={companyFormData.state}
-                  onChange={(e) =>
-                    setCompanyFormData({
-                      ...companyFormData,
-                      state: e.target.value,
-                    })
-                  }
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    flex: 1,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-                <TextField
-                  label="Departamento"
-                  value={companyFormData.country}
-                  onChange={(e) =>
-                    setCompanyFormData({
-                      ...companyFormData,
-                      country: e.target.value,
-                    })
-                  }
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    flex: 1,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-              </Box>
-              <TextField
-                select
-                label="Etapa del Ciclo de Vida"
-                value={companyFormData.lifecycleStage}
-                onChange={(e) =>
-                  setCompanyFormData({
-                    ...companyFormData,
-                    lifecycleStage: e.target.value,
-                  })
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              >
-                <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
-                <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
-                <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
-                <MenuItem value="lead">Lead</MenuItem>
-                <MenuItem value="contacto">Contacto</MenuItem>
-                <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
-                <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-                <MenuItem value="propuesta_economica">
-                  Propuesta Económica
-                </MenuItem>
-                <MenuItem value="negociacion">Negociación</MenuItem>
-                <MenuItem value="licitacion">Licitación</MenuItem>
-                <MenuItem value="licitacion_etapa_final">
-                  Licitación Etapa Final
-                </MenuItem>
-                <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
-                <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
-                <MenuItem value="activo">Activo</MenuItem>
-              </TextField>
-            </Box>
-          )}
-
-          {companyDialogTab === "existing" && (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {/* Campo de búsqueda */}
-              <TextField
-                size="small"
-                placeholder="Buscar Empresas"
-                value={existingCompaniesSearch}
-                onChange={(e) => setExistingCompaniesSearch(e.target.value)}
-                fullWidth
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <Search sx={{ color: taxiMonterricoColors.green }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  mb: 2,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-
-              {/* Lista de empresas */}
-              <Box sx={{ maxHeight: 400, overflowY: "auto" }}>
-                {loadingAllCompanies ? (
-                  <Box
-                    sx={{ display: "flex", justifyContent: "center", py: 4 }}
-                  >
-                    <CircularProgress size={24} />
-                  </Box>
-                ) : (
-                  allCompanies
-                    .filter((company: any) => {
-                      const isAlreadyAdded = (associatedCompanies || []).some(
-                        (c: any) => c.id === company.id
-                      );
-                      if (isAlreadyAdded) return false;
-                      if (!existingCompaniesSearch.trim()) return true;
-                      const searchLower = existingCompaniesSearch.toLowerCase();
-                      return (
-                        company.name?.toLowerCase().includes(searchLower) ||
-                        company.domain?.toLowerCase().includes(searchLower)
-                      );
-                    })
-                    .map((company: any) => (
-                      <ListItem
-                        key={company.id}
-                        disablePadding
-                        sx={{
-                          mb: 0.5,
-                          borderRadius: 1,
-                          "&:hover": {
-                            bgcolor: theme.palette.action.hover,
-                          },
-                        }}
-                      >
-                        <ListItemButton
-                          onClick={() => {
-                            if (
-                              selectedExistingCompanies.some(
-                                (c: any) => c.id === company.id
-                              )
-                            ) {
-                              setSelectedExistingCompanies(
-                                selectedExistingCompanies.filter(
-                                  (c: any) => c.id !== company.id
-                                )
-                              );
-                            } else {
-                              setSelectedExistingCompanies([
-                                ...selectedExistingCompanies,
-                                company,
-                              ]);
-                            }
-                          }}
-                          sx={{
-                            py: 1,
-                            px: 2,
-                            borderRadius: 1,
-                            "&:hover": {
-                              bgcolor: theme.palette.action.hover,
-                            },
-                          }}
-                        >
-                          <Checkbox
-                            checked={selectedExistingCompanies.some(
-                              (c: any) => c.id === company.id
-                            )}
-                            sx={{
-                              color: theme.palette.text.secondary,
-                              "&.Mui-checked": {
-                                color: taxiMonterricoColors.green,
-                              },
-                            }}
-                          />
-                          <ListItemText
-                            primary={company.name}
-                            secondary={company.domain}
-                            sx={{
-                              "& .MuiListItemText-primary": {
-                                fontWeight: 500,
-                                color: theme.palette.text.primary,
-                              },
-                              "& .MuiListItemText-secondary": {
-                                fontSize: "0.75rem",
-                                color: theme.palette.text.secondary,
-                              },
-                            }}
-                          />
-                        </ListItemButton>
-                      </ListItem>
-                    ))
-                )}
-              </Box>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button
-            onClick={() => {
-              setAddCompanyOpen(false);
-              setCompanyDialogTab("create");
-              setSelectedExistingCompanies([]);
-              setExistingCompaniesSearch("");
-              setCompanyFormData({
-                name: "",
-                domain: "",
-                phone: "",
-                companyname: "",
-                lifecycleStage: "lead",
-                ruc: "",
-                address: "",
-                city: "",
-                state: "",
-                country: "",
-              });
-              setRucError("");
-            }}
-            sx={{
-              textTransform: "none",
-              color: theme.palette.text.secondary,
-            }}
-          >
-            Cancelar
-          </Button>
-          {companyDialogTab === "create" ? (
-            <Button
-              onClick={handleAddCompany}
-              variant="contained"
-              sx={{
-                textTransform: "none",
-                bgcolor: taxiMonterricoColors.green,
-                "&:hover": {
-                  bgcolor: taxiMonterricoColors.greenDark,
-                },
-              }}
-            >
-              Crear
-            </Button>
-          ) : (
-            <Button
-              onClick={handleAddExistingCompanies}
-              variant="contained"
-              disabled={selectedExistingCompanies.length === 0}
-              sx={{
-                textTransform: "none",
-                bgcolor: taxiMonterricoColors.green,
-                "&:hover": {
-                  bgcolor: taxiMonterricoColors.greenDark,
-                },
-                "&.Mui-disabled": {
-                  bgcolor: theme.palette.action.disabledBackground,
-                },
-              }}
-            >
-              Agregar ({selectedExistingCompanies.length})
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
-
-      {/* Diálogo para agregar empresa */}
-      <Dialog
-        open={addCompanyOpen}
-        onClose={() => {
-          setAddCompanyOpen(false);
-          setCompanyDialogTab("create");
-          setSelectedExistingCompanies([]);
-          setExistingCompaniesSearch("");
-          setCompanyFormData({
-            name: "",
-            domain: "",
-            phone: "",
-            companyname: "",
-            lifecycleStage: "lead",
-            ruc: "",
-            address: "",
-            city: "",
-            state: "",
-            country: "",
-          });
-          setRucError("");
-        }}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-          },
-        }}
-        BackdropProps={{
-          sx: {
-            backdropFilter: "blur(4px)",
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-          },
-        }}
-      >
-        <DialogContent sx={{ pt: 1 }}>
-          {/* Pestañas */}
-          <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
-            <Tabs
-              value={companyDialogTab === "create" ? 0 : 1}
-              onChange={(e, newValue) =>
-                setCompanyDialogTab(newValue === 0 ? "create" : "existing")
-              }
-            >
-              <Tab label="Crear nueva" />
-              <Tab label="Agregar existente" />
-            </Tabs>
-          </Box>
-
-          {companyDialogTab === "create" && (
-            <Box
-              sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}
-            >
-              {/* RUC y Tipo de Contribuyente / Industria en la misma fila */}
-              <Box sx={{ display: "flex", gap: 2 }}>
-                <TextField
-                  label="RUC"
-                  value={companyFormData.ruc}
-                  onChange={(e) => {
-                    const value = e.target.value.replace(/\D/g, ""); // Solo números
-                    const limitedValue = value.slice(0, 11);
-                    setCompanyFormData({
-                      ...companyFormData,
-                      ruc: limitedValue,
-                    });
-                    setRucError("");
-                  }}
-                  error={!!rucError}
-                  helperText={rucError}
-                  inputProps={{ maxLength: 11 }}
-                  InputLabelProps={{ shrink: true }}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={handleSearchRuc}
-                          disabled={
-                            loadingRuc ||
-                            !companyFormData.ruc ||
-                            companyFormData.ruc.length < 11
-                          }
-                          sx={{
-                            color: taxiMonterricoColors.green,
-                            "&:hover": {
-                              bgcolor: `${taxiMonterricoColors.green}15`,
-                            },
-                            "&.Mui-disabled": {
-                              color: theme.palette.text.disabled,
-                            },
-                          }}
-                        >
-                          {loadingRuc ? (
-                            <CircularProgress size={20} />
-                          ) : (
-                            <Search />
-                          )}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                  sx={{
-                    flex: "2 1 0%",
-                    minWidth: 0,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-                <TextField
-                  label="Razón social"
-                  value={companyFormData.companyname}
-                  onChange={(e) =>
-                    setCompanyFormData({
-                      ...companyFormData,
-                      companyname: e.target.value,
-                    })
-                  }
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    flex: "3 1 0%",
-                    minWidth: 0,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-              </Box>
-              <TextField
-                label="Nombre"
-                value={companyFormData.name}
-                onChange={(e) =>
-                  setCompanyFormData({
-                    ...companyFormData,
-                    name: e.target.value,
-                  })
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <TextField
-                label="Dominio"
-                value={companyFormData.domain}
-                onChange={(e) =>
-                  setCompanyFormData({
-                    ...companyFormData,
-                    domain: e.target.value,
-                  })
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <TextField
-                label="Teléfono"
-                value={companyFormData.phone}
-                onChange={(e) =>
-                  setCompanyFormData({
-                    ...companyFormData,
-                    phone: e.target.value,
-                  })
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <TextField
-                label="Dirección"
-                value={companyFormData.address}
-                onChange={(e) =>
-                  setCompanyFormData({
-                    ...companyFormData,
-                    address: e.target.value,
-                  })
-                }
-                multiline
-                rows={2}
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <Box sx={{ display: "flex", gap: 2 }}>
-                <TextField
-                  label="Distrito"
-                  value={companyFormData.city}
-                  onChange={(e) =>
-                    setCompanyFormData({
-                      ...companyFormData,
-                      city: e.target.value,
-                    })
-                  }
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    flex: 1,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-                <TextField
-                  label="Provincia"
-                  value={companyFormData.state}
-                  onChange={(e) =>
-                    setCompanyFormData({
-                      ...companyFormData,
-                      state: e.target.value,
-                    })
-                  }
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    flex: 1,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-                <TextField
-                  label="Departamento"
-                  value={companyFormData.country}
-                  onChange={(e) =>
-                    setCompanyFormData({
-                      ...companyFormData,
-                      country: e.target.value,
-                    })
-                  }
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    flex: 1,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-              </Box>
-              <TextField
-                select
-                label="Etapa del Ciclo de Vida"
-                value={companyFormData.lifecycleStage}
-                onChange={(e) =>
-                  setCompanyFormData({
-                    ...companyFormData,
-                    lifecycleStage: e.target.value,
-                  })
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              >
-                <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
-                <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
-                <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
-                <MenuItem value="lead">Lead</MenuItem>
-                <MenuItem value="contacto">Contacto</MenuItem>
-                <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
-                <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-                <MenuItem value="propuesta_economica">
-                  Propuesta Económica
-                </MenuItem>
-                <MenuItem value="negociacion">Negociación</MenuItem>
-                <MenuItem value="licitacion">Licitación</MenuItem>
-                <MenuItem value="licitacion_etapa_final">
-                  Licitación Etapa Final
-                </MenuItem>
-                <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
-                <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
-                <MenuItem value="activo">Activo</MenuItem>
-              </TextField>
-            </Box>
-          )}
-
-          {companyDialogTab === "existing" && (
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-              {/* Campo de búsqueda */}
-              <TextField
-                size="small"
-                placeholder="Buscar Empresas"
-                value={existingCompaniesSearch}
-                onChange={(e) => setExistingCompaniesSearch(e.target.value)}
-                fullWidth
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <Search sx={{ color: taxiMonterricoColors.green }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  mb: 2,
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-
-              {/* Lista de empresas */}
-              <Box
-                sx={{
-                  maxHeight: "400px",
-                  overflowY: "auto",
-                  border: `1px solid ${theme.palette.divider}`,
-                  borderRadius: 1,
-                  "&::-webkit-scrollbar": {
-                    width: "8px",
-                  },
-                  "&::-webkit-scrollbar-track": {
-                    background:
-                      theme.palette.mode === "dark"
-                        ? theme.palette.background.paper
-                        : "#f1f1f1",
-                    borderRadius: "4px",
-                  },
-                  "&::-webkit-scrollbar-thumb": {
-                    background:
-                      theme.palette.mode === "dark"
-                        ? theme.palette.divider
-                        : "#888",
-                    borderRadius: "4px",
-                    "&:hover": {
-                      background:
-                        theme.palette.mode === "dark"
-                          ? theme.palette.text.secondary
-                          : "#555",
-                    },
-                  },
-                }}
-              >
-                {(() => {
-                  const associatedCompanyIds = (associatedCompanies || [])
-                    .map((c: any) => c && c.id)
-                    .filter((id: any) => id !== undefined && id !== null);
-                  const filteredCompanies = allCompanies.filter(
-                    (company: any) => {
-                      if (associatedCompanyIds.includes(company.id))
-                        return false;
-                      if (!existingCompaniesSearch) return true;
-                      const searchLower = existingCompaniesSearch.toLowerCase();
-                      return (
-                        (company.name &&
-                          company.name.toLowerCase().includes(searchLower)) ||
-                        (company.domain &&
-                          company.domain.toLowerCase().includes(searchLower))
-                      );
-                    }
-                  );
-
-                  if (filteredCompanies.length === 0) {
-                    return (
-                      <Box sx={{ p: 2, textAlign: "center" }}>
-                        <Typography variant="body2" color="text.secondary">
-                          No hay empresas disponibles
-                        </Typography>
-                      </Box>
-                    );
-                  }
-
-                  return filteredCompanies.map((company: any) => (
-                    <Box
-                      key={company.id}
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        p: 1.5,
-                        borderBottom: `1px solid ${theme.palette.divider}`,
-                        "&:hover": {
-                          backgroundColor: theme.palette.action.hover,
-                        },
-                        "&:last-child": { borderBottom: "none" },
-                      }}
-                    >
-                      <Checkbox
-                        checked={selectedExistingCompanies.includes(company.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedExistingCompanies([
-                              ...selectedExistingCompanies,
-                              company.id,
-                            ]);
-                          } else {
-                            setSelectedExistingCompanies(
-                              selectedExistingCompanies.filter(
-                                (id) => id !== company.id
-                              )
-                            );
-                          }
-                        }}
-                        sx={{
-                          color: taxiMonterricoColors.green,
-                          "&.Mui-checked": {
-                            color: taxiMonterricoColors.green,
-                          },
-                        }}
-                      />
-                      <Box sx={{ flex: 1, ml: 1 }}>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontWeight: 500,
-                            color: theme.palette.text.primary,
-                          }}
-                        >
-                          {company.name}
-                        </Typography>
-                        {company.domain && (
-                          <Typography
-                            variant="caption"
-                            sx={{ color: theme.palette.text.secondary }}
-                          >
-                            {company.domain}
-                          </Typography>
-                        )}
-                      </Box>
-                    </Box>
-                  ));
-                })()}
-              </Box>
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions
-          sx={{
-            px: 3,
-            py: 2,
-            borderTop: `1px solid ${theme.palette.divider}`,
-            gap: 1,
-          }}
-        >
-          <Button
-            onClick={() => {
-              setAddCompanyOpen(false);
-              setCompanyDialogTab("create");
-              setSelectedExistingCompanies([]);
-              setExistingCompaniesSearch("");
-              setCompanyFormData({
-                name: "",
-                domain: "",
-                phone: "",
-                companyname: "",
-                lifecycleStage: "lead",
-                ruc: "",
-                address: "",
-                city: "",
-                state: "",
-                country: "",
-              });
-              setRucError("");
-            }}
-            sx={{
-              textTransform: "none",
-              color: "#757575",
-              fontWeight: 500,
-              "&:hover": {
-                bgcolor: "#f5f5f5",
-              },
-            }}
-          >
-            Cancelar
-          </Button>
-          {companyDialogTab === "create" ? (
-            <Button
-              onClick={handleAddCompany}
-              variant="contained"
-              disabled={!companyFormData.name.trim()}
-              sx={{
-                textTransform: "none",
-                fontWeight: 500,
-                borderRadius: 1.5,
-                px: 2.5,
-                bgcolor: taxiMonterricoColors.green,
-                "&:hover": {
-                  bgcolor: taxiMonterricoColors.greenDark,
-                },
-              }}
-            >
-              Crear
-            </Button>
-          ) : (
-            <Button
-              onClick={handleAddExistingCompanies}
-              variant="contained"
-              disabled={selectedExistingCompanies.length === 0}
-              sx={{
-                textTransform: "none",
-                fontWeight: 500,
-                borderRadius: 1.5,
-                px: 2.5,
-                bgcolor: taxiMonterricoColors.green,
-                "&:hover": {
-                  bgcolor: taxiMonterricoColors.greenDark,
-                },
-              }}
-            >
-              Agregar ({selectedExistingCompanies.length})
-            </Button>
-          )}
-        </DialogActions>
-      </Dialog>
-
-      {/* Diálogo para agregar negocio */}
-      <Dialog
+      {/* Modal para agregar/crear negocios relacionados */}
+      <DealModal
         open={addDealOpen}
         onClose={() => setAddDealOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        BackdropProps={{
-          sx: {
-            backdropFilter: "blur(4px)",
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-          },
+        entityType="contact"
+        entityId={id || ""}
+        entityName={contact ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim() || contact.email || "Sin nombre" : "Sin nombre"}
+        user={user}
+        initialTab={dealDialogTab}
+        defaultCompanyId={contact?.Company?.id || contact?.Companies?.[0]?.id}
+        defaultContactId={contact?.id}
+        excludedDealIds={(associatedDeals || []).map((d: any) => d.id)}
+        getStageLabel={getStageLabel}
+        onSave={async () => {
+          await fetchAssociatedRecords();
+          setAddDealOpen(false);
         }}
-      >
-        <DialogTitle>Nuevo Negocio</DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
-            <TextField
-              label="Nombre"
-              value={dealFormData.name}
-              onChange={(e) =>
-                setDealFormData({ ...dealFormData, name: e.target.value })
-              }
-              required
-            />
-            <TextField
-              label="Monto"
-              type="number"
-              value={dealFormData.amount}
-              onChange={(e) =>
-                setDealFormData({ ...dealFormData, amount: e.target.value })
-              }
-              required
-            />
-            <TextField
-              select
-              label="Etapa"
-              value={dealFormData.stage}
-              onChange={(e) =>
-                setDealFormData({ ...dealFormData, stage: e.target.value })
-              }
-            >
-              {stageOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              label="Fecha de Cierre"
-              type="date"
-              value={dealFormData.closeDate}
-              onChange={(e) =>
-                setDealFormData({ ...dealFormData, closeDate: e.target.value })
-              }
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              select
-              label="Prioridad"
-              value={dealFormData.priority}
-              onChange={(e) =>
-                setDealFormData({
-                  ...dealFormData,
-                  priority: e.target.value as "baja" | "media" | "alta",
-                })
-              }
-            >
-              <MenuItem value="baja">
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Box
-                    sx={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      bgcolor: "#20B2AA",
-                    }}
-                  />
-                  Baja
-                </Box>
-              </MenuItem>
-              <MenuItem value="media">
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Box
-                    sx={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      bgcolor: "#F59E0B",
-                    }}
-                  />
-                  Media
-                </Box>
-              </MenuItem>
-              <MenuItem value="alta">
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Box
-                    sx={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      bgcolor: "#EF4444",
-                    }}
-                  />
-                  Alta
-                </Box>
-              </MenuItem>
-            </TextField>
-            <TextField
-              select
-              label="Empresa"
-              value={
-                dealFormData.companyId ||
-                contact?.Company?.id?.toString() ||
-                contact?.Companies?.[0]?.id?.toString() ||
-                ""
-              }
-              onChange={(e) =>
-                setDealFormData({ ...dealFormData, companyId: e.target.value })
-              }
-              fullWidth
-            >
-              <MenuItem value="">
-                <em>Ninguna</em>
-              </MenuItem>
-              {allCompanies.map((comp) => (
-                <MenuItem key={comp.id} value={comp.id.toString()}>
-                  {comp.name}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              label="Contacto"
-              value={dealFormData.contactId || id?.toString() || ""}
-              onChange={(e) =>
-                setDealFormData({ ...dealFormData, contactId: e.target.value })
-              }
-              fullWidth
-            >
-              <MenuItem value="">
-                <em>Ninguno</em>
-              </MenuItem>
-              {allContacts.map((contactItem) => (
-                <MenuItem
-                  key={contactItem.id}
-                  value={contactItem.id.toString()}
-                >
-                  {contactItem.firstName} {contactItem.lastName}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddDealOpen(false)}>Cancelar</Button>
-          <Button onClick={handleAddDeal} variant="contained">
-            Crear
-          </Button>
-        </DialogActions>
-      </Dialog>
+      />
 
       {/* Diálogo para agregar ticket */}
-      <Dialog
+      {/* <Dialog
         open={addTicketOpen}
         onClose={() => setAddTicketOpen(false)}
         maxWidth="sm"
@@ -3577,7 +2217,7 @@ const ContactDetail: React.FC = () => {
             Crear
           </Button>
         </DialogActions>
-      </Dialog>
+      </Dialog> */}
 
       {/* Dialog para ver detalles de actividad expandida */}
       <ActivityDetailDialog
@@ -3634,6 +2274,68 @@ const ContactDetail: React.FC = () => {
           </Button>
           <Button
             onClick={handleConfirmRemoveCompany}
+            variant="contained"
+            sx={{
+              textTransform: "none",
+              bgcolor: "#FF9800",
+              color: "white",
+              "&:hover": {
+                bgcolor: "#F57C00",
+              },
+            }}
+          >
+            Eliminar asociación
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog para confirmar eliminación de contacto */}
+      <Dialog
+        open={removeContactDialogOpen}
+        onClose={() => {
+          setRemoveContactDialogOpen(false);
+          setContactToRemove(null);
+        }}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+          },
+        }}
+      >
+        <DialogTitle sx={{ pb: 1, fontWeight: 600 }}>
+          Eliminar asociación
+        </DialogTitle>
+        <DialogContent>
+          <Typography
+            variant="body1"
+            sx={{ color: theme.palette.text.secondary }}
+          >
+            {contactToRemove?.name} ya no se asociará con {contact?.firstName} {contact?.lastName}.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, gap: 1 }}>
+          <Button
+            onClick={() => {
+              setRemoveContactDialogOpen(false);
+              setContactToRemove(null);
+            }}
+            sx={{
+              textTransform: "none",
+              color: theme.palette.text.secondary,
+              borderColor: theme.palette.divider,
+              "&:hover": {
+                borderColor: theme.palette.divider,
+                backgroundColor: theme.palette.action.hover,
+              },
+            }}
+            variant="outlined"
+          >
+            Cancelar
+          </Button>
+          <Button
+            onClick={handleConfirmRemoveContact}
             variant="contained"
             sx={{
               textTransform: "none",
@@ -3712,7 +2414,7 @@ const ContactDetail: React.FC = () => {
       </Dialog>
 
       {/* Dialog para confirmar eliminación de ticket */}
-      <Dialog
+      {/* <Dialog
         open={removeTicketDialogOpen}
         onClose={() => {
           setRemoveTicketDialogOpen(false);
@@ -3771,7 +2473,7 @@ const ContactDetail: React.FC = () => {
             Eliminar asociación
           </Button>
         </DialogActions>
-      </Dialog>
+      </Dialog> */}
     </>
   );
 };

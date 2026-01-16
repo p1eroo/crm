@@ -821,7 +821,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   fontWeight: 500,
                 }}
               >
-                Fecha límite
+                {taskType === "meeting" ? "Fecha" : "Fecha límite"}
               </Typography>
               <TextField
                 value={
