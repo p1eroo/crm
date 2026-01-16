@@ -7,7 +7,6 @@ const express_1 = __importDefault(require("express"));
 const Role_1 = require("../models/Role");
 const User_1 = require("../models/User");
 const auth_1 = require("../middleware/auth");
-const rateLimiter_1 = require("../middleware/rateLimiter");
 const rolePermissions_1 = require("../utils/rolePermissions");
 const router = express_1.default.Router();
 router.use(auth_1.authenticateToken);
@@ -23,7 +22,7 @@ const ALL_PERMISSIONS = {
     'view_system_logs': 'Ver logs del sistema',
 };
 // Obtener todos los roles con sus permisos
-router.get('/', rateLimiter_1.apiLimiter, async (req, res) => {
+router.get('/', async (req, res) => {
     try {
         const roles = await Role_1.Role.findAll({
             order: [['name', 'ASC']],

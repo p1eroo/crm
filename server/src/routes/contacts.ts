@@ -5,7 +5,6 @@ import { User } from '../models/User';
 import { Company } from '../models/Company';
 import { ContactCompany } from '../models/ContactCompany';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
-import { apiLimiter, writeLimiter, deleteLimiter, heavyOperationLimiter } from '../middleware/rateLimiter';
 import { getRoleBasedDataFilter, canModifyResource, canDeleteResource } from '../utils/rolePermissions';
 import { logSystemAction, SystemActions, EntityTypes } from '../utils/systemLogger';
 import { sequelize } from '../config/database';
@@ -60,7 +59,7 @@ const cleanContact = (contact: any): any => {
 };
 
 // Obtener todos los contactos
-router.get('/', apiLimiter, async (req: AuthRequest, res) => {
+router.get('/', async (req: AuthRequest, res) => {
   try {
     console.log('📥 Iniciando GET /contacts');
     console.log('📥 Query params:', req.query);
@@ -403,7 +402,7 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
 });
 
 // Obtener un contacto por ID
-router.get('/:id', apiLimiter, async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     // Intentar obtener contact con todas las relaciones
     let contact;
@@ -490,7 +489,7 @@ router.get('/:id', apiLimiter, async (req, res) => {
 });
 
 // Crear contacto
-router.post('/', writeLimiter, async (req: AuthRequest, res) => {
+router.post('/', async (req: AuthRequest, res) => {
   try {
     console.log('📥 Datos recibidos para crear contacto:', {
       companyId: req.body.companyId,
@@ -659,7 +658,7 @@ router.post('/', writeLimiter, async (req: AuthRequest, res) => {
 });
 
 // Actualizar contacto
-router.put('/:id', writeLimiter, async (req: AuthRequest, res) => {
+router.put('/:id', async (req: AuthRequest, res) => {
   try {
     // Validar que companyId esté presente si se está enviando en el body
     if (req.body.hasOwnProperty('companyId') && !req.body.companyId) {
@@ -765,7 +764,7 @@ router.put('/:id', writeLimiter, async (req: AuthRequest, res) => {
 });
 
 // Eliminar contacto
-router.delete('/:id', deleteLimiter, async (req: AuthRequest, res) => {
+router.delete('/:id', async (req: AuthRequest, res) => {
   try {
     const contact = await Contact.findByPk(req.params.id);
     if (!contact) {
@@ -799,7 +798,7 @@ router.delete('/:id', deleteLimiter, async (req: AuthRequest, res) => {
 });
 
 // Agregar empresas asociadas a un contacto
-router.post('/:id/companies', writeLimiter, async (req, res) => {
+router.post('/:id/companies', async (req, res) => {
   try {
     const contact = await Contact.findByPk(req.params.id, {
       include: [
@@ -854,7 +853,7 @@ router.post('/:id/companies', writeLimiter, async (req, res) => {
 });
 
 // Eliminar asociación de empresa con contacto
-router.delete('/:id/companies/:companyId', deleteLimiter, async (req, res) => {
+router.delete('/:id/companies/:companyId', async (req, res) => {
   try {
     const contact = await Contact.findByPk(req.params.id);
     if (!contact) {
@@ -884,7 +883,7 @@ router.delete('/:id/companies/:companyId', deleteLimiter, async (req, res) => {
 });
 
 // Importación masiva de contactos (bulk)
-router.post('/bulk', heavyOperationLimiter, async (req: AuthRequest, res) => {
+router.post('/bulk', async (req: AuthRequest, res) => {
   try {
     const { contacts, batchSize = 1000 } = req.body;
 

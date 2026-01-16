@@ -6,13 +6,12 @@ import { Deal } from '../models/Deal';
 import { Task } from '../models/Task';
 import { User } from '../models/User';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
-import { searchLimiter } from '../middleware/rateLimiter';
 
 const router = express.Router();
 router.use(authenticateToken);
 
 // Búsqueda global
-router.get('/global', searchLimiter, async (req: AuthRequest, res) => {
+router.get('/global', async (req: AuthRequest, res) => {
   try {
     const { q, limit = 10 } = req.query;
     

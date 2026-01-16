@@ -9,9 +9,9 @@ const Contact_1 = require("../models/Contact");
 const User_1 = require("../models/User");
 const Company_1 = require("../models/Company");
 const auth_1 = require("../middleware/auth");
-const rateLimiter_1 = require("../middleware/rateLimiter");
 const rolePermissions_1 = require("../utils/rolePermissions");
 const systemLogger_1 = require("../utils/systemLogger");
+const database_1 = require("../config/database");
 const router = express_1.default.Router();
 router.use(auth_1.authenticateToken);
 // Función para limpiar contactos eliminando campos null y objetos relacionados null
@@ -80,7 +80,7 @@ const cleanContact = (contact) => {
     return cleaned;
 };
 // Obtener todos los contactos
-router.get('/', rateLimiter_1.apiLimiter, async (req, res) => {
+router.get('/', async (req, res) => {
     try {
         console.log('📥 Iniciando GET /contacts');
         console.log('📥 Query params:', req.query);
@@ -400,7 +400,7 @@ router.get('/', rateLimiter_1.apiLimiter, async (req, res) => {
     }
 });
 // Obtener un contacto por ID
-router.get('/:id', rateLimiter_1.apiLimiter, async (req, res) => {
+router.get('/:id', async (req, res) => {
     try {
         // Intentar obtener contact con todas las relaciones
         let contact;
@@ -485,7 +485,7 @@ router.get('/:id', rateLimiter_1.apiLimiter, async (req, res) => {
     }
 });
 // Crear contacto
-router.post('/', rateLimiter_1.writeLimiter, async (req, res) => {
+router.post('/', async (req, res) => {
     try {
         console.log('📥 Datos recibidos para crear contacto:', {
             companyId: req.body.companyId,
@@ -627,7 +627,7 @@ router.post('/', rateLimiter_1.writeLimiter, async (req, res) => {
     }
 });
 // Actualizar contacto
-router.put('/:id', rateLimiter_1.writeLimiter, async (req, res) => {
+router.put('/:id', async (req, res) => {
     try {
         // Validar que companyId esté presente si se está enviando en el body
         if (req.body.hasOwnProperty('companyId') && !req.body.companyId) {
@@ -715,7 +715,7 @@ router.put('/:id', rateLimiter_1.writeLimiter, async (req, res) => {
     }
 });
 // Eliminar contacto
-router.delete('/:id', rateLimiter_1.deleteLimiter, async (req, res) => {
+router.delete('/:id', async (req, res) => {
     try {
         const contact = await Contact_1.Contact.findByPk(req.params.id);
         if (!contact) {
@@ -738,7 +738,7 @@ router.delete('/:id', rateLimiter_1.deleteLimiter, async (req, res) => {
     }
 });
 // Agregar empresas asociadas a un contacto
-router.post('/:id/companies', rateLimiter_1.writeLimiter, async (req, res) => {
+router.post('/:id/companies', async (req, res) => {
     try {
         const contact = await Contact_1.Contact.findByPk(req.params.id, {
             include: [
@@ -784,7 +784,7 @@ router.post('/:id/companies', rateLimiter_1.writeLimiter, async (req, res) => {
     }
 });
 // Eliminar asociación de empresa con contacto
-router.delete('/:id/companies/:companyId', rateLimiter_1.deleteLimiter, async (req, res) => {
+router.delete('/:id/companies/:companyId', async (req, res) => {
     try {
         const contact = await Contact_1.Contact.findByPk(req.params.id);
         if (!contact) {
@@ -807,6 +807,272 @@ router.delete('/:id/companies/:companyId', rateLimiter_1.deleteLimiter, async (r
         console.error('Error removing company association:', error);
         console.error('Error stack:', error.stack);
         res.status(500).json({ error: error.message || 'Error al eliminar la asociación' });
+    }
+});
+// Importación masiva de contactos (bulk)
+router.post('/bulk', async (req, res) => {
+    try {
+        const { contacts, batchSize = 1000 } = req.body;
+        if (!Array.isArray(contacts) || contacts.length === 0) {
+            return res.status(400).json({ error: 'Se requiere un array de contactos' });
+        }
+        if (batchSize > 5000) {
+            return res.status(400).json({ error: 'El tamaño de lote máximo es 5000' });
+        }
+        const results = [];
+        let successCount = 0;
+        let errorCount = 0;
+        // Función helper para buscar o crear empresa
+        const getOrCreateCompany = async (companyName, transaction) => {
+            if (!companyName || !companyName.trim()) {
+                return null;
+            }
+            try {
+                // Buscar empresa existente (case-insensitive)
+                const existingCompany = await Company_1.Company.findOne({
+                    where: {
+                        name: {
+                            [sequelize_1.Op.iLike]: companyName.trim(),
+                        },
+                    },
+                    transaction,
+                });
+                if (existingCompany) {
+                    return existingCompany.id;
+                }
+                // Si no existe, crear la empresa
+                const newCompany = await Company_1.Company.create({
+                    name: companyName.trim(),
+                    lifecycleStage: 'lead',
+                    ownerId: req.userId || null,
+                }, { transaction });
+                return newCompany.id;
+            }
+            catch (error) {
+                console.error('Error al buscar/crear empresa:', error);
+                return null;
+            }
+        };
+        // Procesar en lotes
+        const totalBatches = Math.ceil(contacts.length / batchSize);
+        for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+            const startIndex = batchIndex * batchSize;
+            const endIndex = Math.min(startIndex + batchSize, contacts.length);
+            const batch = contacts.slice(startIndex, endIndex);
+            // Usar transacción para cada lote
+            await database_1.sequelize.transaction(async (t) => {
+                for (let i = 0; i < batch.length; i++) {
+                    const contactData = batch[i];
+                    const globalIndex = startIndex + i;
+                    try {
+                        // Preparar datos del contacto
+                        const processedData = {
+                            ...contactData,
+                            ownerId: contactData.ownerId || req.userId || null,
+                        };
+                        // Validar campos requeridos
+                        if (!processedData.firstName || !processedData.firstName.trim()) {
+                            results.push({
+                                success: false,
+                                error: 'El nombre es requerido',
+                                index: globalIndex,
+                                name: contactData.firstName || 'Sin nombre',
+                            });
+                            errorCount++;
+                            continue;
+                        }
+                        if (!processedData.lastName || !processedData.lastName.trim()) {
+                            results.push({
+                                success: false,
+                                error: 'El apellido es requerido',
+                                index: globalIndex,
+                                name: `${processedData.firstName} Sin apellido`,
+                            });
+                            errorCount++;
+                            continue;
+                        }
+                        if (!processedData.email || !processedData.email.trim()) {
+                            results.push({
+                                success: false,
+                                error: 'El email es requerido',
+                                index: globalIndex,
+                                name: `${processedData.firstName} ${processedData.lastName}`,
+                            });
+                            errorCount++;
+                            continue;
+                        }
+                        // Manejar companyId: si viene como nombre de empresa, buscar o crear
+                        let companyId = processedData.companyId;
+                        if (companyId && typeof companyId === 'string' && isNaN(Number(companyId))) {
+                            // Es un nombre de empresa, buscar o crear
+                            companyId = await getOrCreateCompany(companyId, t);
+                            if (!companyId) {
+                                results.push({
+                                    success: false,
+                                    error: 'No se pudo crear o encontrar la empresa',
+                                    index: globalIndex,
+                                    name: `${processedData.firstName} ${processedData.lastName}`,
+                                });
+                                errorCount++;
+                                continue;
+                            }
+                        }
+                        else if (companyId) {
+                            // Es un ID numérico, verificar que existe
+                            companyId = Number(companyId);
+                            if (isNaN(companyId)) {
+                                results.push({
+                                    success: false,
+                                    error: 'El ID de empresa no es válido',
+                                    index: globalIndex,
+                                    name: `${processedData.firstName} ${processedData.lastName}`,
+                                });
+                                errorCount++;
+                                continue;
+                            }
+                            const companyExists = await Company_1.Company.findByPk(companyId, { transaction: t });
+                            if (!companyExists) {
+                                results.push({
+                                    success: false,
+                                    error: 'La empresa especificada no existe',
+                                    index: globalIndex,
+                                    name: `${processedData.firstName} ${processedData.lastName}`,
+                                });
+                                errorCount++;
+                                continue;
+                            }
+                        }
+                        else {
+                            // No hay companyId, es un error
+                            results.push({
+                                success: false,
+                                error: 'La empresa es requerida',
+                                index: globalIndex,
+                                name: `${processedData.firstName} ${processedData.lastName}`,
+                            });
+                            errorCount++;
+                            continue;
+                        }
+                        processedData.companyId = companyId;
+                        // Validar que no exista un contacto con el mismo email (case-insensitive)
+                        const existingContactByEmail = await Contact_1.Contact.findOne({
+                            where: {
+                                email: {
+                                    [sequelize_1.Op.iLike]: processedData.email.trim(),
+                                },
+                            },
+                            transaction: t,
+                        });
+                        if (existingContactByEmail) {
+                            results.push({
+                                success: false,
+                                error: 'Ya existe un contacto con este email',
+                                index: globalIndex,
+                                name: `${processedData.firstName} ${processedData.lastName}`,
+                            });
+                            errorCount++;
+                            continue;
+                        }
+                        // Validar que no exista un contacto con el mismo DNI (si se proporciona)
+                        if (processedData.dni && processedData.dni.trim() !== '') {
+                            const existingContactByDni = await Contact_1.Contact.findOne({
+                                where: {
+                                    dni: processedData.dni.trim(),
+                                },
+                                transaction: t,
+                            });
+                            if (existingContactByDni) {
+                                results.push({
+                                    success: false,
+                                    error: 'Ya existe un contacto con este DNI',
+                                    index: globalIndex,
+                                    name: `${processedData.firstName} ${processedData.lastName}`,
+                                });
+                                errorCount++;
+                                continue;
+                            }
+                        }
+                        // Validar que no exista un contacto con el mismo CEE (si se proporciona)
+                        if (processedData.cee && processedData.cee.trim() !== '') {
+                            const existingContactByCee = await Contact_1.Contact.findOne({
+                                where: {
+                                    cee: processedData.cee.trim().toUpperCase(),
+                                },
+                                transaction: t,
+                            });
+                            if (existingContactByCee) {
+                                results.push({
+                                    success: false,
+                                    error: 'Ya existe un contacto con este CEE',
+                                    index: globalIndex,
+                                    name: `${processedData.firstName} ${processedData.lastName}`,
+                                });
+                                errorCount++;
+                                continue;
+                            }
+                        }
+                        // Crear nuevo contacto
+                        const newContact = await Contact_1.Contact.create(processedData, { transaction: t });
+                        const createdContact = await Contact_1.Contact.findByPk(newContact.id, {
+                            include: [
+                                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
+                                { model: Company_1.Company, as: 'Company', required: false },
+                            ],
+                            transaction: t,
+                        });
+                        results.push({
+                            success: true,
+                            data: cleanContact(createdContact),
+                            index: globalIndex,
+                            name: `${processedData.firstName} ${processedData.lastName}`,
+                        });
+                        successCount++;
+                        // Registrar log de creación (fuera de la transacción para no afectarla)
+                        if (req.userId) {
+                            try {
+                                await (0, systemLogger_1.logSystemAction)(req.userId, systemLogger_1.SystemActions.CREATE, systemLogger_1.EntityTypes.CONTACT, newContact.id, { firstName: newContact.firstName, lastName: newContact.lastName, email: newContact.email }, req);
+                            }
+                            catch (logError) {
+                                console.error('Error al registrar log de creación:', logError);
+                                // No afectar la transacción si falla el log
+                            }
+                        }
+                    }
+                    catch (error) {
+                        console.error(`Error procesando contacto ${globalIndex}:`, error);
+                        results.push({
+                            success: false,
+                            error: error.message || 'Error desconocido',
+                            index: globalIndex,
+                            name: contactData.firstName && contactData.lastName
+                                ? `${contactData.firstName} ${contactData.lastName}`
+                                : 'Sin nombre',
+                        });
+                        errorCount++;
+                    }
+                }
+            });
+        }
+        console.log('[BULK IMPORT CONTACTS] Resumen final:', {
+            total: contacts.length,
+            successCount,
+            errorCount,
+            resultsCount: results.length,
+        });
+        res.status(200).json({
+            success: true,
+            total: contacts.length,
+            successCount: successCount || 0,
+            errorCount: errorCount || 0,
+            results: results || [],
+        });
+    }
+    catch (error) {
+        console.error('Error en importación masiva de contactos:', error);
+        res.status(500).json({
+            error: error.message || 'Error al procesar la importación masiva',
+            success: false,
+        });
     }
 });
 exports.default = router;

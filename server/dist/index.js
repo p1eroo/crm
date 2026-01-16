@@ -548,7 +548,7 @@ database_1.sequelize.authenticate()
 })
     .then(() => {
     const localIP = getLocalIP();
-    app.listen(PORT, '0.0.0.0', () => {
+    const server = app.listen(PORT, '0.0.0.0', () => {
         console.log('\n========================================');
         console.log(`✅ Servidor iniciado correctamente`);
         console.log(`📍 Puerto: ${PORT}`);
@@ -561,6 +561,8 @@ database_1.sequelize.authenticate()
         console.log(`   http://${localIP}:3000`);
         console.log(`========================================\n`);
     });
+    // Aumentar timeout para operaciones largas (importaciones masivas)
+    server.timeout = 600000; // 10 minutos
 })
     .catch((error) => {
     console.error('Unable to connect to the database:', error);

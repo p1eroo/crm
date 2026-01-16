@@ -2,7 +2,6 @@ import express, { Response } from 'express';
 import { Role } from '../models/Role';
 import { User } from '../models/User';
 import { authenticateToken, AuthRequest, requireRole } from '../middleware/auth';
-import { apiLimiter } from '../middleware/rateLimiter';
 import { canPerformAction } from '../utils/rolePermissions';
 
 const router = express.Router();
@@ -21,7 +20,7 @@ const ALL_PERMISSIONS = {
 };
 
 // Obtener todos los roles con sus permisos
-router.get('/', apiLimiter, async (req: AuthRequest, res: Response) => {
+router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const roles = await Role.findAll({
       order: [['name', 'ASC']],

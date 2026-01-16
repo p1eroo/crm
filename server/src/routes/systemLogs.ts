@@ -3,14 +3,13 @@ import { Op } from 'sequelize';
 import { SystemLog } from '../models/SystemLog';
 import { User } from '../models/User';
 import { authenticateToken, AuthRequest, requireRole } from '../middleware/auth';
-import { apiLimiter } from '../middleware/rateLimiter';
 
 const router = express.Router();
 router.use(authenticateToken);
 router.use(requireRole('admin')); // Solo admin puede ver logs
 
 // Listar logs con paginación
-router.get('/', apiLimiter, async (req: AuthRequest, res: Response) => {
+router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 50;

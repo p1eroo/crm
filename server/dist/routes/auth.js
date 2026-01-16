@@ -12,10 +12,9 @@ const axios_1 = __importDefault(require("axios"));
 const User_1 = require("../models/User");
 const Role_1 = require("../models/Role");
 const auth_1 = require("../middleware/auth");
-const rateLimiter_1 = require("../middleware/rateLimiter");
 const router = express_1.default.Router();
 // Registro
-router.post('/register', rateLimiter_1.registerLimiter, [
+router.post('/register', [
     (0, express_validator_1.body)('usuario').notEmpty().trim(),
     (0, express_validator_1.body)('email').isEmail().normalizeEmail(),
     (0, express_validator_1.body)('password').isLength({ min: 6 }),
@@ -76,7 +75,7 @@ router.post('/register', rateLimiter_1.registerLimiter, [
     }
 });
 // Login con API de Monterrico
-router.post('/login-monterrico', rateLimiter_1.authLimiter, [
+router.post('/login-monterrico', [
     (0, express_validator_1.body)('usuario').notEmpty().trim(),
     (0, express_validator_1.body)('password').notEmpty(),
 ], async (req, res) => {
@@ -248,7 +247,7 @@ router.post('/login-monterrico', rateLimiter_1.authLimiter, [
     }
 });
 // Login local (mantener para compatibilidad)
-router.post('/login', rateLimiter_1.authLimiter, [
+router.post('/login', [
     (0, express_validator_1.body)('usuario').notEmpty().trim(),
     (0, express_validator_1.body)('password').notEmpty(),
 ], async (req, res) => {

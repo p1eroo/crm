@@ -9,7 +9,6 @@ const Company_1 = require("../models/Company");
 const Contact_1 = require("../models/Contact");
 const User_1 = require("../models/User");
 const auth_1 = require("../middleware/auth");
-const rateLimiter_1 = require("../middleware/rateLimiter");
 const rolePermissions_1 = require("../utils/rolePermissions");
 const systemLogger_1 = require("../utils/systemLogger");
 const database_1 = require("../config/database");
@@ -83,9 +82,7 @@ const transformCompanyForList = (company) => {
     return cleanCompany(company, false);
 };
 // Obtener todas las empresas
-router.get('/', rateLimiter_1.apiLimiter, async (req, res) => {
-    console.log(`[COMPANIES] GET / - req.userId:`, req.userId, 'req.userRole:', req.userRole);
-    console.log(`[COMPANIES] Headers authorization:`, req.headers.authorization ? 'Presente' : 'Ausente');
+router.get('/', async (req, res) => {
     try {
         // Validar que el usuario esté autenticado
         if (!req.userId) {
@@ -116,7 +113,6 @@ router.get('/', rateLimiter_1.apiLimiter, async (req, res) => {
         const offset = (pageNum - 1) * limit;
         // Aplicar filtro RBAC primero (igual que en contacts y deals)
         const roleFilter = (0, rolePermissions_1.getRoleBasedDataFilter)(req.userRole, req.userId);
-        console.log(`[RBAC] GET /companies - Usuario: ${req.userId}, Rol: ${req.userRole}, Filtro:`, roleFilter);
         // Construir el objeto where empezando con el filtro RBAC
         const where = {};
         Object.assign(where, roleFilter);
@@ -334,14 +330,6 @@ router.get('/', rateLimiter_1.apiLimiter, async (req, res) => {
                 addCondition(condition);
             }
         });
-        // Debug: mostrar el objeto where completo
-        console.log('[DEBUG] Objeto where completo:', JSON.stringify(where, null, 2));
-        console.log('[DEBUG] where tiene Op.and?', !!where[sequelize_1.Op.and]);
-        console.log('[DEBUG] where está vacío?', Object.keys(where).length === 0);
-        // Si where está completamente vacío, asegurarse de que sea un objeto válido
-        if (Object.keys(where).length === 0) {
-            console.log('[DEBUG] where está vacío, usando {}');
-        }
         // Ordenamiento
         let order = [['createdAt', 'DESC']];
         switch (sortBy) {
@@ -361,7 +349,6 @@ router.get('/', rateLimiter_1.apiLimiter, async (req, res) => {
         // Intentar obtener companies con la relación Owner
         let companies;
         try {
-            console.log('[DEBUG] Ejecutando Company.findAndCountAll con where:', JSON.stringify(where, null, 2));
             companies = await Company_1.Company.findAndCountAll({
                 where,
                 include: [
@@ -377,7 +364,6 @@ router.get('/', rateLimiter_1.apiLimiter, async (req, res) => {
                 order,
                 distinct: true, // Importante para contar correctamente con includes
             });
-            console.log(`[DEBUG] Query exitosa: ${companies.count} empresas encontradas, ${companies.rows.length} en esta página`);
         }
         catch (includeError) {
             console.error('[ERROR] Error en Company.findAndCountAll:', includeError);
@@ -449,7 +435,7 @@ router.get('/', rateLimiter_1.apiLimiter, async (req, res) => {
     }
 });
 // Obtener una empresa por ID
-router.get('/:id', rateLimiter_1.apiLimiter, async (req, res) => {
+router.get('/:id', async (req, res) => {
     try {
         const company = await Company_1.Company.findByPk(req.params.id, {
             include: [
@@ -488,7 +474,7 @@ router.get('/:id', rateLimiter_1.apiLimiter, async (req, res) => {
     }
 });
 // Crear empresa
-router.post('/', rateLimiter_1.writeLimiter, async (req, res) => {
+router.post('/', async (req, res) => {
     try {
         const companyData = {
             ...req.body,
@@ -562,7 +548,7 @@ router.post('/', rateLimiter_1.writeLimiter, async (req, res) => {
     }
 });
 // Actualizar empresa
-router.put('/:id', rateLimiter_1.writeLimiter, async (req, res) => {
+router.put('/:id', async (req, res) => {
     try {
         const company = await Company_1.Company.findByPk(req.params.id);
         if (!company) {
@@ -622,7 +608,7 @@ router.put('/:id', rateLimiter_1.writeLimiter, async (req, res) => {
     }
 });
 // Eliminar empresa
-router.delete('/:id', rateLimiter_1.deleteLimiter, async (req, res) => {
+router.delete('/:id', async (req, res) => {
     try {
         const company = await Company_1.Company.findByPk(req.params.id);
         if (!company) {
@@ -645,7 +631,7 @@ router.delete('/:id', rateLimiter_1.deleteLimiter, async (req, res) => {
     }
 });
 // Agregar contactos asociados a una empresa
-router.post('/:id/contacts', rateLimiter_1.writeLimiter, async (req, res) => {
+router.post('/:id/contacts', async (req, res) => {
     try {
         const company = await Company_1.Company.findByPk(req.params.id, {
             include: [
@@ -690,7 +676,7 @@ router.post('/:id/contacts', rateLimiter_1.writeLimiter, async (req, res) => {
     }
 });
 // Eliminar asociación de contacto con empresa
-router.delete('/:id/contacts/:contactId', rateLimiter_1.deleteLimiter, async (req, res) => {
+router.delete('/:id/contacts/:contactId', async (req, res) => {
     try {
         const company = await Company_1.Company.findByPk(req.params.id);
         if (!company) {
@@ -715,7 +701,7 @@ router.delete('/:id/contacts/:contactId', rateLimiter_1.deleteLimiter, async (re
     }
 });
 // Importación masiva de empresas (bulk)
-router.post('/bulk', rateLimiter_1.heavyOperationLimiter, async (req, res) => {
+router.post('/bulk', async (req, res) => {
     try {
         const { companies, batchSize = 1000 } = req.body;
         if (!Array.isArray(companies) || companies.length === 0) {
@@ -766,6 +752,10 @@ router.post('/bulk', rateLimiter_1.heavyOperationLimiter, async (req, res) => {
                                 processedData.estimatedRevenue = isNaN(parsed) ? null : parsed;
                             }
                         }
+                        // Si email viene como string vacío, convertirlo a null (igual que en el endpoint PUT)
+                        if (processedData.email !== undefined && processedData.email === '') {
+                            processedData.email = null;
+                        }
                         // Verificar si existe empresa con el mismo nombre (case-insensitive)
                         const existingCompanyByName = await Company_1.Company.findOne({
                             where: {
@@ -776,45 +766,15 @@ router.post('/bulk', rateLimiter_1.heavyOperationLimiter, async (req, res) => {
                             transaction: t,
                         });
                         if (existingCompanyByName) {
-                            // Si existe y tiene estimatedRevenue, actualizar solo ese campo
-                            if (processedData.estimatedRevenue !== undefined &&
-                                processedData.estimatedRevenue !== null) {
-                                await existingCompanyByName.update({ estimatedRevenue: processedData.estimatedRevenue }, { transaction: t });
-                                const updatedCompany = await Company_1.Company.findByPk(existingCompanyByName.id, {
-                                    include: [
-                                        { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
-                                    ],
-                                    transaction: t,
-                                });
-                                results.push({
-                                    success: true,
-                                    data: cleanCompany(updatedCompany, true),
-                                    index: globalIndex,
-                                    name: processedData.name,
-                                });
-                                successCount++;
-                                updateCount++;
-                                // Registrar log de actualización (fuera de la transacción para no afectarla)
-                                if (req.userId) {
-                                    try {
-                                        await (0, systemLogger_1.logSystemAction)(req.userId, systemLogger_1.SystemActions.UPDATE, systemLogger_1.EntityTypes.COMPANY, existingCompanyByName.id, { name: existingCompanyByName.name, changes: { estimatedRevenue: processedData.estimatedRevenue } }, req);
-                                    }
-                                    catch (logError) {
-                                        console.error('Error al registrar log de actualización:', logError);
-                                        // No afectar la transacción si falla el log
-                                    }
-                                }
-                            }
-                            else {
-                                // Existe pero no hay estimatedRevenue para actualizar
-                                results.push({
-                                    success: false,
-                                    error: 'Ya existe una empresa con este nombre',
-                                    index: globalIndex,
-                                    name: processedData.name,
-                                });
-                                errorCount++;
-                            }
+                            // Siempre mostrar error cuando ya existe una empresa con el mismo nombre
+                            // (comportamiento consistente con el endpoint POST individual)
+                            results.push({
+                                success: false,
+                                error: 'Ya existe una empresa con este nombre',
+                                index: globalIndex,
+                                name: processedData.name,
+                            });
+                            errorCount++;
                             continue;
                         }
                         // Verificar si existe empresa con el mismo RUC (si se proporciona)
@@ -878,11 +838,11 @@ router.post('/bulk', rateLimiter_1.heavyOperationLimiter, async (req, res) => {
         res.status(200).json({
             success: true,
             total: companies.length,
-            successCount,
-            errorCount,
-            updateCount,
-            createCount: successCount - updateCount,
-            results,
+            successCount: successCount || 0,
+            errorCount: errorCount || 0,
+            updateCount: updateCount || 0,
+            createCount: (successCount || 0) - (updateCount || 0),
+            results: results || [],
         });
     }
     catch (error) {

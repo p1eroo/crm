@@ -7,14 +7,12 @@ import axios from 'axios';
 import { User } from '../models/User';
 import { Role } from '../models/Role';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
-import { authLimiter, registerLimiter } from '../middleware/rateLimiter';
 
 const router = express.Router();
 
 // Registro
 router.post(
   '/register',
-  registerLimiter,
   [
     body('usuario').notEmpty().trim(),
     body('email').isEmail().normalizeEmail(),
@@ -92,7 +90,6 @@ router.post(
 // Login con API de Monterrico
 router.post(
   '/login-monterrico',
-  authLimiter,
   [
     body('usuario').notEmpty().trim(),
     body('password').notEmpty(),
@@ -299,7 +296,6 @@ router.post(
 // Login local (mantener para compatibilidad)
 router.post(
   '/login',
-  authLimiter,
   [
     body('usuario').notEmpty().trim(),
     body('password').notEmpty(),

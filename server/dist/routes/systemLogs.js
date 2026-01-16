@@ -8,12 +8,11 @@ const sequelize_1 = require("sequelize");
 const SystemLog_1 = require("../models/SystemLog");
 const User_1 = require("../models/User");
 const auth_1 = require("../middleware/auth");
-const rateLimiter_1 = require("../middleware/rateLimiter");
 const router = express_1.default.Router();
 router.use(auth_1.authenticateToken);
 router.use((0, auth_1.requireRole)('admin')); // Solo admin puede ver logs
 // Listar logs con paginación
-router.get('/', rateLimiter_1.apiLimiter, async (req, res) => {
+router.get('/', async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 50;

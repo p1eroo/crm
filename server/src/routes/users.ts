@@ -3,7 +3,6 @@ import { Op } from 'sequelize';
 import { User } from '../models/User';
 import { Role } from '../models/Role';
 import { authenticateToken, AuthRequest, requireRole } from '../middleware/auth';
-import { apiLimiter, writeLimiter, deleteLimiter, sensitiveUserOperationLimiter } from '../middleware/rateLimiter';
 
 const router = express.Router();
 
@@ -51,7 +50,7 @@ router.use(authenticateToken);
 router.use(requireRole('admin', 'jefe_comercial'));
 
 // Listar todos los usuarios
-router.get('/', apiLimiter, async (req: AuthRequest, res: Response) => {
+router.get('/', async (req: AuthRequest, res: Response) => {
   try {
     const users = await User.findAll({
       attributes: { exclude: ['password'] },
@@ -67,7 +66,7 @@ router.get('/', apiLimiter, async (req: AuthRequest, res: Response) => {
 });
 
 // Obtener un usuario por ID
-router.get('/:id', apiLimiter, async (req: AuthRequest, res: Response) => {
+router.get('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const user = await User.findByPk(req.params.id, {
       attributes: { exclude: ['password'] },
@@ -85,7 +84,7 @@ router.get('/:id', apiLimiter, async (req: AuthRequest, res: Response) => {
 });
 
 // Actualizar rol de usuario
-router.put('/:id/role', sensitiveUserOperationLimiter, async (req: AuthRequest, res: Response) => {
+router.put('/:id/role', async (req: AuthRequest, res: Response) => {
   try {
     const { role } = req.body;
 
@@ -139,7 +138,7 @@ router.put('/:id/role', sensitiveUserOperationLimiter, async (req: AuthRequest, 
 });
 
 // Actualizar estado activo/inactivo de usuario
-router.put('/:id/status', sensitiveUserOperationLimiter, async (req: AuthRequest, res: Response) => {
+router.put('/:id/status', async (req: AuthRequest, res: Response) => {
   try {
     const { isActive } = req.body;
 
@@ -189,7 +188,7 @@ router.put('/:id/status', sensitiveUserOperationLimiter, async (req: AuthRequest
 });
 
 // Actualizar información de usuario
-router.put('/:id', writeLimiter, async (req: AuthRequest, res: Response) => {
+router.put('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const { firstName, lastName, email, phone } = req.body;
     const user = await User.findByPk(req.params.id);
@@ -235,7 +234,7 @@ router.put('/:id', writeLimiter, async (req: AuthRequest, res: Response) => {
 });
 
 // Eliminar usuario
-router.delete('/:id', deleteLimiter, async (req: AuthRequest, res: Response) => {
+router.delete('/:id', async (req: AuthRequest, res: Response) => {
   try {
     const user = await User.findByPk(req.params.id, {
       include: [{ model: Role, as: 'Role' }],

@@ -4,7 +4,6 @@ import { Company } from '../models/Company';
 import { Contact } from '../models/Contact';
 import { User } from '../models/User';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
-import { apiLimiter, writeLimiter, deleteLimiter, heavyOperationLimiter } from '../middleware/rateLimiter';
 import { getRoleBasedDataFilter, canModifyResource, canDeleteResource } from '../utils/rolePermissions';
 import { logSystemAction, SystemActions, EntityTypes } from '../utils/systemLogger';
 import { sequelize } from '../config/database';
@@ -70,10 +69,7 @@ const transformCompanyForList = (company: any): any => {
 };
 
 // Obtener todas las empresas
-router.get('/', apiLimiter, async (req: AuthRequest, res) => {
-  console.log(`[COMPANIES] GET / - req.userId:`, req.userId, 'req.userRole:', req.userRole);
-  console.log(`[COMPANIES] Headers authorization:`, req.headers.authorization ? 'Presente' : 'Ausente');
-  
+router.get('/', async (req: AuthRequest, res) => {
   try {
     // Validar que el usuario esté autenticado
     if (!req.userId) {
@@ -122,8 +118,6 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
 
     // Aplicar filtro RBAC primero (igual que en contacts y deals)
     const roleFilter = getRoleBasedDataFilter(req.userRole, req.userId);
-    
-    console.log(`[RBAC] GET /companies - Usuario: ${req.userId}, Rol: ${req.userRole}, Filtro:`, roleFilter);
     
     // Construir el objeto where empezando con el filtro RBAC
     const where: any = {};
@@ -341,16 +335,6 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
       }
     });
     
-    // Debug: mostrar el objeto where completo
-    console.log('[DEBUG] Objeto where completo:', JSON.stringify(where, null, 2));
-    console.log('[DEBUG] where tiene Op.and?', !!where[Op.and]);
-    console.log('[DEBUG] where está vacío?', Object.keys(where).length === 0);
-    
-    // Si where está completamente vacío, asegurarse de que sea un objeto válido
-    if (Object.keys(where).length === 0) {
-      console.log('[DEBUG] where está vacío, usando {}');
-    }
-    
     // Ordenamiento
     let order: [string, string][] = [['createdAt', 'DESC']];
     switch (sortBy) {
@@ -372,7 +356,6 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
     // Intentar obtener companies con la relación Owner
     let companies;
     try {
-      console.log('[DEBUG] Ejecutando Company.findAndCountAll con where:', JSON.stringify(where, null, 2));
       companies = await Company.findAndCountAll({
         where,
         include: [
@@ -388,7 +371,6 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
         order,
         distinct: true, // Importante para contar correctamente con includes
       });
-      console.log(`[DEBUG] Query exitosa: ${companies.count} empresas encontradas, ${companies.rows.length} en esta página`);
     } catch (includeError: any) {
       console.error('[ERROR] Error en Company.findAndCountAll:', includeError);
       console.error('[ERROR] Stack:', includeError.stack);
@@ -465,7 +447,7 @@ router.get('/', apiLimiter, async (req: AuthRequest, res) => {
 });
 
 // Obtener una empresa por ID
-router.get('/:id', apiLimiter, async (req, res) => {
+router.get('/:id', async (req, res) => {
   try {
     const company = await Company.findByPk(req.params.id, {
       include: [
@@ -512,7 +494,7 @@ router.get('/:id', apiLimiter, async (req, res) => {
 });
 
 // Crear empresa
-router.post('/', writeLimiter, async (req: AuthRequest, res) => {
+router.post('/', async (req: AuthRequest, res) => {
   try {
     const companyData = {
       ...req.body,
@@ -601,7 +583,7 @@ router.post('/', writeLimiter, async (req: AuthRequest, res) => {
 });
 
 // Actualizar empresa
-router.put('/:id', writeLimiter, async (req: AuthRequest, res) => {
+router.put('/:id', async (req: AuthRequest, res) => {
   try {
     const company = await Company.findByPk(req.params.id);
     if (!company) {
@@ -677,7 +659,7 @@ router.put('/:id', writeLimiter, async (req: AuthRequest, res) => {
 });
 
 // Eliminar empresa
-router.delete('/:id', deleteLimiter, async (req: AuthRequest, res) => {
+router.delete('/:id', async (req: AuthRequest, res) => {
   try {
     const company = await Company.findByPk(req.params.id);
     if (!company) {
@@ -711,7 +693,7 @@ router.delete('/:id', deleteLimiter, async (req: AuthRequest, res) => {
 });
 
 // Agregar contactos asociados a una empresa
-router.post('/:id/contacts', writeLimiter, async (req, res) => {
+router.post('/:id/contacts', async (req, res) => {
   try {
     const company = await Company.findByPk(req.params.id, {
       include: [
@@ -765,7 +747,7 @@ router.post('/:id/contacts', writeLimiter, async (req, res) => {
 });
 
 // Eliminar asociación de contacto con empresa
-router.delete('/:id/contacts/:contactId', deleteLimiter, async (req, res) => {
+router.delete('/:id/contacts/:contactId', async (req, res) => {
   try {
     const company = await Company.findByPk(req.params.id);
     if (!company) {
@@ -794,7 +776,7 @@ router.delete('/:id/contacts/:contactId', deleteLimiter, async (req, res) => {
 });
 
 // Importación masiva de empresas (bulk)
-router.post('/bulk', heavyOperationLimiter, async (req: AuthRequest, res) => {
+router.post('/bulk', async (req: AuthRequest, res) => {
   try {
     const { companies, batchSize = 1000 } = req.body;
 
@@ -861,6 +843,11 @@ router.post('/bulk', heavyOperationLimiter, async (req: AuthRequest, res) => {
               }
             }
 
+            // Si email viene como string vacío, convertirlo a null (igual que en el endpoint PUT)
+            if (processedData.email !== undefined && processedData.email === '') {
+              processedData.email = null;
+            }
+
             // Verificar si existe empresa con el mismo nombre (case-insensitive)
             const existingCompanyByName = await Company.findOne({
               where: {
@@ -872,58 +859,15 @@ router.post('/bulk', heavyOperationLimiter, async (req: AuthRequest, res) => {
             });
 
             if (existingCompanyByName) {
-              // Si existe y tiene estimatedRevenue, actualizar solo ese campo
-              if (
-                processedData.estimatedRevenue !== undefined &&
-                processedData.estimatedRevenue !== null
-              ) {
-                await existingCompanyByName.update(
-                  { estimatedRevenue: processedData.estimatedRevenue },
-                  { transaction: t }
-                );
-
-                const updatedCompany = await Company.findByPk(existingCompanyByName.id, {
-                  include: [
-                    { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
-                  ],
-                  transaction: t,
-                });
-
-                results.push({
-                  success: true,
-                  data: cleanCompany(updatedCompany!, true),
-                  index: globalIndex,
-                  name: processedData.name,
-                });
-                successCount++;
-                updateCount++;
-
-                // Registrar log de actualización (fuera de la transacción para no afectarla)
-                if (req.userId) {
-                  try {
-                    await logSystemAction(
-                      req.userId,
-                      SystemActions.UPDATE,
-                      EntityTypes.COMPANY,
-                      existingCompanyByName.id,
-                      { name: existingCompanyByName.name, changes: { estimatedRevenue: processedData.estimatedRevenue } },
-                      req
-                    );
-                  } catch (logError) {
-                    console.error('Error al registrar log de actualización:', logError);
-                    // No afectar la transacción si falla el log
-                  }
-                }
-              } else {
-                // Existe pero no hay estimatedRevenue para actualizar
-                results.push({
-                  success: false,
-                  error: 'Ya existe una empresa con este nombre',
-                  index: globalIndex,
-                  name: processedData.name,
-                });
-                errorCount++;
-              }
+              // Siempre mostrar error cuando ya existe una empresa con el mismo nombre
+              // (comportamiento consistente con el endpoint POST individual)
+              results.push({
+                success: false,
+                error: 'Ya existe una empresa con este nombre',
+                index: globalIndex,
+                name: processedData.name,
+              });
+              errorCount++;
               continue;
             }
 
@@ -994,15 +938,6 @@ router.post('/bulk', heavyOperationLimiter, async (req: AuthRequest, res) => {
         }
       });
     }
-
-    console.log('[BULK IMPORT] Resumen final:', {
-      total: companies.length,
-      successCount,
-      errorCount,
-      updateCount,
-      createCount: successCount - updateCount,
-      resultsCount: results.length,
-    });
 
     res.status(200).json({
       success: true,
