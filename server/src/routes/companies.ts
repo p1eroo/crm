@@ -68,6 +68,17 @@ const transformCompanyForList = (company: any): any => {
   return cleanCompany(company, false);
 };
 
+// Función para extraer el dominio del email si no está definido
+const extractDomainFromEmail = (companyData: any): void => {
+  // Solo extraer dominio si no está definido y hay un email válido
+  if (!companyData.domain && companyData.email && typeof companyData.email === 'string') {
+    const emailMatch = companyData.email.match(/@(.+)/);
+    if (emailMatch && emailMatch[1]) {
+      companyData.domain = emailMatch[1].toLowerCase().trim();
+    }
+  }
+};
+
 // Obtener todas las empresas
 router.get('/', async (req: AuthRequest, res) => {
   try {
@@ -520,6 +531,9 @@ router.post('/', async (req: AuthRequest, res) => {
       }
     }
 
+    // Extraer dominio del email si no está definido
+    extractDomainFromEmail(companyData);
+
     // Validar que no exista una empresa con el mismo nombre (case-insensitive)
     if (companyData.name) {
       const existingCompanyByName = await Company.findOne({
@@ -535,6 +549,25 @@ router.post('/', async (req: AuthRequest, res) => {
           error: 'Ya existe una empresa con este nombre',
           duplicateField: 'name',
           existingCompanyId: existingCompanyByName.id,
+        });
+      }
+    }
+
+    // Validar que no exista una empresa con el mismo dominio (case-insensitive)
+    if (companyData.domain && companyData.domain.trim() !== '') {
+      const existingCompanyByDomain = await Company.findOne({
+        where: {
+          domain: {
+            [Op.iLike]: companyData.domain.trim(), // Case-insensitive
+          },
+        },
+      });
+
+      if (existingCompanyByDomain) {
+        return res.status(400).json({ 
+          error: 'Ya existe una empresa con este dominio',
+          duplicateField: 'domain',
+          existingCompanyId: existingCompanyByDomain.id,
         });
       }
     }
@@ -848,6 +881,9 @@ router.post('/bulk', async (req: AuthRequest, res) => {
               processedData.email = null;
             }
 
+            // Extraer dominio del email si no está definido
+            extractDomainFromEmail(processedData);
+
             // Verificar si existe empresa con el mismo nombre (case-insensitive)
             const existingCompanyByName = await Company.findOne({
               where: {
@@ -869,6 +905,29 @@ router.post('/bulk', async (req: AuthRequest, res) => {
               });
               errorCount++;
               continue;
+            }
+
+            // Verificar si existe empresa con el mismo dominio (case-insensitive)
+            if (processedData.domain && processedData.domain.trim() !== '') {
+              const existingCompanyByDomain = await Company.findOne({
+                where: {
+                  domain: {
+                    [Op.iLike]: processedData.domain.trim(),
+                  },
+                },
+                transaction: t,
+              });
+            
+              if (existingCompanyByDomain) {
+                results.push({
+                  success: false,
+                  error: 'Ya existe una empresa con este dominio',
+                  index: globalIndex,
+                  name: processedData.name,
+                });
+                errorCount++;
+                continue;
+              }
             }
 
             // Verificar si existe empresa con el mismo RUC (si se proporciona)

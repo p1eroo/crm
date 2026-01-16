@@ -1009,97 +1009,55 @@ const Companies: React.FC = () => {
       // Inicializar el progreso total
       setImportProgress(prev => ({ ...prev, total: companiesToCreate.length }));
 
-      // Crear empresas en el backend con progreso (método anterior que funcionaba bien)
-      let successCount = 0;
-      let errorCount = 0;
-      const errorList: Array<{ name: string; error: string }> = [];
+      // Usar endpoint bulk para importación masiva (igual que Contacts.tsx)
+      try {
+        const response = await api.post('/companies/bulk', {
+          companies: companiesToCreate,
+          batchSize: 1000, // Procesar en lotes de 1000
+        });
 
-      for (let i = 0; i < companiesToCreate.length; i++) {
-        const companyData = companiesToCreate[i];
-        try {
-          await api.post('/companies', companyData);
-          successCount++;
-          setImportProgress({
-            current: i + 1,
-            total: companiesToCreate.length,
-            success: successCount,
-            errors: errorCount,
-            errorList: [...errorList],
-          });
-        } catch (error: any) {
-          console.error('Error creating company:', error);
-          
-          // Verificar si es un error de empresa duplicada y tiene facturación para actualizar
-          if (
-            error.response?.status === 400 &&
-            error.response?.data?.error === 'Ya existe una empresa con este nombre' &&
-            error.response?.data?.existingCompanyId &&
-            companyData.estimatedRevenue !== undefined &&
-            companyData.estimatedRevenue !== null
-          ) {
-            // Si la empresa existe y tiene facturación, actualizar solo ese campo
-            try {
-              await api.put(`/companies/${error.response.data.existingCompanyId}`, {
-                estimatedRevenue: companyData.estimatedRevenue,
-              });
-              successCount++;
-              
-              setImportProgress({
-                current: i + 1,
-                total: companiesToCreate.length,
-                success: successCount,
-                errors: errorCount,
-                errorList: [...errorList],
-              });
-              continue; // Continuar con la siguiente empresa
-            } catch (updateError: any) {
-              // Si falla la actualización, contar como error
-              errorCount++;
-              let updateErrorMessage = 'Error al actualizar facturación';
-              if (updateError.response?.data?.error) {
-                updateErrorMessage = updateError.response.data.error;
-              }
-              
-              const companyName = companyData.name || companyData.companyname || 'Empresa sin nombre';
-              errorList.push({
-                name: companyName,
-                error: updateErrorMessage,
-              });
-              
-              setImportProgress({
-                current: i + 1,
-                total: companiesToCreate.length,
-                success: successCount,
-                errors: errorCount,
-                errorList: [...errorList],
-              });
-            }
-          } else {
-            // Manejo de error normal
-            errorCount++;
-            
-            let errorMessage = 'Error desconocido';
-            if (error.response?.data?.error) {
-              errorMessage = error.response.data.error;
-            } else if (error.message) {
-              errorMessage = error.message;
-            }
-            
-            const companyName = companyData.name || companyData.companyname || 'Empresa sin nombre';
-            errorList.push({
-              name: companyName,
-              error: errorMessage,
-            });
-            
-            setImportProgress({
-              current: i + 1,
-              total: companiesToCreate.length,
-              success: successCount,
-              errors: errorCount,
-              errorList: [...errorList],
-            });
-          }
+        console.log('Respuesta del backend:', response.data); // Debug
+
+        const { successCount = 0, errorCount = 0, results = [] } = response.data || {};
+
+        // Procesar resultados y actualizar progreso
+        const errorList = (results || [])
+          .filter((r: any) => !r.success)
+          .map((r: any) => ({
+            name: r.name || 'Sin nombre',
+            error: r.error || 'Error desconocido',
+          }));
+
+        console.log('successCount:', successCount, 'errorCount:', errorCount); // Debug
+
+        setImportProgress({
+          current: companiesToCreate.length,
+          total: companiesToCreate.length,
+          success: successCount || 0,
+          errors: errorCount || 0,
+          errorList,
+        });
+      } catch (error: any) {
+        console.error('Error en importación masiva:', error);
+        console.error('Error response:', error.response?.data); // Debug
+        
+        let errorMessage = 'Error al procesar la importación masiva';
+        if (error.response?.data?.error) {
+          errorMessage = error.response.data.error;
+        } else if (error.message) {
+          errorMessage = error.message;
         }
+
+        setImportProgress((prev) => ({
+          ...prev,
+          current: companiesToCreate.length,
+          total: companiesToCreate.length,
+          errors: (error.response?.data?.errorCount || 0) + 1,
+          errorList: [...(prev.errorList || []), {
+            name: 'Importación masiva',
+            error: errorMessage,
+          }],
+        }));
       }
 
       // Limpiar el input
