@@ -28,6 +28,7 @@ const DealDetail = lazy(() => import('./pages/DealDetail'));
 const Tasks = lazy(() => import('./pages/Tasks'));
 const TaskDetail = lazy(() => import('./pages/TaskDetail'));
 const Tickets = lazy(() => import('./pages/Tickets'));
+const Emails = lazy(() => import('./pages/Emails'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Users = lazy(() => import('./pages/Users'));
 const SystemLogs = lazy(() => import('./pages/SystemLogs'));
@@ -226,8 +227,36 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
 
 const AppContent: React.FC = () => {
   const { mode } = useTheme();
-  const theme = React.useMemo(() => getTheme(mode), [mode]);
+  
+  // Detectar preferencia del sistema si el modo es 'system'
+  const getSystemPreference = (): 'light' | 'dark' => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'light';
+  };
+
+  // Obtener el tema efectivo (si es 'system', usar la preferencia del sistema)
+  const effectiveMode = mode === 'system' ? getSystemPreference() : mode;
+  
+  const theme = React.useMemo(() => getTheme(effectiveMode), [effectiveMode]);
   const { user, loading } = useAuth();
+
+  // Estado para forzar re-render cuando cambie la preferencia del sistema
+  const [, forceUpdate] = React.useReducer(x => x + 1, 0);
+
+  // Escuchar cambios en la preferencia del sistema cuando el modo es 'system'
+  React.useEffect(() => {
+    if (mode === 'system' && typeof window !== 'undefined' && window.matchMedia) {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = () => {
+        // Forzar re-render cuando cambie la preferencia del sistema
+        forceUpdate();
+      };
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+  }, [mode]);
 
   // Si está cargando, mostrar loading
   if (loading) {
@@ -413,6 +442,16 @@ const AppContent: React.FC = () => {
                     <SidebarProvider>
                       <MainLayout>
                         <Calendar />
+                      </MainLayout>
+                    </SidebarProvider>
+                  }
+                />
+                <Route
+                  path="/emails"
+                  element={
+                    <SidebarProvider>
+                      <MainLayout>
+                        <Emails />
                       </MainLayout>
                     </SidebarProvider>
                   }

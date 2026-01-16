@@ -421,6 +421,48 @@ async function ensureAllEnumsMigration() {
   }
 }
 
+// Función para manejar la migración de columnas gmailMessageId y gmailThreadId en activities
+async function ensureActivityGmailColumnsMigration() {
+  try {
+    // Verificar si las columnas existen
+    const [results] = await sequelize.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'activities' 
+      AND column_name IN ('gmailMessageId', 'gmailThreadId')
+    `) as [Array<{ column_name: string }>, unknown];
+
+    const existingColumns = results.map((r: any) => r.column_name);
+    const hasGmailMessageId = existingColumns.includes('gmailMessageId');
+    const hasGmailThreadId = existingColumns.includes('gmailThreadId');
+
+    if (!hasGmailMessageId) {
+      console.log('🔧 Agregando columna gmailMessageId a activities...');
+      await sequelize.query(`
+        ALTER TABLE activities 
+        ADD COLUMN IF NOT EXISTS "gmailMessageId" VARCHAR(255);
+      `);
+      console.log('✅ Columna gmailMessageId agregada a activities');
+    } else {
+      console.log('✓ Columna gmailMessageId ya existe en activities');
+    }
+
+    if (!hasGmailThreadId) {
+      console.log('🔧 Agregando columna gmailThreadId a activities...');
+      await sequelize.query(`
+        ALTER TABLE activities 
+        ADD COLUMN IF NOT EXISTS "gmailThreadId" VARCHAR(255);
+      `);
+      console.log('✅ Columna gmailThreadId agregada a activities');
+    } else {
+      console.log('✓ Columna gmailThreadId ya existe en activities');
+    }
+  } catch (error: any) {
+    console.error('❌ Error en migración de columnas Gmail de activities:', error.message);
+    // No lanzar error, solo registrar
+  }
+}
+
 // Función para manejar la migración de roleId antes de sync
 async function ensureRoleIdMigration() {
   try {
@@ -506,6 +548,9 @@ sequelize.authenticate()
     // Manejar migración de roleId antes de sync
     await ensureRoleIdMigration();
     
+    // Manejar migración de columnas gmailMessageId y gmailThreadId en activities
+    await ensureActivityGmailColumnsMigration();
+    
     // Sincronizar tablas que tienen ENUMs
     // NO usar alter: true porque puede causar conflictos cuando la columna ya existe con un enum diferente
     // Las columnas se crean manualmente en ensureAllEnumsMigration() si no existen
@@ -518,6 +563,7 @@ sequelize.authenticate()
     await Ticket.sync({ alter: false });
     await Campaign.sync({ alter: false });
     await Automation.sync({ alter: false });
+    // Activity: las columnas gmailMessageId y gmailThreadId se crean manualmente en ensureActivityGmailColumnsMigration()
     await Activity.sync({ alter: false });
     await Payment.sync({ alter: false });
     await Subscription.sync({ alter: false });

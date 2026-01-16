@@ -73,6 +73,14 @@ Activity.init({
         allowNull: true,
         defaultValue: false,
     },
+    gmailMessageId: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: true,
+    },
+    gmailThreadId: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: true,
+    },
 }, {
     sequelize: database_1.sequelize,
     tableName: 'activities',

@@ -1,11 +1,15 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+
+type LayoutMode = 'vertical' | 'collapsed' | 'horizontal';
 
 interface SidebarContextType {
   open: boolean;
   collapsed: boolean;
+  layoutMode: LayoutMode;
   toggleSidebar: () => void;
   toggleCollapsed: () => void;
   setOpen: (open: boolean) => void;
+  setLayoutMode: (mode: LayoutMode) => void;
 }
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
@@ -13,6 +17,14 @@ const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 export const SidebarProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [open, setOpen] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>(() => {
+    const saved = localStorage.getItem('layoutMode') as LayoutMode;
+    return saved || 'vertical';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('layoutMode', layoutMode);
+  }, [layoutMode]);
 
   const toggleSidebar = () => {
     setOpen((prev) => !prev);
@@ -23,7 +35,15 @@ export const SidebarProvider: React.FC<{ children: ReactNode }> = ({ children })
   };
 
   return (
-    <SidebarContext.Provider value={{ open, collapsed, toggleSidebar, toggleCollapsed, setOpen }}>
+    <SidebarContext.Provider value={{ 
+      open, 
+      collapsed, 
+      layoutMode,
+      toggleSidebar, 
+      toggleCollapsed, 
+      setOpen,
+      setLayoutMode 
+    }}>
       {children}
     </SidebarContext.Provider>
   );

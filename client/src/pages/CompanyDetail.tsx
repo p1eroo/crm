@@ -19,13 +19,11 @@ import {
   FormControlLabel,
   InputAdornment,
   useTheme,
-  Drawer,
   FormControl,
 } from "@mui/material";
 import {
   Email,
   Close,
-  KeyboardArrowLeft,
 } from "@mui/icons-material";
 import { faCalendar, faClock } from "@fortawesome/free-regular-svg-icons";
 import { library } from "@fortawesome/fontawesome-svg-core";
@@ -136,7 +134,6 @@ const CompanyDetail: React.FC = () => {
   // const [expandedNotes, setExpandedNotes] = useState<Set<number>>(new Set());
   // const [expandedActivities, setExpandedActivities] = useState<Set<number>>(new Set());
   // const [noteActionMenus, setNoteActionMenus] = useState<{ [key: number]: HTMLElement | null }>({});
-  const [summaryExpanded, setSummaryExpanded] = useState<boolean>(false);
   const [dealSortOrder, setDealSortOrder] = useState<"asc" | "desc">("asc");
   const [dealSortField, setDealSortField] = useState<
     "name" | "amount" | "closeDate" | "stage" | undefined
@@ -547,10 +544,6 @@ const CompanyDetail: React.FC = () => {
   }, [noteOpen, emailOpen, callOpen, taskOpen, meetingOpen]);
 
 
-  // Asegurar que el resumen esté contraído al cambiar de empresa
-  useEffect(() => {
-    setSummaryExpanded(false);
-  }, [id]);
 
   const getContactInitials = (firstName?: string, lastName?: string) => {
     if (firstName && lastName) {
@@ -725,17 +718,21 @@ const CompanyDetail: React.FC = () => {
   }) => {
     try {
       // Enviar email a través del backend (el backend obtendrá el token automáticamente)
-      await api.post("/emails/send", {
+      const emailResponse = await api.post("/emails/send", {
         to: emailData.to,
         subject: emailData.subject,
         body: emailData.body,
       });
 
-      // Registrar como actividad
+      const { messageId, threadId } = emailResponse.data;
+
+      // Registrar como actividad con messageId y threadId
       const response = await api.post("/activities/emails", {
         subject: emailData.subject,
         description: emailData.body.replace(/<[^>]*>/g, ""), // Remover HTML para la descripción
         companyId: id,
+        gmailMessageId: messageId,
+        gmailThreadId: threadId,
       });
       const newActivity = response.data;
 
@@ -1866,152 +1863,7 @@ const tab2Content = (
       }
     />
 
-    {/* Botón flotante para abrir el Drawer de Registros Asociados */}
-    {!summaryExpanded && (
-      <Box
-        sx={{
-          position: "fixed",
-          right: 0,
-          top: "50%",
-          transform: "translateY(-50%)",
-          zIndex: 1000,
-          display: { xs: "none", lg: "flex" },
-        }}
-      >
-        <IconButton
-          onClick={() => setSummaryExpanded(true)}
-          sx={{
-            backgroundColor:
-              theme.palette.mode === "dark"
-                ? "rgba(46, 125, 50, 0.8)"
-                : "rgba(46, 125, 50, 0.1)",
-            color: "#2E7D32",
-            borderRadius: "8px 0 0 8px",
-            width: 40,
-            height: 80,
-            transition: "all 0.2s ease",
-            "&:hover": {
-              backgroundColor:
-                theme.palette.mode === "dark"
-                  ? "rgba(46, 125, 50, 0.9)"
-                  : "rgba(46, 125, 50, 0.15)",
-            },
-          }}
-        >
-          <KeyboardArrowLeft sx={{ fontSize: 24 }} />
-        </IconButton>
-      </Box>
-    )}
-
     {/* MANTENER TODOS LOS MODALES Y DIALOGS DESDE AQUÍ */}
-
-      {/* Botón flotante para abrir el Drawer de Registros Asociados */}
-      {!summaryExpanded && (
-        <Box
-          sx={{
-            position: "fixed",
-            right: 0,
-            top: "50%",
-            transform: "translateY(-50%)",
-            zIndex: 1000,
-            display: { xs: "none", lg: "flex" },
-          }}
-        >
-          <IconButton
-            onClick={() => setSummaryExpanded(true)}
-            sx={{
-              backgroundColor:
-                theme.palette.mode === "dark"
-                  ? "rgba(46, 125, 50, 0.8)"
-                  : "rgba(46, 125, 50, 0.1)",
-              color: "#2E7D32",
-              borderRadius: "8px 0 0 8px",
-              width: 40,
-              height: 80,
-              transition: "all 0.2s ease",
-              "&:hover": {
-                backgroundColor:
-                  theme.palette.mode === "dark"
-                    ? "rgba(46, 125, 50, 0.9)"
-                    : "rgba(46, 125, 50, 0.15)",
-              },
-            }}
-          >
-            <KeyboardArrowLeft sx={{ fontSize: 24 }} />
-          </IconButton>
-        </Box>
-      )}
-
-      {/* Drawer de Registros Asociados */}
-      <Drawer
-        anchor="right"
-        open={summaryExpanded}
-        onClose={() => setSummaryExpanded(false)}
-        PaperProps={{
-          sx: {
-            width: "100vw",
-            maxWidth: "100vw",
-            height: "100vh",
-            maxHeight: "100vh",
-          },
-        }}
-      >
-        <Box
-          sx={{
-            height: "100%",
-            display: "flex",
-            flexDirection: "column",
-            bgcolor: theme.palette.background.default,
-          }}
-        >
-          {/* Header del Drawer */}
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              p: 3,
-              borderBottom: `1px solid ${theme.palette.divider}`,
-              bgcolor: theme.palette.background.paper,
-            }}
-          >
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              Estadísticas de Servicios
-            </Typography>
-            <IconButton
-              onClick={() => setSummaryExpanded(false)}
-              sx={{
-                color: theme.palette.text.secondary,
-                "&:hover": {
-                  bgcolor: theme.palette.action.hover,
-                },
-              }}
-            >
-              <Close />
-            </IconButton>
-          </Box>
-
-          {/* Contenido del Drawer */}
-          <Box
-            sx={{
-              flex: 1,
-              overflowY: "auto",
-              overflowX: "hidden",
-              width: "100%",
-              height: "100%",
-              p: 3,
-              // Ocultar scrollbar pero mantener scroll funcional
-              "&::-webkit-scrollbar": {
-                display: "none",
-                width: 0,
-              },
-              // Para Firefox
-              scrollbarWidth: "none",
-            }}
-          >
-          </Box>
-        </Box>
-      </Drawer>
 
       {/* Mensaje de éxito */}
       {successMessage && (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -23,7 +23,7 @@ import { taxiMonterricoColors } from '../theme/colors';
 interface EmailComposerProps {
   open: boolean;
   onClose: () => void;
-  recipientEmail: string;
+  recipientEmail?: string;
   recipientName?: string;
   onSend?: (emailData: { to: string; subject: string; body: string }) => Promise<void>;
 }
@@ -36,13 +36,26 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
   onSend,
 }) => {
   const theme = useTheme();
+  const [to, setTo] = useState(recipientEmail || '');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
+  // Actualizar 'to' cuando recipientEmail cambia
+  useEffect(() => {
+    if (recipientEmail) {
+      setTo(recipientEmail);
+    }
+  }, [recipientEmail]);
+
   const handleSend = async () => {
+    if (!to.trim()) {
+      setError('El destinatario es requerido');
+      return;
+    }
+
     if (!subject.trim()) {
       setError('El asunto es requerido');
       return;
@@ -59,7 +72,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
     try {
       if (onSend) {
         await onSend({
-          to: recipientEmail,
+          to: to.trim(),
           subject: subject.trim(),
           body: body,
         });
@@ -76,6 +89,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
   };
 
   const handleClose = () => {
+    setTo(recipientEmail || '');
     setSubject('');
     setBody('');
     setError('');
@@ -161,10 +175,16 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
           <Box sx={{ mb: 2 }}>
             <TextField
               label="Para"
-              value={recipientName ? `${recipientName} <${recipientEmail}>` : recipientEmail}
+              value={recipientEmail && !recipientName ? recipientEmail : (recipientName ? `${recipientName} <${recipientEmail}>` : to)}
+              onChange={(e) => {
+                if (!recipientEmail) {
+                  setTo(e.target.value);
+                }
+              }}
               fullWidth
-              disabled
+              disabled={!!recipientEmail}
               size="small"
+              placeholder="correo@ejemplo.com"
               sx={{
                 '& .MuiOutlinedInput-root': {
                   backgroundColor: theme.palette.mode === 'dark' 

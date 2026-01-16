@@ -43,14 +43,44 @@ import { SettingsDrawer } from '../SettingsDrawer';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartPie, faIndustry, faHandHoldingDollar } from '@fortawesome/free-solid-svg-icons';
 import { faAddressBook } from '@fortawesome/free-regular-svg-icons';
-import { CalendarToday, Assessment } from '@mui/icons-material';
+import { CalendarToday, Assessment, History, Security, Mail } from '@mui/icons-material';
+import { useLocation } from 'react-router-dom';
+import logo from '../../assets/tm_login.png';
 
 const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const theme = useTheme();
   const { mode, toggleTheme } = useThemeContext();
-  const { open: sidebarOpen, toggleSidebar, toggleCollapsed } = useSidebar();
+  const { open: sidebarOpen, toggleSidebar, toggleCollapsed, layoutMode } = useSidebar();
+  
+  const isHorizontal = layoutMode === 'horizontal';
+  
+  // Items del menú para el modo horizontal (mismos que en Sidebar)
+  const mainMenuItems = [
+    { text: 'Dashboard', icon: <FontAwesomeIcon icon={faChartPie} />, path: '/dashboard', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Contactos', icon: <FontAwesomeIcon icon={faAddressBook} />, path: '/contacts', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Empresas', icon: <FontAwesomeIcon icon={faIndustry} />, path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Negocios', icon: <FontAwesomeIcon icon={faHandHoldingDollar} />, path: '/deals', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Tareas', icon: <Assignment />, path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Calendario', icon: <CalendarToday />, path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Correos', icon: <Mail />, path: '/emails', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Reportes', icon: <Assessment />, path: '/reports', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  ];
+
+  const adminMenuItems = [
+    { text: 'Logs del Sistema', icon: <History />, path: '/system-logs', roles: ['admin'] },
+    { text: 'Roles y Permisos', icon: <Security />, path: '/roles-permissions', roles: ['admin'] },
+  ];
+
+  // Filtrar items según el rol del usuario
+  const filteredMainItems = mainMenuItems.filter(item => 
+    !item.roles || !user?.role || item.roles.includes(user.role)
+  );
+  const filteredAdminItems = adminMenuItems.filter(item => 
+    !item.roles || !user?.role || item.roles.includes(user.role)
+  );
   
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
@@ -99,6 +129,11 @@ const Header: React.FC = () => {
       title: 'Calendario', 
       path: '/calendar', 
       icon: <CalendarToday />,
+    },
+    { 
+      title: 'Correos', 
+      path: '/emails', 
+      icon: <Mail />,
     },
     { 
       title: 'Reportes', 
@@ -333,13 +368,15 @@ const Header: React.FC = () => {
         WebkitBackdropFilter: isScrolled ? 'blur(10px)' : 'none', // Para Safari
         pl: { xs: 1, sm: 1.5 },
         pr: { xs: 1, sm: 6.5 },
-        pt: { xs: 1, sm: 1.25 },
-        pb: { xs: 1, sm: 1.25 },
+        pt: isHorizontal ? 0 : { xs: 1, sm: 1.25 },
+        pb: isHorizontal ? 0 : { xs: 1, sm: 1.25 },
         display: 'flex',
-        alignItems: 'center',
+        flexDirection: isHorizontal ? 'column' : 'row',
+        alignItems: isHorizontal ? 'stretch' : 'center',
         justifyContent: 'flex-start',
-        gap: 0,
-        height: { xs: 60, sm: 72 },
+        gap: isHorizontal ? 1 : 0,
+        height: isHorizontal ? 'auto' : { xs: 60, sm: 72 },
+        minHeight: isHorizontal ? 'auto' : { xs: 60, sm: 72 },
         position: { xs: 'fixed', sm: 'sticky' },
         top: 0,
         left: { 
@@ -349,53 +386,350 @@ const Header: React.FC = () => {
         zIndex: { xs: 1400, sm: 1300 },
         marginLeft: 0,
         marginRight: 0,
-        borderBottom: { xs: `1px solid ${theme.palette.divider}`, sm: 'none' },
+        borderBottom: isHorizontal 
+          ? `1px solid ${theme.palette.divider}` 
+          : { xs: `1px solid ${theme.palette.divider}`, sm: 'none' },
         transition: 'all 0.3s ease', // Transición suave para todos los cambios
       }}
     >
-      {/* Botón de menú - Solo visible en móviles */}
-      <Box sx={{ 
-        display: { xs: 'flex', sm: 'none' }, // Oculto en desktop, visible en móviles
-        alignItems: 'center', 
-        gap: { xs: 1, sm: 1 }, 
-        flexShrink: 0,
-      }}>
-        {/* Icono de menú para toggle del sidebar */}
-        <IconButton
-          onClick={() => {
-            if (sidebarOpen) {
-              toggleCollapsed();
-            } else {
-              toggleSidebar();
-            }
-          }}
-          size="small"
+      {/* Cuando es horizontal: Primera fila - Logo + elementos de la derecha */}
+      {isHorizontal && (
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between',
+          width: '100%',
+          mt: 1.5,
+          mb: 0.5,
+        }}>
+          {/* Logo grande */}
+          <Box
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 0,
+              px: 2,
+              flexShrink: 0,
+              width: 'fit-content',
+              height: 'fit-content',
+              lineHeight: 0,
+            }}
+          >
+            <img
+              src={logo}
+              alt="Taxi Monterrico"
+              onClick={() => navigate('/dashboard')}
+              style={{ 
+                height: 30, 
+                width: 'auto',
+                cursor: 'pointer',
+              }}
+            />
+          </Box>
+
+          {/* Elementos de la derecha: búsqueda, tema, notificaciones, configuración, perfil */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            {/* Búsqueda */}
+            <Button
+              onClick={() => setSearchModalOpen(true)}
+              sx={{
+                bgcolor: theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.05)' 
+                  : 'rgba(0, 0, 0, 0.02)',
+                borderRadius: '50px',
+                px: 1.5,
+                py: 0.5,
+                display: 'flex',
+                alignItems: 'center',
+                transition: 'all 0.2s ease',
+                border: `1px solid ${theme.palette.divider}`,
+                textTransform: 'none',
+                color: theme.palette.text.secondary,
+                minWidth: 200,
+                justifyContent: 'flex-start',
+                '&:hover': {
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(255, 255, 255, 0.08)' 
+                    : 'rgba(0, 0, 0, 0.04)',
+                  borderColor: taxiMonterricoColors.green,
+                },
+              }}
+            >
+              <Search 
+                sx={{ 
+                  fontSize: 18,
+                  color: '#7081b9',
+                  mr: 1,
+                }} 
+              />
+              <Typography
+                sx={{
+                  fontSize: '0.875rem',
+                  color: theme.palette.text.secondary,
+                  flex: 1,
+                  textAlign: 'left',
+                }}
+              >
+                Buscar...
+              </Typography>
+              <Chip
+                label="Ctrl+K"
+                size="small"
+                sx={{
+                  height: 20,
+                  fontSize: '0.6875rem',
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(255, 255, 255, 0.1)' 
+                    : 'rgba(0, 0, 0, 0.05)',
+                  color: theme.palette.text.secondary,
+                  border: 'none',
+                  '& .MuiChip-label': {
+                    px: 0.75,
+                  },
+                }}
+              />
+            </Button>
+
+            {/* Modo oscuro */}
+            <Tooltip title={mode === 'light' ? 'Modo oscuro' : 'Modo claro'}>
+              <IconButton 
+                size="small"
+                onClick={toggleTheme}
+                sx={{ 
+                  bgcolor: 'transparent', 
+                  borderRadius: 1, 
+                  width: 40,
+                  height: 40,
+                  '&:hover': {
+                    bgcolor: theme.palette.action.hover,
+                  },
+                }}
+              >
+                {mode === 'light' ? (
+                  <DarkMode sx={{ fontSize: 24, color: '#637381' }} />
+                ) : (
+                  <LightMode sx={{ fontSize: 24, color: '#637381' }} />
+                )}
+              </IconButton>
+            </Tooltip>
+
+            {/* Notificaciones */}
+            <Tooltip title="Notificaciones">
+              <IconButton 
+                ref={notificationButtonRef}
+                size="small"
+                onClick={handleNotificationMenu}
+                sx={{ 
+                  bgcolor: 'transparent', 
+                  borderRadius: 1, 
+                  width: 40,
+                  height: 40,
+                  '&:hover': {
+                    bgcolor: theme.palette.action.hover,
+                  },
+                }}
+              >
+                <Badge 
+                  badgeContent={notificationCount > 0 ? notificationCount : undefined} 
+                  sx={{
+                    '& .MuiBadge-badge': {
+                      backgroundColor: '#ef4444',
+                      color: '#ffffff',
+                      fontSize: '0.625rem',
+                      minWidth: 16,
+                      height: 16,
+                      padding: '0 4px',
+                    },
+                  }}
+                >
+                  <Notifications sx={{ fontSize: 24, color: '#637381' }} />
+                </Badge>
+              </IconButton>
+            </Tooltip>
+
+            {/* Configuración */}
+            <Tooltip title="Configuración">
+              <IconButton
+                size="small"
+                onClick={() => setSettingsDrawerOpen(true)}
+                sx={{ 
+                  bgcolor: 'transparent', 
+                  borderRadius: 1, 
+                  width: 40,
+                  height: 40,
+                  '&:hover': {
+                    bgcolor: theme.palette.action.hover,
+                  },
+                }}
+              >
+                <Settings sx={{ fontSize: 24, color: '#637381' }} />
+              </IconButton>
+            </Tooltip>
+
+            {/* Avatar */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, cursor: 'pointer', ml: 1, mr:-3 }} onClick={handleMenu}>
+              <Avatar
+                src={user?.avatar}
+                sx={{
+                  width: 40,
+                  height: 40,
+                  bgcolor: user?.avatar ? 'transparent' : taxiMonterricoColors.green,
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  border: `1px solid ${theme.palette.divider}`,
+                }}
+              >
+                {!user?.avatar && getInitials(user?.firstName, user?.lastName)}
+              </Avatar>
+            </Box>
+          </Box>
+        </Box>
+      )}
+
+      {/* Cuando es horizontal: Segunda fila - Menú de navegación */}
+      {isHorizontal && (
+        <>
+          {/* Línea superior que se extiende completamente */}
+          <Box 
+            sx={{ 
+              borderTop: `1px solid ${theme.palette.divider}`,
+              ml: { xs: -1, sm: -1.5 },
+              mr: { xs: -1, sm: -6.5 },
+            }} 
+          />
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 0.5, 
+            overflowX: 'auto',
+            width: '100%',
+            pt: 0.5,
+            pb: 1.5,
+            pl: { xs: 1, sm: 1.5 },
+            pr: { xs: 1, sm: 6.5 },
+          }}>
+          {filteredMainItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                startIcon={item.icon}
+                sx={{
+                  color: isActive ? taxiMonterricoColors.green : theme.palette.text.secondary,
+                  fontWeight: isActive ? 600 : 400,
+                  textTransform: 'none',
+                  fontSize: '0.8125rem',
+                  px: 1.5,
+                  py: 0.75,
+                  borderRadius: 1,
+                  bgcolor: isActive 
+                    ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : `${taxiMonterricoColors.green}10`)
+                    : 'transparent',
+                  whiteSpace: 'nowrap',
+                  '&:hover': {
+                    bgcolor: isActive 
+                      ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}25` : `${taxiMonterricoColors.green}15`)
+                      : theme.palette.action.hover,
+                  },
+                  '& .MuiButton-startIcon': {
+                    marginRight: 0.5,
+                    '& svg': {
+                      fontSize: '1rem',
+                    },
+                  },
+                }}
+              >
+                {item.text}
+              </Button>
+            );
+          })}
+          {user?.role === 'admin' && filteredAdminItems.map((item) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                startIcon={item.icon}
+                sx={{
+                  color: isActive ? taxiMonterricoColors.green : theme.palette.text.secondary,
+                  fontWeight: isActive ? 600 : 400,
+                  textTransform: 'none',
+                  fontSize: '0.8125rem',
+                  px: 1.5,
+                  py: 0.75,
+                  borderRadius: 1,
+                  bgcolor: isActive 
+                    ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : `${taxiMonterricoColors.green}10`)
+                    : 'transparent',
+                  whiteSpace: 'nowrap',
+                  '&:hover': {
+                    bgcolor: isActive 
+                      ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}25` : `${taxiMonterricoColors.green}15`)
+                      : theme.palette.action.hover,
+                  },
+                  '& .MuiButton-startIcon': {
+                    marginRight: 0.5,
+                    '& svg': {
+                      fontSize: '1rem',
+                    },
+                  },
+                }}
+              >
+                {item.text}
+              </Button>
+            );
+          })}
+          </Box>
+        </>
+      )}
+
+      {/* Botón de menú - Solo visible en móviles o cuando no es horizontal */}
+      {!isHorizontal && (
+        <Box sx={{ 
+          display: { xs: 'flex', sm: 'none' }, // Oculto en desktop, visible en móviles
+          alignItems: 'center', 
+          gap: { xs: 1, sm: 1 }, 
+          flexShrink: 0,
+        }}>
+          {/* Icono de menú para toggle del sidebar */}
+          <IconButton
+            onClick={() => {
+              if (sidebarOpen) {
+                toggleCollapsed();
+              } else {
+                toggleSidebar();
+              }
+            }}
+            size="small"
+            sx={{
+              p: 0.75,
+              borderRadius: '50%',
+              minWidth: 36,
+              width: 36,
+              height: 36,
+              flexShrink: 0,
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+              },
+            }}
+          >
+            <MenuIcon sx={{ fontSize: 24, color: '#637381' }} />
+          </IconButton>
+        </Box>
+      )}
+      
+      {/* Botón de búsqueda - Desktop (solo cuando no es horizontal) */}
+      {!isHorizontal && (
+        <Box
           sx={{
-            p: 0.75,
-            borderRadius: '50%',
-            minWidth: 36,
-            width: 36,
-            height: 36,
-            flexShrink: 0,
-            '&:hover': {
-              bgcolor: theme.palette.action.hover,
-            },
+            flex: 1,
+            position: 'relative',
+            maxWidth: sidebarOpen ? '350px' : '350px',
+            marginLeft: 4,
+            display: { xs: 'none', sm: 'block' },
           }}
         >
-          <MenuIcon sx={{ fontSize: 24, color: '#637381' }} />
-        </IconButton>
-      </Box>
-      
-      {/* Botón de búsqueda - Desktop */}
-      <Box
-        sx={{
-          flex: 1,
-          position: 'relative',
-          maxWidth: sidebarOpen ? '350px' : '350px',
-          marginLeft: 4,
-          display: { xs: 'none', sm: 'block' },
-        }}
-      >
         <Button
           onClick={() => setSearchModalOpen(true)}
           sx={{
@@ -455,10 +789,12 @@ const Header: React.FC = () => {
             }}
           />
         </Button>
-      </Box>
+        </Box>
+      )}
 
-      {/* Icono de búsqueda - Solo móviles */}
-      <Box sx={{ display: { xs: 'block', sm: 'none' }, marginLeft: 1 }}>
+      {/* Icono de búsqueda - Solo móviles (solo cuando no es horizontal) */}
+      {!isHorizontal && (
+        <Box sx={{ display: { xs: 'block', sm: 'none' }, marginLeft: 1 }}>
         <IconButton
           size="small"
           onClick={() => setSearchModalOpen(true)}
@@ -474,10 +810,12 @@ const Header: React.FC = () => {
         >
           <Search sx={{ fontSize: 24, color: '#637381' }} />
         </IconButton>
-      </Box>
+        </Box>
+      )}
 
-      {/* Elementos del lado derecho */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, marginLeft: 'auto' }}>
+      {/* Elementos del lado derecho - Solo cuando NO es horizontal */}
+      {!isHorizontal && (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, marginLeft: 'auto' }}>
         {/* Modo oscuro */}
         <Tooltip title={mode === 'light' ? 'Modo oscuro' : 'Modo claro'}>
           <IconButton 
@@ -570,7 +908,8 @@ const Header: React.FC = () => {
             {!user?.avatar && getInitials(user?.firstName, user?.lastName)}
           </Avatar>
         </Box>
-      </Box>
+        </Box>
+      )}
 
       {/* Menu dropdown de notificaciones (cuando se hace clic manualmente) */}
       <Menu

@@ -1,30 +1,25 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Drawer,
   Box,
   Typography,
   IconButton,
-  Switch,
-  FormControlLabel,
   useTheme,
   Chip,
-  Button,
-  Tooltip,
 } from '@mui/material';
 import {
   Close,
   DarkMode,
-  Contrast,
-  FormatTextdirectionRToL,
-  ViewCompact,
+  LightMode,
+  SettingsBrightness,
   Info,
   Refresh,
-  Palette,
 } from '@mui/icons-material';
 import { HugeiconsIcon } from '@hugeicons/react';
 // @ts-ignore - TypeScript module resolution issue with @hugeicons/core-free-icons
 import { Maximize01Icon, Minimize01Icon } from '@hugeicons/core-free-icons';
 import { useTheme as useThemeContext } from '../context/ThemeContext';
+import { useSidebar } from '../context/SidebarContext';
 import { taxiMonterricoColors } from '../theme/colors';
 
 interface SettingsDrawerProps {
@@ -34,14 +29,23 @@ interface SettingsDrawerProps {
 
 export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose }) => {
   const theme = useTheme();
-  const { mode, toggleTheme } = useThemeContext();
-  const [contrast, setContrast] = useState(false);
-  const [rightToLeft, setRightToLeft] = useState(false);
-  const [compact, setCompact] = useState(true);
-  const [selectedLayout, setSelectedLayout] = useState(2);
-  const [selectedColor, setSelectedColor] = useState('integrate');
-  const [selectedPreset, setSelectedPreset] = useState(0);
+  const { mode, setMode } = useThemeContext();
+  const { collapsed, setOpen: setSidebarOpen, toggleCollapsed, layoutMode, setLayoutMode } = useSidebar();
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Determinar el layout actual basado en layoutMode
+  const getCurrentLayout = useCallback((): number => {
+    if (layoutMode === 'horizontal') return 2;
+    if (layoutMode === 'collapsed') return 1;
+    return 0; // vertical
+  }, [layoutMode]);
+
+  const [selectedLayout, setSelectedLayout] = useState(getCurrentLayout());
+
+  // Actualizar selectedLayout cuando cambie layoutMode
+  useEffect(() => {
+    setSelectedLayout(getCurrentLayout());
+  }, [layoutMode, getCurrentLayout]);
 
   // Función para alternar pantalla completa
   const toggleFullscreen = async () => {
@@ -72,24 +76,35 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
   }, []);
 
   const layouts = [
-    { id: 0, label: 'Layout 1' },
-    { id: 1, label: 'Layout 2' },
-    { id: 2, label: 'Layout 3' },
+    { id: 0, label: 'Vertical' },
+    { id: 1, label: 'Collapsed' },
+    { id: 2, label: 'Horizontal' },
   ];
 
-  const colors = [
-    { id: 'integrate', label: 'Integrate', color: taxiMonterricoColors.green },
-    { id: 'apparent', label: 'Apparent', color: '#637381' },
-  ];
+  const handleLayoutChange = (layoutId: number) => {
+    setSelectedLayout(layoutId);
+    
+    if (layoutId === 0) {
+      // Vertical: sidebar expandido
+      setLayoutMode('vertical');
+      setSidebarOpen(true);
+      if (collapsed) {
+        toggleCollapsed(); // Expandir si está contraído
+      }
+    } else if (layoutId === 1) {
+      // Collapsed: sidebar contraído
+      setLayoutMode('collapsed');
+      setSidebarOpen(true);
+      if (!collapsed) {
+        toggleCollapsed(); // Contraer si está expandido
+      }
+    } else if (layoutId === 2) {
+      // Horizontal: menú en la parte superior
+      setLayoutMode('horizontal');
+      setSidebarOpen(false); // Ocultar sidebar vertical
+    }
+  };
 
-  const presets = [
-    { id: 0, color: taxiMonterricoColors.green },
-    { id: 1, color: '#2196F3' },
-    { id: 2, color: '#9C27B0' },
-    { id: 3, color: '#2196F3' },
-    { id: 4, color: '#FF9800' },
-    { id: 5, color: '#F44336' },
-  ];
 
   return (
     <Drawer
@@ -164,100 +179,179 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
           {/* Mode */}
           <Box sx={{ mb: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <DarkMode sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
               <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                Mode
+                Modo
               </Typography>
             </Box>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={mode === 'dark'}
-                  onChange={toggleTheme}
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              {/* Light Mode Button */}
+              <Box
+                onClick={() => setMode('light')}
+                sx={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1,
+                  py: 2,
+                  px: 1,
+                  borderRadius: 1.5,
+                  border: `2px solid ${
+                    mode === 'light'
+                      ? taxiMonterricoColors.green
+                      : theme.palette.divider
+                  }`,
+                  bgcolor:
+                    mode === 'light'
+                      ? theme.palette.mode === 'dark'
+                        ? `${taxiMonterricoColors.green}20`
+                        : `${taxiMonterricoColors.green}10`
+                      : 'transparent',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    borderColor: taxiMonterricoColors.green,
+                    bgcolor:
+                      theme.palette.mode === 'dark'
+                        ? `${taxiMonterricoColors.green}15`
+                        : `${taxiMonterricoColors.green}08`,
+                  },
+                }}
+              >
+                <LightMode
                   sx={{
-                    '& .MuiSwitch-switchBase.Mui-checked': {
-                      color: taxiMonterricoColors.green,
-                    },
-                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                      backgroundColor: taxiMonterricoColors.green,
-                    },
+                    fontSize: 28,
+                    color:
+                      mode === 'light'
+                        ? taxiMonterricoColors.green
+                        : theme.palette.text.secondary,
                   }}
                 />
-              }
-              label=""
-              sx={{ ml: 0 }}
-            />
-          </Box>
-
-          {/* Contrast */}
-          <Box sx={{ mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <Contrast sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                Contrast
-              </Typography>
-            </Box>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={contrast}
-                  onChange={(e) => setContrast(e.target.checked)}
-                />
-              }
-              label=""
-              sx={{ ml: 0 }}
-            />
-          </Box>
-
-          {/* Right to left */}
-          <Box sx={{ mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <FormatTextdirectionRToL sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                Right to left
-              </Typography>
-            </Box>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={rightToLeft}
-                  onChange={(e) => setRightToLeft(e.target.checked)}
-                />
-              }
-              label=""
-              sx={{ ml: 0 }}
-            />
-          </Box>
-
-          {/* Compact */}
-          <Box sx={{ mb: 4 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <ViewCompact sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                Compact
-              </Typography>
-              <Tooltip title="Información">
-                <Info sx={{ fontSize: 14, color: theme.palette.text.secondary, ml: 0.5 }} />
-              </Tooltip>
-            </Box>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={compact}
-                  onChange={(e) => setCompact(e.target.checked)}
+                <Typography
+                  variant="body2"
                   sx={{
-                    '& .MuiSwitch-switchBase.Mui-checked': {
-                      color: taxiMonterricoColors.green,
-                    },
-                    '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
-                      backgroundColor: taxiMonterricoColors.green,
-                    },
+                    fontSize: '0.875rem',
+                    fontWeight: mode === 'light' ? 500 : 400,
+                    color: theme.palette.text.primary,
+                  }}
+                >
+                  Light
+                </Typography>
+              </Box>
+
+              {/* Dark Mode Button */}
+              <Box
+                onClick={() => setMode('dark')}
+                sx={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1,
+                  py: 2,
+                  px: 1,
+                  borderRadius: 1.5,
+                  border: `2px solid ${
+                    mode === 'dark'
+                      ? taxiMonterricoColors.green
+                      : theme.palette.divider
+                  }`,
+                  bgcolor:
+                    mode === 'dark'
+                      ? theme.palette.mode === 'dark'
+                        ? `${taxiMonterricoColors.green}20`
+                        : `${taxiMonterricoColors.green}10`
+                      : 'transparent',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    borderColor: taxiMonterricoColors.green,
+                    bgcolor:
+                      theme.palette.mode === 'dark'
+                        ? `${taxiMonterricoColors.green}15`
+                        : `${taxiMonterricoColors.green}08`,
+                  },
+                }}
+              >
+                <DarkMode
+                  sx={{
+                    fontSize: 28,
+                    color:
+                      mode === 'dark'
+                        ? taxiMonterricoColors.green
+                        : theme.palette.text.secondary,
                   }}
                 />
-              }
-              label=""
-              sx={{ ml: 0 }}
-            />
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontSize: '0.875rem',
+                    fontWeight: mode === 'dark' ? 500 : 400,
+                    color: theme.palette.text.primary,
+                  }}
+                >
+                  Dark
+                </Typography>
+              </Box>
+
+              {/* System Mode Button */}
+              <Box
+                onClick={() => setMode('system')}
+                sx={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 1,
+                  py: 2,
+                  px: 1,
+                  borderRadius: 1.5,
+                  border: `2px solid ${
+                    mode === 'system'
+                      ? taxiMonterricoColors.green
+                      : theme.palette.divider
+                  }`,
+                  bgcolor:
+                    mode === 'system'
+                      ? theme.palette.mode === 'dark'
+                        ? `${taxiMonterricoColors.green}20`
+                        : `${taxiMonterricoColors.green}10`
+                      : 'transparent',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    borderColor: taxiMonterricoColors.green,
+                    bgcolor:
+                      theme.palette.mode === 'dark'
+                        ? `${taxiMonterricoColors.green}15`
+                        : `${taxiMonterricoColors.green}08`,
+                  },
+                }}
+              >
+                <SettingsBrightness
+                  sx={{
+                    fontSize: 28,
+                    color:
+                      mode === 'system'
+                        ? taxiMonterricoColors.green
+                        : theme.palette.text.secondary,
+                  }}
+                />
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontSize: '0.875rem',
+                    fontWeight: mode === 'system' ? 500 : 400,
+                    color: theme.palette.text.primary,
+                  }}
+                >
+                  System
+                </Typography>
+              </Box>
+            </Box>
           </Box>
 
           {/* Nav Section */}
@@ -285,170 +379,389 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
             {/* Layout */}
             <Box sx={{ mb: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                <Refresh sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
                 <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  Layout
+                  Layouts
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', gap: 1 }}>
                 {layouts.map((layout) => (
                   <Box
                     key={layout.id}
-                    onClick={() => setSelectedLayout(layout.id)}
                     sx={{
                       flex: 1,
-                      height: 60,
-                      borderRadius: 1,
-                      border: `2px solid ${
-                        selectedLayout === layout.id
-                          ? taxiMonterricoColors.green
-                          : theme.palette.divider
-                      }`,
-                      bgcolor:
-                        selectedLayout === layout.id
-                          ? `${taxiMonterricoColors.green}10`
-                          : theme.palette.action.hover,
-                      cursor: 'pointer',
                       display: 'flex',
+                      flexDirection: 'column',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.2s',
-                      '&:hover': {
-                        borderColor: taxiMonterricoColors.green,
-                      },
+                      gap: 1,
                     }}
                   >
                     <Box
+                      onClick={() => handleLayoutChange(layout.id)}
                       sx={{
-                        width: '80%',
-                        height: '60%',
-                        bgcolor:
+                        width: '100%',
+                        height: 80,
+                        borderRadius: 1,
+                        border: `2px solid ${
                           selectedLayout === layout.id
                             ? taxiMonterricoColors.green
-                            : theme.palette.text.disabled,
-                        borderRadius: 0.5,
+                            : theme.palette.divider
+                        }`,
+                        bgcolor:
+                          selectedLayout === layout.id
+                            ? `${taxiMonterricoColors.green}10`
+                            : theme.palette.action.hover,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.2s',
+                        '&:hover': {
+                          borderColor: taxiMonterricoColors.green,
+                        },
                       }}
-                    />
+                    >
+                      {/* Icono del layout */}
+                      <Box
+                        sx={{
+                          width: '80%',
+                          height: '60%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          position: 'relative',
+                        }}
+                      >
+                        {layout.id === 0 ? (
+                          // Vertical: sidebar vertical expandido a la izquierda
+                          <>
+                            <Box
+                              sx={{
+                                width: '30%',
+                                height: '100%',
+                                bgcolor:
+                                  selectedLayout === layout.id
+                                    ? taxiMonterricoColors.green
+                                    : theme.palette.text.disabled,
+                                borderRadius: 0.5,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 0.5,
+                                p: 0.5,
+                              }}
+                            >
+                              {/* Logo/Header del sidebar */}
+                              <Box
+                                sx={{
+                                  width: '100%',
+                                  height: 8,
+                                  bgcolor:
+                                    selectedLayout === layout.id
+                                      ? 'rgba(255, 255, 255, 0.2)'
+                                      : theme.palette.text.secondary,
+                                  borderRadius: 0.5,
+                                  opacity: 0.5,
+                                }}
+                              />
+                              {/* Items del menú */}
+                              {[...Array(4)].map((_, i) => (
+                                <Box
+                                  key={i}
+                                  sx={{
+                                    width: '100%',
+                                    height: 3,
+                                    bgcolor:
+                                      selectedLayout === layout.id
+                                        ? 'rgba(255, 255, 255, 0.3)'
+                                        : theme.palette.text.secondary,
+                                    borderRadius: 0.5,
+                                    opacity: 0.6,
+                                  }}
+                                />
+                              ))}
+                            </Box>
+                            {/* Contenido principal */}
+                            <Box
+                              sx={{
+                                flex: 1,
+                                height: '100%',
+                                ml: 0.5,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 0.5,
+                              }}
+                            >
+                              {/* Header del contenido */}
+                              <Box
+                                sx={{
+                                  width: '100%',
+                                  height: 6,
+                                  bgcolor:
+                                    selectedLayout === layout.id
+                                      ? taxiMonterricoColors.green
+                                      : theme.palette.text.disabled,
+                                  borderRadius: 0.5,
+                                  opacity: 0.8,
+                                }}
+                              />
+                              {/* Contenido */}
+                              <Box sx={{ display: 'flex', gap: 0.5, flex: 1 }}>
+                                <Box
+                                  sx={{
+                                    flex: 1,
+                                    height: '100%',
+                                    bgcolor:
+                                      selectedLayout === layout.id
+                                        ? taxiMonterricoColors.green
+                                        : theme.palette.text.disabled,
+                                    borderRadius: 0.5,
+                                    opacity: 0.5,
+                                  }}
+                                />
+                                <Box
+                                  sx={{
+                                    flex: 1,
+                                    height: '100%',
+                                    bgcolor:
+                                      selectedLayout === layout.id
+                                        ? taxiMonterricoColors.green
+                                        : theme.palette.text.disabled,
+                                    borderRadius: 0.5,
+                                    opacity: 0.5,
+                                  }}
+                                />
+                              </Box>
+                              {/* Footer del contenido */}
+                              <Box
+                                sx={{
+                                  width: '100%',
+                                  height: 4,
+                                  bgcolor:
+                                    selectedLayout === layout.id
+                                      ? taxiMonterricoColors.green
+                                      : theme.palette.text.disabled,
+                                  borderRadius: 0.5,
+                                  opacity: 0.4,
+                                }}
+                              />
+                            </Box>
+                          </>
+                        ) : layout.id === 1 ? (
+                          // Collapsed: sidebar vertical contraído a la izquierda
+                          <>
+                            <Box
+                              sx={{
+                                width: '15%',
+                                height: '100%',
+                                bgcolor:
+                                  selectedLayout === layout.id
+                                    ? taxiMonterricoColors.green
+                                    : theme.palette.text.disabled,
+                                borderRadius: 0.5,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                py: 0.5,
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  width: 6,
+                                  height: 6,
+                                  borderRadius: 0.5,
+                                  bgcolor:
+                                    selectedLayout === layout.id
+                                      ? 'rgba(255, 255, 255, 0.3)'
+                                      : theme.palette.text.secondary,
+                                }}
+                              />
+                              {[...Array(5)].map((_, i) => (
+                                <Box
+                                  key={i}
+                                  sx={{
+                                    width: '50%',
+                                    height: 2,
+                                    bgcolor:
+                                      selectedLayout === layout.id
+                                        ? 'rgba(255, 255, 255, 0.3)'
+                                        : theme.palette.text.secondary,
+                                    borderRadius: 0.5,
+                                  }}
+                                />
+                              ))}
+                            </Box>
+                            <Box
+                              sx={{
+                                flex: 1,
+                                height: '100%',
+                                ml: 0.5,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 0.5,
+                              }}
+                            >
+                              <Box
+                                sx={{
+                                  width: '100%',
+                                  height: 2,
+                                  bgcolor:
+                                    selectedLayout === layout.id
+                                      ? taxiMonterricoColors.green
+                                      : theme.palette.text.disabled,
+                                  borderRadius: 0.5,
+                                }}
+                              />
+                              <Box sx={{ display: 'flex', gap: 0.5, flex: 1 }}>
+                                <Box
+                                  sx={{
+                                    flex: 1,
+                                    height: '100%',
+                                    bgcolor:
+                                      selectedLayout === layout.id
+                                        ? taxiMonterricoColors.green
+                                        : theme.palette.text.disabled,
+                                    borderRadius: 0.5,
+                                    opacity: 0.6,
+                                  }}
+                                />
+                                <Box
+                                  sx={{
+                                    flex: 1,
+                                    height: '100%',
+                                    bgcolor:
+                                      selectedLayout === layout.id
+                                        ? taxiMonterricoColors.green
+                                        : theme.palette.text.disabled,
+                                    borderRadius: 0.5,
+                                    opacity: 0.6,
+                                  }}
+                                />
+                              </Box>
+                              <Box
+                                sx={{
+                                  width: '100%',
+                                  height: '30%',
+                                  bgcolor:
+                                    selectedLayout === layout.id
+                                      ? taxiMonterricoColors.green
+                                      : theme.palette.text.disabled,
+                                  borderRadius: 0.5,
+                                  opacity: 0.4,
+                                }}
+                              />
+                            </Box>
+                          </>
+                        ) : (
+                          // Horizontal: header con tabs arriba, contenido abajo
+                          <Box
+                            sx={{
+                              width: '100%',
+                              height: '100%',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: 0.5,
+                            }}
+                          >
+                            {/* Barra superior con tabs */}
+                            <Box
+                              sx={{
+                                width: '100%',
+                                height: 5,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                px: 0.5,
+                              }}
+                            >
+                              {[...Array(5)].map((_, i) => (
+                                <Box
+                                  key={i}
+                                  sx={{
+                                    flex: 1,
+                                    height: 3,
+                                    bgcolor:
+                                      selectedLayout === layout.id
+                                        ? i === 0
+                                          ? taxiMonterricoColors.green // Primer tab más oscuro (activo)
+                                          : 'rgba(46, 125, 50, 0.3)' // Tabs más claros
+                                        : i === 0
+                                        ? theme.palette.text.secondary
+                                        : theme.palette.text.disabled,
+                                    borderRadius: 0.5,
+                                    opacity: i === 0 ? 1 : 0.6,
+                                  }}
+                                />
+                              ))}
+                            </Box>
+                            
+                            {/* Fila superior: cuadrado pequeño + rectángulo grande */}
+                            <Box
+                              sx={{
+                                width: '100%',
+                                flex: 1,
+                                display: 'flex',
+                                gap: 0.5,
+                              }}
+                            >
+                              {/* Cuadrado pequeño a la izquierda */}
+                              <Box
+                                sx={{
+                                  width: '25%',
+                                  aspectRatio: '1',
+                                  bgcolor:
+                                    selectedLayout === layout.id
+                                      ? taxiMonterricoColors.green
+                                      : theme.palette.text.disabled,
+                                  borderRadius: 0.5,
+                                  opacity: 0.5,
+                                }}
+                              />
+                              {/* Rectángulo grande a la derecha */}
+                              <Box
+                                sx={{
+                                  flex: 1,
+                                  bgcolor:
+                                    selectedLayout === layout.id
+                                      ? taxiMonterricoColors.green
+                                      : theme.palette.text.disabled,
+                                  borderRadius: 0.5,
+                                  opacity: 0.5,
+                                }}
+                              />
+                            </Box>
+                            
+                            {/* Fila inferior: rectángulo ancho */}
+                            <Box
+                              sx={{
+                                width: '100%',
+                                height: '25%',
+                                bgcolor:
+                                  selectedLayout === layout.id
+                                    ? taxiMonterricoColors.green
+                                    : theme.palette.text.disabled,
+                                borderRadius: 0.5,
+                                opacity: 0.4,
+                              }}
+                            />
+                          </Box>
+                        )}
+                      </Box>
+                    </Box>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontSize: '0.75rem',
+                        color: theme.palette.text.secondary,
+                        fontWeight: selectedLayout === layout.id ? 500 : 400,
+                      }}
+                    >
+                      {layout.label}
+                    </Typography>
                   </Box>
                 ))}
               </Box>
             </Box>
 
-            {/* Color */}
-            <Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                <Palette sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  Color
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 1 }}>
-                {colors.map((color) => (
-                  <Button
-                    key={color.id}
-                    onClick={() => setSelectedColor(color.id)}
-                    variant={selectedColor === color.id ? 'contained' : 'outlined'}
-                    sx={{
-                      flex: 1,
-                      py: 1.5,
-                      borderRadius: 1,
-                      borderColor: color.color,
-                      bgcolor: selectedColor === color.id ? color.color : 'transparent',
-                      color: selectedColor === color.id ? 'white' : color.color,
-                      '&:hover': {
-                        bgcolor: selectedColor === color.id ? color.color : `${color.color}10`,
-                        borderColor: color.color,
-                      },
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 16,
-                        height: 16,
-                        bgcolor: selectedColor === color.id ? 'white' : color.color,
-                        borderRadius: 0.5,
-                        mr: 1,
-                      }}
-                    />
-                    {color.label}
-                  </Button>
-                ))}
-              </Box>
-            </Box>
-          </Box>
-
-          {/* Presets Section */}
-          <Box sx={{ mb: 4 }}>
-            <Chip
-              label="Presets"
-              sx={{
-                bgcolor: theme.palette.mode === 'dark' ? '#1F2937' : '#111827',
-                color: 'white',
-                mb: 2,
-                height: 24,
-                '& .MuiChip-label': {
-                  px: 1.5,
-                },
-              }}
-            />
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>
-              {presets.map((preset) => (
-                <Box
-                  key={preset.id}
-                  onClick={() => setSelectedPreset(preset.id)}
-                  sx={{
-                    aspectRatio: '1',
-                    borderRadius: 1,
-                    border: `2px solid ${
-                      selectedPreset === preset.id
-                        ? preset.color
-                        : theme.palette.divider
-                    }`,
-                    bgcolor:
-                      selectedPreset === preset.id
-                        ? `${preset.color}20`
-                        : theme.palette.background.paper,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 0.5,
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                      borderColor: preset.color,
-                    },
-                  }}
-                >
-                  <Box
-                    sx={{
-                      width: '60%',
-                      height: 3,
-                      bgcolor: preset.color,
-                      borderRadius: 1,
-                    }}
-                  />
-                  <Box
-                    sx={{
-                      width: '60%',
-                      height: 3,
-                      bgcolor: preset.color,
-                      borderRadius: 1,
-                    }}
-                  />
-                  {preset.id === 0 && (
-                    <Box
-                      sx={{
-                        width: '60%',
-                        height: 3,
-                        bgcolor: preset.color,
-                        borderRadius: 1,
-                      }}
-                    />
-                  )}
-                </Box>
-              ))}
-            </Box>
           </Box>
 
           {/* Font Section */}

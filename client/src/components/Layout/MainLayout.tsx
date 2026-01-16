@@ -11,9 +11,10 @@ interface MainLayoutProps {
 
 const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const theme = useTheme();
-  const { open, collapsed, toggleCollapsed, toggleSidebar } = useSidebar();
+  const { open, collapsed, toggleCollapsed, toggleSidebar, layoutMode } = useSidebar();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
+  const isHorizontal = layoutMode === 'horizontal';
   const drawerWidth = collapsed 
     ? (isMobile ? 0 : 90) 
     : 300;
@@ -24,13 +25,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       <Box sx={{ 
         width: { 
           xs: '100vw',
-          sm: open ? `calc(100vw - ${drawerWidth}px)` : '100vw'
+          sm: isHorizontal ? '100vw' : (open ? `calc(100vw - ${drawerWidth}px)` : '100vw')
         },
         position: 'sticky',
         top: 0,
         left: { 
           xs: 0,
-          sm: open ? `${drawerWidth}px` : 0 
+          sm: isHorizontal ? 0 : (open ? `${drawerWidth}px` : 0)
         },
         zIndex: 1300,
       }}>
@@ -44,10 +45,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         overflowX: 'hidden', 
         position: 'relative' 
       }}>
-        <Sidebar />
+        {/* Sidebar solo visible cuando no es horizontal */}
+        {!isHorizontal && <Sidebar />}
         
-        {/* Botón para expandir/contraer sidebar - similar a minimals.cc */}
-        {!isMobile && (
+        {/* Botón para expandir/contraer sidebar - solo cuando no es horizontal */}
+        {!isMobile && !isHorizontal && (
           <IconButton
             onClick={() => {
               if (open) {
@@ -94,7 +96,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             width: '100%',
             marginLeft: { 
               xs: 0,
-              sm: open ? `${drawerWidth}px` : 0 
+              sm: isHorizontal ? 0 : (open ? `${drawerWidth}px` : 0)
             },
             display: 'flex',
             flexDirection: 'column',
@@ -110,7 +112,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             flex: 1, 
             bgcolor: theme.palette.background.default, 
             px: { xs: 3.5, sm: 5, md: 6, lg: 5, xl: 8 },
-            pt: { xs: 1.5, sm: 2.5 }, 
+            pt: isHorizontal 
+              ? { xs: 3, sm: 4 }
+              : { xs: 1.5, sm: 2.5 }, 
             pb: 0,
             width: '100%',
             maxWidth: { lg: '1400px', xl: '1600px' },

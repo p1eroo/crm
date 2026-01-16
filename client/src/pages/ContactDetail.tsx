@@ -682,13 +682,15 @@ const ContactDetail: React.FC = () => {
   }) => {
     try {
       // Enviar email a través del backend (el backend obtendrá el token automáticamente)
-      await api.post("/emails/send", {
+      const emailResponse = await api.post("/emails/send", {
         to: emailData.to,
         subject: emailData.subject,
         body: emailData.body,
       });
 
-      // Registrar como actividad
+      const { messageId, threadId } = emailResponse.data;
+
+      // Registrar como actividad con messageId y threadId
       const companies =
         contact?.Companies && Array.isArray(contact.Companies)
           ? contact.Companies
@@ -704,6 +706,8 @@ const ContactDetail: React.FC = () => {
             description: emailData.body.replace(/<[^>]*>/g, ""), // Remover HTML para la descripción
             contactId: id,
             companyId: company.id,
+            gmailMessageId: messageId,
+            gmailThreadId: threadId,
           })
         );
         const responses = await Promise.all(activityPromises);
@@ -713,6 +717,8 @@ const ContactDetail: React.FC = () => {
           subject: emailData.subject,
           description: emailData.body.replace(/<[^>]*>/g, ""),
           contactId: id,
+          gmailMessageId: messageId,
+          gmailThreadId: threadId,
         });
         newActivities = [response.data];
       }
