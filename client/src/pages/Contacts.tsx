@@ -57,6 +57,7 @@ import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from "../components/UnifiedTable
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserTie } from "@fortawesome/free-solid-svg-icons";
 import EntityPreviewDrawer from "../components/EntityPreviewDrawer";
+import ContactCompanyModal from "../components/ContactCompanyModal";
 
 interface Contact {
   id: number;
@@ -134,8 +135,10 @@ const Contacts: React.FC = () => {
     country: "",
   });
   const [companies, setCompanies] = useState<any[]>([]);
-  const [loadingCompanies, setLoadingCompanies] = useState(false);
   const [createCompanyDialogOpen, setCreateCompanyDialogOpen] = useState(false);
+  const [addCompanyModalOpen, setAddCompanyModalOpen] = useState(false);
+  const [createCompanyModalOpen, setCreateCompanyModalOpen] = useState(false);
+  const [selectedCompanyName, setSelectedCompanyName] = useState<string>("");
   const [companyFormData, setCompanyFormData] = useState({
     name: "",
     domain: "",
@@ -497,17 +500,7 @@ const Contacts: React.FC = () => {
     }
   }, [search, currentPage, itemsPerPage, selectedStages, selectedCountries, selectedOwnerFilters, sortBy, filterRules, debouncedColumnFilters]);
 
-  const fetchCompanies = useCallback(async () => {
-    try {
-      setLoadingCompanies(true);
-      const response = await api.get("/companies");
-      setCompanies(response.data.companies || response.data || []);
-    } catch (error) {
-      console.error("Error fetching companies:", error);
-    } finally {
-      setLoadingCompanies(false);
-    }
-  }, []);
+  // fetchCompanies removido - ya no se cargan todas las empresas al inicio
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -530,9 +523,10 @@ const Contacts: React.FC = () => {
     fetchContacts();
   }, [fetchContacts]);
 
-  useEffect(() => {
-    fetchCompanies();
-  }, [fetchCompanies]);
+  // Comentado: ya no cargamos todas las empresas al inicio
+  // useEffect(() => {
+  //   fetchCompanies();
+  // }, [fetchCompanies]);
 
   useEffect(() => {
     if (user?.role === "admin") {
@@ -562,6 +556,7 @@ const Contacts: React.FC = () => {
         state: contact.state || "",
         country: contact.country || "",
       });
+      setSelectedCompanyName(contact.Company?.name || contact.Companies?.[0]?.name || "");
     } else {
       setEditingContact(null);
       setFormData({
@@ -579,6 +574,7 @@ const Contacts: React.FC = () => {
         state: "",
         country: "",
       });
+      setSelectedCompanyName("");
       setIdType("dni"); // Resetear a DNI por defecto
     }
     setDniError("");
@@ -1046,6 +1042,7 @@ const Contacts: React.FC = () => {
         ...prev,
         companyId: response.data.id.toString(),
       }));
+      setSelectedCompanyName(response.data.name);
 
       // Cerrar el diálogo y limpiar el formulario
       setCreateCompanyDialogOpen(false);
@@ -1067,6 +1064,36 @@ const Contacts: React.FC = () => {
       console.error("Error creating company:", error);
       setRucError(error.response?.data?.error || "Error al crear la empresa");
     }
+  };
+
+  // Función para manejar cuando se selecciona una empresa del modal
+  const handleCompanySelected = (company?: any) => {
+    if (company && company.id) {
+      setFormData((prev) => ({
+        ...prev,
+        companyId: company.id.toString(),
+      }));
+      setSelectedCompanyName(company.name || "");
+      if (formErrors.companyId) {
+        setFormErrors((prev) => ({ ...prev, companyId: "" }));
+      }
+    }
+    setAddCompanyModalOpen(false);
+  };
+
+  // Función para manejar cuando se crea una nueva empresa desde el modal
+  const handleCompanyCreated = (company: any) => {
+    if (company && company.id) {
+      setFormData((prev) => ({
+        ...prev,
+        companyId: company.id.toString(),
+      }));
+      setSelectedCompanyName(company.name || "");
+      if (formErrors.companyId) {
+        setFormErrors((prev) => ({ ...prev, companyId: "" }));
+      }
+    }
+    setCreateCompanyModalOpen(false);
   };
 
   const handleSubmit = async () => {
@@ -2953,24 +2980,17 @@ const Contacts: React.FC = () => {
             <TextField
               select
               label="Empresa Principal"
-              value={formData.companyId}
+              value={formData.companyId || ""}
               onChange={(e) => {
-                if (e.target.value === "create_new") {
-                  setCreateCompanyDialogOpen(true);
-                } else {
-                  setFormData((prev) => ({
-                    ...prev,
-                    companyId: e.target.value,
-                  }));
-                  if (formErrors.companyId) {
-                    setFormErrors((prev) => ({ ...prev, companyId: "" }));
-                  }
+                if (e.target.value === "add_existing") {
+                  setAddCompanyModalOpen(true);
+                } else if (e.target.value === "create_new") {
+                  setCreateCompanyModalOpen(true);
                 }
               }}
               error={!!formErrors.companyId}
               helperText={formErrors.companyId}
               required
-              disabled={loadingCompanies}
               fullWidth
               SelectProps={{
                 MenuProps: {
@@ -2999,12 +3019,18 @@ const Contacts: React.FC = () => {
                 },
               }}
             >
-              {companies.map((company) => (
-                <MenuItem key={company.id} value={company.id.toString()}>
-                  {company.name}
+              {formData.companyId && selectedCompanyName && (
+                <MenuItem value={formData.companyId} disabled>
+                  {selectedCompanyName}
                 </MenuItem>
-              ))}
-              <Divider />
+              )}
+              {formData.companyId && <Divider />}
+              <MenuItem value="add_existing">
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Business sx={{ fontSize: 18 }} />
+                  Agregar empresa
+                </Box>
+              </MenuItem>
               <MenuItem
                 value="create_new"
                 sx={{ color: taxiMonterricoColors.green }}
@@ -3577,6 +3603,26 @@ const Contacts: React.FC = () => {
           )}
         </DialogActions>
       </Dialog>
+
+      {/* Modal para agregar empresa existente */}
+      <ContactCompanyModal
+        open={addCompanyModalOpen}
+        onClose={() => setAddCompanyModalOpen(false)}
+        user={user}
+        onSelect={handleCompanySelected}
+        onCreate={handleCompanyCreated}
+        mode="select"
+      />
+
+      {/* Modal para crear nueva empresa */}
+      <ContactCompanyModal
+        open={createCompanyModalOpen}
+        onClose={() => setCreateCompanyModalOpen(false)}
+        user={user}
+        onSelect={handleCompanySelected}
+        onCreate={handleCompanyCreated}
+        mode="create"
+      />
     </Box>
   );
 };

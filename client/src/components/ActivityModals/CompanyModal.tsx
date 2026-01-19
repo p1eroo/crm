@@ -490,7 +490,14 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
         (id) => !excludedCompanyIds.includes(id)
       );
       
-      if (entityId && newCompanyIds.length > 0) {
+      if (newCompanyIds.length === 0) {
+        // Si no hay empresas nuevas, solo cerrar el modal
+        handleClose();
+        return;
+      }
+
+      // Si hay entityId válido, asociar las empresas a la entidad
+      if (entityId && entityId !== 0) {
         const associationEndpoint = getAssociationEndpoint();
         if (associationEndpoint) {
           await api.post(associationEndpoint, {
@@ -499,8 +506,22 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
         }
         onSave();
         handleClose();
-      } else if (newCompanyIds.length === 0) {
-        // Si no hay empresas nuevas, solo cerrar el modal
+      } else {
+        // Si no hay entityId válido (ej: creando contacto nuevo), pasar la primera empresa seleccionada
+        const firstSelectedId = newCompanyIds[0];
+        const selectedCompany = allCompanies.find((c: any) => c.id === firstSelectedId);
+        if (selectedCompany) {
+          onSave(selectedCompany);
+        } else {
+          // Si no está en allCompanies, buscarla
+          try {
+            const response = await api.get(`/companies/${firstSelectedId}`);
+            onSave(response.data);
+          } catch (error) {
+            console.error("Error fetching company:", error);
+            onSave();
+          }
+        }
         handleClose();
       }
     } catch (error: any) {
@@ -573,6 +594,9 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
       onClose={handleClose}
       maxWidth="sm"
       fullWidth
+      sx={{
+        zIndex: 1700, // Mayor que FormDrawer (1600) para que aparezca por encima
+      }}
     >
       <DialogTitle>
         <Box
