@@ -6,9 +6,6 @@ import {
   List,
   ListItem,
   ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Badge,
   TextField,
   InputAdornment,
   IconButton,
@@ -21,27 +18,26 @@ import {
   Dialog,
 } from '@mui/material';
 import {
-  Mail,
-  Send,
-  Drafts,
-  Star,
-  Report,
-  Delete,
   Refresh,
-  MoreVert,
   Search,
-  Add,
   Close,
   ChevronLeft,
   ChevronRight,
-  Business,
+  Star,
+  Send,
+  ExpandMore,
+  ExpandLess,
+  MarkEmailRead,
+  MarkEmailUnread,
 } from '@mui/icons-material';
 import { taxiMonterricoColors } from '../theme/colors';
 import api from '../config/api';
 import EmailComposer from '../components/EmailComposer';
+import RichTextEditor from '../components/RichTextEditor';
 
 interface Email {
   id: string;
+  draftId?: string;
   threadId: string;
   snippet: string;
   from: string;
@@ -58,75 +54,69 @@ interface FolderCount {
 
 const Emails: React.FC = () => {
   const theme = useTheme();
-  const [selectedFolder, setSelectedFolder] = useState('inbox');
   const [searchTerm, setSearchTerm] = useState('');
   const [emails, setEmails] = useState<Email[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [folderCounts, setFolderCounts] = useState<FolderCount[]>([]);
+  const [crmEmailCount, setCrmEmailCount] = useState(0);
+  const [starredCount, setStarredCount] = useState(0);
+  const [selectedFolder, setSelectedFolder] = useState<'inbox' | 'starred'>('inbox');
   const [composeOpen, setComposeOpen] = useState(false);
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [emailDetail, setEmailDetail] = useState<any>(null);
   const [searchDebounce, setSearchDebounce] = useState<NodeJS.Timeout | null>(null);
-  const [tokenHistory, setTokenHistory] = useState<(string | undefined)[]>([undefined]);
-  const [currentTokenIndex, setCurrentTokenIndex] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(false);
+  const [isReplying, setIsReplying] = useState(false);
+  const [replySubject, setReplySubject] = useState('');
+  const [replyBody, setReplyBody] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
+  const [replyError, setReplyError] = useState('');
+  const [threadMessages, setThreadMessages] = useState<any[]>([]);
+  const [loadingThread, setLoadingThread] = useState(false);
+  const [collapsedMessages, setCollapsedMessages] = useState<Set<string>>(new Set());
   const emailsPerPage = 20;
-
-  const folders = [
-    { id: 'inbox', label: 'Bandeja de entrada', icon: <Mail /> },
-    { id: 'sent', label: 'Enviados', icon: <Send /> },
-    { id: 'draft', label: 'Borradores', icon: <Drafts /> },
-    { id: 'starred', label: 'Destacados', icon: <Star /> },
-    { id: 'crm', label: 'CRM', icon: <Business /> },
-    { id: 'spam', label: 'Spam', icon: <Report /> },
-    { id: 'trash', label: 'Papelera', icon: <Delete /> },
-  ];
-
-  const getFolderCount = (folderId: string): number => {
-    const folder = folderCounts.find(f => f.id === folderId);
-    return folder?.count || 0;
-  };
-
 
   const fetchFolderCounts = useCallback(async () => {
     try {
       const response = await api.get('/emails/folders/counts');
-      setFolderCounts(response.data.counts || []);
+      const counts = response.data.counts || [];
+      const crmCount = counts.find((f: FolderCount) => f.id === 'crm');
+      const starredCount = counts.find((f: FolderCount) => f.id === 'starred');
+      setCrmEmailCount(crmCount?.count || 0);
+      setStarredCount(starredCount?.count || 0);
     } catch (err: any) {
       console.error('Error fetching folder counts:', err);
     }
   }, []);
 
-  // Resetear y cargar cuando cambia la carpeta o búsqueda
+  // Cargar emails según la carpeta seleccionada
   useEffect(() => {
-    setTokenHistory([undefined]);
-    setCurrentTokenIndex(0);
     const loadEmails = async () => {
       setLoading(true);
       setError('');
       try {
-        // Si es la carpeta CRM, usar endpoint especial
-        const endpoint = selectedFolder === 'crm' ? '/emails/crm' : '/emails/list';
-        const response = await api.get(endpoint, {
-          params: {
-            folder: selectedFolder,
-            page: 1,
-            limit: emailsPerPage,
-            search: searchTerm,
-          },
-        });
-        setEmails(response.data.messages || []);
-        // Para CRM, la paginación es diferente (usa números de página)
-        if (selectedFolder === 'crm') {
+        let response;
+        if (selectedFolder === 'inbox') {
+          response = await api.get('/emails/crm', {
+            params: {
+              page: currentPage,
+              limit: emailsPerPage,
+              search: searchTerm,
+            },
+          });
+        } else if (selectedFolder === 'starred') {
+          response = await api.get('/emails/crm/starred', {
+            params: {
+              page: currentPage,
+              limit: emailsPerPage,
+              search: searchTerm,
+            },
+          });
+        }
+        if (response) {
+          setEmails(response.data.messages || []);
           setHasNextPage(!!response.data.nextPageToken);
-        } else {
-          setHasNextPage(!!response.data.nextPageToken);
-          const newHistory = [undefined];
-          if (response.data.nextPageToken) {
-            newHistory.push(response.data.nextPageToken);
-          }
-          setTokenHistory(newHistory);
         }
       } catch (err: any) {
         console.error('Error fetching emails:', err);
@@ -137,100 +127,24 @@ const Emails: React.FC = () => {
       }
     };
     loadEmails();
-  }, [selectedFolder, searchTerm]);
-  
-  // Cargar emails cuando cambia el índice del token (navegación manual)
-  useEffect(() => {
-    if (currentTokenIndex > 0 && tokenHistory.length > currentTokenIndex && selectedFolder !== 'crm') {
-      const loadEmails = async () => {
-        setLoading(true);
-        setError('');
-        try {
-          const token = tokenHistory[currentTokenIndex];
-          const response = await api.get('/emails/list', {
-            params: {
-              folder: selectedFolder,
-              page: 1,
-              limit: emailsPerPage,
-              search: searchTerm,
-              pageToken: token,
-            },
-          });
-          setEmails(response.data.messages || []);
-          setHasNextPage(!!response.data.nextPageToken);
-          // Si hay un nuevo token y estamos al final del historial, agregarlo
-          if (response.data.nextPageToken && currentTokenIndex === tokenHistory.length - 1) {
-            setTokenHistory(prev => [...prev, response.data.nextPageToken]);
-          }
-        } catch (err: any) {
-          console.error('Error fetching emails:', err);
-          setError(err.response?.data?.message || 'Error al cargar los correos');
-          setEmails([]);
-        } finally {
-          setLoading(false);
-        }
-      };
-      loadEmails();
-    } else if (selectedFolder === 'crm' && currentTokenIndex > 0) {
-      // Para CRM, usar paginación numérica
-      const loadEmails = async () => {
-        setLoading(true);
-        setError('');
-        try {
-          const page = currentTokenIndex + 1; // currentTokenIndex 0 = página 1
-          const response = await api.get('/emails/crm', {
-            params: {
-              page,
-              limit: emailsPerPage,
-              search: searchTerm,
-            },
-          });
-          setEmails(response.data.messages || []);
-          setHasNextPage(!!response.data.nextPageToken);
-        } catch (err: any) {
-          console.error('Error fetching emails:', err);
-          setError(err.response?.data?.message || 'Error al cargar los correos');
-          setEmails([]);
-        } finally {
-          setLoading(false);
-        }
-      };
-      loadEmails();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentTokenIndex]);
+  }, [currentPage, searchTerm, selectedFolder]);
 
   useEffect(() => {
     fetchFolderCounts();
-    // Refrescar conteos cada 30 segundos
+    // Refrescar conteo cada 30 segundos
     const interval = setInterval(fetchFolderCounts, 30000);
     return () => clearInterval(interval);
   }, [fetchFolderCounts]);
 
-  const handleFolderChange = (folderId: string) => {
-    setSelectedFolder(folderId);
-    setSearchTerm('');
-    // El historial se resetea en el useEffect
-  };
-
   const handleNextPage = () => {
     if (hasNextPage) {
-      // Avanzar al siguiente índice
-      // Si el token ya existe en el historial, solo avanzamos
-      // Si no existe, fetchEmails lo agregará cuando se ejecute
-      if (currentTokenIndex < tokenHistory.length - 1) {
-        setCurrentTokenIndex(prev => prev + 1);
-      } else {
-        // Necesitamos esperar a que fetchEmails agregue el token
-        // Por ahora avanzamos el índice, y fetchEmails manejará el token
-        setCurrentTokenIndex(prev => prev + 1);
-      }
+      setCurrentPage(prev => prev + 1);
     }
   };
 
   const handlePreviousPage = () => {
-    if (currentTokenIndex > 0) {
-      setCurrentTokenIndex(prev => prev - 1);
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
     }
   };
 
@@ -238,48 +152,27 @@ const Emails: React.FC = () => {
     setLoading(true);
     setError('');
     try {
-      if (selectedFolder === 'crm') {
-        // Para CRM, usar paginación numérica
-        const page = currentTokenIndex + 1;
-        const response = await api.get('/emails/crm', {
+      let response;
+      if (selectedFolder === 'inbox') {
+        response = await api.get('/emails/crm', {
           params: {
-            page,
+            page: currentPage,
             limit: emailsPerPage,
             search: searchTerm,
           },
         });
-        setEmails(response.data.messages || []);
-        setHasNextPage(!!response.data.nextPageToken);
-      } else {
-        // Para otras carpetas, usar tokens
-        const token = currentTokenIndex > 0 && tokenHistory.length > currentTokenIndex 
-          ? tokenHistory[currentTokenIndex] 
-          : undefined;
-        
-        const response = await api.get('/emails/list', {
+      } else if (selectedFolder === 'starred') {
+        response = await api.get('/emails/crm/starred', {
           params: {
-            folder: selectedFolder,
-            page: 1,
+            page: currentPage,
             limit: emailsPerPage,
             search: searchTerm,
-            pageToken: token,
           },
         });
-        
+      }
+      if (response) {
         setEmails(response.data.messages || []);
         setHasNextPage(!!response.data.nextPageToken);
-        
-        // Actualizar el historial si estamos en la primera página
-        if (currentTokenIndex === 0) {
-          const newHistory = [undefined];
-          if (response.data.nextPageToken) {
-            newHistory.push(response.data.nextPageToken);
-          }
-          setTokenHistory(newHistory);
-        } else if (response.data.nextPageToken && currentTokenIndex === tokenHistory.length - 1) {
-          // Si avanzamos y hay un nuevo token, agregarlo al historial
-          setTokenHistory(prev => [...prev, response.data.nextPageToken]);
-        }
       }
     } catch (err: any) {
       console.error('Error fetching emails:', err);
@@ -294,6 +187,7 @@ const Emails: React.FC = () => {
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchTerm(value);
+    setCurrentPage(1); // Resetear a página 1 cuando se busca
     
     // Debounce: esperar 500ms antes de buscar
     if (searchDebounce) {
@@ -308,19 +202,155 @@ const Emails: React.FC = () => {
   };
 
   const handleEmailClick = async (email: Email) => {
+    // Mostrar el diálogo de detalle
     setSelectedEmail(email);
+    setIsReplying(false);
+    setReplySubject('');
+    setReplyBody('');
+    setReplyError('');
+    setLoadingThread(true);
     try {
-      const response = await api.get(`/emails/message/${email.id}`);
-      setEmailDetail(response.data);
+      // Cargar el detalle del email y el thread completo
+      const [detailResponse, threadResponse] = await Promise.all([
+        api.get(`/emails/message/${email.id}`),
+        api.get(`/emails/thread/${email.threadId}`),
+      ]);
+      setEmailDetail(detailResponse.data);
+      setThreadMessages(threadResponse.data.messages || []);
     } catch (err: any) {
       console.error('Error fetching email detail:', err);
       setError(err.response?.data?.message || 'Error al cargar el correo');
+    } finally {
+      setLoadingThread(false);
     }
+  };
+
+  // Función para extraer email del remitente
+  const extractEmail = (emailString: string): string => {
+    const match = emailString.match(/<(.+)>/);
+    return match ? match[1] : emailString.trim();
+  };
+
+  // Función para manejar responder (inline)
+  const handleReply = () => {
+    if (!selectedEmail || !emailDetail) return;
+    const subject = emailDetail.subject || selectedEmail.subject || '';
+    setReplySubject(subject.startsWith('Re: ') ? subject : `Re: ${subject}`);
+    
+    // Citar el mensaje original
+    const borderColor = theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)';
+    const textColor = theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)';
+    const quotedMessage = `
+      <div style="border-left: 3px solid ${borderColor}; padding-left: 10px; margin-top: 10px; color: ${textColor};">
+        <div style="margin-bottom: 5px;">
+          <strong>${extractEmail(emailDetail.from)}</strong> escribió:
+        </div>
+        <div style="white-space: pre-wrap;">${emailDetail.body || emailDetail.snippet}</div>
+      </div>
+    `;
+    setReplyBody(quotedMessage);
+    setIsReplying(true);
+    setReplyError('');
+  };
+
+  // Función para cancelar respuesta
+  const handleCancelReply = () => {
+    setIsReplying(false);
+    setReplySubject('');
+    setReplyBody('');
+    setReplyError('');
+  };
+
+  // Función para enviar respuesta directamente desde el diálogo
+  const handleSendReply = async () => {
+    if (!selectedEmail || !emailDetail) return;
+
+    if (!replySubject.trim()) {
+      setReplyError('El asunto es requerido');
+      return;
+    }
+
+    if (!replyBody.trim() || replyBody === '<p><br></p>' || replyBody === '<br>' || replyBody === '') {
+      setReplyError('El mensaje es requerido');
+      return;
+    }
+
+    setReplyError('');
+    setSendingReply(true);
+
+    try {
+      const payload: any = {
+        to: extractEmail(emailDetail.from),
+        subject: replySubject.trim(),
+        body: replyBody,
+        threadId: selectedEmail.threadId,
+        messageId: selectedEmail.id,
+      };
+
+      const emailResponse = await api.post('/emails/send', payload);
+      const { messageId, threadId } = emailResponse.data;
+
+      // Registrar como actividad
+      try {
+        await api.post('/activities/emails', {
+          subject: replySubject.trim(),
+          description: replyBody.replace(/<[^>]*>/g, ''),
+          gmailMessageId: messageId,
+          gmailThreadId: threadId || selectedEmail.threadId,
+        });
+      } catch (err) {
+        console.error('Error registrando respuesta como actividad:', err);
+      }
+
+      // Recargar el thread para mostrar la nueva respuesta
+      try {
+        const threadResponse = await api.get(`/emails/thread/${selectedEmail.threadId}`);
+        setThreadMessages(threadResponse.data.messages || []);
+      } catch (err) {
+        console.error('Error recargando thread:', err);
+      }
+
+      // Cerrar el modo de respuesta
+      setIsReplying(false);
+      setReplySubject('');
+      setReplyBody('');
+      handleRefresh();
+    } catch (err: any) {
+      setReplyError(err.response?.data?.message || 'Error al enviar la respuesta');
+    } finally {
+      setSendingReply(false);
+    }
+  };
+
+  // Función para colapsar/expandir mensajes
+  const toggleMessageCollapse = (messageId: string) => {
+    setCollapsedMessages(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(messageId)) {
+        newSet.delete(messageId);
+      } else {
+        newSet.add(messageId);
+      }
+      return newSet;
+    });
   };
 
   const handleSendEmail = async (emailData: { to: string; subject: string; body: string }) => {
     try {
-      await api.post('/emails/send', emailData);
+      const emailResponse = await api.post('/emails/send', emailData);
+      
+      // Registrar como actividad
+      try {
+        await api.post('/activities/emails', {
+          subject: emailData.subject,
+          description: emailData.body.replace(/<[^>]*>/g, ''),
+          gmailMessageId: emailResponse.data.messageId,
+          gmailThreadId: emailResponse.data.threadId,
+        });
+      } catch (err) {
+        console.error('Error registrando email como actividad:', err);
+      }
+
       setComposeOpen(false);
       handleRefresh();
     } catch (err: any) {
@@ -360,21 +390,91 @@ const Emails: React.FC = () => {
   const isUnread = (labelIds: string[]) => labelIds.includes('UNREAD'); // Si tiene UNREAD, no está leído
   const isStarred = (labelIds: string[]) => labelIds.includes('STARRED');
 
+  const handleToggleRead = async (email: Email, e: React.MouseEvent) => {
+    e.stopPropagation(); // Evitar que se abra el email al hacer clic en el icono
+    
+    const isCurrentlyUnread = isUnread(email.labelIds);
+    const newReadState = !isCurrentlyUnread;
+
+    // Optimistic update: actualizar el estado local inmediatamente
+    setEmails(prevEmails =>
+      prevEmails.map(e =>
+        e.id === email.id
+          ? {
+              ...e,
+              labelIds: newReadState
+                ? e.labelIds.filter(id => id !== 'UNREAD')
+                : [...e.labelIds, 'UNREAD'],
+            }
+          : e
+      )
+    );
+
+    try {
+      const response = await api.post(`/emails/message/${email.id}/read`, { read: newReadState });
+      
+      // Verificar que la respuesta sea exitosa
+      if (response.data && response.data.success !== false) {
+        // Actualizar el conteo si es necesario
+        if (selectedFolder === 'inbox') {
+          fetchFolderCounts();
+        }
+      } else {
+        // Si la respuesta indica error, revertir
+        throw new Error(response.data?.message || 'Error al cambiar estado');
+      }
+    } catch (error: any) {
+      console.error('Error al cambiar estado de lectura:', error);
+      
+      // Revertir el cambio si hay error
+      setEmails(prevEmails =>
+        prevEmails.map(e =>
+          e.id === email.id
+            ? {
+                ...e,
+                labelIds: isCurrentlyUnread
+                  ? e.labelIds.filter(id => id !== 'UNREAD')
+                  : [...e.labelIds, 'UNREAD'],
+              }
+            : e
+        )
+      );
+      
+      // Solo mostrar error si es un error real (no un error de red menor)
+      const errorMessage = error.response?.data?.message || error.message;
+      if (errorMessage && !errorMessage.includes('Network Error')) {
+        setError('Error al cambiar el estado de lectura del correo');
+      }
+    }
+  };
+
   return (
-    <Box sx={{ 
-      display: 'flex', 
-      height: '100%', 
-      gap: 2,
-      overflow: 'hidden',
-      width: '100%',
-    }}>
+    <Box sx={{ flex: 1, pb: 1, display: 'flex' }}>
+      <Paper
+        sx={{
+          bgcolor: 'transparent',
+          borderRadius: 2,
+          px: 0,
+          pt: 0,
+          pb: 0,
+          flex: 1,
+          display: 'flex',
+          gap: 0,
+          overflow: 'hidden',
+          width: '100%',
+          maxWidth: '1400px',
+          mx: 'auto',
+          minHeight: 'calc(100vh - 200px)',
+        }}
+      >
       {/* Sidebar izquierdo */}
       <Box
         sx={{
-          width: 320,
-          bgcolor: theme.palette.background.paper,
+          width: 260,
+          bgcolor: 'transparent',
           borderRadius: 2,
-          p: 2,
+          p: 0,
+          pt: 2,
           display: 'flex',
           flexDirection: 'column',
           gap: 2,
@@ -384,14 +484,16 @@ const Emails: React.FC = () => {
         {/* Botón Componer */}
         <Button
           variant="contained"
-          startIcon={<Add />}
-          fullWidth
           onClick={() => setComposeOpen(true)}
           sx={{
             bgcolor: taxiMonterricoColors.green,
             textTransform: 'none',
-            py: 1.5,
+            px: 2,
+            py: 1,
+            mt: 1,
             borderRadius: 2,
+            width: '85%',
+            alignSelf: 'center',
             '&:hover': {
               bgcolor: taxiMonterricoColors.green,
               opacity: 0.9,
@@ -401,63 +503,139 @@ const Emails: React.FC = () => {
           Redactar
         </Button>
 
-        <Divider />
+        {/* Opciones de carpeta */}
+        <Box sx={{ mt: 2 }}>
+          {/* Inbox */}
+          <Box
+            onClick={() => {
+              setSelectedFolder('inbox');
+              setCurrentPage(1);
+            }}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              p: 1.5,
+              borderRadius: 1,
+              cursor: 'pointer',
+              mb: 1,
+              bgcolor: 'transparent',
+              '&:hover': {
+                bgcolor: theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.05)' 
+                  : 'rgba(0, 0, 0, 0.04)',
+              },
+            }}
+          >
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                color: selectedFolder === 'inbox' 
+                  ? (theme.palette.mode === 'dark' ? 'rgb(144, 202, 249)' : 'rgb(25, 118, 210)')
+                  : theme.palette.text.secondary,
+                fontWeight: selectedFolder === 'inbox' ? 600 : 400,
+              }}
+            >
+              Inbox
+            </Typography>
+            {crmEmailCount > 0 && (
+              <Box
+                sx={{
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(144, 202, 249, 0.16)' 
+                    : 'rgba(144, 202, 249, 0.12)',
+                  color: theme.palette.mode === 'dark'
+                    ? 'rgb(144, 202, 249)'
+                    : 'rgb(25, 118, 210)',
+                  borderRadius: '12px',
+                  minWidth: 24,
+                  height: 24,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  px: 1,
+                  fontSize: '0.75rem',
+                  fontWeight: 500,
+                }}
+              >
+                {crmEmailCount}
+              </Box>
+            )}
+          </Box>
 
-        {/* Lista de carpetas */}
-        <List sx={{ flex: 1, p: 0 }}>
-          {folders.map((folder) => {
-            const count = getFolderCount(folder.id);
-            return (
-              <ListItem key={folder.id} disablePadding>
-                <ListItemButton
-                  selected={selectedFolder === folder.id}
-                  onClick={() => handleFolderChange(folder.id)}
-                  sx={{
-                    borderRadius: 1,
-                    mb: 0.5,
-                    '&.Mui-selected': {
-                      bgcolor: `${taxiMonterricoColors.green}10`,
-                      borderLeft: `3px solid ${taxiMonterricoColors.green}`,
-                      '&:hover': {
-                        bgcolor: `${taxiMonterricoColors.green}15`,
-                      },
-                    },
-                  }}
-                >
-                  <ListItemIcon
-                    sx={{
-                      color: selectedFolder === folder.id ? taxiMonterricoColors.green : theme.palette.text.secondary,
-                      minWidth: 40,
-                    }}
-                  >
-                    {folder.icon}
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={folder.label}
-                    primaryTypographyProps={{
-                      fontSize: '0.875rem',
-                      fontWeight: selectedFolder === folder.id ? 600 : 400,
-                    }}
-                  />
-                  {count > 0 && (
-                    <Badge
-                      badgeContent={count}
-                      color="error"
-                      sx={{
-                        '& .MuiBadge-badge': {
-                          fontSize: '0.75rem',
-                          minWidth: 18,
-                          height: 18,
-                        },
-                      }}
-                    />
-                  )}
-                </ListItemButton>
-              </ListItem>
-            );
-          })}
-        </List>
+          {/* Favoritos */}
+          <Box
+            onClick={() => {
+              setSelectedFolder('starred');
+              setCurrentPage(1);
+            }}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              p: 1.5,
+              borderRadius: 1,
+              cursor: 'pointer',
+              mb: 1,
+              bgcolor: 'transparent',
+              '&:hover': {
+                bgcolor: theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.05)' 
+                  : 'rgba(0, 0, 0, 0.04)',
+              },
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Star 
+                sx={{ 
+                  fontSize: 18, 
+                  color: selectedFolder === 'starred' 
+                    ? (theme.palette.mode === 'dark' ? 'rgb(144, 202, 249)' : 'rgb(25, 118, 210)')
+                    : theme.palette.text.secondary 
+                }} 
+              />
+              <Typography 
+                variant="body2" 
+                sx={{ 
+                  color: selectedFolder === 'starred' 
+                    ? (theme.palette.mode === 'dark' ? 'rgb(144, 202, 249)' : 'rgb(25, 118, 210)')
+                    : theme.palette.text.secondary,
+                  fontWeight: selectedFolder === 'starred' ? 600 : 400,
+                }}
+              >
+                Favoritos
+              </Typography>
+            </Box>
+            {starredCount > 0 && (
+              <Box
+                sx={{
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(144, 202, 249, 0.16)' 
+                    : 'rgba(144, 202, 249, 0.12)',
+                  color: theme.palette.mode === 'dark'
+                    ? 'rgb(144, 202, 249)'
+                    : 'rgb(25, 118, 210)',
+                  borderRadius: '12px',
+                  minWidth: 24,
+                  height: 24,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  px: 1,
+                  fontSize: '0.75rem',
+                  fontWeight: 500,
+                }}
+              >
+                {starredCount}
+              </Box>
+            )}
+          </Box>
+
+        </Box>
       </Box>
+
+      {/* Divider vertical */}
+      <Divider orientation="vertical" flexItem />
 
       {/* Área principal */}
       <Box sx={{ 
@@ -471,12 +649,14 @@ const Emails: React.FC = () => {
         {/* Barra de búsqueda y acciones */}
         <Box
           sx={{
-            bgcolor: theme.palette.background.paper,
-            borderRadius: 2,
-            p: 2,
+            bgcolor: 'transparent',
+            borderRadius: 0,
+            pt: 1,
+            mb: -1,
+            px: 1,
             display: 'flex',
             alignItems: 'center',
-            gap: 2,
+            gap: 0,
           }}
         >
           <TextField
@@ -494,27 +674,35 @@ const Emails: React.FC = () => {
             }}
             sx={{
               '& .MuiOutlinedInput-root': {
-                borderRadius: 2,
+                borderRadius: 0,
+                '& fieldset': {
+                  border: 'none',
+                },
+                '&:hover fieldset': {
+                  border: 'none',
+                },
+                '&.Mui-focused fieldset': {
+                  border: 'none',
+                },
               },
             }}
           />
           <IconButton onClick={handleRefresh} disabled={loading}>
             <Refresh />
           </IconButton>
-          <IconButton>
-            <MoreVert />
-          </IconButton>
         </Box>
 
+        {/* Divider horizontal */}
+        <Divider />
+
         {/* Lista de emails */}
-        <Paper
+        <Box
           sx={{
-            bgcolor: theme.palette.background.paper,
-            borderRadius: 2,
             flex: 1,
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
+            p: 1,
           }}
         >
           {error && (
@@ -541,11 +729,20 @@ const Emails: React.FC = () => {
               </Typography>
             </Box>
           ) : (
-            <List sx={{ p: 0, overflow: 'auto', flex: 1 }}>
+            <List sx={{ 
+              p: 1, 
+              overflow: 'auto', 
+              flex: 1, 
+              minHeight: 0,
+              '& .MuiListItem-root': {
+                px: 0,
+              },
+            }}>
               {emails.map((email) => {
-                // Determinar qué mostrar según la carpeta
-                // En "sent" y "crm" mostramos el destinatario, en otras carpetas el remitente
-                const displayEmail = (selectedFolder === 'sent' || selectedFolder === 'crm') ? email.to : email.from;
+                // Si el email fue enviado (tiene label SENT), mostrar el destinatario
+                // Si fue recibido, mostrar el remitente
+                const isSent = email.labelIds?.includes('SENT');
+                const displayEmail = isSent ? email.to : email.from;
                 const displayName = displayEmail.split(/[<>]/)[0].trim() || displayEmail;
 
                 return (
@@ -554,6 +751,9 @@ const Emails: React.FC = () => {
                     disablePadding
                     sx={{
                       borderBottom: `1px solid ${theme.palette.divider}`,
+                      '&:last-child': {
+                        borderBottom: 'none',
+                      },
                       bgcolor: isUnread(email.labelIds) ? theme.palette.action.hover : 'transparent',
                       '&:hover': {
                         bgcolor: theme.palette.action.hover,
@@ -562,14 +762,29 @@ const Emails: React.FC = () => {
                     }}
                     onClick={() => handleEmailClick(email)}
                   >
-                    <ListItemButton>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                    <ListItemButton
+                      sx={{
+                        py: 1.5,
+                        px: 2,
+                        '&:hover': {
+                          bgcolor: theme.palette.action.hover,
+                        },
+                      }}
+                    >
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 2, 
+                        width: '100%',
+                        py: 0.5,
+                      }}>
                         <Avatar
                           sx={{
                             bgcolor: taxiMonterricoColors.green,
                             width: 40,
                             height: 40,
                             fontSize: '0.875rem',
+                            color: 'white',
                           }}
                         >
                           {getInitials(displayEmail)}
@@ -616,6 +831,52 @@ const Emails: React.FC = () => {
                         </Typography>
                       </Box>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
+                        {/* Icono de leído/no leído */}
+                        <IconButton
+                          size="small"
+                          onClick={(e) => handleToggleRead(email, e)}
+                          sx={{
+                            position: 'relative',
+                            '&:hover': {
+                              bgcolor: theme.palette.action.hover,
+                            },
+                          }}
+                        >
+                          {isUnread(email.labelIds) ? (
+                            <MarkEmailUnread 
+                              sx={{ 
+                                fontSize: 20,
+                                color: theme.palette.text.secondary,
+                              }} 
+                            />
+                          ) : (
+                            <MarkEmailRead 
+                              sx={{ 
+                                fontSize: 20,
+                                color: theme.palette.mode === 'dark' 
+                                  ? 'rgba(144, 202, 249, 0.6)' 
+                                  : 'rgba(25, 118, 210, 0.6)',
+                              }} 
+                            />
+                          )}
+                          {/* Punto indicador para correos leídos */}
+                          {!isUnread(email.labelIds) && (
+                            <Box
+                              sx={{
+                                position: 'absolute',
+                                top: 4,
+                                right: 4,
+                                width: 8,
+                                height: 8,
+                                borderRadius: '50%',
+                                bgcolor: theme.palette.mode === 'dark' 
+                                  ? 'rgb(144, 202, 249)' 
+                                  : 'rgb(25, 118, 210)',
+                              }}
+                            />
+                          )}
+                        </IconButton>
+                        
                         <Typography
                           variant="caption"
                           sx={{
@@ -643,22 +904,24 @@ const Emails: React.FC = () => {
                 justifyContent: 'space-between',
                 p: 2,
                 borderTop: `1px solid ${theme.palette.divider}`,
-                bgcolor: theme.palette.background.paper,
+                bgcolor: 'transparent',
+                flexShrink: 0,
+                mt: 'auto',
               }}
             >
               <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                Página {currentTokenIndex + 1}
+                Página {currentPage}
                 {hasNextPage && ' (más disponible)'}
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <IconButton
                   onClick={handlePreviousPage}
-                  disabled={currentTokenIndex === 0}
+                  disabled={currentPage === 1}
                   size="small"
                   sx={{
-                    color: currentTokenIndex === 0 ? theme.palette.action.disabled : theme.palette.text.secondary,
+                    color: currentPage === 1 ? theme.palette.action.disabled : theme.palette.text.secondary,
                     '&:hover': {
-                      bgcolor: currentTokenIndex === 0 ? 'transparent' : theme.palette.action.hover,
+                      bgcolor: currentPage === 1 ? 'transparent' : theme.palette.action.hover,
                     },
                   }}
                 >
@@ -680,15 +943,22 @@ const Emails: React.FC = () => {
               </Box>
             </Box>
           )}
-        </Paper>
+        </Box>
 
-        {/* Dialog para ver detalles del email */}
+        {/* Dialog para ver detalles del email con thread completo */}
         {selectedEmail && emailDetail && (
           <Dialog
             open={!!selectedEmail}
             onClose={() => {
-              setSelectedEmail(null);
-              setEmailDetail(null);
+              if (!isReplying) {
+                setSelectedEmail(null);
+                setEmailDetail(null);
+                setThreadMessages([]);
+                setIsReplying(false);
+                setReplySubject('');
+                setReplyBody('');
+                setCollapsedMessages(new Set());
+              }
             }}
             maxWidth="md"
             fullWidth
@@ -696,61 +966,257 @@ const Emails: React.FC = () => {
               sx: {
                 borderRadius: 2,
                 maxHeight: '90vh',
+                display: 'flex',
+                flexDirection: 'column',
               },
             }}
           >
-            <Box sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2 }}>
+            <Box sx={{ p: 3, display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              {/* Header del thread */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 2, flexShrink: 0 }}>
                 <Box sx={{ flex: 1 }}>
                   <Typography variant="h6" sx={{ mb: 1, fontWeight: 600 }}>
                     {emailDetail.subject || '(Sin asunto)'}
                   </Typography>
-                  <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>De:</strong> {emailDetail.from}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                      <strong>Para:</strong> {emailDetail.to}
-                    </Typography>
-                  </Box>
                   <Typography variant="caption" color="text.secondary">
-                    {new Date(emailDetail.date).toLocaleString('es-ES')}
+                    {threadMessages.length} {threadMessages.length === 1 ? 'mensaje' : 'mensajes'} en esta conversación
                   </Typography>
                 </Box>
-                <IconButton
-                  onClick={() => {
-                    setSelectedEmail(null);
-                    setEmailDetail(null);
-                  }}
-                >
-                  <Close />
-                </IconButton>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                  {!isReplying && (
+                    <Button
+                      variant="contained"
+                      startIcon={<Send />}
+                      onClick={handleReply}
+                      sx={{
+                        bgcolor: taxiMonterricoColors.green,
+                        textTransform: 'none',
+                        '&:hover': {
+                          bgcolor: taxiMonterricoColors.green,
+                          opacity: 0.9,
+                        },
+                      }}
+                    >
+                      Responder
+                    </Button>
+                  )}
+                  <IconButton
+                    onClick={() => {
+                      if (!isReplying) {
+                        setSelectedEmail(null);
+                        setEmailDetail(null);
+                        setThreadMessages([]);
+                        setIsReplying(false);
+                        setReplySubject('');
+                        setReplyBody('');
+                        setCollapsedMessages(new Set());
+                      } else {
+                        handleCancelReply();
+                      }
+                    }}
+                  >
+                    <Close />
+                  </IconButton>
+                </Box>
               </Box>
-              <Divider sx={{ mb: 2 }} />
+              <Divider sx={{ mb: 2, flexShrink: 0 }} />
+              
+              {/* Área de scroll para los mensajes del thread */}
               <Box
                 sx={{
-                  maxHeight: '60vh',
+                  flex: 1,
                   overflow: 'auto',
-                  '& p': {
-                    marginBottom: 1,
-                  },
+                  mb: isReplying ? 2 : 0,
+                  minHeight: 0,
                 }}
-                dangerouslySetInnerHTML={{ __html: emailDetail.body || emailDetail.snippet }}
-              />
+              >
+                {loadingThread ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                    <CircularProgress size={24} />
+                  </Box>
+                ) : (
+                  threadMessages.map((msg: any, index: number) => {
+                    const isCollapsed = collapsedMessages.has(msg.id);
+                    const isLastMessage = index === threadMessages.length - 1;
+                    const senderName = msg.from.split(/[<>]/)[0].trim() || extractEmail(msg.from);
+                    const senderInitials = getInitials(msg.from);
+
+                    return (
+                      <Box key={msg.id} sx={{ mb: 2 }}>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            gap: 2,
+                            p: 2,
+                            borderRadius: 2,
+                            bgcolor: theme.palette.mode === 'dark' 
+                              ? 'rgba(255, 255, 255, 0.03)' 
+                              : 'rgba(0, 0, 0, 0.02)',
+                            border: `1px solid ${theme.palette.divider}`,
+                          }}
+                        >
+                          {/* Avatar */}
+                          <Avatar
+                            sx={{
+                              bgcolor: taxiMonterricoColors.green,
+                              width: 40,
+                              height: 40,
+                              color: 'white',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {senderInitials}
+                          </Avatar>
+
+                          {/* Contenido del mensaje */}
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            {/* Header del mensaje */}
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', mb: 1 }}>
+                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
+                                  {senderName}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {new Date(msg.date).toLocaleString('es-ES', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </Typography>
+                              </Box>
+                              {threadMessages.length > 3 && index < threadMessages.length - 3 && (
+                                <IconButton
+                                  size="small"
+                                  onClick={() => toggleMessageCollapse(msg.id)}
+                                  sx={{ flexShrink: 0 }}
+                                >
+                                  {isCollapsed ? <ExpandMore /> : <ExpandLess />}
+                                </IconButton>
+                              )}
+                            </Box>
+
+                            {/* Cuerpo del mensaje */}
+                            {!isCollapsed && (
+                              <Box
+                                sx={{
+                                  mt: 1,
+                                  '& p': {
+                                    marginBottom: 1,
+                                  },
+                                  '& *': {
+                                    maxWidth: '100%',
+                                  },
+                                }}
+                                dangerouslySetInnerHTML={{ __html: msg.body || msg.snippet }}
+                              />
+                            )}
+                            {isCollapsed && (
+                              <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                                Mensaje colapsado
+                              </Typography>
+                            )}
+                          </Box>
+                        </Box>
+                        {!isLastMessage && <Divider sx={{ mt: 2 }} />}
+                      </Box>
+                    );
+                  })
+                )}
+              </Box>
+
+              {/* Área de respuesta inline */}
+              {isReplying && (
+                <>
+                  <Divider sx={{ my: 2, flexShrink: 0 }} />
+                  <Box sx={{ flexShrink: 0 }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                      Responder a {extractEmail(emailDetail.from)}
+                    </Typography>
+                    
+                    {/* Campo Asunto */}
+                    <TextField
+                      label="Asunto"
+                      value={replySubject}
+                      onChange={(e) => setReplySubject(e.target.value)}
+                      fullWidth
+                      size="small"
+                      sx={{ mb: 2 }}
+                    />
+
+                    {/* Editor de respuesta */}
+                    <Box
+                      sx={{
+                        border: `1px solid ${theme.palette.divider}`,
+                        borderRadius: 2,
+                        overflow: 'hidden',
+                        minHeight: '200px',
+                        maxHeight: '300px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        mb: 2,
+                      }}
+                    >
+                      <RichTextEditor
+                        value={replyBody}
+                        onChange={setReplyBody}
+                        placeholder="Escribe tu respuesta..."
+                      />
+                    </Box>
+
+                    {/* Mensaje de error */}
+                    {replyError && (
+                      <Alert severity="error" sx={{ mb: 2 }} onClose={() => setReplyError('')}>
+                        {replyError}
+                      </Alert>
+                    )}
+
+                    {/* Botones de acción */}
+                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
+                      <Button
+                        onClick={handleCancelReply}
+                        disabled={sendingReply}
+                        variant="outlined"
+                        sx={{ textTransform: 'none' }}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button
+                        onClick={handleSendReply}
+                        variant="contained"
+                        startIcon={sendingReply ? <CircularProgress size={16} /> : <Send />}
+                        disabled={sendingReply || !replySubject.trim() || !replyBody.trim() || replyBody === '<p><br></p>' || replyBody === '<br>'}
+                        sx={{
+                          bgcolor: taxiMonterricoColors.green,
+                          textTransform: 'none',
+                          '&:hover': {
+                            bgcolor: taxiMonterricoColors.green,
+                            opacity: 0.9,
+                          },
+                        }}
+                      >
+                        {sendingReply ? 'Enviando...' : 'Enviar'}
+                      </Button>
+                    </Box>
+                  </Box>
+                </>
+              )}
             </Box>
           </Dialog>
         )}
       </Box>
 
-      {/* Email Composer */}
+      {/* Email Composer para correos nuevos */}
       <EmailComposer
         open={composeOpen}
-        onClose={() => setComposeOpen(false)}
+        onClose={() => {
+          setComposeOpen(false);
+        }}
         recipientEmail=""
         onSend={handleSendEmail}
       />
+      </Paper>
     </Box>
   );
 };

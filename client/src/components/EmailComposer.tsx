@@ -25,6 +25,8 @@ interface EmailComposerProps {
   onClose: () => void;
   recipientEmail?: string;
   recipientName?: string;
+  initialSubject?: string;
+  initialBody?: string;
   onSend?: (emailData: { to: string; subject: string; body: string }) => Promise<void>;
 }
 
@@ -33,12 +35,14 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
   onClose,
   recipientEmail,
   recipientName,
+  initialSubject,
+  initialBody,
   onSend,
 }) => {
   const theme = useTheme();
   const [to, setTo] = useState(recipientEmail || '');
-  const [subject, setSubject] = useState('');
-  const [body, setBody] = useState('');
+  const [subject, setSubject] = useState(initialSubject || '');
+  const [body, setBody] = useState(initialBody || '');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -49,6 +53,13 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
       setTo(recipientEmail);
     }
   }, [recipientEmail]);
+
+  // Actualizar subject cuando initialSubject cambia
+  useEffect(() => {
+    if (initialSubject) {
+      setSubject(initialSubject);
+    }
+  }, [initialSubject]);
 
   const handleSend = async () => {
     if (!to.trim()) {
@@ -90,8 +101,8 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
 
   const handleClose = () => {
     setTo(recipientEmail || '');
-    setSubject('');
-    setBody('');
+    setSubject(initialSubject || '');
+    setBody(initialBody || '');
     setError('');
     setSuccess(false);
     onClose();
