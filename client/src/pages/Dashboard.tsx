@@ -1634,7 +1634,7 @@ const Dashboard: React.FC = () => {
           alignSelf: 'start',
           minHeight: { xs: 395, sm: 440 },
         }}>
-          <CardContent sx={{ p: { xs: 1.5, md: 2 } }}>
+          <CardContent sx={{ p: { xs: 2, md: 2.5 }, pt: { xs: 1.75, md: 2.25 } }}>
             <Box sx={{ 
               display: 'flex', 
               justifyContent: 'space-between', 
@@ -1679,7 +1679,7 @@ const Dashboard: React.FC = () => {
               <ResponsiveContainer width="100%" height={380} minHeight={250}>
                 <AreaChart 
                   data={salesChartData}
-                  margin={selectedMonth !== null ? { top: 5, right: 5, bottom: 0, left: 5 } : { top: 5, right: 5, bottom: 20, left: 5 }}
+                  margin={selectedMonth !== null ? { top: 5, right: 5, bottom: 0, left: -15 } : { top: 19, right: 5, bottom: 35, left: -15 }}
                 >
                 <defs>
                   <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
@@ -1692,22 +1692,26 @@ const Dashboard: React.FC = () => {
                   dataKey={selectedMonth !== null ? "day" : "month"} 
                   stroke={theme.palette.text.secondary}
                   tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
                   angle={selectedMonth !== null ? -45 : 0}
                   textAnchor={selectedMonth !== null ? "end" : "middle"}
-                  height={selectedMonth !== null ? 50 : undefined}
-                  dy={selectedMonth !== null ? 5 : undefined}
+                  height={selectedMonth !== null ? 50 : 40}
+                  dy={selectedMonth !== null ? 5 : 10}
                 />
                 <YAxis 
                   stroke={theme.palette.text.secondary}
+                  tickLine={false}
+                  axisLine={false}
                   tickFormatter={(value) => {
-                    if (value === 0) return 'S/ 0';
+                    if (value === 0) return '0';
                     const valueInK = value / 1000;
                     // Si es un número entero, mostrar sin decimales
                     if (valueInK % 1 === 0) {
-                      return `S/ ${valueInK}k`;
+                      return `${valueInK}k`;
                     }
                     // Si tiene decimales, mostrar con 1 decimal
-                    return `S/ ${valueInK.toFixed(1)}k`;
+                    return `${valueInK.toFixed(1)}k`;
                   }}
                   domain={selectedMonth !== null && selectedMonthBudget > 0 
                     ? [0, selectedMonthBudget * 1.1] 
@@ -3094,7 +3098,7 @@ const Dashboard: React.FC = () => {
             <ResponsiveContainer width="100%" height={600} minHeight={600}>
               <AreaChart 
                 data={salesChartData}
-                margin={selectedMonth !== null ? { top: 5, right: 5, bottom: 0, left: 5 } : { top: 5, right: 5, bottom: 20, left: 5 }}
+                margin={selectedMonth !== null ? { top: 5, right: 5, bottom: 0, left: 5 } : { top: 5, right: 5, bottom: 35, left: 5 }}
               >
                 <defs>
                   <linearGradient id="colorSalesFullscreen" x1="0" y1="0" x2="0" y2="1">
@@ -3107,20 +3111,24 @@ const Dashboard: React.FC = () => {
                   dataKey={selectedMonth !== null ? "day" : "month"} 
                   stroke={theme.palette.text.secondary}
                   tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
                   angle={selectedMonth !== null ? -45 : 0}
                   textAnchor={selectedMonth !== null ? "end" : "middle"}
-                  height={selectedMonth !== null ? 50 : undefined}
-                  dy={selectedMonth !== null ? 5 : undefined}
+                  height={selectedMonth !== null ? 50 : 40}
+                  dy={selectedMonth !== null ? 5 : 10}
                 />
                 <YAxis 
                   stroke={theme.palette.text.secondary}
+                  tickLine={false}
+                  axisLine={false}
                   tickFormatter={(value) => {
-                    if (value === 0) return 'S/ 0';
+                    if (value === 0) return '0';
                     const valueInK = value / 1000;
                     if (valueInK % 1 === 0) {
-                      return `S/ ${valueInK}k`;
+                      return `${valueInK}k`;
                     }
-                    return `S/ ${valueInK.toFixed(1)}k`;
+                    return `${valueInK.toFixed(1)}k`;
                   }}
                   domain={selectedMonth !== null && selectedMonthBudget > 0 
                     ? [0, selectedMonthBudget * 1.1] 

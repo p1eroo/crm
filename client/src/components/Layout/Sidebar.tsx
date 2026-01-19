@@ -20,8 +20,9 @@ import {
   Mail,
 } from '@mui/icons-material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChartPie, faIndustry, faHandHoldingDollar } from '@fortawesome/free-solid-svg-icons';
-import { faAddressBook } from '@fortawesome/free-regular-svg-icons';
+import { faChartPie, faHandHoldingDollar, faRankingStar, faListCheck, faUserGear, faUserShield, faAddressBook } from '@fortawesome/free-solid-svg-icons';
+import { faCalendarDays } from '@fortawesome/free-regular-svg-icons';
+import { Building2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSidebar } from '../../context/SidebarContext';
 import logo from '../../assets/tm_logo.png';
@@ -42,20 +43,20 @@ const Sidebar: React.FC = () => {
 const mainMenuItems = [
   { text: 'Dashboard', icon: <FontAwesomeIcon icon={faChartPie} />, path: '/dashboard', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Contactos', icon: <FontAwesomeIcon icon={faAddressBook} />, path: '/contacts', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Empresas', icon: <FontAwesomeIcon icon={faIndustry} />, path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Empresas', icon: <Building2 />, path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Negocios', icon: <FontAwesomeIcon icon={faHandHoldingDollar} />, path: '/deals', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Tareas', icon: <Assignment />, path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Tareas', icon: <FontAwesomeIcon icon={faListCheck} />, path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   // { text: 'Tickets', icon: <Support />, path: '/tickets', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Calendario', icon: <CalendarToday />, path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Calendario', icon: <FontAwesomeIcon icon={faCalendarDays} />, path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Correos', icon: <Mail />, path: '/emails', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Reportes', icon: <Assessment />, path: '/reports', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Reportes', icon: <FontAwesomeIcon icon={faRankingStar} />, path: '/reports', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   // { text: 'Campañas', icon: <Campaign />, path: '/campaigns' },
   // { text: 'Automatizaciones', icon: <Timeline />, path: '/automations' },
 ];
 
 const adminMenuItems = [
   { text: 'Logs del Sistema', icon: <History />, path: '/system-logs', roles: ['admin'] },
-  { text: 'Roles y Permisos', icon: <Security />, path: '/roles-permissions', roles: ['admin'] },
+  { text: 'Roles y Permisos', icon: <FontAwesomeIcon icon={faUserShield} />, path: '/roles-permissions', roles: ['admin'] },
 ];
 
 
@@ -179,13 +180,13 @@ const adminMenuItems = [
                 '&.Mui-selected': {
                   background: theme.palette.mode === 'dark' 
                     ? '#1a2e2a' 
-                    : 'rgba(91, 228, 155, 0.1)',
+                    : '#5cdf9924',
                   color: '#5be49b',
                   boxShadow: 'none',
                   '&:hover': {
                     background: theme.palette.mode === 'dark' 
                       ? '#1a2e2a' 
-                      : 'rgba(91, 228, 155, 0.1)',
+                      : '#5cdf9924',
                     boxShadow: 'none',
                   },
                 },
@@ -193,7 +194,7 @@ const adminMenuItems = [
                   ...(isSelected ? {
                     background: theme.palette.mode === 'dark' 
                       ? '#1a2e2a' 
-                      : 'rgba(91, 228, 155, 0.1)',
+                      : '#5cdf9924',
                   } : {
                     backgroundColor: theme.palette.action.hover,
                   }),
@@ -277,13 +278,13 @@ const adminMenuItems = [
               '&.Mui-selected': {
                 background: theme.palette.mode === 'dark' 
                   ? '#1a2e2a' 
-                  : 'rgba(91, 228, 155, 0.1)',
+                  : '#5cdf9924',
                 color: '#5be49b',
                 boxShadow: 'none',
                 '&:hover': {
                   background: theme.palette.mode === 'dark' 
                     ? '#1a2e2a' 
-                    : 'rgba(91, 228, 155, 0.1)',
+                    : '#5cdf9924',
                   boxShadow: 'none',
                 },
               },
@@ -291,7 +292,7 @@ const adminMenuItems = [
                 ...(location.pathname === '/users' ? {
                   background: theme.palette.mode === 'dark' 
                     ? '#1a2e2a' 
-                    : 'rgba(91, 228, 155, 0.1)',
+                    : '#5cdf9924',
                 } : {
                   backgroundColor: theme.palette.action.hover,
                 }),
@@ -315,7 +316,7 @@ const adminMenuItems = [
                 },
               }}
             >
-              <AdminPanelSettings />
+              <FontAwesomeIcon icon={faUserGear} />
             </ListItemIcon>
             {!collapsed && (
               <Typography
@@ -385,13 +386,13 @@ const adminMenuItems = [
                     '&.Mui-selected': {
                       background: theme.palette.mode === 'dark' 
                         ? '#1a2e2a' 
-                        : 'rgba(91, 228, 155, 0.1)',
+                        : '#5cdf9924',
                       color: '#5be49b',
                       boxShadow: 'none',
                       '&:hover': {
                         background: theme.palette.mode === 'dark' 
                           ? '#1a2e2a' 
-                          : 'rgba(91, 228, 155, 0.1)',
+                          : '#5cdf9924',
                         boxShadow: 'none',
                       },
                     },
@@ -399,7 +400,7 @@ const adminMenuItems = [
                       ...(isSelected ? {
                         background: theme.palette.mode === 'dark' 
                           ? '#1a2e2a' 
-                          : 'rgba(91, 228, 155, 0.1)',
+                          : '#5cdf9924',
                       } : {
                         backgroundColor: theme.palette.action.hover,
                       }),

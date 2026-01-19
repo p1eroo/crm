@@ -27,7 +27,6 @@ import {
   Search, 
   Notifications,
   Person,
-  Assignment,
   DarkMode,
   LightMode,
   Logout,
@@ -41,9 +40,10 @@ import { useTheme as useThemeContext } from '../../context/ThemeContext';
 import { useSidebar } from '../../context/SidebarContext';
 import { SettingsDrawer } from '../SettingsDrawer';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChartPie, faIndustry, faHandHoldingDollar } from '@fortawesome/free-solid-svg-icons';
-import { faAddressBook } from '@fortawesome/free-regular-svg-icons';
-import { CalendarToday, Assessment, History, Security, Mail } from '@mui/icons-material';
+import { faChartPie, faHandHoldingDollar, faRankingStar, faListCheck, faUserShield, faAddressBook } from '@fortawesome/free-solid-svg-icons';
+import { faCalendarDays } from '@fortawesome/free-regular-svg-icons';
+import { Building2 } from 'lucide-react';
+import { History, Mail } from '@mui/icons-material';
 import { useLocation } from 'react-router-dom';
 import logo from '../../assets/tm_login.png';
 
@@ -61,17 +61,17 @@ const Header: React.FC = () => {
   const mainMenuItems = [
     { text: 'Dashboard', icon: <FontAwesomeIcon icon={faChartPie} />, path: '/dashboard', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
     { text: 'Contactos', icon: <FontAwesomeIcon icon={faAddressBook} />, path: '/contacts', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-    { text: 'Empresas', icon: <FontAwesomeIcon icon={faIndustry} />, path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Empresas', icon: <Building2 />, path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
     { text: 'Negocios', icon: <FontAwesomeIcon icon={faHandHoldingDollar} />, path: '/deals', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-    { text: 'Tareas', icon: <Assignment />, path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-    { text: 'Calendario', icon: <CalendarToday />, path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Tareas', icon: <FontAwesomeIcon icon={faListCheck} />, path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Calendario', icon: <FontAwesomeIcon icon={faCalendarDays} />, path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
     { text: 'Correos', icon: <Mail />, path: '/emails', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-    { text: 'Reportes', icon: <Assessment />, path: '/reports', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Reportes', icon: <FontAwesomeIcon icon={faRankingStar} />, path: '/reports', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   ];
 
   const adminMenuItems = [
     { text: 'Logs del Sistema', icon: <History />, path: '/system-logs', roles: ['admin'] },
-    { text: 'Roles y Permisos', icon: <Security />, path: '/roles-permissions', roles: ['admin'] },
+    { text: 'Roles y Permisos', icon: <FontAwesomeIcon icon={faUserShield} />, path: '/roles-permissions', roles: ['admin'] },
   ];
 
   // Filtrar items según el rol del usuario
@@ -108,7 +108,7 @@ const Header: React.FC = () => {
     { 
       title: 'Empresas', 
       path: '/companies', 
-      icon: <FontAwesomeIcon icon={faIndustry} />,
+      icon: <Building2 />,
     },
     { 
       title: 'Negocios', 
@@ -118,7 +118,7 @@ const Header: React.FC = () => {
     { 
       title: 'Tareas', 
       path: '/tasks', 
-      icon: <Assignment />,
+      icon: <FontAwesomeIcon icon={faListCheck} />,
     },
     // { 
     //   title: 'Tickets', 
@@ -128,7 +128,7 @@ const Header: React.FC = () => {
     { 
       title: 'Calendario', 
       path: '/calendar', 
-      icon: <CalendarToday />,
+      icon: <FontAwesomeIcon icon={faCalendarDays} />,
     },
     { 
       title: 'Correos', 
@@ -138,7 +138,7 @@ const Header: React.FC = () => {
     { 
       title: 'Reportes', 
       path: '/reports', 
-      icon: <Assessment />,
+      icon: <FontAwesomeIcon icon={faRankingStar} />,
     },
   ];
 
