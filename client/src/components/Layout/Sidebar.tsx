@@ -11,12 +11,7 @@ import {
   useMediaQuery,
 } from '@mui/material';
 import {
-  Assignment,
-  AdminPanelSettings,
-  Assessment,
-  CalendarToday,
   History,
-  Security,
   Mail,
 } from '@mui/icons-material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';

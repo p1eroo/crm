@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogActions,
   Box,
@@ -424,24 +423,15 @@ const DealModal: React.FC<DealModalProps> = ({
       maxWidth="sm"
       fullWidth
     >
-      <DialogTitle>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Typography variant="h6">
-            {dealDialogTab === "create" ? "Nuevo Negocio" : "Agregar Negocio"}
-          </Typography>
-          <IconButton onClick={handleClose} size="small">
-            <Close />
-          </IconButton>
-        </Box>
-      </DialogTitle>
-      <DialogContent>
-        <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+      <DialogContent sx={{ pt: 2 }}>
+        <Box sx={{ 
+          borderBottom: 1, 
+          borderColor: "divider", 
+          mb: 2,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}>
           <Tabs
             value={dealDialogTab === "create" ? 0 : 1}
             onChange={(e, newValue) =>
@@ -451,6 +441,9 @@ const DealModal: React.FC<DealModalProps> = ({
             <Tab label="Crear nuevo" />
             <Tab label="Agregar existente" />
           </Tabs>
+          <IconButton onClick={handleClose} size="small">
+            <Close />
+          </IconButton>
         </Box>
 
         {dealDialogTab === "create" ? (
@@ -787,18 +780,6 @@ const DealModal: React.FC<DealModalProps> = ({
                               <Typography variant="body2" sx={{ fontWeight: 500 }}>
                                 {deal.name}
                               </Typography>
-                              {isAlreadyAssociated && (
-                                <Typography
-                                  variant="caption"
-                                  sx={{
-                                    color: taxiMonterricoColors.green,
-                                    fontWeight: 500,
-                                    fontSize: "0.65rem",
-                                  }}
-                                >
-                                  (Ya asociado)
-                                </Typography>
-                              )}
                             </Box>
                             <Typography variant="caption" color="text.secondary">
                               {deal.amount
@@ -890,29 +871,7 @@ const DealModal: React.FC<DealModalProps> = ({
           </Box>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 2, pb: 1.5, pt: 0, justifyContent: "flex-end", gap: 0.75 }}>
-        <Button
-          onClick={handleClose}
-          sx={{
-            textTransform: "none",
-            color: taxiMonterricoColors.green,
-            fontWeight: 500,
-            px: 2,
-            py: 0.5,
-            fontSize: "0.75rem",
-            bgcolor: "transparent",
-            border: `1px solid ${taxiMonterricoColors.green}`,
-            "&:hover": {
-              bgcolor:
-                theme.palette.mode === "dark"
-                  ? "rgba(46, 125, 50, 0.15)"
-                  : "rgba(46, 125, 50, 0.08)",
-              borderColor: taxiMonterricoColors.green,
-            },
-          }}
-        >
-          Cancelar
-        </Button>
+      <DialogActions sx={{ px: 3, py: 2.5, justifyContent: "flex-start" }}>
         <Button
           onClick={
             dealDialogTab === "create"
@@ -931,8 +890,9 @@ const DealModal: React.FC<DealModalProps> = ({
             textTransform: "none",
             fontWeight: 500,
             px: 2,
-            py: 0.5,
+            py: 0.875,
             fontSize: "0.75rem",
+            borderRadius: 0.5,
             bgcolor: taxiMonterricoColors.green,
             color: "white",
             "&:hover": {

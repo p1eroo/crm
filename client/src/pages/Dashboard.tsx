@@ -6,7 +6,6 @@ import {
   CardContent,
   CircularProgress,
   Button,
-  Avatar,
   IconButton,
   Dialog,
   DialogTitle,
@@ -16,6 +15,7 @@ import {
   useTheme,
   Snackbar,
   Alert,
+  Popover,
 } from '@mui/material';
 import {
   Download,
@@ -96,6 +96,102 @@ interface DashboardStats {
   };
 }
 
+// Componente Tooltip personalizado para el gráfico de KPI
+const CustomKPITooltip = ({ active, payload }: any) => {
+  const theme = useTheme();
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    const userName = data.name || '';
+    const value = data.value || 0;
+    // Obtener el color del segmento desde el payload (puede estar en diferentes ubicaciones)
+    const segmentColor = payload[0].color || payload[0].fill || data.fill || data.color || '#10B981';
+    
+    return (
+      <Box
+        sx={{
+          backgroundColor: theme.palette.mode === 'dark' 
+            ? 'rgba(18, 18, 18, 0.85)' 
+            : 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: '8px',
+          padding: '8px 12px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          boxShadow: theme.palette.mode === 'dark'
+            ? '0 4px 6px rgba(0, 0, 0, 0.5)'
+            : '0 4px 6px rgba(0, 0, 0, 0.1)',
+        }}
+      >
+        <Box
+          sx={{
+            width: '12px',
+            height: '12px',
+            borderRadius: '50%',
+            backgroundColor: segmentColor,
+            flexShrink: 0,
+          }}
+        />
+        <Typography variant="body2" sx={{ color: 'text.primary' }}>
+          {userName}: {typeof value === 'number' ? value.toFixed(1) : '0'}%
+        </Typography>
+      </Box>
+    );
+  }
+  return null;
+};
+
+// Componente Tooltip personalizado para el gráfico de Distribución de Ventas
+const CustomSalesDistributionTooltip = ({ active, payload }: any) => {
+  const theme = useTheme();
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    const name = data.name || '';
+    const value = data.value || 0;
+    // Obtener el color del segmento desde el payload
+    const segmentColor = payload[0].color || payload[0].fill || data.color || data.fill || '#8884d8';
+    
+    return (
+      <Box
+        sx={{
+          backgroundColor: theme.palette.mode === 'dark' 
+            ? 'rgba(18, 18, 18, 0.85)' 
+            : 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: '8px',
+          padding: '8px 12px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          boxShadow: theme.palette.mode === 'dark'
+            ? '0 4px 6px rgba(0, 0, 0, 0.5)'
+            : '0 4px 6px rgba(0, 0, 0, 0.1)',
+        }}
+      >
+        <Box
+          sx={{
+            width: '12px',
+            height: '12px',
+            borderRadius: '50%',
+            backgroundColor: segmentColor,
+            flexShrink: 0,
+          }}
+        />
+        <Typography variant="body2" sx={{ color: 'text.primary' }}>
+          {name}: {typeof value === 'number' ? value : '0'}
+        </Typography>
+      </Box>
+    );
+  }
+  return null;
+};
+
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const theme = useTheme();
@@ -110,13 +206,11 @@ const Dashboard: React.FC = () => {
   const [savingBudget, setSavingBudget] = useState(false);
   const [dailyPayments, setDailyPayments] = useState<any[]>([]);
   const [editingBudgetMonth, setEditingBudgetMonth] = useState<number | null>(null); // Mes que se está editando (null = mes actual)
-  const [advisorsModalOpen, setAdvisorsModalOpen] = useState(false);
   const [maximizedSalesDistribution, setMaximizedSalesDistribution] = useState(false);
   const [maximizedKPIArea, setMaximizedKPIArea] = useState(false);
-  const [maximizedAdvisors, setMaximizedAdvisors] = useState(false);
   const [maximizedWeeklySales, setMaximizedWeeklySales] = useState(false);
   const [maximizedSales, setMaximizedSales] = useState(false);
-  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [calendarAnchorEl, setCalendarAnchorEl] = useState<HTMLElement | null>(null);
   
   // Generar lista de meses
   const monthNames = [
@@ -330,10 +424,6 @@ const Dashboard: React.FC = () => {
   //     console.error('Error updating task:', error);
   //   }
   // };
-
-  const getInitials = (firstName?: string, lastName?: string) => {
-    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
-  };
 
   // const formatTime = (dateString?: string) => {
   //   if (!dateString) return '';
@@ -1013,16 +1103,12 @@ const Dashboard: React.FC = () => {
           mt: { xs: 2, sm: 3, md: 0 },
         }}>
           {/* Botón que abre el calendario de meses */}
-          <Button
-            variant="outlined"
+          <IconButton
             size="small"
-            onClick={() => setCalendarOpen(true)}
-            startIcon={<CalendarToday sx={{ fontSize: 18 }} />}
+            onClick={(e) => setCalendarAnchorEl(e.currentTarget)}
             sx={{
-              minWidth: { xs: '100%', sm: 180 },
-              justifyContent: 'flex-start',
-              textTransform: 'none',
-              borderColor: taxiMonterricoColors.green,
+              border: `1px solid ${taxiMonterricoColors.green}`,
+              borderRadius: 1,
               color: taxiMonterricoColors.green,
               '&:hover': {
                 borderColor: taxiMonterricoColors.greenDark,
@@ -1030,186 +1116,156 @@ const Dashboard: React.FC = () => {
               },
             }}
           >
-            {selectedMonth !== null 
-              ? `${monthNames.find(m => m.value === selectedMonth)?.label} ${selectedYear}`
-              : `Todos los meses ${selectedYear}`
-            }
-          </Button>
+            <CalendarToday sx={{ fontSize: 22 }} />
+          </IconButton>
 
-          {/* Dialog con el calendario de meses */}
-          <Dialog
-            open={calendarOpen}
-            onClose={() => setCalendarOpen(false)}
+          {/* Popover con el calendario de meses */}
+          <Popover
+            open={Boolean(calendarAnchorEl)}
+            anchorEl={calendarAnchorEl}
+            onClose={() => setCalendarAnchorEl(null)}
+            anchorOrigin={{
+              vertical: 'bottom',
+              horizontal: 'left',
+            }}
+            transformOrigin={{
+              vertical: 'top',
+              horizontal: 'left',
+            }}
             PaperProps={{
               sx: {
+                borderRadius: 2,
                 minWidth: 320,
                 maxWidth: 400,
+                p: 2,
+                mt: 1,
               }
             }}
           >
-            <DialogTitle sx={{ pb: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <IconButton
-                  size="small"
-                  onClick={() => {
-                    const newYear = parseInt(selectedYear) - 1;
-                    if (newYear >= 2025) {
-                      setSelectedYear(newYear.toString());
-                    }
-                  }}
-                  disabled={parseInt(selectedYear) <= 2025}
-                  sx={{
-                    bgcolor: theme.palette.background.paper,
-                    border: `1px solid ${theme.palette.divider}`,
-                    '&:hover': {
-                      bgcolor: theme.palette.action.hover,
-                    },
-                    '&:disabled': {
-                      opacity: 0.5,
-                    },
-                  }}
-                >
-                  <ChevronLeft />
-                </IconButton>
-                <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
-                  {selectedYear}
-                </Typography>
-                <IconButton
-                  size="small"
-                  onClick={() => {
-                    const newYear = parseInt(selectedYear) + 1;
-                    if (newYear <= currentYear) {
-                      setSelectedYear(newYear.toString());
-                    }
-                  }}
-                  disabled={parseInt(selectedYear) >= currentYear}
-                  sx={{
-                    bgcolor: theme.palette.background.paper,
-                    border: `1px solid ${theme.palette.divider}`,
-                    '&:hover': {
-                      bgcolor: theme.palette.action.hover,
-                    },
-                    '&:disabled': {
-                      opacity: 0.5,
-                    },
-                  }}
-                >
-                  <ChevronRight />
-                </IconButton>
-              </Box>
-            </DialogTitle>
-            <DialogContent sx={{ pt: 2 }}>
-              {/* Opción "Todos los meses" */}
-              <Button
-                fullWidth
-                variant={selectedMonth === null ? "contained" : "outlined"}
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+              <IconButton
+                size="small"
                 onClick={() => {
-                  setSelectedMonth(null);
-                  setCalendarOpen(false);
+                  const newYear = parseInt(selectedYear) - 1;
+                  if (newYear >= 2025) {
+                    setSelectedYear(newYear.toString());
+                  }
                 }}
+                disabled={parseInt(selectedYear) <= 2025}
                 sx={{
-                  mb: 2,
-                  textTransform: 'none',
-                  bgcolor: selectedMonth === null ? taxiMonterricoColors.green : 'transparent',
-                  color: selectedMonth === null ? 'white' : theme.palette.text.primary,
-                  borderColor: taxiMonterricoColors.green,
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.divider}`,
                   '&:hover': {
-                    bgcolor: selectedMonth === null ? taxiMonterricoColors.greenDark : 'rgba(46, 125, 50, 0.04)',
+                    bgcolor: theme.palette.action.hover,
+                  },
+                  '&:disabled': {
+                    opacity: 0.5,
                   },
                 }}
               >
-                Todos los meses {selectedYear}
-              </Button>
-
-              {/* Grid de meses (3 columnas x 4 filas) */}
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: 1,
-                }}
-              >
-                {monthNames.map((month) => {
-                  const isSelected = selectedMonth === month.value;
-                  const isCurrentMonth = 
-                    parseInt(month.value) === new Date().getMonth() && 
-                    parseInt(selectedYear) === currentYear;
-                  
-                  return (
-                    <Button
-                      key={month.value}
-                      variant={isSelected ? "contained" : "outlined"}
-                      onClick={() => {
-                        setSelectedMonth(month.value);
-                        setCalendarOpen(false);
-                      }}
-                      sx={{
-                        minHeight: 48,
-                        textTransform: 'none',
-                        fontSize: '0.875rem',
-                        bgcolor: isSelected ? taxiMonterricoColors.green : 'transparent',
-                        color: isSelected ? 'white' : theme.palette.text.primary,
-                        borderColor: isCurrentMonth && !isSelected 
-                          ? taxiMonterricoColors.green 
-                          : theme.palette.divider,
-                        fontWeight: isCurrentMonth ? 600 : 400,
-                        '&:hover': {
-                          bgcolor: isSelected 
-                            ? taxiMonterricoColors.greenDark 
-                            : 'rgba(46, 125, 50, 0.04)',
-                          borderColor: taxiMonterricoColors.green,
-                        },
-                      }}
-                    >
-                      {month.label}
-                    </Button>
-                  );
-                })}
-              </Box>
-            </DialogContent>
-            <DialogActions sx={{ px: 2, pb: 2 }}>
-              <Button
+                <ChevronLeft />
+              </IconButton>
+              <Typography 
+                component="div" 
                 onClick={() => {
-                  // Seleccionar mes actual
-                  const today = new Date();
-                  setSelectedYear(today.getFullYear().toString());
-                  setSelectedMonth(today.getMonth().toString());
-                  setCalendarOpen(false);
+                  setSelectedMonth(null);
+                  setCalendarAnchorEl(null);
                 }}
-                sx={{
-                  color: taxiMonterricoColors.green,
-                  textTransform: 'none',
-                }}
-              >
-                Hoy
-              </Button>
-              <Button
-                onClick={() => setCalendarOpen(false)}
-                sx={{
-                  color: theme.palette.text.secondary,
-                  textTransform: 'none',
+                sx={{ 
+                  fontWeight: 600, 
+                  fontSize: '1.25rem',
+                  cursor: 'pointer',
+                  '&:hover': {
+                    color: taxiMonterricoColors.green,
+                  },
                 }}
               >
-                Cerrar
-              </Button>
-            </DialogActions>
-          </Dialog>
-          <Button
-            variant="contained"
+                {selectedYear}
+              </Typography>
+              <IconButton
+                size="small"
+                onClick={() => {
+                  const newYear = parseInt(selectedYear) + 1;
+                  if (newYear <= currentYear) {
+                    setSelectedYear(newYear.toString());
+                  }
+                }}
+                disabled={parseInt(selectedYear) >= currentYear}
+                sx={{
+                  bgcolor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.divider}`,
+                  '&:hover': {
+                    bgcolor: theme.palette.action.hover,
+                  },
+                  '&:disabled': {
+                    opacity: 0.5,
+                  },
+                }}
+              >
+                <ChevronRight />
+              </IconButton>
+            </Box>
+
+            {/* Grid de meses (3 columnas x 4 filas) */}
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: 1,
+              }}
+            >
+              {monthNames.map((month) => {
+                const isSelected = selectedMonth === month.value;
+                const isCurrentMonth = 
+                  parseInt(month.value) === new Date().getMonth() && 
+                  parseInt(selectedYear) === currentYear;
+                
+                return (
+                  <Button
+                    key={month.value}
+                    variant={isSelected ? "contained" : "outlined"}
+                    onClick={() => {
+                      setSelectedMonth(month.value);
+                      setCalendarAnchorEl(null);
+                    }}
+                    sx={{
+                      minHeight: 48,
+                      textTransform: 'none',
+                      fontSize: '0.875rem',
+                      bgcolor: isSelected ? taxiMonterricoColors.green : 'transparent',
+                      color: isSelected ? 'white' : theme.palette.text.primary,
+                      borderColor: isCurrentMonth && !isSelected 
+                        ? taxiMonterricoColors.green 
+                        : theme.palette.divider,
+                      fontWeight: isCurrentMonth ? 600 : 400,
+                      '&:hover': {
+                        bgcolor: isSelected 
+                          ? taxiMonterricoColors.greenDark 
+                          : 'rgba(46, 125, 50, 0.04)',
+                        borderColor: taxiMonterricoColors.green,
+                      },
+                    }}
+                  >
+                    {month.label}
+                  </Button>
+                );
+              })}
+            </Box>
+          </Popover>
+          <IconButton
             size="small"
-            startIcon={<Download sx={{ fontSize: { xs: 16, md: 18 } }} />}
             onClick={handleDownloadDashboard}
             sx={{
               bgcolor: taxiMonterricoColors.green,
-              '&:hover': { bgcolor: taxiMonterricoColors.greenDark },
-              fontSize: { xs: '0.75rem', md: '0.875rem' },
-              textTransform: 'none',
-              whiteSpace: 'nowrap',
-              minWidth: { xs: '100%', sm: 'auto' },
+              color: 'white',
+              borderRadius: 1,
+              '&:hover': { 
+                bgcolor: taxiMonterricoColors.greenDark 
+              },
             }}
           >
-            Descargar
-          </Button>
+            <Download sx={{ fontSize: 22 }} />
+          </IconButton>
         </Box>
       </Box>
 
@@ -1602,12 +1658,13 @@ const Dashboard: React.FC = () => {
                   outerRadius={120}
                   fill="#8884d8"
                   dataKey="value"
+                  stroke="none"
                 >
                   {salesDistributionData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
+                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
                   ))}
                 </Pie>
-                <RechartsTooltip />
+                <RechartsTooltip content={<CustomSalesDistributionTooltip />} />
               </PieChart>
             </ResponsiveContainer>
             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mt: 2, justifyContent: 'center' }}>
@@ -1776,18 +1833,150 @@ const Dashboard: React.FC = () => {
 
       </Box>
 
-      {/* Sección: KPI's Área Comercial, Total de Ventas por Asesor y Ventas Semanales */}
+      {/* Sección: KPI's Área Comercial y Ventas Semanales */}
       <Box sx={{ 
         display: 'grid',
         gridTemplateColumns: { 
           xs: '1fr', 
-          md: 'repeat(2, 1fr)',
-          lg: 'repeat(2, 1fr)',
-          xl: 'repeat(3, 1fr)' 
+          md: '1.5fr 1fr',
+          lg: '1.5fr 1fr',
+          xl: '2fr 1fr'   
         },
         gap: { xs: 1.5, sm: 2, md: 3 },
         mb: { xs: 2, sm: 2.5, md: 3 } 
       }}>
+        {/* Ventas Semanales */}
+        <Card sx={{ 
+          borderRadius: 4, 
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 2px 4px rgba(0,0,0,0.1)' 
+            : '0 1px 3px rgba(0, 0, 0, 0.1)',
+          bgcolor: theme.palette.background.paper,
+          border: 'none',
+        }}>
+          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              mb: 1,
+            }}>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 600, 
+                  color: theme.palette.text.primary, 
+                  fontSize: { xs: '0.875rem', md: '1rem' },
+                }}
+              >
+                Ventas Semanales
+              </Typography>
+              <IconButton 
+                size="small" 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMaximizedWeeklySales(!maximizedWeeklySales);
+                }}
+                sx={{ 
+                  color: theme.palette.text.secondary,
+                  padding: 0.1,
+                  minWidth: 20,
+                  width: 20,
+                  height: 0,
+                  borderRadius: '50%',
+                  '&:hover': {
+                    bgcolor: theme.palette.action.hover,
+                  },
+                  '& svg': {
+                    fontSize: 16,
+                  },
+                }}
+              >
+                <ArrowOutward />
+              </IconButton>
+            </Box>
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart 
+                data={weeklySalesData}
+                layout="vertical"
+                margin={{ top: 5, right: 30, bottom: -10, left: 0 }}
+                barCategoryGap="80%"
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={true} vertical={true} />
+                <XAxis 
+                  type="number" 
+                  stroke={theme.palette.text.secondary}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis 
+                  type="category" 
+                  dataKey="week" 
+                  stroke={theme.palette.text.secondary} 
+                  width={60}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <RechartsTooltip 
+                  trigger="hover"
+                  shared={false}
+                  content={({ active, payload, label }) => {
+                    if (active && payload && payload.length && payload[0] && payload[0].value !== undefined && payload[0].value !== null) {
+                      const value = payload[0].value as number;
+                      if (isNaN(value)) return null;
+                      return (
+                        <Box
+                          sx={{
+                            backgroundColor: theme.palette.background.paper,
+                            border: `1px solid ${theme.palette.divider}`,
+                            borderRadius: 2,
+                            padding: 1.5,
+                            boxShadow: theme.palette.mode === 'dark' 
+                              ? '0 4px 12px rgba(0, 0, 0, 0.4)' 
+                              : '0 2px 8px rgba(0, 0, 0, 0.15)',
+                            minWidth: 140,
+                          }}
+                        >
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              color: theme.palette.text.secondary,
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              mb: 0.5,
+                            }}
+                          >
+                            {label}
+                          </Typography>
+                          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
+                            <Typography 
+                              variant="h6" 
+                              sx={{ 
+                                color: '#8B5CF6',
+                                fontSize: '1.125rem',
+                                fontWeight: 700,
+                              }}
+                            >
+                              S/ {value.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Bar dataKey="value" radius={0} barSize={25}>
+                  {weeklySalesData.map((entry, index) => {
+                    const colors = ['#14B8A6', '#EC4899', '#A78BFA', '#F97316', '#60A5FA', '#10B981', '#F59E0B'];
+                    return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                  })}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
         {/* Desempeño por Usuario */}
         <Card sx={{ 
             borderRadius: 4, 
@@ -1848,66 +2037,43 @@ const Dashboard: React.FC = () => {
                 if (hasData) {
                   return (
                     <Box>
-                      <ResponsiveContainer width="100%" height={300}>
+                      <ResponsiveContainer width="100%" height={400}>
                         <PieChart>
-                          <Pie
-                            data={userPerformance.map((user) => ({
-                              name: `${user.firstName} ${user.lastName}`,
-                              value: user.performance,
-                              percentage: user.performance,
-                            }))}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={true}
-                            label={(props: any) => {
-                              const { name, percentage, cx, cy, midAngle, innerRadius, outerRadius } = props;
-                              if (midAngle === undefined || innerRadius === undefined || outerRadius === undefined) {
-                                return null;
-                              }
-                              const RADIAN = Math.PI / 180;
-                              const radius = outerRadius + 20;
-                              const xPos = cx + radius * Math.cos(-midAngle * RADIAN);
-                              const yPos = cy + radius * Math.sin(-midAngle * RADIAN);
-                              
-                              return (
-                                <text
-                                  x={xPos}
-                                  y={yPos}
-                                  fill={theme.palette.text.primary}
-                                  textAnchor={xPos > cx ? 'start' : 'end'}
-                                  dominantBaseline="central"
-                                  fontSize={10}
-                                  fontWeight={600}
-                                >
-                                  {name}: {percentage.toFixed(1)}%
-                                </text>
-                              );
-                            }}
-                            outerRadius={80}
-                            innerRadius={50}
-                            fill="#8884d8"
-                            dataKey="value"
-                          >
-                            {userPerformance.map((user, index) => {
-                              const colors = ['#1F2937', '#F59E0B', '#10B981', '#8B5CF6', '#EF4444', '#06B6D4'];
-                              return (
-                                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                              );
-                            })}
-                          </Pie>
-                          <RechartsTooltip 
-                            formatter={(value: any) => {
-                              const numValue = typeof value === 'number' ? value : Number(value);
-                              return numValue !== undefined && !isNaN(numValue) ? `${numValue.toFixed(1)}%` : '0%';
-                            }}
-                            contentStyle={{
-                              backgroundColor: theme.palette.background.paper,
-                              border: `1px solid ${theme.palette.divider}`,
-                              borderRadius: '8px',
-                              padding: '8px',
-                              color: theme.palette.text.primary,
-                            }}
-                          />
+                          {(() => {
+                            // Colores en tonos verdes/teal como en la primera imagen
+                            const colors = [
+                              '#A7F3D0', // Verde claro pastel
+                              '#10B981', // Verde medio vibrante
+                              '#059669', // Verde oscuro
+                              '#0D9488', // Teal oscuro
+                              '#134E4A', // Teal muy oscuro
+                              '#6EE7B7', // Verde claro alternativo
+                            ];
+                            return (
+                              <Pie
+                                data={userPerformance.map((user, index) => ({
+                                  name: `${user.firstName} ${user.lastName}`,
+                                  value: user.performance,
+                                  percentage: user.performance,
+                                  fill: colors[index % colors.length],
+                                }))}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={false}
+                                label={false}
+                                outerRadius={130}
+                                innerRadius={90}
+                                fill="#8884d8"
+                                dataKey="value"
+                                stroke="none"
+                              >
+                                {userPerformance.map((user, index) => (
+                                  <Cell key={`cell-${index}`} fill={colors[index % colors.length]} stroke="none" />
+                                ))}
+                              </Pie>
+                            );
+                          })()}
+                          <RechartsTooltip content={<CustomKPITooltip />} />
                         </PieChart>
                       </ResponsiveContainer>
                     </Box>
@@ -1939,346 +2105,6 @@ const Dashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-        {/* Total de Ventas por Asesor */}
-        <Card sx={{ 
-            borderRadius: 4, 
-            boxShadow: theme.palette.mode === 'dark' 
-              ? '0 2px 4px rgba(0,0,0,0.1)' 
-              : '0 1px 3px rgba(0, 0, 0, 0.1)',
-            bgcolor: theme.palette.background.paper,
-            border: 'none',
-          }}>
-            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-              <Box sx={{ 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                mb: 1,
-              }}>
-                <Typography 
-                  variant="h6" 
-                  sx={{ 
-                    fontWeight: 600, 
-                    color: theme.palette.text.primary, 
-                    fontSize: { xs: '0.875rem', md: '1rem' },
-                  }}
-                >
-                  Total de Ventas por Asesor
-                </Typography>
-                <IconButton 
-                  size="small" 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setMaximizedAdvisors(!maximizedAdvisors);
-                  }}
-                  sx={{ 
-                    color: theme.palette.text.secondary,
-                    padding: 0.1,
-                    minWidth: 20,
-                    width: 20,
-                    height: 20,
-                    borderRadius: '50%',
-                    '&:hover': {
-                      bgcolor: theme.palette.action.hover,
-                    },
-                    '& svg': {
-                      fontSize: 16,
-                    },
-                  }}
-                >
-                  <ArrowOutward />
-                </IconButton>
-              </Box>
-              {stats.deals.userPerformance && stats.deals.userPerformance.length > 0 ? (
-                <>
-                  {/* Resumen del periodo */}
-                  {(() => {
-                    const sortedUsers = [...stats.deals.userPerformance]
-                      .sort((a, b) => (b.wonDealsValue || 0) - (a.wonDealsValue || 0));
-                    const topUsers = sortedUsers.slice(0, 5);
-                    const totalPeriod = sortedUsers.reduce((sum, user) => sum + (user.wonDealsValue || 0), 0);
-                    const totalAdvisors = sortedUsers.length;
-                    
-                    return (
-                      <>
-                        <Box sx={{ 
-                          display: 'flex', 
-                          alignItems: 'center',
-                          mb: 2,
-                          flexWrap: 'wrap',
-                          gap: 2,
-                        }}>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              color: theme.palette.text.secondary,
-                              fontSize: '0.75rem',
-                            }}
-                          >
-                            Total del periodo: <strong style={{ color: theme.palette.text.primary }}>S/ {totalPeriod.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</strong>
-                          </Typography>
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              color: theme.palette.text.secondary,
-                              fontSize: '0.75rem',
-                            }}
-                          >
-                            Asesores: <strong style={{ color: theme.palette.text.primary }}>{totalAdvisors}</strong>
-                          </Typography>
-                        </Box>
-
-                        {/* Lista de top 5 asesores */}
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                          {topUsers.map((user, index) => {
-                            const rank = index + 1;
-                            const maxValue = topUsers[0]?.wonDealsValue || 1;
-                            const percentage = ((user.wonDealsValue || 0) / maxValue) * 100;
-                            const avatarColors = ['#8B5CF6', '#10B981', '#3B82F6', '#F59E0B', '#EF4444'];
-                            
-                            return (
-                              <Box 
-                                key={user.userId}
-                                sx={{
-                                  position: 'relative',
-                                  p: 1.5,
-                                  borderRadius: 1,
-                                  bgcolor: 'transparent',
-                                }}
-                              >
-                                <Box sx={{ 
-                                  display: 'flex', 
-                                  alignItems: 'center', 
-                                  gap: 1.5,
-                                  mb: 1,
-                                }}>
-                                  {/* Número de ranking */}
-                                  <Box
-                                    sx={{
-                                      width: 32,
-                                      height: 32,
-                                      borderRadius: 1,
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      bgcolor: rank === 1 ? '#FFF4E6' : (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'),
-                                      color: rank === 1 ? '#F59E0B' : theme.palette.text.secondary,
-                                      fontWeight: 600,
-                                      fontSize: '0.75rem',
-                                      flexShrink: 0,
-                                    }}
-                                  >
-                                    {rank}
-                                  </Box>
-
-                                  {/* Avatar */}
-                                  <Avatar
-                                    sx={{
-                                      width: 36,
-                                      height: 36,
-                                      bgcolor: avatarColors[index % avatarColors.length],
-                                      fontSize: '0.75rem',
-                                      fontWeight: 600,
-                                      flexShrink: 0,
-                                    }}
-                                  >
-                                    {getInitials(user.firstName, user.lastName)}
-                                  </Avatar>
-
-                                  {/* Nombre y ventas */}
-                                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                                    <Typography 
-                                      variant="body2" 
-                                      sx={{ 
-                                        fontWeight: 600, 
-                                        color: theme.palette.text.primary,
-                                        fontSize: '0.75rem',
-                                        mb: 0.25,
-                                      }}
-                                    >
-                                      {user.firstName} {user.lastName}
-                                    </Typography>
-                                    <Typography 
-                                      variant="caption" 
-                                      sx={{ 
-                                        color: theme.palette.text.secondary,
-                                        fontSize: '0.6875rem',
-                                      }}
-                                    >
-                                      {user.wonDeals || 0} {user.wonDeals === 1 ? 'venta' : 'ventas'}
-                                    </Typography>
-                                  </Box>
-
-                                  {/* Monto */}
-                                  <Typography 
-                                    variant="body2" 
-                                    sx={{ 
-                                      fontWeight: 600, 
-                                      color: theme.palette.text.primary,
-                                      fontSize: '0.75rem',
-                                      flexShrink: 0,
-                                    }}
-                                  >
-                                    S/ {(user.wonDealsValue || 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                  </Typography>
-                                </Box>
-
-                                {/* Barra de progreso */}
-                                <Box sx={{ 
-                                  width: '100%', 
-                                  height: 6, 
-                                  borderRadius: 1,
-                                  overflow: 'hidden',
-                                  bgcolor: theme.palette.mode === 'dark' 
-                                    ? 'rgba(255, 255, 255, 0.1)' 
-                                    : 'rgba(0, 0, 0, 0.05)',
-                                  position: 'relative',
-                                }}>
-                                  <Box
-                                    sx={{
-                                      width: `${percentage}%`,
-                                      height: '100%',
-                                      bgcolor: '#10B981',
-                                      transition: 'width 0.3s ease',
-                                    }}
-                                  />
-                                </Box>
-                              </Box>
-                            );
-                          })}
-                        </Box>
-                      </>
-                    );
-                  })()}
-                </>
-              ) : (
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    color: theme.palette.text.secondary,
-                    textAlign: 'center',
-                    py: 3,
-                  }}
-                >
-                No hay datos de ventas por asesor disponibles
-              </Typography>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Ventas Semanales */}
-        <Card sx={{ 
-          borderRadius: 4, 
-          boxShadow: theme.palette.mode === 'dark' 
-            ? '0 2px 4px rgba(0,0,0,0.1)' 
-            : '0 1px 3px rgba(0, 0, 0, 0.1)',
-          bgcolor: theme.palette.background.paper,
-          border: 'none',
-        }}>
-          <CardContent sx={{ p: { xs: 2, md: 3 } }}>
-            <Box sx={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              mb: 1,
-            }}>
-              <Typography 
-                variant="h6" 
-                sx={{ 
-                  fontWeight: 600, 
-                  color: theme.palette.text.primary, 
-                  fontSize: { xs: '0.875rem', md: '1rem' },
-                }}
-              >
-                Ventas Semanales
-              </Typography>
-              <IconButton 
-                size="small" 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMaximizedWeeklySales(!maximizedWeeklySales);
-                }}
-                sx={{ 
-                  color: theme.palette.text.secondary,
-                  padding: 0.1,
-                  minWidth: 20,
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
-                  '&:hover': {
-                    bgcolor: theme.palette.action.hover,
-                  },
-                  '& svg': {
-                    fontSize: 16,
-                  },
-                }}
-              >
-                <ArrowOutward />
-              </IconButton>
-            </Box>
-            <ResponsiveContainer width="100%" height={320}>
-              <BarChart 
-                data={weeklySalesData}
-                margin={{ top: 5, right: 5, bottom: 10, left: 0 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={true} vertical={false} />
-                <XAxis dataKey="week" stroke={theme.palette.text.secondary} />
-                <RechartsTooltip 
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      const value = payload[0].value as number;
-                      return (
-                        <Box
-                          sx={{
-                            backgroundColor: theme.palette.background.paper,
-                            border: `1px solid ${theme.palette.divider}`,
-                            borderRadius: 2,
-                            padding: 1.5,
-                            boxShadow: theme.palette.mode === 'dark' 
-                              ? '0 4px 12px rgba(0, 0, 0, 0.4)' 
-                              : '0 2px 8px rgba(0, 0, 0, 0.15)',
-                            minWidth: 140,
-                          }}
-                        >
-                          <Typography 
-                            variant="body2" 
-                            sx={{ 
-                              color: theme.palette.text.secondary,
-                              fontSize: '0.75rem',
-                              fontWeight: 500,
-                              mb: 0.5,
-                            }}
-                          >
-                            {label}
-                          </Typography>
-                          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
-                            <Typography 
-                              variant="h6" 
-                              sx={{ 
-                                color: '#8B5CF6',
-                                fontSize: '1.125rem',
-                                fontWeight: 700,
-                              }}
-                            >
-                              S/ {value.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar dataKey="value" radius={0} barSize={30}>
-                  {weeklySalesData.map((entry, index) => {
-                    const colors = ['#14B8A6', '#EC4899', '#A78BFA', '#F97316', '#60A5FA', '#10B981', '#F59E0B'];
-                    return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
-                  })}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
       </Box>
 
       </Box>
@@ -2374,268 +2200,6 @@ const Dashboard: React.FC = () => {
         </DialogActions>
       </Dialog>
       
-      {/* Modal de Todos los Asesores */}
-      <Dialog
-        open={advisorsModalOpen}
-        onClose={() => setAdvisorsModalOpen(false)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            maxHeight: '90vh',
-          }
-        }}
-      >
-        <DialogTitle sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          pb: 1,
-        }}>
-          <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
-              Total de Ventas por Asesor
-            </Typography>
-          <IconButton
-            onClick={() => setAdvisorsModalOpen(false)}
-            size="small"
-            sx={{
-              color: theme.palette.text.secondary,
-            }}
-          >
-            <Close />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent sx={{ pt: 2 }}>
-            {stats.deals.userPerformance && stats.deals.userPerformance.length > 0 ? (
-              <>
-                {/* Resumen del periodo */}
-                {(() => {
-                  const sortedUsers = [...stats.deals.userPerformance]
-                    .sort((a, b) => (b.wonDealsValue || 0) - (a.wonDealsValue || 0));
-                  const totalPeriod = sortedUsers.reduce((sum, user) => sum + (user.wonDealsValue || 0), 0);
-                  const totalAdvisors = sortedUsers.length;
-                  
-                  return (
-                    <>
-                      <Box sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                      mb: 3,
-                        flexWrap: 'wrap',
-                      gap: 2,
-                      pb: 2,
-                      borderBottom: `1px solid ${theme.palette.divider}`,
-                      }}>
-                      <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-                          <Typography 
-                          variant="body1" 
-                            sx={{ 
-                              color: theme.palette.text.secondary,
-                              fontSize: '0.875rem',
-                            }}
-                          >
-                            Total del periodo: <strong style={{ color: theme.palette.text.primary }}>S/ {totalPeriod.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</strong>
-                          </Typography>
-                          <Typography 
-                          variant="body1" 
-                            sx={{ 
-                              color: theme.palette.text.secondary,
-                              fontSize: '0.875rem',
-                            }}
-                          >
-                            Asesores: <strong style={{ color: theme.palette.text.primary }}>{totalAdvisors}</strong>
-                          </Typography>
-                        </Box>
-                      </Box>
-
-                    {/* Lista de todos los asesores */}
-                    <Box sx={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      gap: 2,
-                      maxHeight: '60vh',
-                      overflowY: 'auto',
-                      pr: 1,
-                      '&::-webkit-scrollbar': {
-                        width: '8px',
-                      },
-                      '&::-webkit-scrollbar-track': {
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)',
-                        borderRadius: '4px',
-                      },
-                      '&::-webkit-scrollbar-thumb': {
-                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)',
-                        borderRadius: '4px',
-                        '&:hover': {
-                          bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)',
-                        },
-                      },
-                    }}>
-                      {sortedUsers.map((user, index) => {
-                          const rank = index + 1;
-                        const maxValue = sortedUsers[0]?.wonDealsValue || 1;
-                          const percentage = ((user.wonDealsValue || 0) / maxValue) * 100;
-                        const avatarColors = ['#8B5CF6', '#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#06B6D4', '#8B5CF6', '#10B981'];
-                          
-                          return (
-                            <Box 
-                              key={user.userId}
-                              sx={{
-                                position: 'relative',
-                              p: 2,
-                              borderRadius: 1.5,
-                              bgcolor: theme.palette.mode === 'dark' 
-                                ? 'rgba(255, 255, 255, 0.03)' 
-                                : 'rgba(0, 0, 0, 0.02)',
-                              border: `1px solid ${theme.palette.divider}`,
-                              '&:hover': {
-                                bgcolor: theme.palette.mode === 'dark' 
-                                  ? 'rgba(255, 255, 255, 0.05)' 
-                                  : 'rgba(0, 0, 0, 0.04)',
-                              },
-                              }}
-                            >
-                              <Box sx={{ 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                              gap: 2,
-                              mb: 1.5,
-                              }}>
-                                {/* Número de ranking */}
-                                <Box
-                                  sx={{
-                                  width: 40,
-                                  height: 40,
-                                  borderRadius: 1.5,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                  bgcolor: rank === 1 ? '#FFF4E6' : rank === 2 ? '#E0F2FE' : rank === 3 ? '#F3E8FF' : (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'),
-                                  color: rank === 1 ? '#F59E0B' : rank === 2 ? '#0EA5E9' : rank === 3 ? '#8B5CF6' : theme.palette.text.secondary,
-                                  fontWeight: 700,
-                                    fontSize: '0.875rem',
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  {rank}
-                                </Box>
-
-                                {/* Avatar */}
-                                <Avatar
-                                  sx={{
-                                  width: 48,
-                                  height: 48,
-                                    bgcolor: avatarColors[index % avatarColors.length],
-                                    fontSize: '0.875rem',
-                                    fontWeight: 600,
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  {getInitials(user.firstName, user.lastName)}
-                                </Avatar>
-
-                                {/* Nombre y ventas */}
-                                <Box sx={{ flex: 1, minWidth: 0 }}>
-                                  <Typography 
-                                  variant="body1" 
-                                    sx={{ 
-                                      fontWeight: 600, 
-                                      color: theme.palette.text.primary,
-                                    fontSize: '0.9375rem',
-                                    mb: 0.5,
-                                    }}
-                                  >
-                                    {user.firstName} {user.lastName}
-                                  </Typography>
-                                  <Typography 
-                                  variant="body2" 
-                                    sx={{ 
-                                      color: theme.palette.text.secondary,
-                                    fontSize: '0.8125rem',
-                                    }}
-                                  >
-                                    {user.wonDeals || 0} {user.wonDeals === 1 ? 'venta' : 'ventas'}
-                                  </Typography>
-                                </Box>
-
-                                {/* Monto */}
-                                <Typography 
-                                variant="h6" 
-                                  sx={{ 
-                                  fontWeight: 700, 
-                                    color: theme.palette.text.primary,
-                                  fontSize: '1rem',
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  S/ {(user.wonDealsValue || 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                                </Typography>
-                              </Box>
-
-                              {/* Barra de progreso */}
-                              <Box sx={{ 
-                                width: '100%', 
-                              height: 8, 
-                                borderRadius: 1,
-                                overflow: 'hidden',
-                                bgcolor: theme.palette.mode === 'dark' 
-                                  ? 'rgba(255, 255, 255, 0.1)' 
-                                  : 'rgba(0, 0, 0, 0.05)',
-                                position: 'relative',
-                              }}>
-                                <Box
-                                  sx={{
-                                    width: `${percentage}%`,
-                                    height: '100%',
-                                    bgcolor: '#10B981',
-                                    transition: 'width 0.3s ease',
-                                  }}
-                                />
-                              </Box>
-                            </Box>
-                          );
-                        })}
-                      </Box>
-                    </>
-                  );
-                })()}
-              </>
-            ) : (
-            <Box sx={{ 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              py: 6,
-            }}>
-              <Typography 
-                variant="body1" 
-                sx={{ 
-                  color: theme.palette.text.secondary,
-                  textAlign: 'center',
-                }}
-              >
-                No hay datos de ventas por asesor disponibles
-                  </Typography>
-                </Box>
-              )}
-        </DialogContent>
-        <DialogActions sx={{ p: 2, pt: 1, borderTop: `1px solid ${theme.palette.divider}` }}>
-          <Button
-            onClick={() => setAdvisorsModalOpen(false)}
-            variant="contained"
-            sx={{
-              bgcolor: taxiMonterricoColors.green,
-              '&:hover': { bgcolor: taxiMonterricoColors.greenDark },
-            }}
-          >
-            Cerrar
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       {/* Modal Fullscreen - Distribución de Ventas */}
       <Dialog
         open={maximizedSalesDistribution}
@@ -2680,12 +2244,13 @@ const Dashboard: React.FC = () => {
                 outerRadius={150}
                 fill="#8884d8"
                 dataKey="value"
+                stroke="none"
               >
                 {salesDistributionData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                  <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
                 ))}
               </Pie>
-              <RechartsTooltip />
+              <RechartsTooltip content={<CustomSalesDistributionTooltip />} />
             </PieChart>
           </ResponsiveContainer>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, mt: 4, justifyContent: 'center' }}>
@@ -2768,197 +2333,48 @@ const Dashboard: React.FC = () => {
               
               return (
                 <Box>
-                  <ResponsiveContainer width="100%" height={600}>
+                  <ResponsiveContainer width="100%" height={700}>
                     <PieChart>
-                      <Pie
-                        data={userPerformance.map((user) => ({
-                          name: `${user.firstName} ${user.lastName}`,
-                          value: user.performance,
-                          percentage: user.performance,
-                        }))}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={true}
-                        label={(props: any) => {
-                          const { name, percentage, cx, cy, midAngle, innerRadius, outerRadius } = props;
-                          if (midAngle === undefined || innerRadius === undefined || outerRadius === undefined) {
-                            return null;
-                          }
-                          const RADIAN = Math.PI / 180;
-                          const radius = outerRadius + 30;
-                          const xPos = cx + radius * Math.cos(-midAngle * RADIAN);
-                          const yPos = cy + radius * Math.sin(-midAngle * RADIAN);
-                          
-                          return (
-                            <text
-                              x={xPos}
-                              y={yPos}
-                              fill={theme.palette.text.primary}
-                              textAnchor={xPos > cx ? 'start' : 'end'}
-                              dominantBaseline="central"
-                              fontSize={14}
-                              fontWeight={600}
-                            >
-                              {name}: {percentage.toFixed(1)}%
-                            </text>
-                          );
-                        }}
-                        outerRadius={150}
-                        innerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {userPerformance.map((user, index) => {
-                          const colors = ['#1F2937', '#F59E0B', '#10B981', '#8B5CF6', '#EF4444', '#06B6D4'];
-                          return (
-                            <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-                          );
-                        })}
-                      </Pie>
-                      <RechartsTooltip 
-                        formatter={(value: any) => {
-                          return [`${value.toFixed(1)}%`, 'Rendimiento'];
-                        }}
-                      />
+                      {(() => {
+                        // Colores en tonos verdes/teal como en la primera imagen
+                        const colors = [
+                          '#A7F3D0', // Verde claro pastel
+                          '#10B981', // Verde medio vibrante
+                          '#059669', // Verde oscuro
+                          '#0D9488', // Teal oscuro
+                          '#134E4A', // Teal muy oscuro
+                          '#6EE7B7', // Verde claro alternativo
+                        ];
+                        return (
+                          <Pie
+                            data={userPerformance.map((user, index) => ({
+                              name: `${user.firstName} ${user.lastName}`,
+                              value: user.performance,
+                              percentage: user.performance,
+                              fill: colors[index % colors.length],
+                            }))}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={false}
+                            outerRadius={260}
+                            innerRadius={190}
+                            fill="#8884d8"
+                            dataKey="value"
+                            stroke="none"
+                          >
+                            {userPerformance.map((user, index) => (
+                              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} stroke="none" />
+                            ))}
+                          </Pie>
+                        );
+                      })()}
+                      <RechartsTooltip content={<CustomKPITooltip />} />
                     </PieChart>
                   </ResponsiveContainer>
                 </Box>
               );
             })()}
-          </DialogContent>
-        </Dialog>
-
-      {/* Modal Fullscreen - Total de Ventas por Asesor */}
-      <Dialog
-        open={maximizedAdvisors}
-          onClose={() => setMaximizedAdvisors(false)}
-          fullScreen
-          PaperProps={{
-            sx: {
-              bgcolor: theme.palette.background.default,
-            },
-          }}
-        >
-          <DialogTitle sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            borderBottom: `1px solid ${theme.palette.divider}`,
-            pb: 2,
-          }}>
-            <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
-              Total de Ventas por Asesor
-            </Typography>
-            <IconButton
-              onClick={() => setMaximizedAdvisors(false)}
-              sx={{
-                color: theme.palette.text.secondary,
-                '&:hover': {
-                  bgcolor: theme.palette.action.hover,
-                },
-              }}
-            >
-              <ArrowOutward sx={{ transform: 'rotate(180deg)' }} />
-            </IconButton>
-          </DialogTitle>
-          <DialogContent sx={{ p: 4 }}>
-            {stats.deals.userPerformance && stats.deals.userPerformance.length > 0 ? (
-              <>
-                <Box sx={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  mb: 4,
-                  flexWrap: 'wrap',
-                  gap: 2,
-                }}>
-                  <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                    <Typography variant="h6" sx={{ color: theme.palette.text.secondary }}>
-                      Total del periodo: <strong style={{ color: theme.palette.text.primary }}>
-                        S/ {stats.deals.userPerformance.reduce((sum: number, user: any) => sum + (user.wonDealsValue || 0), 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                      </strong>
-                    </Typography>
-                    <Typography variant="h6" sx={{ color: theme.palette.text.secondary }}>
-                      Asesores: <strong style={{ color: theme.palette.text.primary }}>{stats.deals.userPerformance.length}</strong>
-                    </Typography>
-                  </Box>
-                </Box>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {[...stats.deals.userPerformance]
-                    .sort((a, b) => (b.wonDealsValue || 0) - (a.wonDealsValue || 0))
-                    .map((user, index) => {
-                      const maxValue = Math.max(...(stats.deals.userPerformance || []).map((u: any) => u.wonDealsValue || 0));
-                      const percentage = maxValue > 0 ? ((user.wonDealsValue || 0) / maxValue) * 100 : 0;
-                      const avatarColors = ['#8B5CF6', '#10B981', '#3B82F6', '#F59E0B', '#EF4444'];
-                      
-                      return (
-                        <Box 
-                          key={user.userId}
-                          sx={{
-                            position: 'relative',
-                            p: 3,
-                            borderRadius: 2,
-                            bgcolor: theme.palette.background.paper,
-                            border: `1px solid ${theme.palette.divider}`,
-                          }}
-                        >
-                          <Box sx={{ 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: 2,
-                            mb: 2,
-                          }}>
-                            <Avatar sx={{ bgcolor: avatarColors[index % avatarColors.length], width: 56, height: 56 }}>
-                              {user.firstName?.[0]}{user.lastName?.[0]}
-                            </Avatar>
-                            <Box sx={{ flex: 1 }}>
-                              <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-                                {user.firstName} {user.lastName}
-                              </Typography>
-                              <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                                S/ {user.wonDealsValue?.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                              </Typography>
-                            </Box>
-                            <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.secondary }}>
-                              #{index + 1}
-                            </Typography>
-                          </Box>
-                          <Box sx={{ 
-                            width: '100%', 
-                            height: 12, 
-                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-                            borderRadius: 1,
-                            overflow: 'hidden',
-                          }}>
-                            <Box
-                              sx={{
-                                width: `${percentage}%`,
-                                height: '100%',
-                                bgcolor: avatarColors[index % avatarColors.length],
-                                transition: 'width 0.3s ease',
-                              }}
-                            />
-                          </Box>
-                        </Box>
-                      );
-                    })}
-                </Box>
-              </>
-            ) : (
-              <Box sx={{ 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center', 
-                justifyContent: 'center',
-                py: 12,
-                minHeight: 600,
-                width: '100%',
-              }}>
-                <Typography variant="h6" sx={{ color: theme.palette.text.secondary }}>
-                  No hay datos de ventas por asesor disponibles
-                </Typography>
-              </Box>
-            )}
           </DialogContent>
         </Dialog>
 
@@ -2999,14 +2415,32 @@ const Dashboard: React.FC = () => {
           <ResponsiveContainer width="100%" height={600}>
             <BarChart 
               data={weeklySalesData}
-              margin={{ top: 5, right: 5, bottom: 20, left: 0 }}
+              layout="vertical"
+              margin={{ top: 5, right: 30, bottom: 20, left: 0 }}
+              barCategoryGap="30%"
             >
-              <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={true} vertical={false} />
-              <XAxis dataKey="week" stroke={theme.palette.text.secondary} />
+              <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={true} vertical={true} />
+              <XAxis 
+                type="number" 
+                stroke={theme.palette.text.secondary}
+                axisLine={false}
+                tickLine={false}
+              />
+              <YAxis 
+                type="category" 
+                dataKey="week" 
+                stroke={theme.palette.text.secondary} 
+                width={80}
+                axisLine={false}
+                tickLine={false}
+              />
               <RechartsTooltip 
+                trigger="hover"
+                shared={false}
                 content={({ active, payload, label }) => {
-                  if (active && payload && payload.length) {
+                  if (active && payload && payload.length && payload[0] && payload[0].value !== undefined && payload[0].value !== null) {
                     const value = payload[0].value as number;
+                    if (isNaN(value)) return null;
                     return (
                       <Box
                         sx={{
@@ -3046,10 +2480,10 @@ const Dashboard: React.FC = () => {
                       </Box>
                     );
                   }
-                    return null;
+                  return null;
                 }}
               />
-              <Bar dataKey="value" radius={0} barSize={30}>
+              <Bar dataKey="value" radius={0} barSize={35}>
                 {weeklySalesData.map((entry, index) => {
                   const colors = ['#14B8A6', '#EC4899', '#A78BFA', '#F97316', '#60A5FA', '#10B981', '#F59E0B'];
                   return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;

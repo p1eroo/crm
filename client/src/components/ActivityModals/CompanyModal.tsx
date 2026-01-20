@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogActions,
   Box,
@@ -57,6 +56,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
   const [companyDialogTab, setCompanyDialogTab] = useState<"create" | "existing">(
     initialTab
   );
+  const [formStep, setFormStep] = useState<1 | 2>(1);
   const [existingCompaniesSearch, setExistingCompaniesSearch] = useState("");
   const [selectedExistingCompanies, setSelectedExistingCompanies] = useState<number[]>(
     []
@@ -98,6 +98,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
   useEffect(() => {
     if (open) {
       setCompanyDialogTab(initialTab);
+      setFormStep(1);
       setExistingCompaniesSearch("");
       // Inicializar con las empresas ya asociadas (marcadas pero deshabilitadas)
       setSelectedExistingCompanies([...excludedCompanyIds]);
@@ -598,24 +599,15 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
         zIndex: 1700, // Mayor que FormDrawer (1600) para que aparezca por encima
       }}
     >
-      <DialogTitle>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Typography variant="h6">
-            {companyDialogTab === "create" ? "Nueva Empresa" : "Agregar Empresa"}
-          </Typography>
-          <IconButton onClick={handleClose} size="small">
-            <Close />
-          </IconButton>
-        </Box>
-      </DialogTitle>
-      <DialogContent>
-        <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+      <DialogContent sx={{ pt: 2 }}>
+        <Box sx={{ 
+          borderBottom: 1, 
+          borderColor: "divider", 
+          mb: 2,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}>
           <Tabs
             value={companyDialogTab === "create" ? 0 : 1}
             onChange={(e, newValue) =>
@@ -625,16 +617,21 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
             <Tab label="Crear nueva" />
             <Tab label="Agregar existente" />
           </Tabs>
+          <IconButton onClick={handleClose} size="small">
+            <Close />
+          </IconButton>
         </Box>
 
         {companyDialogTab === "create" ? (
           <Box
             sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}
           >
-            {/* Título de sección */}
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: theme.palette.text.primary }}>
-              Información Básica
-            </Typography>
+            {formStep === 1 ? (
+              <>
+                {/* Título de sección */}
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: theme.palette.text.primary }}>
+                  Información Básica
+                </Typography>
             {/* RUC */}
             <TextField
               label="RUC"
@@ -840,10 +837,30 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
                 },
               }}
             />
-            {/* Título de sección */}
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, mt: 1, color: theme.palette.text.primary }}>
-              Información Comercial
-            </Typography>
+              </>
+            ) : (
+              <>
+                {/* Botón Atrás */}
+                <Button
+                  onClick={() => setFormStep(1)}
+                  startIcon={<ChevronLeft />}
+                  sx={{
+                    textTransform: "none",
+                    color: theme.palette.text.secondary,
+                    fontWeight: 500,
+                    alignSelf: "flex-start",
+                    mb: 1,
+                    "&:hover": {
+                      bgcolor: theme.palette.action.hover,
+                    },
+                  }}
+                >
+                  Atrás
+                </Button>
+                {/* Título de sección */}
+                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: theme.palette.text.primary }}>
+                  Información Comercial
+                </Typography>
             {/* Dominio */}
             <TextField
               label="Dominio"
@@ -1033,6 +1050,8 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
                 Cliente Recuperado
               </Typography>
             </Box>
+              </>
+            )}
           </Box>
         ) : (
           <Box sx={{ mt: 1 }}>
@@ -1133,18 +1152,6 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
                               <Typography variant="body2" sx={{ fontWeight: 500 }}>
                                 {company.name}
                               </Typography>
-                              {isAlreadyAdded && (
-                                <Typography
-                                  variant="caption"
-                                  sx={{
-                                    color: taxiMonterricoColors.green,
-                                    fontWeight: 500,
-                                    fontSize: "0.65rem",
-                                  }}
-                                >
-                                  (Ya asociado)
-                                </Typography>
-                              )}
                             </Box>
                             <Typography variant="caption" color="text.secondary">
                               {company.ruc || company.companyname}
@@ -1233,66 +1240,92 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
           </Box>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 2, pb: 1.5, pt: 0, justifyContent: "flex-end", gap: 0.75 }}>
-        <Button
-          onClick={handleClose}
-          sx={{
-            textTransform: "none",
-            color: taxiMonterricoColors.green,
-            fontWeight: 500,
-            px: 2,
-            py: 0.5,
-            fontSize: "0.75rem",
-            bgcolor: "transparent",
-            border: `1px solid ${taxiMonterricoColors.green}`,
-            "&:hover": {
-              bgcolor:
-                theme.palette.mode === "dark"
-                  ? "rgba(46, 125, 50, 0.15)"
-                  : "rgba(46, 125, 50, 0.08)",
-              borderColor: taxiMonterricoColors.green,
-            },
-          }}
-        >
-          Cancelar
-        </Button>
-        <Button
-          onClick={
-            companyDialogTab === "create"
-              ? handleCreateCompany
-              : handleAddExistingCompanies
-          }
-          variant="contained"
-          disabled={
-            saving ||
-            (companyDialogTab === "existing" &&
-              selectedExistingCompanies.filter((id) => !excludedCompanyIds.includes(id)).length === 0) ||
-            (companyDialogTab === "create" && (!companyFormData.name.trim() || !!nameError || !!rucValidationError || !!domainError))
-          }
-          sx={{
-            textTransform: "none",
-            fontWeight: 500,
-            px: 2,
-            py: 0.5,
-            fontSize: "0.75rem",
-            bgcolor: taxiMonterricoColors.green,
-            color: "white",
-            "&:hover": {
+      <DialogActions sx={{ px: 3, pb: 2.5, pt: 0, justifyContent: "flex-start", gap: 0.75 }}>
+        {companyDialogTab === "create" && formStep === 1 ? (
+          <Button
+            onClick={() => setFormStep(2)}
+            variant="contained"
+            disabled={!companyFormData.name.trim() || !!nameError || !!rucValidationError}
+            endIcon={<ChevronRight />}
+            sx={{
+              textTransform: "none",
+              fontWeight: 600,
+              px: 4,
+              py: 0.875,
+              fontSize: "0.9375rem",
               bgcolor: taxiMonterricoColors.green,
-              opacity: 0.9,
-            },
-            "&:disabled": {
-              bgcolor: theme.palette.action.disabledBackground,
-              color: theme.palette.action.disabled,
-            },
-          }}
-        >
-          {saving
-            ? "Guardando..."
-            : companyDialogTab === "create"
-            ? "Crear"
-            : "Agregar"}
-        </Button>
+              color: "white",
+              borderRadius: 0.5,
+              boxShadow: `0 4px 12px ${taxiMonterricoColors.green}40`,
+              "&:hover": {
+                bgcolor: taxiMonterricoColors.greenDark,
+                boxShadow: `0 6px 16px ${taxiMonterricoColors.green}50`,
+                transform: "translateY(-2px)",
+              },
+              "&:active": {
+                transform: "translateY(0)",
+              },
+              "&:disabled": {
+                bgcolor: theme.palette.action.disabledBackground,
+                color: theme.palette.action.disabled,
+                boxShadow: "none",
+              },
+              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+            }}
+          >
+            Siguiente
+          </Button>
+        ) : (
+          <Button
+            onClick={
+              companyDialogTab === "create"
+                ? handleCreateCompany
+                : handleAddExistingCompanies
+            }
+            variant="contained"
+            disabled={
+              saving ||
+              (companyDialogTab === "existing" &&
+                selectedExistingCompanies.filter((id) => !excludedCompanyIds.includes(id)).length === 0) ||
+              (companyDialogTab === "create" && (!companyFormData.name.trim() || !!nameError || !!rucValidationError || !!domainError))
+            }
+            sx={{
+              textTransform: "none",
+              fontWeight: 600,
+              px: 4,
+              py: 1.25,
+              fontSize: "0.9375rem",
+              bgcolor: taxiMonterricoColors.green,
+              color: "white",
+              borderRadius: 0.5,
+              boxShadow: saving
+                ? "none"
+                : `0 4px 12px ${taxiMonterricoColors.green}40`,
+              "&:hover": {
+                bgcolor: taxiMonterricoColors.greenDark,
+                boxShadow: saving
+                  ? "none"
+                  : `0 6px 16px ${taxiMonterricoColors.green}50`,
+                transform: "translateY(-2px)",
+              },
+              "&:active": {
+                transform: "translateY(0)",
+              },
+              "&:disabled": {
+                bgcolor: theme.palette.action.disabledBackground,
+                color: theme.palette.action.disabled,
+                boxShadow: "none",
+              },
+              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+            }}
+          >
+            {saving
+              ? "Guardando..."
+              : companyDialogTab === "create"
+              ? "Crear"
+              : "Agregar"}
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );

@@ -112,18 +112,22 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
     <Dialog
       open={open}
       onClose={handleClose}
-      maxWidth="md"
-      fullWidth
+      maxWidth={false}
       PaperProps={{
         sx: {
-          borderRadius: 4,
-          maxHeight: '90vh',
+          borderRadius: 1,
+          width: { xs: '95vw', sm: '1100px', md: '1200px' },
+          maxWidth: { xs: '95vw', sm: '95vw' },
+          height: { xs: '85vh', sm: '80vh' },
+          maxHeight: { xs: '85vh', sm: '800px' },
           bgcolor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
           color: theme.palette.text.primary,
           boxShadow: theme.palette.mode === 'dark' 
             ? '0 20px 60px rgba(0,0,0,0.5)' 
             : '0 20px 60px rgba(0,0,0,0.12)',
           border: 'none',
+          display: 'flex',
+          flexDirection: 'column',
           animation: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           '@keyframes fadeInScale': {
             '0%': {
@@ -176,11 +180,24 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
         </IconButton>
       </DialogTitle>
 
-      <DialogContent sx={{ p: 0, '&.MuiDialogContent-root': { pt: 0 } }}>
+      <DialogContent sx={{ 
+        p: 0, 
+        '&.MuiDialogContent-root': { 
+          pt: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
+        } 
+      }}>
         <Box sx={{ 
           px: 3,
           py: 2,
           bgcolor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          minHeight: 0,
         }}>
           {/* Campo Para */}
           <Box sx={{ mb: 2 }}>
@@ -198,9 +215,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
               placeholder="correo@ejemplo.com"
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  backgroundColor: theme.palette.mode === 'dark' 
-                    ? 'rgba(255, 255, 255, 0.05)' 
-                    : 'rgba(0, 0, 0, 0.02)',
+                  backgroundColor: 'transparent',
                   '& fieldset': {
                     borderColor: theme.palette.mode === 'dark'
                       ? 'rgba(255,255,255,0.1)'
@@ -227,9 +242,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
               placeholder="Escribe el asunto..."
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  backgroundColor: theme.palette.mode === 'dark' 
-                    ? 'rgba(255, 255, 255, 0.05)' 
-                    : 'rgba(0, 0, 0, 0.02)',
+                  backgroundColor: 'transparent',
                   '& fieldset': {
                     borderColor: theme.palette.mode === 'dark'
                       ? 'rgba(255,255,255,0.1)'
@@ -254,7 +267,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
           </Box>
 
           {/* Editor de texto enriquecido */}
-          <Box sx={{ mb: 2 }}>
+          <Box sx={{ mb: 2, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <Box
               sx={{
                 border: `1px solid ${
@@ -264,8 +277,8 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
                 }`,
                 borderRadius: 2,
                 overflow: 'hidden',
-                minHeight: '300px',
-                maxHeight: '400px',
+                flex: 1,
+                minHeight: '400px',
                 display: 'flex',
                 flexDirection: 'column',
                 bgcolor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
@@ -297,57 +310,51 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
       <DialogActions
         sx={{
           px: 3,
-          py: 1.5,
+          py: 2.5,
           borderTop: `1px solid ${
             theme.palette.mode === 'dark'
               ? 'rgba(255,255,255,0.1)'
               : theme.palette.divider
           }`,
-          justifyContent: 'flex-end',
+          justifyContent: 'flex-start',
           bgcolor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
         }}
       >
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button 
-            onClick={handleClose} 
-            disabled={sending}
-            variant="outlined"
-            sx={{
-              textTransform: 'none',
-              px: 3,
-              py: 0.75,
-              color: theme.palette.text.secondary,
-              borderColor: theme.palette.divider,
-              fontWeight: 600,
-              borderRadius: 2,
-              '&:hover': {
-                borderColor: theme.palette.divider,
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255,255,255,0.05)' 
-                  : 'rgba(0,0,0,0.02)',
-              },
-            }}
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSend}
-            variant="contained"
-            startIcon={sending ? <CircularProgress size={16} /> : <Send />}
-            disabled={sending || !subject.trim() || !body.trim() || body === '<p><br></p>' || body === '<br>' || body === ''}
-            sx={{
-              textTransform: 'none',
-              px: 3,
-              py: 0.75,
-              bgcolor: taxiMonterricoColors.green,
-              fontWeight: 600,
-              borderRadius: 2,
-              '&:hover': { bgcolor: taxiMonterricoColors.greenDark },
-            }}
-          >
-            {sending ? 'Enviando...' : 'Enviar'}
-          </Button>
-        </Box>
+        <Button
+          onClick={handleSend}
+          variant="contained"
+          startIcon={sending ? <CircularProgress size={16} /> : <Send />}
+          disabled={sending || !subject.trim() || !body.trim() || body === '<p><br></p>' || body === '<br>' || body === ''}
+          sx={{
+            textTransform: 'none',
+            px: 4,
+            py: 1.25,
+            bgcolor: taxiMonterricoColors.green,
+            fontWeight: 600,
+            borderRadius: 0.5,
+            boxShadow: sending
+              ? 'none'
+              : `0 4px 12px ${taxiMonterricoColors.green}40`,
+            '&:hover': { 
+              bgcolor: taxiMonterricoColors.greenDark,
+              boxShadow: sending
+                ? 'none'
+                : `0 6px 16px ${taxiMonterricoColors.green}50`,
+              transform: 'translateY(-2px)',
+            },
+            '&:active': {
+              transform: 'translateY(0)',
+            },
+            '&.Mui-disabled': {
+              backgroundColor: theme.palette.action.disabledBackground,
+              color: theme.palette.action.disabled,
+              boxShadow: 'none',
+            },
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+        >
+          {sending ? 'Enviando...' : 'Enviar'}
+        </Button>
       </DialogActions>
     </Dialog>
   );

@@ -131,16 +131,16 @@ const CallModal: React.FC<CallModalProps> = ({
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
-          width: "600px",
-          maxWidth: "95vw",
-          height: "52vh",
-          maxHeight: "600px",
+          width: { xs: "50vw", sm: "500px", md: "700px" },
+          maxWidth: { xs: "95vw", sm: "95vw" },
+          height: { xs: "85vh", sm: "80vh" },
+          maxHeight: { xs: "85vh", sm: "550px" },
           backgroundColor:
             theme.palette.mode === "dark"
               ? "#1F2937"
               : theme.palette.background.paper,
           boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
-          borderRadius: 4,
+          borderRadius: 1,
           zIndex: 1500,
           display: "flex",
           flexDirection: "column",
@@ -353,7 +353,7 @@ const CallModal: React.FC<CallModalProps> = ({
         <Box
           sx={{
             px: 3,
-            py: 1,
+            py: 2.5,
             borderTop: `1px solid ${
               theme.palette.mode === "dark"
                 ? "rgba(255,255,255,0.1)"
@@ -364,31 +364,10 @@ const CallModal: React.FC<CallModalProps> = ({
                 ? "#1F2937"
                 : theme.palette.background.paper,
             display: "flex",
-            justifyContent: "flex-end",
+            justifyContent: "flex-start",
             gap: 2,
           }}
         >
-          <Button
-            onClick={onClose}
-            variant="outlined"
-            sx={{
-              textTransform: "none",
-              color: theme.palette.text.secondary,
-              borderColor: theme.palette.divider,
-              fontWeight: 600,
-              px: 3,
-              py: 1,
-              borderRadius: 2,
-              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-              "&:hover": {
-                bgcolor: theme.palette.action.hover,
-                borderColor: theme.palette.text.secondary,
-                transform: "translateY(-1px)",
-              },
-            }}
-          >
-            Cancelar
-          </Button>
           <Button
             onClick={handleSaveCall}
             variant="contained"
@@ -401,8 +380,8 @@ const CallModal: React.FC<CallModalProps> = ({
               color: "white",
               fontWeight: 600,
               px: 4,
-              py: 1,
-              borderRadius: 2,
+              py: 1.25,
+              borderRadius: 0.5,
               boxShadow: saving
                 ? "none"
                 : `0 4px 12px ${taxiMonterricoColors.green}40`,

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import {
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogActions,
   Box,
@@ -397,24 +396,15 @@ const ContactModal: React.FC<ContactModalProps> = ({
       maxWidth="sm"
       fullWidth
     >
-      <DialogTitle>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Typography variant="h6">
-            {contactDialogTab === "create" ? "Nuevo Contacto" : "Agregar Contacto"}
-          </Typography>
-          <IconButton onClick={handleClose} size="small">
-            <Close />
-          </IconButton>
-        </Box>
-      </DialogTitle>
-      <DialogContent>
-        <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+      <DialogContent sx={{ pt: 2 }}>
+        <Box sx={{ 
+          borderBottom: 1, 
+          borderColor: "divider", 
+          mb: 2,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}>
           <Tabs
             value={contactDialogTab === "create" ? 0 : 1}
             onChange={(e, newValue) =>
@@ -424,6 +414,9 @@ const ContactModal: React.FC<ContactModalProps> = ({
             <Tab label="Crear nueva" />
             <Tab label="Agregar existente" />
           </Tabs>
+          <IconButton onClick={handleClose} size="small">
+            <Close />
+          </IconButton>
         </Box>
 
         {contactDialogTab === "create" ? (
@@ -922,25 +915,13 @@ const ContactModal: React.FC<ContactModalProps> = ({
                               }}
                             />
                             <Box sx={{ flex: 1 }}>
-                              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                  {contact.firstName} {contact.lastName}
-                                </Typography>
-                                {isAlreadyAssociated && (
-                                  <Typography
-                                    variant="caption"
-                                    sx={{
-                                      color: taxiMonterricoColors.green,
-                                      fontWeight: 500,
-                                      fontSize: "0.65rem",
-                                    }}
-                                  >
-                                    (Ya asociado)
+                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                                {contact.firstName} {contact.lastName}
+                                {contact.email && (
+                                  <Typography component="span" variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 400, ml: 0.5 }}>
+                                    ({contact.email})
                                   </Typography>
                                 )}
-                              </Box>
-                              <Typography variant="caption" color="text.secondary">
-                                {contact.email}
                               </Typography>
                             </Box>
                           </Box>
@@ -1026,24 +1007,7 @@ const ContactModal: React.FC<ContactModalProps> = ({
           </Box>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 2, pb: 1.5, pt: 0, justifyContent: "flex-end", gap: 0.75 }}>
-        <Button
-          onClick={handleClose}
-          sx={{
-            textTransform: "none",
-            color: taxiMonterricoColors.green,
-            fontWeight: 500,
-            px: 2,
-            "&:hover": {
-              bgcolor:
-                theme.palette.mode === "dark"
-                  ? `${taxiMonterricoColors.green}15`
-                  : `${taxiMonterricoColors.green}08`,
-            },
-          }}
-        >
-          Cancelar
-        </Button>
+      <DialogActions sx={{ px: 3, pb: 2.5, pt: 0, justifyContent: "flex-start", gap: 0.75 }}>
         <Button
           onClick={
             contactDialogTab === "create"
@@ -1054,23 +1018,38 @@ const ContactModal: React.FC<ContactModalProps> = ({
           disabled={saving}
           sx={{
             textTransform: "none",
+            fontWeight: 600,
+            px: 4,
+            py: 0.875,
+            fontSize: "0.9375rem",
             bgcolor: taxiMonterricoColors.green,
-            fontWeight: 500,
-            px: 2,
+            color: "white",
+            borderRadius: 0.5,
+            boxShadow: saving
+              ? "none"
+              : `0 4px 12px ${taxiMonterricoColors.green}40`,
             "&:hover": {
-              bgcolor: taxiMonterricoColors.green,
-              opacity: 0.9,
+              bgcolor: taxiMonterricoColors.greenDark,
+              boxShadow: saving
+                ? "none"
+                : `0 6px 16px ${taxiMonterricoColors.green}50`,
+              transform: "translateY(-2px)",
+            },
+            "&:active": {
+              transform: "translateY(0)",
             },
             "&.Mui-disabled": {
               bgcolor: theme.palette.action.disabledBackground,
               color: theme.palette.action.disabled,
+              boxShadow: "none",
             },
+            transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
           }}
         >
           {saving
             ? "Guardando..."
             : contactDialogTab === "create"
-            ? "Crear y agregar"
+            ? "Crear"
             : "Agregar"}
         </Button>
       </DialogActions>

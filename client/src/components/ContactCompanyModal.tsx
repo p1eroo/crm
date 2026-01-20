@@ -283,13 +283,10 @@ const ContactCompanyModal: React.FC<ContactCompanyModalProps> = ({
         <Box
           sx={{
             display: "flex",
-            justifyContent: "space-between",
+            justifyContent: "flex-end",
             alignItems: "center",
           }}
         >
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            {mode === "select" ? "Seleccionar Empresa" : "Crear Nueva Empresa"}
-          </Typography>
           <IconButton onClick={handleClose} size="small">
             <Close />
           </IconButton>

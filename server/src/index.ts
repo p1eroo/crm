@@ -579,7 +579,7 @@ sequelize.authenticate()
     // Sincronizar tablas de asociación (muchos a muchos)
     if (DealContact && typeof (DealContact as any).sync === 'function') {
       try {
-        await (DealContact as any).sync({ alter: true });
+      await (DealContact as any).sync({ alter: true });
       } catch (error: any) {
         // Si falla por restricciones, intentar sin alter
         if (error.name === 'SequelizeUnknownConstraintError' || error.code === '42704') {
@@ -592,7 +592,7 @@ sequelize.authenticate()
     }
     if (DealCompany && typeof (DealCompany as any).sync === 'function') {
       try {
-        await (DealCompany as any).sync({ alter: true });
+      await (DealCompany as any).sync({ alter: true });
       } catch (error: any) {
         // Si falla por restricciones que no existen, intentar sin alter
         if (error.name === 'SequelizeUnknownConstraintError' || error.code === '42704') {
@@ -605,7 +605,7 @@ sequelize.authenticate()
     }
     if (ContactCompany && typeof (ContactCompany as any).sync === 'function') {
       try {
-        await (ContactCompany as any).sync({ alter: true });
+      await (ContactCompany as any).sync({ alter: true });
       } catch (error: any) {
         // Si falla por restricciones, intentar sin alter
         if (error.name === 'SequelizeUnknownConstraintError' || error.code === '42704') {

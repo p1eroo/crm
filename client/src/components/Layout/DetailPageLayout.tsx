@@ -10,6 +10,7 @@ import {
   Tooltip,
   useTheme,
   CircularProgress,
+  Drawer,
 } from '@mui/material';
 import {
   ChevronLeft,
@@ -24,6 +25,7 @@ import {
   Event,
   TaskAlt,
   Business,
+  Close,
 } from '@mui/icons-material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -118,6 +120,7 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
 }) => {
   const theme = useTheme();
   const [tabValue, setTabValue] = useState(0);
+  const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
 
   const renderLogIcon = (iconType?: string) => {
     switch (iconType) {
@@ -453,236 +456,46 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
               </Box>
 
               {onEditDetails && (
-                <Button
-                  onClick={onEditDetails}
-                  variant="contained"
-                  fullWidth
-                  sx={{
-                    mt: 2,
-                    py: 1,
-                    borderRadius: 2,
-                    textTransform: 'none',
-                    fontSize: '0.9375rem',
-                    fontWeight: 600,
-                    background: '#4caf50',
-                    color: 'white',
-                  }}
-                >
-                  {editButtonText}
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1, width: '100%', mt: 2 }}>
+                  <Button
+                    onClick={onEditDetails}
+                    variant="contained"
+                    fullWidth
+                    sx={{
+                      py: 1,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '0.9375rem',
+                      fontWeight: 600,
+                      background: '#4caf50',
+                      color: 'white',
+                    }}
+                  >
+                    {editButtonText}
+                  </Button>
+                  <Button
+                    onClick={() => setHistoryDrawerOpen(true)}
+                    variant="outlined"
+                    sx={{
+                      py: 1,
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontSize: '0.9375rem',
+                      fontWeight: 600,
+                      borderColor: '#4caf50',
+                      color: '#4caf50',
+                      minWidth: 'auto',
+                      px: 2,
+                      '&:hover': {
+                        borderColor: '#45a049',
+                        bgcolor: 'rgba(76, 175, 80, 0.04)',
+                      },
+                    }}
+                  >
+                    <History sx={{ fontSize: 20 }} />
+                  </Button>
+                </Box>
               )}
-            </Paper>
-
-            {/* Card de Historial */}
-            <Paper
-              elevation={0}
-              sx={{
-                borderRadius: 3,
-                px: 2.5,
-                pt: 3,
-                pb: 2.5,
-                mt: 3,
-                bgcolor: theme.palette.background.paper,
-                border: 'none',
-                boxShadow:
-                  theme.palette.mode === 'dark'
-                    ? '0 2px 8px rgba(0,0,0,0.3)'
-                    : '0 2px 8px rgba(0,0,0,0.1)',
-                display: 'flex',
-                flexDirection: 'column',
-              }}
-            >
-              <Box sx={{ display: 'flex', gap: 1.5, mb: 1.5 }}>
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 1.5,
-                    bgcolor:
-                      theme.palette.mode === 'dark'
-                        ? 'rgba(33, 150, 243, 0.2)'
-                        : 'rgba(33, 150, 243, 0.1)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <History sx={{ fontSize: 20, color: '#2196F3' }} />
-                </Box>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography
-                    variant="subtitle2"
-                    sx={{ fontWeight: 700, mb: 0.5, fontSize: '0.875rem' }}
-                  >
-                    Registro de Cambios
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ fontSize: '0.8125rem', lineHeight: 1.5 }}
-                  >
-                    Historial de actividades y modificaciones recientes
-                  </Typography>
-                </Box>
-              </Box>
-
-              <Box
-                sx={{
-                  overflowY: 'auto',
-                  maxHeight: 280,
-                  mt: 1,
-                  '&::-webkit-scrollbar': {
-                    width: 6,
-                  },
-                  '&::-webkit-scrollbar-track': {
-                    backgroundColor: 'transparent',
-                  },
-                  '&::-webkit-scrollbar-thumb': {
-                    backgroundColor:
-                      theme.palette.mode === 'dark'
-                        ? 'rgba(255,255,255,0.2)'
-                        : 'rgba(0,0,0,0.2)',
-                    borderRadius: 3,
-                  },
-                }}
-              >
-                {loadingLogs ? (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'center',
-                      py: 2,
-                    }}
-                  >
-                    <CircularProgress size={20} />
-                  </Box>
-                ) : activityLogs.length === 0 ? (
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{
-                      fontSize: '0.75rem',
-                      textAlign: 'center',
-                      py: 2,
-                      fontStyle: 'italic',
-                    }}
-                  >
-                    No hay registros disponibles
-                  </Typography>
-                ) : (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 1.5,
-                    }}
-                  >
-                    {activityLogs.map((log, index) => (
-                      <Box
-                        key={log.id}
-                        sx={{
-                          display: 'flex',
-                          gap: 1,
-                          alignItems: 'flex-start',
-                          pb: index < activityLogs.length - 1 ? 1.5 : 0,
-                          borderBottom:
-                            index < activityLogs.length - 1
-                              ? `1px solid ${
-                                  theme.palette.mode === 'dark'
-                                    ? 'rgba(255,255,255,0.08)'
-                                    : 'rgba(0,0,0,0.08)'
-                                }`
-                              : 'none',
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: 1,
-                            bgcolor:
-                              theme.palette.mode === 'dark'
-                                ? 'rgba(33, 150, 243, 0.15)'
-                                : 'rgba(33, 150, 243, 0.1)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                            mt: 0.25,
-                          }}
-                        >
-                          {renderLogIcon(log.iconType)}
-                        </Box>
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              fontSize: '0.75rem',
-                              fontWeight: 500,
-                              mb: 0.25,
-                            }}
-                          >
-                            {log.description}
-                          </Typography>
-                          <Box
-                            sx={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 0.75,
-                              flexWrap: 'wrap',
-                            }}
-                          >
-                            {log.user && (
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  fontSize: '0.6875rem',
-                                  color: theme.palette.text.secondary,
-                                }}
-                              >
-                                {log.user.firstName} {log.user.lastName}
-                              </Typography>
-                            )}
-                            {log.timestamp && (
-                              <>
-                                {log.user && (
-                                  <Typography
-                                    variant="caption"
-                                    sx={{
-                                      fontSize: '0.6875rem',
-                                      color: theme.palette.text.disabled,
-                                    }}
-                                  >
-                                    •
-                                  </Typography>
-                                )}
-                                <Typography
-                                  variant="caption"
-                                  sx={{
-                                    fontSize: '0.6875rem',
-                                    color: theme.palette.text.secondary,
-                                  }}
-                                >
-                                  {new Date(log.timestamp).toLocaleDateString(
-                                    'es-ES',
-                                    {
-                                      day: '2-digit',
-                                      month: 'short',
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                    }
-                                  )}
-                                </Typography>
-                              </>
-                            )}
-                          </Box>
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
-                )}
-              </Box>
             </Paper>
           </Box>
 
@@ -794,6 +607,178 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
       
       {/* Dialog de edición */}
       {editDialog}
+
+      {/* Drawer de Historial de Cambios */}
+      <Drawer
+        anchor="right"
+        open={historyDrawerOpen}
+        onClose={() => setHistoryDrawerOpen(false)}
+        ModalProps={{
+          BackdropProps: {
+            sx: {
+              backgroundColor: 'transparent',
+            },
+          },
+        }}
+        sx={{
+          zIndex: 1600,
+        }}
+        PaperProps={{
+          sx: {
+            width: { xs: '100%', sm: 380, md: 420 },
+            maxWidth: '100%',
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 8px 24px rgba(0,0,0,0.5)'
+              : '0 8px 24px rgba(0,0,0,0.15)',
+          },
+        }}
+      >
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: 'column', 
+          height: '100%',
+          bgcolor: theme.palette.background.paper,
+        }}>
+          {/* Header del Drawer */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            px: 3,
+            py: 2,
+            borderBottom: `1px solid ${theme.palette.divider}`,
+          }}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Historial de Cambios
+            </Typography>
+            <IconButton onClick={() => setHistoryDrawerOpen(false)} size="small">
+              <Close />
+            </IconButton>
+          </Box>
+
+          {/* Contenido del historial con scroll */}
+          <Box sx={{ 
+            flex: 1, 
+            overflowY: 'auto', 
+            px: 3, 
+            py: 2,
+          }}>
+            {loadingLogs ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', py: 2 }}>
+                <CircularProgress size={20} />
+              </Box>
+            ) : activityLogs.length === 0 ? (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{
+                  fontSize: '0.75rem',
+                  textAlign: 'center',
+                  py: 2,
+                  fontStyle: 'italic',
+                }}
+              >
+                No hay registros disponibles
+              </Typography>
+            ) : (
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                {activityLogs.map((log, index) => (
+                  <Box
+                    key={log.id}
+                    sx={{
+                      display: 'flex',
+                      gap: 1,
+                      alignItems: 'flex-start',
+                      pb: index < activityLogs.length - 1 ? 1.5 : 0,
+                      borderBottom:
+                        index < activityLogs.length - 1
+                          ? `1px solid ${
+                              theme.palette.mode === 'dark'
+                                ? 'rgba(255,255,255,0.08)'
+                                : 'rgba(0,0,0,0.08)'
+                          }`
+                          : 'none',
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 1,
+                        bgcolor:
+                          theme.palette.mode === 'dark'
+                            ? 'rgba(33, 150, 243, 0.15)'
+                            : 'rgba(33, 150, 243, 0.1)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                        mt: 0.25,
+                      }}
+                    >
+                      {renderLogIcon(log.iconType)}
+                    </Box>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontSize: '0.75rem',
+                          fontWeight: 500,
+                          mb: 0.25,
+                        }}
+                      >
+                        {log.description}
+                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, flexWrap: 'wrap' }}>
+                        {log.user && (
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              fontSize: '0.6875rem',
+                              color: theme.palette.text.secondary,
+                            }}
+                          >
+                            {log.user.firstName} {log.user.lastName}
+                          </Typography>
+                        )}
+                        {log.timestamp && (
+                          <>
+                            {log.user && (
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  fontSize: '0.6875rem',
+                                  color: theme.palette.text.disabled,
+                                }}
+                              >
+                                •
+                              </Typography>
+                            )}
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                fontSize: '0.6875rem',
+                                color: theme.palette.text.secondary,
+                              }}
+                            >
+                              {new Date(log.timestamp).toLocaleDateString('es-ES', {
+                                day: '2-digit',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </Typography>
+                          </>
+                        )}
+                      </Box>
+                    </Box>
+                  </Box>
+                ))}
+              </Box>
+            )}
+          </Box>
+        </Box>
+      </Drawer>
     </Box>
   );
 };

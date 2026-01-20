@@ -505,10 +505,10 @@ const NoteModal: React.FC<NoteModalProps> = ({
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
-          width: { xs: "95vw", sm: "700px" },
-          maxWidth: { xs: "95vw", sm: "90vw" },
-          height: "70vh",
-          maxHeight: "600px",
+          width: { xs: "95vw", sm: "1100px", md: "1200px" },
+          maxWidth: { xs: "95vw", sm: "95vw" },
+          height: { xs: "85vh", sm: "80vh" },
+          maxHeight: { xs: "85vh", sm: "800px" },
           backgroundColor:
             theme.palette.mode === "dark"
               ? "#1F2937"
@@ -521,7 +521,7 @@ const NoteModal: React.FC<NoteModalProps> = ({
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
-          borderRadius: 4,
+          borderRadius: 1,
           animation: "fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
           "@keyframes fadeInScale": {
             "0%": {
@@ -653,10 +653,7 @@ const NoteModal: React.FC<NoteModalProps> = ({
             variant="outlined"
             sx={{
               "& .MuiOutlinedInput-root": {
-                backgroundColor:
-                  theme.palette.mode === "dark"
-                    ? "rgba(255, 255, 255, 0.05)"
-                    : "rgba(0, 0, 0, 0.02)",
+                backgroundColor: "transparent",
                 "& fieldset": {
                   borderColor:
                     theme.palette.mode === "dark"
@@ -917,7 +914,7 @@ const NoteModal: React.FC<NoteModalProps> = ({
         <Box
           sx={{
             px: 3,
-            py: 1,
+            py: 2.5,
             borderTop: `1px solid ${
               theme.palette.mode === "dark"
                 ? "rgba(255,255,255,0.1)"
@@ -928,74 +925,50 @@ const NoteModal: React.FC<NoteModalProps> = ({
                 ? "#1F2937"
                 : theme.palette.background.paper,
             display: "flex",
-            justifyContent: "flex-end",
+            justifyContent: "flex-start",
             alignItems: "center",
             gap: 2,
           }}
         >
-          {/* Botones */}
-          <Box sx={{ display: "flex", gap: 2 }}>
-            <Button
-              onClick={onClose}
-              variant="outlined"
-              sx={{
-                textTransform: "none",
-                px: 3,
-                py: 1,
-                color: theme.palette.text.secondary,
-                borderColor: theme.palette.divider,
-                fontWeight: 600,
-                borderRadius: 2,
-                "&:hover": {
-                  backgroundColor: theme.palette.action.hover,
-                  borderColor: theme.palette.text.secondary,
-                  transform: "translateY(-1px)",
-                },
-                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleSaveNote}
-              variant="contained"
-              disabled={saving || !noteData.description.trim()}
-              sx={{
-                textTransform: "none",
-                px: 4,
-                py: 1.25,
+          <Button
+            onClick={handleSaveNote}
+            variant="contained"
+            disabled={saving || !noteData.description.trim()}
+            sx={{
+              textTransform: "none",
+              px: 4,
+              py: 1.25,
+              backgroundColor: saving
+                ? theme.palette.action.disabledBackground
+                : taxiMonterricoColors.green,
+              color: "white",
+              fontWeight: 600,
+              borderRadius: 0.5,
+              boxShadow: saving
+                ? "none"
+                : `0 4px 12px ${taxiMonterricoColors.green}40`,
+              "&:hover": {
                 backgroundColor: saving
                   ? theme.palette.action.disabledBackground
-                  : taxiMonterricoColors.green,
-                color: "white",
-                fontWeight: 600,
-                borderRadius: 2,
+                  : taxiMonterricoColors.greenDark,
                 boxShadow: saving
                   ? "none"
-                  : `0 4px 12px ${taxiMonterricoColors.green}40`,
-                "&:hover": {
-                  backgroundColor: saving
-                    ? theme.palette.action.disabledBackground
-                    : taxiMonterricoColors.greenDark,
-                  boxShadow: saving
-                    ? "none"
-                    : `0 6px 16px ${taxiMonterricoColors.green}50`,
-                  transform: "translateY(-2px)",
-                },
-                "&:active": {
-                  transform: "translateY(0)",
-                },
-                "&.Mui-disabled": {
-                  backgroundColor: theme.palette.action.disabledBackground,
-                  color: theme.palette.action.disabled,
-                  boxShadow: "none",
-                },
-                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-              }}
-            >
-              {saving ? "Guardando..." : "Crear nota"}
-            </Button>
-          </Box>
+                  : `0 6px 16px ${taxiMonterricoColors.green}50`,
+                transform: "translateY(-2px)",
+              },
+              "&:active": {
+                transform: "translateY(0)",
+              },
+              "&.Mui-disabled": {
+                backgroundColor: theme.palette.action.disabledBackground,
+                color: theme.palette.action.disabled,
+                boxShadow: "none",
+              },
+              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+            }}
+          >
+            {saving ? "Guardando..." : "Crear nota"}
+          </Button>
         </Box>
       </Box>
       {/* Overlay de fondo cuando la ventana está abierta */}

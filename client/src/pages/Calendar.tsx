@@ -5,11 +5,9 @@ import {
   Card,
   IconButton,
   useTheme,
-  Button,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
   TextField,
   Chip,
   CircularProgress,
@@ -402,26 +400,8 @@ const Calendar: React.FC = () => {
             </IconButton>
           </Box>
 
-          {/* Botón Today y menú (derecha) */}
+          {/* Menú (derecha) */}
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            <Button
-              variant="contained"
-              size="small"
-              onClick={() => {
-                setCalendarDate(new Date());
-                setSelectedDate(null);
-              }}
-              sx={{
-                bgcolor: theme.palette.error.main,
-                color: theme.palette.error.contrastText,
-                textTransform: 'none',
-                '&:hover': {
-                  bgcolor: theme.palette.error.dark,
-                },
-              }}
-            >
-              Today
-            </Button>
             <IconButton size="small" sx={{ color: theme.palette.text.secondary }}>
               <MenuIcon />
             </IconButton>
@@ -795,19 +775,6 @@ const Calendar: React.FC = () => {
             </Box>
           ) : null}
         </DialogContent>
-
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            onClick={() => {
-              setEventModalOpen(false);
-              setSelectedEvent(null);
-              setEventDetails(null);
-            }}
-            variant="outlined"
-          >
-            Cerrar
-          </Button>
-        </DialogActions>
       </Dialog>
     </Box>
   );
