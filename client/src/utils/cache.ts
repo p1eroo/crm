@@ -1,5 +1,7 @@
 // Sistema de caché híbrido (memoria + sessionStorage) para evitar peticiones duplicadas
 
+import { logWarn } from './logger';
+
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
@@ -58,7 +60,7 @@ class HybridCache {
           return entry.data;
         }
       } catch (error) {
-        console.warn('Error reading from sessionStorage:', error);
+        logWarn('Error reading from sessionStorage:', error);
       }
     }
 
@@ -100,10 +102,10 @@ class HybridCache {
               sessionStorage.setItem(storageKey, serialized);
             }
           } catch (retryError) {
-            console.warn('Could not store in sessionStorage after cleanup:', retryError);
+            logWarn('Could not store in sessionStorage after cleanup:', retryError);
           }
         } else {
-          console.warn('Error writing to sessionStorage:', error);
+          logWarn('Error writing to sessionStorage:', error);
         }
       }
     }
@@ -119,7 +121,7 @@ class HybridCache {
       try {
         sessionStorage.removeItem(STORAGE_PREFIX + key);
       } catch (error) {
-        console.warn('Error deleting from sessionStorage:', error);
+        logWarn('Error deleting from sessionStorage:', error);
       }
     }
   }
@@ -178,7 +180,7 @@ class HybridCache {
         sessionStorage.removeItem(key);
       });
     } catch (error) {
-      console.warn('Error cleaning expired storage:', error);
+      logWarn('Error cleaning expired storage:', error);
     }
   }
 
@@ -201,7 +203,7 @@ class HybridCache {
           sessionStorage.removeItem(key);
         });
       } catch (error) {
-        console.warn('Error clearing sessionStorage:', error);
+        logWarn('Error clearing sessionStorage:', error);
       }
     }
   }

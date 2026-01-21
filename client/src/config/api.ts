@@ -1,14 +1,15 @@
 import axios from 'axios';
+import { log, logWarn, logError } from '../utils/logger';
 
 // Detectar automáticamente la URL de la API
 const getApiUrl = () => {
   // Si hay una variable de entorno, usarla
   if (process.env.REACT_APP_API_URL) {
-    console.log('🌐 Usando REACT_APP_API_URL del .env:', process.env.REACT_APP_API_URL);
+    log('🌐 Usando REACT_APP_API_URL del .env:', process.env.REACT_APP_API_URL);
     return process.env.REACT_APP_API_URL;
   }
   
-  console.log('🌐 No se encontró REACT_APP_API_URL, detectando automáticamente...');
+  log('🌐 No se encontró REACT_APP_API_URL, detectando automáticamente...');
   
   const hostname = window.location.hostname;
   const protocol = window.location.protocol; // 'https:' o 'http:'
@@ -37,8 +38,8 @@ const getApiUrl = () => {
   const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
   if (ipRegex.test(hostname)) {
     const url = `${isHttps ? 'https' : 'http'}://${hostname}:5000/api`;
-    console.log('🌐 Detectada IP de red:', hostname);
-    console.log('🔗 URL de API configurada:', url);
+    log('🌐 Detectada IP de red:', hostname);
+    log('🔗 URL de API configurada:', url);
     return url;
   }
   
@@ -48,31 +49,31 @@ const getApiUrl = () => {
     // En producción con HTTPS, usar el subdominio api-crm.taximonterrico.com
     if (hostname === 'crm.taximonterrico.com') {
       const url = 'https://api-crm.taximonterrico.com/api';
-      console.log('🌐 Detectado dominio en producción:', hostname);
-      console.log('🔒 Protocolo: HTTPS');
-      console.log('🔗 URL de API configurada:', url);
+      log('🌐 Detectado dominio en producción:', hostname);
+      log('🔒 Protocolo: HTTPS');
+      log('🔗 URL de API configurada:', url);
       return url;
     } else {
       // Para otros dominios HTTPS, usar el mismo dominio sin puerto
       const url = `https://${hostname}/api`;
-      console.log('🌐 Detectado dominio en producción:', hostname);
-      console.log('🔒 Protocolo: HTTPS');
-      console.log('🔗 URL de API configurada:', url);
+      log('🌐 Detectado dominio en producción:', hostname);
+      log('🔒 Protocolo: HTTPS');
+      log('🔗 URL de API configurada:', url);
       return url;
     }
   } else {
     // En desarrollo, usar el puerto 5000
     const url = `http://${hostname}:5000/api`;
-    console.log('🌐 Detectado dominio en desarrollo:', hostname);
-    console.log('🔒 Protocolo: HTTP');
-    console.log('🔗 URL de API configurada:', url);
+    log('🌐 Detectado dominio en desarrollo:', hostname);
+    log('🔒 Protocolo: HTTP');
+    log('🔗 URL de API configurada:', url);
     return url;
   }
 };
 
 // URL inicial
 const API_URL = getApiUrl();
-console.log('🔗 URL base de la API configurada:', API_URL);
+log('🔗 URL base de la API configurada:', API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
@@ -132,18 +133,18 @@ api.interceptors.request.use(
       // Asegurarse de que el header Authorization esté configurado correctamente
       config.headers = config.headers || {};
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('🔑 Token agregado a petición:', config.url);
+      log('🔑 Token agregado a petición:', config.url);
     } else if (!isPublicEndpoint) {
       // Solo mostrar warning para endpoints que requieren autenticación
-      console.warn('⚠️ No hay token disponible para petición:', config.url);
-      console.warn('⚠️ Petición sin token a endpoint que probablemente requiere autenticación:', config.url);
+      logWarn('⚠️ No hay token disponible para petición:', config.url);
+      logWarn('⚠️ Petición sin token a endpoint que probablemente requiere autenticación:', config.url);
     }
     
-    console.log('📤 Petición a:', config.baseURL + (config.url || ''), 'con token:', token ? 'Sí' : 'No');
+    log('📤 Petición a:', config.baseURL + (config.url || ''), 'con token:', token ? 'Sí' : 'No');
     return config;
   },
   (error) => {
-    console.error('❌ Error en interceptor de request:', error);
+    logError('❌ Error en interceptor de request:', error);
     return Promise.reject(error);
   }
 );
@@ -151,7 +152,7 @@ api.interceptors.request.use(
 // Interceptor para manejar errores de autenticación y red
 api.interceptors.response.use(
   (response) => {
-    console.log('✅ Respuesta recibida de:', response.config.baseURL + (response.config.url || ''));
+    log('✅ Respuesta recibida de:', response.config.baseURL + (response.config.url || ''));
     
     // Validar que la respuesta sea JSON y no HTML
     const contentType = response.headers['content-type'] || '';
@@ -211,7 +212,7 @@ api.interceptors.response.use(
       });
     } else if (errorCode === 'ERR_NETWORK' || errorCode === 'ERR_INTERNET_DISCONNECTED') {
       // Errores de red no deberían cerrar la sesión
-      console.warn('⚠️ Error de red (no se cierra sesión):', error.message);
+      logWarn('⚠️ Error de red (no se cierra sesión):', error.message);
     }
     
     // Manejar errores 401 (siempre token inválido/expirado)
@@ -221,7 +222,7 @@ api.interceptors.response.use(
       const isAuthMeRequest = url.includes('/auth/me');
       
       if (!isLoginPage && !isLoginRequest && !isAuthMeRequest) {
-        console.log('🔒 [Interceptor] Error 401 - Token inválido o expirado, cerrando sesión');
+        log('🔒 [Interceptor] Error 401 - Token inválido o expirado, cerrando sesión');
         localStorage.removeItem('user');
         localStorage.removeItem('token');
         delete api.defaults.headers.common['Authorization'];
@@ -255,7 +256,7 @@ api.interceptors.response.use(
       
       // Si el mensaje indica explícitamente que el token es inválido, cerrar sesión
       if (isTokenInvalid) {
-        console.log('🔒 [Interceptor] Error 403 - Token inválido según mensaje, cerrando sesión');
+        log('🔒 [Interceptor] Error 403 - Token inválido según mensaje, cerrando sesión');
         localStorage.removeItem('user');
         localStorage.removeItem('token');
         delete api.defaults.headers.common['Authorization'];

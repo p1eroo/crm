@@ -27,6 +27,7 @@ import {
 } from '@mui/icons-material';
 import api from '../config/api';
 import { useAuth } from '../context/AuthContext';
+import { log } from '../utils/logger';
 import {
   getCalendarDays,
   isToday as isTodayUtil,
@@ -68,7 +69,7 @@ const Calendar: React.FC = () => {
     // Verificar autenticación antes de hacer la llamada
     const token = localStorage.getItem('token');
     if (!user || !token) {
-      console.log('⚠️ Usuario no autenticado, omitiendo fetchGoogleCalendarEvents');
+      log('⚠️ Usuario no autenticado, omitiendo fetchGoogleCalendarEvents');
       setGoogleCalendarEvents([]);
       return;
     }
@@ -102,7 +103,7 @@ const Calendar: React.FC = () => {
     // Verificar autenticación antes de hacer la llamada
     const token = localStorage.getItem('token');
     if (!user || !token) {
-      console.log('⚠️ Usuario no autenticado, omitiendo checkGoogleCalendarConnection');
+      log('⚠️ Usuario no autenticado, omitiendo checkGoogleCalendarConnection');
       setGoogleCalendarConnected(false);
       setGoogleCalendarEvents([]);
       return;
@@ -137,7 +138,7 @@ const Calendar: React.FC = () => {
   const fetchAllActivities = useCallback(async () => {
     const token = localStorage.getItem('token');
     if (!user || !token) {
-      console.log('⚠️ Usuario no autenticado, omitiendo fetchAllActivities');
+      log('⚠️ Usuario no autenticado, omitiendo fetchAllActivities');
       setNotes([]);
       setMeetings([]);
       return [];
@@ -175,7 +176,7 @@ const Calendar: React.FC = () => {
     // Verificar autenticación antes de hacer la llamada
     const token = localStorage.getItem('token');
     if (!user || !token) {
-      console.log('⚠️ Usuario no autenticado, omitiendo fetchAllTasksWithDates');
+      log('⚠️ Usuario no autenticado, omitiendo fetchAllTasksWithDates');
       setAllTasksWithDates([]);
       return;
     }

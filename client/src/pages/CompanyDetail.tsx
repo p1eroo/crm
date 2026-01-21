@@ -50,6 +50,7 @@ import type { GeneralInfoCard } from "../components/DetailCards";
 import DetailPageLayout from "../components/Layout/DetailPageLayout";
 import { useAuth } from "../context/AuthContext";
 import { Building2 } from "lucide-react";
+import { log } from "../utils/logger";
 
 // Agregar los iconos a la librería para usar byPrefixAndName
 library.add(far);
@@ -661,7 +662,7 @@ const CompanyDetail: React.FC = () => {
       // Asegurarse de que isRecoveredClient sea boolean
       dataToSend.isRecoveredClient = Boolean(editFormData.isRecoveredClient);
       
-      console.log("Datos a enviar:", dataToSend);
+      log("Datos a enviar:", dataToSend);
       
       const response = await api.put(`/companies/${company.id}`, dataToSend);
       setCompany(response.data);

@@ -51,6 +51,7 @@ import api from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { taxiMonterricoColors } from '../theme/colors';
 import * as XLSX from 'xlsx';
+import { log, logWarn } from '../utils/logger';
 
 interface DashboardStats {
   contacts: {
@@ -232,13 +233,13 @@ const Dashboard: React.FC = () => {
     // Verificar autenticación antes de hacer la llamada
     const token = localStorage.getItem('token');
     if (!user || !token) {
-      console.log('⚠️ Usuario no autenticado, omitiendo fetchStats');
+      log('⚠️ Usuario no autenticado, omitiendo fetchStats');
       setLoading(false);
       return;
     }
 
     try {
-      console.log('📊 Iniciando fetchStats...');
+      log('📊 Iniciando fetchStats...');
       // Calcular fechas de inicio y fin según el año y mes seleccionado
       const year = parseInt(selectedYear);
       let startDate: Date;
@@ -255,7 +256,7 @@ const Dashboard: React.FC = () => {
         endDate = new Date(year, 11, 31, 23, 59, 59); // 31 de diciembre
       }
       
-      console.log('📊 Token disponible para fetchStats:', token ? 'Sí' : 'No');
+      log('📊 Token disponible para fetchStats:', token ? 'Sí' : 'No');
       
       const response = await api.get('/dashboard/stats', {
         params: {
@@ -269,8 +270,8 @@ const Dashboard: React.FC = () => {
         throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica la configuración del proxy reverso.');
       }
       
-      console.log('✅ Dashboard stats recibidos:', response.data);
-      console.log('Deals por etapa:', response.data.deals?.byStage);
+      log('✅ Dashboard stats recibidos:', response.data);
+      log('Deals por etapa:', response.data.deals?.byStage);
       
       // Validar que response.data sea un objeto antes de establecerlo
       if (response.data && typeof response.data === 'object' && !Array.isArray(response.data)) {
@@ -315,7 +316,7 @@ const Dashboard: React.FC = () => {
       // Verificar autenticación antes de hacer la llamada
       const token = localStorage.getItem('token');
       if (!user || !token) {
-        console.log('⚠️ Usuario no autenticado, omitiendo fetchDailyDeals');
+        log('⚠️ Usuario no autenticado, omitiendo fetchDailyDeals');
         return;
       }
 
@@ -444,7 +445,7 @@ const Dashboard: React.FC = () => {
 
   const handleDownloadDashboard = () => {
     if (!stats) {
-      console.warn('No hay datos disponibles para descargar');
+      logWarn('No hay datos disponibles para descargar');
       return;
     }
     
@@ -776,7 +777,7 @@ const Dashboard: React.FC = () => {
   // Priorizar etapas ganadas y perdidas, luego ordenar por cantidad
   const salesDistributionData = stats.deals.byStage && stats.deals.byStage.length > 0
     ? (() => {
-        console.log('Procesando deals por etapa:', stats.deals.byStage);
+        log('Procesando deals por etapa:', stats.deals.byStage);
         
         // Normalizar los datos - Sequelize puede devolver count como string o number
         const normalizedStages = stats.deals.byStage.map((d: any) => ({
@@ -785,7 +786,7 @@ const Dashboard: React.FC = () => {
           total: typeof d.total === 'string' ? parseFloat(d.total) : (d.total || 0),
         }));
         
-        console.log('Etapas normalizadas:', normalizedStages);
+        log('Etapas normalizadas:', normalizedStages);
         
         // Separar etapas ganadas, perdidas y otras
         const wonStages = normalizedStages.filter(d => 
@@ -798,16 +799,16 @@ const Dashboard: React.FC = () => {
           !['won', 'closed won', 'cierre_ganado', 'lost', 'closed lost', 'cierre_perdido'].includes(d.stage)
         );
         
-        console.log('Etapas ganadas:', wonStages);
-        console.log('Etapas perdidas:', lostStages);
-        console.log('Otras etapas:', otherStages);
+        log('Etapas ganadas:', wonStages);
+        log('Etapas perdidas:', lostStages);
+        log('Otras etapas:', otherStages);
         
         // Agregar etapas ganadas y perdidas agrupadas si existen
         const wonTotal = wonStages.reduce((sum, d) => sum + d.count, 0);
         const lostTotal = lostStages.reduce((sum, d) => sum + d.count, 0);
         
-        console.log('Total ganados:', wonTotal);
-        console.log('Total perdidos:', lostTotal);
+        log('Total ganados:', wonTotal);
+        log('Total perdidos:', lostTotal);
         
         const chartData: Array<{ name: string; value: number; color: string }> = [];
         
@@ -838,7 +839,7 @@ const Dashboard: React.FC = () => {
           });
         });
         
-        console.log('Datos finales del gráfico:', chartData);
+        log('Datos finales del gráfico:', chartData);
         
         return chartData.length > 0 ? chartData : [{ name: 'Sin datos', value: 1, color: '#E5E7EB' }];
       })()

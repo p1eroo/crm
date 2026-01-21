@@ -30,6 +30,7 @@ import {
 } from '@mui/material';
 import { Add, Delete, Search, Campaign as CampaignIcon, TrendingUp, Computer, Visibility, CheckCircle } from '@mui/icons-material';
 import api from '../config/api';
+import { log } from '../utils/logger';
 import { taxiMonterricoColors } from '../theme/colors';
 
 interface Campaign {
@@ -82,7 +83,7 @@ const Campaigns: React.FC = () => {
 
   // Función para vista previa
   const handlePreview = (campaign: Campaign) => {
-    console.log('Preview campaign:', campaign);
+    log('Preview campaign:', campaign);
   };
 
   useEffect(() => {

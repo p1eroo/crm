@@ -41,6 +41,7 @@ import {
   ChevronRight,
 } from '@mui/icons-material';
 import api from '../config/api';
+import { log } from '../utils/logger';
 import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
 
@@ -123,13 +124,13 @@ const Tickets: React.FC = () => {
 
   // Función para vista previa
   const handlePreview = (ticket: Ticket) => {
-    console.log('Preview ticket:', ticket);
+    log('Preview ticket:', ticket);
   };
 
   // Función para abrir modal de edición
   const handleOpen = (ticket?: Ticket) => {
     // TODO: Implementar modal de edición de ticket
-    console.log('Edit ticket:', ticket);
+    log('Edit ticket:', ticket);
   };
 
   const handleDelete = (id: number) => {

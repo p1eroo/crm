@@ -37,6 +37,7 @@ import { useAuth } from '../../context/AuthContext';
 import { taxiMonterricoColors } from '../../theme/colors';
 import api from '../../config/api';
 import { useTheme as useThemeContext } from '../../context/ThemeContext';
+import { log } from '../../utils/logger';
 import { useSidebar } from '../../context/SidebarContext';
 import { SettingsDrawer } from '../SettingsDrawer';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -196,7 +197,7 @@ const Header: React.FC = () => {
       // Verificar autenticación antes de hacer requests
       const token = localStorage.getItem('token');
       if (!user || !token) {
-        console.log('⚠️ Usuario no autenticado, omitiendo fetchNotifications');
+        log('⚠️ Usuario no autenticado, omitiendo fetchNotifications');
         return;
       }
 
@@ -255,10 +256,10 @@ const Header: React.FC = () => {
           // Si es un 401, significa que el usuario no tiene Google Calendar conectado
           // o el token expiró. Esto es normal y no debería mostrar error.
           if (error.response?.status === 401) {
-            console.log('ℹ️ Google Calendar no disponible o no conectado');
+            log('ℹ️ Google Calendar no disponible o no conectado');
           } else {
             // Para otros errores, loguear pero no interrumpir el flujo
-            console.log('⚠️ Error obteniendo eventos de Google Calendar:', error.message);
+            log('⚠️ Error obteniendo eventos de Google Calendar:', error.message);
           }
           // Continuar sin eventos de Google Calendar
         }

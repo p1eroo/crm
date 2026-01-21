@@ -48,6 +48,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import api from "../config/api";
 import { taxiMonterricoColors } from "../theme/colors";
+import { log } from "../utils/logger";
 import { pageStyles } from "../theme/styles";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
@@ -373,7 +374,7 @@ const Contacts: React.FC = () => {
           batchSize: 1000, // Procesar en lotes de 1000
         });
 
-        console.log('Respuesta del backend:', response.data); // Debug
+        log('Respuesta del backend:', response.data); // Debug
 
         const { successCount = 0, errorCount = 0, results = [] } = response.data || {};
 
@@ -385,7 +386,7 @@ const Contacts: React.FC = () => {
             error: r.error || 'Error desconocido',
           }));
 
-        console.log('successCount:', successCount, 'errorCount:', errorCount); // Debug
+        log('successCount:', successCount, 'errorCount:', errorCount); // Debug
 
         setImportProgress({
           current: contactsToCreate.length,
@@ -510,7 +511,7 @@ const Contacts: React.FC = () => {
       // Si es un error 403, el usuario no tiene permisos para ver usuarios (no es admin)
       // Esto es normal y no debería mostrar un error
       if (error.response?.status === 403) {
-        console.log('Usuario no tiene permisos para ver usuarios (no es admin)');
+        log('Usuario no tiene permisos para ver usuarios (no es admin)');
         setUsers([]);
       } else {
         console.error('Error fetching users:', error);
@@ -1120,7 +1121,7 @@ const Contacts: React.FC = () => {
         companyId: companyIdNum,
       };
 
-      console.log('📤 Enviando datos:', submitData);
+      log('📤 Enviando datos:', submitData);
 
       if (editingContact) {
         await api.put(`/contacts/${editingContact.id}`, submitData);
@@ -2215,6 +2216,8 @@ const Contacts: React.FC = () => {
                   Filas por página:
                 </Typography>
                 <Select
+                  id="contacts-rows-per-page"
+                  name="contacts-rows-per-page"
                   value={itemsPerPage}
                   onChange={(e) => {
                     setItemsPerPage(Number(e.target.value));
@@ -2463,6 +2466,8 @@ const Contacts: React.FC = () => {
             {/* Columna */}
             <FormControl size="small" sx={{ minWidth: 100, flex: 1 }}>
               <Select
+                id="contacts-filter-column"
+                name="contacts-filter-column"
                 value={filterRules.length > 0 ? filterRules[filterRules.length - 1]?.column || 'firstName' : 'firstName'}
                 onChange={(e) => {
                   if (filterRules.length === 0) {
@@ -2498,6 +2503,8 @@ const Contacts: React.FC = () => {
             {/* Operador */}
             <FormControl size="small" sx={{ minWidth: 100, flex: 1 }}>
               <Select
+                id="contacts-filter-operator"
+                name="contacts-filter-operator"
                 value={filterRules.length > 0 ? filterRules[filterRules.length - 1]?.operator || 'contains' : 'contains'}
                 onChange={(e) => {
                   if (filterRules.length === 0) {
@@ -2730,6 +2737,7 @@ const Contacts: React.FC = () => {
               <Box>
                   {idType === "dni" ? (
                     <TextField
+                      id="contact-dni-input"
                       label="DNI"
                       value={formData.dni}
                       onChange={async (e) => {
@@ -2797,6 +2805,7 @@ const Contacts: React.FC = () => {
                     />
                   ) : (
                     <TextField
+                      id="contact-cee-input"
                       label="CEE"
                       value={formData.cee}
                       onChange={async (e) => {
@@ -2926,6 +2935,8 @@ const Contacts: React.FC = () => {
 
             {/* Dirección */}
             <TextField
+              id="contact-address"
+              name="address"
               label="Dirección"
               value={formData.address}
               onChange={handleAddressChange}
@@ -2978,6 +2989,7 @@ const Contacts: React.FC = () => {
 
             {/* Empresa Principal */}
             <TextField
+              id="contact-company-input"
               select
               label="Empresa Principal"
               value={formData.companyId || ""}
@@ -2992,7 +3004,14 @@ const Contacts: React.FC = () => {
               helperText={formErrors.companyId}
               required
               fullWidth
+              InputLabelProps={{
+                htmlFor: "contact-company-input",
+              }}
               SelectProps={{
+                inputProps: {
+                  id: "contact-company-input",
+                  name: "contact-company-input",
+                },
                 MenuProps: {
                   disableScrollLock: true,
                   disablePortal: true,
@@ -3058,6 +3077,7 @@ const Contacts: React.FC = () => {
             />
             {/* Etapa del Ciclo de Vida */}
             <TextField
+              id="contact-lifecycle-stage-input"
               select
               label="Etapa del Ciclo de Vida"
               value={formData.lifecycleStage}
@@ -3068,7 +3088,14 @@ const Contacts: React.FC = () => {
                 }))
               }
               fullWidth
+              InputLabelProps={{
+                htmlFor: "contact-lifecycle-stage-input",
+              }}
               SelectProps={{
+                inputProps: {
+                  id: "contact-lifecycle-stage-input",
+                  name: "contact-lifecycle-stage-input",
+                },
                 MenuProps: {
                   disableScrollLock: true,
                   disablePortal: true,
@@ -3322,6 +3349,8 @@ const Contacts: React.FC = () => {
               }}
             />
             <TextField
+              id="company-address"
+              name="address"
               label="Dirección"
               value={companyFormData.address}
               onChange={(e) =>

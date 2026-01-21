@@ -10,6 +10,7 @@ import { ThemeProvider, useTheme } from './context/ThemeContext';
 import MainLayout from './components/Layout/MainLayout';
 import Login from './pages/Login';
 import { taxiMonterricoColors } from './theme/colors';
+import { logWarn } from './utils/logger';
 
 // Importar fuente Inter con todos los pesos necesarios
 import '@fontsource/inter/400.css';
@@ -571,7 +572,7 @@ const App: React.FC = () => {
   // Esto evita errores cuando los componentes intentan usar useGoogleLogin
   // Si no hay client_id, simplemente no funcionará la autenticación
   if (!googleClientId) {
-    console.warn('REACT_APP_GOOGLE_CLIENT_ID no está configurado. La funcionalidad de email no estará disponible.');
+    logWarn('REACT_APP_GOOGLE_CLIENT_ID no está configurado. La funcionalidad de email no estará disponible.');
   }
 
   return (

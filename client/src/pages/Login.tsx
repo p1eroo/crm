@@ -16,6 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import logoImage from '../assets/tm_login.png';
 import logoIcon from '../assets/logo.png';
 import { taxiMonterricoColors } from '../theme/colors';
+import { log } from '../utils/logger';
 
 const Login: React.FC = () => {
   // Cargar usuario recordado al inicializar el estado
@@ -56,11 +57,11 @@ const Login: React.FC = () => {
     mountedRef.current = true;
     // Cargar credenciales guardadas si existen (por si acaso no se cargaron en el estado inicial)
     const savedUsername = getRememberedUsername();
-    console.log('🔍 [useEffect] Verificando usuario recordado:', savedUsername);
+    log('🔍 [useEffect] Verificando usuario recordado:', savedUsername);
     if (savedUsername && savedUsername !== username) {
       setUsername(savedUsername);
       setRememberMe(true);
-      console.log('✅ [useEffect] Usuario recordado cargado:', savedUsername);
+      log('✅ [useEffect] Usuario recordado cargado:', savedUsername);
     }
     return () => {
       mountedRef.current = false;
@@ -72,11 +73,11 @@ const Login: React.FC = () => {
   useEffect(() => {
     if (!user) {
       const savedUsername = getRememberedUsername();
-      console.log('🔍 [useEffect user] Usuario desautenticado, verificando usuario recordado:', savedUsername);
+      log('🔍 [useEffect user] Usuario desautenticado, verificando usuario recordado:', savedUsername);
       if (savedUsername && savedUsername !== username) {
         setUsername(savedUsername);
         setRememberMe(true);
-        console.log('✅ [useEffect user] Usuario recordado cargado después del logout:', savedUsername);
+        log('✅ [useEffect user] Usuario recordado cargado después del logout:', savedUsername);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -100,11 +101,11 @@ const Login: React.FC = () => {
     // para asegurarnos de que se guarde incluso si el componente se desmonta
     if (rememberMe && username) {
       localStorage.setItem('rememberedUsername', username);
-      console.log('✅ Usuario guardado para recordar (antes del login):', username);
-      console.log('🔍 Verificando guardado:', localStorage.getItem('rememberedUsername'));
+      log('✅ Usuario guardado para recordar (antes del login):', username);
+      log('🔍 Verificando guardado:', localStorage.getItem('rememberedUsername'));
     } else {
       localStorage.removeItem('rememberedUsername');
-      console.log('🗑️ Usuario eliminado de recordar');
+      log('🗑️ Usuario eliminado de recordar');
     }
 
     const success = await login(username, password);

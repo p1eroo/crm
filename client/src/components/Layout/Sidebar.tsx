@@ -20,6 +20,7 @@ import { faCalendarDays } from '@fortawesome/free-regular-svg-icons';
 import { Building2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSidebar } from '../../context/SidebarContext';
+import { log } from '../../utils/logger';
 import logo from '../../assets/tm_logo.png';
 import logoMobile from '../../assets/logo.png';
 
@@ -253,7 +254,7 @@ const adminMenuItems = [
         {/* Opción de Administrar Usuarios - Solo visible para admins */}
         {(() => {
           const userRole = user?.role;
-          console.log('🔍 Verificando rol para mostrar opción de administrar usuarios:', userRole);
+          log('🔍 Verificando rol para mostrar opción de administrar usuarios:', userRole);
           return userRole === 'admin';
         })() && (
           <ListItemButton

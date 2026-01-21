@@ -41,6 +41,7 @@ import { Building2 } from "lucide-react";
 import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from '../components/UnifiedTable';
 import EntityPreviewDrawer from '../components/EntityPreviewDrawer';
 import { useAuth } from '../context/AuthContext';
+import { log, logWarn } from '../utils/logger';
 
 interface Company {
   id: number;
@@ -712,7 +713,7 @@ const Companies: React.FC = () => {
       // Si es un error 403, el usuario no tiene permisos para ver usuarios (no es admin)
       // Esto es normal y no debería mostrar un error
       if (error.response?.status === 403) {
-        console.log('Usuario no tiene permisos para ver usuarios (no es admin)');
+        log('Usuario no tiene permisos para ver usuarios (no es admin)');
         setUsers([]);
       } else {
         console.error('Error fetching users:', error);
@@ -800,7 +801,7 @@ const Companies: React.FC = () => {
             // Error en users (403 es normal si no es admin)
             const error = usersResult.reason;
             if (error.response?.status === 403) {
-              console.log('Usuario no tiene permisos para ver usuarios (no es admin)');
+              log('Usuario no tiene permisos para ver usuarios (no es admin)');
               setUsers([]);
             } else if (error.name !== 'CanceledError' && error.name !== 'AbortError' && error.code !== 'ERR_CANCELED') {
               console.error('Error fetching users:', error);
@@ -1017,7 +1018,7 @@ const Companies: React.FC = () => {
           batchSize: 1000, // Procesar en lotes de 1000
         });
 
-        console.log('Respuesta del backend:', response.data); // Debug
+        log('Respuesta del backend:', response.data); // Debug
 
         const { successCount = 0, errorCount = 0, results = [] } = response.data || {};
 
@@ -1029,7 +1030,7 @@ const Companies: React.FC = () => {
             error: r.error || 'Error desconocido',
           }));
 
-        console.log('successCount:', successCount, 'errorCount:', errorCount); // Debug
+        log('successCount:', successCount, 'errorCount:', errorCount); // Debug
 
         setImportProgress({
           current: companiesToCreate.length,
@@ -1311,12 +1312,12 @@ const Companies: React.FC = () => {
 
       let debtsFound = false;
 
-      console.log('🔍 Consultando deudas en Factiliza para RUC:', ruc);
-      console.log('📋 Endpoints a probar:', endpoints);
+      log('🔍 Consultando deudas en Factiliza para RUC:', ruc);
+      log('📋 Endpoints a probar:', endpoints);
 
       for (const endpoint of endpoints) {
         try {
-          console.log(`🔄 Probando endpoint: ${endpoint}`);
+          log(`🔄 Probando endpoint: ${endpoint}`);
           const debtsResponse = await axios.get(endpoint, {
             headers: {
               'Authorization': `Bearer ${factilizaToken}`,
@@ -1324,12 +1325,12 @@ const Companies: React.FC = () => {
             timeout: 5000,
           });
 
-          console.log(`✅ Respuesta exitosa de ${endpoint}:`, debtsResponse.data);
+          log(`✅ Respuesta exitosa de ${endpoint}:`, debtsResponse.data);
 
           if (debtsResponse.data && (debtsResponse.data.success || debtsResponse.data.data)) {
             const debtsData = debtsResponse.data.data || debtsResponse.data;
             
-            console.log('📊 Datos de deudas recibidos:', debtsData);
+            log('📊 Datos de deudas recibidos:', debtsData);
             
             // Normalizar los datos a un formato común
             const normalizedDebts = {
@@ -1342,18 +1343,19 @@ const Companies: React.FC = () => {
               deudas: debtsData.deudas || debtsData.deuda || debtsData.detalle || [],
             };
 
-            console.log('✅ Deudas normalizadas:', normalizedDebts);
+            log('✅ Deudas normalizadas:', normalizedDebts);
             setRucDebts(normalizedDebts);
             debtsFound = true;
             break;
           } else {
-            console.log(`⚠️ Respuesta sin datos válidos de ${endpoint}`);
+            log(`⚠️ Respuesta sin datos válidos de ${endpoint}`);
           }
         } catch (endpointError: any) {
           // Mostrar errores detallados
           const errorStatus = endpointError.response?.status;
           const errorData = endpointError.response?.data;
           
+          // Los errores críticos siempre se muestran
           console.error(`❌ Error en endpoint ${endpoint}:`, {
             status: errorStatus,
             statusText: endpointError.response?.statusText,
@@ -1363,34 +1365,34 @@ const Companies: React.FC = () => {
           
           // Si es 401, el token puede ser inválido o el endpoint requiere autenticación diferente
           if (errorStatus === 401) {
-            console.warn(`🔐 Error de autenticación (401) en ${endpoint}`);
-            console.warn('💡 Verifica que tu token sea válido y tenga permisos para consultar deudas');
+            logWarn(`🔐 Error de autenticación (401) en ${endpoint}`);
+            logWarn('💡 Verifica que tu token sea válido y tenga permisos para consultar deudas');
           }
           
           // Si es 403, el plan puede no incluir este servicio
           if (errorStatus === 403) {
-            console.warn(`🚫 Acceso denegado (403) en ${endpoint}`);
-            console.warn('💡 Tu plan de Factiliza puede no incluir el servicio de consulta de deudas');
-            console.warn('💡 Contacta a soporte de Factiliza para verificar qué servicios incluye tu plan');
+            logWarn(`🚫 Acceso denegado (403) en ${endpoint}`);
+            logWarn('💡 Tu plan de Factiliza puede no incluir el servicio de consulta de deudas');
+            logWarn('💡 Contacta a soporte de Factiliza para verificar qué servicios incluye tu plan');
           }
           
           // Si es 404, el endpoint no existe
           if (errorStatus === 404) {
-            console.log(`📍 Endpoint no encontrado (404): ${endpoint}`);
+            log(`📍 Endpoint no encontrado (404): ${endpoint}`);
           }
           
           // Continuar con el siguiente endpoint si este falla
           if (errorStatus !== 404 && errorStatus !== 400) {
-            console.log(`⚠️ Error no crítico en ${endpoint}, probando siguiente...`);
+            log(`⚠️ Error no crítico en ${endpoint}, probando siguiente...`);
           }
         }
       }
 
       // Si no se encontró información en Factiliza
       if (!debtsFound) {
-        console.log('⚠️ No se encontró información de deudas en Factiliza');
+        log('⚠️ No se encontró información de deudas en Factiliza');
       } else {
-        console.log('✅ Deudas obtenidas exitosamente de Factiliza');
+        log('✅ Deudas obtenidas exitosamente de Factiliza');
       }
     } catch (error: any) {
       console.error('Error al buscar deudas:', error);

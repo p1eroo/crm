@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import api from '../config/api';
+import { log, logWarn } from '../utils/logger';
 
 interface User {
   id: number;
@@ -49,13 +50,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               ...userData,
               role: userData.role || parsedUser.role || 'user',
             };
-            console.log('👤 Usuario actualizado desde backend:', { id: updatedUser.id, usuario: updatedUser.usuario });
-            console.log('🔑 Rol del usuario:', updatedUser.role);
+            log('👤 Usuario actualizado desde backend:', { id: updatedUser.id, usuario: updatedUser.usuario });
+            log('🔑 Rol del usuario:', updatedUser.role);
             setUser(updatedUser);
             localStorage.setItem('user', JSON.stringify(updatedUser));
           })
           .catch(error => {
-            console.warn('No se pudo verificar el usuario con el backend:', error);
+            logWarn('No se pudo verificar el usuario con el backend:', error);
             // Continuar con el usuario guardado si falla la verificación
           })
           .finally(() => {
@@ -141,7 +142,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Usar la instancia de api (axios) en lugar de fetch para evitar problemas de CORS
       // El interceptor de axios maneja automáticamente la detección de URL y CORS
       const apiUrl = getBackendUrl();
-      console.log('🔗 URL del backend detectada:', apiUrl);
+      log('🔗 URL del backend detectada:', apiUrl);
       let backendData: any = {};
       
       try {
@@ -204,8 +205,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         avatar: monterricoData.usuarioimagen
       };
       
-      console.log('👤 Usuario autenticado:', { id: userData.id, usuario: userData.usuario });
-      console.log('🔑 Rol asignado:', userData.role);
+      log('👤 Usuario autenticado:', { id: userData.id, usuario: userData.usuario });
+      log('🔑 Rol asignado:', userData.role);
       
       // Usar setTimeout para asegurar que el estado se actualice en el siguiente tick
       // Esto evita conflictos con el desmontaje del componente Login
