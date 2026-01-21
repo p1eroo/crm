@@ -4,7 +4,7 @@ import { Role } from './Role';
 
 interface UserAttributes {
   id: number;
-  email: string;
+  email?: string;
   usuario: string;
   password: string;
   firstName: string;
@@ -21,11 +21,11 @@ interface UserAttributes {
   updatedAt?: Date;
 }
 
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'avatar' | 'isActive' | 'createdAt' | 'updatedAt'> {}
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'email' | 'avatar' | 'isActive' | 'createdAt' | 'updatedAt'> {}
 
 export class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   public id!: number;
-  public email!: string;
+  public email?: string;
   public usuario!: string;
   public password!: string;
   public firstName!: string;
@@ -59,10 +59,12 @@ User.init(
     },
     email: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       unique: true,
       validate: {
-        isEmail: true,
+        isEmail: {
+          msg: 'El email debe ser válido',
+        },
       },
     },
     usuario: {

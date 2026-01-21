@@ -22,19 +22,25 @@ import {
   Dialog,
   DialogContent,
   DialogContentText,
+  DialogTitle,
   DialogActions,
   Button,
+  TextField,
+  InputAdornment,
   useTheme,
 } from '@mui/material';
 import {
   CheckCircle,
   Cancel,
   Delete,
+  Add,
+  Search,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
+import axios from 'axios';
 
 interface User {
   id: number;
@@ -59,6 +65,23 @@ const Users: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
+  
+  // Estados para el modal de creación
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [formData, setFormData] = useState({
+    usuario: '',
+    password: '',
+    firstName: '',
+    lastName: '',
+    role: 'user' as 'admin' | 'user' | 'manager' | 'jefe_comercial',
+  });
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  
+  // Estados para búsqueda de DNI
+  const [dni, setDni] = useState('');
+  const [loadingDni, setLoadingDni] = useState(false);
+  const [dniError, setDniError] = useState('');
 
   useEffect(() => {
     fetchUsers();
@@ -163,6 +186,185 @@ const Users: React.FC = () => {
     return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
   };
 
+  // Función para capitalizar iniciales (similar a Contacts.tsx)
+  const capitalizeInitials = (text: string) => {
+    if (!text) return '';
+    return text
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  };
+
+  // Función para buscar DNI
+  const handleSearchDni = async () => {
+    if (!dni || dni.length < 8) {
+      setDniError('El DNI debe tener al menos 8 dígitos');
+      return;
+    }
+
+    setLoadingDni(true);
+    setDniError('');
+
+    try {
+      const factilizaToken = process.env.REACT_APP_FACTILIZA_TOKEN || '';
+
+      if (!factilizaToken) {
+        setDniError(
+          '⚠️ La búsqueda automática de DNI no está disponible. Puedes ingresar los datos manualmente. Para habilitarla, configura REACT_APP_FACTILIZA_TOKEN en el archivo .env'
+        );
+        setLoadingDni(false);
+        return;
+      }
+
+      const response = await axios.get(
+        `https://api.factiliza.com/v1/dni/info/${dni}`,
+        {
+          headers: {
+            Authorization: `Bearer ${factilizaToken}`,
+          },
+        }
+      );
+
+      if (response.data.success && response.data.data) {
+        const data = response.data.data;
+
+        // Separar nombres y apellidos
+        const nombres = data.nombres || '';
+        const apellidoPaterno = data.apellido_paterno || '';
+        const apellidoMaterno = data.apellido_materno || '';
+
+        // Capitalizar solo las iniciales para nombre y apellido
+        const nombresCapitalizados = capitalizeInitials(nombres);
+        const apellidosCapitalizados = capitalizeInitials(
+          `${apellidoPaterno} ${apellidoMaterno}`.trim()
+        );
+
+        // Generar usuario: primera letra del nombre + apellido completo (todo en minúsculas)
+        // Ejemplo: "Jack Valdivia" -> "jvaldivia"
+        const primerNombre = nombres.split(' ')[0] || '';
+        const primerApellido = apellidoPaterno || '';
+        const usuarioGenerado = `${primerNombre.charAt(0).toLowerCase()}${primerApellido.toLowerCase().replace(/\s+/g, '')}`;
+
+        // Actualizar el formulario con los datos obtenidos
+        setFormData((prev) => ({
+          ...prev,
+          firstName: nombresCapitalizados,
+          lastName: apellidosCapitalizados,
+          usuario: usuarioGenerado,
+          // No modificar password
+        }));
+        
+        setDniError(''); // Limpiar error si fue exitoso
+      } else {
+        setDniError('No se encontró información para este DNI');
+      }
+    } catch (error: any) {
+      if (error.response?.status === 400) {
+        setDniError('DNI no válido o no encontrado');
+      } else if (error.response?.status === 401) {
+        setDniError('Error de autenticación con la API');
+      } else {
+        setDniError('Error al consultar el DNI. Por favor, intente nuevamente');
+      }
+    } finally {
+      setLoadingDni(false);
+    }
+  };
+
+  const handleCreateUser = () => {
+    setFormData({
+      usuario: '',
+      password: '',
+      firstName: '',
+      lastName: '',
+      role: 'user',
+    });
+    setFormErrors({});
+    setDni('');
+    setDniError('');
+    setCreateDialogOpen(true);
+  };
+
+  const validateForm = () => {
+    const errors: { [key: string]: string } = {};
+
+    if (!formData.usuario.trim()) {
+      errors.usuario = 'El nombre de usuario es requerido';
+    }
+
+    if (!formData.password) {
+      errors.password = 'La contraseña es requerida';
+    } else if (formData.password.length < 6) {
+      errors.password = 'La contraseña debe tener al menos 6 caracteres';
+    }
+
+    if (!formData.firstName.trim()) {
+      errors.firstName = 'El nombre es requerido';
+    }
+
+    if (!formData.lastName.trim()) {
+      errors.lastName = 'El apellido es requerido';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmitCreate = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    try {
+      setCreating(true);
+      const response = await api.post('/auth/register', formData);
+      
+      // Agregar el nuevo usuario a la lista
+      const newUser = {
+        ...response.data.user,
+        isActive: true,
+      };
+      setUsers([newUser, ...users]);
+      
+      setMessage({ type: 'success', text: 'Usuario creado correctamente' });
+      setTimeout(() => setMessage(null), 3000);
+      setCreateDialogOpen(false);
+      setFormData({
+        usuario: '',
+        password: '',
+        firstName: '',
+        lastName: '',
+        role: 'user',
+      });
+      setFormErrors({});
+      setDni('');
+      setDniError('');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || error.response?.data?.errors?.[0]?.msg || 'Error al crear el usuario';
+      setMessage({ 
+        type: 'error', 
+        text: errorMessage 
+      });
+      setTimeout(() => setMessage(null), 5000);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleCancelCreate = () => {
+    setCreateDialogOpen(false);
+    setFormData({
+      usuario: '',
+      password: '',
+      firstName: '',
+      lastName: '',
+      role: 'user',
+    });
+    setFormErrors({});
+    setDni('');
+    setDniError('');
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -177,13 +379,28 @@ const Users: React.FC = () => {
       minHeight: '100vh',
       pb: { xs: 2, sm: 3, md: 4 },
     }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={pageStyles.pageTitle}>
-          Usuarios
-        </Typography>
-        <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-          Gestiona los usuarios del sistema y asigna roles
-        </Typography>
+      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+        <Box>
+          <Typography variant="h4" sx={pageStyles.pageTitle}>
+            Usuarios
+          </Typography>
+          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+            Gestiona los usuarios del sistema y asigna roles
+          </Typography>
+        </Box>
+        <Button
+          variant="contained"
+          startIcon={<Add />}
+          onClick={handleCreateUser}
+          sx={{
+            bgcolor: taxiMonterricoColors.green,
+            '&:hover': {
+              bgcolor: '#158a5f',
+            },
+          }}
+        >
+          Crear Usuario
+        </Button>
       </Box>
 
       {message && (
@@ -343,6 +560,178 @@ const Users: React.FC = () => {
           </TableBody>
         </Table>
       </TableContainer>
+
+      {/* Dialog de creación de usuario */}
+      <Dialog
+        open={createDialogOpen}
+        onClose={handleCancelCreate}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: theme.palette.mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.3)' : '0 8px 24px rgba(0,0,0,0.12)',
+            bgcolor: theme.palette.background.paper,
+          }
+        }}
+      >
+        <DialogTitle sx={{ color: theme.palette.text.primary, fontWeight: 600 }}>
+          Crear Nuevo Usuario
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+            {/* Campo DNI con botón de búsqueda */}
+            <TextField
+              id="create-dni"
+              name="dni"
+              label="DNI (opcional)"
+              value={dni}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '').slice(0, 8);
+                setDni(value);
+                setDniError('');
+              }}
+              error={!!dniError}
+              helperText={dniError || 'Ingresa el DNI para autocompletar datos'}
+              fullWidth
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                },
+              }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={handleSearchDni}
+                      disabled={loadingDni || !dni || dni.length < 8}
+                      size="small"
+                      sx={{
+                        color: taxiMonterricoColors.green,
+                        '&:hover': {
+                          bgcolor: `${taxiMonterricoColors.green}15`,
+                        },
+                        '&.Mui-disabled': {
+                          color: theme.palette.text.disabled,
+                        },
+                      }}
+                    >
+                      {loadingDni ? (
+                        <CircularProgress size={20} />
+                      ) : (
+                        <Search />
+                      )}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <TextField
+              id="create-usuario"
+              name="usuario"
+              label="Nombre de Usuario"
+              value={formData.usuario}
+              onChange={(e) => setFormData({ ...formData, usuario: e.target.value })}
+              error={!!formErrors.usuario}
+              helperText={formErrors.usuario}
+              fullWidth
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                },
+              }}
+            />
+            <TextField
+              id="create-password"
+              name="password"
+              label="Contraseña"
+              type="password"
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              error={!!formErrors.password}
+              helperText={formErrors.password || 'Mínimo 6 caracteres'}
+              fullWidth
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                },
+              }}
+            />
+            <TextField
+              id="create-firstName"
+              name="firstName"
+              label="Nombre"
+              value={formData.firstName}
+              onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+              error={!!formErrors.firstName}
+              helperText={formErrors.firstName}
+              fullWidth
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                },
+              }}
+            />
+            <TextField
+              id="create-lastName"
+              name="lastName"
+              label="Apellido"
+              value={formData.lastName}
+              onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+              error={!!formErrors.lastName}
+              helperText={formErrors.lastName}
+              fullWidth
+              required
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                },
+              }}
+            />
+            <FormControl fullWidth>
+              <TextField
+                id="create-role"
+                name="role"
+                select
+                label="Rol"
+                value={formData.role}
+                onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 1.5,
+                  },
+                }}
+              >
+                <MenuItem value="admin">Administrador</MenuItem>
+                <MenuItem value="jefe_comercial">Jefe Comercial</MenuItem>
+                <MenuItem value="manager">Manager</MenuItem>
+                <MenuItem value="user">Usuario</MenuItem>
+              </TextField>
+            </FormControl>
+          </Box>
+        </DialogContent>
+        <DialogActions sx={{ p: 2.5, pt: 1 }}>
+          <Button onClick={handleCancelCreate} color="inherit" sx={{ color: theme.palette.text.secondary }}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSubmitCreate} 
+            variant="contained"
+            disabled={creating}
+            sx={{
+              bgcolor: taxiMonterricoColors.green,
+              '&:hover': {
+                bgcolor: '#158a5f',
+              },
+            }}
+          >
+            {creating ? <CircularProgress size={20} /> : 'Crear Usuario'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Dialog de confirmación para eliminar */}
       <Dialog

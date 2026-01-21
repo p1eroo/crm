@@ -1351,8 +1351,10 @@ const Dashboard: React.FC = () => {
                 position: 'absolute',
                 right: { xs: 16, sm: 20, md: 24 },
                 top: { xs: 16, sm: 20, md: 24 },
+                minWidth: 0,
+                minHeight: 0,
               }}>
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width={140} height={80}>
                   <LineChart data={[
                     { value: 20 },
                     { value: 35 },

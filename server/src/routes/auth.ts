@@ -15,7 +15,7 @@ router.post(
   '/register',
   [
     body('usuario').notEmpty().trim(),
-    body('email').isEmail().normalizeEmail(),
+    body('email').optional().isEmail().normalizeEmail(),
     body('password').isLength({ min: 6 }),
     body('firstName').notEmpty().trim(),
     body('lastName').notEmpty().trim(),
@@ -29,16 +29,26 @@ router.post(
 
       const { usuario, email, password, firstName, lastName, role } = req.body;
 
+      // Construir condición de búsqueda: siempre buscar por usuario, y por email solo si existe
+      const whereCondition: any = email && email.trim() 
+        ? {
+            [Op.or]: [
+              { usuario },
+              { email: email.trim() }
+            ]
+          }
+        : { usuario };
+
       const existingUser = await User.findOne({ 
-        where: { 
-          [Op.or]: [
-            { usuario },
-            { email }
-          ]
-        } 
+        where: whereCondition
       });
       if (existingUser) {
-        return res.status(400).json({ error: 'El usuario o email ya existe' });
+        if (existingUser.usuario === usuario) {
+          return res.status(400).json({ error: 'El usuario ya existe' });
+        }
+        if (email && existingUser.email === email.trim()) {
+          return res.status(400).json({ error: 'El email ya existe' });
+        }
       }
 
       // Obtener el roleId basado en el nombre del rol
@@ -49,14 +59,20 @@ router.post(
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
-      const user = await User.create({
+      const userData: any = {
         usuario,
-        email,
         password: hashedPassword,
         firstName,
         lastName,
         roleId: userRole.id,
-      });
+      };
+      
+      // Solo incluir email si se proporciona
+      if (email && email.trim()) {
+        userData.email = email.trim();
+      }
+      
+      const user = await User.create(userData);
 
       // Cargar la relación con Role para acceder a user.role
       await user.reload({ include: [{ model: Role, as: 'Role' }] });
@@ -65,7 +81,7 @@ router.post(
       const userRoleName = user.Role?.name || user.role || 'user';
 
       const token = jwt.sign(
-        { userId: user.id, usuario: user.usuario, email: user.email, role: userRoleName },
+        { userId: user.id, usuario: user.usuario, email: user.email || null, role: userRoleName },
         process.env.JWT_SECRET!,
         { expiresIn: '7d' }
       );
@@ -75,7 +91,7 @@ router.post(
         user: {
           id: user.id,
           usuario: user.usuario,
-          email: user.email,
+          email: user.email || null,
           firstName: user.firstName,
           lastName: user.lastName,
           role: userRoleName,

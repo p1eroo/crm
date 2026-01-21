@@ -18,11 +18,10 @@ import {
   DialogTitle,
   DialogContent,
 } from '@mui/material';
-import { Assessment, Person, ArrowOutward, Close } from '@mui/icons-material';
+import { Person, ArrowOutward, Close } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../config/api';
 import { useTheme } from '@mui/material/styles';
-import { pageStyles } from '../theme/styles';
 
 interface User {
   id: number;
@@ -115,23 +114,105 @@ const Reports: React.FC = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Assessment sx={{ fontSize: 40, color: theme.palette.primary.main }} />
-        <Typography variant="h4" sx={pageStyles.pageTitle}>
-          Reportes
-        </Typography>
-      </Box>
-
-      {/* Total de Ventas por Asesor */}
-      <Card sx={{ 
-        borderRadius: 4, 
-        boxShadow: theme.palette.mode === 'dark' 
-          ? '0 2px 4px rgba(0,0,0,0.1)' 
-          : '0 1px 3px rgba(0, 0, 0, 0.1)',
-        bgcolor: theme.palette.background.paper,
-        border: 'none',
+      <Box sx={{ 
+        display: 'flex', 
+        gap: 3, 
+        flexDirection: { xs: 'column', lg: 'row' },
         mb: 3,
       }}>
+        {/* Asesores */}
+        <Card sx={{ 
+          borderRadius: 4, 
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 2px 4px rgba(0,0,0,0.1)' 
+            : '0 1px 3px rgba(0, 0, 0, 0.1)',
+          bgcolor: theme.palette.background.paper,
+          border: 'none',
+          flex: { xs: '1 1 auto', lg: '1 1 60%' },
+        }}>
+          <CardContent>
+            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
+              Asesores
+            </Typography>
+
+            {users.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <Person sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                <Typography variant="body1" color="text.secondary">
+                  No hay usuarios con rol de usuario para mostrar
+                </Typography>
+              </Box>
+            ) : (
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ fontWeight: 600 }}>Nombre</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Teléfono</TableCell>
+                      <TableCell sx={{ fontWeight: 600 }}>Acción</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {users.map((user) => (
+                      <TableRow
+                        key={user.id}
+                        hover
+                        sx={{ cursor: 'pointer' }}
+                        onClick={() => navigate(`/reports/${user.id}`)}
+                      >
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <Avatar
+                              src={user.avatar}
+                              sx={{
+                                bgcolor: theme.palette.primary.main,
+                                width: 40,
+                                height: 40,
+                              }}
+                            >
+                              {getInitials(user.firstName, user.lastName)}
+                            </Avatar>
+                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                              {user.firstName} {user.lastName}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>{user.phone || '--'}</TableCell>
+                        <TableCell>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: theme.palette.primary.main,
+                              fontWeight: 500,
+                              '&:hover': {
+                                textDecoration: 'underline',
+                              },
+                            }}
+                          >
+                            Ver Reporte
+                          </Typography>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Total de Ventas por Asesor */}
+        <Card sx={{ 
+          borderRadius: 4, 
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 2px 4px rgba(0,0,0,0.1)' 
+            : '0 1px 3px rgba(0, 0, 0, 0.1)',
+          bgcolor: theme.palette.background.paper,
+          border: 'none',
+          flex: { xs: '1 1 auto', lg: '1 1 40%' },
+        }}>
         <CardContent sx={{ p: { xs: 2, md: 3 } }}>
           <Box sx={{ 
             display: 'flex', 
@@ -215,7 +296,6 @@ const Reports: React.FC = () => {
                     {/* Lista de top 5 asesores */}
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                       {topUsers.map((user, index) => {
-                        const rank = index + 1;
                         const maxValue = topUsers[0]?.wonDealsValue || 1;
                         const percentage = ((user.wonDealsValue || 0) / maxValue) * 100;
                         const avatarColors = ['#8B5CF6', '#10B981', '#3B82F6', '#F59E0B', '#EF4444'];
@@ -236,25 +316,6 @@ const Reports: React.FC = () => {
                               gap: 1.5,
                               mb: 1,
                             }}>
-                              {/* Número de ranking */}
-                              <Box
-                                sx={{
-                                  width: 32,
-                                  height: 32,
-                                  borderRadius: 1,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  bgcolor: rank === 1 ? '#FFF4E6' : (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'),
-                                  color: rank === 1 ? '#F59E0B' : theme.palette.text.secondary,
-                                  fontWeight: 600,
-                                  fontSize: '0.75rem',
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {rank}
-                              </Box>
-
                               {/* Avatar */}
                               <Avatar
                                 sx={{
@@ -349,84 +410,7 @@ const Reports: React.FC = () => {
           )}
         </CardContent>
       </Card>
-
-      <Card>
-        <CardContent>
-          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-            Usuarios con Rol de Usuario
-          </Typography>
-
-          {users.length === 0 ? (
-            <Box sx={{ textAlign: 'center', py: 4 }}>
-              <Person sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-              <Typography variant="body1" color="text.secondary">
-                No hay usuarios con rol de usuario para mostrar
-              </Typography>
-            </Box>
-          ) : (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 600 }}>Usuario</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Nombre</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Teléfono</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Acción</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {users.map((user) => (
-                    <TableRow
-                      key={user.id}
-                      hover
-                      sx={{ cursor: 'pointer' }}
-                      onClick={() => navigate(`/reports/${user.id}`)}
-                    >
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                          <Avatar
-                            src={user.avatar}
-                            sx={{
-                              bgcolor: theme.palette.primary.main,
-                              width: 40,
-                              height: 40,
-                            }}
-                          >
-                            {getInitials(user.firstName, user.lastName)}
-                          </Avatar>
-                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                            {user.usuario}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        {user.firstName} {user.lastName}
-                      </TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.phone || '--'}</TableCell>
-                      <TableCell>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            color: theme.palette.primary.main,
-                            fontWeight: 500,
-                            '&:hover': {
-                              textDecoration: 'underline',
-                            },
-                          }}
-                        >
-                          Ver Reporte
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </CardContent>
-      </Card>
+      </Box>
 
       {/* Modal de Todos los Asesores */}
       <Dialog
@@ -528,7 +512,6 @@ const Reports: React.FC = () => {
                       },
                     }}>
                       {sortedUsers.map((user, index) => {
-                        const rank = index + 1;
                         const maxValue = sortedUsers[0]?.wonDealsValue || 1;
                         const percentage = ((user.wonDealsValue || 0) / maxValue) * 100;
                         const avatarColors = ['#8B5CF6', '#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#06B6D4', '#8B5CF6', '#10B981'];
@@ -557,25 +540,6 @@ const Reports: React.FC = () => {
                               gap: 2,
                               mb: 1.5,
                             }}>
-                              {/* Número de ranking */}
-                              <Box
-                                sx={{
-                                  width: 40,
-                                  height: 40,
-                                  borderRadius: 1.5,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  bgcolor: rank === 1 ? '#FFF4E6' : rank === 2 ? '#E0F2FE' : rank === 3 ? '#F3E8FF' : (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'),
-                                  color: rank === 1 ? '#F59E0B' : rank === 2 ? '#0EA5E9' : rank === 3 ? '#8B5CF6' : theme.palette.text.secondary,
-                                  fontWeight: 700,
-                                  fontSize: '0.875rem',
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {rank}
-                              </Box>
-
                               {/* Avatar */}
                               <Avatar
                                 sx={{
@@ -769,9 +733,6 @@ const Reports: React.FC = () => {
                               S/ {user.wonDealsValue?.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
                             </Typography>
                           </Box>
-                          <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.secondary }}>
-                            #{index + 1}
-                          </Typography>
                         </Box>
                         <Box sx={{ 
                           width: '100%', 

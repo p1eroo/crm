@@ -80,8 +80,106 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setLoading(true);
     setError(null);
     
+    // Detectar automáticamente la URL del backend basándose en el hostname actual
+    const getBackendUrl = () => {
+      if (process.env.REACT_APP_API_URL) {
+        return process.env.REACT_APP_API_URL;
+      }
+      
+      const hostname = window.location.hostname;
+      const protocol = window.location.protocol; // 'https:' o 'http:'
+      const isHttps = protocol === 'https:';
+      
+      // Si estamos accediendo desde localhost, usar localhost
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
+        return 'http://localhost:5000/api';
+      }
+      
+      // Si estamos accediendo desde la red (IP), usar la misma IP pero con el protocolo correcto
+      const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+      if (ipRegex.test(hostname)) {
+        return `${isHttps ? 'https' : 'http'}://${hostname}:5000/api`;
+      }
+      
+      // Si es un dominio en producción (HTTPS), usar el subdominio de la API
+      // En desarrollo (HTTP), usar el puerto 5000
+      if (isHttps) {
+        if (hostname === 'crm.taximonterrico.com') {
+          return 'https://api-crm.taximonterrico.com/api';
+        } else {
+          return `https://${hostname}/api`;
+        }
+      } else {
+        return `http://${hostname}:5000/api`;
+      }
+    };
+    
+    const apiUrl = getBackendUrl();
+    log('🔗 URL del backend detectada:', apiUrl);
+    
     try {
-      // Primero autenticar con Monterrico
+      // PASO 1: Intentar login local primero
+      try {
+        log('🔐 Intentando login local...');
+        const localLoginResponse = await api.post('/auth/login', {
+          usuario: idacceso,
+          password: contraseña,
+        }, {
+          baseURL: apiUrl,
+        });
+
+        const localData = localLoginResponse.data;
+        
+        if (localData.token && localData.user) {
+          // Login local exitoso
+          log('✅ Login local exitoso');
+          
+          // Guardar token y datos del usuario
+          localStorage.setItem('token', localData.token);
+          localStorage.setItem('user', JSON.stringify(localData.user));
+          
+          // Limpiar datos de Monterrico si existen
+          localStorage.removeItem('idusuario');
+          localStorage.removeItem('usuarioimagen');
+          localStorage.removeItem('monterricoToken');
+          localStorage.removeItem('key');
+          
+          const userData: User = {
+            id: localData.user.id,
+            usuario: localData.user.usuario,
+            email: localData.user.email || '',
+            firstName: localData.user.firstName,
+            lastName: localData.user.lastName,
+            role: localData.user.role || 'user',
+            avatar: localData.user.avatar,
+          };
+          
+          log('👤 Usuario autenticado (local):', { id: userData.id, usuario: userData.usuario });
+          log('🔑 Rol asignado:', userData.role);
+          
+          setTimeout(() => {
+            setUser(userData);
+            setLoading(false);
+          }, 0);
+          
+          return true;
+        }
+      } catch (localError: any) {
+        // Si el login local falla, continuar con Monterrico
+        log('⚠️ Login local falló, intentando con Monterrico...');
+        
+        // Si es un error 401, significa que las credenciales son incorrectas para usuario local
+        // Continuar con Monterrico solo si es un error de autenticación
+        if (localError.response?.status === 401) {
+          log('🔐 Usuario local no encontrado o credenciales incorrectas, intentando Monterrico...');
+        } else {
+          // Si es otro error (red, servidor, etc.), también intentar Monterrico como fallback
+          log('⚠️ Error en login local (posiblemente de red), intentando Monterrico...');
+        }
+      }
+
+      // PASO 2: Si el login local falló, intentar con Monterrico
+      log('🔐 Intentando login con Monterrico...');
       const monterricoResponse = await fetch('https://rest.monterrico.app/api/Licencias/Login', {
         method: 'POST',
         headers: {
@@ -105,55 +203,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       // Si Monterrico fue exitoso, obtener JWT local del backend
-      // Detectar automáticamente la URL del backend basándose en el hostname actual
-      const getBackendUrl = () => {
-        if (process.env.REACT_APP_API_URL) {
-          return process.env.REACT_APP_API_URL;
-        }
-        
-        const hostname = window.location.hostname;
-        const protocol = window.location.protocol; // 'https:' o 'http:'
-        const isHttps = protocol === 'https:';
-        
-        // Si estamos accediendo desde localhost, usar localhost
-        if (hostname === 'localhost' || hostname === '127.0.0.1') {
-          return 'http://localhost:5000/api';
-        }
-        
-        // Si estamos accediendo desde la red (IP), usar la misma IP pero con el protocolo correcto
-        const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
-        if (ipRegex.test(hostname)) {
-          return `${isHttps ? 'https' : 'http'}://${hostname}:5000/api`;
-        }
-        
-        // Si es un dominio en producción (HTTPS), usar el subdominio de la API
-        // En desarrollo (HTTP), usar el puerto 5000
-        if (isHttps) {
-          if (hostname === 'crm.taximonterrico.com') {
-            return 'https://api-crm.taximonterrico.com/api';
-          } else {
-            return `https://${hostname}/api`;
-          }
-        } else {
-          return `http://${hostname}:5000/api`;
-        }
-      };
-      
-      // Usar la instancia de api (axios) en lugar de fetch para evitar problemas de CORS
-      // El interceptor de axios maneja automáticamente la detección de URL y CORS
-      const apiUrl = getBackendUrl();
-      log('🔗 URL del backend detectada:', apiUrl);
       let backendData: any = {};
       
       try {
-        // Usar api.post en lugar de fetch para aprovechar la configuración de axios
-        // El interceptor solo agregará el token si existe, así que está bien usarlo aquí
-        // El interceptor también recalcula la baseURL automáticamente, pero podemos sobrescribirla si es necesario
         const backendResponse = await api.post('/auth/login-monterrico', {
           usuario: idacceso,
           password: contraseña,
         }, {
-          // Sobrescribir la baseURL para esta petición específica para asegurar que use la URL correcta
           baseURL: apiUrl,
         });
 
@@ -161,8 +217,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
         if (!backendData.token) {
           console.error('Error obteniendo JWT local:', backendData);
-          // Continuar con el login aunque falle el backend, pero sin JWT local
-          // Esto permite usar la app aunque el backend esté caído
         }
       } catch (backendError: any) {
         console.error('Error al conectar con backend:', backendError);
@@ -193,7 +247,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         email: backendData.user.email || idacceso,
         firstName: backendData.user.firstName || idacceso.toUpperCase(),
         lastName: backendData.user.lastName || '',
-        role: backendData.user.role || 'user', // Cambiar de 'admin' a 'user' por defecto
+        role: backendData.user.role || 'user',
         avatar: backendData.user.avatar || monterricoData.usuarioimagen
       } : {
         id: parseInt(monterricoData.idusuario.toString()),
@@ -201,15 +255,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         email: idacceso,
         firstName: idacceso.toUpperCase(),
         lastName: '',
-        role: 'user', // Cambiar de 'admin' a 'user' por defecto
+        role: 'user',
         avatar: monterricoData.usuarioimagen
       };
       
-      log('👤 Usuario autenticado:', { id: userData.id, usuario: userData.usuario });
+      log('👤 Usuario autenticado (Monterrico):', { id: userData.id, usuario: userData.usuario });
       log('🔑 Rol asignado:', userData.role);
       
-      // Usar setTimeout para asegurar que el estado se actualice en el siguiente tick
-      // Esto evita conflictos con el desmontaje del componente Login
       setTimeout(() => {
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));

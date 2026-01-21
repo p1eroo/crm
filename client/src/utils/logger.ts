@@ -50,12 +50,14 @@ export const logError = (...args: any[]) => {
 };
 
 /**
- * Exportar objeto con todas las funciones para uso conveniente
+ * Objeto con todas las funciones para uso conveniente
  */
-export default {
+const logger = {
   log,
   warn: logWarn,
   info: logInfo,
   debug: logDebug,
   error: logError,
 };
+
+export default logger;

@@ -70,3 +70,36 @@ html::-webkit-scrollbar {
   width: 0 !important;
   height: 0 !important;
 }
+
+/* Quitar outline de gráficos Recharts al hacer click */
+.recharts-wrapper,
+.recharts-wrapper:focus,
+.recharts-wrapper:focus-visible {
+  outline: none !important;
+}
+
+.recharts-surface,
+.recharts-surface:focus,
+.recharts-surface:focus-visible {
+  outline: none !important;
+}
+
+/* Quitar outline de elementos SVG dentro de gráficos */
+.recharts-wrapper svg,
+.recharts-wrapper svg:focus,
+.recharts-wrapper svg:focus-visible {
+  outline: none !important;
+}
+
+/* Quitar outline de elementos interactivos dentro de gráficos */
+.recharts-active-shape,
+.recharts-active-shape:focus,
+.recharts-active-shape:focus-visible {
+  outline: none !important;
+}
+
+/* Quitar outline de Cards cuando se hace click en gráficos */
+.MuiCard-root:focus,
+.MuiCard-root:focus-visible {
+  outline: none !important;
+}
