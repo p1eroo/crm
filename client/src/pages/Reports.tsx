@@ -93,6 +93,40 @@ const Reports: React.FC = () => {
     return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
   };
 
+  const stringToColor = (string: string) => {
+    let hash = 0;
+    let i;
+    for (i = 0; i < string.length; i += 1) {
+      hash = string.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    let color = '#';
+    for (i = 0; i < 3; i += 1) {
+      const value = (hash >> (i * 8)) & 0xff;
+      color += `00${value.toString(16)}`.substr(-2);
+    }
+    return color;
+  };
+
+  const stringToGradient = (string: string, isDarkMode: boolean) => {
+    const baseColor = stringToColor(string);
+    // Convertir hex a RGB
+    const r = parseInt(baseColor.slice(1, 3), 16);
+    const g = parseInt(baseColor.slice(3, 5), 16);
+    const b = parseInt(baseColor.slice(5, 7), 16);
+    
+    // Ajustar la intensidad del degradado según el modo
+    // En modo oscuro: degradado más pronunciado (más oscuro)
+    // En modo claro: degradado más suave (menos oscuro)
+    const darkenAmount = isDarkMode ? 40 : 20;
+    
+    // Crear un color más oscuro para el degradado
+    const darkerR = Math.max(0, r - darkenAmount);
+    const darkerG = Math.max(0, g - darkenAmount);
+    const darkerB = Math.max(0, b - darkenAmount);
+    
+    return `linear-gradient(135deg, ${baseColor} 0%, rgb(${darkerR}, ${darkerG}, ${darkerB}) 100%)`;
+  };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '400px' }}>
@@ -193,23 +227,38 @@ const Reports: React.FC = () => {
                       <TableRow
                         key={user.id}
                         hover
-                        sx={{ cursor: 'pointer' }}
-                        onClick={() => navigate(`/reports/${user.id}`)}
                       >
                         <TableCell sx={{ pl: 5 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                             <Avatar
                               src={user.avatar}
                               sx={{
-                                bgcolor: theme.palette.primary.main,
-                                color: theme.palette.primary.contrastText,
+                                background: stringToGradient(`${user.firstName || ''}${user.lastName || ''}` || 'user', theme.palette.mode === 'dark'),
+                                color: '#ffffff',
                                 width: 40,
                                 height: 40,
+                                fontSize: '0.875rem',
+                                fontWeight: 600,
+                                border: `2px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)'}`,
+                                boxShadow: theme.palette.mode === 'dark' 
+                                  ? '0 2px 8px rgba(0, 0, 0, 0.3)' 
+                                  : '0 2px 8px rgba(0, 0, 0, 0.1)',
                               }}
                             >
                               {getInitials(user.firstName, user.lastName)}
                             </Avatar>
-                            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            <Typography 
+                              variant="body2" 
+                              sx={{ 
+                                fontWeight: 500,
+                                color: theme.palette.text.primary,
+                                cursor: 'pointer',
+                                '&:hover': {
+                                  textDecoration: 'underline',
+                                },
+                              }}
+                              onClick={() => navigate(`/reports/${user.id}`)}
+                            >
                               {user.firstName} {user.lastName}
                             </Typography>
                           </Box>
