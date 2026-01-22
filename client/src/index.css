@@ -1,0 +1,105 @@
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE y Edge */
+}
+
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari y Opera */
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Ocultar barras de desplazamiento pero mantener funcionalidad de scroll */
+* {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE y Edge */
+}
+
+*::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari y Opera */
+  width: 0 !important;
+  height: 0 !important;
+}
+
+html {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE y Edge */
+}
+
+html::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari y Opera */
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Excepción para el contenedor del pipeline - mostrar barra de desplazamiento horizontal */
+.pipeline-scroll-container {
+  scrollbar-width: thin !important; /* Firefox */
+  -ms-overflow-style: scrollbar !important; /* IE y Edge */
+}
+
+.pipeline-scroll-container::-webkit-scrollbar {
+  display: block !important; /* Chrome, Safari y Opera */
+  height: 16px !important;
+  width: auto !important;
+}
+
+.pipeline-scroll-container::-webkit-scrollbar-track {
+  display: block !important;
+}
+
+.pipeline-scroll-container::-webkit-scrollbar-thumb {
+  display: block !important;
+}
+
+/* Excepción para las columnas del pipeline - ocultar barra de desplazamiento vertical pero mantener funcionalidad */
+.pipeline-column-scroll {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE y Edge */
+}
+
+.pipeline-column-scroll::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari y Opera */
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Quitar outline de gráficos Recharts al hacer click */
+.recharts-wrapper,
+.recharts-wrapper:focus,
+.recharts-wrapper:focus-visible {
+  outline: none !important;
+}
+
+.recharts-surface,
+.recharts-surface:focus,
+.recharts-surface:focus-visible {
+  outline: none !important;
+}
+
+/* Quitar outline de elementos SVG dentro de gráficos */
+.recharts-wrapper svg,
+.recharts-wrapper svg:focus,
+.recharts-wrapper svg:focus-visible {
+  outline: none !important;
+}
+
+/* Quitar outline de elementos interactivos dentro de gráficos */
+.recharts-active-shape,
+.recharts-active-shape:focus,
+.recharts-active-shape:focus-visible {
+  outline: none !important;
+}
+
+/* Quitar outline de Cards cuando se hace click en gráficos */
+.MuiCard-root:focus,
+.MuiCard-root:focus-visible {
+  outline: none !important;
+}
