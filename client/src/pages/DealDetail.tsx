@@ -13,7 +13,10 @@ import {
   DialogActions,
   TextField,
   MenuItem,
+  IconButton,
 } from "@mui/material";
+import { Close } from "@mui/icons-material";
+import { taxiMonterricoColors } from "../theme/colors";
 import api from "../config/api";
 import {
   RecentActivitiesCard,
@@ -565,7 +568,7 @@ const DealDetail: React.FC = () => {
         bgcolor:
           theme.palette.mode === "dark"
             ? "rgba(255, 255, 255, 0.05)"
-            : "#F5F5F5",
+            : theme.palette.grey[100],
       };
     }
 
@@ -581,19 +584,25 @@ const DealDetail: React.FC = () => {
       // Vencida - rojo claro
       return {
         bgcolor:
-          theme.palette.mode === "dark" ? "rgba(244, 67, 54, 0.15)" : "#FFEBEE",
+          theme.palette.mode === "dark" 
+            ? `${theme.palette.error.main}26` 
+            : `${theme.palette.error.main}15`,
       };
     } else if (diffDays <= 3) {
       // Por vencer (1-3 días) - amarillo/naranja claro
       return {
         bgcolor:
-          theme.palette.mode === "dark" ? "rgba(255, 152, 0, 0.15)" : "#FFF9C4",
+          theme.palette.mode === "dark" 
+            ? `${taxiMonterricoColors.orange}26` 
+            : `${taxiMonterricoColors.orange}15`,
       };
     } else {
       // A tiempo - verde claro
       return {
         bgcolor:
-          theme.palette.mode === "dark" ? "rgba(76, 175, 80, 0.15)" : "#E8F5E9",
+          theme.palette.mode === "dark" 
+            ? `${taxiMonterricoColors.green}26` 
+            : `${taxiMonterricoColors.green}15`,
       };
     }
   };
@@ -868,15 +877,19 @@ const DealDetail: React.FC = () => {
             })}`
           : 'No disponible',
         icon: faCalendar,
-        iconBgColor: '#0d939429',
-        iconColor: '#0d9394',
+        iconBgColor: theme.palette.mode === 'dark' 
+          ? `${taxiMonterricoColors.green}29` 
+          : `${taxiMonterricoColors.green}15`,
+        iconColor: taxiMonterricoColors.green,
       },
       {
         label: 'Etapa del negocio',
         value: deal?.stage ? getStageLabel(deal.stage) : 'No disponible',
         icon: ['fas', 'arrows-rotate'],
-        iconBgColor: '#e4f6d6',
-        iconColor: '#56ca00',
+        iconBgColor: theme.palette.mode === 'dark' 
+          ? `${taxiMonterricoColors.green}26` 
+          : `${taxiMonterricoColors.green}15`,
+        iconColor: taxiMonterricoColors.greenLight,
         showArrow: true,
       },
       {
@@ -889,8 +902,10 @@ const DealDetail: React.FC = () => {
             })
           : 'No hay actividades',
         icon: faClock,
-        iconBgColor: '#fff3d6',
-        iconColor: '#ffb400',
+        iconBgColor: theme.palette.mode === 'dark' 
+          ? `${taxiMonterricoColors.orange}26` 
+          : `${taxiMonterricoColors.orange}15`,
+        iconColor: taxiMonterricoColors.orange,
       },
       {
         label: 'Propietario del negocio',
@@ -900,8 +915,10 @@ const DealDetail: React.FC = () => {
             : deal.Owner.email || 'Sin nombre'
           : 'No asignado',
         icon: faUserRegular,
-        iconBgColor: '#daf2ff',
-        iconColor: '#16b1ff',
+        iconBgColor: theme.palette.mode === 'dark' 
+          ? `${theme.palette.primary.main}26` 
+          : `${theme.palette.primary.main}15`,
+        iconColor: theme.palette.primary.main,
       },
     ];
 
@@ -1075,7 +1092,7 @@ const DealDetail: React.FC = () => {
           ]}
           onBack={() => navigate('/deals')}
           avatarIcon={<FontAwesomeIcon icon={faHandshake} style={{ fontSize: 60, color: 'white' }} />}
-          avatarBgColor="#0d9394"
+          avatarBgColor={taxiMonterricoColors.green}
           entityName={deal?.name || ''}
           entitySubtitle={
             deal
@@ -1109,9 +1126,106 @@ const DealDetail: React.FC = () => {
               onClose={handleCloseEditDialog}
               maxWidth="sm"
               fullWidth
+              PaperProps={{
+                sx: {
+                  bgcolor: `${theme.palette.background.paper} !important`,
+                  color: `${theme.palette.text.primary} !important`,
+                  borderRadius: 3,
+                  boxShadow: `0 8px 32px ${taxiMonterricoColors.greenLight}30`,
+                },
+              }}
             >
-              <DialogTitle>Editar Negocio</DialogTitle>
-              <DialogContent>
+              <DialogTitle
+                sx={{
+                  background: `linear-gradient(135deg, ${taxiMonterricoColors.green}15 0%, ${taxiMonterricoColors.orange}15 100%)`,
+                  borderBottom: `2px solid transparent`,
+                  borderImage: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+                  borderImageSlice: 1,
+                  pb: 2,
+                  position: 'relative',
+                  '& .MuiTypography-root': {
+                    background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    fontWeight: 700,
+                    fontSize: '1.25rem',
+                  },
+                }}
+              >
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <Typography sx={{ 
+                    background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    fontWeight: 700,
+                    fontSize: '1.25rem',
+                  }}>
+                    Editar Negocio
+                  </Typography>
+                  <IconButton
+                    onClick={handleCloseEditDialog}
+                    sx={{
+                      color: taxiMonterricoColors.orange,
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        bgcolor: `${taxiMonterricoColors.orange}15`,
+                        transform: 'rotate(90deg)',
+                      },
+                    }}
+                  >
+                    <Close />
+                  </IconButton>
+                </Box>
+              </DialogTitle>
+              <DialogContent
+                sx={{
+                  bgcolor: `${theme.palette.background.paper} !important`,
+                  background: theme.palette.mode === 'dark'
+                    ? `linear-gradient(to bottom, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`
+                    : `linear-gradient(to bottom, ${theme.palette.background.paper} 0%, ${theme.palette.grey[50]} 100%)`,
+                  pt: 3,
+                  '& .MuiTextField-root': {
+                    '& .MuiOutlinedInput-root': {
+                      bgcolor: `${theme.palette.background.paper} !important`,
+                      color: `${theme.palette.text.primary} !important`,
+                      '& fieldset': {
+                        borderColor: theme.palette.divider,
+                      },
+                      '&:hover fieldset': {
+                        borderColor: `${taxiMonterricoColors.greenLight} !important`,
+                        boxShadow: `0 0 0 2px ${taxiMonterricoColors.greenLight}30`,
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: `${taxiMonterricoColors.green} !important`,
+                        boxShadow: `0 0 0 3px ${taxiMonterricoColors.greenLight}30`,
+                      },
+                      '& input': {
+                        color: `${theme.palette.text.primary} !important`,
+                        '&::placeholder': {
+                          color: `${theme.palette.text.secondary} !important`,
+                          opacity: 1,
+                        },
+                      },
+                      '& input:-webkit-autofill': {
+                        WebkitBoxShadow: `0 0 0 100px ${theme.palette.background.paper} inset !important`,
+                        WebkitTextFillColor: `${theme.palette.text.primary} !important`,
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: `${theme.palette.text.secondary} !important`,
+                      '&.Mui-focused': {
+                        color: `${taxiMonterricoColors.green} !important`,
+                        fontWeight: 600,
+                      },
+                    },
+                    '& .MuiSelect-icon': {
+                      color: taxiMonterricoColors.green,
+                    },
+                  },
+                }}
+              >
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
                   <TextField
                     label="Nombre"
@@ -1158,19 +1272,19 @@ const DealDetail: React.FC = () => {
                   >
                     <MenuItem value="baja">
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#20B2AA' }} />
+                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: taxiMonterricoColors.green }} />
                         Baja
                       </Box>
                     </MenuItem>
                     <MenuItem value="media">
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#F59E0B' }} />
+                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: taxiMonterricoColors.orange }} />
                         Media
                       </Box>
                     </MenuItem>
                     <MenuItem value="alta">
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#EF4444' }} />
+                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: theme.palette.error.main }} />
                         Alta
                       </Box>
                     </MenuItem>
@@ -1209,14 +1323,59 @@ const DealDetail: React.FC = () => {
                   </TextField>
                 </Box>
               </DialogContent>
-              <DialogActions>
-                <Button onClick={handleCloseEditDialog} disabled={savingEdit}>
+              <DialogActions sx={{ 
+                bgcolor: '#FFFFFF !important',
+                px: 3,
+                pb: 2.5,
+                gap: 1.5,
+              }}>
+                <Button 
+                  onClick={handleCloseEditDialog} 
+                  disabled={savingEdit}
+                  sx={{
+                    borderWidth: 2,
+                    borderColor: theme.palette.error.main,
+                    color: theme.palette.error.main,
+                    bgcolor: theme.palette.background.paper,
+                    fontWeight: 600,
+                    px: 3,
+                    py: 1,
+                    borderRadius: 2,
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      bgcolor: theme.palette.error.main,
+                      color: theme.palette.common.white,
+                      borderColor: theme.palette.error.main,
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 4px 12px rgba(211, 47, 47, 0.3)',
+                    },
+                  }}
+                >
                   Cancelar
                 </Button>
                 <Button 
                   onClick={handleSubmitEdit} 
                   variant="contained"
                   disabled={savingEdit || !editFormData.name.trim() || !editFormData.amount.trim()}
+                  sx={{
+                    background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`,
+                    color: 'white',
+                    fontWeight: 700,
+                    px: 3,
+                    py: 1,
+                    borderRadius: 2,
+                    boxShadow: `0 4px 12px ${taxiMonterricoColors.greenLight}40`,
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      background: `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`,
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 8px 20px ${taxiMonterricoColors.greenLight}60`,
+                    },
+                    '&:disabled': {
+                      background: 'rgba(0,0,0,0.12)',
+                      color: 'rgba(0,0,0,0.26)',
+                    },
+                  }}
                 >
                   {savingEdit ? 'Guardando...' : 'Actualizar'}
                 </Button>

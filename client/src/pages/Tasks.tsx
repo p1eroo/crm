@@ -28,7 +28,7 @@ import {
   Paper,
   useTheme,
 } from '@mui/material';
-import { Add, Delete, Search, CheckCircle, Visibility, Warning, Schedule, PendingActions, Edit, ChevronLeft, ChevronRight, Assignment } from '@mui/icons-material';
+import { Add, Delete, Search, CheckCircle, Visibility, Warning, Schedule, PendingActions, Edit, ChevronLeft, ChevronRight } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
@@ -353,10 +353,21 @@ const Tasks: React.FC = () => {
     }}>
       {/* Cards de resumen */}
       <Card sx={{ 
-        borderRadius: 6,
-        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
+        borderRadius: 3,
+        boxShadow: theme.palette.mode === 'dark' 
+          ? '0 4px 16px rgba(0,0,0,0.3)' 
+          : `0 4px 16px ${taxiMonterricoColors.greenLight}15`,
         bgcolor: theme.palette.background.paper,
+        border: '1px solid',
+        borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
         mb: 2.5,
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 8px 24px rgba(0,0,0,0.4)' 
+            : `0 8px 24px ${taxiMonterricoColors.greenLight}25`,
+          transform: 'translateY(-2px)',
+        },
       }}>
         <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
           <Box sx={{ display: 'flex', alignItems: 'stretch', flexWrap: { xs: 'wrap', sm: 'nowrap' }, gap: { xs: 1.5, sm: 2 } }}>
@@ -371,13 +382,33 @@ const Tasks: React.FC = () => {
                 gap: { xs: 2, sm: 3, md: 4 },
                 px: { xs: 0.75, sm: 1 },
                 py: { xs: 1, sm: 1 },
-                borderRadius: 1.5,
-                bgcolor: activeFilter === 'overdue' ? theme.palette.action.hover : 'transparent',
+                borderRadius: 2,
+                bgcolor: activeFilter === 'overdue' ? `${theme.palette.error.main}10` : 'transparent',
                 cursor: 'pointer',
-                transition: 'background-color 0.2s',
-                border: activeFilter === 'overdue' ? `1px solid ${theme.palette.divider}` : '1px solid transparent',
+                transition: 'all 0.3s ease',
+                border: activeFilter === 'overdue' 
+                  ? `2px solid ${theme.palette.error.main}` 
+                  : '1px solid transparent',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: '-100%',
+                  width: '100%',
+                  height: '100%',
+                  background: `linear-gradient(90deg, transparent, ${theme.palette.error.main}15, transparent)`,
+                  transition: 'left 0.5s ease',
+                },
                 '&:hover': {
-                  bgcolor: theme.palette.action.hover,
+                  bgcolor: `${theme.palette.error.main}15`,
+                  borderColor: theme.palette.error.main,
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 4px 12px ${theme.palette.error.main}30`,
+                  '&::before': {
+                    left: '100%',
+                  },
                 },
               }}
             >
@@ -388,10 +419,23 @@ const Tasks: React.FC = () => {
                 width: { xs: 60, sm: 75, md: 95 },
                 height: { xs: 60, sm: 75, md: 95 },
                 borderRadius: '50%',
-                bgcolor: `${theme.palette.error.main}15`,
+                background: `linear-gradient(135deg, ${theme.palette.error.main}20 0%, ${theme.palette.error.main}10 100%)`,
+                border: `2px solid ${theme.palette.error.main}30`,
                 flexShrink: 0,
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'scale(1.1) rotate(5deg)',
+                  boxShadow: `0 4px 12px ${theme.palette.error.main}40`,
+                },
               }}>
-                <Warning sx={{ color: theme.palette.error.main, fontSize: { xs: 35, sm: 45, md: 60 } }} />
+                <Warning sx={{ 
+                  color: theme.palette.error.main, 
+                  fontSize: { xs: 35, sm: 45, md: 60 },
+                  transition: 'transform 0.3s ease',
+                  '&:hover': {
+                    transform: 'scale(1.1)',
+                  },
+                }} />
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
                 <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: { xs: '0.875rem', sm: '1rem', md: '1.125rem' }, fontWeight: 400, lineHeight: 1.4 }}>
@@ -416,13 +460,33 @@ const Tasks: React.FC = () => {
                 gap: { xs: 2, sm: 3, md: 4 },
                 px: { xs: 0.75, sm: 1 },
                 py: { xs: 1, sm: 1 },
-                borderRadius: 1.5,
-                bgcolor: activeFilter === 'dueToday' ? theme.palette.action.hover : 'transparent',
+                borderRadius: 2,
+                bgcolor: activeFilter === 'dueToday' ? `${taxiMonterricoColors.orange}10` : 'transparent',
                 cursor: 'pointer',
-                transition: 'background-color 0.2s',
-                border: activeFilter === 'dueToday' ? `1px solid ${theme.palette.divider}` : '1px solid transparent',
+                transition: 'all 0.3s ease',
+                border: activeFilter === 'dueToday' 
+                  ? `2px solid ${taxiMonterricoColors.orange}` 
+                  : '1px solid transparent',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: '-100%',
+                  width: '100%',
+                  height: '100%',
+                  background: `linear-gradient(90deg, transparent, ${taxiMonterricoColors.orange}15, transparent)`,
+                  transition: 'left 0.5s ease',
+                },
                 '&:hover': {
-                  bgcolor: theme.palette.action.hover,
+                  bgcolor: `${taxiMonterricoColors.orange}15`,
+                  borderColor: taxiMonterricoColors.orange,
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 4px 12px ${taxiMonterricoColors.orange}30`,
+                  '&::before': {
+                    left: '100%',
+                  },
                 },
               }}
             >
@@ -433,10 +497,23 @@ const Tasks: React.FC = () => {
                 width: { xs: 60, sm: 75, md: 95 },
                 height: { xs: 60, sm: 75, md: 95 },
                 borderRadius: '50%',
-                bgcolor: `${taxiMonterricoColors.orange}15`,
+                background: `linear-gradient(135deg, ${taxiMonterricoColors.orange}20 0%, ${taxiMonterricoColors.orange}10 100%)`,
+                border: `2px solid ${taxiMonterricoColors.orange}30`,
                 flexShrink: 0,
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'scale(1.1) rotate(5deg)',
+                  boxShadow: `0 4px 12px ${taxiMonterricoColors.orange}40`,
+                },
               }}>
-                <Schedule sx={{ color: taxiMonterricoColors.orange, fontSize: { xs: 35, sm: 45, md: 60 } }} />
+                <Schedule sx={{ 
+                  color: taxiMonterricoColors.orange, 
+                  fontSize: { xs: 35, sm: 45, md: 60 },
+                  transition: 'transform 0.3s ease',
+                  '&:hover': {
+                    transform: 'scale(1.1)',
+                  },
+                }} />
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
                 <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: { xs: '0.875rem', sm: '1rem', md: '1.125rem' }, fontWeight: 400, lineHeight: 1.4 }}>
@@ -461,13 +538,33 @@ const Tasks: React.FC = () => {
                 gap: { xs: 2, sm: 3, md: 4 },
                 px: { xs: 0.75, sm: 1 },
                 py: { xs: 1, sm: 1 },
-                borderRadius: 1.5,
-                bgcolor: activeFilter === 'pending' ? theme.palette.action.hover : 'transparent',
+                borderRadius: 2,
+                bgcolor: activeFilter === 'pending' ? `${theme.palette.warning.main}10` : 'transparent',
                 cursor: 'pointer',
-                transition: 'background-color 0.2s',
-                border: activeFilter === 'pending' ? `1px solid ${theme.palette.divider}` : '1px solid transparent',
+                transition: 'all 0.3s ease',
+                border: activeFilter === 'pending' 
+                  ? `2px solid ${theme.palette.warning.main}` 
+                  : '1px solid transparent',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: '-100%',
+                  width: '100%',
+                  height: '100%',
+                  background: `linear-gradient(90deg, transparent, ${theme.palette.warning.main}15, transparent)`,
+                  transition: 'left 0.5s ease',
+                },
                 '&:hover': {
-                  bgcolor: theme.palette.action.hover,
+                  bgcolor: `${theme.palette.warning.main}15`,
+                  borderColor: theme.palette.warning.main,
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 4px 12px ${theme.palette.warning.main}30`,
+                  '&::before': {
+                    left: '100%',
+                  },
                 },
               }}
             >
@@ -478,10 +575,23 @@ const Tasks: React.FC = () => {
                 width: { xs: 60, sm: 75, md: 95 },
                 height: { xs: 60, sm: 75, md: 95 },
                 borderRadius: '50%',
-                bgcolor: `${theme.palette.warning.main}15`,
+                background: `linear-gradient(135deg, ${theme.palette.warning.main}20 0%, ${theme.palette.warning.main}10 100%)`,
+                border: `2px solid ${theme.palette.warning.main}30`,
                 flexShrink: 0,
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'scale(1.1) rotate(5deg)',
+                  boxShadow: `0 4px 12px ${theme.palette.warning.main}40`,
+                },
               }}>
-                <PendingActions sx={{ color: theme.palette.warning.main, fontSize: { xs: 35, sm: 45, md: 60 } }} />
+                <PendingActions sx={{ 
+                  color: theme.palette.warning.main, 
+                  fontSize: { xs: 35, sm: 45, md: 60 },
+                  transition: 'transform 0.3s ease',
+                  '&:hover': {
+                    transform: 'scale(1.1)',
+                  },
+                }} />
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
                 <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: { xs: '0.875rem', sm: '1rem', md: '1.125rem' }, fontWeight: 400, lineHeight: 1.4 }}>
@@ -506,13 +616,33 @@ const Tasks: React.FC = () => {
                 gap: { xs: 2, sm: 3, md: 4 },
                 px: { xs: 0.75, sm: 1 },
                 py: { xs: 1, sm: 1 },
-                borderRadius: 1.5,
-                bgcolor: activeFilter === 'completed' ? theme.palette.action.hover : 'transparent',
+                borderRadius: 2,
+                bgcolor: activeFilter === 'completed' ? `${taxiMonterricoColors.green}10` : 'transparent',
                 cursor: 'pointer',
-                transition: 'background-color 0.2s',
-                border: activeFilter === 'completed' ? `1px solid ${theme.palette.divider}` : '1px solid transparent',
+                transition: 'all 0.3s ease',
+                border: activeFilter === 'completed' 
+                  ? `2px solid ${taxiMonterricoColors.green}` 
+                  : '1px solid transparent',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: '-100%',
+                  width: '100%',
+                  height: '100%',
+                  background: `linear-gradient(90deg, transparent, ${taxiMonterricoColors.green}15, transparent)`,
+                  transition: 'left 0.5s ease',
+                },
                 '&:hover': {
-                  bgcolor: theme.palette.action.hover,
+                  bgcolor: `${taxiMonterricoColors.green}15`,
+                  borderColor: taxiMonterricoColors.green,
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
+                  '&::before': {
+                    left: '100%',
+                  },
                 },
               }}
             >
@@ -523,10 +653,23 @@ const Tasks: React.FC = () => {
                 width: { xs: 60, sm: 75, md: 95 },
                 height: { xs: 60, sm: 75, md: 95 },
                 borderRadius: '50%',
-                bgcolor: `${taxiMonterricoColors.green}15`,
+                background: `linear-gradient(135deg, ${taxiMonterricoColors.green}20 0%, ${taxiMonterricoColors.green}10 100%)`,
+                border: `2px solid ${taxiMonterricoColors.green}30`,
                 flexShrink: 0,
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'scale(1.1) rotate(5deg)',
+                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}40`,
+                },
               }}>
-                <CheckCircle sx={{ color: taxiMonterricoColors.green, fontSize: { xs: 35, sm: 45, md: 60 } }} />
+                <CheckCircle sx={{ 
+                  color: taxiMonterricoColors.green, 
+                  fontSize: { xs: 35, sm: 45, md: 60 },
+                  transition: 'transform 0.3s ease',
+                  '&:hover': {
+                    transform: 'scale(1.1)',
+                  },
+                }} />
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
                 <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: { xs: '0.875rem', sm: '1rem', md: '1.125rem' }, fontWeight: 400, lineHeight: 1.4 }}>
@@ -543,41 +686,88 @@ const Tasks: React.FC = () => {
 
       {/* Sección de tabla */}
       <Card sx={{ 
-        borderRadius: 6,
-        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.08)',
+        borderRadius: 3,
+        boxShadow: theme.palette.mode === 'dark' 
+          ? '0 4px 16px rgba(0,0,0,0.3)' 
+          : `0 4px 16px ${taxiMonterricoColors.greenLight}15`,
         overflow: 'hidden',
         bgcolor: theme.palette.background.paper,
+        border: '1px solid',
+        borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 8px 24px rgba(0,0,0,0.4)' 
+            : `0 8px 24px ${taxiMonterricoColors.greenLight}25`,
+        },
       }}>
-        <Box sx={{ px: 3, pt: 3, pb: 2 }}>
+        <Box sx={{ 
+          px: 3, 
+          pt: 3, 
+          pb: 2,
+          background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)`,
+          borderBottom: `2px solid transparent`,
+          borderImage: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+          borderImageSlice: 1,
+        }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
             <Box>
-              <Typography variant="h4" sx={pageStyles.pageTitle}>
+              <Typography 
+                variant="h4" 
+                sx={{
+                  fontWeight: 700,
+                  fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
+                  background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
                 Tareas
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <TextField
-                size="small"
+                size="medium"
                 placeholder="Buscar"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 InputProps={{
-                  startAdornment: <Search sx={{ mr: 1, color: theme.palette.text.secondary, fontSize: 20 }} />,
+                  startAdornment: <Search sx={{ 
+                    mr: 2.5, 
+                    color: theme.palette.text.secondary, 
+                    fontSize: 38,
+                    transition: 'color 0.3s ease',
+                  }} />,
                 }}
                 sx={{ 
                   minWidth: 200,
                   bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
-                  borderRadius: 1.5,
+                  borderRadius: 2,
                   '& .MuiOutlinedInput-root': {
+                    fontSize: '1.4rem',
+                    borderWidth: 2,
                     '& fieldset': {
-                      borderColor: theme.palette.divider,
+                      borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)',
                     },
                     '&:hover fieldset': {
-                      borderColor: theme.palette.text.secondary,
+                      borderColor: `${taxiMonterricoColors.greenLight} !important`,
+                      boxShadow: `0 0 0 2px ${taxiMonterricoColors.greenLight}30`,
                     },
                     '&.Mui-focused fieldset': {
-                      borderColor: theme.palette.primary.main,
+                      borderColor: `${taxiMonterricoColors.green} !important`,
+                      boxShadow: `0 0 0 3px ${taxiMonterricoColors.greenLight}30`,
                     },
+                    '& input::placeholder': {
+                      fontSize: '1.4rem',
+                      opacity: 0.7,
+                    },
+                  },
+                  '&:hover .MuiInputAdornment-root .MuiSvgIcon-root': {
+                    color: taxiMonterricoColors.greenLight,
+                  },
+                  '& .MuiOutlinedInput-root.Mui-focused .MuiInputAdornment-root .MuiSvgIcon-root': {
+                    color: taxiMonterricoColors.green,
                   },
                 }}
               />
@@ -588,7 +778,24 @@ const Tasks: React.FC = () => {
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   displayEmpty
-                  sx={pageStyles.select}
+                  sx={{
+                    borderRadius: 2,
+                    borderWidth: 2,
+                    borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)',
+                    bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      borderColor: `${taxiMonterricoColors.greenLight} !important`,
+                      boxShadow: `0 0 0 2px ${taxiMonterricoColors.greenLight}30`,
+                    },
+                    '&.Mui-focused': {
+                      borderColor: `${taxiMonterricoColors.green} !important`,
+                      boxShadow: `0 0 0 3px ${taxiMonterricoColors.greenLight}30`,
+                    },
+                    '& .MuiSelect-icon': {
+                      color: taxiMonterricoColors.green,
+                    },
+                  }}
                 >
                   <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
                   <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
@@ -596,14 +803,49 @@ const Tasks: React.FC = () => {
                   <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
                 </Select>
               </FormControl>
-              <Button 
-                variant="contained" 
-                startIcon={<Add />} 
-                onClick={() => handleOpen()}
-                sx={pageStyles.primaryButton}
-              >
-                Nueva Tarea
-              </Button>
+              <Tooltip title="Crear nueva tarea" arrow>
+                <Button 
+                  variant="contained" 
+                  startIcon={<Add />} 
+                  onClick={() => handleOpen()}
+                  sx={{
+                    background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`,
+                    color: 'white',
+                    borderRadius: 2,
+                    px: 3,
+                    py: 1.25,
+                    fontWeight: 700,
+                    textTransform: 'none',
+                    boxShadow: `0 4px 12px ${taxiMonterricoColors.greenLight}40`,
+                    transition: 'all 0.3s ease',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: '-100%',
+                      width: '100%',
+                      height: '100%',
+                      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                      transition: 'left 0.5s ease',
+                    },
+                    '&:hover': {
+                      transform: 'translateY(-2px) scale(1.02)',
+                      boxShadow: `0 8px 20px ${taxiMonterricoColors.greenLight}60`,
+                      background: `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`,
+                      '&::before': {
+                        left: '100%',
+                      },
+                    },
+                    '&:active': {
+                      transform: 'translateY(0) scale(1)',
+                    },
+                  }}
+                >
+                  Nueva Tarea
+                </Button>
+              </Tooltip>
             </Box>
           </Box>
         </Box>
@@ -626,13 +868,13 @@ const Tasks: React.FC = () => {
               height: 8,
             },
             '&::-webkit-scrollbar-track': {
-              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f1f1f1',
+              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.default : theme.palette.grey[100],
             },
             '&::-webkit-scrollbar-thumb': {
-              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.secondary : '#888',
+              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.secondary : theme.palette.grey[500],
               borderRadius: 4,
               '&:hover': {
-                backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.primary : '#555',
+                backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.grey[600],
               },
             },
           }}
@@ -640,9 +882,14 @@ const Tasks: React.FC = () => {
           <Table sx={{ minWidth: { xs: 800, md: 'auto' } }}>
             <TableHead>
               <TableRow sx={{ 
-                bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#fafafa',
+                background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)`,
+                borderTop: `2px solid transparent`,
+                borderImage: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+                borderImageSlice: 1,
+                borderBottom: `2px solid ${taxiMonterricoColors.greenLight}`,
                 '& .MuiTableCell-head': {
                   borderBottom: 'none',
+                  fontWeight: 700,
                 },
                 '& .MuiTableCell-head:first-of-type': {
                   borderTopLeftRadius: 0,
@@ -694,33 +941,38 @@ const Tasks: React.FC = () => {
                           borderRadius: '50%',
                           bgcolor: theme.palette.mode === 'dark' 
                             ? 'rgba(255, 255, 255, 0.05)' 
-                            : '#F3F4F6',
+                            : theme.palette.grey[100],
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
+                          fontSize: '64px',
+                          lineHeight: 1,
                         }}
                       >
-                        <Assignment
-                          sx={{
-                            fontSize: 48,
-                            color: theme.palette.text.secondary,
-                          }}
-                        />
+                        📋
                       </Box>
-                      <Box>
+                      <Box sx={{ textAlign: 'center', maxWidth: '400px' }}>
                         <Typography
                           variant="h6"
                           sx={{
-                            fontWeight: 600,
+                            fontWeight: 700,
                             mb: 1,
                             color: theme.palette.text.primary,
+                            fontSize: { xs: '1.25rem', md: '1.5rem' },
                           }}
                         >
                           No hay tareas registradas
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: theme.palette.text.primary,
+                            lineHeight: 1.6,
+                            fontSize: { xs: '0.875rem', md: '0.9375rem' },
+                          }}
+                        >
                           {tasks.length === 0 && !loading
-                            ? 'Crea tu primera tarea para comenzar a organizar tu trabajo.'
+                            ? 'Crea tu primera tarea para comenzar a organizar tu trabajo de manera eficiente.'
                             : 'No se encontraron tareas que coincidan con tu búsqueda.'}
                         </Typography>
                       </Box>
@@ -734,7 +986,7 @@ const Tasks: React.FC = () => {
                   hover
                   onClick={() => handlePreview(task)}
                   sx={{ 
-                    '&:hover': { bgcolor: theme.palette.mode === 'dark' ? theme.palette.action.hover : '#fafafa' },
+                    '&:hover': { bgcolor: theme.palette.action.hover },
                     cursor: 'pointer',
                     transition: 'background-color 0.2s',
                   }}
@@ -783,15 +1035,15 @@ const Tasks: React.FC = () => {
                         fontSize: { xs: '0.7rem', md: '0.75rem' },
                         height: { xs: 20, md: 24 },
                         bgcolor: task.priority === 'urgent' || task.priority === 'high'
-                          ? '#FFEBEE'
+                          ? (theme.palette.mode === 'dark' ? `${theme.palette.error.main}26` : `${theme.palette.error.main}15`)
                           : task.priority === 'medium'
-                          ? '#FFF3E0'
-                          : '#E8F5E9',
+                          ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}26` : `${taxiMonterricoColors.orange}15`)
+                          : (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}15`),
                         color: task.priority === 'urgent' || task.priority === 'high'
-                          ? '#C62828'
+                          ? theme.palette.error.main
                           : task.priority === 'medium'
-                          ? '#E65100'
-                          : '#2E7D32',
+                          ? taxiMonterricoColors.orangeDark
+                          : taxiMonterricoColors.green,
                         border: 'none',
                         borderRadius: 1,
                       }}
@@ -818,7 +1070,7 @@ const Tasks: React.FC = () => {
                           <Typography 
                             variant="caption" 
                             sx={{ 
-                              color: '#d32f2f',
+                              color: theme.palette.error.main,
                               fontSize: '0.7rem',
                               fontWeight: 500,
                               display: 'block',
@@ -1113,7 +1365,7 @@ const Tasks: React.FC = () => {
             disabled={deleting}
             variant="contained"
             sx={pageStyles.deleteButton}
-            startIcon={deleting ? <CircularProgress size={16} sx={{ color: '#ffffff' }} /> : <Delete />}
+            startIcon={deleting ? <CircularProgress size={16} sx={{ color: theme.palette.common.white }} /> : <Delete />}
           >
             {deleting ? 'Eliminando...' : 'Eliminar'}
           </Button>

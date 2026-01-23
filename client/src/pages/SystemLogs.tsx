@@ -147,12 +147,21 @@ const SystemLogs: React.FC = () => {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <Search />
+                <Search sx={{ fontSize: 38 }} />
               </InputAdornment>
             ),
           }}
-          sx={{ minWidth: 250 }}
-          size="small"
+          sx={{ 
+            minWidth: 250,
+            '& .MuiOutlinedInput-root': {
+              fontSize: '1.4rem',
+              '& input::placeholder': {
+                fontSize: '1.4rem',
+                opacity: 0.7,
+              },
+            },
+          }}
+          size="medium"
         />
         <FormControl size="small" sx={{ minWidth: 200 }}>
           <InputLabel>Tipo de Entidad</InputLabel>

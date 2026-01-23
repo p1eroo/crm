@@ -115,17 +115,16 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
       maxWidth={false}
       PaperProps={{
         sx: {
-          borderRadius: 1,
+          borderRadius: 3,
           width: { xs: '95vw', sm: '1100px', md: '1200px' },
           maxWidth: { xs: '95vw', sm: '95vw' },
           height: { xs: '85vh', sm: '80vh' },
           maxHeight: { xs: '85vh', sm: '800px' },
-          bgcolor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
-          color: theme.palette.text.primary,
-          boxShadow: theme.palette.mode === 'dark' 
-            ? '0 20px 60px rgba(0,0,0,0.5)' 
-            : '0 20px 60px rgba(0,0,0,0.12)',
-          border: 'none',
+          bgcolor: `${theme.palette.background.paper} !important`,
+          color: `${theme.palette.text.primary} !important`,
+          boxShadow: `0 8px 32px ${taxiMonterricoColors.greenLight}30`,
+          border: '1px solid',
+          borderColor: theme.palette.divider,
           display: 'flex',
           flexDirection: 'column',
           animation: 'fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -148,18 +147,26 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
           justifyContent: 'space-between',
           alignItems: 'center',
           px: 3,
-          py: 2,
-          pb: 2,
-          borderBottom: `1px solid ${theme.palette.divider}`,
-          bgcolor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
+          py: 2.5,
+          pb: 2.5,
+          background: `linear-gradient(135deg, ${taxiMonterricoColors.green}15 0%, ${taxiMonterricoColors.orange}15 100%)`,
+          borderBottom: `2px solid transparent`,
+          borderImage: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+          borderImageSlice: 1,
+          bgcolor: `${theme.palette.background.paper} !important`,
         }}
       >
         <Typography 
           variant="h6" 
           sx={{
-            fontWeight: 600,
-            fontSize: '1.25rem',
+            fontWeight: 700,
+            fontSize: '1.375rem',
             letterSpacing: '-0.02em',
+            background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            color: `${theme.palette.text.primary} !important`,
           }}
         >
           Nuevo Mensaje
@@ -168,12 +175,12 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
           onClick={handleClose} 
           size="small"
           sx={{
-            color: theme.palette.text.secondary,
+            color: taxiMonterricoColors.orange,
+            transition: 'all 0.3s ease',
             '&:hover': {
-              backgroundColor: theme.palette.error.main + '15',
-              color: theme.palette.error.main,
+              bgcolor: `${taxiMonterricoColors.orange}15`,
+              transform: 'rotate(90deg)',
             },
-            transition: 'all 0.2s ease',
           }}
         >
           <Close fontSize="small" />
@@ -193,7 +200,8 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
         <Box sx={{ 
           px: 3,
           py: 2,
-          bgcolor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
+          bgcolor: `${theme.palette.background.paper} !important`,
+          background: `linear-gradient(to bottom, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`,
           display: 'flex',
           flexDirection: 'column',
           flex: 1,
@@ -215,16 +223,37 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
               placeholder="correo@ejemplo.com"
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'transparent',
+                  bgcolor: `${theme.palette.background.paper} !important`,
+                  color: `${theme.palette.text.primary} !important`,
+                  borderWidth: 2,
                   '& fieldset': {
-                    borderColor: theme.palette.mode === 'dark'
-                      ? 'rgba(255,255,255,0.1)'
-                      : theme.palette.divider,
+                    borderColor: theme.palette.divider,
                   },
                   '&:hover fieldset': {
-                    borderColor: theme.palette.mode === 'dark'
-                      ? 'rgba(255,255,255,0.2)'
-                      : theme.palette.divider,
+                    borderColor: `${taxiMonterricoColors.greenLight} !important`,
+                    boxShadow: `0 0 0 2px ${taxiMonterricoColors.greenLight}30`,
+                  },
+                  '&.Mui-focused fieldset': {
+                    borderColor: `${taxiMonterricoColors.green} !important`,
+                    boxShadow: `0 0 0 3px ${taxiMonterricoColors.greenLight}30`,
+                  },
+                  '& input': {
+                    color: `${theme.palette.text.primary} !important`,
+                    '&::placeholder': {
+                      color: `${theme.palette.text.secondary} !important`,
+                      opacity: 1,
+                    },
+                  },
+                  '& input:-webkit-autofill': {
+                    WebkitBoxShadow: `0 0 0 100px ${theme.palette.background.paper} inset !important`,
+                    WebkitTextFillColor: `${theme.palette.text.primary} !important`,
+                  },
+                },
+                '& .MuiInputLabel-root': {
+                  color: `${theme.palette.text.secondary} !important`,
+                  '&.Mui-focused': {
+                    color: `${taxiMonterricoColors.green} !important`,
+                    fontWeight: 600,
                   },
                 },
               }}
@@ -242,25 +271,41 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
               placeholder="Escribe el asunto..."
               sx={{
                 '& .MuiOutlinedInput-root': {
-                  backgroundColor: 'transparent',
+                  bgcolor: `${theme.palette.background.paper} !important`,
+                  color: `${theme.palette.text.primary} !important`,
+                  borderWidth: 2,
                   '& fieldset': {
-                    borderColor: theme.palette.mode === 'dark'
-                      ? 'rgba(255,255,255,0.1)'
-                      : theme.palette.divider,
+                    borderColor: theme.palette.divider,
                   },
                   '&:hover fieldset': {
-                    borderColor: theme.palette.mode === 'dark'
-                      ? 'rgba(255,255,255,0.2)'
-                      : theme.palette.divider,
+                    borderColor: `${taxiMonterricoColors.greenLight} !important`,
+                    boxShadow: `0 0 0 2px ${taxiMonterricoColors.greenLight}30`,
                   },
                   '&.Mui-focused fieldset': {
-                    borderColor: taxiMonterricoColors.green,
+                    borderColor: `${taxiMonterricoColors.green} !important`,
+                    boxShadow: `0 0 0 3px ${taxiMonterricoColors.greenLight}30`,
+                  },
+                  '& input': {
+                    color: `${theme.palette.text.primary} !important`,
+                    fontSize: '1rem',
+                    fontWeight: 500,
+                    py: 1.5,
+                    '&::placeholder': {
+                      color: `${theme.palette.text.secondary} !important`,
+                      opacity: 1,
+                    },
+                  },
+                  '& input:-webkit-autofill': {
+                    WebkitBoxShadow: `0 0 0 100px ${theme.palette.background.paper} inset !important`,
+                    WebkitTextFillColor: `${theme.palette.text.primary} !important`,
                   },
                 },
-                '& .MuiInputBase-input': {
-                  fontSize: '1rem',
-                  fontWeight: 500,
-                  py: 1.5,
+                '& .MuiInputLabel-root': {
+                  color: `${theme.palette.text.secondary} !important`,
+                  '&.Mui-focused': {
+                    color: `${taxiMonterricoColors.green} !important`,
+                    fontWeight: 600,
+                  },
                 },
               }}
             />
@@ -281,7 +326,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
                 minHeight: '400px',
                 display: 'flex',
                 flexDirection: 'column',
-                bgcolor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
+                bgcolor: theme.palette.background.paper,
                 transition: 'all 0.2s ease',
               }}
             >
@@ -295,12 +340,47 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
 
           {/* Mensajes de error/éxito */}
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 2,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: theme.palette.error.main,
+                boxShadow: `0 4px 12px ${theme.palette.error.main}33`,
+                bgcolor: theme.palette.background.paper,
+                '& .MuiAlert-icon': {
+                  fontSize: 28,
+                },
+                '& .MuiAlert-message': {
+                  fontWeight: 500,
+                  color: theme.palette.text.primary,
+                },
+              }} 
+              onClose={() => setError('')}
+            >
               {error}
             </Alert>
           )}
           {success && (
-            <Alert severity="success" sx={{ mb: 2 }}>
+            <Alert 
+              severity="success" 
+              sx={{ 
+                mb: 2,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: taxiMonterricoColors.green,
+                boxShadow: `0 4px 12px ${taxiMonterricoColors.greenLight}30`,
+                bgcolor: theme.palette.background.paper,
+                '& .MuiAlert-icon': {
+                  fontSize: 28,
+                },
+                '& .MuiAlert-message': {
+                  fontWeight: 500,
+                  color: theme.palette.text.primary,
+                },
+              }}
+            >
               Correo enviado exitosamente
             </Alert>
           )}
@@ -311,13 +391,9 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
         sx={{
           px: 3,
           py: 2.5,
-          borderTop: `1px solid ${
-            theme.palette.mode === 'dark'
-              ? 'rgba(255,255,255,0.1)'
-              : theme.palette.divider
-          }`,
+          borderTop: `1px solid ${theme.palette.divider}`,
           justifyContent: 'flex-start',
-          bgcolor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
+          bgcolor: `${theme.palette.background.paper} !important`,
         }}
       >
         <Button
@@ -328,19 +404,36 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
           sx={{
             textTransform: 'none',
             px: 4,
-            py: 1.25,
-            bgcolor: taxiMonterricoColors.green,
-            fontWeight: 600,
-            borderRadius: 0.5,
+            py: 1.5,
+            background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`,
+            color: theme.palette.common.white,
+            fontWeight: 700,
+            borderRadius: 2,
             boxShadow: sending
               ? 'none'
-              : `0 4px 12px ${taxiMonterricoColors.green}40`,
+              : `0 4px 12px ${taxiMonterricoColors.greenLight}40`,
+            transition: 'all 0.3s ease',
+            position: 'relative',
+            overflow: 'hidden',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: '-100%',
+              width: '100%',
+              height: '100%',
+              background: `linear-gradient(90deg, transparent, ${theme.palette.common.white}4D, transparent)`,
+              transition: 'left 0.5s ease',
+            },
             '&:hover': { 
-              bgcolor: taxiMonterricoColors.greenDark,
+              background: `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`,
               boxShadow: sending
                 ? 'none'
-                : `0 6px 16px ${taxiMonterricoColors.green}50`,
+                : `0 8px 20px ${taxiMonterricoColors.greenLight}60`,
               transform: 'translateY(-2px)',
+              '&::before': {
+                left: '100%',
+              },
             },
             '&:active': {
               transform: 'translateY(0)',
@@ -349,8 +442,8 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
               backgroundColor: theme.palette.action.disabledBackground,
               color: theme.palette.action.disabled,
               boxShadow: 'none',
+              background: theme.palette.action.disabledBackground,
             },
-            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         >
           {sending ? 'Enviando...' : 'Enviar'}

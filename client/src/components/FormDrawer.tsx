@@ -8,6 +8,7 @@ import {
   useTheme,
 } from '@mui/material';
 import { Close } from '@mui/icons-material';
+import { taxiMonterricoColors } from '../theme/colors';
 
 interface FormDrawerProps {
   open: boolean;
@@ -39,8 +40,8 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
         BackdropProps: {
           sx: {
             backgroundColor: theme.palette.mode === 'dark'
-              ? 'rgba(76, 82, 76, 0.63)'
-              : '#464f4666',
+              ? `${theme.palette.common.black}80`
+              : `${theme.palette.common.black}66`,
           },
         },
       }}
@@ -51,9 +52,29 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
         sx: {
           width,
           maxWidth: '100%',
-          boxShadow: theme.palette.mode === 'dark'
-            ? '0 8px 24px rgba(0,0,0,0.5)'
-            : '0 8px 24px rgba(0,0,0,0.15)',
+          bgcolor: theme.palette.background.paper,
+          color: theme.palette.text.primary,
+          boxShadow: 'none',
+          border: 'none', // Quitar el borde derecho del estilo global de MuiDrawer
+          '& *': {
+            '&::-webkit-scrollbar': {
+              width: '8px',
+            },
+            '&::-webkit-scrollbar-track': {
+              bgcolor: theme.palette.mode === 'dark' 
+                ? theme.palette.background.default 
+                : theme.palette.grey[100],
+            },
+            '&::-webkit-scrollbar-thumb': {
+              bgcolor: theme.palette.mode === 'dark'
+                ? theme.palette.action.disabledBackground
+                : theme.palette.action.disabled,
+              borderRadius: '4px',
+              '&:hover': {
+                bgcolor: theme.palette.action.hover,
+              },
+            },
+          },
         },
       }}
     >
@@ -62,6 +83,10 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
         flexDirection: 'column', 
         height: '100%',
         bgcolor: theme.palette.background.paper,
+        color: theme.palette.text.primary,
+        '& *': {
+          color: 'inherit',
+        },
       }}>
         {/* Header del Drawer */}
         <Box sx={{ 
@@ -70,12 +95,36 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
           alignItems: 'center',
           px: 3,
           py: 2,
-          borderBottom: `1px solid ${theme.palette.divider}`,
+          borderBottom: `2px solid ${theme.palette.divider}`,
+          background: theme.palette.mode === 'dark'
+            ? `linear-gradient(135deg, ${taxiMonterricoColors.green}15 0%, ${taxiMonterricoColors.orange}15 100%)`
+            : `linear-gradient(135deg, ${taxiMonterricoColors.green}0D 0%, ${taxiMonterricoColors.orange}0D 100%)`,
+          bgcolor: theme.palette.background.paper,
         }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          <Typography variant="h6" sx={{ 
+            fontWeight: 700,
+            background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}>
             {title}
           </Typography>
-          <IconButton onClick={onClose} size="small">
+          <IconButton 
+            onClick={onClose} 
+            size="small"
+            sx={{
+              color: `${taxiMonterricoColors.orange} !important`,
+              borderRadius: 1.5,
+              border: '1.5px solid transparent',
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                bgcolor: `${taxiMonterricoColors.orange}1A`,
+                borderColor: taxiMonterricoColors.orange,
+                transform: 'rotate(90deg)',
+              },
+            }}
+          >
             <Close />
           </IconButton>
         </Box>
@@ -88,11 +137,249 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
           px: 3, 
           py: 2,
           position: 'relative',
+          bgcolor: theme.palette.background.paper,
+          color: theme.palette.text.primary,
+          background: theme.palette.mode === 'dark'
+            ? `linear-gradient(180deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`
+            : `linear-gradient(180deg, ${theme.palette.background.paper} 0%, ${theme.palette.grey[50]} 100%)`,
           '& .MuiPopover-root': {
             zIndex: '2000 !important',
+            '& .MuiPaper-root': {
+              bgcolor: theme.palette.background.paper,
+              color: theme.palette.text.primary,
+              boxShadow: theme.palette.mode === 'dark'
+                ? '0 8px 24px rgba(0,0,0,0.5) !important'
+                : '0 8px 24px rgba(0,0,0,0.15) !important',
+            },
           },
+          // Estilos globales para TextField dentro del FormDrawer
+          '& .MuiTextField-root': {
+            '& .MuiOutlinedInput-root': {
+              bgcolor: theme.palette.background.paper,
+              color: theme.palette.text.primary,
+              '& fieldset': {
+                borderColor: theme.palette.divider,
+              },
+              '&:hover': {
+                bgcolor: theme.palette.background.paper,
+                '& fieldset': {
+                  borderColor: taxiMonterricoColors.green,
+                  boxShadow: `0 0 0 2px ${taxiMonterricoColors.green}1A`,
+                },
+              },
+              '&.Mui-focused': {
+                bgcolor: theme.palette.background.paper,
+                '& fieldset': {
+                  borderColor: `${taxiMonterricoColors.green} !important`,
+                  borderWidth: '2px',
+                  boxShadow: `0 0 0 3px ${taxiMonterricoColors.green}26`,
+                },
+              },
+              '& input': {
+                color: theme.palette.text.primary,
+                bgcolor: theme.palette.background.paper,
+                '&::placeholder': {
+                  color: theme.palette.text.secondary,
+                  opacity: 1,
+                },
+                '&:-webkit-autofill': {
+                  WebkitBoxShadow: `0 0 0 1000px ${theme.palette.background.paper} inset !important`,
+                  WebkitTextFillColor: `${theme.palette.text.primary} !important`,
+                  transition: 'background-color 5000s ease-in-out 0s',
+                },
+                '&:-webkit-autofill:hover': {
+                  WebkitBoxShadow: `0 0 0 1000px ${theme.palette.background.paper} inset !important`,
+                  WebkitTextFillColor: `${theme.palette.text.primary} !important`,
+                },
+                '&:-webkit-autofill:focus': {
+                  WebkitBoxShadow: `0 0 0 1000px ${theme.palette.background.paper} inset !important`,
+                  WebkitTextFillColor: `${theme.palette.text.primary} !important`,
+                },
+                '&:-webkit-autofill:active': {
+                  WebkitBoxShadow: `0 0 0 1000px ${theme.palette.background.paper} inset !important`,
+                  WebkitTextFillColor: `${theme.palette.text.primary} !important`,
+                },
+              },
+              '& textarea': {
+                color: theme.palette.text.primary,
+                bgcolor: theme.palette.background.paper,
+                '&::placeholder': {
+                  color: theme.palette.text.secondary,
+                  opacity: 1,
+                },
+              },
+            },
+            '& .MuiInputLabel-root': {
+              color: theme.palette.text.secondary,
+              fontWeight: 500,
+              '&.Mui-focused': {
+                color: `${taxiMonterricoColors.green} !important`,
+                fontWeight: 600,
+              },
+            },
+            '& .MuiFormHelperText-root': {
+              color: theme.palette.text.secondary,
+            },
+          },
+          // Estilos para Select
+          '& .MuiSelect-root': {
+            bgcolor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+          },
+          '& .MuiOutlinedInput-root': {
+            bgcolor: theme.palette.background.paper,
+            '& .MuiSelect-select': {
+              color: theme.palette.text.primary,
+              bgcolor: theme.palette.background.paper,
+            },
+            '&:hover': {
+              bgcolor: theme.palette.background.paper,
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: taxiMonterricoColors.green,
+              },
+            },
+            '&.Mui-focused': {
+              bgcolor: theme.palette.background.paper,
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: `${taxiMonterricoColors.green} !important`,
+                borderWidth: '2px',
+                boxShadow: `0 0 0 3px ${taxiMonterricoColors.green}26`,
+              },
+            },
+          },
+          '& .MuiSelect-icon': {
+            color: taxiMonterricoColors.green,
+          },
+          // Estilos para Menu (Select dropdown)
           '& .MuiMenu-paper': {
-            zIndex: '2000 !important',
+            bgcolor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 8px 24px rgba(0,0,0,0.5) !important'
+              : '0 8px 24px rgba(0,0,0,0.15) !important',
+            border: `1px solid ${theme.palette.divider}`,
+          },
+          '& .MuiMenuItem-root': {
+            bgcolor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+            '&:hover': {
+              bgcolor: `${taxiMonterricoColors.green}1A !important`,
+              color: `${taxiMonterricoColors.green} !important`,
+            },
+            '&.Mui-selected': {
+              bgcolor: `${taxiMonterricoColors.green}26 !important`,
+              color: `${taxiMonterricoColors.green} !important`,
+              fontWeight: 600,
+              '&:hover': {
+                bgcolor: `${taxiMonterricoColors.green}33 !important`,
+              },
+            },
+          },
+          '& .MuiList-root': {
+            bgcolor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+          },
+          // Estilos para RadioGroup
+          '& .MuiFormControlLabel-root': {
+            color: theme.palette.text.primary,
+          },
+          '& .MuiRadio-root': {
+            color: theme.palette.text.secondary,
+            '&.Mui-checked': {
+              color: `${taxiMonterricoColors.green} !important`,
+            },
+            '&:hover': {
+              bgcolor: `${taxiMonterricoColors.green}14`,
+            },
+          },
+          // Estilos para Checkbox
+          '& .MuiCheckbox-root': {
+            color: theme.palette.text.secondary,
+            '&.Mui-checked': {
+              color: `${taxiMonterricoColors.green} !important`,
+            },
+            '&:hover': {
+              bgcolor: `${taxiMonterricoColors.green}14`,
+            },
+          },
+          // Estilos para Autocomplete
+          '& .MuiAutocomplete-root': {
+            '& .MuiOutlinedInput-root': {
+              bgcolor: theme.palette.background.paper,
+              color: theme.palette.text.primary,
+              '& input': {
+                color: theme.palette.text.primary,
+                bgcolor: theme.palette.background.paper,
+              },
+              '&:hover': {
+                bgcolor: theme.palette.background.paper,
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: taxiMonterricoColors.green,
+                },
+              },
+              '&.Mui-focused': {
+                bgcolor: theme.palette.background.paper,
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: `${taxiMonterricoColors.green} !important`,
+                  borderWidth: '2px',
+                  boxShadow: `0 0 0 3px ${taxiMonterricoColors.green}26`,
+                },
+              },
+            },
+            '& .MuiAutocomplete-popper': {
+              '& .MuiPaper-root': {
+                bgcolor: theme.palette.background.paper,
+                color: theme.palette.text.primary,
+              },
+            },
+            '& .MuiAutocomplete-listbox': {
+              bgcolor: theme.palette.background.paper,
+              color: theme.palette.text.primary,
+              '& .MuiOption-root': {
+                bgcolor: theme.palette.background.paper,
+                color: theme.palette.text.primary,
+                '&:hover': {
+                  bgcolor: `${taxiMonterricoColors.green}1A !important`,
+                },
+                '&[aria-selected="true"]': {
+                  bgcolor: `${taxiMonterricoColors.green}26 !important`,
+                },
+              },
+            },
+          },
+          // Estilos adicionales para Typography y otros elementos
+          '& .MuiTypography-root': {
+            color: theme.palette.text.primary,
+          },
+          '& .MuiChip-root': {
+            bgcolor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+            borderColor: theme.palette.divider,
+          },
+          '& .MuiDivider-root': {
+            borderColor: theme.palette.divider,
+          },
+          // Estilos para IconButton
+          '& .MuiIconButton-root': {
+            color: 'inherit',
+            '& .MuiSvgIcon-root': {
+              color: 'inherit',
+            },
+          },
+          // Estilos para CircularProgress
+          '& .MuiCircularProgress-root': {
+            color: taxiMonterricoColors.green,
+          },
+          // Estilos para InputAdornment
+          '& .MuiInputAdornment-root': {
+            color: theme.palette.text.secondary,
+            '& .MuiSvgIcon-root': {
+              color: theme.palette.text.secondary,
+            },
+          },
+          // Estilos para Box y otros contenedores
+          '& > *': {
+            color: theme.palette.text.primary,
           },
         }}>
           {children}
@@ -105,18 +392,49 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
             gap: 2,
             justifyContent: 'flex-start',
           }}>
-            <Button onClick={onSubmit} variant="contained">
+            <Button 
+              onClick={onSubmit} 
+              variant="contained"
+              sx={{
+                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%) !important`,
+                color: `${theme.palette.common.white} !important`,
+                fontWeight: 600,
+                px: 3,
+                py: 1,
+                borderRadius: 2,
+                boxShadow: `0 4px 12px ${taxiMonterricoColors.green}4D`,
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': {
+                  background: `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%) !important`,
+                  boxShadow: `0 6px 20px ${taxiMonterricoColors.green}66`,
+                  transform: 'translateY(-2px)',
+                },
+                '&:active': {
+                  transform: 'translateY(0)',
+                },
+              }}
+            >
               {submitLabel}
             </Button>
             <Button 
               onClick={onClose}
               variant="outlined"
               sx={{
-                color: '#f44336',
-                borderColor: '#f44336',
+                color: `${theme.palette.error.main} !important`,
+                borderColor: `${theme.palette.error.main} !important`,
+                borderWidth: '2px',
+                bgcolor: theme.palette.background.paper,
+                fontWeight: 600,
+                px: 3,
+                py: 1,
+                borderRadius: 2,
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
-                  borderColor: '#d32f2f',
-                  backgroundColor: 'rgba(244, 67, 54, 0.04)',
+                  borderColor: `${theme.palette.error.dark} !important`,
+                  borderWidth: '2px',
+                  backgroundColor: `${theme.palette.error.main}14 !important`,
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 4px 12px ${theme.palette.error.main}33`,
                 },
               }}
             >

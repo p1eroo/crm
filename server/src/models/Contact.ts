@@ -87,9 +87,16 @@ Contact.init(
     },
     email: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       validate: {
-        isEmail: true,
+        isEmailOrEmpty(value: any) {
+          if (value && value.trim() !== '') {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(value)) {
+              throw new Error('Debe ser un email válido');
+            }
+          }
+        },
       },
     },
     dni: {

@@ -58,7 +58,7 @@ const ContactCompanyModal: React.FC<ContactCompanyModalProps> = ({
   const [nameError, setNameError] = useState("");
   const [rucValidationError, setRucValidationError] = useState("");
   const rucValidationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   const [companyFormData, setCompanyFormData] = useState({
     name: "",
     domain: "",
@@ -238,7 +238,7 @@ const ContactCompanyModal: React.FC<ContactCompanyModalProps> = ({
         const errorMessage = error.response.data.error;
         const duplicateField = error.response.data.duplicateField;
         const field = error.response.data.field;
-        
+
         if (field === 'name' || duplicateField === 'name') {
           setNameError(errorMessage);
         } else if (duplicateField === 'ruc') {
@@ -275,11 +275,20 @@ const ContactCompanyModal: React.FC<ContactCompanyModalProps> = ({
       PaperProps={{
         sx: {
           borderRadius: 2,
-          bgcolor: '#111a2c',
+          bgcolor: '#FFFFFF !important',
+          backgroundColor: '#FFFFFF !important',
+          color: '#000000 !important',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
         },
       }}
     >
-      <DialogTitle>
+      <DialogTitle sx={{ 
+        bgcolor: '#FFFFFF !important',
+        color: '#000000 !important',
+        borderBottom: '2px solid',
+        borderImage: 'linear-gradient(90deg, #2E7D32 0%, #FF6F00 100%) 1',
+        background: 'linear-gradient(135deg, rgba(46, 125, 50, 0.05) 0%, rgba(255, 111, 0, 0.05) 100%)',
+      }}>
         <Box
           sx={{
             display: "flex",
@@ -287,16 +296,81 @@ const ContactCompanyModal: React.FC<ContactCompanyModalProps> = ({
             alignItems: "center",
           }}
         >
-          <IconButton onClick={handleClose} size="small">
+          <IconButton 
+            onClick={handleClose} 
+            size="small"
+            sx={{
+              color: '#FF6F00 !important',
+              '&:hover': {
+                bgcolor: 'rgba(255, 111, 0, 0.1)',
+              },
+            }}
+          >
             <Close />
           </IconButton>
         </Box>
       </DialogTitle>
-      
-      <DialogContent>
+
+      <DialogContent sx={{ 
+        bgcolor: '#FFFFFF !important',
+        backgroundColor: '#FFFFFF !important',
+        color: '#000000 !important',
+        '& .MuiTextField-root': {
+          '& .MuiOutlinedInput-root': {
+            bgcolor: '#FFFFFF !important',
+            backgroundColor: '#FFFFFF !important',
+            color: '#000000 !important',
+            '& input': {
+              color: '#000000 !important',
+            },
+            '& input::placeholder': {
+              color: 'rgba(0, 0, 0, 0.6) !important',
+              opacity: 1,
+            },
+            '& .MuiOutlinedInput-notchedOutline': {
+              borderColor: 'rgba(0, 0, 0, 0.23)',
+            },
+            '&:hover .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#4CAF50',
+            },
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderColor: '#2E7D32 !important',
+              borderWidth: '2px',
+            },
+          },
+          '& .MuiInputLabel-root': {
+            color: 'rgba(0, 0, 0, 0.6) !important',
+            '&.Mui-focused': {
+              color: '#2E7D32 !important',
+            },
+          },
+          '& .MuiFormHelperText-root': {
+            color: 'rgba(0, 0, 0, 0.6) !important',
+          },
+        },
+        '& .MuiTypography-root': {
+          color: '#000000 !important',
+        },
+        '& .MuiList-root': {
+          bgcolor: '#FFFFFF !important',
+        },
+        '& .MuiListItemButton-root': {
+          color: '#000000 !important',
+          '&:hover': {
+            bgcolor: 'rgba(46, 125, 50, 0.1) !important',
+          },
+        },
+        '& .MuiListItemText-primary': {
+          color: '#000000 !important',
+        },
+        '& .MuiListItemText-secondary': {
+          color: 'rgba(0, 0, 0, 0.6) !important',
+        },
+      }}>
         {mode === "select" ? (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
             <TextField
+              variant="outlined"
               placeholder="Buscar empresa..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -304,17 +378,37 @@ const ContactCompanyModal: React.FC<ContactCompanyModalProps> = ({
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <Search sx={{ color: theme.palette.text.secondary }} />
+                    <Search sx={{ color: "#2E7D32" }} />
                   </InputAdornment>
                 ),
               }}
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: 1.5,
+                  bgcolor: '#FFFFFF !important',
+                  backgroundColor: '#FFFFFF !important',
+                },
+                "& input": {
+                  color: "#000000 !important",
+                },
+                "& input::placeholder": {
+                  color: "rgba(0, 0, 0, 0.6) !important",
+                  opacity: 1,
+                },
+                "& .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "rgba(0, 0, 0, 0.23)",
+                },
+                "&:hover .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "#4CAF50",
+                },
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                  borderColor: "#2E7D32 !important",
+                  borderWidth: '2px',
                 },
               }}
             />
-            
+
+
             {loading ? (
               <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
                 <CircularProgress />
@@ -323,14 +417,14 @@ const ContactCompanyModal: React.FC<ContactCompanyModalProps> = ({
               <List sx={{ maxHeight: 300, overflow: "auto" }}>
                 {companies.map((company) => (
                   <ListItem key={company.id} disablePadding>
-                    <ListItemButton 
+                    <ListItemButton
                       onClick={() => handleSelectCompany(company)}
                       sx={{
                         borderRadius: 1,
                         mb: 0.5,
                         "&:hover": {
-                          bgcolor: theme.palette.mode === 'dark' 
-                            ? 'rgba(255, 255, 255, 0.08)' 
+                          bgcolor: theme.palette.mode === 'dark'
+                            ? 'rgba(255, 255, 255, 0.08)'
                             : 'rgba(0, 0, 0, 0.04)',
                         },
                       }}
@@ -347,11 +441,11 @@ const ContactCompanyModal: React.FC<ContactCompanyModalProps> = ({
                 ))}
               </List>
             ) : searchTerm.trim() ? (
-              <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center", py: 4 }}>
+              <Typography variant="body2" sx={{ textAlign: "center", py: 4, color: '#000000 !important' }}>
                 No se encontraron empresas
               </Typography>
             ) : (
-              <Typography variant="body2" color="text.secondary" sx={{ textAlign: "center", py: 4 }}>
+              <Typography variant="body2" sx={{ textAlign: "center", py: 4, color: '#000000 !important' }}>
                 Escribe para buscar empresas
               </Typography>
             )}
@@ -520,21 +614,32 @@ const ContactCompanyModal: React.FC<ContactCompanyModalProps> = ({
             </Box>
 
             {rucValidationError && (
-              <Typography variant="caption" color="error" sx={{ mt: -1 }}>
+              <Typography variant="caption" sx={{ mt: -1, color: '#d32f2f !important' }}>
                 {rucValidationError}
               </Typography>
             )}
           </Box>
         )}
       </DialogContent>
-      
+
       {mode === "create" && (
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button 
-            onClick={handleClose} 
-            sx={{ 
-              color: theme.palette.text.secondary,
+        <DialogActions sx={{ 
+          px: 3, 
+          pb: 2,
+          bgcolor: '#FFFFFF !important',
+          borderTop: '1px solid rgba(0, 0, 0, 0.12)',
+        }}>
+          <Button
+            onClick={handleClose}
+            sx={{
+              color: '#FF5252 !important',
               textTransform: "none",
+              fontWeight: 600,
+              border: '2px solid #FF5252',
+              '&:hover': {
+                bgcolor: 'rgba(255, 82, 82, 0.08)',
+                borderColor: '#FF1744',
+              },
             }}
           >
             Cancelar
@@ -544,14 +649,19 @@ const ContactCompanyModal: React.FC<ContactCompanyModalProps> = ({
             variant="contained"
             disabled={saving || !companyFormData.name.trim() || !!nameError || !!rucValidationError}
             sx={{
-              bgcolor: taxiMonterricoColors.green,
+              background: 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%) !important',
+              color: '#FFFFFF !important',
               textTransform: "none",
-              "&:hover": { 
-                bgcolor: taxiMonterricoColors.green, 
-                opacity: 0.9 
+              fontWeight: 600,
+              boxShadow: '0 4px 12px rgba(46, 125, 50, 0.3)',
+              "&:hover": {
+                background: 'linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%) !important',
+                boxShadow: '0 6px 20px rgba(46, 125, 50, 0.4)',
+                transform: 'translateY(-2px)',
               },
               "&:disabled": {
-                bgcolor: theme.palette.action.disabledBackground,
+                background: 'rgba(0, 0, 0, 0.12) !important',
+                color: 'rgba(0, 0, 0, 0.26) !important',
               },
             }}
           >

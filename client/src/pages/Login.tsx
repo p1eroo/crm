@@ -10,15 +10,16 @@ import {
   FormControlLabel,
   IconButton,
   InputAdornment,
+  useTheme,
 } from '@mui/material';
 import { Person, Lock, Visibility, VisibilityOff } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import logoImage from '../assets/tm_login.png';
 import logoIcon from '../assets/logo.png';
 import { taxiMonterricoColors } from '../theme/colors';
-import { log } from '../utils/logger';
 
 const Login: React.FC = () => {
+  const theme = useTheme();
   // Cargar usuario recordado al inicializar el estado
   const getRememberedUsername = () => {
     try {
@@ -57,11 +58,11 @@ const Login: React.FC = () => {
     mountedRef.current = true;
     // Cargar credenciales guardadas si existen (por si acaso no se cargaron en el estado inicial)
     const savedUsername = getRememberedUsername();
-    log('🔍 [useEffect] Verificando usuario recordado:', savedUsername);
+    console.log('🔍 [useEffect] Verificando usuario recordado:', savedUsername);
     if (savedUsername && savedUsername !== username) {
       setUsername(savedUsername);
       setRememberMe(true);
-      log('✅ [useEffect] Usuario recordado cargado:', savedUsername);
+      console.log('✅ [useEffect] Usuario recordado cargado:', savedUsername);
     }
     return () => {
       mountedRef.current = false;
@@ -73,11 +74,11 @@ const Login: React.FC = () => {
   useEffect(() => {
     if (!user) {
       const savedUsername = getRememberedUsername();
-      log('🔍 [useEffect user] Usuario desautenticado, verificando usuario recordado:', savedUsername);
+      console.log('🔍 [useEffect user] Usuario desautenticado, verificando usuario recordado:', savedUsername);
       if (savedUsername && savedUsername !== username) {
         setUsername(savedUsername);
         setRememberMe(true);
-        log('✅ [useEffect user] Usuario recordado cargado después del logout:', savedUsername);
+        console.log('✅ [useEffect user] Usuario recordado cargado después del logout:', savedUsername);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -101,11 +102,11 @@ const Login: React.FC = () => {
     // para asegurarnos de que se guarde incluso si el componente se desmonta
     if (rememberMe && username) {
       localStorage.setItem('rememberedUsername', username);
-      log('✅ Usuario guardado para recordar (antes del login):', username);
-      log('🔍 Verificando guardado:', localStorage.getItem('rememberedUsername'));
+      console.log('✅ Usuario guardado para recordar (antes del login):', username);
+      console.log('🔍 Verificando guardado:', localStorage.getItem('rememberedUsername'));
     } else {
       localStorage.removeItem('rememberedUsername');
-      log('🗑️ Usuario eliminado de recordar');
+      console.log('🗑️ Usuario eliminado de recordar');
     }
 
     const success = await login(username, password);
@@ -139,7 +140,9 @@ const Login: React.FC = () => {
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: '#0B1220',
+          backgroundColor: theme.palette.mode === 'dark' 
+            ? theme.palette.background.default
+            : theme.palette.grey[900],
           backgroundAttachment: 'fixed',
           backgroundImage: `
             radial-gradient(ellipse 1200px 900px at 10% 20%, rgba(255, 193, 7, 0.15) 0%, transparent 60%),
@@ -185,7 +188,7 @@ const Login: React.FC = () => {
           backdropFilter: 'blur(14px)',
           WebkitBackdropFilter: 'blur(14px)',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)',
-          color: '#fff',
+          color: theme.palette.common.white,
         }}
       >
         {/* Header de marca */}
@@ -255,9 +258,9 @@ const Login: React.FC = () => {
               mb: 3,
               borderRadius: '8px',
               backgroundColor: 'rgba(211, 47, 47, 0.9)',
-              color: '#fff',
+              color: theme.palette.common.white,
               '& .MuiAlert-icon': {
-                color: '#fff',
+                color: theme.palette.common.white,
               },
             }}
           >
@@ -327,7 +330,7 @@ const Login: React.FC = () => {
             sx={{
               '& .MuiOutlinedInput-root': {
                 backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                color: '#fff',
+                color: theme.palette.common.white,
                 borderRadius: '25px',
                 '& fieldset': {
                   borderColor: 'rgba(255, 255, 255, 0.2)',
@@ -346,20 +349,20 @@ const Login: React.FC = () => {
               '& input': {
                 '&:-webkit-autofill': {
                   WebkitBoxShadow: '0 0 0 1000px rgba(255, 255, 255, 0.05) inset',
-                  WebkitTextFillColor: '#fff',
+                  WebkitTextFillColor: theme.palette.common.white,
                   transition: 'background-color 5000s ease-in-out 0s',
                 },
                 '&:-webkit-autofill:hover': {
                   WebkitBoxShadow: '0 0 0 1000px rgba(255, 255, 255, 0.05) inset',
-                  WebkitTextFillColor: '#fff',
+                  WebkitTextFillColor: theme.palette.common.white,
                 },
                 '&:-webkit-autofill:focus': {
                   WebkitBoxShadow: '0 0 0 1000px rgba(255, 255, 255, 0.05) inset',
-                  WebkitTextFillColor: '#fff',
+                  WebkitTextFillColor: theme.palette.common.white,
                 },
                 '&:-webkit-autofill:active': {
                   WebkitBoxShadow: '0 0 0 1000px rgba(255, 255, 255, 0.05) inset',
-                  WebkitTextFillColor: '#fff',
+                  WebkitTextFillColor: theme.palette.common.white,
                 },
               },
               '& .MuiInputLabel-root': {
@@ -410,7 +413,7 @@ const Login: React.FC = () => {
                     sx={{
                       color: 'rgba(255, 255, 255, 0.7)',
                       '&:hover': {
-                        color: '#fff',
+                        color: theme.palette.common.white,
                         backgroundColor: 'rgba(255, 255, 255, 0.1)',
                       },
                     }}
@@ -423,7 +426,7 @@ const Login: React.FC = () => {
             sx={{
               '& .MuiOutlinedInput-root': {
                 backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                color: '#fff',
+                color: theme.palette.common.white,
                 borderRadius: '25px',
                 '& fieldset': {
                   borderColor: 'rgba(255, 255, 255, 0.2)',
@@ -505,7 +508,7 @@ const Login: React.FC = () => {
                 cursor: 'pointer',
                 '&:hover': {
                   textDecoration: 'underline',
-                  color: '#fff',
+                  color: theme.palette.common.white,
                 },
                 '&:focus': {
                   outline: '2px solid',
@@ -532,7 +535,7 @@ const Login: React.FC = () => {
               fontWeight: 400,
               textTransform: 'none',
               backgroundColor: taxiMonterricoColors.green,
-              color: '#fff',
+              color: theme.palette.common.white,
               '&:hover': {
                 backgroundColor: taxiMonterricoColors.greenDark,
               },
@@ -549,7 +552,7 @@ const Login: React.FC = () => {
           >
             {loading ? (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CircularProgress size={20} sx={{ color: '#fff' }} />
+                <CircularProgress size={20} sx={{ color: theme.palette.common.white }} />
                 <span>Cargando...</span>
               </Box>
             ) : (

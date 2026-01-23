@@ -29,7 +29,7 @@ import {
   Checkbox,
   Popover,
 } from '@mui/material';
-import { Add, Delete, Search, Visibility, UploadFile, FileDownload, FilterList, Close, ExpandMore, Remove, Bolt, Edit, Business, ChevronLeft, ChevronRight, MoreVert, ViewColumn, Phone, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered } from '@mui/icons-material';
+import { Add, Delete, Search, Visibility, UploadFile, FileDownload, FilterList, Close, ExpandMore, Remove, Bolt, Edit, ChevronLeft, ChevronRight, MoreVert, ViewColumn, Phone, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
@@ -41,7 +41,6 @@ import { Building2 } from "lucide-react";
 import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from '../components/UnifiedTable';
 import EntityPreviewDrawer from '../components/EntityPreviewDrawer';
 import { useAuth } from '../context/AuthContext';
-import { log, logWarn } from '../utils/logger';
 
 interface Company {
   id: number;
@@ -68,7 +67,6 @@ interface Company {
 const Companies: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const isLargeScreen = useMediaQuery(theme.breakpoints.up('md'));
   const { user } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -162,15 +160,6 @@ const Companies: React.FC = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [datePickerAnchorEl, setDatePickerAnchorEl] = useState<null | HTMLElement>(null);
   
-  // Estados para filtros avanzados
-  const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
-  const [filterRules, setFilterRules] = useState<Array<{
-    id: string;
-    column: string;
-    operator: string;
-    value: string;
-  }>>([]);
-
   // Estados para filtros por columna
   const [columnFilters, setColumnFilters] = useState<{
     nombre: string;
@@ -663,11 +652,6 @@ const Companies: React.FC = () => {
       if (debouncedColumnFilters.etapa) params.filterEtapa = debouncedColumnFilters.etapa;
       if (debouncedColumnFilters.cr) params.filterCR = debouncedColumnFilters.cr;
       
-      // Filtros avanzados
-      if (filterRules.length > 0) {
-        params.filterRules = JSON.stringify(filterRules);
-      }
-      
       const response = await api.get('/companies', { params });
       const companiesData = response.data.companies || response.data;
       
@@ -694,7 +678,7 @@ const Companies: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [search, currentPage, itemsPerPage, selectedStages, selectedCountries, selectedOwnerFilters, sortBy, filterRules, debouncedColumnFilters]);
+  }, [search, currentPage, itemsPerPage, selectedStages, selectedCountries, selectedOwnerFilters, sortBy, debouncedColumnFilters]);
 
   // Debounce para filtros de columna (esperar 500ms después de que el usuario deje de escribir)
   useEffect(() => {
@@ -713,7 +697,7 @@ const Companies: React.FC = () => {
       // Si es un error 403, el usuario no tiene permisos para ver usuarios (no es admin)
       // Esto es normal y no debería mostrar un error
       if (error.response?.status === 403) {
-        log('Usuario no tiene permisos para ver usuarios (no es admin)');
+        console.log('Usuario no tiene permisos para ver usuarios (no es admin)');
         setUsers([]);
       } else {
         console.error('Error fetching users:', error);
@@ -752,7 +736,6 @@ const Companies: React.FC = () => {
               ...(debouncedColumnFilters.origenLead && { filterOrigenLead: debouncedColumnFilters.origenLead }),
               ...(debouncedColumnFilters.etapa && { filterEtapa: debouncedColumnFilters.etapa }),
               ...(debouncedColumnFilters.cr && { filterCR: debouncedColumnFilters.cr }),
-              ...(filterRules.length > 0 && { filterRules: JSON.stringify(filterRules) }),
             },
             signal: abortController.signal 
           }),
@@ -801,7 +784,7 @@ const Companies: React.FC = () => {
             // Error en users (403 es normal si no es admin)
             const error = usersResult.reason;
             if (error.response?.status === 403) {
-              log('Usuario no tiene permisos para ver usuarios (no es admin)');
+              console.log('Usuario no tiene permisos para ver usuarios (no es admin)');
               setUsers([]);
             } else if (error.name !== 'CanceledError' && error.name !== 'AbortError' && error.code !== 'ERR_CANCELED') {
               console.error('Error fetching users:', error);
@@ -832,7 +815,7 @@ const Companies: React.FC = () => {
       isMounted = false;
       abortController.abort();
     };
-  }, [currentPage, itemsPerPage, search, selectedStages, selectedCountries, selectedOwnerFilters, sortBy, filterRules, debouncedColumnFilters]);
+  }, [currentPage, itemsPerPage, search, selectedStages, selectedCountries, selectedOwnerFilters, sortBy, debouncedColumnFilters]);
 
   // Limpiar timeouts al desmontar el componente
   useEffect(() => {
@@ -984,8 +967,13 @@ const Companies: React.FC = () => {
         const crValue = (row['C.R.'] || row['Cliente Recuperado'] || '').toString().trim().toLowerCase();
         const isRecoveredClient = crValue === 'sí' || crValue === 'si' || crValue === 'yes' || crValue === 'true' || crValue === '1' || crValue === 'x' || crValue === '✓';
 
+        // Extraer datos del contacto si existen
+        const contactName = (row['Contacto'] || row['Nombre Contacto'] || '').toString().trim();
+        const contactJobTitleRaw = (row['Cargo'] || row['Cargo Contacto'] || '').toString().trim();
+        const contactJobTitle = (contactJobTitleRaw === '0' || contactJobTitleRaw === '') ? undefined : contactJobTitleRaw;
+
         return {
-          name: (row['Nombre'] || row['Contacto'] || '').toString().trim() || 'Sin nombre',
+          name: (row['Nombre'] || '').toString().trim() || 'Sin nombre',
           domain: (row['Dominio'] || '').toString().trim() || undefined,
           companyname: (row['Razón social'] || '').toString().trim() || undefined,
           phone: (row['Teléfono'] || '').toString().trim() || undefined,
@@ -1005,62 +993,103 @@ const Companies: React.FC = () => {
           })(),
           isRecoveredClient: isRecoveredClient,
           ownerId: ownerId || undefined,
+          // Agregar datos del contacto para crear después
+          _contactName: contactName || undefined,
+          _contactJobTitle: contactJobTitle || undefined,
         };
       }).filter(company => company.name !== 'Sin nombre'); // Filtrar filas vacías
 
       // Inicializar el progreso total
-      setImportProgress(prev => ({ ...prev, total: companiesToCreate.length }));
+      const totalCompanies = companiesToCreate.length;
+      setImportProgress(prev => ({ ...prev, total: totalCompanies }));
 
-      // Usar endpoint bulk para importación masiva (igual que Contacts.tsx)
-      try {
-        const response = await api.post('/companies/bulk', {
-          companies: companiesToCreate,
-          batchSize: 1000, // Procesar en lotes de 1000
-        });
+      // Procesar en lotes pequeños usando el endpoint individual
+      const BATCH_SIZE = 50; // Procesar 50 empresas por lote
 
-        log('Respuesta del backend:', response.data); // Debug
-
-        const { successCount = 0, errorCount = 0, results = [] } = response.data || {};
-
-        // Procesar resultados y actualizar progreso
-        const errorList = (results || [])
-          .filter((r: any) => !r.success)
-          .map((r: any) => ({
-            name: r.name || 'Sin nombre',
-            error: r.error || 'Error desconocido',
-          }));
-
-        log('successCount:', successCount, 'errorCount:', errorCount); // Debug
-
-        setImportProgress({
-          current: companiesToCreate.length,
-          total: companiesToCreate.length,
-          success: successCount || 0,
-          errors: errorCount || 0,
-          errorList,
-        });
-      } catch (error: any) {
-        console.error('Error en importación masiva:', error);
-        console.error('Error response:', error.response?.data); // Debug
+      for (let i = 0; i < companiesToCreate.length; i += BATCH_SIZE) {
+        const batch = companiesToCreate.slice(i, i + BATCH_SIZE);
         
-        let errorMessage = 'Error al procesar la importación masiva';
-        if (error.response?.data?.error) {
-          errorMessage = error.response.data.error;
-        } else if (error.message) {
-          errorMessage = error.message;
-        }
+        // Procesar cada empresa del lote en paralelo (con límite de concurrencia)
+        const batchPromises = batch.map(async (company) => {
+          try {
+            // Extraer datos del contacto antes de crear la empresa
+            const contactName = (company as any)._contactName;
+            const contactJobTitle = (company as any)._contactJobTitle;
+            delete (company as any)._contactName;
+            delete (company as any)._contactJobTitle;
 
-        setImportProgress((prev) => ({
-          ...prev,
-          current: companiesToCreate.length,
-          total: companiesToCreate.length,
-          errors: (error.response?.data?.errorCount || 0) + 1,
-          errorList: [...(prev.errorList || []), {
-            name: 'Importación masiva',
-            error: errorMessage,
-          }],
-        }));
+            // Crear la empresa
+            const companyResponse = await api.post('/companies', company);
+            const createdCompany = companyResponse.data;
+
+            // Si hay datos del contacto, crear el contacto asociado
+            if (contactName && contactName.trim()) {
+              try {
+                // Separar nombre y apellido
+                const nameParts = contactName.trim().split(' ');
+                const firstName = nameParts[0] || 'Sin nombre';
+                const lastName = nameParts.slice(1).join(' ') || 'Sin apellido';
+
+                console.log(`📝 Creando contacto para empresa ${createdCompany.name}:`, {
+                  firstName,
+                  lastName,
+                  jobTitle: contactJobTitle,
+                  companyId: createdCompany.id,
+                });
+
+                await api.post('/contacts', {
+                  firstName,
+                  lastName,
+                  jobTitle: contactJobTitle || undefined,
+                  companyId: createdCompany.id,
+                  lifecycleStage: 'lead',
+                  // email es opcional, no se envía si no está en el Excel
+                });
+
+                console.log(`✅ Contacto creado exitosamente para ${createdCompany.name}`);
+              } catch (contactError: any) {
+                const contactErrorMessage = contactError.response?.data?.error || contactError.message || 'Error desconocido al crear contacto';
+                console.error(`❌ Error creando contacto para empresa ${createdCompany.name}:`, contactError);
+                console.error(`❌ Detalles del error:`, contactError.response?.data);
+                
+                // Agregar el error a la lista de errores para que el usuario lo vea
+                setImportProgress(prev => ({
+                  ...prev,
+                  errors: prev.errors + 1,
+                  errorList: [...prev.errorList, {
+                    name: `${createdCompany.name} - Contacto: ${contactName}`,
+                    error: contactErrorMessage,
+                  }],
+                }));
+              }
+            } else {
+              console.log(`⚠️ No se creó contacto para ${createdCompany.name} - nombre de contacto vacío`);
+            }
+
+            setImportProgress(prev => ({
+              ...prev,
+              current: prev.current + 1,
+              success: prev.success + 1,
+            }));
+          } catch (error: any) {
+            const errorMessage = error.response?.data?.error || error.message || 'Error desconocido';
+            setImportProgress(prev => ({
+              ...prev,
+              current: prev.current + 1,
+              errors: prev.errors + 1,
+              errorList: [...prev.errorList, {
+                name: company.name || 'Sin nombre',
+                error: errorMessage,
+              }],
+            }));
+          }
+        });
+
+        // Esperar a que termine el lote antes de continuar (evita sobrecargar el servidor)
+        await Promise.all(batchPromises);
       }
+
+      // El progreso final ya se actualiza automáticamente con cada setImportProgress
 
       // Limpiar el input
       if (fileInputRef.current) {
@@ -1068,10 +1097,17 @@ const Companies: React.FC = () => {
       }
 
       // Recargar la lista de empresas
-      fetchCompanies();
-    } catch (error) {
-      console.error('Error importing file:', error);
-      setImportProgress(prev => ({ ...prev, errors: prev.errors + 1 }));
+      await fetchCompanies();
+    } catch (error: any) {
+      console.error('Error al procesar el archivo:', error);
+      setImportProgress((prev) => ({
+        ...prev,
+        errors: prev.errors + 1,
+        errorList: [...(prev.errorList || []), {
+          name: 'Error de procesamiento',
+          error: error.message || 'Error desconocido al procesar el archivo',
+        }],
+      }));
     } finally {
       setImporting(false);
     }
@@ -1312,12 +1348,12 @@ const Companies: React.FC = () => {
 
       let debtsFound = false;
 
-      log('🔍 Consultando deudas en Factiliza para RUC:', ruc);
-      log('📋 Endpoints a probar:', endpoints);
+      console.log('🔍 Consultando deudas en Factiliza para RUC:', ruc);
+      console.log('📋 Endpoints a probar:', endpoints);
 
       for (const endpoint of endpoints) {
         try {
-          log(`🔄 Probando endpoint: ${endpoint}`);
+          console.log(`🔄 Probando endpoint: ${endpoint}`);
           const debtsResponse = await axios.get(endpoint, {
             headers: {
               'Authorization': `Bearer ${factilizaToken}`,
@@ -1325,12 +1361,12 @@ const Companies: React.FC = () => {
             timeout: 5000,
           });
 
-          log(`✅ Respuesta exitosa de ${endpoint}:`, debtsResponse.data);
+          console.log(`✅ Respuesta exitosa de ${endpoint}:`, debtsResponse.data);
 
           if (debtsResponse.data && (debtsResponse.data.success || debtsResponse.data.data)) {
             const debtsData = debtsResponse.data.data || debtsResponse.data;
             
-            log('📊 Datos de deudas recibidos:', debtsData);
+            console.log('📊 Datos de deudas recibidos:', debtsData);
             
             // Normalizar los datos a un formato común
             const normalizedDebts = {
@@ -1343,19 +1379,18 @@ const Companies: React.FC = () => {
               deudas: debtsData.deudas || debtsData.deuda || debtsData.detalle || [],
             };
 
-            log('✅ Deudas normalizadas:', normalizedDebts);
+            console.log('✅ Deudas normalizadas:', normalizedDebts);
             setRucDebts(normalizedDebts);
             debtsFound = true;
             break;
           } else {
-            log(`⚠️ Respuesta sin datos válidos de ${endpoint}`);
+            console.log(`⚠️ Respuesta sin datos válidos de ${endpoint}`);
           }
         } catch (endpointError: any) {
           // Mostrar errores detallados
           const errorStatus = endpointError.response?.status;
           const errorData = endpointError.response?.data;
           
-          // Los errores críticos siempre se muestran
           console.error(`❌ Error en endpoint ${endpoint}:`, {
             status: errorStatus,
             statusText: endpointError.response?.statusText,
@@ -1365,34 +1400,34 @@ const Companies: React.FC = () => {
           
           // Si es 401, el token puede ser inválido o el endpoint requiere autenticación diferente
           if (errorStatus === 401) {
-            logWarn(`🔐 Error de autenticación (401) en ${endpoint}`);
-            logWarn('💡 Verifica que tu token sea válido y tenga permisos para consultar deudas');
+            console.warn(`🔐 Error de autenticación (401) en ${endpoint}`);
+            console.warn('💡 Verifica que tu token sea válido y tenga permisos para consultar deudas');
           }
           
           // Si es 403, el plan puede no incluir este servicio
           if (errorStatus === 403) {
-            logWarn(`🚫 Acceso denegado (403) en ${endpoint}`);
-            logWarn('💡 Tu plan de Factiliza puede no incluir el servicio de consulta de deudas');
-            logWarn('💡 Contacta a soporte de Factiliza para verificar qué servicios incluye tu plan');
+            console.warn(`🚫 Acceso denegado (403) en ${endpoint}`);
+            console.warn('💡 Tu plan de Factiliza puede no incluir el servicio de consulta de deudas');
+            console.warn('💡 Contacta a soporte de Factiliza para verificar qué servicios incluye tu plan');
           }
           
           // Si es 404, el endpoint no existe
           if (errorStatus === 404) {
-            log(`📍 Endpoint no encontrado (404): ${endpoint}`);
+            console.log(`📍 Endpoint no encontrado (404): ${endpoint}`);
           }
           
           // Continuar con el siguiente endpoint si este falla
           if (errorStatus !== 404 && errorStatus !== 400) {
-            log(`⚠️ Error no crítico en ${endpoint}, probando siguiente...`);
+            console.log(`⚠️ Error no crítico en ${endpoint}, probando siguiente...`);
           }
         }
       }
 
       // Si no se encontró información en Factiliza
       if (!debtsFound) {
-        log('⚠️ No se encontró información de deudas en Factiliza');
+        console.log('⚠️ No se encontró información de deudas en Factiliza');
       } else {
-        log('✅ Deudas obtenidas exitosamente de Factiliza');
+        console.log('✅ Deudas obtenidas exitosamente de Factiliza');
       }
     } catch (error: any) {
       console.error('Error al buscar deudas:', error);
@@ -1576,30 +1611,60 @@ const Companies: React.FC = () => {
   const getStageColor = (stage: string) => {
     // Cierre ganado y etapas finales exitosas
     if (['cierre_ganado', 'firma_contrato', 'activo'].includes(stage)) {
-      return { bg: '#E8F5E9', color: '#2E7D32' };
+      return { 
+        bg: theme.palette.mode === 'dark' 
+          ? `${taxiMonterricoColors.green}26` 
+          : `${taxiMonterricoColors.green}15`, 
+        color: taxiMonterricoColors.green 
+      };
     }
     // Cierre perdido y clientes perdidos
     else if (stage === 'cierre_perdido' || stage === 'cliente_perdido') {
-      return { bg: '#FFEBEE', color: '#C62828' };
+      return { 
+        bg: theme.palette.mode === 'dark' 
+          ? `${theme.palette.error.main}26` 
+          : `${theme.palette.error.main}15`, 
+        color: theme.palette.error.main 
+      };
     }
     // Negociación y reuniones
     else if (['reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion'].includes(stage)) {
-      return { bg: '#FFF3E0', color: '#E65100' };
+      return { 
+        bg: theme.palette.mode === 'dark' 
+          ? `${taxiMonterricoColors.orange}26` 
+          : `${taxiMonterricoColors.orange}15`, 
+        color: taxiMonterricoColors.orangeDark 
+      };
     }
     // Licitación - Color de texto púrpura oscuro
     else if (stage === 'licitacion_etapa_final' || stage === 'licitacion') {
-      return { bg: '#F3E5F5', color: '#7B1FA2' };
+      return { 
+        bg: theme.palette.mode === 'dark' 
+          ? `${theme.palette.secondary.main}26` 
+          : `${theme.palette.secondary.main}15`, 
+        color: theme.palette.secondary.main 
+      };
     }
     // Lead y Contacto - Azul oscuro
     else if (['lead', 'contacto'].includes(stage)) {
-      return { bg: '#E3F2FD', color: '#1976D2' };
+      return { 
+        bg: theme.palette.mode === 'dark' 
+          ? `${theme.palette.primary.main}26` 
+          : `${theme.palette.primary.main}15`, 
+        color: theme.palette.primary.main 
+      };
     }
     // Lead inactivo - Gris oscuro
     else if (stage === 'lead_inactivo') {
       return { bg: theme.palette.action.hover, color: theme.palette.text.secondary };
     }
     // Por defecto
-    return { bg: '#E3F2FD', color: '#1976D2' };
+    return { 
+      bg: theme.palette.mode === 'dark' 
+        ? `${theme.palette.primary.main}26` 
+        : `${theme.palette.primary.main}15`, 
+      color: theme.palette.primary.main 
+    };
   };
 
   const getStageLabel = (stage: string) => {
@@ -1662,25 +1727,6 @@ const Companies: React.FC = () => {
   ];
 
   // Opciones de columnas disponibles
-  const columnOptions = [
-    { value: 'name', label: 'Nombre' },
-    { value: 'companyname', label: 'Razón Social' },
-    { value: 'phone', label: 'Teléfono' },
-    { value: 'email', label: 'Correo' },
-    { value: 'leadSource', label: 'Origen de Lead' },
-    { value: 'country', label: 'País' },
-    { value: 'lifecycleStage', label: 'Etapa' },
-    { value: 'owner', label: 'Propietario' },
-  ];
-
-  // Operadores disponibles
-  const operatorOptions = [
-    { value: 'contains', label: 'contiene' },
-    { value: 'equals', label: 'es igual a' },
-    { value: 'notEquals', label: 'no es igual a' },
-    { value: 'startsWith', label: 'empieza con' },
-    { value: 'endsWith', label: 'termina con' },
-  ];
 
   // Los datos ya vienen filtrados y ordenados del servidor
   // Solo aplicamos filtros adicionales que requieren lógica del cliente
@@ -1709,7 +1755,7 @@ const Companies: React.FC = () => {
   // Resetear a la página 1 cuando cambien los filtros
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [selectedStages, selectedCountries, selectedOwnerFilters, search, sortBy, filterRules, columnFilters]);
+  }, [selectedStages, selectedCountries, selectedOwnerFilters, search, sortBy, columnFilters]);
 
   if (loading) {
     return (
@@ -1817,7 +1863,13 @@ const Companies: React.FC = () => {
           title="Empresas"
           actions={
             <>
-                <FormControl size="small" sx={{ minWidth: 130 }}>
+                <FormControl
+                  size="small"
+                  sx={{
+                    minWidth: { xs: "100%", sm: 130 },
+                    order: { xs: 1, sm: 0 },
+                  }}
+                >
                   <Select
                     id="companies-sort-select"
                     name="companies-sort"
@@ -1827,15 +1879,19 @@ const Companies: React.FC = () => {
                     sx={{
                       borderRadius: 1.5,
                       bgcolor: theme.palette.background.paper,
-                      fontSize: '0.8125rem',
-                      '& .MuiOutlinedInput-notchedOutline': {
-                        borderColor: theme.palette.divider,
+                      fontSize: { xs: "0.75rem", sm: "0.8125rem" },
+                      border: `1.5px solid ${theme.palette.divider}`,
+                      transition: 'all 0.2s ease',
+                      "& .MuiOutlinedInput-notchedOutline": {
+                        border: 'none',
                       },
-                      '&:hover .MuiOutlinedInput-notchedOutline': {
-                        borderColor: theme.palette.text.secondary,
+                      "&:hover": {
+                        borderColor: taxiMonterricoColors.green,
+                        boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
                       },
-                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
+                      "&.Mui-focused": {
+                        borderColor: taxiMonterricoColors.green,
+                        boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
                       },
                     }}
                   >
@@ -1845,98 +1901,135 @@ const Companies: React.FC = () => {
                     <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
                   </Select>
                 </FormControl>
-                <Tooltip title={importing ? 'Importando...' : 'Importar'}>
-                  <IconButton
-                    size="small"
-                    onClick={handleImportFromExcel}
-                    disabled={importing}
-                    sx={pageStyles.outlinedIconButton}
-                  >
-                    <UploadFile sx={{ fontSize: 18 }} />
-                  </IconButton>
-                </Tooltip>
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
-                <Tooltip title="Exportar">
-                  <IconButton
-                    size="small"
-                    onClick={handleExportToExcel}
-                    sx={pageStyles.outlinedIconButton}
-                  >
-                    <FileDownload sx={{ fontSize: 18 }} />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: { xs: 0.5, sm: 0.75 },
+                    order: { xs: 3, sm: 0 },
+                  }}
+                >
+                  <Tooltip title={importing ? 'Importando...' : 'Importar'} arrow>
+                    <IconButton
+                      size="small"
+                      onClick={handleImportFromExcel}
+                      disabled={importing}
+                      sx={{
+                        border: `1.5px solid ${theme.palette.divider}`,
+                        borderRadius: 1.5,
+                        bgcolor: 'transparent',
+                        color: theme.palette.text.secondary,
+                        p: { xs: 0.75, sm: 0.875 },
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '&:hover': {
+                          borderColor: taxiMonterricoColors.green,
+                          bgcolor: theme.palette.mode === 'dark' 
+                            ? 'rgba(16, 185, 129, 0.1)' 
+                            : 'rgba(16, 185, 129, 0.05)',
+                          color: taxiMonterricoColors.green,
+                          transform: 'translateY(-2px)',
+                          boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                        },
+                        '&:disabled': {
+                          opacity: 0.5,
+                        },
+                      }}
+                    >
+                      <UploadFile sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                    </IconButton>
+                  </Tooltip>
+                  <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
+                  <Tooltip title="Exportar" arrow>
+                    <IconButton
+                      size="small"
+                      onClick={handleExportToExcel}
+                      sx={{
+                        border: `1.5px solid ${theme.palette.divider}`,
+                        borderRadius: 1.5,
+                        bgcolor: 'transparent',
+                        color: theme.palette.text.secondary,
+                        p: { xs: 0.75, sm: 0.875 },
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        '&:hover': {
+                          borderColor: taxiMonterricoColors.green,
+                          bgcolor: theme.palette.mode === 'dark' 
+                            ? 'rgba(16, 185, 129, 0.1)' 
+                            : 'rgba(16, 185, 129, 0.05)',
+                          color: taxiMonterricoColors.green,
+                          transform: 'translateY(-2px)',
+                          boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                        },
+                      }}
+                    >
+                      <FileDownload sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+                <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"} arrow>
                   <IconButton
                     size="small"
                     onClick={() => setShowColumnFilters(!showColumnFilters)}
                     sx={{
-                      border: `1px solid ${showColumnFilters ? theme.palette.primary.main : theme.palette.divider}`,
-                      borderRadius: 1,
+                      border: `1.5px solid ${showColumnFilters ? taxiMonterricoColors.green : theme.palette.divider}`,
+                      borderRadius: 1.5,
                       bgcolor: showColumnFilters 
-                        ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
+                        ? (theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.08)')
                         : 'transparent',
-                      color: showColumnFilters ? theme.palette.primary.main : theme.palette.text.secondary,
+                      color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.secondary,
                       p: { xs: 0.75, sm: 0.875 },
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      order: { xs: 5, sm: 0 },
                       '&:hover': {
+                        borderColor: taxiMonterricoColors.green,
                         bgcolor: theme.palette.mode === 'dark' 
-                          ? 'rgba(25, 118, 210, 0.3)' 
-                          : 'rgba(25, 118, 210, 0.15)',
+                          ? 'rgba(16, 185, 129, 0.2)' 
+                          : 'rgba(16, 185, 129, 0.1)',
+                        color: taxiMonterricoColors.green,
+                        transform: 'translateY(-2px)',
+                        boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
                       },
                     }}
                   >
                     <ViewColumn sx={{ fontSize: { xs: 18, sm: 20 } }} />
                   </IconButton>
                 </Tooltip>
-                <Tooltip title="Filtros avanzados">
-                  <IconButton
-                    size="small"
-                    onClick={(e) => {
-                      setFilterAnchorEl(e.currentTarget);
-                      // Si no hay reglas, agregar una inicial
-                      if (filterRules.length === 0) {
-                        setFilterRules([{
-                          id: `filter-${Date.now()}`,
-                          column: 'name',
-                          operator: 'contains',
-                          value: '',
-                        }]);
-                      }
-                    }}
-                    sx={{
-                      border: `1px solid ${filterRules.length > 0 ? theme.palette.primary.main : theme.palette.divider}`,
-                      borderRadius: 1,
-                      bgcolor: filterRules.length > 0 
-                        ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
-                        : 'transparent',
-                      color: filterRules.length > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
-                      p: { xs: 0.75, sm: 0.875 },
-                      '&:hover': {
-                        bgcolor: theme.palette.mode === 'dark' 
-                          ? 'rgba(25, 118, 210, 0.3)' 
-                          : 'rgba(25, 118, 210, 0.15)',
-                        borderColor: theme.palette.primary.main,
-                      },
-                    }}
-                  >
-                    <FilterList sx={{ fontSize: { xs: 18, sm: 20 } }} />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Nueva Empresa">
+                <Tooltip title="Nueva Empresa" arrow>
                   <IconButton
                     size="small"
                     onClick={() => handleOpen()}
                     sx={{
-                      bgcolor: taxiMonterricoColors.green,
-                      color: 'white',
-                      '&:hover': {
-                        bgcolor: taxiMonterricoColors.greenDark,
-                      },
+                      background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+                      color: "white",
                       borderRadius: 1.5,
-                      p: 0.875,
-                      boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
+                      p: { xs: 0.75, sm: 0.875 },
+                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
+                      order: { xs: 2, sm: 0 },
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: '-100%',
+                        width: '100%',
+                        height: '100%',
+                        background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
+                        transition: 'left 0.5s ease',
+                      },
+                      '&:hover': {
+                        transform: 'translateY(-2px) scale(1.05)',
+                        boxShadow: `0 8px 20px ${taxiMonterricoColors.green}50`,
+                        background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
+                        '&::before': {
+                          left: '100%',
+                        },
+                      },
+                      '&:active': {
+                        transform: 'translateY(0) scale(1)',
+                      },
                     }}
                   >
-                    <Add sx={{ fontSize: 18 }} />
+                    <Add sx={{ fontSize: { xs: 16, sm: 18 } }} />
                   </IconButton>
                 </Tooltip>
             </>
@@ -1945,7 +2038,9 @@ const Companies: React.FC = () => {
             <Box
               component="div"
               sx={{ 
-                bgcolor: theme.palette.background.paper,
+                bgcolor: theme.palette.mode === 'dark'
+                  ? 'rgba(16, 185, 129, 0.02)'
+                  : 'rgba(16, 185, 129, 0.01)',
                 overflow: 'hidden',
                 display: 'grid',
                 gridTemplateColumns: { 
@@ -1958,9 +2053,18 @@ const Companies: React.FC = () => {
                 width: '100%',
                 px: { xs: 1.5, md: 2 },
                 py: { xs: 1.25, md: 1.5 },
-                borderBottom: theme.palette.mode === 'light' 
-                  ? '1px solid rgba(0, 0, 0, 0.08)' 
-                  : '1px solid rgba(255, 255, 255, 0.1)',
+                borderBottom: `2px solid ${theme.palette.divider}`,
+                position: 'relative',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '3px',
+                  background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+                  opacity: 0.3,
+                },
               }}
             >
             <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.25, md: 0.5 } }}>
@@ -2230,7 +2334,7 @@ const Companies: React.FC = () => {
                         sx={{
                           width: { xs: 32, md: 40 },
                           height: { xs: 32, md: 40 },
-                          bgcolor: (company as any).logo ? 'transparent' : '#0d9394',
+                          bgcolor: (company as any).logo ? 'transparent' : taxiMonterricoColors.green,
                           fontSize: { xs: '0.75rem', md: '0.875rem' },
                           fontWeight: 600,
                           boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
@@ -2267,7 +2371,7 @@ const Companies: React.FC = () => {
                               }
                             }}
                             sx={{ 
-                              color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
+                              color: theme.palette.primary.main,
                             fontSize: { xs: '0.6875rem', md: '0.75rem' },
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
@@ -2470,7 +2574,7 @@ const Companies: React.FC = () => {
                     variant="body2" 
                     sx={{ 
                       color: company.estimatedRevenue 
-                        ? (theme.palette.mode === 'dark' ? '#39ff14' : '#00a76f')
+                        ? taxiMonterricoColors.green
                         : theme.palette.text.primary,
                       fontSize: { xs: '0.75rem', md: '0.8125rem' },
                       fontWeight: 500,
@@ -2531,11 +2635,13 @@ const Companies: React.FC = () => {
                             handleDelete(company.id);
                           }}
                           sx={{
-                            color: '#d32f2f',
+                            color: theme.palette.error.main,
                             padding: 0.5,
                             '&:hover': {
-                              color: '#d32f2f',
-                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.15)' : '#ffebee',
+                              color: theme.palette.error.main,
+                              bgcolor: theme.palette.mode === 'dark' 
+                                ? `${theme.palette.error.main}26` 
+                                : `${theme.palette.error.main}15`,
                             },
                           }}
                         >
@@ -2619,9 +2725,11 @@ const Companies: React.FC = () => {
                             alignItems: 'center',
                             gap: 1.5,
                             py: 1.5,
-                            color: '#d32f2f',
+                            color: theme.palette.error.main,
                             '&:hover': {
-                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.15)' : '#ffebee',
+                              bgcolor: theme.palette.mode === 'dark' 
+                                ? `${theme.palette.error.main}26` 
+                                : `${theme.palette.error.main}15`,
                             },
                           }}
                         >
@@ -2640,14 +2748,48 @@ const Companies: React.FC = () => {
           emptyState={
             paginatedCompanies.length === 0 ? (
               <Box sx={{ ...pageStyles.emptyState, m: 3 }}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                  <Business sx={{ fontSize: 48, color: theme.palette.text.disabled }} />
-                  <Typography variant="body1" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
-                    No hay empresas para mostrar
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                    Crea tu primera empresa para comenzar
-                  </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, py: 6 }}>
+                  <Box
+                    sx={{
+                      width: 120,
+                      height: 120,
+                      borderRadius: '50%',
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(255, 255, 255, 0.05)' 
+                        : theme.palette.grey[100],
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mb: 1,
+                      fontSize: '64px',
+                      lineHeight: 1,
+                    }}
+                  >
+                    🏢
+                  </Box>
+                  <Box sx={{ textAlign: 'center', maxWidth: '400px' }}>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 700,
+                        mb: 1,
+                        color: theme.palette.text.primary,
+                        fontSize: { xs: '1.25rem', md: '1.5rem' },
+                      }}
+                    >
+                      No hay empresas para mostrar
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: theme.palette.text.primary,
+                        lineHeight: 1.6,
+                        fontSize: { xs: '0.875rem', md: '0.9375rem' },
+                      }}
+                    >
+                      Crea tu primera empresa para comenzar a gestionar tus relaciones comerciales de manera eficiente.
+                    </Typography>
+                  </Box>
                 </Box>
               </Box>
             ) : undefined
@@ -2779,7 +2921,7 @@ const Companies: React.FC = () => {
                   setSelectedCountries([]);
                 }}
                 sx={{
-                  color: '#d32f2f',
+                  color: theme.palette.error.main,
                   textTransform: 'none',
                   fontSize: '0.75rem',
                   fontWeight: 500,
@@ -3535,7 +3677,7 @@ const Companies: React.FC = () => {
             disabled={deleting}
             variant="contained"
             sx={pageStyles.deleteButton}
-            startIcon={deleting ? <CircularProgress size={16} sx={{ color: '#ffffff' }} /> : <Delete />}
+            startIcon={deleting ? <CircularProgress size={16} sx={{ color: theme.palette.common.white }} /> : <Delete />}
           >
             {deleting ? 'Eliminando...' : 'Eliminar'}
           </Button>
@@ -3671,275 +3813,6 @@ const Companies: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Popover de Filtros - Diseño tipo Tags */}
-      <Popover
-        open={Boolean(filterAnchorEl)}
-        anchorEl={filterAnchorEl}
-        onClose={() => setFilterAnchorEl(null)}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: isMobile ? 'center' : 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: isMobile ? 'center' : 'right',
-        }}
-        PaperProps={{
-          sx: {
-            mt: 1,
-            minWidth: isMobile ? 'calc(100vw - 32px)' : 420,
-            maxWidth: isMobile ? 'calc(100vw - 32px)' : 500,
-            bgcolor: theme.palette.background.paper,
-            borderRadius: 2,
-            boxShadow: theme.palette.mode === 'dark'
-              ? '0 8px 24px rgba(0,0,0,0.5)'
-              : '0 8px 24px rgba(0,0,0,0.15)',
-            border: `1px solid ${theme.palette.divider}`,
-          },
-        }}
-      >
-        <Box sx={{ p: 2 }}>
-          {/* Header */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography sx={{ fontWeight: 600, fontSize: '0.9375rem', color: theme.palette.text.primary }}>
-              Filtros
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              {filterRules.length > 0 && (
-                <Button
-                  size="small"
-                  onClick={() => {
-                    setFilterRules([]);
-                    setSelectedStages([]);
-                    setSelectedOwnerFilters([]);
-                    setSelectedCountries([]);
-                  }}
-                  sx={{
-                    textTransform: 'none',
-                    fontSize: '0.75rem',
-                    px: 1.5,
-                    color: theme.palette.error.main,
-                    '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' 
-                        ? 'rgba(211, 47, 47, 0.1)' 
-                        : 'rgba(211, 47, 47, 0.05)',
-                    },
-                  }}
-                >
-                  Limpiar todo
-                </Button>
-              )}
-              <IconButton
-                size="small"
-                onClick={() => setFilterAnchorEl(null)}
-                sx={{ color: theme.palette.text.secondary }}
-              >
-                <Close sx={{ fontSize: 18 }} />
-              </IconButton>
-            </Box>
-          </Box>
-
-          {/* Filtros activos como Tags/Chips */}
-          {filterRules.length > 0 && (
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-              {filterRules.map((rule) => {
-                const columnLabel = columnOptions.find(c => c.value === rule.column)?.label || rule.column;
-                const operatorLabel = operatorOptions.find(o => o.value === rule.operator)?.label || rule.operator;
-                return (
-                  <Chip
-                    key={rule.id}
-                    label={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Typography component="span" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>
-                          {columnLabel}
-                        </Typography>
-                        <Typography component="span" sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary }}>
-                          {operatorLabel.toLowerCase()}
-                        </Typography>
-                        <Typography component="span" sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
-                          "{rule.value || '...'}"
-                        </Typography>
-                      </Box>
-                    }
-                    onDelete={() => {
-                      setFilterRules(filterRules.filter(r => r.id !== rule.id));
-                    }}
-                    sx={{
-                      height: 'auto',
-                      py: 0.5,
-                      bgcolor: theme.palette.mode === 'dark' 
-                        ? 'rgba(25, 118, 210, 0.2)' 
-                        : 'rgba(25, 118, 210, 0.1)',
-                      border: `1px solid ${theme.palette.primary.main}`,
-                      '& .MuiChip-label': {
-                        px: 1,
-                      },
-                      '& .MuiChip-deleteIcon': {
-                        fontSize: 16,
-                        color: theme.palette.text.secondary,
-                        '&:hover': {
-                          color: theme.palette.error.main,
-                        },
-                      },
-                    }}
-                  />
-                );
-              })}
-            </Box>
-          )}
-
-          {/* Formulario para agregar nuevo filtro */}
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: { xs: 'column', sm: 'row' },
-            gap: 1, 
-            alignItems: { xs: 'stretch', sm: 'flex-end' },
-            p: 1.5,
-            borderRadius: 1.5,
-            bgcolor: theme.palette.mode === 'dark' 
-              ? 'rgba(255, 255, 255, 0.03)' 
-              : 'rgba(0, 0, 0, 0.02)',
-            border: `1px dashed ${theme.palette.divider}`,
-          }}>
-            {/* Columna */}
-            <FormControl size="small" sx={{ minWidth: 100, flex: 1 }}>
-              <Select
-                value={filterRules.length > 0 ? filterRules[filterRules.length - 1]?.column || 'name' : 'name'}
-                onChange={(e) => {
-                  if (filterRules.length === 0) {
-                    setFilterRules([{
-                      id: `filter-${Date.now()}`,
-                      column: e.target.value,
-                      operator: 'contains',
-                      value: '',
-                    }]);
-                  } else {
-                    const newRules = [...filterRules];
-                    newRules[newRules.length - 1].column = e.target.value;
-                    setFilterRules(newRules);
-                  }
-                }}
-                displayEmpty
-                sx={{
-                  fontSize: '0.8125rem',
-                  bgcolor: theme.palette.background.paper,
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: theme.palette.divider,
-                  },
-                }}
-              >
-                {columnOptions.map((option) => (
-                  <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.8125rem' }}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            {/* Operador */}
-            <FormControl size="small" sx={{ minWidth: 100, flex: 1 }}>
-              <Select
-                value={filterRules.length > 0 ? filterRules[filterRules.length - 1]?.operator || 'contains' : 'contains'}
-                onChange={(e) => {
-                  if (filterRules.length === 0) {
-                    setFilterRules([{
-                      id: `filter-${Date.now()}`,
-                      column: 'name',
-                      operator: e.target.value,
-                      value: '',
-                    }]);
-                  } else {
-                    const newRules = [...filterRules];
-                    newRules[newRules.length - 1].operator = e.target.value;
-                    setFilterRules(newRules);
-                  }
-                }}
-                displayEmpty
-                sx={{
-                  fontSize: '0.8125rem',
-                  bgcolor: theme.palette.background.paper,
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: theme.palette.divider,
-                  },
-                }}
-              >
-                {operatorOptions.map((option) => (
-                  <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.8125rem' }}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            {/* Valor */}
-            <TextField
-              size="small"
-              placeholder="Valor..."
-              value={filterRules.length > 0 ? filterRules[filterRules.length - 1]?.value || '' : ''}
-              onChange={(e) => {
-                if (filterRules.length === 0) {
-                  setFilterRules([{
-                    id: `filter-${Date.now()}`,
-                    column: 'name',
-                    operator: 'contains',
-                    value: e.target.value,
-                  }]);
-                } else {
-                  const newRules = [...filterRules];
-                  newRules[newRules.length - 1].value = e.target.value;
-                  setFilterRules(newRules);
-                }
-              }}
-              sx={{
-                flex: 1.5,
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: theme.palette.background.paper,
-                  fontSize: '0.8125rem',
-                  '& fieldset': {
-                    borderColor: theme.palette.divider,
-                  },
-                },
-                '& .MuiInputBase-input::placeholder': {
-                  fontSize: '0.8125rem',
-                },
-              }}
-            />
-
-            {/* Botón Agregar */}
-            <IconButton
-              size="small"
-              onClick={() => {
-                setFilterRules([
-                  ...filterRules,
-                  {
-                    id: `filter-${Date.now()}`,
-                    column: 'name',
-                    operator: 'contains',
-                    value: '',
-                  },
-                ]);
-              }}
-              sx={{
-                bgcolor: theme.palette.primary.main,
-                color: 'white',
-                '&:hover': {
-                  bgcolor: theme.palette.primary.dark,
-                },
-              }}
-            >
-              <Add sx={{ fontSize: 18 }} />
-            </IconButton>
-          </Box>
-
-          {/* Texto de ayuda */}
-          {filterRules.length === 0 && (
-            <Typography variant="caption" sx={{ display: 'block', mt: 1.5, color: theme.palette.text.secondary, textAlign: 'center' }}>
-              Configura los campos y haz clic en + para agregar un filtro
-            </Typography>
-          )}
-        </Box>
-      </Popover>
-
       {/* Snackbar para mensajes de éxito */}
       <Snackbar
         open={!!successMessage}
@@ -3973,7 +3846,7 @@ const Companies: React.FC = () => {
               width: { xs: '95vw', sm: '700px' },
               maxWidth: { xs: '95vw', sm: '90vw' },
               height: '85vh',
-              backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
+              backgroundColor: theme.palette.background.paper,
               boxShadow: theme.palette.mode === 'dark' 
                 ? '0 20px 60px rgba(0,0,0,0.5)' 
                 : '0 20px 60px rgba(0,0,0,0.12)',
@@ -4045,7 +3918,7 @@ const Companies: React.FC = () => {
                   borderRadius: 2,
                   overflow: 'hidden',
                   minHeight: '300px',
-                  backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper,
+                  backgroundColor: theme.palette.background.paper,
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   '&:focus-within': {
                     boxShadow: 'none',
@@ -4066,7 +3939,7 @@ const Companies: React.FC = () => {
               px: 3,
               py: 2.5, 
               borderTop: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.divider}`, 
-              backgroundColor: theme.palette.mode === 'dark' ? '#1F2937' : theme.palette.background.paper, 
+              backgroundColor: theme.palette.background.paper, 
               display: 'flex', 
               justifyContent: 'flex-end', 
               gap: 2,
@@ -4744,9 +4617,9 @@ const Companies: React.FC = () => {
                         p: 0.25, 
                         minWidth: 28, 
                         height: 28,
-                        backgroundColor: activeFormats.bold ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                        backgroundColor: activeFormats.bold ? (theme.palette.mode === 'dark' ? `${theme.palette.common.white}26` : theme.palette.grey[300]) : 'transparent',
                         '&:hover': {
-                          backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                          backgroundColor: theme.palette.mode === 'dark' ? `${theme.palette.common.white}1A` : theme.palette.grey[300],
                         }
                       }}
                       onClick={() => {
@@ -4763,9 +4636,9 @@ const Companies: React.FC = () => {
                         p: 0.25, 
                         minWidth: 28, 
                         height: 28,
-                        backgroundColor: activeFormats.italic ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                        backgroundColor: activeFormats.italic ? (theme.palette.mode === 'dark' ? `${theme.palette.common.white}26` : theme.palette.grey[300]) : 'transparent',
                         '&:hover': {
-                          backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                          backgroundColor: theme.palette.mode === 'dark' ? `${theme.palette.common.white}1A` : theme.palette.grey[300],
                         }
                       }}
                       onClick={() => {
@@ -4782,9 +4655,9 @@ const Companies: React.FC = () => {
                         p: 0.25, 
                         minWidth: 28, 
                         height: 28,
-                        backgroundColor: activeFormats.underline ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                        backgroundColor: activeFormats.underline ? (theme.palette.mode === 'dark' ? `${theme.palette.common.white}26` : theme.palette.grey[300]) : 'transparent',
                         '&:hover': {
-                          backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                          backgroundColor: theme.palette.mode === 'dark' ? `${theme.palette.common.white}1A` : theme.palette.grey[300],
                         }
                       }}
                       onClick={() => {
@@ -4801,9 +4674,9 @@ const Companies: React.FC = () => {
                         p: 0.25, 
                         minWidth: 28, 
                         height: 28,
-                        backgroundColor: activeFormats.strikeThrough ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                        backgroundColor: activeFormats.strikeThrough ? (theme.palette.mode === 'dark' ? `${theme.palette.common.white}26` : theme.palette.grey[300]) : 'transparent',
                         '&:hover': {
-                          backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                          backgroundColor: theme.palette.mode === 'dark' ? `${theme.palette.common.white}1A` : theme.palette.grey[300],
                         }
                       }}
                       onClick={() => {
@@ -4820,9 +4693,9 @@ const Companies: React.FC = () => {
                         p: 0.25, 
                         minWidth: 28, 
                         height: 28,
-                        backgroundColor: activeFormats.unorderedList ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                        backgroundColor: activeFormats.unorderedList ? (theme.palette.mode === 'dark' ? `${theme.palette.common.white}26` : theme.palette.grey[300]) : 'transparent',
                         '&:hover': {
-                          backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                          backgroundColor: theme.palette.mode === 'dark' ? `${theme.palette.common.white}1A` : theme.palette.grey[300],
                         }
                       }}
                       onClick={() => {
@@ -4839,9 +4712,9 @@ const Companies: React.FC = () => {
                         p: 0.25, 
                         minWidth: 28, 
                         height: 28,
-                        backgroundColor: activeFormats.orderedList ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0') : 'transparent',
+                        backgroundColor: activeFormats.orderedList ? (theme.palette.mode === 'dark' ? `${theme.palette.common.white}26` : theme.palette.grey[300]) : 'transparent',
                         '&:hover': {
-                          backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                          backgroundColor: theme.palette.mode === 'dark' ? `${theme.palette.common.white}1A` : theme.palette.grey[300],
                         }
                       }}
                       onClick={() => {

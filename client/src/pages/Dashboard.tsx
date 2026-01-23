@@ -28,8 +28,6 @@ import {
   ChevronLeft,
   ChevronRight,
 } from '@mui/icons-material';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCoins, faTags, faBuilding, faPeopleGroup } from '@fortawesome/free-solid-svg-icons';
 import {
   AreaChart,
   Area,
@@ -51,7 +49,6 @@ import api from '../config/api';
 import { useAuth } from '../context/AuthContext';
 import { taxiMonterricoColors } from '../theme/colors';
 import * as XLSX from 'xlsx';
-import { log, logWarn } from '../utils/logger';
 
 interface DashboardStats {
   contacts: {
@@ -105,14 +102,15 @@ const CustomKPITooltip = ({ active, payload }: any) => {
     const userName = data.name || '';
     const value = data.value || 0;
     // Obtener el color del segmento desde el payload (puede estar en diferentes ubicaciones)
-    const segmentColor = payload[0].color || payload[0].fill || data.fill || data.color || '#10B981';
+    const segmentColor = payload[0].color || payload[0].fill || data.fill || data.color || taxiMonterricoColors.green;
     
     return (
       <Box
         sx={{
-          backgroundColor: theme.palette.mode === 'dark' 
-            ? 'rgba(18, 18, 18, 0.85)' 
-            : 'rgba(255, 255, 255, 0.9)',
+          backgroundColor: 
+          theme.palette.mode === 'dark' 
+            ?' rgba(18,18,18,0.85)'
+            :' rgba(255,255,255,0.9)',
           backdropFilter: 'blur(10px)',
           WebkitBackdropFilter: 'blur(10px)',
           border: '1px solid',
@@ -121,8 +119,9 @@ const CustomKPITooltip = ({ active, payload }: any) => {
           padding: '8px 12px',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
-          boxShadow: theme.palette.mode === 'dark'
+          gap: '8px', 
+          boxShadow: 
+            theme.palette.mode === 'dark'
             ? '0 4px 6px rgba(0, 0, 0, 0.5)'
             : '0 4px 6px rgba(0, 0, 0, 0.1)',
         }}
@@ -136,7 +135,7 @@ const CustomKPITooltip = ({ active, payload }: any) => {
             flexShrink: 0,
           }}
         />
-        <Typography variant="body2" sx={{ color: 'text.primary' }}>
+        <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 900, fontSize: '0.95rem' }}>
           {userName}: {typeof value === 'number' ? value.toFixed(1) : '0'}%
         </Typography>
       </Box>
@@ -153,7 +152,7 @@ const CustomSalesDistributionTooltip = ({ active, payload }: any) => {
     const name = data.name || '';
     const value = data.value || 0;
     // Obtener el color del segmento desde el payload
-    const segmentColor = payload[0].color || payload[0].fill || data.color || data.fill || '#8884d8';
+    const segmentColor = payload[0].color || payload[0].fill || data.color || data.fill || theme.palette.primary.main;
     
     return (
       <Box
@@ -184,7 +183,7 @@ const CustomSalesDistributionTooltip = ({ active, payload }: any) => {
             flexShrink: 0,
           }}
         />
-        <Typography variant="body2" sx={{ color: 'text.primary' }}>
+        <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 900, fontSize: '0.95rem' }}>
           {name}: {typeof value === 'number' ? value : '0'}
         </Typography>
       </Box>
@@ -233,13 +232,13 @@ const Dashboard: React.FC = () => {
     // Verificar autenticación antes de hacer la llamada
     const token = localStorage.getItem('token');
     if (!user || !token) {
-      log('⚠️ Usuario no autenticado, omitiendo fetchStats');
+      console.log('⚠️ Usuario no autenticado, omitiendo fetchStats');
       setLoading(false);
       return;
     }
 
     try {
-      log('📊 Iniciando fetchStats...');
+      console.log('📊 Iniciando fetchStats...');
       // Calcular fechas de inicio y fin según el año y mes seleccionado
       const year = parseInt(selectedYear);
       let startDate: Date;
@@ -256,7 +255,7 @@ const Dashboard: React.FC = () => {
         endDate = new Date(year, 11, 31, 23, 59, 59); // 31 de diciembre
       }
       
-      log('📊 Token disponible para fetchStats:', token ? 'Sí' : 'No');
+      console.log('📊 Token disponible para fetchStats:', token ? 'Sí' : 'No');
       
       const response = await api.get('/dashboard/stats', {
         params: {
@@ -270,8 +269,8 @@ const Dashboard: React.FC = () => {
         throw new Error('El servidor devolvió HTML en lugar de JSON. Verifica la configuración del proxy reverso.');
       }
       
-      log('✅ Dashboard stats recibidos:', response.data);
-      log('Deals por etapa:', response.data.deals?.byStage);
+      console.log('✅ Dashboard stats recibidos:', response.data);
+      console.log('Deals por etapa:', response.data.deals?.byStage);
       
       // Validar que response.data sea un objeto antes de establecerlo
       if (response.data && typeof response.data === 'object' && !Array.isArray(response.data)) {
@@ -316,7 +315,7 @@ const Dashboard: React.FC = () => {
       // Verificar autenticación antes de hacer la llamada
       const token = localStorage.getItem('token');
       if (!user || !token) {
-        log('⚠️ Usuario no autenticado, omitiendo fetchDailyDeals');
+        console.log('⚠️ Usuario no autenticado, omitiendo fetchDailyDeals');
         return;
       }
 
@@ -445,7 +444,7 @@ const Dashboard: React.FC = () => {
 
   const handleDownloadDashboard = () => {
     if (!stats) {
-      logWarn('No hay datos disponibles para descargar');
+      console.warn('No hay datos disponibles para descargar');
       return;
     }
     
@@ -702,16 +701,16 @@ const Dashboard: React.FC = () => {
   if (!stats) {
     return (
       <Box sx={{ 
-        backgroundColor: '#c4d4d4', 
+        backgroundColor: theme.palette.background.default, 
         minHeight: '100vh',
         px: { xs: 0, sm: 0, md: 0.25 },
         pt: { xs: 0.25, sm: 0.5, md: 1 },
         pb: 4,
       }}>
-        <Typography variant="h4" sx={{ fontWeight: 600, color: theme.palette.text.primary, mb: 4 }}>
+        <Typography variant="h4" sx={{ fontWeight: 800, color: theme.palette.text.primary, mb: 4 }}>
           Hola, {user?.firstName || 'Usuario'}
         </Typography>
-        <Typography sx={{ color: theme.palette.text.secondary }}>No hay datos disponibles</Typography>
+        <Typography sx={{ color: theme.palette.text.secondary, fontWeight: 800 }}>No hay datos disponibles</Typography>
       </Box>
     );
   }
@@ -777,7 +776,7 @@ const Dashboard: React.FC = () => {
   // Priorizar etapas ganadas y perdidas, luego ordenar por cantidad
   const salesDistributionData = stats.deals.byStage && stats.deals.byStage.length > 0
     ? (() => {
-        log('Procesando deals por etapa:', stats.deals.byStage);
+        console.log('Procesando deals por etapa:', stats.deals.byStage);
         
         // Normalizar los datos - Sequelize puede devolver count como string o number
         const normalizedStages = stats.deals.byStage.map((d: any) => ({
@@ -786,7 +785,7 @@ const Dashboard: React.FC = () => {
           total: typeof d.total === 'string' ? parseFloat(d.total) : (d.total || 0),
         }));
         
-        log('Etapas normalizadas:', normalizedStages);
+        console.log('Etapas normalizadas:', normalizedStages);
         
         // Separar etapas ganadas, perdidas y otras
         const wonStages = normalizedStages.filter(d => 
@@ -799,16 +798,16 @@ const Dashboard: React.FC = () => {
           !['won', 'closed won', 'cierre_ganado', 'lost', 'closed lost', 'cierre_perdido'].includes(d.stage)
         );
         
-        log('Etapas ganadas:', wonStages);
-        log('Etapas perdidas:', lostStages);
-        log('Otras etapas:', otherStages);
+        console.log('Etapas ganadas:', wonStages);
+        console.log('Etapas perdidas:', lostStages);
+        console.log('Otras etapas:', otherStages);
         
         // Agregar etapas ganadas y perdidas agrupadas si existen
         const wonTotal = wonStages.reduce((sum, d) => sum + d.count, 0);
         const lostTotal = lostStages.reduce((sum, d) => sum + d.count, 0);
         
-        log('Total ganados:', wonTotal);
-        log('Total perdidos:', lostTotal);
+        console.log('Total ganados:', wonTotal);
+        console.log('Total perdidos:', lostTotal);
         
         const chartData: Array<{ name: string; value: number; color: string }> = [];
         
@@ -816,7 +815,7 @@ const Dashboard: React.FC = () => {
           chartData.push({
             name: 'Ganados',
             value: wonTotal,
-            color: '#4BC0C0',
+            color: taxiMonterricoColors.green,
           });
         }
         
@@ -824,7 +823,7 @@ const Dashboard: React.FC = () => {
           chartData.push({
             name: 'Perdidos',
             value: lostTotal,
-            color: '#FF6384',
+            color: theme.palette.error.main,
           });
         }
         
@@ -835,16 +834,16 @@ const Dashboard: React.FC = () => {
           chartData.push({
             name: getStageLabel(deal.stage),
             value: deal.count,
-            color: ['#FFCE56', '#36A2EB', '#9966FF'][index % 3],
+            color: [taxiMonterricoColors.orange, theme.palette.primary.main, theme.palette.secondary.main][index % 3],
           });
         });
         
-        log('Datos finales del gráfico:', chartData);
+        console.log('Datos finales del gráfico:', chartData);
         
-        return chartData.length > 0 ? chartData : [{ name: 'Sin datos', value: 1, color: '#E5E7EB' }];
+        return chartData.length > 0 ? chartData : [{ name: 'Sin datos', value: 1, color: theme.palette.grey[300] }];
       })()
     : [
-        { name: 'Sin datos', value: 1, color: '#E5E7EB' }
+        { name: 'Sin datos', value: 1, color: theme.palette.grey[300] }
       ];
 
   // Datos para Weekly Sales (últimas 7 semanas)
@@ -1084,17 +1083,36 @@ const Dashboard: React.FC = () => {
         flexDirection: { xs: 'column', sm: 'row' },
         gap: { xs: 2, sm: 0 },
       }}>
-        <Typography 
-          variant="h4" 
-          sx={{ 
-            fontWeight: 500, 
-            color: theme.palette.text.primary, 
-            fontSize: { xs: '0.9375rem', sm: '1.125rem', md: '1.25rem' },
-            mt: { xs: 2, sm: 3, md: -2 },
-          }}
-        >
-          <span style={{ fontSize: '1.5rem', fontWeight: 600 }}>Hola, Bienvenido {user?.firstName || 'Usuario'} 👋</span>
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: { xs: 2, sm: 3, md: -2 } }}>
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              fontWeight: 800, 
+              color: theme.palette.text.primary, 
+              fontSize: { xs: '1.75rem', sm: '2.25rem', md: '2.75rem' },
+              background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              textTransform: 'uppercase',
+              letterSpacing: '0.02em',
+            }}
+          >
+            HOLA, {user?.firstName?.toUpperCase() || 'USUARIO'}
+          </Typography>
+          <Box
+            component="span"
+            sx={{
+              fontSize: { xs: '1.75rem', sm: '2.25rem', md: '2.75rem' },
+              lineHeight: 1,
+              display: 'inline-block',
+              filter: 'none',
+              color: 'inherit',
+            }}
+          >
+            👋🏽
+          </Box>
+        </Box>
         <Box sx={{ 
           display: 'flex', 
           alignItems: 'center', 
@@ -1108,12 +1126,15 @@ const Dashboard: React.FC = () => {
             size="small"
             onClick={(e) => setCalendarAnchorEl(e.currentTarget)}
             sx={{
-              border: `1px solid ${taxiMonterricoColors.green}`,
-              borderRadius: 1,
+              border: `1.5px solid ${taxiMonterricoColors.green}`,
+              borderRadius: 1.5,
               color: taxiMonterricoColors.green,
+              transition: 'all 0.2s ease',
               '&:hover': {
                 borderColor: taxiMonterricoColors.greenDark,
-                bgcolor: 'rgba(46, 125, 50, 0.04)',
+                bgcolor: 'rgba(46, 125, 50, 0.08)',
+                transform: 'scale(1.05)',
+                boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
               },
             }}
           >
@@ -1173,7 +1194,7 @@ const Dashboard: React.FC = () => {
                   setCalendarAnchorEl(null);
                 }}
                 sx={{ 
-                  fontWeight: 600, 
+                  fontWeight: 800, 
                   fontSize: '1.25rem',
                   cursor: 'pointer',
                   '&:hover': {
@@ -1238,11 +1259,11 @@ const Dashboard: React.FC = () => {
                       borderColor: isCurrentMonth && !isSelected 
                         ? taxiMonterricoColors.green 
                         : theme.palette.divider,
-                      fontWeight: isCurrentMonth ? 600 : 400,
+                      fontWeight: isCurrentMonth ? 800 : 700,
                       '&:hover': {
                         bgcolor: isSelected 
                           ? taxiMonterricoColors.greenDark 
-                          : 'rgba(46, 125, 50, 0.04)',
+                          : `${taxiMonterricoColors.green}0A`,
                         borderColor: taxiMonterricoColors.green,
                       },
                     }}
@@ -1283,13 +1304,46 @@ const Dashboard: React.FC = () => {
           onClick={canEditBudget ? handleBudgetCardClick : undefined}
           sx={{ 
             minHeight: { xs: 140, sm: 160, md: 185 },
-            borderRadius: 4,
-            boxShadow: 'none',
-            bgcolor: 'rgb(212, 249, 226)',
-            color: '#004B50',
+            borderRadius: 3,
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 4px 20px rgba(26, 174, 122, 0.15)'
+              : '0 4px 20px rgba(26, 174, 122, 0.1)',
+            bgcolor: theme.palette.mode === 'dark' 
+              ? `${taxiMonterricoColors.green}1A`
+              : `${taxiMonterricoColors.green}15`,
+            color: theme.palette.mode === 'dark' 
+              ? taxiMonterricoColors.greenLight
+              : taxiMonterricoColors.greenDark,
             overflow: 'hidden',
-            border: 'none',
+            border: `1px solid rgba(26, 174, 122, 0.2)`,
             cursor: canEditBudget ? 'pointer' : 'default',
+            position: 'relative',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '4px',
+              background: `linear-gradient(90deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
+              transform: 'scaleX(0)',
+              transformOrigin: 'left',
+              transition: 'transform 0.3s ease',
+            },
+            '&:hover': {
+              transform: 'translateY(-8px)',
+              boxShadow: theme.palette.mode === 'dark'
+                ? '0 12px 40px rgba(26, 174, 122, 0.3)'
+                : '0 12px 40px rgba(26, 174, 122, 0.2)',
+              borderColor: taxiMonterricoColors.greenLight,
+              '&::before': {
+                transform: 'scaleX(1)',
+              },
+              '& .kpi-icon': {
+                transform: 'scale(1.1) rotate(5deg)',
+              },
+            },
           }}
         >
           <CardContent sx={{ 
@@ -1310,21 +1364,33 @@ const Dashboard: React.FC = () => {
                 gap: 5,
                 flex: 1,
               }}>
-                <FontAwesomeIcon 
-                  icon={faCoins} 
-                  style={{
-                    color: "#1aae7a",
-                    fontSize: 36,
-                  }} 
-                />
+                <Box
+                  className="kpi-icon"
+                  sx={{
+                    p: 1.5,
+                    borderRadius: 2,
+                    background: 'linear-gradient(135deg, rgba(26, 174, 122, 0.15) 0%, rgba(26, 174, 122, 0.05) 100%)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    border: '1px solid rgba(26, 174, 122, 0.2)',
+                    fontSize: '36px',
+                    lineHeight: 1,
+                  }}
+                >
+                  💰
+                </Box>
                 <Box sx={{ textAlign: 'left' }}>
                   <Typography 
                     variant="body2" 
                     sx={{ 
-                      color: '#004B50',
+                      color: theme.palette.mode === 'dark' 
+                        ? taxiMonterricoColors.greenLight
+                        : taxiMonterricoColors.greenDark,
                       mb: 1.5,
                       fontSize: '0.875rem',
-                      fontWeight: 600,
+                      fontWeight: 800,
                       lineHeight: 1.2,
                     }}
                   >
@@ -1333,10 +1399,12 @@ const Dashboard: React.FC = () => {
                   <Typography 
                     variant="h6" 
                     sx={{ 
-                      fontWeight: 600, 
+                      fontWeight: 800, 
                       fontSize: '1.5rem',
                       lineHeight: 1.2,
-                      color: '#004B50',
+                      color: theme.palette.mode === 'dark' 
+                        ? taxiMonterricoColors.greenLight
+                        : taxiMonterricoColors.greenDark,
                     }}
                   >
                     S/ {monthlyBudget.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
@@ -1351,10 +1419,8 @@ const Dashboard: React.FC = () => {
                 position: 'absolute',
                 right: { xs: 16, sm: 20, md: 24 },
                 top: { xs: 16, sm: 20, md: 24 },
-                minWidth: 0,
-                minHeight: 0,
               }}>
-                <ResponsiveContainer width={140} height={80}>
+                <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={[
                     { value: 20 },
                     { value: 35 },
@@ -1367,7 +1433,7 @@ const Dashboard: React.FC = () => {
                     <Line 
                       type="monotone" 
                       dataKey="value" 
-                      stroke="#1aae7a" 
+                      stroke={taxiMonterricoColors.greenLight} 
                       strokeWidth={2}
                       dot={false}
                     />
@@ -1381,12 +1447,43 @@ const Dashboard: React.FC = () => {
         {/* Orders In Line */}
         <Card sx={{ 
           minHeight: { xs: 140, sm: 160, md: 185 },
-          borderRadius: 4,
-          boxShadow: 'none',
-          bgcolor: '#edd6ff',
+          borderRadius: 3,
+          boxShadow: theme.palette.mode === 'dark'
+            ? '0 4px 20px rgba(129, 53, 230, 0.15)'
+            : '0 4px 20px rgba(129, 53, 230, 0.1)',
+          bgcolor: theme.palette.mode === 'dark' 
+            ? `${theme.palette.secondary.main}1A`
+            : `${theme.palette.secondary.main}15`,
           color: theme.palette.text.primary,
           overflow: 'hidden',
-          border: 'none',
+          border: `1px solid rgba(129, 53, 230, 0.2)`,
+          position: 'relative',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '4px',
+            background: `linear-gradient(90deg, ${theme.palette.secondary.main} 0%, ${theme.palette.secondary.light} 100%)`,
+            transform: 'scaleX(0)',
+            transformOrigin: 'left',
+            transition: 'transform 0.3s ease',
+          },
+          '&:hover': {
+            transform: 'translateY(-8px)',
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 12px 40px rgba(129, 53, 230, 0.3)'
+              : '0 12px 40px rgba(129, 53, 230, 0.2)',
+            borderColor: theme.palette.secondary.main,
+            '&::before': {
+              transform: 'scaleX(1)',
+            },
+            '& .kpi-icon': {
+              transform: 'scale(1.1) rotate(5deg)',
+            },
+          },
         }}>
           <CardContent sx={{ 
             p: { xs: 2, sm: 2.5, md: 3 },
@@ -1398,21 +1495,33 @@ const Dashboard: React.FC = () => {
               alignItems: 'flex-start',
               gap: 5,
             }}>
-              <FontAwesomeIcon 
-                icon={faTags} 
-                style={{
-                  color: "#8135e6",
-                  fontSize: 36,
-                }} 
-              />
+              <Box
+                className="kpi-icon"
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  background: 'linear-gradient(135deg, rgba(129, 53, 230, 0.15) 0%, rgba(129, 53, 230, 0.05) 100%)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  border: '1px solid rgba(129, 53, 230, 0.2)',
+                  fontSize: '36px',
+                  lineHeight: 1,
+                }}
+              >
+                🏷️
+              </Box>
               <Box sx={{ textAlign: 'left' }}>
                 <Typography 
                   variant="body2" 
                   sx={{ 
-                    color: '#27097a',
+                    color: theme.palette.mode === 'dark' 
+                      ? theme.palette.secondary.light
+                      : theme.palette.secondary.dark,
                     mb: 1.5,
                     fontSize: '0.875rem',
-                    fontWeight: 600,
+                    fontWeight: 800,
                     lineHeight: 1.2,
                   }}
                 >
@@ -1421,10 +1530,12 @@ const Dashboard: React.FC = () => {
                 <Typography 
                   variant="h6" 
                   sx={{ 
-                    fontWeight: 600, 
+                    fontWeight: 800, 
                     fontSize: '1.5rem',
                     lineHeight: 1.2,
-                    color: '#27097a',
+                    color: theme.palette.mode === 'dark' 
+                      ? theme.palette.secondary.light
+                      : theme.palette.secondary.dark,
                   }}
                 >
                   {ordersInLine}
@@ -1437,13 +1548,43 @@ const Dashboard: React.FC = () => {
         {/* New Clients */}
         <Card sx={{ 
           minHeight: { xs: 140, sm: 160, md: 185 },
-          borderRadius: 4,
-          boxShadow: 'none',
-          bgcolor: '#fff1c9',
+          borderRadius: 3,
+          boxShadow: theme.palette.mode === 'dark'
+            ? '0 4px 20px rgba(235, 163, 22, 0.15)'
+            : '0 4px 20px rgba(235, 163, 22, 0.1)',
+          bgcolor: theme.palette.mode === 'dark' 
+            ? `${taxiMonterricoColors.orange}1A`
+            : `${taxiMonterricoColors.orange}15`,
           color: theme.palette.text.primary,
           overflow: 'hidden',
           position: 'relative',
-          border: 'none',
+          border: `1px solid rgba(235, 163, 22, 0.2)`,
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '4px',
+            background: `linear-gradient(90deg, ${taxiMonterricoColors.orangeDark} 0%, ${taxiMonterricoColors.orange} 100%)`,
+            transform: 'scaleX(0)',
+            transformOrigin: 'left',
+            transition: 'transform 0.3s ease',
+          },
+          '&:hover': {
+            transform: 'translateY(-8px)',
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 12px 40px rgba(235, 163, 22, 0.3)'
+              : '0 12px 40px rgba(235, 163, 22, 0.2)',
+            borderColor: taxiMonterricoColors.orangeDark,
+            '&::before': {
+              transform: 'scaleX(1)',
+            },
+            '& .kpi-icon': {
+              transform: 'scale(1.1) rotate(5deg)',
+            },
+          },
         }}>
           <CardContent sx={{ 
             p: { xs: 2, sm: 2.5, md: 3 },
@@ -1455,21 +1596,33 @@ const Dashboard: React.FC = () => {
               alignItems: 'flex-start',
               gap: 5,
             }}>
-              <FontAwesomeIcon 
-                icon={faBuilding} 
-                style={{
-                  color: "#eba316",
-                  fontSize: 36,
-                }} 
-              />
+              <Box
+                className="kpi-icon"
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  background: 'linear-gradient(135deg, rgba(235, 163, 22, 0.15) 0%, rgba(235, 163, 22, 0.05) 100%)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  border: '1px solid rgba(235, 163, 22, 0.2)',
+                  fontSize: '36px',
+                  lineHeight: 1,
+                }}
+              >
+                🏢
+              </Box>
               <Box sx={{ textAlign: 'left' }}>
                 <Typography 
                   variant="body2" 
                   sx={{ 
-                    color: '#944100',
+                    color: theme.palette.mode === 'dark' 
+                      ? taxiMonterricoColors.orangeLight
+                      : taxiMonterricoColors.orangeDark,
                     mb: 1.5,
                     fontSize: '0.875rem',
-                    fontWeight: 600,
+                    fontWeight: 800,
                     lineHeight: 1.2,
                   }}
                 >
@@ -1478,10 +1631,12 @@ const Dashboard: React.FC = () => {
                 <Typography 
                   variant="h6" 
                   sx={{ 
-                    fontWeight: 600, 
+                    fontWeight: 800, 
                     fontSize: '1.5rem',
                     lineHeight: 1.2,
-                    color: '#944100',
+                    color: theme.palette.mode === 'dark' 
+                      ? taxiMonterricoColors.orangeLight
+                      : taxiMonterricoColors.orangeDark,
                   }}
                 >
                   {newCompanies}
@@ -1494,13 +1649,43 @@ const Dashboard: React.FC = () => {
         {/* Team KPI */}
         <Card sx={{ 
           minHeight: { xs: 140, sm: 160, md: 185 },
-          borderRadius: 4,
-          boxShadow: 'none',
-          bgcolor: '#ffe4d5',
+          borderRadius: 3,
+          boxShadow: theme.palette.mode === 'dark'
+            ? '0 4px 20px rgba(239, 97, 65, 0.15)'
+            : '0 4px 20px rgba(239, 97, 65, 0.1)',
+          bgcolor: theme.palette.mode === 'dark' 
+            ? `${theme.palette.error.main}1A`
+            : `${theme.palette.error.main}15`,
           color: theme.palette.text.primary,
           overflow: 'hidden',
           position: 'relative',
-          border: 'none',
+          border: `1px solid rgba(239, 97, 65, 0.2)`,
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '4px',
+            background: `linear-gradient(90deg, ${theme.palette.error.main} 0%, ${theme.palette.error.light} 100%)`,
+            transform: 'scaleX(0)',
+            transformOrigin: 'left',
+            transition: 'transform 0.3s ease',
+          },
+          '&:hover': {
+            transform: 'translateY(-8px)',
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 12px 40px rgba(239, 97, 65, 0.3)'
+              : '0 12px 40px rgba(239, 97, 65, 0.2)',
+            borderColor: theme.palette.error.main,
+            '&::before': {
+              transform: 'scaleX(1)',
+            },
+            '& .kpi-icon': {
+              transform: 'scale(1.1) rotate(5deg)',
+            },
+          },
         }}>
           <CardContent sx={{ 
             p: { xs: 2, sm: 2.5, md: 3 },
@@ -1512,21 +1697,33 @@ const Dashboard: React.FC = () => {
               alignItems: 'flex-start',
               gap: 5,
             }}>
-              <FontAwesomeIcon 
-                icon={faPeopleGroup} 
-                style={{
-                  color: "#ef6141",
-                  fontSize: 36,
-                }} 
-              />
+              <Box
+                className="kpi-icon"
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2,
+                  background: 'linear-gradient(135deg, rgba(239, 97, 65, 0.15) 0%, rgba(239, 97, 65, 0.05) 100%)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  border: '1px solid rgba(239, 97, 65, 0.2)',
+                  fontSize: '36px',
+                  lineHeight: 1,
+                }}
+              >
+                👥
+              </Box>
               <Box sx={{ textAlign: 'left' }}>
                 <Typography 
                   variant="body2" 
                   sx={{ 
-                    color: '#b24930',
+                    color: theme.palette.mode === 'dark' 
+                      ? theme.palette.error.light
+                      : theme.palette.error.dark,
                     mb: 1.5,
                     fontSize: '0.875rem',
-                    fontWeight: 600,
+                    fontWeight: 800,
                     lineHeight: 1.2,
                   }}
                 >
@@ -1540,10 +1737,12 @@ const Dashboard: React.FC = () => {
                   <Typography 
                     variant="h6" 
                     sx={{ 
-                      fontWeight: 600, 
+                      fontWeight: 800, 
                       fontSize: '1.5rem',
                       lineHeight: 1.2,
-                      color: '#b24930',
+                      color: theme.palette.mode === 'dark' 
+                        ? theme.palette.error.light
+                        : theme.palette.error.dark,
                     }}
                   >
                     {teamKPI.toFixed(1)}%
@@ -1558,14 +1757,14 @@ const Dashboard: React.FC = () => {
                       <TrendingUp 
                         sx={{ 
                           fontSize: 20,
-                          color: '#7a0916',
+                          color: theme.palette.error.dark,
                         }} 
                       />
                     ) : (
                       <TrendingDown 
                         sx={{ 
                           fontSize: 20,
-                          color: '#7a0916',
+                          color: theme.palette.error.dark,
                         }} 
                       />
                     )}
@@ -1573,8 +1772,8 @@ const Dashboard: React.FC = () => {
                       variant="body2" 
                       sx={{ 
                         fontSize: '0.875rem',
-                        color: '#7a0916',
-                        fontWeight: 600,
+                        color: theme.palette.error.dark,
+                        fontWeight: 800,
                       }}
                     >
                       {Math.abs(kpiChangePercent).toFixed(1)}%
@@ -1601,13 +1800,37 @@ const Dashboard: React.FC = () => {
       }}>
         {/* Sales Distribution */}
         <Card sx={{ 
-            borderRadius: 4, 
+            borderRadius: 3, 
             boxShadow: theme.palette.mode === 'dark' 
-              ? '0 2px 4px rgba(0,0,0,0.1)' 
-              : '0 1px 3px rgba(0, 0, 0, 0.1)',
+              ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
+              : '0 4px 20px rgba(0, 0, 0, 0.08)',
             bgcolor: theme.palette.background.paper,
-            border: 'none',
+            border: `1px solid ${theme.palette.divider}`,
             minHeight: { xs: 400, sm: 480 },
+            position: 'relative',
+            overflow: 'hidden',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '4px',
+              background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+              opacity: 0,
+              transition: 'opacity 0.3s ease',
+            },
+            '&:hover': {
+              transform: 'translateY(-4px)',
+              boxShadow: theme.palette.mode === 'dark'
+                ? '0 12px 40px rgba(16, 185, 129, 0.2)'
+                : '0 12px 40px rgba(16, 185, 129, 0.15)',
+              borderColor: taxiMonterricoColors.green,
+              '&::before': {
+                opacity: 1,
+              },
+            },
           }}
         >
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
@@ -1620,9 +1843,13 @@ const Dashboard: React.FC = () => {
               <Typography 
                 variant="h6" 
                 sx={{ 
-                  fontWeight: 600, 
+                  fontWeight: 800, 
                   color: theme.palette.text.primary, 
-                  fontSize: { xs: '0.875rem', md: '1rem' },
+                  fontSize: { xs: '1rem', md: '1.25rem' },
+                  background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
                 }}
               >
                 Distribución de Ventas
@@ -1635,16 +1862,18 @@ const Dashboard: React.FC = () => {
                 }}
                 sx={{ 
                   color: theme.palette.text.secondary,
-                  padding: 0.1,
-                  minWidth: 20,
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
+                  padding: 1,
+                  borderRadius: 1.5,
+                  border: `1px solid ${theme.palette.divider}`,
+                  transition: 'all 0.2s ease',
                   '&:hover': {
                     bgcolor: theme.palette.action.hover,
+                    borderColor: taxiMonterricoColors.green,
+                    color: taxiMonterricoColors.green,
+                    transform: 'rotate(90deg)',
                   },
                   '& svg': {
-                    fontSize: 16,
+                    fontSize: 18,
                   },
                 }}
               >
@@ -1653,18 +1882,37 @@ const Dashboard: React.FC = () => {
             </Box>
             <ResponsiveContainer width="100%" height={320}>
               <PieChart>
+                <defs>
+                  {salesDistributionData.map((entry, index) => (
+                    <linearGradient key={`gradient-${index}`} id={`gradient-${index}`} x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor={entry.color} stopOpacity={1} />
+                      <stop offset="100%" stopColor={entry.color} stopOpacity={0.7} />
+                    </linearGradient>
+                  ))}
+                </defs>
                 <Pie
                   data={salesDistributionData}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
                   outerRadius={120}
-                  fill="#8884d8"
+                  innerRadius={60}
+                  fill={theme.palette.primary.main}
                   dataKey="value"
                   stroke="none"
+                  paddingAngle={2}
                 >
                   {salesDistributionData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={`url(#gradient-${index})`} 
+                      stroke={theme.palette.background.paper}
+                      strokeWidth={2}
+                      style={{
+                        filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
+                        transition: 'all 0.2s ease',
+                      }}
+                    />
                   ))}
                 </Pie>
                 <RechartsTooltip content={<CustomSalesDistributionTooltip />} />
@@ -1674,7 +1922,7 @@ const Dashboard: React.FC = () => {
               {salesDistributionData.map((entry, index) => (
                 <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: entry.color }} />
-                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontWeight: 900, fontSize: '0.875rem' }}>
                     {entry.name}
                   </Typography>
                 </Box>
@@ -1685,14 +1933,38 @@ const Dashboard: React.FC = () => {
 
         {/* Sales Chart */}
         <Card sx={{ 
-          borderRadius: 4, 
+          borderRadius: 3, 
           boxShadow: theme.palette.mode === 'dark' 
-              ? '0 2px 4px rgba(0,0,0,0.1)' 
-              : '0 1px 3px rgba(0, 0, 0, 0.1)',
+              ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
+              : '0 4px 20px rgba(0, 0, 0, 0.08)',
             bgcolor: theme.palette.background.paper,
-            border: 'none',
+            border: `1px solid ${theme.palette.divider}`,
           alignSelf: 'start',
           minHeight: { xs: 395, sm: 440 },
+          position: 'relative',
+          overflow: 'hidden',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '4px',
+            background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+            opacity: 0,
+            transition: 'opacity 0.3s ease',
+          },
+          '&:hover': {
+            transform: 'translateY(-4px)',
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 12px 40px rgba(16, 185, 129, 0.2)'
+              : '0 12px 40px rgba(16, 185, 129, 0.15)',
+            borderColor: taxiMonterricoColors.green,
+            '&::before': {
+              opacity: 1,
+            },
+          },
         }}>
           <CardContent sx={{ p: { xs: 2, md: 2.5 }, pt: { xs: 1.75, md: 2.25 } }}>
             <Box sx={{ 
@@ -1704,9 +1976,13 @@ const Dashboard: React.FC = () => {
               <Typography 
                 variant="h6" 
                 sx={{ 
-                  fontWeight: 600, 
+                  fontWeight: 800, 
                   color: theme.palette.text.primary,
                   fontSize: { xs: '1rem', md: '1.25rem' },
+                  background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
                 }}
               >
                 Ventas
@@ -1719,16 +1995,18 @@ const Dashboard: React.FC = () => {
                 }}
                 sx={{ 
                   color: theme.palette.text.secondary,
-                  padding: 0.1,
-                  minWidth: 20,
-                  width: 20,
-                  height: 20,
-                  borderRadius: '50%',
+                  padding: 1,
+                  borderRadius: 1.5,
+                  border: `1px solid ${theme.palette.divider}`,
+                  transition: 'all 0.2s ease',
                   '&:hover': {
                     bgcolor: theme.palette.action.hover,
+                    borderColor: taxiMonterricoColors.green,
+                    color: taxiMonterricoColors.green,
+                    transform: 'rotate(90deg)',
                   },
                   '& svg': {
-                    fontSize: 16,
+                    fontSize: 18,
                   },
                 }}
               >
@@ -1743,9 +2021,17 @@ const Dashboard: React.FC = () => {
                 >
                 <defs>
                   <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                    <stop offset="5%" stopColor={taxiMonterricoColors.green} stopOpacity={0.4}/>
+                    <stop offset="50%" stopColor={taxiMonterricoColors.green} stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor={taxiMonterricoColors.green} stopOpacity={0}/>
                   </linearGradient>
+                  <filter id="glow">
+                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                    <feMerge>
+                      <feMergeNode in="coloredBlur"/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={true} vertical={false} />
                 <XAxis 
@@ -1794,13 +2080,13 @@ const Dashboard: React.FC = () => {
                 {selectedMonth !== null && selectedMonthBudget > 0 && (
                   <ReferenceLine 
                     y={selectedMonthBudget} 
-                    stroke="#10B981" 
+                    stroke={taxiMonterricoColors.green} 
                     strokeWidth={2}
                     strokeDasharray="5 5"
                     label={{ 
                       value: `Presupuesto: S/ ${selectedMonthBudget.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, 
                       position: "right",
-                      fill: "#10B981",
+                      fill: taxiMonterricoColors.green,
                       fontSize: 12,
                     }}
                   />
@@ -1808,11 +2094,20 @@ const Dashboard: React.FC = () => {
                 <Area 
                   type="monotone" 
                   dataKey="value" 
-                  stroke="#10B981" 
+                  stroke={taxiMonterricoColors.green} 
                   strokeWidth={3}
                   fill="url(#colorSales)"
                   dot={false}
-                  activeDot={{ r: 6, fill: '#10B981' }}
+                  activeDot={{ 
+                    r: 8, 
+                    fill: taxiMonterricoColors.green,
+                    stroke: theme.palette.common.white,
+                    strokeWidth: 2,
+                    filter: 'drop-shadow(0 2px 4px rgba(16, 185, 129, 0.4))',
+                  }}
+                  style={{
+                    filter: 'drop-shadow(0 2px 4px rgba(16, 185, 129, 0.2))',
+                  }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -1850,12 +2145,36 @@ const Dashboard: React.FC = () => {
       }}>
         {/* Ventas Semanales */}
         <Card sx={{ 
-          borderRadius: 4, 
+          borderRadius: 3, 
           boxShadow: theme.palette.mode === 'dark' 
-            ? '0 2px 4px rgba(0,0,0,0.1)' 
-            : '0 1px 3px rgba(0, 0, 0, 0.1)',
+            ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
+            : '0 4px 20px rgba(0, 0, 0, 0.08)',
           bgcolor: theme.palette.background.paper,
-          border: 'none',
+          border: `1px solid ${theme.palette.divider}`,
+          position: 'relative',
+          overflow: 'hidden',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '4px',
+            background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+            opacity: 0,
+            transition: 'opacity 0.3s ease',
+          },
+          '&:hover': {
+            transform: 'translateY(-4px)',
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 12px 40px rgba(16, 185, 129, 0.2)'
+              : '0 12px 40px rgba(16, 185, 129, 0.15)',
+            borderColor: taxiMonterricoColors.green,
+            '&::before': {
+              opacity: 1,
+            },
+          },
         }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
             <Box sx={{ 
@@ -1867,9 +2186,13 @@ const Dashboard: React.FC = () => {
               <Typography 
                 variant="h6" 
                 sx={{ 
-                  fontWeight: 600, 
+                  fontWeight: 800, 
                   color: theme.palette.text.primary, 
-                  fontSize: { xs: '0.875rem', md: '1rem' },
+                  fontSize: { xs: '1rem', md: '1.25rem' },
+                  background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
                 }}
               >
                 Ventas Semanales
@@ -1882,16 +2205,18 @@ const Dashboard: React.FC = () => {
                 }}
                 sx={{ 
                   color: theme.palette.text.secondary,
-                  padding: 0.1,
-                  minWidth: 20,
-                  width: 20,
-                  height: 0,
-                  borderRadius: '50%',
+                  padding: 1,
+                  borderRadius: 1.5,
+                  border: `1px solid ${theme.palette.divider}`,
+                  transition: 'all 0.2s ease',
                   '&:hover': {
                     bgcolor: theme.palette.action.hover,
+                    borderColor: taxiMonterricoColors.green,
+                    color: taxiMonterricoColors.green,
+                    transform: 'rotate(90deg)',
                   },
                   '& svg': {
-                    fontSize: 16,
+                    fontSize: 18,
                   },
                 }}
               >
@@ -1944,8 +2269,8 @@ const Dashboard: React.FC = () => {
                             variant="body2" 
                             sx={{ 
                               color: theme.palette.text.secondary,
-                              fontSize: '0.75rem',
-                              fontWeight: 500,
+                              fontSize: '0.875rem',
+                              fontWeight: 900,
                               mb: 0.5,
                             }}
                           >
@@ -1955,9 +2280,9 @@ const Dashboard: React.FC = () => {
                             <Typography 
                               variant="h6" 
                               sx={{ 
-                                color: '#8B5CF6',
+                                color: theme.palette.secondary.main,
                                 fontSize: '1.125rem',
-                                fontWeight: 700,
+                                fontWeight: 800,
                               }}
                             >
                               S/ {value.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
@@ -1969,10 +2294,27 @@ const Dashboard: React.FC = () => {
                     return null;
                   }}
                 />
-                <Bar dataKey="value" radius={0} barSize={25}>
+                <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={30}>
                   {weeklySalesData.map((entry, index) => {
-                    const colors = ['#14B8A6', '#EC4899', '#A78BFA', '#F97316', '#60A5FA', '#10B981', '#F59E0B'];
-                    return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                    const colors = [
+                      taxiMonterricoColors.green,
+                      theme.palette.error.main,
+                      theme.palette.secondary.main,
+                      taxiMonterricoColors.orange,
+                      theme.palette.primary.main,
+                      taxiMonterricoColors.greenLight,
+                      taxiMonterricoColors.orangeDark
+                    ];
+                    return (
+                      <Cell 
+                        key={`cell-${index}`} 
+                        fill={colors[index % colors.length]}
+                        style={{
+                          filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
+                          transition: 'all 0.2s ease',
+                        }}
+                      />
+                    );
                   })}
                 </Bar>
               </BarChart>
@@ -1982,12 +2324,36 @@ const Dashboard: React.FC = () => {
 
         {/* Desempeño por Usuario */}
         <Card sx={{ 
-            borderRadius: 4, 
+            borderRadius: 3, 
             boxShadow: theme.palette.mode === 'dark' 
-              ? '0 2px 4px rgba(0,0,0,0.1)' 
-              : '0 1px 3px rgba(0, 0, 0, 0.1)',
+              ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
+              : '0 4px 20px rgba(0, 0, 0, 0.08)',
             bgcolor: theme.palette.background.paper,
-            border: 'none',
+            border: `1px solid ${theme.palette.divider}`,
+            position: 'relative',
+            overflow: 'hidden',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            '&::before': {
+              content: '""',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: '4px',
+              background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+              opacity: 0,
+              transition: 'opacity 0.3s ease',
+            },
+            '&:hover': {
+              transform: 'translateY(-4px)',
+              boxShadow: theme.palette.mode === 'dark'
+                ? '0 12px 40px rgba(16, 185, 129, 0.2)'
+                : '0 12px 40px rgba(16, 185, 129, 0.15)',
+              borderColor: taxiMonterricoColors.green,
+              '&::before': {
+                opacity: 1,
+              },
+            },
           }}>
             <CardContent sx={{ p: { xs: 2, md: 3 } }}>
               <Box sx={{ 
@@ -1999,9 +2365,13 @@ const Dashboard: React.FC = () => {
                 <Typography 
                   variant="h6" 
                   sx={{ 
-                    fontWeight: 600, 
+                    fontWeight: 800, 
                     color: theme.palette.text.primary, 
-                    fontSize: { xs: '0.875rem', md: '1rem' },
+                    fontSize: { xs: '1rem', md: '1.25rem' },
+                    background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
                   }}
                 >
                   KPI's Área Comercial
@@ -2014,16 +2384,18 @@ const Dashboard: React.FC = () => {
                   }}
                   sx={{ 
                     color: theme.palette.text.secondary,
-                    padding: 0.1,
-                    minWidth: 20,
-                    width: 20,
-                    height: 20,
-                    borderRadius: '50%',
+                    padding: 1,
+                    borderRadius: 1.5,
+                    border: `1px solid ${theme.palette.divider}`,
+                    transition: 'all 0.2s ease',
                     '&:hover': {
                       bgcolor: theme.palette.action.hover,
+                      borderColor: taxiMonterricoColors.green,
+                      color: taxiMonterricoColors.green,
+                      transform: 'rotate(90deg)',
                     },
                     '& svg': {
-                      fontSize: 16,
+                      fontSize: 18,
                     },
                   }}
                 >
@@ -2042,15 +2414,33 @@ const Dashboard: React.FC = () => {
                     <Box>
                       <ResponsiveContainer width="100%" height={400}>
                         <PieChart>
+                          <defs>
+                            {(() => {
+                              const colors = [
+                                taxiMonterricoColors.greenLight,
+                                taxiMonterricoColors.green,
+                                taxiMonterricoColors.greenDark,
+                                theme.palette.primary.main,
+                                theme.palette.primary.dark,
+                                taxiMonterricoColors.greenLight,
+                              ];
+                              return userPerformance.map((user, index) => (
+                                <linearGradient key={`kpi-gradient-${index}`} id={`kpi-gradient-${index}`} x1="0" y1="0" x2="1" y2="1">
+                                  <stop offset="0%" stopColor={colors[index % colors.length]} stopOpacity={1} />
+                                  <stop offset="100%" stopColor={colors[index % colors.length]} stopOpacity={0.7} />
+                                </linearGradient>
+                              ));
+                            })()}
+                          </defs>
                           {(() => {
-                            // Colores en tonos verdes/teal como en la primera imagen
+                            // Colores en tonos verdes/teal
                             const colors = [
-                              '#A7F3D0', // Verde claro pastel
-                              '#10B981', // Verde medio vibrante
-                              '#059669', // Verde oscuro
-                              '#0D9488', // Teal oscuro
-                              '#134E4A', // Teal muy oscuro
-                              '#6EE7B7', // Verde claro alternativo
+                              taxiMonterricoColors.greenLight,
+                              taxiMonterricoColors.green,
+                              taxiMonterricoColors.greenDark,
+                              theme.palette.primary.main,
+                              theme.palette.primary.dark,
+                              taxiMonterricoColors.greenLight,
                             ];
                             return (
                               <Pie
@@ -2066,12 +2456,22 @@ const Dashboard: React.FC = () => {
                                 label={false}
                                 outerRadius={130}
                                 innerRadius={90}
-                                fill="#8884d8"
+                                fill={theme.palette.primary.main}
                                 dataKey="value"
                                 stroke="none"
+                                paddingAngle={2}
                               >
                                 {userPerformance.map((user, index) => (
-                                  <Cell key={`cell-${index}`} fill={colors[index % colors.length]} stroke="none" />
+                                  <Cell 
+                                    key={`cell-${index}`} 
+                                    fill={`url(#kpi-gradient-${index})`} 
+                                    stroke={theme.palette.background.paper}
+                                    strokeWidth={2}
+                                    style={{
+                                      filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
+                                      transition: 'all 0.2s ease',
+                                    }}
+                                  />
                                 ))}
                               </Pie>
                             );
@@ -2138,7 +2538,7 @@ const Dashboard: React.FC = () => {
           alignItems: 'center',
           pb: 1,
         }}>
-          <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
+          <Typography component="div" sx={{ fontWeight: 800, fontSize: '1.25rem' }}>
             Editar Presupuesto {editingBudgetMonth !== null 
               ? monthNames[editingBudgetMonth]?.label.substring(0, 3) + '.' 
               : currentMonthAbbr}
@@ -2163,7 +2563,7 @@ const Dashboard: React.FC = () => {
             onChange={(e) => setBudgetValue(e.target.value)}
             disabled={savingBudget}
             InputProps={{
-              startAdornment: <Typography sx={{ mr: 1, color: theme.palette.text.secondary }}>S/</Typography>,
+              startAdornment: <Typography sx={{ mr: 1, color: theme.palette.text.secondary, fontWeight: 800 }}>S/</Typography>,
             }}
               sx={{ 
               mt: 2,
@@ -2221,15 +2621,31 @@ const Dashboard: React.FC = () => {
           borderBottom: `1px solid ${theme.palette.divider}`,
           pb: 2,
         }}>
-          <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
+          <Typography 
+            component="div" 
+            sx={{ 
+              fontWeight: 700, 
+              fontSize: { xs: '1.25rem', md: '1.75rem' },
+              background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
             Distribución de Ventas
           </Typography>
           <IconButton
             onClick={() => setMaximizedSalesDistribution(false)}
             sx={{
               color: theme.palette.text.secondary,
+              borderRadius: 1.5,
+              border: `1px solid ${theme.palette.divider}`,
+              transition: 'all 0.2s ease',
               '&:hover': {
                 bgcolor: theme.palette.action.hover,
+                borderColor: taxiMonterricoColors.green,
+                color: taxiMonterricoColors.green,
+                transform: 'rotate(90deg)',
               },
             }}
           >
@@ -2239,18 +2655,37 @@ const Dashboard: React.FC = () => {
         <DialogContent sx={{ p: 4 }}>
           <ResponsiveContainer width="100%" height={600}>
             <PieChart>
+              <defs>
+                {salesDistributionData.map((entry, index) => (
+                  <linearGradient key={`gradient-fullscreen-${index}`} id={`gradient-fullscreen-${index}`} x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor={entry.color} stopOpacity={1} />
+                    <stop offset="100%" stopColor={entry.color} stopOpacity={0.7} />
+                  </linearGradient>
+                ))}
+              </defs>
               <Pie
                 data={salesDistributionData}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
                 outerRadius={150}
-                fill="#8884d8"
+                innerRadius={80}
+                fill={theme.palette.primary.main}
                 dataKey="value"
                 stroke="none"
+                paddingAngle={2}
               >
                 {salesDistributionData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={`url(#gradient-fullscreen-${index})`} 
+                    stroke={theme.palette.background.paper}
+                    strokeWidth={2}
+                    style={{
+                      filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
+                      transition: 'all 0.2s ease',
+                    }}
+                  />
                 ))}
               </Pie>
               <RechartsTooltip content={<CustomSalesDistributionTooltip />} />
@@ -2260,7 +2695,7 @@ const Dashboard: React.FC = () => {
             {salesDistributionData.map((entry, index) => (
               <Box key={index} sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                 <Box sx={{ width: 16, height: 16, borderRadius: '50%', bgcolor: entry.color }} />
-                <Typography variant="body1" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
+                <Typography variant="body1" sx={{ color: theme.palette.text.secondary, fontWeight: 900, fontSize: '1.1rem' }}>
                   {entry.name}
                 </Typography>
               </Box>
@@ -2287,19 +2722,35 @@ const Dashboard: React.FC = () => {
             borderBottom: `1px solid ${theme.palette.divider}`,
             pb: 2,
           }}>
-            <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
+            <Typography 
+              component="div" 
+              sx={{ 
+                fontWeight: 700, 
+                fontSize: { xs: '1.25rem', md: '1.75rem' },
+                background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
               KPI's Área Comercial
             </Typography>
             <IconButton
               onClick={() => setMaximizedKPIArea(false)}
               sx={{
                 color: theme.palette.text.secondary,
+                borderRadius: 1.5,
+                border: `1px solid ${theme.palette.divider}`,
+                transition: 'all 0.2s ease',
                 '&:hover': {
                   bgcolor: theme.palette.action.hover,
+                  borderColor: taxiMonterricoColors.green,
+                  color: taxiMonterricoColors.green,
+                  transform: 'rotate(90deg)',
                 },
               }}
             >
-              <ArrowOutward sx={{ transform: 'rotate(180deg)' }} />
+              ✖️
             </IconButton>
           </DialogTitle>
           <DialogContent sx={{ p: 4 }}>
@@ -2327,7 +2778,7 @@ const Dashboard: React.FC = () => {
                         mb: 2,
                       }} 
                     />
-                    <Typography variant="h6" sx={{ color: theme.palette.text.secondary }}>
+                    <Typography variant="h6" sx={{ color: theme.palette.text.secondary, fontWeight: 900 }}>
                       No hay datos disponibles
                     </Typography>
                   </Box>
@@ -2338,15 +2789,33 @@ const Dashboard: React.FC = () => {
                 <Box>
                   <ResponsiveContainer width="100%" height={700}>
                     <PieChart>
+                      <defs>
+                        {(() => {
+                          const colors = [
+                            taxiMonterricoColors.greenLight,
+                            taxiMonterricoColors.green,
+                            taxiMonterricoColors.greenDark,
+                            theme.palette.primary.main,
+                            theme.palette.primary.dark,
+                            taxiMonterricoColors.greenLight,
+                          ];
+                          return userPerformance.map((user, index) => (
+                            <linearGradient key={`kpi-fullscreen-gradient-${index}`} id={`kpi-fullscreen-gradient-${index}`} x1="0" y1="0" x2="1" y2="1">
+                              <stop offset="0%" stopColor={colors[index % colors.length]} stopOpacity={1} />
+                              <stop offset="100%" stopColor={colors[index % colors.length]} stopOpacity={0.7} />
+                            </linearGradient>
+                          ));
+                        })()}
+                      </defs>
                       {(() => {
-                        // Colores en tonos verdes/teal como en la primera imagen
+                        // Colores en tonos verdes/teal
                         const colors = [
-                          '#A7F3D0', // Verde claro pastel
-                          '#10B981', // Verde medio vibrante
-                          '#059669', // Verde oscuro
-                          '#0D9488', // Teal oscuro
-                          '#134E4A', // Teal muy oscuro
-                          '#6EE7B7', // Verde claro alternativo
+                          taxiMonterricoColors.greenLight,
+                          taxiMonterricoColors.green,
+                          taxiMonterricoColors.greenDark,
+                          theme.palette.primary.main,
+                          theme.palette.primary.dark,
+                          taxiMonterricoColors.greenLight,
                         ];
                         return (
                           <Pie
@@ -2362,12 +2831,22 @@ const Dashboard: React.FC = () => {
                             label={false}
                             outerRadius={260}
                             innerRadius={190}
-                            fill="#8884d8"
+                            fill={theme.palette.primary.main}
                             dataKey="value"
                             stroke="none"
+                            paddingAngle={2}
                           >
                             {userPerformance.map((user, index) => (
-                              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} stroke="none" />
+                              <Cell 
+                                key={`cell-${index}`} 
+                                fill={`url(#kpi-fullscreen-gradient-${index})`} 
+                                stroke={theme.palette.background.paper}
+                                strokeWidth={2}
+                                style={{
+                                  filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
+                                  transition: 'all 0.2s ease',
+                                }}
+                              />
                             ))}
                           </Pie>
                         );
@@ -2399,15 +2878,31 @@ const Dashboard: React.FC = () => {
           borderBottom: `1px solid ${theme.palette.divider}`,
           pb: 2,
         }}>
-          <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
+          <Typography 
+            component="div" 
+            sx={{ 
+              fontWeight: 700, 
+              fontSize: { xs: '1.25rem', md: '1.75rem' },
+              background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
             Ventas Semanales
           </Typography>
           <IconButton
             onClick={() => setMaximizedWeeklySales(false)}
             sx={{
               color: theme.palette.text.secondary,
+              borderRadius: 1.5,
+              border: `1px solid ${theme.palette.divider}`,
+              transition: 'all 0.2s ease',
               '&:hover': {
                 bgcolor: theme.palette.action.hover,
+                borderColor: taxiMonterricoColors.green,
+                color: taxiMonterricoColors.green,
+                transform: 'rotate(90deg)',
               },
             }}
           >
@@ -2461,8 +2956,8 @@ const Dashboard: React.FC = () => {
                           variant="body2" 
                           sx={{ 
                             color: theme.palette.text.secondary,
-                            fontSize: '0.875rem',
-                            fontWeight: 500,
+                            fontSize: '1rem',
+                            fontWeight: 900,
                             mb: 0.75,
                           }}
                         >
@@ -2472,9 +2967,9 @@ const Dashboard: React.FC = () => {
                           <Typography 
                             variant="h6" 
                             sx={{ 
-                              color: '#8B5CF6',
+                              color: theme.palette.secondary.main,
                               fontSize: '1.25rem',
-                              fontWeight: 700,
+                              fontWeight: 800,
                             }}
                           >
                             S/ {value.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
@@ -2486,10 +2981,27 @@ const Dashboard: React.FC = () => {
                   return null;
                 }}
               />
-              <Bar dataKey="value" radius={0} barSize={35}>
+              <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={40}>
                 {weeklySalesData.map((entry, index) => {
-                  const colors = ['#14B8A6', '#EC4899', '#A78BFA', '#F97316', '#60A5FA', '#10B981', '#F59E0B'];
-                  return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                  const colors = [
+                    taxiMonterricoColors.green,
+                    theme.palette.error.main,
+                    theme.palette.secondary.main,
+                    taxiMonterricoColors.orange,
+                    theme.palette.primary.main,
+                    taxiMonterricoColors.greenLight,
+                    taxiMonterricoColors.orangeDark
+                  ];
+                  return (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={colors[index % colors.length]}
+                      style={{
+                        filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
+                        transition: 'all 0.2s ease',
+                      }}
+                    />
+                  );
                 })}
               </Bar>
             </BarChart>
@@ -2515,15 +3027,31 @@ const Dashboard: React.FC = () => {
           borderBottom: `1px solid ${theme.palette.divider}`,
           pb: 2,
         }}>
-          <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
+          <Typography 
+            component="div" 
+            sx={{ 
+              fontWeight: 700, 
+              fontSize: { xs: '1.25rem', md: '1.75rem' },
+              background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
             Ventas
           </Typography>
           <IconButton
             onClick={() => setMaximizedSales(false)}
             sx={{
               color: theme.palette.text.secondary,
+              borderRadius: 1.5,
+              border: `1px solid ${theme.palette.divider}`,
+              transition: 'all 0.2s ease',
               '&:hover': {
                 bgcolor: theme.palette.action.hover,
+                borderColor: taxiMonterricoColors.green,
+                color: taxiMonterricoColors.green,
+                transform: 'rotate(90deg)',
               },
             }}
           >
@@ -2539,9 +3067,17 @@ const Dashboard: React.FC = () => {
               >
                 <defs>
                   <linearGradient id="colorSalesFullscreen" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                    <stop offset="5%" stopColor={taxiMonterricoColors.green} stopOpacity={0.4}/>
+                    <stop offset="50%" stopColor={taxiMonterricoColors.green} stopOpacity={0.2}/>
+                    <stop offset="95%" stopColor={taxiMonterricoColors.green} stopOpacity={0}/>
                   </linearGradient>
+                  <filter id="glowFullscreen">
+                    <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+                    <feMerge>
+                      <feMergeNode in="coloredBlur"/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} horizontal={true} vertical={false} />
                 <XAxis 
@@ -2588,13 +3124,13 @@ const Dashboard: React.FC = () => {
                 {selectedMonth !== null && selectedMonthBudget > 0 && (
                   <ReferenceLine 
                     y={selectedMonthBudget} 
-                    stroke="#10B981" 
+                    stroke={taxiMonterricoColors.green} 
                     strokeWidth={2}
                     strokeDasharray="5 5"
                     label={{ 
                       value: `Presupuesto: S/ ${selectedMonthBudget.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`, 
                       position: "right",
-                      fill: "#10B981",
+                      fill: taxiMonterricoColors.green,
                       fontSize: 12,
                     }}
                   />
@@ -2602,11 +3138,20 @@ const Dashboard: React.FC = () => {
                 <Area 
                   type="monotone" 
                   dataKey="value" 
-                  stroke="#10B981" 
+                  stroke={taxiMonterricoColors.green} 
                   strokeWidth={3}
                   fill="url(#colorSalesFullscreen)"
                   dot={false}
-                  activeDot={{ r: 6, fill: '#10B981' }}
+                  activeDot={{ 
+                    r: 8, 
+                    fill: taxiMonterricoColors.green,
+                    stroke: theme.palette.common.white,
+                    strokeWidth: 2,
+                    filter: 'drop-shadow(0 2px 4px rgba(16, 185, 129, 0.4))',
+                  }}
+                  style={{
+                    filter: 'drop-shadow(0 2px 4px rgba(16, 185, 129, 0.2))',
+                  }}
                 />
               </AreaChart>
             </ResponsiveContainer>

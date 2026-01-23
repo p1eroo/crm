@@ -211,8 +211,9 @@ router.get('/stats', async (req: AuthRequest, res) => {
           whereClause += ' AND d."createdAt" <= :endDate';
           replacements.endDate = dateFilter.createdAt[Op.lte];
         }
+        whereClause += ' AND r.name = \'user\'';
       } else {
-        whereClause = 'WHERE 1=1';
+        whereClause = 'WHERE r.name = \'user\'';
       }
 
       const userPerformanceQuery = await sequelize.query(`
@@ -224,6 +225,7 @@ router.get('/stats', async (req: AuthRequest, res) => {
           COUNT(CASE WHEN d.stage IN ('won', 'closed won', 'cierre_ganado') THEN 1 END)::integer as "wonDeals",
           COALESCE(SUM(CASE WHEN d.stage IN ('won', 'closed won', 'cierre_ganado') THEN d.amount ELSE 0 END), 0)::numeric as "wonDealsValue"
         FROM users u
+        INNER JOIN roles r ON u."roleId" = r.id
         INNER JOIN deals d ON u.id = d."ownerId"
         ${whereClause}
         GROUP BY u.id, u."firstName", u."lastName"

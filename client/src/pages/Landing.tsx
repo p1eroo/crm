@@ -79,7 +79,10 @@ const Landing: React.FC = () => {
         sx={{
           backgroundColor: theme.palette.background.paper,
           borderBottom: `1px solid ${theme.palette.divider}`,
-          py: 2,
+          py: { xs: 2, md: 2.5 },
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 1px 3px rgba(0, 0, 0, 0.3)' 
+            : '0 1px 3px rgba(0, 0, 0, 0.05)',
         }}
       >
         <Container maxWidth="lg">
@@ -90,11 +93,22 @@ const Landing: React.FC = () => {
                 src={logoImage}
                 alt="Taxi Monterrico"
                 sx={{
-                  height: 50,
+                  height: { xs: 45, md: 50 },
                   objectFit: 'contain',
+                  transition: 'transform 0.2s ease',
+                  '&:hover': {
+                    transform: 'scale(1.05)',
+                  },
                 }}
               />
-              <Typography variant="h5" sx={{ fontWeight: 700, color: taxiMonterricoColors.green }}>
+              <Typography 
+                variant="h5" 
+                sx={{ 
+                  fontWeight: 700, 
+                  color: taxiMonterricoColors.green,
+                  fontSize: { xs: '1.25rem', md: '1.5rem' },
+                }}
+              >
                 CRM Taxi Monterrico
               </Typography>
             </Box>
@@ -103,8 +117,19 @@ const Landing: React.FC = () => {
               onClick={() => navigate('/login')}
               sx={{
                 backgroundColor: taxiMonterricoColors.green,
+                color: theme.palette.common.white,
+                px: { xs: 2.5, md: 3 },
+                py: { xs: 1, md: 1.25 },
+                fontSize: { xs: '0.875rem', md: '1rem' },
+                fontWeight: 600,
+                borderRadius: 2,
+                textTransform: 'none',
+                boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
+                transition: 'all 0.2s ease',
                 '&:hover': {
                   backgroundColor: taxiMonterricoColors.greenDark,
+                  transform: 'translateY(-1px)',
+                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}40`,
                 },
               }}
             >
@@ -117,17 +142,31 @@ const Landing: React.FC = () => {
       {/* Hero Section */}
       <Box
         sx={{
-          backgroundColor: theme.palette.background.paper,
-          py: 8,
+          background: theme.palette.mode === 'dark'
+            ? `linear-gradient(135deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`
+            : `linear-gradient(135deg, ${theme.palette.background.paper} 0%, rgba(46, 125, 50, 0.02) 100%)`,
+          py: { xs: 6, md: 10 },
           borderBottom: `1px solid ${theme.palette.divider}`,
+          position: 'relative',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            width: '40%',
+            height: '100%',
+            background: `radial-gradient(circle at center, ${taxiMonterricoColors.green}08 0%, transparent 70%)`,
+            pointerEvents: 'none',
+          },
         }}
       >
-        <Container maxWidth="lg">
+        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
           <Box
             sx={{
               display: 'flex',
               flexDirection: { xs: 'column', md: 'row' },
-              gap: 4,
+              gap: { xs: 4, md: 6 },
               alignItems: 'center',
             }}
           >
@@ -137,34 +176,60 @@ const Landing: React.FC = () => {
                 component="h1"
                 gutterBottom
                 sx={{
-                  fontWeight: 700,
+                  fontWeight: 800,
                   color: theme.palette.text.primary,
                   mb: 3,
+                  fontSize: { xs: '2rem', sm: '2.5rem', md: '3rem' },
+                  lineHeight: 1.2,
+                  letterSpacing: '-0.02em',
                 }}
               >
-                Gestiona tus relaciones comerciales de manera eficiente
+                Gestiona tus relaciones comerciales de manera{' '}
+                <Box
+                  component="span"
+                  sx={{
+                    background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
+                  eficiente
+                </Box>
               </Typography>
               <Typography
                 variant="h6"
                 color="text.secondary"
                 paragraph
-                sx={{ mb: 4 }}
+                sx={{ 
+                  mb: 4,
+                  fontSize: { xs: '1rem', md: '1.25rem' },
+                  lineHeight: 1.6,
+                  maxWidth: '600px',
+                }}
               >
                 Plataforma CRM completa para gestionar empresas, contactos, negocios y tareas.
                 Optimiza tus procesos comerciales y aumenta tu productividad.
               </Typography>
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
                 <Button
                   variant="contained"
                   size="large"
                   onClick={() => navigate('/login')}
                   sx={{
-                    backgroundColor: taxiMonterricoColors.green,
-                    px: 4,
-                    py: 1.5,
-                    fontSize: '1.1rem',
+                    background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+                    color: theme.palette.common.white,
+                    px: { xs: 3, md: 4 },
+                    py: { xs: 1.25, md: 1.5 },
+                    fontSize: { xs: '1rem', md: '1.1rem' },
+                    fontWeight: 600,
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    boxShadow: `0 4px 14px ${taxiMonterricoColors.green}30`,
+                    transition: 'all 0.3s ease',
                     '&:hover': {
-                      backgroundColor: taxiMonterricoColors.greenDark,
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 6px 20px ${taxiMonterricoColors.green}40`,
                     },
                   }}
                 >
@@ -187,7 +252,12 @@ const Landing: React.FC = () => {
                 sx={{
                   maxWidth: '100%',
                   height: 'auto',
-                  opacity: 0.9,
+                  opacity: 0.95,
+                  filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1))',
+                  transition: 'transform 0.3s ease',
+                  '&:hover': {
+                    transform: 'scale(1.02)',
+                  },
                 }}
               />
             </Box>
@@ -196,30 +266,41 @@ const Landing: React.FC = () => {
       </Box>
 
       {/* Features Section */}
-      <Box sx={{ py: 8, backgroundColor: theme.palette.background.default }}>
+      <Box 
+        sx={{ 
+          py: { xs: 6, md: 10 },
+          backgroundColor: theme.palette.background.default,
+          position: 'relative',
+        }}
+      >
         <Container maxWidth="lg">
-          <Typography
-            variant="h3"
-            component="h2"
-            align="center"
-            gutterBottom
-            sx={{
-              fontWeight: 700,
-              mb: 2,
-              color: theme.palette.text.primary,
-            }}
-          >
-            Características Principales
-          </Typography>
-          <Typography
-            variant="h6"
-            align="center"
-            color="text.secondary"
-            paragraph
-            sx={{ mb: 6 }}
-          >
-            Todo lo que necesitas para gestionar tus relaciones comerciales
-          </Typography>
+          <Box sx={{ textAlign: 'center', mb: { xs: 5, md: 7 } }}>
+            <Typography
+              variant="h3"
+              component="h2"
+              gutterBottom
+              sx={{
+                fontWeight: 800,
+                mb: 2,
+                color: theme.palette.text.primary,
+                fontSize: { xs: '2rem', md: '2.75rem' },
+              }}
+            >
+              Características Principales
+            </Typography>
+            <Typography
+              variant="h6"
+              color="text.secondary"
+              sx={{ 
+                maxWidth: '700px',
+                mx: 'auto',
+                fontSize: { xs: '1rem', md: '1.25rem' },
+                lineHeight: 1.6,
+              }}
+            >
+              Todo lo que necesitas para gestionar tus relaciones comerciales
+            </Typography>
+          </Box>
           <Box
             sx={{
               display: 'grid',
@@ -228,34 +309,91 @@ const Landing: React.FC = () => {
                 sm: 'repeat(2, 1fr)',
                 md: 'repeat(3, 1fr)',
               },
-              gap: 4,
+              gap: { xs: 3, md: 4 },
             }}
           >
             {features.map((feature, index) => (
               <Paper
                 key={index}
-                elevation={2}
+                elevation={0}
                 sx={{
-                  p: 3,
+                  p: { xs: 3, md: 4 },
                   height: '100%',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   textAlign: 'center',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
+                  backgroundColor: theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.divider}`,
+                  borderRadius: 3,
+                  cursor: 'pointer',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '3px',
+                    background: index % 3 === 2 
+                      ? `linear-gradient(90deg, ${taxiMonterricoColors.orange} 0%, ${taxiMonterricoColors.orangeDark} 100%)`
+                      : `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+                    transform: 'scaleX(0)',
+                    transformOrigin: 'left',
+                    transition: 'transform 0.3s ease',
+                  },
                   '&:hover': {
-                    transform: 'translateY(-4px)',
+                    transform: 'translateY(-8px)',
                     boxShadow: theme.palette.mode === 'dark'
-                      ? '0 8px 16px rgba(0, 0, 0, 0.4)'
-                      : '0 8px 16px rgba(0, 0, 0, 0.15)',
+                      ? '0 12px 40px rgba(0, 0, 0, 0.4)'
+                      : '0 12px 40px rgba(46, 125, 50, 0.15)',
+                    borderColor: index % 3 === 2 ? taxiMonterricoColors.orange : taxiMonterricoColors.green,
+                    '&::before': {
+                      transform: 'scaleX(1)',
+                    },
+                    '& .feature-icon-wrapper': {
+                      transform: 'scale(1.1) rotate(5deg)',
+                    },
                   },
                 }}
               >
-                <Box sx={{ mb: 2 }}>{feature.icon}</Box>
-                <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                <Box 
+                  className="feature-icon-wrapper"
+                  sx={{ 
+                    mb: 3,
+                    p: 2,
+                    borderRadius: '16px',
+                    background: index % 3 === 2
+                      ? `linear-gradient(135deg, ${taxiMonterricoColors.orange}15 0%, ${taxiMonterricoColors.orange}05 100%)`
+                      : `linear-gradient(135deg, ${taxiMonterricoColors.green}15 0%, ${taxiMonterricoColors.green}05 100%)`,
+                    display: 'inline-flex',
+                    transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  }}
+                >
+                  {feature.icon}
+                </Box>
+                <Typography 
+                  variant="h6" 
+                  gutterBottom 
+                  sx={{ 
+                    fontWeight: 700,
+                    mb: 1.5,
+                    fontSize: { xs: '1.1rem', md: '1.25rem' },
+                    color: theme.palette.text.primary,
+                  }}
+                >
                   {feature.title}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+                <Typography 
+                  variant="body2" 
+                  color="text.secondary"
+                  sx={{ 
+                    lineHeight: 1.7,
+                    fontSize: { xs: '0.9rem', md: '0.95rem' },
+                  }}
+                >
                   {feature.description}
                 </Typography>
               </Paper>
@@ -267,25 +405,49 @@ const Landing: React.FC = () => {
       {/* CTA Section */}
       <Box
         sx={{
-          backgroundColor: theme.palette.background.paper,
-          py: 6,
-          borderTop: `1px solid ${theme.palette.divider}`,
+          position: 'relative',
+          py: { xs: 6, md: 10 },
+          background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'radial-gradient(circle at 30% 50%, rgba(255, 255, 255, 0.1) 0%, transparent 50%)',
+            pointerEvents: 'none',
+          },
         }}
       >
-        <Container maxWidth="md">
-          <Paper
-            elevation={3}
-            sx={{
-              p: 6,
-              textAlign: 'center',
-              backgroundColor: taxiMonterricoColors.green,
-              color: 'white',
-            }}
-          >
-            <Typography variant="h4" component="h2" gutterBottom sx={{ fontWeight: 700 }}>
+        <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
+          <Box sx={{ textAlign: 'center', color: 'white' }}>
+            <Typography 
+              variant="h3" 
+              component="h2" 
+              gutterBottom 
+              sx={{ 
+                fontWeight: 800,
+                mb: 2,
+                fontSize: { xs: '2rem', md: '2.5rem' },
+                textShadow: '0 2px 10px rgba(0, 0, 0, 0.2)',
+              }}
+            >
               ¿Listo para comenzar?
             </Typography>
-            <Typography variant="h6" paragraph sx={{ mb: 4, opacity: 0.9 }}>
+            <Typography 
+              variant="h6" 
+              paragraph 
+              sx={{ 
+                mb: 5,
+                fontSize: { xs: '1rem', md: '1.25rem' },
+                opacity: 0.95,
+                maxWidth: '600px',
+                mx: 'auto',
+                lineHeight: 1.6,
+              }}
+            >
               Accede a tu cuenta y comienza a gestionar tus relaciones comerciales hoy mismo.
             </Typography>
             <Button
@@ -295,18 +457,24 @@ const Landing: React.FC = () => {
               sx={{
                 backgroundColor: 'white',
                 color: taxiMonterricoColors.green,
-                px: 4,
-                py: 1.5,
-                fontSize: '1.1rem',
-                fontWeight: 600,
+                px: { xs: 4, md: 5 },
+                py: { xs: 1.5, md: 2 },
+                fontSize: { xs: '1rem', md: '1.1rem' },
+                fontWeight: 700,
+                borderRadius: 2,
+                textTransform: 'none',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+                transition: 'all 0.3s ease',
                 '&:hover': {
-                  backgroundColor: '#f5f5f5',
+                  backgroundColor: theme.palette.grey[50],
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 6px 25px rgba(0, 0, 0, 0.3)',
                 },
               }}
             >
               Iniciar Sesión
             </Button>
-          </Paper>
+          </Box>
         </Container>
       </Box>
 
@@ -314,59 +482,91 @@ const Landing: React.FC = () => {
       <Box
         component="footer"
         sx={{
-          backgroundColor: theme.palette.background.paper,
-          borderTop: `1px solid ${theme.palette.divider}`,
-          py: 4,
+          backgroundColor: theme.palette.mode === 'dark' 
+            ? theme.palette.background.paper 
+            : theme.palette.grey[50],
+          borderTop: `2px solid ${theme.palette.divider}`,
+          py: { xs: 5, md: 6 },
           mt: 'auto',
         }}
       >
         <Container maxWidth="lg">
           <Box
             sx={{
-              display: 'flex',
-              flexDirection: { xs: 'column', md: 'row' },
-              gap: 4,
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' },
+              gap: { xs: 4, md: 6 },
+              mb: 4,
             }}
           >
-            <Box sx={{ flex: 1 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3 }}>
                 <Box
                   component="img"
                   src={logoImage}
                   alt="Taxi Monterrico"
                   sx={{
-                    height: 40,
+                    height: { xs: 45, md: 50 },
                     objectFit: 'contain',
                   }}
                 />
-                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                <Typography 
+                  variant="h5" 
+                  sx={{ 
+                    fontWeight: 800,
+                    background: `linear-gradient(135deg, ${taxiMonterricoColors.orange} 0%, ${taxiMonterricoColors.green} 100%)`,
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    fontSize: { xs: '1.25rem', md: '1.5rem' },
+                  }}
+                >
                   CRM Taxi Monterrico
                 </Typography>
               </Box>
-              <Typography variant="body2" color="text.secondary">
+              <Typography 
+                variant="body1" 
+                color="text.secondary"
+                sx={{ 
+                  maxWidth: '500px',
+                  lineHeight: 1.7,
+                  fontSize: { xs: '0.9rem', md: '1rem' },
+                }}
+              >
                 Plataforma de gestión de relaciones comerciales diseñada para optimizar tus procesos
-                y aumentar tu productividad.
+                y aumentar tu productividad empresarial.
               </Typography>
             </Box>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 2 }}>
+            <Box>
+              <Typography 
+                variant="h6" 
+                gutterBottom 
+                sx={{ 
+                  fontWeight: 700, 
+                  mb: 3,
+                  fontSize: { xs: '1rem', md: '1.1rem' },
+                  color: theme.palette.text.primary,
+                }}
+              >
                 Información Legal
               </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                 <Link
                   to="/privacy"
                   style={{
                     color: theme.palette.text.secondary,
                     textDecoration: 'none',
-                    fontSize: '0.875rem',
+                    fontSize: '0.95rem',
+                    transition: 'all 0.2s ease',
+                    display: 'inline-block',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.color = taxiMonterricoColors.green;
-                    e.currentTarget.style.textDecoration = 'underline';
+                    e.currentTarget.style.transform = 'translateX(4px)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.color = theme.palette.text.secondary;
-                    e.currentTarget.style.textDecoration = 'none';
+                    e.currentTarget.style.transform = 'translateX(0)';
                   }}
                 >
                   Política de Privacidad
@@ -376,24 +576,54 @@ const Landing: React.FC = () => {
                   style={{
                     color: theme.palette.text.secondary,
                     textDecoration: 'none',
-                    fontSize: '0.875rem',
+                    fontSize: '0.95rem',
+                    transition: 'all 0.2s ease',
+                    display: 'inline-block',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.color = taxiMonterricoColors.green;
-                    e.currentTarget.style.textDecoration = 'underline';
+                    e.currentTarget.style.transform = 'translateX(4px)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.color = theme.palette.text.secondary;
-                    e.currentTarget.style.textDecoration = 'none';
+                    e.currentTarget.style.transform = 'translateX(0)';
                   }}
                 >
                   Términos de Servicio
                 </Link>
               </Box>
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
-                © {new Date().getFullYear()} Taxi Monterrico. Todos los derechos reservados.
-              </Typography>
             </Box>
+          </Box>
+          <Box
+            sx={{
+              pt: 4,
+              borderTop: `1px solid ${theme.palette.divider}`,
+              display: 'flex',
+              flexDirection: { xs: 'column', md: 'row' },
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 2,
+            }}
+          >
+            <Typography 
+              variant="body2" 
+              color="text.secondary"
+              sx={{ 
+                fontSize: { xs: '0.85rem', md: '0.9rem' },
+              }}
+            >
+              © {new Date().getFullYear()} Taxi Monterrico. Todos los derechos reservados.
+            </Typography>
+            <Typography 
+              variant="body2" 
+              color="text.secondary"
+              sx={{ 
+                fontSize: { xs: '0.85rem', md: '0.9rem' },
+                opacity: 0.7,
+              }}
+            >
+              Desarrollado con tecnología empresarial
+            </Typography>
           </Box>
         </Container>
       </Box>

@@ -16,7 +16,7 @@ const router = express_1.default.Router();
 // Registro
 router.post('/register', [
     (0, express_validator_1.body)('usuario').notEmpty().trim(),
-    (0, express_validator_1.body)('email').isEmail().normalizeEmail(),
+    (0, express_validator_1.body)('email').optional().isEmail().normalizeEmail(),
     (0, express_validator_1.body)('password').isLength({ min: 6 }),
     (0, express_validator_1.body)('firstName').notEmpty().trim(),
     (0, express_validator_1.body)('lastName').notEmpty().trim(),
@@ -27,16 +27,25 @@ router.post('/register', [
             return res.status(400).json({ errors: errors.array() });
         }
         const { usuario, email, password, firstName, lastName, role } = req.body;
-        const existingUser = await User_1.User.findOne({
-            where: {
+        // Construir condición de búsqueda: siempre buscar por usuario, y por email solo si existe
+        const whereCondition = email && email.trim()
+            ? {
                 [sequelize_1.Op.or]: [
                     { usuario },
-                    { email }
+                    { email: email.trim() }
                 ]
             }
+            : { usuario };
+        const existingUser = await User_1.User.findOne({
+            where: whereCondition
         });
         if (existingUser) {
-            return res.status(400).json({ error: 'El usuario o email ya existe' });
+            if (existingUser.usuario === usuario) {
+                return res.status(400).json({ error: 'El usuario ya existe' });
+            }
+            if (email && existingUser.email === email.trim()) {
+                return res.status(400).json({ error: 'El email ya existe' });
+            }
         }
         // Obtener el roleId basado en el nombre del rol
         const roleName = role || 'user';
@@ -45,25 +54,29 @@ router.post('/register', [
             return res.status(400).json({ error: `Rol '${roleName}' no encontrado` });
         }
         const hashedPassword = await bcryptjs_1.default.hash(password, 10);
-        const user = await User_1.User.create({
+        const userData = {
             usuario,
-            email,
             password: hashedPassword,
             firstName,
             lastName,
             roleId: userRole.id,
-        });
+        };
+        // Solo incluir email si se proporciona
+        if (email && email.trim()) {
+            userData.email = email.trim();
+        }
+        const user = await User_1.User.create(userData);
         // Cargar la relación con Role para acceder a user.role
         await user.reload({ include: [{ model: Role_1.Role, as: 'Role' }] });
         // Obtener el nombre del rol directamente de la relación
         const userRoleName = user.Role?.name || user.role || 'user';
-        const token = jsonwebtoken_1.default.sign({ userId: user.id, usuario: user.usuario, email: user.email, role: userRoleName }, process.env.JWT_SECRET, { expiresIn: '7d' });
+        const token = jsonwebtoken_1.default.sign({ userId: user.id, usuario: user.usuario, email: user.email || null, role: userRoleName }, process.env.JWT_SECRET, { expiresIn: '7d' });
         res.status(201).json({
             token,
             user: {
                 id: user.id,
                 usuario: user.usuario,
-                email: user.email,
+                email: user.email || null,
                 firstName: user.firstName,
                 lastName: user.lastName,
                 role: userRoleName,

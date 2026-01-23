@@ -6,7 +6,6 @@ import {
   Tab,
   TextField,
   Button,
-  Avatar,
   Paper,
   InputAdornment,
   IconButton,
@@ -41,6 +40,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
+import UserAvatar from '../components/UserAvatar';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -446,18 +446,14 @@ const Profile: React.FC = () => {
                   gap: 1.5,
                 }}
               >
-                <Avatar
-                  src={profileData.avatar}
-                  sx={{ 
-                    width: 100, 
-                    height: 100, 
-                    fontSize: '2rem',
-                    bgcolor: taxiMonterricoColors.green,
-                    flexShrink: 0,
-                  }}
-                >
-                  {profileData.firstName?.[0]}{profileData.lastName?.[0]}
-                </Avatar>
+                <UserAvatar
+                  firstName={profileData.firstName}
+                  lastName={profileData.lastName}
+                  avatar={profileData.avatar}
+                  size="large"
+                  variant="default"
+                  sx={{ flexShrink: 0 }}
+                />
                 <Button
                   component="label"
                   variant="outlined"

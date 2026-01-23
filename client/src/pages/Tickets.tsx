@@ -41,7 +41,6 @@ import {
   ChevronRight,
 } from '@mui/icons-material';
 import api from '../config/api';
-import { log } from '../utils/logger';
 import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
 
@@ -124,13 +123,13 @@ const Tickets: React.FC = () => {
 
   // Función para vista previa
   const handlePreview = (ticket: Ticket) => {
-    log('Preview ticket:', ticket);
+    console.log('Preview ticket:', ticket);
   };
 
   // Función para abrir modal de edición
   const handleOpen = (ticket?: Ticket) => {
     // TODO: Implementar modal de edición de ticket
-    log('Edit ticket:', ticket);
+    console.log('Edit ticket:', ticket);
   };
 
   const handleDelete = (id: number) => {
@@ -437,18 +436,19 @@ const Tickets: React.FC = () => {
             </Box>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <TextField
-                size="small"
+                size="medium"
                 placeholder="Buscar"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 InputProps={{
-                  startAdornment: <Search sx={{ mr: 1, color: theme.palette.text.secondary, fontSize: 20 }} />,
+                  startAdornment: <Search sx={{ mr: 2.5, color: theme.palette.text.secondary, fontSize: 38 }} />,
                 }}
                 sx={{ 
                   minWidth: 200,
                   bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
                   borderRadius: 1.5,
                   '& .MuiOutlinedInput-root': {
+                    fontSize: '1.4rem',
                     '& fieldset': {
                       borderColor: theme.palette.divider,
                     },
@@ -457,6 +457,10 @@ const Tickets: React.FC = () => {
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: theme.palette.primary.main,
+                    },
+                    '& input::placeholder': {
+                      fontSize: '1.4rem',
+                      opacity: 0.7,
                     },
                   },
                 }}
@@ -508,13 +512,13 @@ const Tickets: React.FC = () => {
               height: 8,
             },
             '&::-webkit-scrollbar-track': {
-              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f1f1f1',
+              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.default : theme.palette.grey[100],
             },
             '&::-webkit-scrollbar-thumb': {
-              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.secondary : '#888',
+              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.secondary : theme.palette.grey[500],
               borderRadius: 4,
               '&:hover': {
-                backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.primary : '#555',
+                backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.primary : theme.palette.grey[600],
               },
             },
           }}
@@ -573,7 +577,7 @@ const Tickets: React.FC = () => {
                             borderRadius: '50%',
                             bgcolor: theme.palette.mode === 'dark' 
                               ? 'rgba(255, 255, 255, 0.05)' 
-                              : '#F3F4F6',
+                              : theme.palette.grey[100],
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -612,7 +616,7 @@ const Tickets: React.FC = () => {
                       key={ticket.id} 
                       hover
                       sx={{ 
-                        '&:hover': { bgcolor: theme.palette.mode === 'dark' ? theme.palette.action.hover : '#fafafa' },
+                        '&:hover': { bgcolor: theme.palette.action.hover },
                         cursor: 'pointer',
                         transition: 'background-color 0.2s',
                       }}
@@ -666,14 +670,24 @@ const Tickets: React.FC = () => {
                           fontWeight: 500,
                           fontSize: { xs: '0.7rem', md: '0.75rem' },
                           height: { xs: 20, md: 24 },
-                          bgcolor: ticket.status === 'closed' ? '#E0E0E0' : 
-                                  ticket.status === 'resolved' ? '#E8F5E9' :
-                                  ticket.status === 'pending' ? '#FFF9C4' :
-                                  ticket.status === 'open' ? '#E3F2FD' : '#F5F5F5',
-                          color: ticket.status === 'closed' ? '#757575' :
-                                 ticket.status === 'resolved' ? '#2E7D32' :
-                                 ticket.status === 'pending' ? '#F57F17' :
-                                 ticket.status === 'open' ? '#1976D2' : '#757575',
+                          bgcolor: ticket.status === 'closed' 
+                            ? (theme.palette.mode === 'dark' ? theme.palette.grey[700] : theme.palette.grey[300])
+                            : ticket.status === 'resolved' 
+                            ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}15`)
+                            : ticket.status === 'pending' 
+                            ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}26` : `${taxiMonterricoColors.orange}15`)
+                            : ticket.status === 'open' 
+                            ? (theme.palette.mode === 'dark' ? `${theme.palette.primary.main}26` : `${theme.palette.primary.main}15`)
+                            : theme.palette.grey[100],
+                          color: ticket.status === 'closed' 
+                            ? theme.palette.text.secondary
+                            : ticket.status === 'resolved' 
+                            ? taxiMonterricoColors.green
+                            : ticket.status === 'pending' 
+                            ? taxiMonterricoColors.orangeDark
+                            : ticket.status === 'open' 
+                            ? theme.palette.primary.main
+                            : theme.palette.text.secondary,
                           border: 'none',
                           borderRadius: 1,
                         }} 
@@ -687,12 +701,20 @@ const Tickets: React.FC = () => {
                           fontWeight: 500,
                           fontSize: { xs: '0.7rem', md: '0.75rem' },
                           height: { xs: 20, md: 24 },
-                          bgcolor: ticket.priority === 'urgent' ? '#FFEBEE' :
-                                  ticket.priority === 'high' ? '#FFF3E0' :
-                                  ticket.priority === 'medium' ? '#FFF9C4' : '#E8F5E9',
-                          color: ticket.priority === 'urgent' ? '#C62828' :
-                                 ticket.priority === 'high' ? '#E65100' :
-                                 ticket.priority === 'medium' ? '#F57F17' : '#2E7D32',
+                          bgcolor: ticket.priority === 'urgent' 
+                            ? (theme.palette.mode === 'dark' ? `${theme.palette.error.main}26` : `${theme.palette.error.main}15`)
+                            : ticket.priority === 'high' 
+                            ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}26` : `${taxiMonterricoColors.orange}15`)
+                            : ticket.priority === 'medium' 
+                            ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orangeLight}26` : `${taxiMonterricoColors.orangeLight}15`)
+                            : (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}15`),
+                          color: ticket.priority === 'urgent' 
+                            ? theme.palette.error.main
+                            : ticket.priority === 'high' 
+                            ? taxiMonterricoColors.orangeDark
+                            : ticket.priority === 'medium' 
+                            ? taxiMonterricoColors.orange
+                            : taxiMonterricoColors.green,
                           border: 'none',
                           borderRadius: 1,
                         }} 
@@ -771,8 +793,10 @@ const Tickets: React.FC = () => {
                               color: theme.palette.text.secondary,
                               padding: { xs: 0.5, md: 1 },
                               '&:hover': {
-                                color: '#d32f2f',
-                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.2)' : '#ffebee',
+                                color: theme.palette.error.main,
+                                bgcolor: theme.palette.mode === 'dark' 
+                                  ? `${theme.palette.error.main}33` 
+                                  : `${theme.palette.error.main}15`,
                               },
                             }}
                           >
@@ -934,16 +958,16 @@ const Tickets: React.FC = () => {
               fontWeight: 500,
               borderRadius: 1.5,
               px: 2.5,
-              bgcolor: '#d32f2f',
+              bgcolor: theme.palette.error.main,
               '&:hover': {
-                bgcolor: '#b71c1c',
+                bgcolor: theme.palette.error.dark,
               },
               '&.Mui-disabled': {
-                bgcolor: '#ffcdd2',
-                color: '#ffffff',
+                bgcolor: theme.palette.error.light,
+                color: theme.palette.common.white,
               }
             }}
-            startIcon={deleting ? <CircularProgress size={16} sx={{ color: '#ffffff' }} /> : <Delete />}
+            startIcon={deleting ? <CircularProgress size={16} sx={{ color: theme.palette.common.white }} /> : <Delete />}
           >
             {deleting ? 'Eliminando...' : 'Eliminar'}
           </Button>

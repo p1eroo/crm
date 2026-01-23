@@ -42,6 +42,7 @@ router.get('/auth', auth_1.authenticateToken, (req, res) => {
                 'https://www.googleapis.com/auth/gmail.send',
                 'https://www.googleapis.com/auth/gmail.compose',
                 'https://www.googleapis.com/auth/gmail.readonly',
+                'https://www.googleapis.com/auth/gmail.modify',
             ],
             state: userId.toString(), // Pasar userId en el state para identificarlo después
         });

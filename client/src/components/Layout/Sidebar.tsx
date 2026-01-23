@@ -10,17 +10,9 @@ import {
   Typography,
   useMediaQuery,
 } from '@mui/material';
-import {
-  History,
-  Mail,
-} from '@mui/icons-material';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChartPie, faHandHoldingDollar, faRankingStar, faListCheck, faUserGear, faUserShield, faAddressBook } from '@fortawesome/free-solid-svg-icons';
-import { faCalendarDays } from '@fortawesome/free-regular-svg-icons';
-import { Building2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useSidebar } from '../../context/SidebarContext';
-import { log } from '../../utils/logger';
+import { taxiMonterricoColors } from '../../theme/colors';
 import logo from '../../assets/tm_logo.png';
 import logoMobile from '../../assets/logo.png';
 
@@ -37,22 +29,22 @@ const Sidebar: React.FC = () => {
     : 300;
 
 const mainMenuItems = [
-  { text: 'Dashboard', icon: <FontAwesomeIcon icon={faChartPie} />, path: '/dashboard', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Contactos', icon: <FontAwesomeIcon icon={faAddressBook} />, path: '/contacts', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Empresas', icon: <Building2 />, path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Negocios', icon: <FontAwesomeIcon icon={faHandHoldingDollar} />, path: '/deals', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Tareas', icon: <FontAwesomeIcon icon={faListCheck} />, path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Dashboard', icon: '📊', path: '/dashboard', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Contactos', icon: '👤', path: '/contacts', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Empresas', icon: '🏢', path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Negocios', icon: '💰', path: '/deals', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Tareas', icon: '📋', path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   // { text: 'Tickets', icon: <Support />, path: '/tickets', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Calendario', icon: <FontAwesomeIcon icon={faCalendarDays} />, path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Correos', icon: <Mail />, path: '/emails', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Reportes', icon: <FontAwesomeIcon icon={faRankingStar} />, path: '/reports', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Calendario', icon: '📅', path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Correos', icon: '📧', path: '/emails', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Reportes', icon: '📈', path: '/reports', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   // { text: 'Campañas', icon: <Campaign />, path: '/campaigns' },
   // { text: 'Automatizaciones', icon: <Timeline />, path: '/automations' },
 ];
 
 const adminMenuItems = [
-  { text: 'Logs del Sistema', icon: <History />, path: '/system-logs', roles: ['admin'] },
-  { text: 'Roles y Permisos', icon: <FontAwesomeIcon icon={faUserShield} />, path: '/roles-permissions', roles: ['admin'] },
+  { text: 'Logs del Sistema', icon: '📝', path: '/system-logs', roles: ['admin'] },
+  { text: 'Roles y Permisos', icon: '🛡️', path: '/roles-permissions', roles: ['admin'] },
 ];
 
 
@@ -78,8 +70,8 @@ const adminMenuItems = [
           bgcolor: theme.palette.background.default,
           border: 'none', // Eliminar todos los bordes primero
           borderRight: theme.palette.mode === 'light' 
-            ? '1px solid rgba(0, 0, 0, 0.05)' 
-            : '1px solid rgba(255, 255, 255, 0.08)', // Solo borde derecho
+            ? `1px solid ${theme.palette.divider}` 
+            : `1px solid ${theme.palette.divider}`, // Solo borde derecho
           borderTop: 'none', // Asegurar que no haya borde superior
           borderBottom: 'none', // Asegurar que no haya borde inferior
           borderLeft: 'none', // Asegurar que no haya borde izquierdo
@@ -175,22 +167,22 @@ const adminMenuItems = [
               transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&.Mui-selected': {
                   background: theme.palette.mode === 'dark' 
-                    ? '#1a2e2a' 
-                    : '#5cdf9924',
-                  color: '#5be49b',
+                    ? `${taxiMonterricoColors.greenDark}33` 
+                    : `${taxiMonterricoColors.green}15`,
+                  color: taxiMonterricoColors.greenLight,
                   boxShadow: 'none',
                   '&:hover': {
                     background: theme.palette.mode === 'dark' 
-                      ? '#1a2e2a' 
-                      : '#5cdf9924',
+                      ? `${taxiMonterricoColors.greenDark}33` 
+                      : `${taxiMonterricoColors.green}15`,
                     boxShadow: 'none',
                   },
                 },
                 '&:hover': {
                   ...(isSelected ? {
                     background: theme.palette.mode === 'dark' 
-                      ? '#1a2e2a' 
-                      : '#5cdf9924',
+                      ? `${taxiMonterricoColors.greenDark}33` 
+                      : `${taxiMonterricoColors.green}15`,
                   } : {
                     backgroundColor: theme.palette.action.hover,
                   }),
@@ -206,16 +198,23 @@ const adminMenuItems = [
                   minWidth: collapsed ? 'auto' : 36,
                   justifyContent: 'center',
                   margin: collapsed ? '0 0 4px 0' : 0,
-                  color: isSelected 
-                    ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
-                    : '#637381',
-                  '& svg': {
-                    fontSize: 19,
-                    color: 'inherit', // Heredar el color del contenedor
-                  },
+                  fontSize: '24px',
+                  lineHeight: 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  filter: isSelected ? 'none' : 'none',
                 }}
               >
-                {item.icon}
+                <Box
+                  component="span"
+                  sx={{
+                    fontSize: '24px',
+                    lineHeight: 1,
+                    display: 'inline-block',
+                  }}
+                >
+                  {item.icon}
+                </Box>
               </ListItemIcon>
               {!collapsed && (
                 <Typography
@@ -224,8 +223,8 @@ const adminMenuItems = [
                     fontSize: '0.875rem',
                     fontWeight: isSelected ? 600 : 400,
                     color: isSelected 
-                      ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
-                      : '#5a5c61',
+                      ? (theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : taxiMonterricoColors.green)
+                      : theme.palette.text.secondary,
                     ml: 0.8,
                   }}
                 >
@@ -239,8 +238,8 @@ const adminMenuItems = [
                     fontSize: '0.625rem',
                     fontWeight: isSelected ? 600 : 400,
                     color: isSelected 
-                      ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
-                      : '#5a5c61',
+                      ? (theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : taxiMonterricoColors.green)
+                      : theme.palette.text.secondary,
                     textAlign: 'center',
                     mt: 0.25,
                   }}
@@ -254,7 +253,7 @@ const adminMenuItems = [
         {/* Opción de Administrar Usuarios - Solo visible para admins */}
         {(() => {
           const userRole = user?.role;
-          log('🔍 Verificando rol para mostrar opción de administrar usuarios:', userRole);
+          console.log('🔍 Verificando rol para mostrar opción de administrar usuarios:', userRole);
           return userRole === 'admin';
         })() && (
           <ListItemButton
@@ -275,7 +274,7 @@ const adminMenuItems = [
                 background: theme.palette.mode === 'dark' 
                   ? '#1a2e2a' 
                   : '#5cdf9924',
-                color: '#5be49b',
+                color: taxiMonterricoColors.greenLight,
                 boxShadow: 'none',
                 '&:hover': {
                   background: theme.palette.mode === 'dark' 
@@ -304,15 +303,22 @@ const adminMenuItems = [
                 minWidth: collapsed ? 'auto' : 36,
                 justifyContent: 'center',
                 margin: collapsed ? '0 0 4px 0' : 0,
-                color: location.pathname === '/users' 
-                  ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
-                  : '#637381',
-                '& svg': {
-                  fontSize: 20,
-                },
+                fontSize: '24px',
+                lineHeight: 1,
+                display: 'flex',
+                alignItems: 'center',
               }}
             >
-              <FontAwesomeIcon icon={faUserGear} />
+              <Box
+                component="span"
+                sx={{
+                  fontSize: '24px',
+                  lineHeight: 1,
+                  display: 'inline-block',
+                }}
+              >
+                👥
+              </Box>
             </ListItemIcon>
             {!collapsed && (
               <Typography
@@ -383,7 +389,7 @@ const adminMenuItems = [
                       background: theme.palette.mode === 'dark' 
                         ? '#1a2e2a' 
                         : '#5cdf9924',
-                      color: '#5be49b',
+                      color: taxiMonterricoColors.greenLight,
                       boxShadow: 'none',
                       '&:hover': {
                         background: theme.palette.mode === 'dark' 
@@ -412,15 +418,22 @@ const adminMenuItems = [
                       minWidth: collapsed ? 'auto' : 36,
                       justifyContent: 'center',
                       margin: collapsed ? '0 0 4px 0' : 0,
-                      color: isSelected 
-                        ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
-                        : '#637381',
-                      '& svg': {
-                        fontSize: 20,
-                      },
+                      fontSize: '24px',
+                      lineHeight: 1,
+                      display: 'flex',
+                      alignItems: 'center',
                     }}
                   >
-                    {item.icon}
+                    <Box
+                      component="span"
+                      sx={{
+                        fontSize: '24px',
+                        lineHeight: 1,
+                        display: 'inline-block',
+                      }}
+                    >
+                      {item.icon}
+                    </Box>
                   </ListItemIcon>
                   {!collapsed && (
                     <Typography

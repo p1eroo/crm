@@ -1101,7 +1101,7 @@ const ContactDetail: React.FC = () => {
   const handleConfirmRemoveDeal = async () => {
     if (!id || !dealToRemove) return;
     try {
-      await api.delete(`/contacts/${id}/deals/${dealToRemove.id}`);
+      await api.delete(`/deals/${dealToRemove.id}/contacts/${id}`);
       setAssociatedDeals((prevDeals) =>
         prevDeals.filter((deal: any) => deal.id !== dealToRemove.id)
       );
@@ -2242,6 +2242,7 @@ const ContactDetail: React.FC = () => {
         }}
         maxWidth="sm"
         fullWidth
+        disableRestoreFocus={true}
         PaperProps={{
           sx: {
             borderRadius: 2,
@@ -2304,6 +2305,7 @@ const ContactDetail: React.FC = () => {
         }}
         maxWidth="sm"
         fullWidth
+        disableRestoreFocus={true}
         PaperProps={{
           sx: {
             borderRadius: 2,
@@ -2366,6 +2368,7 @@ const ContactDetail: React.FC = () => {
         }}
         maxWidth="sm"
         fullWidth
+        disableRestoreFocus={true}
         PaperProps={{
           sx: {
             borderRadius: 2,

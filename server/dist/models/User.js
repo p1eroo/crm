@@ -19,10 +19,12 @@ User.init({
     },
     email: {
         type: sequelize_1.DataTypes.STRING,
-        allowNull: false,
+        allowNull: true,
         unique: true,
         validate: {
-            isEmail: true,
+            isEmail: {
+                msg: 'El email debe ser válido',
+            },
         },
     },
     usuario: {

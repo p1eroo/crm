@@ -16,7 +16,6 @@ import {
   FormControl,
   CircularProgress,
   Alert,
-  Avatar,
   Switch,
   Tooltip,
   Dialog,
@@ -41,6 +40,7 @@ import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
 import axios from 'axios';
+import UserAvatar from '../components/UserAvatar';
 
 interface User {
   id: number;
@@ -180,10 +180,6 @@ const Users: React.FC = () => {
   const handleCancelDelete = () => {
     setDeleteDialogOpen(false);
     setUserToDelete(null);
-  };
-
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
   };
 
   // Función para capitalizar iniciales (similar a Contacts.tsx)
@@ -435,17 +431,13 @@ const Users: React.FC = () => {
               >
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Avatar
-                      src={userItem.avatar}
-                      sx={{
-                        width: 40,
-                        height: 40,
-                        bgcolor: taxiMonterricoColors.green,
-                        fontSize: '1rem',
-                      }}
-                    >
-                      {!userItem.avatar && getInitials(userItem.firstName, userItem.lastName)}
-                    </Avatar>
+                    <UserAvatar
+                      firstName={userItem.firstName}
+                      lastName={userItem.lastName}
+                      avatar={userItem.avatar}
+                      size="medium"
+                      variant="default"
+                    />
                     <Box>
                       <Typography variant="body2" sx={{ fontWeight: 500, color: theme.palette.text.primary }}>
                         {userItem.firstName} {userItem.lastName}

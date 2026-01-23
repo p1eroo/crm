@@ -22,7 +22,6 @@ import {
   Menu,
   useTheme,
   Collapse,
-  Popover,
 } from '@mui/material';
 import { Add, Delete, AttachMoney, Visibility, ViewList, AccountTree, CalendarToday, Close, FileDownload, UploadFile, FilterList, ExpandMore, Remove, Bolt, Business, Edit, ChevronLeft, ChevronRight, ViewColumn } from '@mui/icons-material';
 import api from '../config/api';
@@ -34,6 +33,7 @@ import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from '../components/UnifiedTable
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faHandshake } from "@fortawesome/free-solid-svg-icons";
 import EntityPreviewDrawer from '../components/EntityPreviewDrawer';
+import UserAvatar from '../components/UserAvatar';
 
 interface Deal {
   id: number;
@@ -93,15 +93,6 @@ const Deals: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   
-  // Estados para filtros avanzados
-  const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
-  const [filterRules, setFilterRules] = useState<Array<{
-    id: string;
-    column: string;
-    operator: string;
-    value: string;
-  }>>([]);
-
   // Estados para filtros por columna
   const [columnFilters, setColumnFilters] = useState<{
     nombre: string;
@@ -123,20 +114,20 @@ const Deals: React.FC = () => {
   
   // Etapas del pipeline
   const stages = [
-    { id: 'lead_inactivo', label: 'Lead Inactivo', color: '#9E9E9E' },
-    { id: 'lead', label: 'Lead', color: '#2196F3' },
-    { id: 'contacto', label: 'Contacto', color: '#42A5F5' },
-    { id: 'reunion_agendada', label: 'Reunión Agendada', color: '#66BB6A' },
-    { id: 'reunion_efectiva', label: 'Reunión Efectiva', color: '#81C784' },
-    { id: 'propuesta_economica', label: 'Propuesta Económica', color: '#FFB74D' },
-    { id: 'negociacion', label: 'Negociación', color: '#FF9800' },
-    { id: 'licitacion', label: 'Licitación', color: '#F57C00' },
-    { id: 'licitacion_etapa_final', label: 'Licitación Etapa Final', color: '#E65100' },
-    { id: 'cierre_ganado', label: 'Cierre Ganado', color: '#4CAF50' },
-    { id: 'firma_contrato', label: 'Firma de Contrato', color: '#388E3C' },
-    { id: 'activo', label: 'Activo', color: '#2E7D32' },
-    { id: 'cliente_perdido', label: 'Cliente Perdido', color: '#F44336' },
-    { id: 'cierre_perdido', label: 'Cierre Perdido', color: '#D32F2F' },
+    { id: 'lead_inactivo', label: 'Lead Inactivo', color: theme.palette.text.secondary },
+    { id: 'lead', label: 'Lead', color: theme.palette.primary.main },
+    { id: 'contacto', label: 'Contacto', color: theme.palette.primary.light },
+    { id: 'reunion_agendada', label: 'Reunión Agendada', color: taxiMonterricoColors.greenLight },
+    { id: 'reunion_efectiva', label: 'Reunión Efectiva', color: taxiMonterricoColors.green },
+    { id: 'propuesta_economica', label: 'Propuesta Económica', color: taxiMonterricoColors.orangeLight },
+    { id: 'negociacion', label: 'Negociación', color: taxiMonterricoColors.orange },
+    { id: 'licitacion', label: 'Licitación', color: taxiMonterricoColors.orangeDark },
+    { id: 'licitacion_etapa_final', label: 'Licitación Etapa Final', color: theme.palette.warning.dark },
+    { id: 'cierre_ganado', label: 'Cierre Ganado', color: taxiMonterricoColors.greenLight },
+    { id: 'firma_contrato', label: 'Firma de Contrato', color: taxiMonterricoColors.green },
+    { id: 'activo', label: 'Activo', color: taxiMonterricoColors.green },
+    { id: 'cliente_perdido', label: 'Cliente Perdido', color: theme.palette.error.light },
+    { id: 'cierre_perdido', label: 'Cierre Perdido', color: theme.palette.error.main },
   ];
 
   // Función helper para convertir amount a número de forma segura
@@ -190,27 +181,8 @@ const Deals: React.FC = () => {
   // Resetear a la página 1 cuando cambien los filtros
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedStages, selectedOwnerFilters, search, sortBy, filterRules, debouncedColumnFilters]);
+  }, [selectedStages, selectedOwnerFilters, search, sortBy, debouncedColumnFilters]);
 
-
-  // Función para obtener iniciales
-  const getInitials = (firstName?: string, lastName?: string) => {
-    if (firstName && lastName) {
-      return `${firstName[0]}${lastName[0]}`.toUpperCase();
-    }
-    if (firstName) {
-      return firstName.substring(0, 2).toUpperCase();
-    }
-    if (typeof firstName === 'string' && !lastName) {
-      // Si solo se pasa un string (nombre del deal)
-      const words = firstName.trim().split(' ');
-      if (words.length >= 2) {
-        return `${words[0][0]}${words[1][0]}`.toUpperCase();
-      }
-      return firstName.substring(0, 2).toUpperCase();
-    }
-    return '--';
-  };
 
   // Función para vista previa
   const handlePreview = (deal: Deal) => {
@@ -223,76 +195,97 @@ const Deals: React.FC = () => {
     setPreviewDeal(null);
   };
 
-  // Opciones de columnas disponibles
-  const columnOptions = [
-    { value: 'name', label: 'Nombre' },
-    { value: 'amount', label: 'Monto' },
-    { value: 'stage', label: 'Etapa' },
-    { value: 'contact', label: 'Contacto' },
-    { value: 'company', label: 'Empresa' },
-    { value: 'owner', label: 'Propietario' },
-  ];
-
-  // Operadores disponibles
-  const operatorOptions = [
-    { value: 'contains', label: 'contiene' },
-    { value: 'equals', label: 'es igual a' },
-    { value: 'notEquals', label: 'no es igual a' },
-    { value: 'startsWith', label: 'empieza con' },
-    { value: 'endsWith', label: 'termina con' },
-  ];
-
   // Función para obtener el color de la etapa (para el texto del chip)
   const getStageColor = (stage: string) => {
     // Cierre ganado y etapas finales exitosas
     if (['cierre_ganado', 'firma_contrato', 'activo'].includes(stage)) {
-      return { bg: '#E8F5E9', color: '#2E7D32' };
+      return { 
+        bg: theme.palette.mode === 'dark' 
+          ? `${taxiMonterricoColors.green}26` 
+          : `${taxiMonterricoColors.green}15`, 
+        color: taxiMonterricoColors.green 
+      };
     }
     // Cierre perdido y clientes perdidos
     else if (stage === 'cierre_perdido' || stage === 'cliente_perdido') {
-      return { bg: '#FFEBEE', color: '#C62828' };
+      return { 
+        bg: theme.palette.mode === 'dark' 
+          ? `${theme.palette.error.main}26` 
+          : `${theme.palette.error.main}15`, 
+        color: theme.palette.error.main 
+      };
     }
     // Negociación y reuniones
     else if (['reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion'].includes(stage)) {
-      return { bg: '#FFF3E0', color: '#E65100' };
+      return { 
+        bg: theme.palette.mode === 'dark' 
+          ? `${taxiMonterricoColors.orange}26` 
+          : `${taxiMonterricoColors.orange}15`, 
+        color: taxiMonterricoColors.orangeDark 
+      };
     }
     // Licitación - Color de texto púrpura oscuro
     else if (stage === 'licitacion_etapa_final' || stage === 'licitacion') {
-      return { bg: '#F3E5F5', color: '#7B1FA2' };
+      return { 
+        bg: theme.palette.mode === 'dark' 
+          ? `${theme.palette.secondary.main}26` 
+          : `${theme.palette.secondary.main}15`, 
+        color: theme.palette.secondary.main 
+      };
     }
     // Lead y Contacto - Azul oscuro
     else if (['lead', 'contacto'].includes(stage)) {
-      return { bg: '#E3F2FD', color: '#1976D2' };
+      return { 
+        bg: theme.palette.mode === 'dark' 
+          ? `${theme.palette.primary.main}26` 
+          : `${theme.palette.primary.main}15`, 
+        color: theme.palette.primary.main 
+      };
     }
     // Lead inactivo - Gris oscuro
     else if (stage === 'lead_inactivo') {
       return { bg: theme.palette.action.hover, color: theme.palette.text.secondary };
     }
     // Por defecto
-    return { bg: '#E3F2FD', color: '#1976D2' };
+    return { 
+      bg: theme.palette.mode === 'dark' 
+        ? `${theme.palette.primary.main}26` 
+        : `${theme.palette.primary.main}15`, 
+      color: theme.palette.primary.main 
+    };
   };
 
   // Función para obtener el color de fondo de la card según la etapa
   const getStageCardColor = (stage: string) => {
     // Cierre ganado y etapas finales exitosas
     if (['cierre_ganado', 'firma_contrato', 'activo'].includes(stage)) {
-      return theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.15)' : '#E8F5E9';
+      return theme.palette.mode === 'dark' 
+        ? `${taxiMonterricoColors.green}26` 
+        : `${taxiMonterricoColors.green}15`;
     }
     // Cierre perdido y clientes perdidos
     else if (stage === 'cierre_perdido' || stage === 'cliente_perdido') {
-      return theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.15)' : '#FFEBEE';
+      return theme.palette.mode === 'dark' 
+        ? `${theme.palette.error.main}26` 
+        : `${theme.palette.error.main}15`;
     }
     // Negociación y reuniones
     else if (['reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion'].includes(stage)) {
-      return theme.palette.mode === 'dark' ? 'rgba(255, 152, 0, 0.15)' : '#FFF3E0';
+      return theme.palette.mode === 'dark' 
+        ? `${taxiMonterricoColors.orange}26` 
+        : `${taxiMonterricoColors.orange}15`;
     }
     // Licitación - Color distintivo (púrpura claro)
     else if (stage === 'licitacion_etapa_final' || stage === 'licitacion') {
-      return theme.palette.mode === 'dark' ? 'rgba(156, 39, 176, 0.15)' : '#F3E5F5';
+      return theme.palette.mode === 'dark' 
+        ? `${theme.palette.secondary.main}26` 
+        : `${theme.palette.secondary.main}15`;
     }
     // Lead y Contacto - Azul claro
     else if (['lead', 'contacto'].includes(stage)) {
-      return theme.palette.mode === 'dark' ? 'rgba(33, 150, 243, 0.1)' : '#E3F2FD';
+      return theme.palette.mode === 'dark' 
+        ? `${theme.palette.primary.main}1A` 
+        : `${theme.palette.primary.main}15`;
     }
     // Lead inactivo
     else if (stage === 'lead_inactivo') {
@@ -345,11 +338,6 @@ const Deals: React.FC = () => {
       if (debouncedColumnFilters.empresa) params.filterEmpresa = debouncedColumnFilters.empresa;
       if (debouncedColumnFilters.etapa) params.filterEtapa = debouncedColumnFilters.etapa;
       
-      // Filtros avanzados
-      if (filterRules.length > 0) {
-        params.filterRules = JSON.stringify(filterRules);
-      }
-      
       const response = await api.get('/deals', { params });
       const dealsData = response.data.deals || response.data || [];
       
@@ -362,7 +350,7 @@ const Deals: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [search, currentPage, itemsPerPage, selectedStages, selectedOwnerFilters, sortBy, filterRules, debouncedColumnFilters]);
+  }, [search, currentPage, itemsPerPage, selectedStages, selectedOwnerFilters, sortBy, debouncedColumnFilters]);
 
   useEffect(() => {
     fetchDeals();
@@ -798,19 +786,52 @@ const Deals: React.FC = () => {
           mb: 0,
         }}
       >
-        <Typography variant="h5" sx={{ fontWeight: 600 }}>
+        <Typography 
+          variant="h5" 
+          sx={{ 
+            fontWeight: 700,
+            fontSize: { xs: '1.25rem', md: '1.5rem' },
+            background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.mode === 'dark' ? '#10B981' : '#2E7D32'} 100%)`,
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
+        >
           Negocios
         </Typography>
         
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-          <FormControl size="small" sx={{ minWidth: 130 }}>
+          <FormControl 
+            size="small" 
+            sx={{ 
+              minWidth: { xs: "100%", sm: 130 },
+              order: { xs: 1, sm: 0 },
+            }}
+          >
             <Select
               id="deals-sort-select"
               name="deals-sort"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               displayEmpty
-              sx={pageStyles.select}
+              sx={{
+                borderRadius: 1.5,
+                bgcolor: theme.palette.background.paper,
+                fontSize: { xs: "0.75rem", sm: "0.8125rem" },
+                border: `1.5px solid ${theme.palette.divider}`,
+                transition: 'all 0.2s ease',
+                "& .MuiOutlinedInput-notchedOutline": {
+                  border: 'none',
+                },
+                "&:hover": {
+                  borderColor: taxiMonterricoColors.green,
+                  boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
+                },
+                "&.Mui-focused": {
+                  borderColor: taxiMonterricoColors.green,
+                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
+                },
+              }}
             >
               <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
               <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
@@ -819,45 +840,94 @@ const Deals: React.FC = () => {
             </Select>
           </FormControl>
           
-          <Tooltip title={importing ? 'Importando...' : 'Importar'}>
-            <IconButton
-              size="small"
-              onClick={handleImportFromExcel}
-              disabled={importing}
-              sx={pageStyles.outlinedIconButton}
-            >
-              <UploadFile sx={{ fontSize: 18 }} />
-            </IconButton>
-          </Tooltip>
+          <Box
+            sx={{
+              display: "flex",
+              gap: { xs: 0.5, sm: 0.75 },
+              order: { xs: 3, sm: 0 },
+            }}
+          >
+            <Tooltip title={importing ? 'Importando...' : 'Importar'} arrow>
+              <IconButton
+                size="small"
+                onClick={handleImportFromExcel}
+                disabled={importing}
+                sx={{
+                  border: `1.5px solid ${theme.palette.divider}`,
+                  borderRadius: 1.5,
+                  bgcolor: 'transparent',
+                  color: theme.palette.text.secondary,
+                  p: { xs: 0.75, sm: 0.875 },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    borderColor: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? `${taxiMonterricoColors.green}1A` 
+                      : `${taxiMonterricoColors.green}0D`,
+                    color: taxiMonterricoColors.green,
+                    transform: 'translateY(-2px)',
+                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                  },
+                  '&:disabled': {
+                    opacity: 0.5,
+                  },
+                }}
+              >
+                <UploadFile sx={{ fontSize: { xs: 16, sm: 18 } }} />
+              </IconButton>
+            </Tooltip>
+            
+            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
+            
+            <Tooltip title="Exportar" arrow>
+              <IconButton
+                size="small"
+                onClick={handleExportToExcel}
+                sx={{
+                  border: `1.5px solid ${theme.palette.divider}`,
+                  borderRadius: 1.5,
+                  bgcolor: 'transparent',
+                  color: theme.palette.text.secondary,
+                  p: { xs: 0.75, sm: 0.875 },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    borderColor: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? `${taxiMonterricoColors.green}1A` 
+                      : `${taxiMonterricoColors.green}0D`,
+                    color: taxiMonterricoColors.green,
+                    transform: 'translateY(-2px)',
+                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                  },
+                }}
+              >
+                <FileDownload sx={{ fontSize: { xs: 16, sm: 18 } }} />
+              </IconButton>
+            </Tooltip>
+          </Box>
           
-          <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
-          
-          <Tooltip title="Exportar">
-            <IconButton
-              size="small"
-              onClick={handleExportToExcel}
-              sx={pageStyles.outlinedIconButton}
-            >
-              <FileDownload sx={{ fontSize: 18 }} />
-            </IconButton>
-          </Tooltip>
-          
-          <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"}>
+          <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"} arrow>
             <IconButton
               size="small"
               onClick={() => setShowColumnFilters(!showColumnFilters)}
               sx={{
-                border: `1px solid ${showColumnFilters ? theme.palette.primary.main : theme.palette.divider}`,
-                borderRadius: 1,
+                border: `1.5px solid ${showColumnFilters ? taxiMonterricoColors.green : theme.palette.divider}`,
+                borderRadius: 1.5,
                 bgcolor: showColumnFilters 
-                  ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
+                  ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}14`)
                   : 'transparent',
-                color: showColumnFilters ? theme.palette.primary.main : theme.palette.text.secondary,
+                color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.secondary,
                 p: { xs: 0.75, sm: 0.875 },
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                order: { xs: 5, sm: 0 },
                 '&:hover': {
+                  borderColor: taxiMonterricoColors.green,
                   bgcolor: theme.palette.mode === 'dark' 
-                    ? 'rgba(25, 118, 210, 0.3)' 
-                    : 'rgba(25, 118, 210, 0.15)',
+                    ? `${taxiMonterricoColors.green}33` 
+                    : `${taxiMonterricoColors.green}1A`,
+                  color: taxiMonterricoColors.green,
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
                 },
               }}
             >
@@ -865,91 +935,106 @@ const Deals: React.FC = () => {
             </IconButton>
           </Tooltip>
           
-          <Tooltip title="Filtros avanzados">
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                setFilterAnchorEl(e.currentTarget);
-                if (filterRules.length === 0) {
-                  setFilterRules([{
-                    id: `filter-${Date.now()}`,
-                    column: 'name',
-                    operator: 'contains',
-                    value: '',
-                  }]);
-                }
-              }}
-              sx={{
-                border: `1px solid ${filterRules.length > 0 ? theme.palette.primary.main : theme.palette.divider}`,
-                borderRadius: 1,
-                bgcolor: filterRules.length > 0 
-                  ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
-                  : 'transparent',
-                color: filterRules.length > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
-                p: { xs: 0.75, sm: 0.875 },
-                '&:hover': {
-                  bgcolor: theme.palette.mode === 'dark' 
-                    ? 'rgba(25, 118, 210, 0.3)' 
-                    : 'rgba(25, 118, 210, 0.15)',
-                  borderColor: theme.palette.primary.main,
-                },
-              }}
-            >
-              <FilterList sx={{ fontSize: { xs: 18, sm: 20 } }} />
-            </IconButton>
-          </Tooltip>
-          
-          <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 0.5, 
+            alignItems: 'center',
+            order: { xs: 6, sm: 0 },
+          }}>
             <Tooltip title="Ver lista" arrow>
               <IconButton
                 onClick={() => setViewMode('list')}
                 sx={{
-                  bgcolor: viewMode === 'list' ? taxiMonterricoColors.green : theme.palette.background.paper,
+                  bgcolor: viewMode === 'list' 
+                    ? `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`
+                    : theme.palette.background.paper,
                   color: viewMode === 'list' ? 'white' : theme.palette.text.secondary,
                   borderRadius: 1.5,
-                  p: 0.875,
+                  p: { xs: 0.75, sm: 0.875 },
+                  border: `1.5px solid ${viewMode === 'list' ? 'transparent' : theme.palette.divider}`,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: viewMode === 'list' ? `0 4px 12px ${taxiMonterricoColors.green}30` : 'none',
                   '&:hover': {
-                    bgcolor: viewMode === 'list' ? taxiMonterricoColors.greenDark : theme.palette.action.hover,
+                    bgcolor: viewMode === 'list' 
+                      ? `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`
+                      : theme.palette.action.hover,
+                    transform: 'translateY(-2px)',
+                    boxShadow: viewMode === 'list' 
+                      ? `0 6px 20px ${taxiMonterricoColors.green}40`
+                      : `0 4px 12px ${taxiMonterricoColors.green}20`,
                   },
                 }}
               >
-                <ViewList />
+                <ViewList sx={{ fontSize: { xs: 16, sm: 18 } }} />
               </IconButton>
             </Tooltip>
             <Tooltip title="Ver funnel" arrow>
               <IconButton
                 onClick={() => setViewMode('funnel')}
                 sx={{
-                  bgcolor: viewMode === 'funnel' ? taxiMonterricoColors.green : theme.palette.background.paper,
+                  bgcolor: viewMode === 'funnel' 
+                    ? `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`
+                    : theme.palette.background.paper,
                   color: viewMode === 'funnel' ? 'white' : theme.palette.text.secondary,
                   borderRadius: 1.5,
-                  p: 0.875,
+                  p: { xs: 0.75, sm: 0.875 },
+                  border: `1.5px solid ${viewMode === 'funnel' ? 'transparent' : theme.palette.divider}`,
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: viewMode === 'funnel' ? `0 4px 12px ${taxiMonterricoColors.green}30` : 'none',
                   '&:hover': {
-                    bgcolor: viewMode === 'funnel' ? taxiMonterricoColors.greenDark : theme.palette.action.hover,
+                    bgcolor: viewMode === 'funnel' 
+                      ? `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`
+                      : theme.palette.action.hover,
+                    transform: 'translateY(-2px)',
+                    boxShadow: viewMode === 'funnel' 
+                      ? `0 6px 20px ${taxiMonterricoColors.green}40`
+                      : `0 4px 12px ${taxiMonterricoColors.green}20`,
                   },
                 }}
               >
-                <AccountTree />
+                <AccountTree sx={{ fontSize: { xs: 16, sm: 18 } }} />
               </IconButton>
             </Tooltip>
           </Box>
           
-          <Tooltip title="Nuevo Negocio">
+          <Tooltip title="Nuevo Negocio" arrow>
             <IconButton
               size="small"
               onClick={() => handleOpen()}
               sx={{
-                bgcolor: taxiMonterricoColors.green,
-                color: 'white',
-                '&:hover': {
-                  bgcolor: taxiMonterricoColors.greenDark,
-                },
+                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+                color: "white",
                 borderRadius: 1.5,
-                p: 0.875,
-                boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
+                p: { xs: 0.75, sm: 0.875 },
+                boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
+                order: { xs: 2, sm: 0 },
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: '-100%',
+                  width: '100%',
+                  height: '100%',
+                  background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
+                  transition: 'left 0.5s ease',
+                },
+                '&:hover': {
+                  transform: 'translateY(-2px) scale(1.05)',
+                  boxShadow: `0 8px 20px ${taxiMonterricoColors.green}50`,
+                  background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
+                  '&::before': {
+                    left: '100%',
+                  },
+                },
+                '&:active': {
+                  transform: 'translateY(0) scale(1)',
+                },
               }}
             >
-              <Add sx={{ fontSize: 18 }} />
+              <Add sx={{ fontSize: { xs: 16, sm: 18 } }} />
             </IconButton>
           </Tooltip>
         </Box>
@@ -966,16 +1051,30 @@ const Deals: React.FC = () => {
             <Box
               component="div"
               sx={{ 
-                bgcolor: theme.palette.background.paper,
+                bgcolor: theme.palette.mode === 'dark'
+                  ? `${taxiMonterricoColors.green}05`
+                  : `${taxiMonterricoColors.green}03`,
                 overflow: 'hidden',
                 display: 'grid',
                 gridTemplateColumns: { xs: 'repeat(6, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 1fr 0.7fr' },
                 columnGap: { xs: 1, md: 1.5 },
+                position: 'relative',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '3px',
+                  background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+                  opacity: 0.3,
+                },
                 minWidth: { xs: 800, md: 'auto' },
                 maxWidth: '100%',
                 width: '100%',
                 px: { xs: 1, md: 1.5 },
                 py: { xs: 1.5, md: 2 },
+                borderBottom: `2px solid ${theme.palette.divider}`,
               }}
             >
             <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
@@ -1156,7 +1255,7 @@ const Deals: React.FC = () => {
                         sx={{
                           width: { xs: 32, md: 40 },
                           height: { xs: 32, md: 40 },
-                          bgcolor: (deal as any).logo ? 'transparent' : '#0d9394',
+                          bgcolor: (deal as any).logo ? 'transparent' : taxiMonterricoColors.green,
                           fontSize: { xs: '0.75rem', md: '0.875rem' },
                           fontWeight: 600,
                           boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
@@ -1190,7 +1289,7 @@ const Deals: React.FC = () => {
                                 width: 6,
                                 height: 6,
                                 borderRadius: '50%',
-                                bgcolor: deal.priority === 'baja' ? '#20B2AA' : deal.priority === 'media' ? '#F59E0B' : '#EF4444',
+                                bgcolor: deal.priority === 'baja' ? taxiMonterricoColors.green : deal.priority === 'media' ? taxiMonterricoColors.orange : theme.palette.error.main,
                                 flexShrink: 0,
                               }}
                             />
@@ -1465,11 +1564,51 @@ const Deals: React.FC = () => {
           emptyState={
             deals.length === 0 ? (
               <Box sx={pageStyles.emptyState}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                  <AttachMoney sx={{ fontSize: 48, color: theme.palette.text.disabled }} />
-                  <Typography variant="body1" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
-                    No hay negocios para mostrar
-                  </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, py: 6 }}>
+                  <Box
+                    sx={{
+                      width: 120,
+                      height: 120,
+                      borderRadius: '50%',
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(255, 255, 255, 0.05)' 
+                        : theme.palette.grey[100],
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mb: 1,
+                    }}
+                  >
+                    <AttachMoney
+                      sx={{
+                        fontSize: 56,
+                        color: theme.palette.text.secondary,
+                      }}
+                    />
+                  </Box>
+                  <Box sx={{ textAlign: 'center', maxWidth: '400px' }}>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        fontWeight: 600,
+                        mb: 1,
+                        color: theme.palette.text.primary,
+                        fontSize: { xs: '1.1rem', md: '1.25rem' },
+                      }}
+                    >
+                      No hay negocios para mostrar
+                    </Typography>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: theme.palette.text.secondary,
+                        lineHeight: 1.6,
+                        fontSize: { xs: '0.875rem', md: '0.9375rem' },
+                      }}
+                    >
+                      Crea tu primer negocio para comenzar a gestionar tus oportunidades de venta de manera eficiente.
+                    </Typography>
+                  </Box>
                 </Box>
               </Box>
             ) : null
@@ -1526,7 +1665,7 @@ const Deals: React.FC = () => {
                     setSelectedOwnerFilters([]);
                   }}
                   sx={{
-                    color: '#d32f2f',
+                    color: theme.palette.error.main,
                     textTransform: 'none',
                     fontSize: '0.75rem',
                     fontWeight: 500,
@@ -1733,17 +1872,13 @@ const Deals: React.FC = () => {
                           <Chip
                             key={userItem.id}
                             avatar={
-                              <Avatar
-                                src={userItem.avatar}
-                                sx={{
-                                  width: 20,
-                                  height: 20,
-                                  fontSize: '0.625rem',
-                                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
-                                }}
-                              >
-                                {userItem.firstName?.[0]?.toUpperCase() || userItem.email?.[0]?.toUpperCase() || 'U'}
-                              </Avatar>
+                              <UserAvatar
+                                firstName={userItem.firstName}
+                                lastName={userItem.lastName}
+                                avatar={userItem.avatar}
+                                size={20}
+                                variant="minimal"
+                              />
                             }
                             label={`${userItem.firstName} ${userItem.lastName}`}
                             size="small"
@@ -1808,7 +1943,7 @@ const Deals: React.FC = () => {
                   height: '100%',
                   position: 'relative',
                   scrollbarWidth: 'thin',
-                  scrollbarColor: `${theme.palette.mode === 'dark' ? '#757575' : '#9e9e9e'} ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'}`,
+                  scrollbarColor: `${theme.palette.mode === 'dark' ? theme.palette.grey[500] : theme.palette.grey[400]} ${theme.palette.mode === 'dark' ? `${theme.palette.common.white}14` : `${theme.palette.common.black}14`}`,
                   WebkitOverflowScrolling: 'touch',
                   // Estilos para la barra de desplazamiento horizontal - siempre visible
                   '&::-webkit-scrollbar': {
@@ -1830,7 +1965,7 @@ const Deals: React.FC = () => {
                     border: `2px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
                     minHeight: 24,
                     '&:hover': {
-                      background: theme.palette.mode === 'dark' ? '#bdbdbd' : '#9e9e9e',
+                      background: theme.palette.mode === 'dark' ? theme.palette.grey[300] : theme.palette.grey[400],
                     },
                   },
                   '&::-webkit-scrollbar-corner': {
@@ -2029,7 +2164,7 @@ const Deals: React.FC = () => {
                                 lineHeight: 1.4,
                                 cursor: 'pointer',
                                 '&:hover': {
-                                  color: '#20B2AA',
+                                  color: taxiMonterricoColors.green,
                                   textDecoration: 'underline',
                                 },
                               }}
@@ -2069,17 +2204,12 @@ const Deals: React.FC = () => {
                               )}
                               {deal.Owner && (
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  <Avatar
-                                    sx={{
-                                      width: 18,
-                                      height: 18,
-                                      bgcolor: taxiMonterricoColors.green,
-                                      fontSize: '0.5625rem',
-                                      fontWeight: 600,
-                                    }}
-                                  >
-                                    {getInitials(deal.Owner.firstName, deal.Owner.lastName)}
-                                  </Avatar>
+                                  <UserAvatar
+                                    firstName={deal.Owner.firstName}
+                                    lastName={deal.Owner.lastName}
+                                    size={18}
+                                    variant="default"
+                                  />
                                   <Typography 
                                     variant="caption" 
                                     sx={{ 
@@ -2103,19 +2233,13 @@ const Deals: React.FC = () => {
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
                               {deal.Contact && (
                                 <Tooltip title={`${deal.Contact.firstName} ${deal.Contact.lastName}`} arrow>
-                                  <Avatar
-                                    sx={{
-                                      width: 24,
-                                      height: 24,
-                                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
-                                      fontSize: '0.625rem',
-                                      fontWeight: 600,
-                                      border: `1px solid ${theme.palette.divider}`,
-                                      cursor: 'pointer',
-                                    }}
-                                  >
-                                    {getInitials(deal.Contact.firstName, deal.Contact.lastName)}
-                                  </Avatar>
+                                  <UserAvatar
+                                    firstName={deal.Contact.firstName}
+                                    lastName={deal.Contact.lastName}
+                                    size="small"
+                                    variant="minimal"
+                                    sx={{ cursor: 'pointer' }}
+                                  />
                                 </Tooltip>
                               )}
                               {deal.Company && (
@@ -2158,14 +2282,131 @@ const Deals: React.FC = () => {
         BackdropProps={{
           sx: {
             backdropFilter: 'blur(4px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            backgroundColor: theme.palette.mode === 'dark'
+              ? `${theme.palette.common.black}80`
+              : `${theme.palette.common.black}80`,
           }
         }}
+        PaperProps={{
+          sx: {
+            bgcolor: `${theme.palette.background.paper} !important`,
+            color: `${theme.palette.text.primary} !important`,
+            borderRadius: 3,
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 8px 24px rgba(0,0,0,0.5)'
+              : '0 8px 24px rgba(0,0,0,0.15)',
+          },
+        }}
       >
-        <DialogTitle>
-          {editingDeal ? 'Editar Negocio' : 'Nuevo Negocio'}
+        <DialogTitle sx={{
+          borderBottom: `2px solid ${theme.palette.divider}`,
+          borderImage: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%) 1`,
+          background: `linear-gradient(135deg, ${taxiMonterricoColors.green}0D 0%, ${taxiMonterricoColors.orange}0D 100%)`,
+          bgcolor: `${theme.palette.background.paper} !important`,
+          pb: 2,
+        }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography sx={{ 
+              fontWeight: 700,
+              fontSize: { xs: '1.25rem', md: '1.5rem' },
+              background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}>
+              {editingDeal ? 'Editar Negocio' : 'Nuevo Negocio'}
+            </Typography>
+            <IconButton
+              onClick={handleClose}
+              size="small"
+              sx={{
+                color: `${taxiMonterricoColors.orange} !important`,
+                borderRadius: 1.5,
+                border: '1.5px solid transparent',
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  bgcolor: `${taxiMonterricoColors.orange}1A`,
+                  borderColor: taxiMonterricoColors.orange,
+                  transform: 'rotate(90deg)',
+                },
+              }}
+            >
+              <Close />
+            </IconButton>
+          </Box>
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ 
+          pt: 3,
+          bgcolor: `${theme.palette.background.paper} !important`,
+          color: `${theme.palette.text.primary} !important`,
+          background: theme.palette.mode === 'dark'
+            ? `linear-gradient(180deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`
+            : `linear-gradient(180deg, ${theme.palette.background.paper} 0%, ${theme.palette.grey[50]} 100%)`,
+          // Estilos globales para TextField dentro del Dialog
+          '& .MuiTextField-root': {
+            '& .MuiOutlinedInput-root': {
+              bgcolor: `${theme.palette.background.paper} !important`,
+              color: `${theme.palette.text.primary} !important`,
+              '& fieldset': {
+                borderColor: theme.palette.divider,
+              },
+              '&:hover fieldset': {
+                borderColor: taxiMonterricoColors.greenLight,
+                boxShadow: `0 0 0 2px ${taxiMonterricoColors.greenLight}1A`,
+              },
+              '&.Mui-focused fieldset': {
+                borderColor: `${taxiMonterricoColors.green} !important`,
+                borderWidth: '2px',
+                boxShadow: `0 0 0 3px ${taxiMonterricoColors.green}26`,
+              },
+              '& input': {
+                color: `${theme.palette.text.primary} !important`,
+                '&::placeholder': {
+                  color: theme.palette.text.secondary,
+                  opacity: 1,
+                },
+                '&:-webkit-autofill': {
+                  WebkitBoxShadow: `0 0 0 1000px ${theme.palette.background.paper} inset !important`,
+                  WebkitTextFillColor: `${theme.palette.text.primary} !important`,
+                  transition: 'background-color 5000s ease-in-out 0s',
+                },
+              },
+            },
+            '& .MuiInputLabel-root': {
+              color: `${theme.palette.text.secondary} !important`,
+              fontWeight: 500,
+              '&.Mui-focused': {
+                color: `${taxiMonterricoColors.green} !important`,
+                fontWeight: 600,
+              },
+            },
+          },
+          // Estilos para Select
+          '& .MuiSelect-root': {
+            bgcolor: `${theme.palette.background.paper} !important`,
+            color: `${theme.palette.text.primary} !important`,
+          },
+          '& .MuiOutlinedInput-root': {
+            '& .MuiSelect-select': {
+              color: `${theme.palette.text.primary} !important`,
+            },
+            '&:hover': {
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: taxiMonterricoColors.greenLight,
+              },
+            },
+            '&.Mui-focused': {
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: `${taxiMonterricoColors.green} !important`,
+                borderWidth: '2px',
+                boxShadow: `0 0 0 3px ${taxiMonterricoColors.green}26`,
+              },
+            },
+          },
+          '& .MuiSelect-icon': {
+            color: taxiMonterricoColors.green,
+          },
+        }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
             <TextField
               label="Nombre"
@@ -2207,19 +2448,19 @@ const Deals: React.FC = () => {
             >
               <MenuItem value="baja">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#20B2AA' }} />
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: taxiMonterricoColors.green }} />
                   Baja
                 </Box>
               </MenuItem>
               <MenuItem value="media">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#F59E0B' }} />
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: taxiMonterricoColors.orange }} />
                   Media
                 </Box>
               </MenuItem>
               <MenuItem value="alta">
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: '#EF4444' }} />
+                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: theme.palette.error.main }} />
                   Alta
                 </Box>
               </MenuItem>
@@ -2258,184 +2499,64 @@ const Deals: React.FC = () => {
             </TextField>
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancelar</Button>
-          <Button onClick={handleSubmit} variant="contained">
+        <DialogActions sx={{ 
+          px: 3, 
+          py: 2, 
+          borderTop: `1px solid ${theme.palette.divider}`,
+          bgcolor: `${theme.palette.background.paper} !important`,
+        }}>
+          <Button 
+            onClick={handleClose}
+            sx={{
+              color: `${theme.palette.error.main} !important`,
+              borderColor: `${theme.palette.error.main} !important`,
+              borderWidth: '2px',
+              bgcolor: `${theme.palette.background.paper} !important`,
+              fontWeight: 600,
+              px: 3,
+              py: 1,
+              borderRadius: 2,
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': {
+                borderColor: `${theme.palette.error.dark} !important`,
+                borderWidth: '2px',
+                backgroundColor: `${theme.palette.error.main}14 !important`,
+                transform: 'translateY(-2px)',
+                boxShadow: `0 4px 12px ${theme.palette.error.main}33`,
+              },
+            }}
+            variant="outlined"
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSubmit} 
+            variant="contained"
+            sx={{
+              background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%) !important`,
+              color: `${theme.palette.common.white} !important`,
+              fontWeight: 600,
+              px: 3,
+              py: 1,
+              borderRadius: 2,
+              boxShadow: `0 4px 12px ${taxiMonterricoColors.green}4D`,
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              '&:hover': {
+                background: `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%) !important`,
+                boxShadow: `0 6px 20px ${taxiMonterricoColors.green}66`,
+                transform: 'translateY(-2px)',
+              },
+              '&:active': {
+                transform: 'translateY(0)',
+              },
+            }}
+          >
             {editingDeal ? 'Actualizar' : 'Crear'}
           </Button>
         </DialogActions>
       </Dialog>
 
       {/* Popover de Filtros Avanzados */}
-      <Popover
-        open={Boolean(filterAnchorEl)}
-        anchorEl={filterAnchorEl}
-        onClose={() => setFilterAnchorEl(null)}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
-        }}
-        PaperProps={{
-          sx: {
-            width: { xs: '90vw', sm: 500 },
-            maxWidth: 500,
-            maxHeight: '80vh',
-            overflow: 'auto',
-            mt: 1,
-            p: 2,
-            borderRadius: 2,
-            boxShadow: theme.palette.mode === 'dark'
-              ? '0 8px 24px rgba(0,0,0,0.4)'
-              : '0 8px 24px rgba(0,0,0,0.15)',
-          },
-        }}
-      >
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" sx={{ fontSize: '1rem', fontWeight: 600 }}>
-            Filtros Avanzados
-          </Typography>
-          <IconButton
-            size="small"
-            onClick={() => setFilterAnchorEl(null)}
-            sx={{ p: 0.5 }}
-          >
-            <Close sx={{ fontSize: 18 }} />
-          </IconButton>
-        </Box>
-
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {filterRules.map((rule, index) => (
-            <Box key={rule.id} sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-              <FormControl size="small" sx={{ minWidth: 120, flex: 1 }}>
-                <Select
-                  value={rule.column}
-                  onChange={(e) => {
-                    const newRules = [...filterRules];
-                    newRules[index].column = e.target.value;
-                    setFilterRules(newRules);
-                  }}
-                  sx={{ fontSize: '0.875rem' }}
-                >
-                  {columnOptions.map((col) => (
-                    <MenuItem key={col.value} value={col.value}>
-                      {col.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl size="small" sx={{ minWidth: 120, flex: 1 }}>
-                <Select
-                  value={rule.operator}
-                  onChange={(e) => {
-                    const newRules = [...filterRules];
-                    newRules[index].operator = e.target.value;
-                    setFilterRules(newRules);
-                  }}
-                  sx={{ fontSize: '0.875rem' }}
-                >
-                  {operatorOptions.map((op) => (
-                    <MenuItem key={op.value} value={op.value}>
-                      {op.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <TextField
-                size="small"
-                placeholder="Valor..."
-                value={rule.value}
-                onChange={(e) => {
-                  const newRules = [...filterRules];
-                  newRules[index].value = e.target.value;
-                  setFilterRules(newRules);
-                }}
-                sx={{ flex: 1, minWidth: 150 }}
-              />
-
-              <IconButton
-                size="small"
-                onClick={() => {
-                  setFilterRules(filterRules.filter((_, i) => i !== index));
-                }}
-                sx={{ color: theme.palette.error.main }}
-              >
-                <Delete sx={{ fontSize: 18 }} />
-              </IconButton>
-            </Box>
-          ))}
-
-          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'space-between', mt: 1 }}>
-            <Button
-              size="small"
-              onClick={() => {
-                setFilterRules([...filterRules, {
-                  id: `filter-${Date.now()}-${Math.random()}`,
-                  column: 'name',
-                  operator: 'contains',
-                  value: '',
-                }]);
-              }}
-              sx={{ textTransform: 'none' }}
-            >
-              + Agregar filtro
-            </Button>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                size="small"
-                onClick={() => {
-                  setFilterRules([]);
-                }}
-                sx={{ textTransform: 'none', color: theme.palette.error.main }}
-              >
-                Limpiar
-              </Button>
-              <Button
-                size="small"
-                variant="contained"
-                onClick={() => setFilterAnchorEl(null)}
-                sx={{ textTransform: 'none' }}
-              >
-                Aplicar
-              </Button>
-            </Box>
-          </Box>
-
-          {/* Mostrar filtros activos como chips */}
-          {filterRules.filter(r => r.value).length > 0 && (
-            <Box sx={{ mt: 2, pt: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
-              <Typography variant="caption" sx={{ color: theme.palette.text.secondary, mb: 1, display: 'block' }}>
-                Filtros activos:
-              </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                {filterRules
-                  .filter(rule => rule.value)
-                  .map((rule) => {
-                    const columnLabel = columnOptions.find(c => c.value === rule.column)?.label || rule.column;
-                    const operatorLabel = operatorOptions.find(o => o.value === rule.operator)?.label || rule.operator;
-                    return (
-                      <Chip
-                        key={rule.id}
-                        size="small"
-                        label={`${columnLabel} ${operatorLabel} "${rule.value}"`}
-                        onDelete={() => {
-                          setFilterRules(filterRules.filter(r => r.id !== rule.id));
-                        }}
-                        sx={{ height: 24, fontSize: '0.7rem' }}
-                      />
-                    );
-                  })}
-              </Box>
-            </Box>
-          )}
-        </Box>
-      </Popover>
-
       {/* Entity Preview Drawer */}
       <EntityPreviewDrawer
         open={previewOpen}
@@ -2476,7 +2597,7 @@ const Deals: React.FC = () => {
             disabled={deleting}
             variant="contained"
             sx={pageStyles.deleteButton}
-            startIcon={deleting ? <CircularProgress size={16} sx={{ color: '#ffffff' }} /> : <Delete />}
+            startIcon={deleting ? <CircularProgress size={16} sx={{ color: theme.palette.common.white }} /> : <Delete />}
           >
             {deleting ? 'Eliminando...' : 'Eliminar'}
           </Button>

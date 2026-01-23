@@ -4,7 +4,6 @@ import {
   Typography,
   Card,
   CardContent,
-  Avatar,
   CircularProgress,
   Alert,
   Chip,
@@ -36,6 +35,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../config/api';
 import { useTheme } from '@mui/material/styles';
 import { PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import UserAvatar from '../components/UserAvatar';
 
 interface User {
   id: number;
@@ -248,37 +248,6 @@ const ReportDetail: React.FC = () => {
     }
   }, [allMonthlyActivity, selectedMonths.size]);
 
-  const getInitials = (firstName: string, lastName: string) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
-  };
-
-  const stringToColor = (string: string) => {
-    let hash = 0;
-    let i;
-    for (i = 0; i < string.length; i += 1) {
-      hash = string.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    let color = '#';
-    for (i = 0; i < 3; i += 1) {
-      const value = (hash >> (i * 8)) & 0xff;
-      color += `00${value.toString(16)}`.substr(-2);
-    }
-    return color;
-  };
-
-  const stringToGradient = (string: string, isDarkMode: boolean) => {
-    const baseColor = stringToColor(string);
-    const r = parseInt(baseColor.slice(1, 3), 16);
-    const g = parseInt(baseColor.slice(3, 5), 16);
-    const b = parseInt(baseColor.slice(5, 7), 16);
-    
-    const darkenAmount = isDarkMode ? 40 : 20;
-    const darkerR = Math.max(0, r - darkenAmount);
-    const darkerG = Math.max(0, g - darkenAmount);
-    const darkerB = Math.max(0, b - darkenAmount);
-    
-    return `linear-gradient(135deg, ${baseColor} 0%, rgb(${darkerR}, ${darkerG}, ${darkerB}) 100%)`;
-  };
 
 
   const formatCurrency = (amount: number) => {
@@ -370,23 +339,19 @@ const ReportDetail: React.FC = () => {
         />
         {/* Avatar posicionado absolutamente para que quede por encima */}
         <Box sx={{ position: 'absolute', left: { xs: 16, sm: 20, md: 24 }, bottom: 20, zIndex: 20 }}>
-          <Avatar
-            src={user.avatar}
+          <UserAvatar
+            firstName={user.firstName}
+            lastName={user.lastName}
+            avatar={user.avatar}
+            size="xlarge"
+            variant="default"
             sx={{
-              background: stringToGradient(`${user.firstName || ''}${user.lastName || ''}` || 'user', theme.palette.mode === 'dark'),
-              color: '#ffffff',
-              width: 120,
-              height: 120,
-              fontSize: '2.5rem',
-              fontWeight: 600,
               border: '4px solid rgba(255, 255, 255, 0.9)',
               boxShadow: theme.palette.mode === 'dark'
                 ? '0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)'
                 : '0 8px 24px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05)',
             }}
-          >
-            {getInitials(user.firstName, user.lastName)}
-          </Avatar>
+          />
         </Box>
         <CardContent sx={{ position: 'relative', zIndex: 1, p: { xs: 2, sm: 3, md: 4 }, py: 6, pb: 10, pl: { xs: 16, sm: 18, md: 20, lg: 24 } }}>
           <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: 3 }}>
@@ -485,11 +450,11 @@ const ReportDetail: React.FC = () => {
           {/* Estadísticas Principales en un solo card */}
           <Card sx={{ borderRadius: 3 }}>
             <CardContent>
-              <Box sx={{ 
+          <Box sx={{ 
                 display: 'grid',
                 gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-                gap: 3
-              }}>
+            gap: 3
+          }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <People sx={{ fontSize: 40, color: theme.palette.primary.main }} />
                   <Box>
@@ -533,10 +498,10 @@ const ReportDetail: React.FC = () => {
                       Tareas
                     </Typography>
                   </Box>
+                  </Box>
                 </Box>
-              </Box>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
           {/* Métricas de Rendimiento */}
           <Card sx={{ borderRadius: 3 }}>
@@ -593,7 +558,7 @@ const ReportDetail: React.FC = () => {
                   }}
                 >
                   Ingresos Mensuales
-                </Typography>
+              </Typography>
                 <IconButton
                   size="small"
                   onClick={(e) => {
@@ -836,7 +801,7 @@ const ReportDetail: React.FC = () => {
               </Popover>
               {monthlyActivity.length > 0 ? (
                 <Box sx={{ width: '100%', height: 300, minHeight: 300, minWidth: 0, position: 'relative' }}>
-                  <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={300}>
                     <AreaChart 
                       data={monthlyActivity}
                       margin={{ top: 19, right: 5, bottom: 35, left: -15 }}
@@ -901,7 +866,7 @@ const ReportDetail: React.FC = () => {
                         activeDot={{ r: 6, fill: '#10B981' }}
                       />
                     </AreaChart>
-                  </ResponsiveContainer>
+                </ResponsiveContainer>
                 </Box>
               ) : (
                 <Box sx={{ textAlign: 'center', py: 4 }}>

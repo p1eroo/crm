@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
-  Avatar,
   IconButton,
   Badge,
   Snackbar,
@@ -37,16 +36,11 @@ import { useAuth } from '../../context/AuthContext';
 import { taxiMonterricoColors } from '../../theme/colors';
 import api from '../../config/api';
 import { useTheme as useThemeContext } from '../../context/ThemeContext';
-import { log } from '../../utils/logger';
 import { useSidebar } from '../../context/SidebarContext';
 import { SettingsDrawer } from '../SettingsDrawer';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChartPie, faHandHoldingDollar, faRankingStar, faListCheck, faUserShield, faAddressBook } from '@fortawesome/free-solid-svg-icons';
-import { faCalendarDays } from '@fortawesome/free-regular-svg-icons';
-import { Building2 } from 'lucide-react';
-import { History, Mail } from '@mui/icons-material';
 import { useLocation } from 'react-router-dom';
 import logo from '../../assets/tm_login.png';
+import UserAvatar from '../UserAvatar';
 
 const Header: React.FC = () => {
   const { user, logout } = useAuth();
@@ -60,19 +54,19 @@ const Header: React.FC = () => {
   
   // Items del menú para el modo horizontal (mismos que en Sidebar)
   const mainMenuItems = [
-    { text: 'Dashboard', icon: <FontAwesomeIcon icon={faChartPie} />, path: '/dashboard', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-    { text: 'Contactos', icon: <FontAwesomeIcon icon={faAddressBook} />, path: '/contacts', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-    { text: 'Empresas', icon: <Building2 />, path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-    { text: 'Negocios', icon: <FontAwesomeIcon icon={faHandHoldingDollar} />, path: '/deals', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-    { text: 'Tareas', icon: <FontAwesomeIcon icon={faListCheck} />, path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-    { text: 'Calendario', icon: <FontAwesomeIcon icon={faCalendarDays} />, path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-    { text: 'Correos', icon: <Mail />, path: '/emails', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-    { text: 'Reportes', icon: <FontAwesomeIcon icon={faRankingStar} />, path: '/reports', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Dashboard', icon: '📊', path: '/dashboard', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Contactos', icon: '👤', path: '/contacts', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Empresas', icon: '🏢', path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Negocios', icon: '💰', path: '/deals', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Tareas', icon: '📋', path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Calendario', icon: '📅', path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Correos', icon: '📧', path: '/emails', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Reportes', icon: '📈', path: '/reports', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   ];
 
   const adminMenuItems = [
-    { text: 'Logs del Sistema', icon: <History />, path: '/system-logs', roles: ['admin'] },
-    { text: 'Roles y Permisos', icon: <FontAwesomeIcon icon={faUserShield} />, path: '/roles-permissions', roles: ['admin'] },
+    { text: 'Logs del Sistema', icon: '📝', path: '/system-logs', roles: ['admin'] },
+    { text: 'Roles y Permisos', icon: '🛡️', path: '/roles-permissions', roles: ['admin'] },
   ];
 
   // Filtrar items según el rol del usuario
@@ -99,27 +93,27 @@ const Header: React.FC = () => {
     { 
       title: 'Dashboard', 
       path: '/dashboard', 
-      icon: <FontAwesomeIcon icon={faChartPie} />,
+      icon: '📊',
     },
     { 
       title: 'Contactos', 
       path: '/contacts', 
-      icon: <FontAwesomeIcon icon={faAddressBook} />,
+      icon: '👤',
     },
     { 
       title: 'Empresas', 
       path: '/companies', 
-      icon: <Building2 />,
+      icon: '🏢',
     },
     { 
       title: 'Negocios', 
       path: '/deals', 
-      icon: <FontAwesomeIcon icon={faHandHoldingDollar} />,
+      icon: '💰',
     },
     { 
       title: 'Tareas', 
       path: '/tasks', 
-      icon: <FontAwesomeIcon icon={faListCheck} />,
+      icon: '📋',
     },
     // { 
     //   title: 'Tickets', 
@@ -129,17 +123,17 @@ const Header: React.FC = () => {
     { 
       title: 'Calendario', 
       path: '/calendar', 
-      icon: <FontAwesomeIcon icon={faCalendarDays} />,
+      icon: '📅',
     },
     { 
       title: 'Correos', 
       path: '/emails', 
-      icon: <Mail />,
+      icon: '📧',
     },
     { 
       title: 'Reportes', 
       path: '/reports', 
-      icon: <FontAwesomeIcon icon={faRankingStar} />,
+      icon: '📈',
     },
   ];
 
@@ -164,11 +158,6 @@ const Header: React.FC = () => {
     navigate('/profile');
     handleClose();
   };
-
-  const getInitials = (firstName?: string, lastName?: string) => {
-    return `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase();
-  };
-
 
   // Listener para el atajo de teclado Ctrl+K
   useEffect(() => {
@@ -197,7 +186,7 @@ const Header: React.FC = () => {
       // Verificar autenticación antes de hacer requests
       const token = localStorage.getItem('token');
       if (!user || !token) {
-        log('⚠️ Usuario no autenticado, omitiendo fetchNotifications');
+        console.log('⚠️ Usuario no autenticado, omitiendo fetchNotifications');
         return;
       }
 
@@ -256,10 +245,10 @@ const Header: React.FC = () => {
           // Si es un 401, significa que el usuario no tiene Google Calendar conectado
           // o el token expiró. Esto es normal y no debería mostrar error.
           if (error.response?.status === 401) {
-            log('ℹ️ Google Calendar no disponible o no conectado');
+            console.log('ℹ️ Google Calendar no disponible o no conectado');
           } else {
             // Para otros errores, loguear pero no interrumpir el flujo
-            log('⚠️ Error obteniendo eventos de Google Calendar:', error.message);
+            console.log('⚠️ Error obteniendo eventos de Google Calendar:', error.message);
           }
           // Continuar sin eventos de Google Calendar
         }
@@ -569,19 +558,13 @@ const Header: React.FC = () => {
 
             {/* Avatar */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, cursor: 'pointer', ml: 1, mr:-3 }} onClick={handleMenu}>
-              <Avatar
-                src={user?.avatar}
-                sx={{
-                  width: 40,
-                  height: 40,
-                  bgcolor: user?.avatar ? 'transparent' : taxiMonterricoColors.green,
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  border: `1px solid ${theme.palette.divider}`,
-                }}
-              >
-                {!user?.avatar && getInitials(user?.firstName, user?.lastName)}
-              </Avatar>
+              <UserAvatar
+                firstName={user?.firstName}
+                lastName={user?.lastName}
+                avatar={user?.avatar}
+                size="medium"
+                variant="header"
+              />
             </Box>
           </Box>
         </Box>
@@ -615,7 +598,6 @@ const Header: React.FC = () => {
               <Button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                startIcon={item.icon}
                 sx={{
                   color: isActive ? taxiMonterricoColors.green : theme.palette.text.secondary,
                   fontWeight: isActive ? 600 : 400,
@@ -628,19 +610,19 @@ const Header: React.FC = () => {
                     ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : `${taxiMonterricoColors.green}10`)
                     : 'transparent',
                   whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
                   '&:hover': {
                     bgcolor: isActive 
                       ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}25` : `${taxiMonterricoColors.green}15`)
                       : theme.palette.action.hover,
                   },
-                  '& .MuiButton-startIcon': {
-                    marginRight: 0.5,
-                    '& svg': {
-                      fontSize: '1rem',
-                    },
-                  },
                 }}
               >
+                <Box component="span" sx={{ fontSize: '1rem', lineHeight: 1 }}>
+                  {item.icon}
+                </Box>
                 {item.text}
               </Button>
             );
@@ -651,7 +633,6 @@ const Header: React.FC = () => {
               <Button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                startIcon={item.icon}
                 sx={{
                   color: isActive ? taxiMonterricoColors.green : theme.palette.text.secondary,
                   fontWeight: isActive ? 600 : 400,
@@ -664,19 +645,19 @@ const Header: React.FC = () => {
                     ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}20` : `${taxiMonterricoColors.green}10`)
                     : 'transparent',
                   whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 0.5,
                   '&:hover': {
                     bgcolor: isActive 
                       ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}25` : `${taxiMonterricoColors.green}15`)
                       : theme.palette.action.hover,
                   },
-                  '& .MuiButton-startIcon': {
-                    marginRight: 0.5,
-                    '& svg': {
-                      fontSize: '1rem',
-                    },
-                  },
                 }}
               >
+                <Box component="span" sx={{ fontSize: '1rem', lineHeight: 1 }}>
+                  {item.icon}
+                </Box>
                 {item.text}
               </Button>
             );
@@ -895,19 +876,13 @@ const Header: React.FC = () => {
 
         {/* Avatar con dropdown */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, cursor: 'pointer', ml: 1 }} onClick={handleMenu}>
-          <Avatar
-            src={user?.avatar}
-            sx={{
-              width: 40,
-              height: 40,
-              bgcolor: user?.avatar ? 'transparent' : taxiMonterricoColors.green,
-              fontSize: '0.875rem',
-              fontWeight: 600,
-              border: `1px solid ${theme.palette.divider}`,
-            }}
-          >
-            {!user?.avatar && getInitials(user?.firstName, user?.lastName)}
-          </Avatar>
+          <UserAvatar
+            firstName={user?.firstName}
+            lastName={user?.lastName}
+            avatar={user?.avatar}
+            size="medium"
+            variant="header"
+          />
         </Box>
         </Box>
       )}
@@ -1091,16 +1066,13 @@ const Header: React.FC = () => {
       >
         <Box sx={{ px: 2.5, pt: 2.5, pb: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <Avatar
-              src={user?.avatar}
-              sx={{
-                width: 48,
-                height: 48,
-                bgcolor: taxiMonterricoColors.green,
-              }}
-            >
-              {user?.firstName?.[0]}{user?.lastName?.[0]}
-            </Avatar>
+            <UserAvatar
+              firstName={user?.firstName}
+              lastName={user?.lastName}
+              avatar={user?.avatar}
+              size={48}
+              variant="header"
+            />
             <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
               <Typography 
                 variant="body2" 
@@ -1218,8 +1190,8 @@ const Header: React.FC = () => {
                   },
                 }}
               >
-                <Box sx={{ 
-                  display: 'flex', 
+                <Box sx={{
+                  display: 'flex',
                   alignItems: 'center', 
                   justifyContent: 'center',
                   width: 40,
@@ -1229,6 +1201,8 @@ const Header: React.FC = () => {
                     ? 'rgba(255, 255, 255, 0.05)' 
                     : 'rgba(0, 0, 0, 0.02)',
                   color: theme.palette.text.primary,
+                  fontSize: '1.25rem',
+                  lineHeight: 1,
                 }}>
                   {page.icon}
                 </Box>

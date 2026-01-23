@@ -598,8 +598,53 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
       sx={{
         zIndex: 1700, // Mayor que FormDrawer (1600) para que aparezca por encima
       }}
+      PaperProps={{
+        sx: {
+          bgcolor: '#FFFFFF !important',
+          color: '#000000 !important',
+        },
+      }}
     >
-      <DialogContent sx={{ pt: 2 }}>
+      <DialogContent sx={{ 
+        pt: 2,
+        bgcolor: '#FFFFFF !important',
+        color: '#000000 !important',
+        // Estilos globales para TextField dentro del Dialog
+        '& .MuiTextField-root': {
+          '& .MuiOutlinedInput-root': {
+            bgcolor: '#FFFFFF !important',
+            color: '#000000 !important',
+            '& fieldset': {
+              borderColor: 'rgba(0, 0, 0, 0.23)',
+            },
+            '&:hover fieldset': {
+              borderColor: 'rgba(0, 0, 0, 0.5)',
+            },
+            '&.Mui-focused fieldset': {
+              borderColor: '#2E7D32 !important',
+              borderWidth: '2px',
+            },
+            '& input': {
+              color: '#000000 !important',
+              '&::placeholder': {
+                color: 'rgba(0, 0, 0, 0.6)',
+                opacity: 1,
+              },
+              '&:-webkit-autofill': {
+                WebkitBoxShadow: '0 0 0 1000px #FFFFFF inset !important',
+                WebkitTextFillColor: '#000000 !important',
+                transition: 'background-color 5000s ease-in-out 0s',
+              },
+            },
+          },
+          '& .MuiInputLabel-root': {
+            color: 'rgba(0, 0, 0, 0.6) !important',
+            '&.Mui-focused': {
+              color: '#2E7D32 !important',
+            },
+          },
+        },
+      }}>
         <Box sx={{ 
           borderBottom: 1, 
           borderColor: "divider", 

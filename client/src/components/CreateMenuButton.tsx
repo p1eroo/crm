@@ -15,6 +15,7 @@ import {
   PersonAddAltRounded,
   BusinessRounded,
 } from '@mui/icons-material';
+import { taxiMonterricoColors } from '../theme/colors';
 
 export interface CreateMenuOption {
   key: string;
@@ -27,36 +28,36 @@ export interface CreateMenuButtonProps {
   onSelect: (key: string) => void;
 }
 
-const CREATE_OPTIONS: CreateMenuOption[] = [
+const getCreateOptions = (theme: any): CreateMenuOption[] => [
   {
     key: 'task',
     label: 'Tarea',
     icon: <TaskAltRounded />,
-    color: '#F59E0B',
+    color: taxiMonterricoColors.orange,
   },
   {
     key: 'opportunity',
     label: 'Negocio',
     icon: <TrendingUpRounded />,
-    color: '#3B82F6',
+    color: theme.palette.primary.main,
   },
   {
     key: 'ticket',
     label: 'Ticket',
     icon: <ConfirmationNumberRounded />,
-    color: '#14B8A6',
+    color: taxiMonterricoColors.green,
   },
   {
     key: 'contact',
     label: 'Contacto',
     icon: <PersonAddAltRounded />,
-    color: '#22C55E',
+    color: taxiMonterricoColors.greenLight,
   },
   {
     key: 'company',
     label: 'Empresa',
     icon: <BusinessRounded />,
-    color: '#64748B',
+    color: theme.palette.text.secondary,
   },
 ];
 
@@ -93,18 +94,18 @@ const CreateMenuButton: React.FC<CreateMenuButtonProps> = ({ onSelect }) => {
         startIcon={<Add sx={{ fontSize: 18 }} />}
         onClick={handleClick}
         sx={{
-          bgcolor: '#5F9EA0',
-          color: 'white',
+          bgcolor: taxiMonterricoColors.green,
+          color: theme.palette.common.white,
           borderRadius: 2,
           px: 2.5,
           py: 0.875,
           textTransform: 'none',
           fontSize: '0.875rem',
           fontWeight: 500,
-          boxShadow: '0 2px 8px rgba(95, 158, 160, 0.3)',
+          boxShadow: `0 2px 8px ${taxiMonterricoColors.green}4D`,
           '&:hover': {
-            bgcolor: '#4a8a8c',
-            boxShadow: '0 4px 12px rgba(95, 158, 160, 0.4)',
+            bgcolor: taxiMonterricoColors.greenDark,
+            boxShadow: `0 4px 12px ${taxiMonterricoColors.green}66`,
           },
         }}
       >
@@ -143,7 +144,7 @@ const CreateMenuButton: React.FC<CreateMenuButtonProps> = ({ onSelect }) => {
           },
         }}
       >
-        {CREATE_OPTIONS.map((option) => (
+        {getCreateOptions(theme).map((option) => (
           <MenuItem
             key={option.key}
             onClick={() => handleSelect(option.key)}

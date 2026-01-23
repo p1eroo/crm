@@ -533,11 +533,15 @@ router.post('/', async (req, res) => {
         if (!contactData.lastName || !contactData.lastName.trim()) {
             return res.status(400).json({ error: 'El apellido es requerido' });
         }
-        if (!contactData.email || !contactData.email.trim()) {
-            return res.status(400).json({ error: 'El email es requerido' });
+        // El email es opcional, pero si se proporciona debe ser válido
+        if (contactData.email && contactData.email.trim()) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(contactData.email.trim())) {
+                return res.status(400).json({ error: 'El email proporcionado no es válido' });
+            }
         }
         // Validar que no exista un contacto con el mismo email (case-insensitive)
-        if (contactData.email) {
+        if (contactData.email && contactData.email.trim()) {
             const existingContactByEmail = await Contact_1.Contact.findOne({
                 where: {
                     email: {

@@ -24,17 +24,13 @@ import {
   FormControlLabel,
   InputAdornment,
   LinearProgress,
-  Popover,
-  useMediaQuery,
 } from "@mui/material";
 import {
   Add,
   Delete,
   Search,
-  Close,
   Business,
   Phone,
-  Person,
   LocationOn,
   FilterList,
   Visibility,
@@ -48,7 +44,6 @@ import {
 import { useNavigate } from "react-router-dom";
 import api from "../config/api";
 import { taxiMonterricoColors } from "../theme/colors";
-import { log } from "../utils/logger";
 import { pageStyles } from "../theme/styles";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
@@ -108,7 +103,6 @@ const Contacts: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -182,16 +176,9 @@ const Contacts: React.FC = () => {
   });
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [_users, setUsers] = useState<any[]>([]);
-  const [filterAnchorEl, setFilterAnchorEl] = useState<HTMLElement | null>(null);
-  const [filterRules, setFilterRules] = useState<Array<{
-    id: string;
-    column: string;
-    operator: string;
-    value: string;
-  }>>([]);
-  const [selectedStages, setSelectedStages] = useState<string[]>([]);
-  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
-  const [selectedOwnerFilters, setSelectedOwnerFilters] = useState<
+  const [selectedStages] = useState<string[]>([]);
+  const [selectedCountries] = useState<string[]>([]);
+  const [selectedOwnerFilters] = useState<
     (string | number)[]
   >([]);
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<{ [key: number]: HTMLElement | null }>({});
@@ -215,25 +202,6 @@ const Contacts: React.FC = () => {
   const [updatingStatus, setUpdatingStatus] = useState<{ [key: number]: boolean }>({});
 
   // Opciones de columnas disponibles
-  const columnOptions = [
-    { value: 'firstName', label: 'Nombre' },
-    { value: 'lastName', label: 'Apellido' },
-    { value: 'email', label: 'Email' },
-    { value: 'phone', label: 'Teléfono' },
-    { value: 'company', label: 'Empresa' },
-    { value: 'country', label: 'País' },
-    { value: 'lifecycleStage', label: 'Etapa' },
-    { value: 'jobTitle', label: 'Cargo' },
-  ];
-
-  // Operadores disponibles
-  const operatorOptions = [
-    { value: 'contains', label: 'contiene' },
-    { value: 'equals', label: 'es igual a' },
-    { value: 'notEquals', label: 'no es igual a' },
-    { value: 'startsWith', label: 'empieza con' },
-    { value: 'endsWith', label: 'termina con' },
-  ];
 
 
   const handleExportToExcel = () => {
@@ -374,7 +342,7 @@ const Contacts: React.FC = () => {
           batchSize: 1000, // Procesar en lotes de 1000
         });
 
-        log('Respuesta del backend:', response.data); // Debug
+        console.log('Respuesta del backend:', response.data); // Debug
 
         const { successCount = 0, errorCount = 0, results = [] } = response.data || {};
 
@@ -386,7 +354,7 @@ const Contacts: React.FC = () => {
             error: r.error || 'Error desconocido',
           }));
 
-        log('successCount:', successCount, 'errorCount:', errorCount); // Debug
+        console.log('successCount:', successCount, 'errorCount:', errorCount); // Debug
 
         setImportProgress({
           current: contactsToCreate.length,
@@ -482,11 +450,6 @@ const Contacts: React.FC = () => {
       if (debouncedColumnFilters.pais) params.filterPais = debouncedColumnFilters.pais;
       if (debouncedColumnFilters.etapa) params.filterEtapa = debouncedColumnFilters.etapa;
       
-      // Filtros avanzados
-      if (filterRules.length > 0) {
-        params.filterRules = JSON.stringify(filterRules);
-      }
-      
       const response = await api.get('/contacts', { params });
       const contactsData = response.data.contacts || response.data || [];
       
@@ -499,7 +462,7 @@ const Contacts: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [search, currentPage, itemsPerPage, selectedStages, selectedCountries, selectedOwnerFilters, sortBy, filterRules, debouncedColumnFilters]);
+  }, [search, currentPage, itemsPerPage, selectedStages, selectedCountries, selectedOwnerFilters, sortBy, debouncedColumnFilters]);
 
   // fetchCompanies removido - ya no se cargan todas las empresas al inicio
 
@@ -511,7 +474,7 @@ const Contacts: React.FC = () => {
       // Si es un error 403, el usuario no tiene permisos para ver usuarios (no es admin)
       // Esto es normal y no debería mostrar un error
       if (error.response?.status === 403) {
-        log('Usuario no tiene permisos para ver usuarios (no es admin)');
+        console.log('Usuario no tiene permisos para ver usuarios (no es admin)');
         setUsers([]);
       } else {
         console.error('Error fetching users:', error);
@@ -1121,7 +1084,7 @@ const Contacts: React.FC = () => {
         companyId: companyIdNum,
       };
 
-      log('📤 Enviando datos:', submitData);
+      console.log('📤 Enviando datos:', submitData);
 
       if (editingContact) {
         await api.put(`/contacts/${editingContact.id}`, submitData);
@@ -1280,7 +1243,7 @@ const Contacts: React.FC = () => {
   // Resetear a la página 1 cuando cambien los filtros
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedStages, selectedCountries, selectedOwnerFilters, search, sortBy, filterRules, debouncedColumnFilters]);
+  }, [selectedStages, selectedCountries, selectedOwnerFilters, search, sortBy, debouncedColumnFilters]);
 
   if (loading) {
     return (
@@ -1324,15 +1287,18 @@ const Contacts: React.FC = () => {
                   borderRadius: 1.5,
                   bgcolor: theme.palette.background.paper,
                   fontSize: { xs: "0.75rem", sm: "0.8125rem" },
+                  border: `1.5px solid ${theme.palette.divider}`,
+                  transition: 'all 0.2s ease',
                   "& .MuiOutlinedInput-notchedOutline": {
-                    borderColor: theme.palette.divider,
+                    border: 'none',
                   },
-                  "&:hover .MuiOutlinedInput-notchedOutline": {
-                    borderColor: theme.palette.text.secondary,
+                  "&:hover": {
+                    borderColor: taxiMonterricoColors.green,
+                    boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
                   },
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                    borderColor:
-                      theme.palette.mode === "dark" ? "#64B5F6" : "#1976d2",
+                  "&.Mui-focused": {
+                    borderColor: taxiMonterricoColors.green,
+                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
                   },
                 }}
               >
@@ -1342,20 +1308,41 @@ const Contacts: React.FC = () => {
                 <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
               </Select>
             </FormControl>
-            <Tooltip title="Nuevo Contacto">
+            <Tooltip title="Nuevo Contacto" arrow>
               <IconButton
                 size="small"
                 onClick={() => handleOpen()}
                 sx={{
-                  bgcolor: taxiMonterricoColors.green,
+                  background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
                   color: "white",
-                  "&:hover": {
-                    bgcolor: taxiMonterricoColors.greenDark,
-                  },
                   borderRadius: 1.5,
                   p: { xs: 0.75, sm: 0.875 },
-                  boxShadow: `0 2px 8px ${taxiMonterricoColors.green}30`,
+                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
                   order: { xs: 2, sm: 0 },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: '-100%',
+                    width: '100%',
+                    height: '100%',
+                    background: `linear-gradient(90deg, transparent, ${theme.palette.common.white}33, transparent)`,
+                    transition: 'left 0.5s ease',
+                  },
+                  '&:hover': {
+                    transform: 'translateY(-2px) scale(1.05)',
+                    boxShadow: `0 8px 20px ${taxiMonterricoColors.green}50`,
+                    background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
+                    '&::before': {
+                      left: '100%',
+                    },
+                  },
+                  '&:active': {
+                    transform: 'translateY(0) scale(1)',
+                  },
                 }}
               >
                 <Add sx={{ fontSize: { xs: 16, sm: 18 } }} />
@@ -1368,14 +1355,30 @@ const Contacts: React.FC = () => {
                 order: { xs: 3, sm: 0 },
               }}
             >
-              <Tooltip title={importing ? "Importando..." : "Importar"}>
+              <Tooltip title={importing ? "Importando..." : "Importar"} arrow>
                 <IconButton
                   size="small"
                   onClick={handleImportFromExcel}
                   disabled={importing}
                   sx={{
-                    ...pageStyles.outlinedIconButton,
+                    border: `1.5px solid ${theme.palette.divider}`,
+                    borderRadius: 1.5,
+                    bgcolor: 'transparent',
+                    color: theme.palette.text.secondary,
                     p: { xs: 0.75, sm: 0.875 },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:hover': {
+                      borderColor: taxiMonterricoColors.green,
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? `${taxiMonterricoColors.green}1A` 
+                        : `${taxiMonterricoColors.green}0D`,
+                      color: taxiMonterricoColors.green,
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                    },
+                    '&:disabled': {
+                      opacity: 0.5,
+                    },
                   }}
                 >
                   <UploadFile sx={{ fontSize: { xs: 16, sm: 18 } }} />
@@ -1388,75 +1391,58 @@ const Contacts: React.FC = () => {
                 accept=".xlsx,.xls"
                 style={{ display: "none" }}
               />
-              <Tooltip title="Exportar">
+              <Tooltip title="Exportar" arrow>
                 <IconButton
                   size="small"
                   onClick={handleExportToExcel}
                   sx={{
-                    ...pageStyles.outlinedIconButton,
+                    border: `1.5px solid ${theme.palette.divider}`,
+                    borderRadius: 1.5,
+                    bgcolor: 'transparent',
+                    color: theme.palette.text.secondary,
                     p: { xs: 0.75, sm: 0.875 },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:hover': {
+                      borderColor: taxiMonterricoColors.green,
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? `${taxiMonterricoColors.green}1A` 
+                        : `${taxiMonterricoColors.green}0D`,
+                      color: taxiMonterricoColors.green,
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                    },
                   }}
                 >
                   <FileDownload sx={{ fontSize: { xs: 16, sm: 18 } }} />
                 </IconButton>
               </Tooltip>
             </Box>
-            <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"}>
+            <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"} arrow>
               <IconButton
                 size="small"
                 onClick={() => setShowColumnFilters(!showColumnFilters)}
                 sx={{
-                  border: `1px solid ${showColumnFilters ? theme.palette.primary.main : theme.palette.divider}`,
-                  borderRadius: 1,
+                  border: `1.5px solid ${showColumnFilters ? taxiMonterricoColors.green : theme.palette.divider}`,
+                  borderRadius: 1.5,
                   bgcolor: showColumnFilters 
-                    ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
+                    ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}14`)
                     : 'transparent',
-                  color: showColumnFilters ? theme.palette.primary.main : theme.palette.text.secondary,
+                  color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.secondary,
                   p: { xs: 0.75, sm: 0.875 },
-                  '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? 'rgba(25, 118, 210, 0.3)' 
-                      : 'rgba(25, 118, 210, 0.15)',
-                  },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   order: { xs: 5, sm: 0 },
+                  '&:hover': {
+                    borderColor: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? `${taxiMonterricoColors.green}33` 
+                      : `${taxiMonterricoColors.green}1A`,
+                    color: taxiMonterricoColors.green,
+                    transform: 'translateY(-2px)',
+                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                  },
                 }}
               >
                 <ViewColumn sx={{ fontSize: { xs: 18, sm: 20 } }} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Filtros avanzados">
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  setFilterAnchorEl(e.currentTarget);
-                  // Si no hay reglas, agregar una inicial
-                  if (filterRules.length === 0) {
-                    setFilterRules([{
-                      id: `filter-${Date.now()}`,
-                      column: 'firstName',
-                      operator: 'contains',
-                      value: '',
-                    }]);
-                  }
-                }}
-                sx={{
-                  border: `1px solid ${filterRules.length > 0 ? theme.palette.primary.main : theme.palette.divider}`,
-                  borderRadius: 1,
-                  bgcolor: filterRules.length > 0 
-                    ? (theme.palette.mode === 'dark' ? 'rgba(25, 118, 210, 0.2)' : 'rgba(25, 118, 210, 0.1)')
-                    : 'transparent',
-                  color: filterRules.length > 0 ? theme.palette.primary.main : theme.palette.text.secondary,
-                  p: { xs: 0.75, sm: 0.875 },
-                  order: { xs: 4, sm: 0 },
-                  '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? 'rgba(25, 118, 210, 0.3)' 
-                      : 'rgba(25, 118, 210, 0.15)',
-                    borderColor: theme.palette.primary.main,
-                  },
-                }}
-              >
-                <FilterList sx={{ fontSize: { xs: 18, sm: 20 } }} />
               </IconButton>
             </Tooltip>
           </>
@@ -1465,7 +1451,9 @@ const Contacts: React.FC = () => {
           <Box
             component="div"
             sx={{
-              bgcolor: theme.palette.background.paper,
+              bgcolor: theme.palette.mode === 'dark'
+                ? `${taxiMonterricoColors.green}05`
+                : `${taxiMonterricoColors.green}03`,
               overflow: 'hidden',
               display: 'grid',
               gridTemplateColumns: {
@@ -1478,9 +1466,18 @@ const Contacts: React.FC = () => {
               width: '100%',
               px: { xs: 1.5, md: 2 },
               py: { xs: 1.25, md: 1.5 },
-              borderBottom: theme.palette.mode === 'light' 
-                ? '1px solid rgba(0, 0, 0, 0.08)' 
-                : '1px solid rgba(255, 255, 255, 0.1)',
+              borderBottom: `2px solid ${theme.palette.divider}`,
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '3px',
+                background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+                opacity: 0.3,
+              },
             }}
           >
             <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
@@ -1647,13 +1644,9 @@ const Contacts: React.FC = () => {
                   overflow: 'hidden',
                   px: { xs: 1.5, md: 2 },
                   py: { xs: 1, md: 1.25 },
-                  borderBottom: theme.palette.mode === 'light' 
-                    ? '1px solid rgba(0, 0, 0, 0.08)' 
-                    : '1px solid rgba(255, 255, 255, 0.1)',
+                  borderBottom: `1px solid ${theme.palette.divider}`,
                   '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? 'rgba(255, 255, 255, 0.02)' 
-                      : 'rgba(0, 0, 0, 0.02)',
+                    bgcolor: theme.palette.action.hover,
                   },
                 }}
               >
@@ -1681,10 +1674,12 @@ const Contacts: React.FC = () => {
                       sx={{
                         width: 48,
                         height: 48,
-                        bgcolor: contact?.avatar ? "transparent" : "#0d9394",
+                        bgcolor: contact?.avatar ? "transparent" : taxiMonterricoColors.green,
                         fontSize: "1rem",
                         fontWeight: 600,
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+                        boxShadow: theme.palette.mode === 'dark'
+                          ? `0 1px 3px ${theme.palette.common.black}1F`
+                          : `0 1px 3px ${theme.palette.common.black}1F`,
                         flexShrink: 0,
                       }}
                     >
@@ -1852,7 +1847,9 @@ const Contacts: React.FC = () => {
                             maxHeight: 400,
                             mt: 0.5,
                             borderRadius: 1.5,
-                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                            boxShadow: theme.palette.mode === 'dark'
+                              ? '0 4px 12px rgba(0,0,0,0.5)'
+                              : '0 4px 12px rgba(0,0,0,0.15)',
                             overflow: 'auto',
                           }
                         }}
@@ -1909,10 +1906,12 @@ const Contacts: React.FC = () => {
                       sx={{
                         width: { sm: 32, md: 40 },
                         height: { sm: 32, md: 40 },
-                        bgcolor: contact?.avatar ? "transparent" : "#0d9394",
+                        bgcolor: contact?.avatar ? "transparent" : taxiMonterricoColors.green,
                         fontSize: { sm: "0.75rem", md: "0.875rem" },
                         fontWeight: 600,
-                        boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+                        boxShadow: theme.palette.mode === 'dark'
+                          ? `0 1px 3px ${theme.palette.common.black}1F`
+                          : `0 1px 3px ${theme.palette.common.black}1F`,
                         flexShrink: 0,
                       }}
                     >
@@ -2175,27 +2174,51 @@ const Contacts: React.FC = () => {
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
-                  gap: 1,
+                  gap: 2,
+                  py: 6,
                 }}
               >
-                <Person
-                  sx={{ fontSize: 48, color: theme.palette.text.disabled }}
-                />
-                <Typography
-                  variant="body1"
+                <Box
                   sx={{
-                    color: theme.palette.text.secondary,
-                    fontWeight: 500,
+                    width: 120,
+                    height: 120,
+                    borderRadius: '50%',
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? theme.palette.action.disabledBackground
+                      : theme.palette.grey[100],
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    mb: 1,
+                    fontSize: '64px',
+                    lineHeight: 1,
                   }}
                 >
-                  No hay contactos para mostrar
-                </Typography>
-                <Typography
-                  variant="body2"
-                  sx={{ color: theme.palette.text.secondary }}
-                >
-                  Crea tu primer contacto para comenzar
-                </Typography>
+                  👤🏽
+                </Box>
+                <Box sx={{ textAlign: 'center', maxWidth: '400px' }}>
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      fontWeight: 700,
+                      mb: 1,
+                      color: theme.palette.text.primary,
+                      fontSize: { xs: '1.25rem', md: '1.5rem' },
+                    }}
+                  >
+                    No hay contactos para mostrar
+                  </Typography>
+                  <Typography 
+                    variant="body2" 
+                    sx={{ 
+                      color: theme.palette.text.primary,
+                      lineHeight: 1.6,
+                      fontSize: { xs: '0.875rem', md: '0.9375rem' },
+                    }}
+                  >
+                    Crea tu primer contacto para comenzar a gestionar tus relaciones comerciales de manera eficiente.
+                  </Typography>
+                </Box>
               </Box>
             </Box>
           ) : undefined
@@ -2216,8 +2239,6 @@ const Contacts: React.FC = () => {
                   Filas por página:
                 </Typography>
                 <Select
-                  id="contacts-rows-per-page"
-                  name="contacts-rows-per-page"
                   value={itemsPerPage}
                   onChange={(e) => {
                     setItemsPerPage(Number(e.target.value));
@@ -2333,279 +2354,6 @@ const Contacts: React.FC = () => {
         </Box>
       )}
 
-      {/* Popover de Filtros - Diseño tipo Tags */}
-      <Popover
-        open={Boolean(filterAnchorEl)}
-        anchorEl={filterAnchorEl}
-        onClose={() => setFilterAnchorEl(null)}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: isMobile ? 'center' : 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: isMobile ? 'center' : 'right',
-        }}
-        PaperProps={{
-          sx: {
-            mt: 1,
-            minWidth: isMobile ? 'calc(100vw - 32px)' : 420,
-            maxWidth: isMobile ? 'calc(100vw - 32px)' : 500,
-            bgcolor: theme.palette.background.paper,
-            borderRadius: 2,
-            boxShadow: theme.palette.mode === 'dark'
-              ? '0 8px 24px rgba(0,0,0,0.5)'
-              : '0 8px 24px rgba(0,0,0,0.15)',
-            border: `1px solid ${theme.palette.divider}`,
-          },
-        }}
-      >
-        <Box sx={{ p: 2 }}>
-          {/* Header */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography sx={{ fontWeight: 600, fontSize: '0.9375rem', color: theme.palette.text.primary }}>
-              Filtros
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              {filterRules.length > 0 && (
-                <Button
-                  size="small"
-                  onClick={() => {
-                    setFilterRules([]);
-                    setSelectedStages([]);
-                    setSelectedOwnerFilters([]);
-                    setSelectedCountries([]);
-                  }}
-                  sx={{
-                    textTransform: 'none',
-                    fontSize: '0.75rem',
-                    px: 1.5,
-                    color: theme.palette.error.main,
-                    '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' 
-                        ? 'rgba(211, 47, 47, 0.1)' 
-                        : 'rgba(211, 47, 47, 0.05)',
-                    },
-                  }}
-                >
-                  Limpiar todo
-                </Button>
-              )}
-              <IconButton
-                size="small"
-                onClick={() => setFilterAnchorEl(null)}
-                sx={{ color: theme.palette.text.secondary }}
-              >
-                <Close sx={{ fontSize: 18 }} />
-              </IconButton>
-            </Box>
-          </Box>
-
-          {/* Filtros activos como Tags/Chips */}
-          {filterRules.length > 0 && (
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
-              {filterRules.map((rule) => {
-                const columnLabel = columnOptions.find(c => c.value === rule.column)?.label || rule.column;
-                const operatorLabel = operatorOptions.find(o => o.value === rule.operator)?.label || rule.operator;
-                return (
-                  <Chip
-                    key={rule.id}
-                    label={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Typography component="span" sx={{ fontWeight: 600, fontSize: '0.75rem' }}>
-                          {columnLabel}
-                        </Typography>
-                        <Typography component="span" sx={{ fontSize: '0.75rem', color: theme.palette.text.secondary }}>
-                          {operatorLabel.toLowerCase()}
-                        </Typography>
-                        <Typography component="span" sx={{ fontSize: '0.75rem', fontStyle: 'italic' }}>
-                          "{rule.value || '...'}"
-                        </Typography>
-                      </Box>
-                    }
-                    onDelete={() => {
-                      setFilterRules(filterRules.filter(r => r.id !== rule.id));
-                    }}
-                    sx={{
-                      height: 'auto',
-                      py: 0.5,
-                      bgcolor: theme.palette.mode === 'dark' 
-                        ? 'rgba(25, 118, 210, 0.2)' 
-                        : 'rgba(25, 118, 210, 0.1)',
-                      border: `1px solid ${theme.palette.primary.main}`,
-                      '& .MuiChip-label': {
-                        px: 1,
-                      },
-                      '& .MuiChip-deleteIcon': {
-                        fontSize: 16,
-                        color: theme.palette.text.secondary,
-                        '&:hover': {
-                          color: theme.palette.error.main,
-                        },
-                      },
-                    }}
-                  />
-                );
-              })}
-            </Box>
-          )}
-
-          {/* Formulario para agregar nuevo filtro */}
-          <Box sx={{ 
-            display: 'flex', 
-            flexDirection: { xs: 'column', sm: 'row' },
-            gap: 1, 
-            alignItems: { xs: 'stretch', sm: 'flex-end' },
-            p: 1.5,
-            borderRadius: 1.5,
-            bgcolor: theme.palette.mode === 'dark' 
-              ? 'rgba(255, 255, 255, 0.03)' 
-              : 'rgba(0, 0, 0, 0.02)',
-            border: `1px dashed ${theme.palette.divider}`,
-          }}>
-            {/* Columna */}
-            <FormControl size="small" sx={{ minWidth: 100, flex: 1 }}>
-              <Select
-                id="contacts-filter-column"
-                name="contacts-filter-column"
-                value={filterRules.length > 0 ? filterRules[filterRules.length - 1]?.column || 'firstName' : 'firstName'}
-                onChange={(e) => {
-                  if (filterRules.length === 0) {
-                    setFilterRules([{
-                      id: `filter-${Date.now()}`,
-                      column: e.target.value,
-                      operator: 'contains',
-                      value: '',
-                    }]);
-                  } else {
-                    const newRules = [...filterRules];
-                    newRules[newRules.length - 1].column = e.target.value;
-                    setFilterRules(newRules);
-                  }
-                }}
-                displayEmpty
-                sx={{
-                  fontSize: '0.8125rem',
-                  bgcolor: theme.palette.background.paper,
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: theme.palette.divider,
-                  },
-                }}
-              >
-                {columnOptions.map((option) => (
-                  <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.8125rem' }}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            {/* Operador */}
-            <FormControl size="small" sx={{ minWidth: 100, flex: 1 }}>
-              <Select
-                id="contacts-filter-operator"
-                name="contacts-filter-operator"
-                value={filterRules.length > 0 ? filterRules[filterRules.length - 1]?.operator || 'contains' : 'contains'}
-                onChange={(e) => {
-                  if (filterRules.length === 0) {
-                    setFilterRules([{
-                      id: `filter-${Date.now()}`,
-                      column: 'firstName',
-                      operator: e.target.value,
-                      value: '',
-                    }]);
-                  } else {
-                    const newRules = [...filterRules];
-                    newRules[newRules.length - 1].operator = e.target.value;
-                    setFilterRules(newRules);
-                  }
-                }}
-                displayEmpty
-                sx={{
-                  fontSize: '0.8125rem',
-                  bgcolor: theme.palette.background.paper,
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: theme.palette.divider,
-                  },
-                }}
-              >
-                {operatorOptions.map((option) => (
-                  <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.8125rem' }}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            {/* Valor */}
-            <TextField
-              size="small"
-              placeholder="Valor..."
-              value={filterRules.length > 0 ? filterRules[filterRules.length - 1]?.value || '' : ''}
-              onChange={(e) => {
-                if (filterRules.length === 0) {
-                  setFilterRules([{
-                    id: `filter-${Date.now()}`,
-                    column: 'firstName',
-                    operator: 'contains',
-                    value: e.target.value,
-                  }]);
-                } else {
-                  const newRules = [...filterRules];
-                  newRules[newRules.length - 1].value = e.target.value;
-                  setFilterRules(newRules);
-                }
-              }}
-              sx={{
-                flex: 1.5,
-                '& .MuiOutlinedInput-root': {
-                  bgcolor: theme.palette.background.paper,
-                  fontSize: '0.8125rem',
-                  '& fieldset': {
-                    borderColor: theme.palette.divider,
-                  },
-                },
-                '& .MuiInputBase-input::placeholder': {
-                  fontSize: '0.8125rem',
-                },
-              }}
-            />
-
-            {/* Botón Agregar */}
-            <IconButton
-              size="small"
-              onClick={() => {
-                setFilterRules([
-                  ...filterRules,
-                  {
-                    id: `filter-${Date.now()}`,
-                    column: 'firstName',
-                    operator: 'contains',
-                    value: '',
-                  },
-                ]);
-              }}
-              sx={{
-                bgcolor: theme.palette.primary.main,
-                color: 'white',
-                '&:hover': {
-                  bgcolor: theme.palette.primary.dark,
-                },
-              }}
-            >
-              <Add sx={{ fontSize: 18 }} />
-            </IconButton>
-          </Box>
-
-          {/* Texto de ayuda */}
-          {filterRules.length === 0 && (
-            <Typography variant="caption" sx={{ display: 'block', mt: 1.5, color: theme.palette.text.secondary, textAlign: 'center' }}>
-              Configura los campos y haz clic en + para agregar un filtro
-            </Typography>
-          )}
-        </Box>
-      </Popover>
-
       <FormDrawer
         open={open}
         onClose={handleClose}
@@ -2639,9 +2387,12 @@ const Contacts: React.FC = () => {
                       <Radio
                         size="small"
                         sx={{
-                          color: theme.palette.text.secondary,
+                          color: `${theme.palette.text.secondary} !important`,
                           "&.Mui-checked": {
-                            color: taxiMonterricoColors.green,
+                            color: `${taxiMonterricoColors.green} !important`,
+                          },
+                          "&:hover": {
+                            bgcolor: `${taxiMonterricoColors.green}14`,
                           },
                         }}
                       />
@@ -2658,26 +2409,23 @@ const Contacts: React.FC = () => {
                           : theme.palette.divider
                       }`,
                       borderRadius: 1.5,
-                      bgcolor:
-                        idType === "dni"
-                          ? theme.palette.mode === "dark"
-                            ? `${taxiMonterricoColors.green}20`
-                            : `${taxiMonterricoColors.green}10`
-                          : "transparent",
+                      background: idType === "dni" 
+                        ? `linear-gradient(135deg, ${taxiMonterricoColors.green}26 0%, ${taxiMonterricoColors.green}0D 100%)` 
+                        : theme.palette.background.paper,
                       cursor: "pointer",
-                      transition: "all 0.2s ease",
+                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                       display: "flex",
                       alignItems: "center",
+                      boxShadow: idType === "dni" ? `0 2px 8px ${taxiMonterricoColors.green}33` : 'none',
                       "&:hover": {
                         borderColor: taxiMonterricoColors.green,
-                        bgcolor:
-                          theme.palette.mode === "dark"
-                            ? `${taxiMonterricoColors.green}15`
-                            : `${taxiMonterricoColors.green}08`,
+                        background: `linear-gradient(135deg, ${taxiMonterricoColors.green}33 0%, ${taxiMonterricoColors.green}1A 100%)`,
+                        transform: 'translateY(-2px)',
+                        boxShadow: `0 4px 12px ${taxiMonterricoColors.green}4D`,
                       },
                       "& .MuiFormControlLabel-label": {
-                        color: theme.palette.text.primary,
-                        fontWeight: idType === "dni" ? 500 : 400,
+                        color: idType === "dni" ? taxiMonterricoColors.green : theme.palette.text.primary,
+                        fontWeight: idType === "dni" ? 600 : 400,
                         fontSize: "0.875rem",
                       },
                     }}
@@ -2688,9 +2436,12 @@ const Contacts: React.FC = () => {
                       <Radio
                         size="small"
                         sx={{
-                          color: theme.palette.text.secondary,
+                          color: `${theme.palette.text.secondary} !important`,
                           "&.Mui-checked": {
-                            color: taxiMonterricoColors.green,
+                            color: `${taxiMonterricoColors.orange} !important`,
+                          },
+                          "&:hover": {
+                            bgcolor: `${taxiMonterricoColors.orange}14`,
                           },
                         }}
                       />
@@ -2703,30 +2454,27 @@ const Contacts: React.FC = () => {
                       height: "36px",
                       border: `2px solid ${
                         idType === "cee"
-                          ? taxiMonterricoColors.green
+                          ? taxiMonterricoColors.orange
                           : theme.palette.divider
                       }`,
                       borderRadius: 1.5,
-                      bgcolor:
-                        idType === "cee"
-                          ? theme.palette.mode === "dark"
-                            ? `${taxiMonterricoColors.green}20`
-                            : `${taxiMonterricoColors.green}10`
-                          : "transparent",
+                      background: idType === "cee" 
+                        ? `linear-gradient(135deg, ${taxiMonterricoColors.orange}26 0%, ${taxiMonterricoColors.orange}0D 100%)` 
+                        : theme.palette.background.paper,
                       cursor: "pointer",
-                      transition: "all 0.2s ease",
+                      transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
                       display: "flex",
                       alignItems: "center",
+                      boxShadow: idType === "cee" ? `0 2px 8px ${taxiMonterricoColors.orange}33` : 'none',
                       "&:hover": {
-                        borderColor: taxiMonterricoColors.green,
-                        bgcolor:
-                          theme.palette.mode === "dark"
-                            ? `${taxiMonterricoColors.green}15`
-                            : `${taxiMonterricoColors.green}08`,
+                        borderColor: taxiMonterricoColors.orange,
+                        background: `linear-gradient(135deg, ${taxiMonterricoColors.orange}33 0%, ${taxiMonterricoColors.orange}1A 100%)`,
+                        transform: 'translateY(-2px)',
+                        boxShadow: `0 4px 12px ${taxiMonterricoColors.orange}4D`,
                       },
                       "& .MuiFormControlLabel-label": {
-                        color: theme.palette.text.primary,
-                        fontWeight: idType === "cee" ? 500 : 400,
+                        color: idType === "cee" ? taxiMonterricoColors.orange : theme.palette.text.primary,
+                        fontWeight: idType === "cee" ? 600 : 400,
                         fontSize: "0.875rem",
                       },
                     }}
@@ -2737,7 +2485,6 @@ const Contacts: React.FC = () => {
               <Box>
                   {idType === "dni" ? (
                     <TextField
-                      id="contact-dni-input"
                       label="DNI"
                       value={formData.dni}
                       onChange={async (e) => {
@@ -2785,12 +2532,16 @@ const Contacts: React.FC = () => {
                             }
                             size="small"
                             sx={{
-                              color: taxiMonterricoColors.green,
+                              color: `${taxiMonterricoColors.green} !important`,
+                              borderRadius: 1,
+                              transition: 'all 0.2s ease',
                               "&:hover": {
-                                bgcolor: `${taxiMonterricoColors.green}15`,
+                                bgcolor: `${taxiMonterricoColors.green}26 !important`,
+                                transform: 'scale(1.1)',
+                                color: `${taxiMonterricoColors.greenDark} !important`,
                               },
                               "&.Mui-disabled": {
-                                color: theme.palette.text.disabled,
+                                color: `${theme.palette.action.disabled} !important`,
                               },
                             }}
                           >
@@ -2805,7 +2556,6 @@ const Contacts: React.FC = () => {
                     />
                   ) : (
                     <TextField
-                      id="contact-cee-input"
                       label="CEE"
                       value={formData.cee}
                       onChange={async (e) => {
@@ -2854,12 +2604,16 @@ const Contacts: React.FC = () => {
                             }
                             size="small"
                             sx={{
-                              color: taxiMonterricoColors.green,
+                              color: `${taxiMonterricoColors.orange} !important`,
+                              borderRadius: 1,
+                              transition: 'all 0.2s ease',
                               "&:hover": {
-                                bgcolor: `${taxiMonterricoColors.green}15`,
+                                bgcolor: `${taxiMonterricoColors.orange}26 !important`,
+                                transform: 'scale(1.1)',
+                                color: `${taxiMonterricoColors.orangeDark} !important`,
                               },
                               "&.Mui-disabled": {
-                                color: theme.palette.text.disabled,
+                                color: `${theme.palette.action.disabled} !important`,
                               },
                             }}
                           >
@@ -2935,8 +2689,6 @@ const Contacts: React.FC = () => {
 
             {/* Dirección */}
             <TextField
-              id="contact-address"
-              name="address"
               label="Dirección"
               value={formData.address}
               onChange={handleAddressChange}
@@ -2989,7 +2741,6 @@ const Contacts: React.FC = () => {
 
             {/* Empresa Principal */}
             <TextField
-              id="contact-company-input"
               select
               label="Empresa Principal"
               value={formData.companyId || ""}
@@ -3004,14 +2755,7 @@ const Contacts: React.FC = () => {
               helperText={formErrors.companyId}
               required
               fullWidth
-              InputLabelProps={{
-                htmlFor: "contact-company-input",
-              }}
               SelectProps={{
-                inputProps: {
-                  id: "contact-company-input",
-                  name: "contact-company-input",
-                },
                 MenuProps: {
                   disableScrollLock: true,
                   disablePortal: true,
@@ -3077,7 +2821,6 @@ const Contacts: React.FC = () => {
             />
             {/* Etapa del Ciclo de Vida */}
             <TextField
-              id="contact-lifecycle-stage-input"
               select
               label="Etapa del Ciclo de Vida"
               value={formData.lifecycleStage}
@@ -3088,14 +2831,7 @@ const Contacts: React.FC = () => {
                 }))
               }
               fullWidth
-              InputLabelProps={{
-                htmlFor: "contact-lifecycle-stage-input",
-              }}
               SelectProps={{
-                inputProps: {
-                  id: "contact-lifecycle-stage-input",
-                  name: "contact-lifecycle-stage-input",
-                },
                 MenuProps: {
                   disableScrollLock: true,
                   disablePortal: true,
@@ -3193,7 +2929,7 @@ const Contacts: React.FC = () => {
             sx={pageStyles.deleteButton}
             startIcon={
               deleting ? (
-                <CircularProgress size={16} sx={{ color: "#ffffff" }} />
+                <CircularProgress size={16} sx={{ color: theme.palette.common.white }} />
               ) : (
                 <Delete />
               )
@@ -3229,7 +2965,9 @@ const Contacts: React.FC = () => {
         BackdropProps={{
           sx: {
             backdropFilter: "blur(4px)",
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            backgroundColor: theme.palette.mode === 'dark'
+              ? `${theme.palette.common.black}80`
+              : `${theme.palette.common.black}80`,
           },
         }}
       >
@@ -3349,8 +3087,6 @@ const Contacts: React.FC = () => {
               }}
             />
             <TextField
-              id="company-address"
-              name="address"
               label="Dirección"
               value={companyFormData.address}
               onChange={(e) =>

@@ -30,7 +30,6 @@ import {
 } from '@mui/material';
 import { Add, Delete, Search, Campaign as CampaignIcon, TrendingUp, Computer, Visibility, CheckCircle } from '@mui/icons-material';
 import api from '../config/api';
-import { log } from '../utils/logger';
 import { taxiMonterricoColors } from '../theme/colors';
 
 interface Campaign {
@@ -83,7 +82,7 @@ const Campaigns: React.FC = () => {
 
   // Función para vista previa
   const handlePreview = (campaign: Campaign) => {
-    log('Preview campaign:', campaign);
+    console.log('Preview campaign:', campaign);
   };
 
   useEffect(() => {
@@ -380,18 +379,19 @@ const Campaigns: React.FC = () => {
             </Box>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <TextField
-                size="small"
+                size="medium"
                 placeholder="Search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 InputProps={{
-                  startAdornment: <Search sx={{ mr: 1, color: '#9e9e9e', fontSize: 20 }} />,
+                  startAdornment: <Search sx={{ mr: 2.5, color: '#9e9e9e', fontSize: 38 }} />,
                 }}
                 sx={{ 
                   minWidth: 200,
                   bgcolor: 'white',
                   borderRadius: 1.5,
                   '& .MuiOutlinedInput-root': {
+                    fontSize: '1.4rem',
                     '& fieldset': {
                       borderColor: '#e0e0e0',
                     },
@@ -400,6 +400,10 @@ const Campaigns: React.FC = () => {
                     },
                     '&.Mui-focused fieldset': {
                       borderColor: '#1976d2',
+                    },
+                    '& input::placeholder': {
+                      fontSize: '1.4rem',
+                      opacity: 0.7,
                     },
                   },
                 }}

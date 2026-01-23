@@ -509,19 +509,16 @@ const NoteModal: React.FC<NoteModalProps> = ({
           maxWidth: { xs: "95vw", sm: "95vw" },
           height: { xs: "85vh", sm: "80vh" },
           maxHeight: { xs: "85vh", sm: "800px" },
-          backgroundColor:
-            theme.palette.mode === "dark"
-              ? "#1F2937"
-              : theme.palette.background.paper,
-          boxShadow:
-            theme.palette.mode === "dark"
-              ? "0 20px 60px rgba(0,0,0,0.5)"
-              : "0 20px 60px rgba(0,0,0,0.12)",
+          backgroundColor: `${theme.palette.background.paper} !important`,
+          color: `${theme.palette.text.primary} !important`,
+          boxShadow: `0 8px 32px ${taxiMonterricoColors.greenLight}30`,
+          border: "1px solid",
+          borderColor: theme.palette.divider,
           zIndex: 1500,
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
-          borderRadius: 1,
+          borderRadius: 3,
           animation: "fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
           "@keyframes fadeInScale": {
             "0%": {
@@ -540,9 +537,13 @@ const NoteModal: React.FC<NoteModalProps> = ({
         <Box
           sx={{
             px: 3,
-            py: 2,
-            backgroundColor: "transparent",
-            color: theme.palette.text.primary,
+            py: 2.5,
+            background: `linear-gradient(135deg, ${taxiMonterricoColors.green}15 0%, ${taxiMonterricoColors.orange}15 100%)`,
+            borderBottom: `2px solid transparent`,
+            borderImage: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+            borderImageSlice: 1,
+            backgroundColor: `${theme.palette.background.paper} !important`,
+            color: `${theme.palette.text.primary} !important`,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -552,10 +553,14 @@ const NoteModal: React.FC<NoteModalProps> = ({
             <Typography
               variant="h6"
               sx={{
-                color: theme.palette.text.primary,
-                fontWeight: 600,
-                fontSize: "1.25rem",
+                fontWeight: 700,
+                fontSize: "1.375rem",
                 letterSpacing: "-0.02em",
+                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                backgroundClip: "text",
+                color: `${theme.palette.text.primary} !important`,
               }}
             >
               Nota
@@ -564,12 +569,12 @@ const NoteModal: React.FC<NoteModalProps> = ({
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
             <IconButton
               sx={{
-                color: theme.palette.text.secondary,
+                color: taxiMonterricoColors.orange,
+                transition: "all 0.3s ease",
                 "&:hover": {
-                  backgroundColor: theme.palette.error.main + "15",
-                  color: theme.palette.error.main,
+                  bgcolor: `${taxiMonterricoColors.orange}15`,
+                  transform: "rotate(90deg)",
                 },
-                transition: "all 0.2s ease",
               }}
               size="small"
               onClick={onClose}
@@ -580,14 +585,14 @@ const NoteModal: React.FC<NoteModalProps> = ({
         </Box>
 
         {/* Campo de título/asunto */}
-        <Box sx={{ px: 3, pb: 2 }}>
+        <Box sx={{ px: 3, pb: 2, bgcolor: `${theme.palette.background.paper} !important`, background: `linear-gradient(to bottom, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)` }}>
           <Typography
             variant="body2"
             sx={{
-              color: theme.palette.text.secondary,
+              color: `${theme.palette.text.secondary} !important`,
               fontSize: "0.875rem",
               mb: 0.5,
-              fontWeight: 400,
+              fontWeight: 500,
             }}
           >
             para: {getEntityTypeLabel()} · {entityName}
@@ -595,7 +600,7 @@ const NoteModal: React.FC<NoteModalProps> = ({
           <Typography
             variant="body2"
             sx={{
-              color: theme.palette.text.secondary,
+              color: `${theme.palette.text.secondary} !important`,
               fontSize: "0.75rem",
               mb: 1.5,
               fontWeight: 400,
@@ -653,27 +658,43 @@ const NoteModal: React.FC<NoteModalProps> = ({
             variant="outlined"
             sx={{
               "& .MuiOutlinedInput-root": {
-                backgroundColor: "transparent",
+                bgcolor: `${theme.palette.background.paper} !important`,
+                color: `${theme.palette.text.primary} !important`,
+                borderWidth: 2,
                 "& fieldset": {
-                  borderColor:
-                    theme.palette.mode === "dark"
-                      ? "rgba(255,255,255,0.1)"
-                      : theme.palette.divider,
+                  borderColor: theme.palette.divider,
                 },
                 "&:hover fieldset": {
-                  borderColor:
-                    theme.palette.mode === "dark"
-                      ? "rgba(255,255,255,0.2)"
-                      : theme.palette.divider,
+                  borderColor: `${taxiMonterricoColors.greenLight} !important`,
+                  boxShadow: `0 0 0 2px ${taxiMonterricoColors.greenLight}30`,
                 },
                 "&.Mui-focused fieldset": {
-                  borderColor: taxiMonterricoColors.green,
+                  borderColor: `${taxiMonterricoColors.green} !important`,
+                  boxShadow: `0 0 0 3px ${taxiMonterricoColors.greenLight}30`,
+                },
+                "& input": {
+                  color: `${theme.palette.text.primary} !important`,
+                  "&::placeholder": {
+                    color: `${theme.palette.text.secondary} !important`,
+                    opacity: 1,
+                  },
+                },
+                "& input:-webkit-autofill": {
+                  WebkitBoxShadow: `0 0 0 100px ${theme.palette.background.paper} inset !important`,
+                  WebkitTextFillColor: `${theme.palette.text.primary} !important`,
                 },
               },
               "& .MuiInputBase-input": {
                 fontSize: "1rem",
                 fontWeight: 500,
                 py: 1.5,
+              },
+              "& .MuiInputLabel-root": {
+                color: `${theme.palette.text.secondary} !important`,
+                "&.Mui-focused": {
+                  color: `${taxiMonterricoColors.green} !important`,
+                  fontWeight: 600,
+                },
               },
             }}
             onKeyDown={(e) => {
@@ -719,19 +740,20 @@ const NoteModal: React.FC<NoteModalProps> = ({
                 flex: 1,
                 display: "flex",
                 flexDirection: "column",
-                border: `1px solid ${
-                  theme.palette.mode === "dark"
-                    ? "rgba(255,255,255,0.1)"
-                    : theme.palette.divider
-                }`,
+                border: `2px solid ${theme.palette.divider}`,
                 borderRadius: 2,
                 overflow: "hidden",
                 minHeight: 0,
-                backgroundColor:
-                  theme.palette.mode === "dark"
-                    ? "#1F2937"
-                    : theme.palette.background.paper,
-                transition: "all 0.2s ease",
+                backgroundColor: `${theme.palette.background.paper} !important`,
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  borderColor: `${taxiMonterricoColors.greenLight}`,
+                  boxShadow: `0 0 0 2px ${taxiMonterricoColors.greenLight}30`,
+                },
+                "&:focus-within": {
+                  borderColor: `${taxiMonterricoColors.green}`,
+                  boxShadow: `0 0 0 3px ${taxiMonterricoColors.greenLight}30`,
+                },
               }}
             >
               <RichTextEditor
@@ -915,15 +937,8 @@ const NoteModal: React.FC<NoteModalProps> = ({
           sx={{
             px: 3,
             py: 2.5,
-            borderTop: `1px solid ${
-              theme.palette.mode === "dark"
-                ? "rgba(255,255,255,0.1)"
-                : theme.palette.divider
-            }`,
-            backgroundColor:
-              theme.palette.mode === "dark"
-                ? "#1F2937"
-                : theme.palette.background.paper,
+            borderTop: `1px solid ${theme.palette.divider}`,
+            backgroundColor: `${theme.palette.background.paper} !important`,
             display: "flex",
             justifyContent: "flex-start",
             alignItems: "center",
@@ -937,24 +952,40 @@ const NoteModal: React.FC<NoteModalProps> = ({
             sx={{
               textTransform: "none",
               px: 4,
-              py: 1.25,
-              backgroundColor: saving
+              py: 1.5,
+              background: saving
                 ? theme.palette.action.disabledBackground
-                : taxiMonterricoColors.green,
-              color: "white",
-              fontWeight: 600,
-              borderRadius: 0.5,
+                : `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`,
+              color: theme.palette.common.white,
+              fontWeight: 700,
+              borderRadius: 2,
               boxShadow: saving
                 ? "none"
-                : `0 4px 12px ${taxiMonterricoColors.green}40`,
+                : `0 4px 12px ${taxiMonterricoColors.greenLight}40`,
+              transition: "all 0.3s ease",
+              position: "relative",
+              overflow: "hidden",
+              "&::before": {
+                content: '""',
+                position: "absolute",
+                top: 0,
+                left: "-100%",
+                width: "100%",
+                height: "100%",
+                background: `linear-gradient(90deg, transparent, ${theme.palette.common.white}40, transparent)`,
+                transition: "left 0.5s ease",
+              },
               "&:hover": {
-                backgroundColor: saving
+                background: saving
                   ? theme.palette.action.disabledBackground
-                  : taxiMonterricoColors.greenDark,
+                  : `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`,
                 boxShadow: saving
                   ? "none"
-                  : `0 6px 16px ${taxiMonterricoColors.green}50`,
+                  : `0 8px 20px ${taxiMonterricoColors.greenLight}60`,
                 transform: "translateY(-2px)",
+                "&::before": {
+                  left: "100%",
+                },
               },
               "&:active": {
                 transform: "translateY(0)",
@@ -963,8 +994,8 @@ const NoteModal: React.FC<NoteModalProps> = ({
                 backgroundColor: theme.palette.action.disabledBackground,
                 color: theme.palette.action.disabled,
                 boxShadow: "none",
+                background: theme.palette.action.disabledBackground,
               },
-              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
             }}
           >
             {saving ? "Guardando..." : "Crear nota"}
@@ -979,10 +1010,9 @@ const NoteModal: React.FC<NoteModalProps> = ({
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor:
-            theme.palette.mode === "dark"
-              ? "rgba(0, 0, 0, 0.7)"
-              : "rgba(0, 0, 0, 0.5)",
+          backgroundColor: theme.palette.mode === "dark"
+              ? `${theme.palette.common.black}80`
+              : `${theme.palette.common.black}80`,
           zIndex: 1499,
           animation: "fadeIn 0.3s ease-out",
           "@keyframes fadeIn": {
@@ -1051,15 +1081,15 @@ const NoteModal: React.FC<NoteModalProps> = ({
                     "&.Mui-selected": {
                       backgroundColor:
                         theme.palette.mode === "dark"
-                          ? "rgba(76, 175, 80, 0.3)"
-                          : "rgba(76, 175, 80, 0.15)",
+                          ? `${taxiMonterricoColors.green}4D`
+                          : `${taxiMonterricoColors.green}26`,
                       color:
-                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
+                        theme.palette.mode === "dark" ? theme.palette.common.white : "inherit",
                       "&:hover": {
                         backgroundColor:
                           theme.palette.mode === "dark"
-                            ? "rgba(76, 175, 80, 0.4)"
-                            : "rgba(76, 175, 80, 0.2)",
+                            ? `${taxiMonterricoColors.green}66`
+                            : `${taxiMonterricoColors.green}33`,
                       },
                     },
                   }}
@@ -1087,15 +1117,15 @@ const NoteModal: React.FC<NoteModalProps> = ({
                     "&.Mui-selected": {
                       backgroundColor:
                         theme.palette.mode === "dark"
-                          ? "rgba(76, 175, 80, 0.3)"
-                          : "rgba(76, 175, 80, 0.15)",
+                          ? `${taxiMonterricoColors.green}4D`
+                          : `${taxiMonterricoColors.green}26`,
                       color:
-                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
+                        theme.palette.mode === "dark" ? theme.palette.common.white : "inherit",
                       "&:hover": {
                         backgroundColor:
                           theme.palette.mode === "dark"
-                            ? "rgba(76, 175, 80, 0.4)"
-                            : "rgba(76, 175, 80, 0.2)",
+                            ? `${taxiMonterricoColors.green}66`
+                            : `${taxiMonterricoColors.green}33`,
                       },
                     },
                   }}
@@ -1121,15 +1151,15 @@ const NoteModal: React.FC<NoteModalProps> = ({
                     "&.Mui-selected": {
                       backgroundColor:
                         theme.palette.mode === "dark"
-                          ? "rgba(76, 175, 80, 0.3)"
-                          : "rgba(76, 175, 80, 0.15)",
+                          ? `${taxiMonterricoColors.green}4D`
+                          : `${taxiMonterricoColors.green}26`,
                       color:
-                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
+                        theme.palette.mode === "dark" ? theme.palette.common.white : "inherit",
                       "&:hover": {
                         backgroundColor:
                           theme.palette.mode === "dark"
-                            ? "rgba(76, 175, 80, 0.4)"
-                            : "rgba(76, 175, 80, 0.2)",
+                            ? `${taxiMonterricoColors.green}66`
+                            : `${taxiMonterricoColors.green}33`,
                       },
                     },
                   }}
@@ -1155,15 +1185,15 @@ const NoteModal: React.FC<NoteModalProps> = ({
                     "&.Mui-selected": {
                       backgroundColor:
                         theme.palette.mode === "dark"
-                          ? "rgba(76, 175, 80, 0.3)"
-                          : "rgba(76, 175, 80, 0.15)",
+                          ? `${taxiMonterricoColors.green}4D`
+                          : `${taxiMonterricoColors.green}26`,
                       color:
-                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
+                        theme.palette.mode === "dark" ? theme.palette.common.white : "inherit",
                       "&:hover": {
                         backgroundColor:
                           theme.palette.mode === "dark"
-                            ? "rgba(76, 175, 80, 0.4)"
-                            : "rgba(76, 175, 80, 0.2)",
+                            ? `${taxiMonterricoColors.green}66`
+                            : `${taxiMonterricoColors.green}33`,
                       },
                     },
                   }}
@@ -1189,15 +1219,15 @@ const NoteModal: React.FC<NoteModalProps> = ({
                     "&.Mui-selected": {
                       backgroundColor:
                         theme.palette.mode === "dark"
-                          ? "rgba(76, 175, 80, 0.3)"
-                          : "rgba(76, 175, 80, 0.15)",
+                          ? `${taxiMonterricoColors.green}4D`
+                          : `${taxiMonterricoColors.green}26`,
                       color:
-                        theme.palette.mode === "dark" ? "#ffffff" : "inherit",
+                        theme.palette.mode === "dark" ? theme.palette.common.white : "inherit",
                       "&:hover": {
                         backgroundColor:
                           theme.palette.mode === "dark"
-                            ? "rgba(76, 175, 80, 0.4)"
-                            : "rgba(76, 175, 80, 0.2)",
+                            ? `${taxiMonterricoColors.green}66`
+                            : `${taxiMonterricoColors.green}33`,
                       },
                     },
                   }}

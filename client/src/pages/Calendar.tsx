@@ -27,7 +27,7 @@ import {
 } from '@mui/icons-material';
 import api from '../config/api';
 import { useAuth } from '../context/AuthContext';
-import { log } from '../utils/logger';
+import { taxiMonterricoColors } from '../theme/colors';
 import {
   getCalendarDays,
   isToday as isTodayUtil,
@@ -69,7 +69,7 @@ const Calendar: React.FC = () => {
     // Verificar autenticación antes de hacer la llamada
     const token = localStorage.getItem('token');
     if (!user || !token) {
-      log('⚠️ Usuario no autenticado, omitiendo fetchGoogleCalendarEvents');
+      console.log('⚠️ Usuario no autenticado, omitiendo fetchGoogleCalendarEvents');
       setGoogleCalendarEvents([]);
       return;
     }
@@ -103,7 +103,7 @@ const Calendar: React.FC = () => {
     // Verificar autenticación antes de hacer la llamada
     const token = localStorage.getItem('token');
     if (!user || !token) {
-      log('⚠️ Usuario no autenticado, omitiendo checkGoogleCalendarConnection');
+      console.log('⚠️ Usuario no autenticado, omitiendo checkGoogleCalendarConnection');
       setGoogleCalendarConnected(false);
       setGoogleCalendarEvents([]);
       return;
@@ -138,7 +138,7 @@ const Calendar: React.FC = () => {
   const fetchAllActivities = useCallback(async () => {
     const token = localStorage.getItem('token');
     if (!user || !token) {
-      log('⚠️ Usuario no autenticado, omitiendo fetchAllActivities');
+      console.log('⚠️ Usuario no autenticado, omitiendo fetchAllActivities');
       setNotes([]);
       setMeetings([]);
       return [];
@@ -176,7 +176,7 @@ const Calendar: React.FC = () => {
     // Verificar autenticación antes de hacer la llamada
     const token = localStorage.getItem('token');
     if (!user || !token) {
-      log('⚠️ Usuario no autenticado, omitiendo fetchAllTasksWithDates');
+      console.log('⚠️ Usuario no autenticado, omitiendo fetchAllTasksWithDates');
       setAllTasksWithDates([]);
       return;
     }
@@ -306,6 +306,12 @@ const Calendar: React.FC = () => {
   const modalYear = calendarDate.getFullYear();
   const calendarDays = getCalendarDays(modalYear, modalMonth);
 
+  // Meses en español
+  const mesesEnEspanol = [
+    'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+  ];
+
   return (
     <Box sx={{ 
       backgroundColor: theme.palette.background.default, 
@@ -322,10 +328,21 @@ const Calendar: React.FC = () => {
           borderRadius: 2,
           p: 0,
           boxShadow: theme.palette.mode === 'dark' 
-            ? '0 4px 12px rgba(0,0,0,0.3)' 
-            : '0 2px 8px rgba(0,0,0,0.1)',
+            ? '0 8px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(46, 125, 50, 0.1)' 
+            : '0 8px 24px rgba(46, 125, 50, 0.12), 0 0 0 1px rgba(46, 125, 50, 0.08)',
           overflow: 'hidden',
           border: 'none',
+          position: 'relative',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '4px',
+            background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+            zIndex: 1,
+          },
         }}
       >
         {/* Barra superior dentro del Card */}
@@ -337,17 +354,26 @@ const Calendar: React.FC = () => {
           pb: 2,
           px: { xs: 1.5, md: 2 },
           pt: { xs: 1.5, md: 2 },
-          borderBottom: `1px solid ${theme.palette.divider}`,
+          borderBottom: `2px solid ${theme.palette.divider}`,
+          background: theme.palette.mode === 'dark'
+            ? `linear-gradient(135deg, rgba(46, 125, 50, 0.05) 0%, transparent 100%)`
+            : `linear-gradient(135deg, rgba(46, 125, 50, 0.02) 0%, transparent 100%)`,
+          borderRadius: '8px 8px 0 0',
         }}>
           {/* Iconos de vista (izquierda) */}
           <Box sx={{ display: 'flex', gap: 0.5 }}>
             <IconButton
               size="small"
               sx={{
-                bgcolor: theme.palette.primary.main,
-                color: theme.palette.primary.contrastText,
+                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+                color: 'white',
+                borderRadius: 1.5,
+                transition: 'all 0.2s ease',
+                boxShadow: `0 2px 6px ${taxiMonterricoColors.green}30`,
                 '&:hover': {
-                  bgcolor: theme.palette.primary.dark,
+                  transform: 'translateY(-1px)',
+                  boxShadow: `0 4px 8px ${taxiMonterricoColors.green}40`,
+                  background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
                 },
               }}
             >
@@ -357,8 +383,14 @@ const Calendar: React.FC = () => {
               size="small"
               sx={{
                 color: theme.palette.text.secondary,
+                borderRadius: 1.5,
+                border: `1px solid ${theme.palette.divider}`,
+                transition: 'all 0.2s ease',
                 '&:hover': {
                   bgcolor: theme.palette.action.hover,
+                  borderColor: taxiMonterricoColors.green,
+                  color: taxiMonterricoColors.green,
+                  transform: 'translateY(-1px)',
                 },
               }}
             >
@@ -377,13 +409,36 @@ const Calendar: React.FC = () => {
                 setSelectedDate(null);
               }}
               sx={{
-                color: theme.palette.text.primary,
+                color: theme.palette.text.secondary,
+                border: `1px solid ${theme.palette.divider}`,
+                borderRadius: 1.5,
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                  borderColor: taxiMonterricoColors.green,
+                  color: taxiMonterricoColors.green,
+                  transform: 'translateX(-2px)',
+                },
               }}
             >
               <ChevronLeft />
             </IconButton>
-            <Typography variant="h6" sx={{ minWidth: 180, textAlign: 'center', fontWeight: 500 }}>
-              {calendarDate.toLocaleString('es-ES', { month: 'long', year: 'numeric' })}
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                minWidth: 180, 
+                textAlign: 'center', 
+                fontWeight: 800,
+                fontSize: { xs: '1.2rem', md: '1.5rem' },
+                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                letterSpacing: '-0.03em',
+                textTransform: 'capitalize',
+              }}
+            >
+              {mesesEnEspanol[calendarDate.getMonth()]} {calendarDate.getFullYear()}
             </Typography>
             <IconButton 
               size="small" 
@@ -394,7 +449,16 @@ const Calendar: React.FC = () => {
                 setSelectedDate(null);
               }}
               sx={{
-                color: theme.palette.text.primary,
+                color: theme.palette.text.secondary,
+                border: `1px solid ${theme.palette.divider}`,
+                borderRadius: 1.5,
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                  borderColor: taxiMonterricoColors.green,
+                  color: taxiMonterricoColors.green,
+                  transform: 'translateX(2px)',
+                },
               }}
             >
               <ChevronRight />
@@ -403,7 +467,20 @@ const Calendar: React.FC = () => {
 
           {/* Menú (derecha) */}
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            <IconButton size="small" sx={{ color: theme.palette.text.secondary }}>
+            <IconButton 
+              size="small" 
+              sx={{ 
+                color: theme.palette.text.secondary,
+                borderRadius: 1.5,
+                border: `1px solid ${theme.palette.divider}`,
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                  borderColor: taxiMonterricoColors.green,
+                  color: taxiMonterricoColors.green,
+                },
+              }}
+            >
               <MenuIcon />
             </IconButton>
           </Box>
@@ -416,18 +493,27 @@ const Calendar: React.FC = () => {
           gap: 0,
           mb: 0,
           px: { xs: 1.5, md: 2 },
-          py: 0.5,
+          py: 1.5,
+          background: theme.palette.mode === 'dark'
+            ? `linear-gradient(135deg, rgba(46, 125, 50, 0.08) 0%, rgba(46, 125, 50, 0.03) 100%)`
+            : `linear-gradient(135deg, rgba(46, 125, 50, 0.06) 0%, rgba(46, 125, 50, 0.02) 100%)`,
+          borderBottom: `1px solid ${theme.palette.divider}`,
         }}>
-              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
+              {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day, index) => (
                 <Typography
                   key={day}
                   variant="caption"
                   sx={{ 
                     textAlign: 'center', 
-                    fontWeight: 500, 
-                    color: theme.palette.text.secondary,
-                    fontSize: '0.75rem',
-                    py: 0.5,
+                    fontWeight: 800, 
+                    color: index === 0 || index === 6 
+                      ? taxiMonterricoColors.green 
+                      : theme.palette.text.secondary,
+                    fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                    py: 1,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.08em',
+                    position: 'relative',
                   }}
                 >
                   {day}
@@ -487,7 +573,7 @@ const Calendar: React.FC = () => {
                       borderRight: index % 7 !== 6 ? `1px solid ${theme.palette.divider}` : 'none',
                       borderBottom: `1px solid ${theme.palette.divider}`,
                       borderRadius: 0,
-                      p: 0.75,
+                      p: 1,
                       bgcolor: calendarDay.isCurrentMonth
                         ? theme.palette.background.paper
                         : (theme.palette.mode === 'dark'
@@ -497,6 +583,17 @@ const Calendar: React.FC = () => {
                       flexDirection: 'column',
                       cursor: calendarDay.isCurrentMonth ? 'pointer' : 'default',
                       position: 'relative',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&:hover': calendarDay.isCurrentMonth ? {
+                        bgcolor: theme.palette.mode === 'dark' 
+                          ? 'rgba(46, 125, 50, 0.15)' 
+                          : 'rgba(46, 125, 50, 0.06)',
+                        transform: 'scale(1.02)',
+                        zIndex: 1,
+                        boxShadow: theme.palette.mode === 'dark'
+                          ? '0 4px 12px rgba(46, 125, 50, 0.2)'
+                          : '0 4px 12px rgba(46, 125, 50, 0.15)',
+                      } : {},
                     }}
                   >
                     {/* Número del día */}
@@ -509,21 +606,35 @@ const Calendar: React.FC = () => {
                       <Typography
                         variant="body2"
                         sx={{
-                          fontWeight: dayIsToday ? 700 : 500,
-                          fontSize: '0.875rem',
+                          fontWeight: dayIsToday ? 800 : (calendarDay.isCurrentMonth ? 600 : 400),
+                          fontSize: dayIsToday ? '1rem' : '0.875rem',
                           position: 'relative',
                           display: 'inline-flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          width: dayIsToday ? 24 : 'auto',
-                          height: dayIsToday ? 24 : 'auto',
+                          width: dayIsToday ? 32 : 'auto',
+                          height: dayIsToday ? 32 : 'auto',
                           borderRadius: dayIsToday ? '50%' : 0,
-                          bgcolor: dayIsToday ? theme.palette.error.main : 'transparent',
+                          background: dayIsToday 
+                            ? `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`
+                            : 'transparent',
                           color: dayIsToday 
-                            ? theme.palette.error.contrastText 
+                            ? 'white'
                             : (calendarDay.isCurrentMonth
                               ? theme.palette.text.primary
                               : theme.palette.text.disabled),
+                          boxShadow: dayIsToday 
+                            ? `0 4px 12px ${taxiMonterricoColors.green}50, 0 0 0 2px ${taxiMonterricoColors.green}20`
+                            : 'none',
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                          '&:hover': calendarDay.isCurrentMonth && !dayIsToday ? {
+                            bgcolor: theme.palette.mode === 'dark'
+                              ? 'rgba(46, 125, 50, 0.2)'
+                              : 'rgba(46, 125, 50, 0.1)',
+                            borderRadius: '50%',
+                            width: 28,
+                            height: 28,
+                          } : {},
                         }}
                       >
                         {calendarDay.day}
@@ -544,16 +655,21 @@ const Calendar: React.FC = () => {
                           sx={{
                             bgcolor: event.color,
                             color: '#fff',
-                            borderRadius: 0.5,
+                            borderRadius: 1,
                             px: 0.75,
-                            py: 0.25,
+                            py: 0.4,
                             fontSize: '0.7rem',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                             cursor: 'pointer',
+                            fontWeight: 500,
+                            boxShadow: `0 2px 4px ${event.color}40`,
+                            transition: 'all 0.2s ease',
                             '&:hover': {
-                              opacity: 0.9,
+                              transform: 'translateX(2px)',
+                              boxShadow: `0 3px 8px ${event.color}50`,
+                              opacity: 0.95,
                             },
                           }}
                           onClick={(e) => {
@@ -700,11 +816,10 @@ const Calendar: React.FC = () => {
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <CalendarToday sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
                   <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                    Fecha de vencimiento: {new Date(eventDetails.dueDate).toLocaleDateString('es-ES', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                    })}
+                    Fecha de vencimiento: {(() => {
+                      const fecha = new Date(eventDetails.dueDate);
+                      return `${fecha.getDate()} de ${mesesEnEspanol[fecha.getMonth()]} de ${fecha.getFullYear()}`;
+                    })()}
                   </Typography>
                 </Box>
               )}

@@ -4,7 +4,6 @@ import {
   Typography,
   Card,
   CardContent,
-  Avatar,
   CircularProgress,
   Alert,
   Table,
@@ -19,6 +18,7 @@ import { Person } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import api from '../config/api';
 import { useTheme } from '@mui/material/styles';
+import UserAvatar from '../components/UserAvatar';
 
 interface User {
   id: number;
@@ -88,44 +88,6 @@ const Reports: React.FC = () => {
     }
   };
 
-  const getInitials = (firstName?: string, lastName?: string) => {
-    if (!firstName && !lastName) return '?';
-    return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
-  };
-
-  const stringToColor = (string: string) => {
-    let hash = 0;
-    let i;
-    for (i = 0; i < string.length; i += 1) {
-      hash = string.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    let color = '#';
-    for (i = 0; i < 3; i += 1) {
-      const value = (hash >> (i * 8)) & 0xff;
-      color += `00${value.toString(16)}`.substr(-2);
-    }
-    return color;
-  };
-
-  const stringToGradient = (string: string, isDarkMode: boolean) => {
-    const baseColor = stringToColor(string);
-    // Convertir hex a RGB
-    const r = parseInt(baseColor.slice(1, 3), 16);
-    const g = parseInt(baseColor.slice(3, 5), 16);
-    const b = parseInt(baseColor.slice(5, 7), 16);
-    
-    // Ajustar la intensidad del degradado según el modo
-    // En modo oscuro: degradado más pronunciado (más oscuro)
-    // En modo claro: degradado más suave (menos oscuro)
-    const darkenAmount = isDarkMode ? 40 : 20;
-    
-    // Crear un color más oscuro para el degradado
-    const darkerR = Math.max(0, r - darkenAmount);
-    const darkerG = Math.max(0, g - darkenAmount);
-    const darkerB = Math.max(0, b - darkenAmount);
-    
-    return `linear-gradient(135deg, ${baseColor} 0%, rgb(${darkerR}, ${darkerG}, ${darkerB}) 100%)`;
-  };
 
   if (loading) {
     return (
@@ -164,7 +126,7 @@ const Reports: React.FC = () => {
         </Typography>
         <Card sx={{ 
           borderRadius: 4, 
-          background: theme.palette.mode === 'dark' ? '#171e2b' : theme.palette.background.paper,
+          background: theme.palette.mode === 'dark' ? theme.palette.background.default : theme.palette.background.paper,
           border: 'none',
           mx: { xs: 2, md: 19 },
           maxWidth: { xs: 'calc(100% - 32px)', md: 'calc(100% - 135px)' },
@@ -230,23 +192,13 @@ const Reports: React.FC = () => {
                       >
                         <TableCell sx={{ pl: 5 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Avatar
-                              src={user.avatar}
-                              sx={{
-                                background: stringToGradient(`${user.firstName || ''}${user.lastName || ''}` || 'user', theme.palette.mode === 'dark'),
-                                color: '#ffffff',
-                                width: 40,
-                                height: 40,
-                                fontSize: '0.875rem',
-                                fontWeight: 600,
-                                border: `2px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)'}`,
-                                boxShadow: theme.palette.mode === 'dark' 
-                                  ? '0 2px 8px rgba(0, 0, 0, 0.3)' 
-                                  : '0 2px 8px rgba(0, 0, 0, 0.1)',
-                              }}
-                            >
-                              {getInitials(user.firstName, user.lastName)}
-                            </Avatar>
+                            <UserAvatar
+                              firstName={user.firstName}
+                              lastName={user.lastName}
+                              avatar={user.avatar}
+                              size="medium"
+                              variant="default"
+                            />
                             <Typography 
                               variant="body2" 
                               sx={{ 

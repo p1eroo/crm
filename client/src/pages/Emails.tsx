@@ -30,6 +30,7 @@ import {
   MarkEmailRead,
   MarkEmailUnread,
 } from '@mui/icons-material';
+import { Tooltip } from '@mui/material';
 import { taxiMonterricoColors } from '../theme/colors';
 import api from '../config/api';
 import EmailComposer from '../components/EmailComposer';
@@ -482,26 +483,52 @@ const Emails: React.FC = () => {
         }}
       >
         {/* Botón Componer */}
-        <Button
-          variant="contained"
-          onClick={() => setComposeOpen(true)}
-          sx={{
-            bgcolor: taxiMonterricoColors.green,
-            textTransform: 'none',
-            px: 2,
-            py: 1,
-            mt: 1,
-            borderRadius: 2,
-            width: '85%',
-            alignSelf: 'center',
-            '&:hover': {
-              bgcolor: taxiMonterricoColors.green,
-              opacity: 0.9,
-            },
-          }}
-        >
-          Redactar
-        </Button>
+        <Tooltip title="Crear nuevo correo" arrow>
+          <Button
+            variant="contained"
+            onClick={() => setComposeOpen(true)}
+            startIcon={<Send />}
+            sx={{
+              background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`,
+              color: 'white',
+              textTransform: 'none',
+              px: 2.5,
+              py: 1.5,
+              mt: 1,
+              borderRadius: 2,
+              width: '85%',
+              alignSelf: 'center',
+              fontWeight: 700,
+              boxShadow: `0 4px 12px ${taxiMonterricoColors.greenLight}40`,
+              transition: 'all 0.3s ease',
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: '-100%',
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                transition: 'left 0.5s ease',
+              },
+              '&:hover': {
+                transform: 'translateY(-2px) scale(1.02)',
+                boxShadow: `0 8px 20px ${taxiMonterricoColors.greenLight}60`,
+                background: `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`,
+                '&::before': {
+                  left: '100%',
+                },
+              },
+              '&:active': {
+                transform: 'translateY(0) scale(1)',
+              },
+            }}
+          >
+            Redactar
+          </Button>
+        </Tooltip>
 
         {/* Opciones de carpeta */}
         <Box sx={{ mt: 2 }}>
@@ -516,14 +543,26 @@ const Emails: React.FC = () => {
               alignItems: 'center',
               justifyContent: 'space-between',
               p: 1.5,
-              borderRadius: 1,
+              borderRadius: 2,
               cursor: 'pointer',
               mb: 1,
-              bgcolor: 'transparent',
+              bgcolor: selectedFolder === 'inbox' 
+                ? `linear-gradient(135deg, ${taxiMonterricoColors.green}15 0%, ${taxiMonterricoColors.greenLight}10 100%)`
+                : 'transparent',
+              border: selectedFolder === 'inbox' 
+                ? `2px solid ${taxiMonterricoColors.green}`
+                : '1px solid transparent',
+              transition: 'all 0.3s ease',
               '&:hover': {
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 255, 255, 0.05)' 
-                  : 'rgba(0, 0, 0, 0.04)',
+                bgcolor: selectedFolder === 'inbox'
+                  ? `linear-gradient(135deg, ${taxiMonterricoColors.green}20 0%, ${taxiMonterricoColors.greenLight}15 100%)`
+                  : theme.palette.mode === 'dark' 
+                    ? 'rgba(255, 255, 255, 0.05)' 
+                    : `${taxiMonterricoColors.greenLight}10`,
+                borderColor: selectedFolder === 'inbox' 
+                  ? taxiMonterricoColors.green
+                  : taxiMonterricoColors.greenLight,
+                transform: 'translateX(4px)',
               },
             }}
           >
@@ -531,9 +570,10 @@ const Emails: React.FC = () => {
               variant="body2" 
               sx={{ 
                 color: selectedFolder === 'inbox' 
-                  ? (theme.palette.mode === 'dark' ? 'rgb(144, 202, 249)' : 'rgb(25, 118, 210)')
+                  ? taxiMonterricoColors.green
                   : theme.palette.text.secondary,
-                fontWeight: selectedFolder === 'inbox' ? 600 : 400,
+                fontWeight: selectedFolder === 'inbox' ? 700 : 500,
+                transition: 'all 0.3s ease',
               }}
             >
               Inbox
@@ -541,12 +581,16 @@ const Emails: React.FC = () => {
             {crmEmailCount > 0 && (
               <Box
                 sx={{
-                  bgcolor: theme.palette.mode === 'dark' 
-                    ? 'rgba(144, 202, 249, 0.16)' 
-                    : 'rgba(144, 202, 249, 0.12)',
-                  color: theme.palette.mode === 'dark'
-                    ? 'rgb(144, 202, 249)'
-                    : 'rgb(25, 118, 210)',
+                  bgcolor: selectedFolder === 'inbox'
+                    ? taxiMonterricoColors.green
+                    : theme.palette.mode === 'dark' 
+                      ? 'rgba(144, 202, 249, 0.16)' 
+                      : 'rgba(144, 202, 249, 0.12)',
+                  color: selectedFolder === 'inbox'
+                    ? 'white'
+                    : theme.palette.mode === 'dark'
+                      ? 'rgb(144, 202, 249)'
+                      : 'rgb(25, 118, 210)',
                   borderRadius: '12px',
                   minWidth: 24,
                   height: 24,
@@ -555,7 +599,11 @@ const Emails: React.FC = () => {
                   justifyContent: 'center',
                   px: 1,
                   fontSize: '0.75rem',
-                  fontWeight: 500,
+                  fontWeight: 700,
+                  boxShadow: selectedFolder === 'inbox' 
+                    ? `0 2px 8px ${taxiMonterricoColors.greenLight}40`
+                    : 'none',
+                  transition: 'all 0.3s ease',
                 }}
               >
                 {crmEmailCount}
@@ -574,33 +622,50 @@ const Emails: React.FC = () => {
               alignItems: 'center',
               justifyContent: 'space-between',
               p: 1.5,
-              borderRadius: 1,
+              borderRadius: 2,
               cursor: 'pointer',
               mb: 1,
-              bgcolor: 'transparent',
+              bgcolor: selectedFolder === 'starred' 
+                ? `linear-gradient(135deg, ${taxiMonterricoColors.orange}15 0%, ${taxiMonterricoColors.orangeLight}10 100%)`
+                : 'transparent',
+              border: selectedFolder === 'starred' 
+                ? `2px solid ${taxiMonterricoColors.orange}`
+                : '1px solid transparent',
+              transition: 'all 0.3s ease',
               '&:hover': {
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 255, 255, 0.05)' 
-                  : 'rgba(0, 0, 0, 0.04)',
+                bgcolor: selectedFolder === 'starred'
+                  ? `linear-gradient(135deg, ${taxiMonterricoColors.orange}20 0%, ${taxiMonterricoColors.orangeLight}15 100%)`
+                  : theme.palette.mode === 'dark' 
+                    ? 'rgba(255, 255, 255, 0.05)' 
+                    : `${taxiMonterricoColors.orange}10`,
+                borderColor: selectedFolder === 'starred' 
+                  ? taxiMonterricoColors.orange
+                  : taxiMonterricoColors.orangeLight,
+                transform: 'translateX(4px)',
               },
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Star 
                 sx={{ 
-                  fontSize: 18, 
+                  fontSize: 18,
                   color: selectedFolder === 'starred' 
-                    ? (theme.palette.mode === 'dark' ? 'rgb(144, 202, 249)' : 'rgb(25, 118, 210)')
-                    : theme.palette.text.secondary 
+                    ? taxiMonterricoColors.orange
+                    : theme.palette.text.secondary,
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    transform: 'scale(1.2) rotate(15deg)',
+                  },
                 }} 
               />
               <Typography 
                 variant="body2" 
                 sx={{ 
                   color: selectedFolder === 'starred' 
-                    ? (theme.palette.mode === 'dark' ? 'rgb(144, 202, 249)' : 'rgb(25, 118, 210)')
+                    ? taxiMonterricoColors.orange
                     : theme.palette.text.secondary,
-                  fontWeight: selectedFolder === 'starred' ? 600 : 400,
+                  fontWeight: selectedFolder === 'starred' ? 700 : 500,
+                  transition: 'all 0.3s ease',
                 }}
               >
                 Favoritos
@@ -609,12 +674,16 @@ const Emails: React.FC = () => {
             {starredCount > 0 && (
               <Box
                 sx={{
-                  bgcolor: theme.palette.mode === 'dark' 
-                    ? 'rgba(144, 202, 249, 0.16)' 
-                    : 'rgba(144, 202, 249, 0.12)',
-                  color: theme.palette.mode === 'dark'
-                    ? 'rgb(144, 202, 249)'
-                    : 'rgb(25, 118, 210)',
+                  bgcolor: selectedFolder === 'starred'
+                    ? taxiMonterricoColors.orange
+                    : theme.palette.mode === 'dark' 
+                      ? 'rgba(144, 202, 249, 0.16)' 
+                      : 'rgba(144, 202, 249, 0.12)',
+                  color: selectedFolder === 'starred'
+                    ? 'white'
+                    : theme.palette.mode === 'dark'
+                      ? 'rgb(144, 202, 249)'
+                      : 'rgb(25, 118, 210)',
                   borderRadius: '12px',
                   minWidth: 24,
                   height: 24,
@@ -623,7 +692,11 @@ const Emails: React.FC = () => {
                   justifyContent: 'center',
                   px: 1,
                   fontSize: '0.75rem',
-                  fontWeight: 500,
+                  fontWeight: 700,
+                  boxShadow: selectedFolder === 'starred' 
+                    ? `0 2px 8px ${taxiMonterricoColors.orange}40`
+                    : 'none',
+                  transition: 'all 0.3s ease',
                 }}
               >
                 {starredCount}
@@ -663,33 +736,74 @@ const Emails: React.FC = () => {
             placeholder="Buscar correo"
             value={searchTerm}
             onChange={handleSearch}
-            size="small"
+            size="medium"
             fullWidth
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Search sx={{ color: theme.palette.text.secondary }} />
+                  <Search sx={{ 
+                    color: theme.palette.text.secondary,
+                    fontSize: 38,
+                    transition: 'color 0.3s ease',
+                  }} />
                 </InputAdornment>
               ),
             }}
             sx={{
               '& .MuiOutlinedInput-root': {
-                borderRadius: 0,
+                fontSize: '1.4rem',
+                borderRadius: 2,
+                borderWidth: 2,
+                borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)',
+                bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  borderColor: `${taxiMonterricoColors.greenLight} !important`,
+                  boxShadow: `0 0 0 2px ${taxiMonterricoColors.greenLight}30`,
+                  '& .MuiInputAdornment-root .MuiSvgIcon-root': {
+                    color: taxiMonterricoColors.greenLight,
+                  },
+                },
+                '& input::placeholder': {
+                  fontSize: '1.4rem',
+                  opacity: 0.7,
+                },
+                '&.Mui-focused': {
+                  borderColor: `${taxiMonterricoColors.green} !important`,
+                  boxShadow: `0 0 0 3px ${taxiMonterricoColors.greenLight}30`,
+                  '& .MuiInputAdornment-root .MuiSvgIcon-root': {
+                    color: taxiMonterricoColors.green,
+                  },
+                },
                 '& fieldset': {
-                  border: 'none',
-                },
-                '&:hover fieldset': {
-                  border: 'none',
-                },
-                '&.Mui-focused fieldset': {
                   border: 'none',
                 },
               },
             }}
           />
-          <IconButton onClick={handleRefresh} disabled={loading}>
-            <Refresh />
-          </IconButton>
+          <Tooltip title="Actualizar correos" arrow>
+            <IconButton 
+              onClick={handleRefresh} 
+              disabled={loading}
+              sx={{
+                border: '1px solid',
+                borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  bgcolor: taxiMonterricoColors.greenLight,
+                  color: 'white',
+                  borderColor: taxiMonterricoColors.greenLight,
+                  transform: 'rotate(180deg)',
+                  boxShadow: `0 4px 12px ${taxiMonterricoColors.greenLight}40`,
+                },
+                '&:disabled': {
+                  opacity: 0.5,
+                },
+              }}
+            >
+              <Refresh />
+            </IconButton>
+          </Tooltip>
         </Box>
 
         {/* Divider horizontal */}
@@ -706,7 +820,23 @@ const Emails: React.FC = () => {
           }}
         >
           {error && (
-            <Alert severity="error" sx={{ m: 2 }} onClose={() => setError('')}>
+            <Alert 
+              severity="error" 
+              sx={{ 
+                m: 2,
+                borderRadius: 2,
+                border: '1px solid',
+                borderColor: theme.palette.error.main,
+                boxShadow: `0 4px 12px ${theme.palette.error.main}33`,
+                '& .MuiAlert-icon': {
+                  fontSize: 28,
+                },
+                '& .MuiAlert-message': {
+                  fontWeight: 500,
+                },
+              }} 
+              onClose={() => setError('')}
+            >
               {error}
             </Alert>
           )}
@@ -719,14 +849,57 @@ const Emails: React.FC = () => {
             <Box
               sx={{
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flex: 1,
+                gap: 2,
+                py: 6,
               }}
             >
-              <Typography variant="body2" color="text.secondary">
-                No hay correos para mostrar
-              </Typography>
+              <Box
+                sx={{
+                  width: 120,
+                  height: 120,
+                  borderRadius: '50%',
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(255, 255, 255, 0.05)' 
+                    : theme.palette.grey[100],
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mb: 1,
+                  fontSize: '64px',
+                  lineHeight: 1,
+                }}
+              >
+                📧
+              </Box>
+              <Box sx={{ textAlign: 'center', maxWidth: '400px' }}>
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 700,
+                    mb: 1,
+                    color: theme.palette.text.primary,
+                    fontSize: { xs: '1.25rem', md: '1.5rem' },
+                  }}
+                >
+                  No hay correos para mostrar
+                </Typography>
+                <Typography 
+                  variant="body2" 
+                  sx={{ 
+                    color: theme.palette.text.primary,
+                    lineHeight: 1.6,
+                    fontSize: { xs: '0.875rem', md: '0.9375rem' },
+                  }}
+                >
+                  {error 
+                    ? 'Conecta tu cuenta de Google para comenzar a gestionar tus correos electrónicos.'
+                    : 'No hay correos en esta carpeta. Usa el botón "Redactar" para crear un nuevo correo.'}
+                </Typography>
+              </Box>
             </Box>
           ) : (
             <List sx={{ 

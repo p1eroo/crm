@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Typography, useTheme } from '@mui/material';
+import { taxiMonterricoColors } from '../theme/colors';
 
 // Valor por defecto para itemsPerPage en todas las tablas
 export const DEFAULT_ITEMS_PER_PAGE = 10;
@@ -28,15 +29,20 @@ export const UnifiedTable: React.FC<UnifiedTableProps> = ({
       <Box
         sx={{
           bgcolor: theme.palette.background.paper,
-          borderRadius: '8px',
+          borderRadius: 3,
           overflow: 'hidden',
           boxShadow: theme.palette.mode === 'dark' 
-            ? '0 2px 4px rgba(0,0,0,0.1)' 
-            : '0 1px 3px rgba(0, 0, 0, 0.1)',
-          border: theme.palette.mode === 'light' 
-            ? '1px solid rgba(0, 0, 0, 0.04)' 
-            : '1px solid rgba(255, 255, 255, 0.05)',
+            ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
+            : '0 4px 20px rgba(0, 0, 0, 0.08)',
+          border: `1px solid ${theme.palette.divider}`,
           mb: 2,
+          position: 'relative',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&:hover': {
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 8px 30px rgba(0, 0, 0, 0.4)' 
+              : '0 8px 30px rgba(0, 0, 0, 0.12)',
+          },
         }}
       >
         {/* Fila superior con título y acciones */}
@@ -48,15 +54,19 @@ export const UnifiedTable: React.FC<UnifiedTableProps> = ({
               alignItems: 'center',
               px: { xs: 1.5, md: 2 },
               py: { xs: 1.25, md: 1.5 },
-              borderBottom: theme.palette.mode === 'light' 
-                ? '1px solid rgba(0, 0, 0, 0.08)' 
-                : '1px solid rgba(255, 255, 255, 0.1)',
+              borderBottom: `2px solid ${theme.palette.divider}`,
+              background: theme.palette.mode === 'dark'
+                ? `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, transparent 100%)`
+                : `linear-gradient(135deg, ${taxiMonterricoColors.green}03 0%, transparent 100%)`,
             }}
           >
             <Typography variant="h5" sx={{ 
-              fontWeight: 600, 
-              fontSize: { xs: '1rem', md: '1.25rem' },
-              color: theme.palette.text.primary,
+              fontWeight: 700, 
+              fontSize: { xs: '1.25rem', md: '1.5rem' },
+              background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
             }}>
               {title}
             </Typography>
@@ -86,8 +96,8 @@ export const UnifiedTable: React.FC<UnifiedTableProps> = ({
               boxShadow: 'none',
               border: 'none',
               borderTop: theme.palette.mode === 'light' 
-                ? '1px solid rgba(0, 0, 0, 0.08)' 
-                : '1px solid rgba(255, 255, 255, 0.1)',
+                ? `1px solid ${theme.palette.divider}` 
+                : `1px solid ${theme.palette.divider}`,
               px: { xs: 1.5, md: 2 },
               py: { xs: 1.25, md: 1.5 },
               display: 'flex',
