@@ -787,329 +787,360 @@ const Deals: React.FC = () => {
       )}
 
       {/* Barra de herramientas compartida - se muestra siempre */}
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
+      {/* Indicador de filtros por columna activos */}
+      {Object.values(columnFilters).some(v => v) && (
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 1, 
+          flexWrap: 'wrap', 
+          mb: 1.5,
           alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 2,
-          p: 2,
-          mb: 0,
-        }}
-      >
-        <Typography 
-          variant="h5" 
-          sx={{ 
-            fontWeight: 700,
-            fontSize: { xs: '1.25rem', md: '1.5rem' },
-            background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.mode === 'dark' ? '#10B981' : '#2E7D32'} 100%)`,
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-          }}
-        >
-          Negocios
-        </Typography>
-        
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-          <FormControl 
-            size="small" 
+          px: { xs: 1, sm: 2 },
+        }}>
+          <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>
+            Filtros por columna:
+          </Typography>
+          {columnFilters.nombre && (
+            <Chip
+              size="small"
+              label={`Nombre: "${columnFilters.nombre}"`}
+              onDelete={() => setColumnFilters(prev => ({ ...prev, nombre: '' }))}
+              sx={{ height: 24, fontSize: '0.7rem' }}
+            />
+          )}
+          {columnFilters.monto && (
+            <Chip
+              size="small"
+              label={`Monto: "${columnFilters.monto}"`}
+              onDelete={() => setColumnFilters(prev => ({ ...prev, monto: '' }))}
+              sx={{ height: 24, fontSize: '0.7rem' }}
+            />
+          )}
+          {columnFilters.etapa && (
+            <Chip
+              size="small"
+              label={`Etapa: "${columnFilters.etapa}"`}
+              onDelete={() => setColumnFilters(prev => ({ ...prev, etapa: '' }))}
+              sx={{ height: 24, fontSize: '0.7rem' }}
+            />
+          )}
+          {columnFilters.contacto && (
+            <Chip
+              size="small"
+              label={`Contacto: "${columnFilters.contacto}"`}
+              onDelete={() => setColumnFilters(prev => ({ ...prev, contacto: '' }))}
+              sx={{ height: 24, fontSize: '0.7rem' }}
+            />
+          )}
+          {columnFilters.empresa && (
+            <Chip
+              size="small"
+              label={`Empresa: "${columnFilters.empresa}"`}
+              onDelete={() => setColumnFilters(prev => ({ ...prev, empresa: '' }))}
+              sx={{ height: 24, fontSize: '0.7rem' }}
+            />
+          )}
+          <Button
+            size="small"
+            onClick={() => setColumnFilters({ nombre: '', monto: '', etapa: '', contacto: '', empresa: '' })}
             sx={{ 
-              minWidth: { xs: "100%", sm: 130 },
-              order: { xs: 1, sm: 0 },
+              fontSize: '0.7rem', 
+              textTransform: 'none',
+              color: theme.palette.error.main,
+              minWidth: 'auto',
+              p: 0.5,
             }}
           >
-            <Select
-              id="deals-sort-select"
-              name="deals-sort"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              displayEmpty
-              sx={{
-                borderRadius: 1.5,
-                bgcolor: theme.palette.background.paper,
-                fontSize: { xs: "0.75rem", sm: "0.8125rem" },
-                border: `1.5px solid ${theme.palette.divider}`,
-                transition: 'all 0.2s ease',
-                "& .MuiOutlinedInput-notchedOutline": {
-                  border: 'none',
-                },
-                "&:hover": {
-                  borderColor: taxiMonterricoColors.green,
-                  boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
-                },
-                "&.Mui-focused": {
-                  borderColor: taxiMonterricoColors.green,
-                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                },
-              }}
-            >
-              <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
-              <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
-              <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
-              <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
-            </Select>
-          </FormControl>
-          
-          <Box
-            sx={{
-              display: "flex",
-              gap: { xs: 0.5, sm: 0.75 },
-              order: { xs: 3, sm: 0 },
-            }}
-          >
-            <Tooltip title={importing ? 'Importando...' : 'Importar'} arrow>
-              <IconButton
-                size="small"
-                onClick={handleImportFromExcel}
-                disabled={importing}
-                sx={{
-                  border: `1.5px solid ${theme.palette.divider}`,
-                  borderRadius: 1.5,
-                  bgcolor: 'transparent',
-                  color: theme.palette.text.secondary,
-                  p: { xs: 0.75, sm: 0.875 },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    borderColor: taxiMonterricoColors.green,
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? 'rgba(16, 185, 129, 0.1)' 
-                      : 'rgba(16, 185, 129, 0.05)',
-                    color: taxiMonterricoColors.green,
-                    transform: 'translateY(-2px)',
-                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
-                  },
-                  '&:disabled': {
-                    opacity: 0.5,
-                  },
-                }}
-              >
-                <UploadFile sx={{ fontSize: { xs: 16, sm: 18 } }} />
-              </IconButton>
-            </Tooltip>
-            
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
-            
-            <Tooltip title="Exportar" arrow>
-              <IconButton
-                size="small"
-                onClick={handleExportToExcel}
-                sx={{
-                  border: `1.5px solid ${theme.palette.divider}`,
-                  borderRadius: 1.5,
-                  bgcolor: 'transparent',
-                  color: theme.palette.text.secondary,
-                  p: { xs: 0.75, sm: 0.875 },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    borderColor: taxiMonterricoColors.green,
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? 'rgba(16, 185, 129, 0.1)' 
-                      : 'rgba(16, 185, 129, 0.05)',
-                    color: taxiMonterricoColors.green,
-                    transform: 'translateY(-2px)',
-                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
-                  },
-                }}
-              >
-                <FileDownload sx={{ fontSize: { xs: 16, sm: 18 } }} />
-              </IconButton>
-            </Tooltip>
-          </Box>
-          
-          <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"} arrow>
-            <IconButton
-              size="small"
-              onClick={() => setShowColumnFilters(!showColumnFilters)}
-              sx={{
-                border: `1.5px solid ${showColumnFilters ? taxiMonterricoColors.green : theme.palette.divider}`,
-                borderRadius: 1.5,
-                bgcolor: showColumnFilters 
-                  ? (theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.08)')
-                  : 'transparent',
-                color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.secondary,
-                p: { xs: 0.75, sm: 0.875 },
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                order: { xs: 5, sm: 0 },
-                '&:hover': {
-                  borderColor: taxiMonterricoColors.green,
-                  bgcolor: theme.palette.mode === 'dark' 
-                    ? 'rgba(16, 185, 129, 0.2)' 
-                    : 'rgba(16, 185, 129, 0.1)',
-                  color: taxiMonterricoColors.green,
-                  transform: 'translateY(-2px)',
-                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
-                },
-              }}
-            >
-              <ViewColumn sx={{ fontSize: { xs: 18, sm: 20 } }} />
-            </IconButton>
-          </Tooltip>
-          
-          <Tooltip title="Filtros avanzados" arrow>
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                setFilterAnchorEl(e.currentTarget);
-                if (filterRules.length === 0) {
-                  setFilterRules([{
-                    id: `filter-${Date.now()}`,
-                    column: 'name',
-                    operator: 'contains',
-                    value: '',
-                  }]);
-                }
-              }}
-              sx={{
-                border: `1.5px solid ${filterRules.length > 0 ? taxiMonterricoColors.green : theme.palette.divider}`,
-                borderRadius: 1.5,
-                bgcolor: filterRules.length > 0 
-                  ? (theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.08)')
-                  : 'transparent',
-                color: filterRules.length > 0 ? taxiMonterricoColors.green : theme.palette.text.secondary,
-                p: { xs: 0.75, sm: 0.875 },
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                position: 'relative',
-                order: { xs: 4, sm: 0 },
-                '&::after': filterRules.length > 0 ? {
-                  content: '""',
-                  position: 'absolute',
-                  top: 4,
-                  right: 4,
-                  width: 6,
-                  height: 6,
-                  borderRadius: '50%',
-                  bgcolor: taxiMonterricoColors.green,
-                  boxShadow: `0 0 8px ${taxiMonterricoColors.green}`,
-                } : {},
-                '&:hover': {
-                  borderColor: taxiMonterricoColors.green,
-                  bgcolor: theme.palette.mode === 'dark' 
-                    ? 'rgba(16, 185, 129, 0.2)' 
-                    : 'rgba(16, 185, 129, 0.1)',
-                  color: taxiMonterricoColors.green,
-                  transform: 'translateY(-2px)',
-                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
-                },
-              }}
-            >
-              <FilterList sx={{ fontSize: { xs: 18, sm: 20 } }} />
-            </IconButton>
-          </Tooltip>
-          
-          <Box sx={{ 
-            display: 'flex', 
-            gap: 0.5, 
-            alignItems: 'center',
-            order: { xs: 6, sm: 0 },
-          }}>
-            <Tooltip title="Ver lista" arrow>
-              <IconButton
-                onClick={() => setViewMode('list')}
-                sx={{
-                  bgcolor: viewMode === 'list' 
-                    ? `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`
-                    : theme.palette.background.paper,
-                  color: viewMode === 'list' ? 'white' : theme.palette.text.secondary,
-                  borderRadius: 1.5,
-                  p: { xs: 0.75, sm: 0.875 },
-                  border: `1.5px solid ${viewMode === 'list' ? 'transparent' : theme.palette.divider}`,
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: viewMode === 'list' ? `0 4px 12px ${taxiMonterricoColors.green}30` : 'none',
-                  '&:hover': {
-                    bgcolor: viewMode === 'list' 
-                      ? `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`
-                      : theme.palette.action.hover,
-                    transform: 'translateY(-2px)',
-                    boxShadow: viewMode === 'list' 
-                      ? `0 6px 20px ${taxiMonterricoColors.green}40`
-                      : `0 4px 12px ${taxiMonterricoColors.green}20`,
-                  },
-                }}
-              >
-                <ViewList sx={{ fontSize: { xs: 16, sm: 18 } }} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Ver funnel" arrow>
-              <IconButton
-                onClick={() => setViewMode('funnel')}
-                sx={{
-                  bgcolor: viewMode === 'funnel' 
-                    ? `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`
-                    : theme.palette.background.paper,
-                  color: viewMode === 'funnel' ? 'white' : theme.palette.text.secondary,
-                  borderRadius: 1.5,
-                  p: { xs: 0.75, sm: 0.875 },
-                  border: `1.5px solid ${viewMode === 'funnel' ? 'transparent' : theme.palette.divider}`,
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: viewMode === 'funnel' ? `0 4px 12px ${taxiMonterricoColors.green}30` : 'none',
-                  '&:hover': {
-                    bgcolor: viewMode === 'funnel' 
-                      ? `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`
-                      : theme.palette.action.hover,
-                    transform: 'translateY(-2px)',
-                    boxShadow: viewMode === 'funnel' 
-                      ? `0 6px 20px ${taxiMonterricoColors.green}40`
-                      : `0 4px 12px ${taxiMonterricoColors.green}20`,
-                  },
-                }}
-              >
-                <AccountTree sx={{ fontSize: { xs: 16, sm: 18 } }} />
-              </IconButton>
-            </Tooltip>
-          </Box>
-          
-          <Tooltip title="Nuevo Negocio" arrow>
-            <IconButton
-              size="small"
-              onClick={() => handleOpen()}
-              sx={{
-                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
-                color: "white",
-                borderRadius: 1.5,
-                p: { xs: 0.75, sm: 0.875 },
-                boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                order: { xs: 2, sm: 0 },
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                position: 'relative',
-                overflow: 'hidden',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: '-100%',
-                  width: '100%',
-                  height: '100%',
-                  background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
-                  transition: 'left 0.5s ease',
-                },
-                '&:hover': {
-                  transform: 'translateY(-2px) scale(1.05)',
-                  boxShadow: `0 8px 20px ${taxiMonterricoColors.green}50`,
-                  background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
-                  '&::before': {
-                    left: '100%',
-                  },
-                },
-                '&:active': {
-                  transform: 'translateY(0) scale(1)',
-                },
-              }}
-            >
-              <Add sx={{ fontSize: { xs: 16, sm: 18 } }} />
-            </IconButton>
-          </Tooltip>
+            Limpiar todos
+          </Button>
         </Box>
-      </Box>
+      )}
 
       {/* Contenedor principal con layout flex para tabla y panel de filtros */}
       {viewMode === 'list' && (
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', md: 'row' } }}>
         {/* Contenido principal usando UnifiedTable */}
         <UnifiedTable
-          title=""
-          actions={null}
+          title="Negocios"
+          actions={
+            <>
+              <FormControl
+                size="small"
+                sx={{
+                  minWidth: { xs: "100%", sm: 130 },
+                  order: { xs: 1, sm: 0 },
+                }}
+              >
+                <Select
+                  id="deals-sort-select"
+                  name="deals-sort"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  displayEmpty
+                  sx={{
+                    borderRadius: 1.5,
+                    bgcolor: theme.palette.background.paper,
+                    fontSize: { xs: "0.75rem", sm: "0.8125rem" },
+                    border: `1.5px solid ${theme.palette.divider}`,
+                    transition: 'all 0.2s ease',
+                    "& .MuiOutlinedInput-notchedOutline": {
+                      border: 'none',
+                    },
+                    "&:hover": {
+                      borderColor: taxiMonterricoColors.green,
+                      boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
+                    },
+                    "&.Mui-focused": {
+                      borderColor: taxiMonterricoColors.green,
+                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
+                    },
+                  }}
+                >
+                  <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
+                  <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
+                  <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
+                  <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
+                </Select>
+              </FormControl>
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: { xs: 0.5, sm: 0.75 },
+                  order: { xs: 3, sm: 0 },
+                }}
+              >
+                <Tooltip title={importing ? 'Importando...' : 'Importar'} arrow>
+                  <IconButton
+                    size="small"
+                    onClick={handleImportFromExcel}
+                    disabled={importing}
+                    sx={{
+                      border: `1.5px solid ${theme.palette.divider}`,
+                      borderRadius: 1.5,
+                      bgcolor: 'transparent',
+                      color: theme.palette.text.secondary,
+                      p: { xs: 0.75, sm: 0.875 },
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&:hover': {
+                        borderColor: taxiMonterricoColors.green,
+                        bgcolor: theme.palette.mode === 'dark' 
+                          ? 'rgba(16, 185, 129, 0.1)' 
+                          : 'rgba(16, 185, 129, 0.05)',
+                        color: taxiMonterricoColors.green,
+                        transform: 'translateY(-2px)',
+                        boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                      },
+                      '&:disabled': {
+                        opacity: 0.5,
+                      },
+                    }}
+                  >
+                    <UploadFile sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                  </IconButton>
+                </Tooltip>
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
+                <Tooltip title="Exportar" arrow>
+                  <IconButton
+                    size="small"
+                    onClick={handleExportToExcel}
+                    sx={{
+                      border: `1.5px solid ${theme.palette.divider}`,
+                      borderRadius: 1.5,
+                      bgcolor: 'transparent',
+                      color: theme.palette.text.secondary,
+                      p: { xs: 0.75, sm: 0.875 },
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&:hover': {
+                        borderColor: taxiMonterricoColors.green,
+                        bgcolor: theme.palette.mode === 'dark' 
+                          ? 'rgba(16, 185, 129, 0.1)' 
+                          : 'rgba(16, 185, 129, 0.05)',
+                        color: taxiMonterricoColors.green,
+                        transform: 'translateY(-2px)',
+                        boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                      },
+                    }}
+                  >
+                    <FileDownload sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"} arrow>
+                <IconButton
+                  size="small"
+                  onClick={() => setShowColumnFilters(!showColumnFilters)}
+                  sx={{
+                    border: `1.5px solid ${showColumnFilters ? taxiMonterricoColors.green : theme.palette.divider}`,
+                    borderRadius: 1.5,
+                    bgcolor: showColumnFilters 
+                      ? (theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.08)')
+                      : 'transparent',
+                    color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.secondary,
+                    p: { xs: 0.75, sm: 0.875 },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    order: { xs: 5, sm: 0 },
+                    '&:hover': {
+                      borderColor: taxiMonterricoColors.green,
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(16, 185, 129, 0.2)' 
+                        : 'rgba(16, 185, 129, 0.1)',
+                      color: taxiMonterricoColors.green,
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                    },
+                  }}
+                >
+                  <ViewColumn sx={{ fontSize: { xs: 18, sm: 20 } }} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Filtros avanzados" arrow>
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    setFilterAnchorEl(e.currentTarget);
+                    if (filterRules.length === 0) {
+                      setFilterRules([{
+                        id: `filter-${Date.now()}`,
+                        column: 'name',
+                        operator: 'contains',
+                        value: '',
+                      }]);
+                    }
+                  }}
+                  sx={{
+                    border: `1.5px solid ${filterRules.length > 0 ? taxiMonterricoColors.green : theme.palette.divider}`,
+                    borderRadius: 1.5,
+                    bgcolor: filterRules.length > 0 
+                      ? (theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.08)')
+                      : 'transparent',
+                    color: filterRules.length > 0 ? taxiMonterricoColors.green : theme.palette.text.secondary,
+                    p: { xs: 0.75, sm: 0.875 },
+                    order: { xs: 4, sm: 0 },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    position: 'relative',
+                    '&::after': filterRules.length > 0 ? {
+                      content: '""',
+                      position: 'absolute',
+                      top: 4,
+                      right: 4,
+                      width: 6,
+                      height: 6,
+                      borderRadius: '50%',
+                      bgcolor: taxiMonterricoColors.green,
+                      boxShadow: `0 0 8px ${taxiMonterricoColors.green}`,
+                    } : {},
+                    '&:hover': {
+                      borderColor: taxiMonterricoColors.green,
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(16, 185, 129, 0.2)' 
+                        : 'rgba(16, 185, 129, 0.1)',
+                      color: taxiMonterricoColors.green,
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                    },
+                  }}
+                >
+                  <FilterList sx={{ fontSize: { xs: 18, sm: 20 } }} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Ver lista" arrow>
+                <IconButton
+                  size="small"
+                  onClick={() => setViewMode('list')}
+                  sx={{
+                    border: `1.5px solid ${(viewMode as 'list' | 'funnel') === 'list' ? taxiMonterricoColors.green : theme.palette.divider}`,
+                    borderRadius: 1.5,
+                    bgcolor: (viewMode as 'list' | 'funnel') === 'list' 
+                      ? (theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.08)')
+                      : 'transparent',
+                    color: (viewMode as 'list' | 'funnel') === 'list' ? taxiMonterricoColors.green : theme.palette.text.secondary,
+                    p: { xs: 0.75, sm: 0.875 },
+                    order: { xs: 6, sm: 0 },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:hover': {
+                      borderColor: taxiMonterricoColors.green,
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(16, 185, 129, 0.2)' 
+                        : 'rgba(16, 185, 129, 0.1)',
+                      color: taxiMonterricoColors.green,
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                    },
+                  }}
+                >
+                  <ViewList sx={{ fontSize: { xs: 18, sm: 20 } }} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Ver funnel" arrow>
+                <IconButton
+                  size="small"
+                  onClick={() => setViewMode('funnel')}
+                  sx={{
+                    border: `1.5px solid ${(viewMode as 'list' | 'funnel') === 'funnel' ? taxiMonterricoColors.green : theme.palette.divider}`,
+                    borderRadius: 1.5,
+                    bgcolor: (viewMode as 'list' | 'funnel') === 'funnel' 
+                      ? (theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.08)')
+                      : 'transparent',
+                    color: (viewMode as 'list' | 'funnel') === 'funnel' ? taxiMonterricoColors.green : theme.palette.text.secondary,
+                    p: { xs: 0.75, sm: 0.875 },
+                    order: { xs: 7, sm: 0 },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:hover': {
+                      borderColor: taxiMonterricoColors.green,
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(16, 185, 129, 0.2)' 
+                        : 'rgba(16, 185, 129, 0.1)',
+                      color: taxiMonterricoColors.green,
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                    },
+                  }}
+                >
+                  <AccountTree sx={{ fontSize: { xs: 18, sm: 20 } }} />
+                </IconButton>
+              </Tooltip>
+              <Tooltip title="Nuevo Negocio" arrow>
+                <IconButton
+                  size="small"
+                  onClick={() => handleOpen()}
+                  sx={{
+                    background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+                    color: "white",
+                    borderRadius: 1.5,
+                    p: { xs: 0.75, sm: 0.875 },
+                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
+                    order: { xs: 2, sm: 0 },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: '-100%',
+                      width: '100%',
+                      height: '100%',
+                      background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
+                      transition: 'left 0.5s ease',
+                    },
+                    '&:hover': {
+                      transform: 'translateY(-2px) scale(1.05)',
+                      boxShadow: `0 8px 20px ${taxiMonterricoColors.green}50`,
+                      background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
+                      '&::before': {
+                        left: '100%',
+                      },
+                    },
+                    '&:active': {
+                      transform: 'translateY(0) scale(1)',
+                    },
+                  }}
+                >
+                  <Add sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                </IconButton>
+              </Tooltip>
+            </>
+          }
           header={
             <Box
               component="div"
@@ -1626,7 +1657,7 @@ const Deals: React.FC = () => {
           }
           emptyState={
             deals.length === 0 ? (
-              <Box sx={pageStyles.emptyState}>
+              <Box sx={{ ...pageStyles.emptyState, m: 3 }}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, py: 6 }}>
                   <Box
                     sx={{
@@ -1640,23 +1671,20 @@ const Deals: React.FC = () => {
                       alignItems: 'center',
                       justifyContent: 'center',
                       mb: 1,
+                      fontSize: '64px',
+                      lineHeight: 1,
                     }}
                   >
-                    <AttachMoney
-                      sx={{
-                        fontSize: 56,
-                        color: theme.palette.text.secondary,
-                      }}
-                    />
+                    💼
                   </Box>
                   <Box sx={{ textAlign: 'center', maxWidth: '400px' }}>
                     <Typography
                       variant="h6"
                       sx={{
-                        fontWeight: 600,
+                        fontWeight: 700,
                         mb: 1,
-                        color: theme.palette.text.primary,
-                        fontSize: { xs: '1.1rem', md: '1.25rem' },
+                        color: '#000000',
+                        fontSize: { xs: '1.25rem', md: '1.5rem' },
                       }}
                     >
                       No hay negocios para mostrar
@@ -1664,7 +1692,7 @@ const Deals: React.FC = () => {
                     <Typography 
                       variant="body2" 
                       sx={{ 
-                        color: theme.palette.text.secondary,
+                        color: '#000000',
                         lineHeight: 1.6,
                         fontSize: { xs: '0.875rem', md: '0.9375rem' },
                       }}
@@ -1674,7 +1702,7 @@ const Deals: React.FC = () => {
                   </Box>
                 </Box>
               </Box>
-            ) : null
+            ) : undefined
           }
         />
 

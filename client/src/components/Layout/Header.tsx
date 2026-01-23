@@ -501,9 +501,9 @@ const Header: React.FC = () => {
                 }}
               >
                 {mode === 'light' ? (
-                  <DarkMode sx={{ fontSize: 24, color: '#637381' }} />
+                  <DarkMode sx={{ fontSize: 24, color: '#6366F1' }} />
                 ) : (
-                  <LightMode sx={{ fontSize: 24, color: '#637381' }} />
+                  <LightMode sx={{ fontSize: 24, color: '#F59E0B' }} />
                 )}
               </IconButton>
             </Tooltip>
@@ -520,7 +520,7 @@ const Header: React.FC = () => {
                   width: 40,
                   height: 40,
                   '&:hover': {
-                    bgcolor: theme.palette.action.hover,
+                    bgcolor: 'rgba(236, 72, 153, 0.15)',
                   },
                 }}
               >
@@ -537,7 +537,11 @@ const Header: React.FC = () => {
                     },
                   }}
                 >
-                  <Notifications sx={{ fontSize: 24, color: '#637381' }} />
+                  <Notifications sx={{ 
+                    fontSize: 24, 
+                    color: '#EC4899',
+                    transition: 'all 0.2s ease',
+                  }} />
                 </Badge>
               </IconButton>
             </Tooltip>
@@ -553,11 +557,15 @@ const Header: React.FC = () => {
                   width: 40,
                   height: 40,
                   '&:hover': {
-                    bgcolor: theme.palette.action.hover,
+                    bgcolor: `${taxiMonterricoColors.orange}15`,
                   },
                 }}
               >
-                <Settings sx={{ fontSize: 24, color: '#637381' }} />
+                <Settings sx={{ 
+                  fontSize: 24, 
+                  color: '#8B5CF6',
+                  transition: 'all 0.2s ease',
+                }} />
               </IconButton>
             </Tooltip>
 
@@ -707,7 +715,7 @@ const Header: React.FC = () => {
               },
             }}
           >
-            <MenuIcon sx={{ fontSize: 24, color: '#637381' }} />
+            <MenuIcon sx={{ fontSize: 24, color: '#06B6D4' }} />
           </IconButton>
         </Box>
       )}
@@ -801,7 +809,7 @@ const Header: React.FC = () => {
             },
           }}
         >
-          <Search sx={{ fontSize: 24, color: '#637381' }} />
+          <Search sx={{ fontSize: 24, color: '#10B981' }} />
         </IconButton>
         </Box>
       )}
@@ -825,9 +833,9 @@ const Header: React.FC = () => {
             }}
           >
             {mode === 'light' ? (
-              <DarkMode sx={{ fontSize: 24, color: '#637381' }} />
+              <DarkMode sx={{ fontSize: 24, color: taxiMonterricoColors.green }} />
             ) : (
-              <LightMode sx={{ fontSize: 24, color: '#637381' }} />
+              <LightMode sx={{ fontSize: 24, color: taxiMonterricoColors.orange }} />
             )}
           </IconButton>
         </Tooltip>
@@ -861,7 +869,11 @@ const Header: React.FC = () => {
                 },
               }}
             >
-              <Notifications sx={{ fontSize: 24, color: '#637381' }} />
+              <Notifications sx={{ 
+                fontSize: 24, 
+                color: '#EC4899',
+                transition: 'all 0.2s ease',
+              }} />
             </Badge>
           </IconButton>
         </Tooltip>
@@ -877,11 +889,15 @@ const Header: React.FC = () => {
               width: 40,
               height: 40,
               '&:hover': {
-                bgcolor: theme.palette.action.hover,
+                bgcolor: 'rgba(139, 92, 246, 0.15)',
               },
             }}
           >
-            <Settings sx={{ fontSize: 24, color: '#637381' }} />
+            <Settings sx={{ 
+              fontSize: 24, 
+              color: '#8B5CF6',
+              transition: 'all 0.2s ease',
+            }} />
           </IconButton>
         </Tooltip>
 
@@ -965,14 +981,49 @@ const Header: React.FC = () => {
         disableRestoreFocus={true}
         PaperProps={{
           sx: {
-            borderRadius: 2,
-            boxShadow: theme.shadows[8],
+            borderRadius: 3,
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
+              : '0 4px 20px rgba(0, 0, 0, 0.08)',
+            border: `1px solid ${theme.palette.divider}`,
+            overflow: 'hidden',
           },
         }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, pb: 1 }}>
-          <Notifications sx={{ color: taxiMonterricoColors.green, fontSize: 24 }} />
-          <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
+        <DialogTitle sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1, 
+          pb: 1.5,
+          pt: 2,
+          px: 3,
+          borderBottom: `2px solid transparent`,
+          borderImage: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+          borderImageSlice: 1,
+          background: theme.palette.mode === 'dark'
+            ? `linear-gradient(135deg, rgba(16, 185, 129, 0.03) 0%, transparent 100%)`
+            : `linear-gradient(135deg, rgba(16, 185, 129, 0.01) 0%, transparent 100%)`,
+          position: 'relative',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '3px',
+            background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+            opacity: 0.3,
+          },
+        }}>
+          <Notifications sx={{ color: '#EC4899', fontSize: 24 }} />
+          <Typography component="div" sx={{ 
+            fontWeight: 700, 
+            fontSize: { xs: '1.125rem', md: '1.25rem' },
+            background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.mode === 'dark' ? '#10B981' : '#2E7D32'} 100%)`,
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}>
             Notificaciones
           </Typography>
         </DialogTitle>
@@ -1041,16 +1092,27 @@ const Header: React.FC = () => {
             </List>
           )}
         </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
+        <DialogActions sx={{ px: 3, py: 2, borderTop: `1px solid ${theme.palette.divider}` }}>
           <Button
             onClick={() => setNotificationDialogOpen(false)}
             variant="contained"
             sx={{
               bgcolor: taxiMonterricoColors.green,
+              borderRadius: 2,
+              px: 3,
+              textTransform: 'none',
+              fontWeight: 600,
+              boxShadow: theme.palette.mode === 'dark' 
+                ? '0 4px 12px rgba(46, 125, 50, 0.3)' 
+                : '0 4px 12px rgba(46, 125, 50, 0.2)',
               '&:hover': {
-                bgcolor: taxiMonterricoColors.green,
-                opacity: 0.9,
+                bgcolor: '#158a5f',
+                boxShadow: theme.palette.mode === 'dark' 
+                  ? '0 6px 16px rgba(46, 125, 50, 0.4)' 
+                  : '0 6px 16px rgba(46, 125, 50, 0.3)',
+                transform: 'translateY(-2px)',
               },
+              transition: 'all 0.3s ease',
             }}
           >
             Entendido
@@ -1137,7 +1199,7 @@ const Header: React.FC = () => {
             },
           }}
         >
-          <Person sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
+          <Person sx={{ fontSize: 20, color: '#3B82F6' }} />
           <Typography variant="body2" sx={{ fontWeight: 500, color: theme.palette.text.primary }}>
             Editar perfil
           </Typography>
@@ -1159,7 +1221,7 @@ const Header: React.FC = () => {
             },
           }}
         >
-          <Logout sx={{ fontSize: 20 }} />
+          <Logout sx={{ fontSize: 20, color: theme.palette.error.main }} />
           <Typography variant="body2" sx={{ fontWeight: 500 }}>
             Cerrar sesión
           </Typography>

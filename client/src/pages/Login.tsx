@@ -10,6 +10,7 @@ import {
   FormControlLabel,
   IconButton,
   InputAdornment,
+  alpha,
 } from '@mui/material';
 import { Person, Lock, Visibility, VisibilityOff } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
@@ -166,6 +167,34 @@ const Login: React.FC = () => {
             `,
             backgroundAttachment: 'fixed',
             zIndex: 1,
+            animation: 'pulse 8s ease-in-out infinite',
+            '@keyframes pulse': {
+              '0%, 100%': {
+                opacity: 1,
+              },
+              '50%': {
+                opacity: 0.8,
+              },
+            },
+          },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: '-50%',
+            left: '-50%',
+            width: '200%',
+            height: '200%',
+            background: 'radial-gradient(circle, rgba(46, 125, 50, 0.05) 0%, transparent 70%)',
+            animation: 'rotate 20s linear infinite',
+            zIndex: 1,
+            '@keyframes rotate': {
+              '0%': {
+                transform: 'rotate(0deg)',
+              },
+              '100%': {
+                transform: 'rotate(360deg)',
+              },
+            },
           },
         }}
       />
@@ -176,15 +205,47 @@ const Login: React.FC = () => {
         sx={{
           position: 'relative',
           zIndex: 2,
-          width: { xs: '92%', sm: '480px' },
-          padding: '32px',
-          border: '1px solid rgba(255, 255, 255, 0.14)',
-          borderRadius: '16px',
-          background: 'rgba(17, 24, 39, 0.60)',
-          backdropFilter: 'blur(14px)',
-          WebkitBackdropFilter: 'blur(14px)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)',
+          width: { xs: '92%', sm: '500px' },
+          padding: { xs: '32px', sm: '48px' },
+          border: `1px solid ${alpha('#fff', 0.2)}`,
+          borderRadius: '28px',
+          background: `linear-gradient(135deg, ${alpha('#111827', 0.85)} 0%, ${alpha('#1a1a2e', 0.75)} 100%)`,
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          boxShadow: `
+            0 25px 70px rgba(0, 0, 0, 0.5),
+            0 0 50px ${alpha(taxiMonterricoColors.green, 0.15)},
+            inset 0 1px 0 ${alpha('#fff', 0.1)}
+          `,
           color: '#fff',
+          animation: 'fadeInUp 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+          transition: 'all 0.4s ease',
+          overflow: 'hidden',
+          '@keyframes fadeInUp': {
+            '0%': {
+              opacity: 0,
+              transform: 'translateY(40px) scale(0.95)'
+            },
+            '100%': {
+              opacity: 1,
+              transform: 'translateY(0) scale(1)'
+            }
+          },
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            top: '-50%',
+            left: '-50%',
+            width: '200%',
+            height: '200%',
+            background: `radial-gradient(circle, ${alpha(taxiMonterricoColors.green, 0.1)} 0%, transparent 70%)`,
+            animation: 'rotate 15s linear infinite',
+            pointerEvents: 'none',
+            '@keyframes rotate': {
+              '0%': { transform: 'rotate(0deg)' },
+              '100%': { transform: 'rotate(360deg)' }
+            }
+          }
         }}
       >
         {/* Header de marca */}
@@ -203,8 +264,10 @@ const Login: React.FC = () => {
               flexDirection: 'row',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 2,
-              mb: 2,
+              gap: 2.5,
+              mb: 3,
+              position: 'relative',
+              zIndex: 1,
             }}
           >
             <Box
@@ -212,10 +275,21 @@ const Login: React.FC = () => {
               src={logoIcon}
               alt="TM Logo"
               sx={{
-                maxWidth: { xs: '60px', sm: '70px' },
+                maxWidth: { xs: '65px', sm: '75px' },
                 width: 'auto',
                 height: 'auto',
                 objectFit: 'contain',
+                filter: 'drop-shadow(0 4px 12px rgba(46, 125, 50, 0.4))',
+                transition: 'all 0.3s ease',
+                animation: 'logoFloat 3s ease-in-out infinite',
+                '@keyframes logoFloat': {
+                  '0%, 100%': { transform: 'translateY(0)' },
+                  '50%': { transform: 'translateY(-5px)' }
+                },
+                '&:hover': {
+                  transform: 'scale(1.1) rotate(5deg)',
+                  filter: 'drop-shadow(0 6px 16px rgba(46, 125, 50, 0.6))',
+                }
               }}
             />
             <Box
@@ -223,10 +297,16 @@ const Login: React.FC = () => {
               src={logoImage}
               alt="CRM Monterrico"
               sx={{
-                maxWidth: { xs: '140px', sm: '160px' },
+                maxWidth: { xs: '150px', sm: '170px' },
                 width: '100%',
                 height: 'auto',
                 objectFit: 'contain',
+                filter: 'drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3))',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'scale(1.05)',
+                  filter: 'drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4))',
+                }
               }}
             />
           </Box>
@@ -234,10 +314,20 @@ const Login: React.FC = () => {
           <Typography
             variant="h6"
             sx={{
+              fontFamily: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
               color: 'white',
-              fontSize: { xs: '1.25rem', sm: '1.5rem' },
+              fontSize: { xs: '1.6rem', sm: '1.9rem' },
               textAlign: 'center',
-              fontWeight: 400,
+              fontWeight: 600,
+              letterSpacing: '0.03em',
+              mt: 1,
+              position: 'relative',
+              zIndex: 1,
+              textShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
+              background: 'linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.9) 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
             }}
           >
             Iniciar sesión
@@ -251,12 +341,26 @@ const Login: React.FC = () => {
               setLocalError('');
             }}
             sx={{
+              fontFamily: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
               mb: 3,
-              borderRadius: '8px',
-              backgroundColor: 'rgba(211, 47, 47, 0.9)',
+              borderRadius: '12px',
+              backgroundColor: alpha('#d32f2f', 0.95),
               color: '#fff',
+              backdropFilter: 'blur(10px)',
+              border: `1px solid ${alpha('#d32f2f', 0.3)}`,
+              boxShadow: '0 4px 20px rgba(211, 47, 47, 0.3)',
+              animation: 'shake 0.5s ease-in-out',
+              '@keyframes shake': {
+                '0%, 100%': { transform: 'translateX(0)' },
+                '25%': { transform: 'translateX(-5px)' },
+                '75%': { transform: 'translateX(5px)' },
+              },
               '& .MuiAlert-icon': {
                 color: '#fff',
+              },
+              '& .MuiAlert-message': {
+                fontWeight: 500,
+                fontSize: '0.95rem',
               },
             }}
           >
@@ -264,7 +368,18 @@ const Login: React.FC = () => {
           </Alert>
         )}
 
-        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, marginTop: -2 }}>
+        <Box 
+          component="form" 
+          onSubmit={handleSubmit} 
+          sx={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: 3, 
+            marginTop: 1,
+            position: 'relative',
+            zIndex: 1
+          }}
+        >
           {/* Campo Usuario */}
           <TextField
             required
@@ -319,45 +434,70 @@ const Login: React.FC = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Person sx={{ color: error ? 'error.main' : 'rgba(255, 255, 255, 0.7)' }} />
+                  <Person sx={{ color: error ? 'error.main' : alpha('#fff', 0.7), fontSize: '1.2rem' }} />
                 </InputAdornment>
               ),
             }}
             sx={{
               '& .MuiOutlinedInput-root': {
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                fontFamily: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+                backgroundColor: alpha('#fff', 0.08),
                 color: '#fff',
-                borderRadius: '25px',
+                borderRadius: '16px',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 '& fieldset': {
-                  borderColor: 'rgba(255, 255, 255, 0.2)',
-                  borderRadius: '25px',
+                  borderColor: alpha('#fff', 0.25),
+                  borderWidth: '2px',
+                  borderRadius: '16px',
+                  transition: 'all 0.3s ease',
                 },
-                '&:hover fieldset': {
-                  borderColor: 'rgba(255, 255, 255, 0.3)',
+                '&:hover': {
+                  backgroundColor: alpha('#fff', 0.12),
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                  '& fieldset': {
+                    borderColor: alpha('#fff', 0.4),
+                  },
                 },
-                '&.Mui-focused fieldset': {
-                  borderColor: taxiMonterricoColors.green,
+                '&.Mui-focused': {
+                  backgroundColor: alpha('#fff', 0.1),
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 8px 24px ${alpha(taxiMonterricoColors.green, 0.3)}`,
+                  '& fieldset': {
+                    borderColor: taxiMonterricoColors.green,
+                    borderWidth: '2px',
+                    boxShadow: `0 0 0 3px ${alpha(taxiMonterricoColors.green, 0.1)}`,
+                  },
                 },
-                '&.Mui-error fieldset': {
-                  borderColor: 'error.main',
+                '&.Mui-error': {
+                  '& fieldset': {
+                    borderColor: '#d32f2f',
+                    borderWidth: '2px',
+                  },
                 },
               },
               '& input': {
+                fontFamily: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+                fontSize: '1.05rem',
+                fontWeight: 400,
+                padding: '16px 18px',
+                letterSpacing: '0.01em',
                 '&:-webkit-autofill': {
-                  WebkitBoxShadow: '0 0 0 1000px rgba(255, 255, 255, 0.05) inset',
+                  WebkitBoxShadow: `0 0 0 1000px ${alpha('#fff', 0.08)} inset`,
                   WebkitTextFillColor: '#fff',
                   transition: 'background-color 5000s ease-in-out 0s',
+                  borderRadius: '18px',
                 },
                 '&:-webkit-autofill:hover': {
-                  WebkitBoxShadow: '0 0 0 1000px rgba(255, 255, 255, 0.05) inset',
+                  WebkitBoxShadow: `0 0 0 1000px ${alpha('#fff', 0.12)} inset`,
                   WebkitTextFillColor: '#fff',
                 },
                 '&:-webkit-autofill:focus': {
-                  WebkitBoxShadow: '0 0 0 1000px rgba(255, 255, 255, 0.05) inset',
+                  WebkitBoxShadow: `0 0 0 1000px ${alpha('#fff', 0.1)} inset`,
                   WebkitTextFillColor: '#fff',
                 },
                 '&:-webkit-autofill:active': {
-                  WebkitBoxShadow: '0 0 0 1000px rgba(255, 255, 255, 0.05) inset',
+                  WebkitBoxShadow: `0 0 0 1000px ${alpha('#fff', 0.08)} inset`,
                   WebkitTextFillColor: '#fff',
                 },
               },
@@ -365,11 +505,13 @@ const Login: React.FC = () => {
                 display: 'none', // Ocultar el label
               },
               '& input::placeholder': {
-                color: 'rgba(255, 255, 255, 0.7)',
+                color: alpha('#fff', 0.6),
                 opacity: 1,
+                fontFamily: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+                fontWeight: 300,
               },
               '& .MuiFormHelperText-root': {
-                color: 'rgba(255, 255, 255, 0.6)',
+                color: alpha('#fff', 0.6),
                 '&.Mui-error': {
                   color: 'error.main',
                 },
@@ -396,7 +538,7 @@ const Login: React.FC = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <Lock sx={{ color: error ? 'error.main' : 'rgba(255, 255, 255, 0.7)' }} />
+                  <Lock sx={{ color: error ? 'error.main' : alpha('#fff', 0.7), fontSize: '1.2rem' }} />
                 </InputAdornment>
               ),
               endAdornment: (
@@ -407,10 +549,12 @@ const Login: React.FC = () => {
                     onMouseDown={handleMouseDownPassword}
                     edge="end"
                     sx={{
-                      color: 'rgba(255, 255, 255, 0.7)',
+                      color: alpha('#fff', 0.7),
+                      transition: 'all 0.2s ease',
                       '&:hover': {
                         color: '#fff',
-                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        backgroundColor: alpha('#fff', 0.2),
+                        transform: 'scale(1.15) rotate(5deg)',
                       },
                     }}
                   >
@@ -421,32 +565,79 @@ const Login: React.FC = () => {
             }}
             sx={{
               '& .MuiOutlinedInput-root': {
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                fontFamily: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+                backgroundColor: alpha('#fff', 0.1),
                 color: '#fff',
-                borderRadius: '25px',
+                borderRadius: '18px',
+                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
+                overflow: 'hidden',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: '-100%',
+                  width: '100%',
+                  height: '100%',
+                  background: `linear-gradient(90deg, transparent, ${alpha(taxiMonterricoColors.green, 0.1)}, transparent)`,
+                  transition: 'left 0.5s ease',
+                },
                 '& fieldset': {
-                  borderColor: 'rgba(255, 255, 255, 0.2)',
-                  borderRadius:'25px',
+                  borderColor: alpha('#fff', 0.3),
+                  borderWidth: '2px',
+                  borderRadius: '18px',
+                  transition: 'all 0.3s ease',
                 },
-                '&:hover fieldset': {
-                  borderColor: 'rgba(255, 255, 255, 0.3)',
+                '&:hover': {
+                  backgroundColor: alpha('#fff', 0.15),
+                  transform: 'translateY(-3px)',
+                  boxShadow: '0 6px 20px rgba(0, 0, 0, 0.2)',
+                  '& fieldset': {
+                    borderColor: alpha('#fff', 0.5),
+                  },
+                  '&::before': {
+                    left: '100%',
+                  },
                 },
-                '&.Mui-focused fieldset': {
-                  borderColor: taxiMonterricoColors.green,
+                '&.Mui-focused': {
+                  backgroundColor: alpha('#fff', 0.12),
+                  transform: 'translateY(-3px)',
+                  boxShadow: `0 10px 30px ${alpha(taxiMonterricoColors.green, 0.4)}`,
+                  '& fieldset': {
+                    borderColor: taxiMonterricoColors.green,
+                    borderWidth: '2px',
+                    boxShadow: `0 0 0 4px ${alpha(taxiMonterricoColors.green, 0.15)}`,
+                  },
+                  '&::before': {
+                    left: '100%',
+                  },
                 },
-                '&.Mui-error fieldset': {
-                  borderColor: 'error.main',
+                '&.Mui-error': {
+                  '& fieldset': {
+                    borderColor: '#d32f2f',
+                    borderWidth: '2px',
+                    boxShadow: `0 0 0 3px ${alpha('#d32f2f', 0.1)}`,
+                  },
                 },
+              },
+              '& input': {
+                fontFamily: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+                fontSize: '1.05rem',
+                fontWeight: 400,
+                padding: '16px 18px',
+                letterSpacing: '0.01em',
               },
               '& .MuiInputLabel-root': {
                 display: 'none', // Ocultar el label
               },
               '& input::placeholder': {
-                color: 'rgba(255, 255, 255, 0.7)',
+                color: alpha('#fff', 0.6),
                 opacity: 1,
+                fontFamily: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+                fontWeight: 300,
               },
               '& .MuiFormHelperText-root': {
-                color: 'rgba(255, 255, 255, 0.6)',
+                color: alpha('#fff', 0.6),
                 '&.Mui-error': {
                   color: 'error.main',
                 },
@@ -462,20 +653,24 @@ const Login: React.FC = () => {
               flexWrap: 'wrap',
               gap: { xs: 1, sm: 2 },
               alignItems: 'center',
+              mt: 1,
             }}
           >
             <FormControlLabel
               control={
-                <Checkbox
+                  <Checkbox
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
                   sx={{
-                    color: 'rgba(255, 255, 255, 0.7)',
+                    color: alpha('#fff', 0.7),
+                    transition: 'all 0.2s ease',
                     '&.Mui-checked': {
                       color: taxiMonterricoColors.green,
+                      transform: 'scale(1.1)',
                     },
                     '&:hover': {
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      backgroundColor: alpha('#fff', 0.1),
+                      transform: 'scale(1.05)',
                     },
                   }}
                 />
@@ -484,8 +679,11 @@ const Login: React.FC = () => {
                 <Typography
                   component="span"
                   sx={{
-                    fontSize: { xs: '0.875rem', sm: '0.9375rem' },
-                    color: 'rgba(255, 255, 255, 0.9)',
+                    fontFamily: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+                    fontSize: { xs: '0.9rem', sm: '0.95rem' },
+                    color: alpha('#fff', 0.95),
+                    fontWeight: 400,
+                    letterSpacing: '0.01em',
                   }}
                 >
                   Recordarme
@@ -498,13 +696,18 @@ const Login: React.FC = () => {
               target="_blank"
               rel="noopener noreferrer"
               sx={{
-                fontSize: { xs: '0.875rem', sm: '0.9375rem' },
-                color: 'rgba(255, 255, 255, 0.9)',
+                fontFamily: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+                fontSize: { xs: '0.9rem', sm: '0.95rem' },
+                color: alpha('#fff', 0.95),
                 textDecoration: 'none',
                 cursor: 'pointer',
+                fontWeight: 400,
+                letterSpacing: '0.01em',
+                transition: 'all 0.2s ease',
                 '&:hover': {
                   textDecoration: 'underline',
                   color: '#fff',
+                  transform: 'translateX(2px)',
                 },
                 '&:focus': {
                   outline: '2px solid',
@@ -525,31 +728,88 @@ const Login: React.FC = () => {
             disabled={loading}
             fullWidth
             sx={{
-              height: '48px',
-              borderRadius: '15px',
-              fontSize: '1.1rem',
-              fontWeight: 400,
+              fontFamily: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
+              height: '56px',
+              borderRadius: '18px',
+              fontSize: '1.15rem',
+              fontWeight: 600,
               textTransform: 'none',
-              backgroundColor: taxiMonterricoColors.green,
+              letterSpacing: '0.03em',
+              background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
               color: '#fff',
+              boxShadow: `
+                0 6px 25px ${alpha(taxiMonterricoColors.green, 0.45)},
+                0 0 20px ${alpha(taxiMonterricoColors.green, 0.2)},
+                inset 0 1px 0 ${alpha('#fff', 0.2)}
+              `,
+              transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+              position: 'relative',
+              overflow: 'hidden',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: '-100%',
+                width: '100%',
+                height: '100%',
+                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent)',
+                transition: 'left 0.6s ease',
+              },
+              '&::after': {
+                content: '""',
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                width: '0',
+                height: '0',
+                borderRadius: '50%',
+                background: alpha('#fff', 0.2),
+                transform: 'translate(-50%, -50%)',
+                transition: 'width 0.6s ease, height 0.6s ease',
+              },
               '&:hover': {
-                backgroundColor: taxiMonterricoColors.greenDark,
+                background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
+                transform: 'translateY(-4px) scale(1.02)',
+                boxShadow: `
+                  0 12px 40px ${alpha(taxiMonterricoColors.green, 0.6)},
+                  0 0 30px ${alpha(taxiMonterricoColors.green, 0.3)},
+                  inset 0 1px 0 ${alpha('#fff', 0.3)}
+                `,
+                '&::before': {
+                  left: '100%',
+                },
+                '&::after': {
+                  width: '300px',
+                  height: '300px',
+                },
+              },
+              '&:active': {
+                transform: 'translateY(-2px) scale(1)',
               },
               '&:disabled': {
-                backgroundColor: 'rgba(46, 125, 50, 0.5)',
-                color: 'rgba(255, 255, 255, 0.7)',
+                background: alpha(taxiMonterricoColors.green, 0.4),
+                color: alpha('#fff', 0.7),
+                boxShadow: 'none',
+                transform: 'none',
+                '&::before': {
+                  display: 'none',
+                },
+                '&::after': {
+                  display: 'none',
+                },
               },
               '&:focus': {
-                outline: '2px solid',
+                outline: '3px solid',
                 outlineColor: taxiMonterricoColors.greenLight,
-                outlineOffset: '2px',
+                outlineOffset: '4px',
+                borderRadius: '18px',
               },
             }}
           >
             {loading ? (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CircularProgress size={20} sx={{ color: '#fff' }} />
-                <span>Cargando...</span>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                <CircularProgress size={22} sx={{ color: '#fff' }} />
+                <span style={{ fontFamily: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif" }}>Cargando...</span>
               </Box>
             ) : (
               'Ingresar'
@@ -559,10 +819,13 @@ const Login: React.FC = () => {
           {/* Link de registro */}
           <Typography
             sx={{
+              fontFamily: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
               textAlign: 'center',
-              fontSize: { xs: '0.875rem', sm: '0.9375rem' },
-              color: 'rgba(255, 255, 255, 0.8)',
-              mt: 1,
+              fontSize: { xs: '0.9rem', sm: '0.95rem' },
+              color: alpha('#fff', 0.85),
+              mt: 2,
+              fontWeight: 300,
+              letterSpacing: '0.01em',
             }}
           >
             ¿Todavía no tienes una cuenta?{' '}
@@ -572,14 +835,18 @@ const Login: React.FC = () => {
               target="_blank"
               rel="noopener noreferrer"
               sx={{
+                fontFamily: "'Helvetica Neue', 'Helvetica', 'Arial', sans-serif",
                 fontSize: 'inherit',
                 color: taxiMonterricoColors.greenLight,
                 textDecoration: 'none',
                 cursor: 'pointer',
-                fontWeight: 500,
+                fontWeight: 600,
+                letterSpacing: '0.01em',
+                transition: 'all 0.2s ease',
                 '&:hover': {
                   textDecoration: 'underline',
                   color: taxiMonterricoColors.green,
+                  transform: 'translateX(2px)',
                 },
                 '&:focus': {
                   outline: '2px solid',

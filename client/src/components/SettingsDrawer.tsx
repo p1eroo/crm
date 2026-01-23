@@ -145,25 +145,82 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
           alignItems: 'center',
           px: 3,
           py: 2,
+          borderBottom: `2px solid transparent`,
+          borderImage: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+          borderImageSlice: 1,
+          background: theme.palette.mode === 'dark'
+            ? `linear-gradient(135deg, rgba(16, 185, 129, 0.03) 0%, transparent 100%)`
+            : `linear-gradient(135deg, rgba(16, 185, 129, 0.01) 0%, transparent 100%)`,
+          position: 'relative',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '3px',
+            background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+            opacity: 0.3,
+          },
         }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Settings
+          <Typography variant="h6" sx={{ 
+            fontWeight: 700,
+            fontSize: { xs: '1.125rem', md: '1.25rem' },
+            background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.mode === 'dark' ? '#10B981' : '#2E7D32'} 100%)`,
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}>
+            Configuraciones
           </Typography>
           <Box sx={{ display: 'flex', gap: 1 }}>
             <IconButton 
               size="small" 
-              sx={{ width: 40, height: 40 }}
+              sx={{ 
+                width: 40, 
+                height: 40,
+                color: theme.palette.text.secondary,
+                '&:hover': {
+                  bgcolor: theme.palette.action.hover,
+                  color: taxiMonterricoColors.green,
+                },
+              }}
               onClick={toggleFullscreen}
             >
               <HugeiconsIcon 
                 icon={isFullscreen ? Minimize01Icon : Maximize01Icon} 
-                style={{ width: 24, height: 24, color: '#637381' }} 
+                style={{ 
+                  width: 24, 
+                  height: 24,
+                  color: '#06B6D4',
+                }} 
               />
             </IconButton>
-            <IconButton size="small" sx={{ width: 40, height: 40 }}>
-              <Refresh sx={{ fontSize: 24, color: theme.palette.text.secondary }} />
+            <IconButton 
+              size="small" 
+              sx={{ 
+                width: 40, 
+                height: 40,
+                color: '#10B981',
+                '&:hover': {
+                  bgcolor: `${taxiMonterricoColors.green}15`,
+                  color: '#059669',
+                },
+              }}
+            >
+              <Refresh sx={{ fontSize: 24 }} />
             </IconButton>
-            <IconButton onClick={onClose} size="small">
+            <IconButton 
+              onClick={onClose} 
+              size="small"
+              sx={{
+                color: '#EF4444',
+                '&:hover': {
+                  bgcolor: 'rgba(239, 68, 68, 0.1)',
+                  color: '#DC2626',
+                },
+              }}
+            >
               <Close />
             </IconButton>
           </Box>
@@ -224,8 +281,9 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
                     fontSize: 28,
                     color:
                       mode === 'light'
-                        ? taxiMonterricoColors.green
-                        : theme.palette.text.secondary,
+                        ? '#F59E0B'
+                        : '#FBBF24',
+                    transition: 'color 0.2s ease',
                   }}
                 />
                 <Typography
@@ -280,8 +338,9 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
                     fontSize: 28,
                     color:
                       mode === 'dark'
-                        ? taxiMonterricoColors.green
-                        : theme.palette.text.secondary,
+                        ? '#6366F1'
+                        : '#818CF8',
+                    transition: 'color 0.2s ease',
                   }}
                 />
                 <Typography
@@ -336,8 +395,9 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
                     fontSize: 28,
                     color:
                       mode === 'system'
-                        ? taxiMonterricoColors.green
-                        : theme.palette.text.secondary,
+                        ? '#8B5CF6'
+                        : '#A78BFA',
+                    transition: 'color 0.2s ease',
                   }}
                 />
                 <Typography
@@ -362,7 +422,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
                   <Typography variant="caption" sx={{ fontWeight: 600 }}>
                     Nav
                   </Typography>
-                  <Info sx={{ fontSize: 12 }} />
+                  <Info sx={{ fontSize: 12, color: '#3B82F6' }} />
                 </Box>
               }
               sx={{

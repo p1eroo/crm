@@ -453,8 +453,8 @@ const Emails: React.FC = () => {
     <Box sx={{ flex: 1, pb: 1, display: 'flex' }}>
       <Paper
         sx={{
-          bgcolor: 'transparent',
-          borderRadius: 2,
+          bgcolor: theme.palette.background.paper,
+          borderRadius: 3,
           px: 0,
           pt: 0,
           pb: 0,
@@ -466,6 +466,28 @@ const Emails: React.FC = () => {
           maxWidth: '1400px',
           mx: 'auto',
           minHeight: 'calc(100vh - 200px)',
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
+            : '0 4px 20px rgba(0, 0, 0, 0.08)',
+          border: `1px solid ${theme.palette.divider}`,
+          position: 'relative',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&:hover': {
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 8px 30px rgba(0, 0, 0, 0.4)' 
+              : '0 8px 30px rgba(0, 0, 0, 0.12)',
+          },
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '3px',
+            background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+            opacity: 0.3,
+            zIndex: 1,
+          },
         }}
       >
       {/* Sidebar izquierdo */}
@@ -482,6 +504,32 @@ const Emails: React.FC = () => {
           flexShrink: 0,
         }}
       >
+        {/* Título Correos */}
+        <Box
+          sx={{
+            px: 2,
+            pb: 1,
+            borderBottom: `2px solid ${theme.palette.divider}`,
+            background: theme.palette.mode === 'dark'
+              ? `linear-gradient(135deg, rgba(16, 185, 129, 0.03) 0%, transparent 100%)`
+              : `linear-gradient(135deg, rgba(16, 185, 129, 0.01) 0%, transparent 100%)`,
+          }}
+        >
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              fontWeight: 700, 
+              fontSize: { xs: '1.25rem', md: '1.5rem' },
+              background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.mode === 'dark' ? '#10B981' : '#2E7D32'} 100%)`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
+            Correos
+          </Typography>
+        </Box>
+
         {/* Botón Componer */}
         <Tooltip title="Crear nuevo correo" arrow>
           <Button
@@ -736,14 +784,14 @@ const Emails: React.FC = () => {
             placeholder="Buscar correo"
             value={searchTerm}
             onChange={handleSearch}
-            size="medium"
+            size="small"
             fullWidth
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
                   <Search sx={{ 
                     color: theme.palette.text.secondary,
-                    fontSize: 38,
+                    fontSize: 20,
                     transition: 'color 0.3s ease',
                   }} />
                 </InputAdornment>
@@ -751,9 +799,9 @@ const Emails: React.FC = () => {
             }}
             sx={{
               '& .MuiOutlinedInput-root': {
-                fontSize: '1.4rem',
-                borderRadius: 2,
-                borderWidth: 2,
+                fontSize: '0.875rem',
+                borderRadius: 1.5,
+                borderWidth: 1.5,
                 borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)',
                 bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
                 transition: 'all 0.3s ease',
@@ -765,7 +813,7 @@ const Emails: React.FC = () => {
                   },
                 },
                 '& input::placeholder': {
-                  fontSize: '1.4rem',
+                  fontSize: '0.875rem',
                   opacity: 0.7,
                 },
                 '&.Mui-focused': {
@@ -786,15 +834,20 @@ const Emails: React.FC = () => {
               onClick={handleRefresh} 
               disabled={loading}
               sx={{
-                border: '1px solid',
-                borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-                transition: 'all 0.3s ease',
+                border: `1.5px solid ${theme.palette.divider}`,
+                borderRadius: 1.5,
+                bgcolor: 'transparent',
+                color: theme.palette.text.secondary,
+                p: { xs: 0.75, sm: 0.875 },
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
-                  bgcolor: taxiMonterricoColors.greenLight,
-                  color: 'white',
-                  borderColor: taxiMonterricoColors.greenLight,
-                  transform: 'rotate(180deg)',
-                  boxShadow: `0 4px 12px ${taxiMonterricoColors.greenLight}40`,
+                  borderColor: taxiMonterricoColors.green,
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(16, 185, 129, 0.1)' 
+                    : 'rgba(16, 185, 129, 0.05)',
+                  color: taxiMonterricoColors.green,
+                  transform: 'rotate(180deg) translateY(-2px)',
+                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
                 },
                 '&:disabled': {
                   opacity: 0.5,

@@ -1544,7 +1544,7 @@ const Contacts: React.FC = () => {
               display: 'grid',
               gridTemplateColumns: {
                 sm: "repeat(6, minmax(0, 1fr))",
-                md: "1.5fr 1fr 0.9fr 0.7fr 1.2fr 0.7fr",
+                md: "2.5fr 1fr 0.9fr 0.7fr 1.2fr 0.7fr",
               },
               columnGap: { sm: 1, md: 1.5 },
               minWidth: { xs: 800, md: 'auto' },
@@ -1721,7 +1721,7 @@ const Contacts: React.FC = () => {
                   display: "grid",
                   gridTemplateColumns: {
                     sm: "repeat(6, minmax(0, 1fr))",
-                    md: "1.5fr 1fr 0.9fr 0.7fr 1.2fr 0.7fr",
+                    md: "2.5fr 1fr 0.9fr 0.7fr 1.2fr 0.7fr",
                   },
                   columnGap: { sm: 1, md: 1.5 },
                   minWidth: { xs: 800, md: 'auto' },

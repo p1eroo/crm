@@ -322,25 +322,30 @@ const Calendar: React.FC = () => {
       {/* Card principal del calendario */}
       <Card
         sx={{
-          bgcolor: theme.palette.mode === 'dark' 
-            ? 'rgba(255, 255, 255, 0.05)' 
-            : theme.palette.background.paper,
-          borderRadius: 2,
+          bgcolor: theme.palette.background.paper,
+          borderRadius: 3,
           p: 0,
           boxShadow: theme.palette.mode === 'dark' 
-            ? '0 8px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(46, 125, 50, 0.1)' 
-            : '0 8px 24px rgba(46, 125, 50, 0.12), 0 0 0 1px rgba(46, 125, 50, 0.08)',
+            ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
+            : '0 4px 20px rgba(0, 0, 0, 0.08)',
+          border: `1px solid ${theme.palette.divider}`,
           overflow: 'hidden',
-          border: 'none',
           position: 'relative',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          '&:hover': {
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 8px 30px rgba(0, 0, 0, 0.4)' 
+              : '0 8px 30px rgba(0, 0, 0, 0.12)',
+          },
           '&::before': {
             content: '""',
             position: 'absolute',
             top: 0,
             left: 0,
             right: 0,
-            height: '4px',
-            background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+            height: '3px',
+            background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+            opacity: 0.3,
             zIndex: 1,
           },
         }}
@@ -356,47 +361,24 @@ const Calendar: React.FC = () => {
           pt: { xs: 1.5, md: 2 },
           borderBottom: `2px solid ${theme.palette.divider}`,
           background: theme.palette.mode === 'dark'
-            ? `linear-gradient(135deg, rgba(46, 125, 50, 0.05) 0%, transparent 100%)`
-            : `linear-gradient(135deg, rgba(46, 125, 50, 0.02) 0%, transparent 100%)`,
+            ? `linear-gradient(135deg, rgba(16, 185, 129, 0.03) 0%, transparent 100%)`
+            : `linear-gradient(135deg, rgba(16, 185, 129, 0.01) 0%, transparent 100%)`,
           borderRadius: '8px 8px 0 0',
         }}>
-          {/* Iconos de vista (izquierda) */}
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
-            <IconButton
-              size="small"
-              sx={{
-                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
-                color: 'white',
-                borderRadius: 1.5,
-                transition: 'all 0.2s ease',
-                boxShadow: `0 2px 6px ${taxiMonterricoColors.green}30`,
-                '&:hover': {
-                  transform: 'translateY(-1px)',
-                  boxShadow: `0 4px 8px ${taxiMonterricoColors.green}40`,
-                  background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
-                },
-              }}
-            >
-              <ViewModule fontSize="small" />
-            </IconButton>
-            <IconButton
-              size="small"
-              sx={{
-                color: theme.palette.text.secondary,
-                borderRadius: 1.5,
-                border: `1px solid ${theme.palette.divider}`,
-                transition: 'all 0.2s ease',
-                '&:hover': {
-                  bgcolor: theme.palette.action.hover,
-                  borderColor: taxiMonterricoColors.green,
-                  color: taxiMonterricoColors.green,
-                  transform: 'translateY(-1px)',
-                },
-              }}
-            >
-              <ViewList fontSize="small" />
-            </IconButton>
-          </Box>
+          {/* Título Calendario */}
+          <Typography 
+            variant="h5" 
+            sx={{ 
+              fontWeight: 700, 
+              fontSize: { xs: '1.25rem', md: '1.5rem' },
+              background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.mode === 'dark' ? '#10B981' : '#2E7D32'} 100%)`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
+            Calendario
+          </Typography>
 
           {/* Mes y año con navegación (centro) */}
           <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -410,14 +392,17 @@ const Calendar: React.FC = () => {
               }}
               sx={{
                 color: theme.palette.text.secondary,
-                border: `1px solid ${theme.palette.divider}`,
+                border: `1.5px solid ${theme.palette.divider}`,
                 borderRadius: 1.5,
-                transition: 'all 0.2s ease',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
-                  bgcolor: theme.palette.action.hover,
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(16, 185, 129, 0.1)' 
+                    : 'rgba(16, 185, 129, 0.05)',
                   borderColor: taxiMonterricoColors.green,
                   color: taxiMonterricoColors.green,
                   transform: 'translateX(-2px)',
+                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
                 },
               }}
             >
@@ -430,7 +415,7 @@ const Calendar: React.FC = () => {
                 textAlign: 'center', 
                 fontWeight: 800,
                 fontSize: { xs: '1.2rem', md: '1.5rem' },
-                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+                background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
                 backgroundClip: 'text',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
@@ -450,14 +435,17 @@ const Calendar: React.FC = () => {
               }}
               sx={{
                 color: theme.palette.text.secondary,
-                border: `1px solid ${theme.palette.divider}`,
+                border: `1.5px solid ${theme.palette.divider}`,
                 borderRadius: 1.5,
-                transition: 'all 0.2s ease',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
-                  bgcolor: theme.palette.action.hover,
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(16, 185, 129, 0.1)' 
+                    : 'rgba(16, 185, 129, 0.05)',
                   borderColor: taxiMonterricoColors.green,
                   color: taxiMonterricoColors.green,
                   transform: 'translateX(2px)',
+                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
                 },
               }}
             >
@@ -465,25 +453,47 @@ const Calendar: React.FC = () => {
             </IconButton>
           </Box>
 
-          {/* Menú (derecha) */}
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            <IconButton 
-              size="small" 
-              sx={{ 
-                color: theme.palette.text.secondary,
+          {/* Iconos de vista (derecha) */}
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <IconButton
+              size="small"
+              sx={{
+                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+                color: 'white',
                 borderRadius: 1.5,
-                border: `1px solid ${theme.palette.divider}`,
-                transition: 'all 0.2s ease',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
                 '&:hover': {
-                  bgcolor: theme.palette.action.hover,
-                  borderColor: taxiMonterricoColors.green,
-                  color: taxiMonterricoColors.green,
+                  transform: 'translateY(-2px) scale(1.05)',
+                  boxShadow: `0 8px 20px ${taxiMonterricoColors.green}50`,
+                  background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
                 },
               }}
             >
-              <MenuIcon />
+              <ViewModule fontSize="small" />
+            </IconButton>
+            <IconButton
+              size="small"
+              sx={{
+                color: theme.palette.text.secondary,
+                borderRadius: 1.5,
+                border: `1.5px solid ${theme.palette.divider}`,
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': {
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(16, 185, 129, 0.1)' 
+                    : 'rgba(16, 185, 129, 0.05)',
+                  borderColor: taxiMonterricoColors.green,
+                  color: taxiMonterricoColors.green,
+                  transform: 'translateY(-2px)',
+                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                },
+              }}
+            >
+              <ViewList fontSize="small" />
             </IconButton>
           </Box>
+
         </Box>
 
         {/* Días de la semana */}

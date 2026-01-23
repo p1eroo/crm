@@ -23,6 +23,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../config/api';
 import { useTheme } from '@mui/material/styles';
 import { taxiMonterricoColors } from '../theme/colors';
+import { UnifiedTable } from '../components/UnifiedTable';
 
 interface User {
   id: number;
@@ -182,66 +183,63 @@ const Reports: React.FC = () => {
         '100%': { transform: 'translateX(100%)' },
       },
     }}>
-      <Box sx={{ mb: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Box
-          sx={{
-            p: 1.5,
-            borderRadius: '16px',
-            background: `linear-gradient(135deg, ${taxiMonterricoColors.green}15 0%, ${taxiMonterricoColors.green}05 100%)`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            border: `1px solid ${taxiMonterricoColors.green}20`,
-          }}
-        >
-          <Assessment sx={{ fontSize: { xs: 36, md: 40 }, color: taxiMonterricoColors.green }} />
-        </Box>
-        <Typography 
-          variant="h4" 
-          sx={{
-            fontWeight: 800,
-            fontSize: { xs: '1.75rem', md: '2rem' },
-            background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            letterSpacing: '-0.02em',
-          }}
-        >
-          Reportes
-        </Typography>
-      </Box>
-
-      {/* Total de Ventas por Asesor */}
+      <UnifiedTable
+        title="Reportes"
+        actions={null}
+        header={<Box />}
+        rows={
+          <>
+            {/* Total de Ventas por Asesor */}
       <Card sx={{ 
         borderRadius: 3, 
         boxShadow: theme.palette.mode === 'dark' 
-          ? '0 4px 12px rgba(0,0,0,0.3)' 
-          : '0 4px 12px rgba(46, 125, 50, 0.08)',
+          ? '0 4px 20px rgba(0,0,0,0.3)' 
+          : '0 4px 20px rgba(0,0,0,0.08)',
         bgcolor: theme.palette.background.paper,
         border: `1px solid ${theme.palette.divider}`,
         mb: 3,
+        minHeight: 'calc(100vh - 400px)',
         transition: 'all 0.3s ease',
         '&:hover': {
           boxShadow: theme.palette.mode === 'dark' 
-            ? '0 6px 16px rgba(0,0,0,0.4)' 
-            : '0 6px 16px rgba(46, 125, 50, 0.12)',
+            ? '0 8px 30px rgba(0,0,0,0.4)' 
+            : '0 8px 30px rgba(0,0,0,0.12)',
           transform: 'translateY(-2px)',
         },
+        position: 'relative',
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '3px',
+          background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+          opacity: 0.3,
+          zIndex: 1,
+        },
       }}>
-        <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+        <CardContent sx={{ p: { xs: 4, md: 5 } }}>
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
             alignItems: 'center',
-            mb: 1,
+            mb: 3.5,
+            pb: 2,
+            borderBottom: `2px solid ${theme.palette.divider}`,
+            background: theme.palette.mode === 'dark'
+              ? `linear-gradient(135deg, rgba(16, 185, 129, 0.03) 0%, transparent 100%)`
+              : `linear-gradient(135deg, rgba(16, 185, 129, 0.01) 0%, transparent 100%)`,
           }}>
             <Typography 
-              variant="h6" 
+              variant="h5" 
               sx={{ 
-                fontWeight: 600, 
-                color: theme.palette.text.primary, 
-                fontSize: { xs: '0.875rem', md: '1rem' },
+                fontWeight: 700, 
+                fontSize: { xs: '1.25rem', md: '1.5rem' },
+                background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
               }}
             >
               Total de Ventas por Asesor
@@ -287,24 +285,24 @@ const Reports: React.FC = () => {
                     <Box sx={{ 
                       display: 'flex', 
                       alignItems: 'center',
-                      mb: 2,
+                      mb: 4,
                       flexWrap: 'wrap',
-                      gap: 2,
+                      gap: 3,
                     }}>
                       <Typography 
-                        variant="body2" 
+                        variant="body1" 
                         sx={{ 
                           color: theme.palette.text.secondary,
-                          fontSize: '0.75rem',
+                          fontSize: { xs: '0.875rem', md: '1rem' },
                         }}
                       >
                         Total del periodo: <strong style={{ color: theme.palette.text.primary }}>S/ {totalPeriod.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</strong>
                       </Typography>
                       <Typography 
-                        variant="body2" 
+                        variant="body1" 
                         sx={{ 
                           color: theme.palette.text.secondary,
-                          fontSize: '0.75rem',
+                          fontSize: { xs: '0.875rem', md: '1rem' },
                         }}
                       >
                         Asesores: <strong style={{ color: theme.palette.text.primary }}>{totalAdvisors}</strong>
@@ -312,7 +310,7 @@ const Reports: React.FC = () => {
                     </Box>
 
                     {/* Lista de top 5 asesores */}
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
                       {topUsers.map((user, index) => {
                         const rank = index + 1;
                         const maxValue = topUsers[0]?.wonDealsValue || 1;
@@ -324,23 +322,33 @@ const Reports: React.FC = () => {
                             key={user.userId}
                             sx={{
                               position: 'relative',
-                              p: 1.5,
-                              borderRadius: 1,
-                              bgcolor: 'transparent',
+                              p: 2.5,
+                              borderRadius: 2,
+                              bgcolor: theme.palette.mode === 'dark' 
+                                ? 'rgba(255, 255, 255, 0.02)' 
+                                : 'rgba(0, 0, 0, 0.01)',
+                              border: `1px solid ${theme.palette.divider}`,
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                bgcolor: theme.palette.mode === 'dark' 
+                                  ? 'rgba(255, 255, 255, 0.04)' 
+                                  : 'rgba(0, 0, 0, 0.02)',
+                                transform: 'translateY(-1px)',
+                              },
                             }}
                           >
                             <Box sx={{ 
                               display: 'flex', 
                               alignItems: 'center', 
-                              gap: 1.5,
-                              mb: 1,
+                              gap: 2.5,
+                              mb: 2,
                             }}>
                               {/* Número de ranking */}
                               <Box
                                 sx={{
-                                  width: 36,
-                                  height: 36,
-                                  borderRadius: 1.5,
+                                  width: 52,
+                                  height: 52,
+                                  borderRadius: 2,
                                   display: 'flex',
                                   alignItems: 'center',
                                   justifyContent: 'center',
@@ -351,9 +359,9 @@ const Reports: React.FC = () => {
                                       : 'rgba(0, 0, 0, 0.05)'),
                                   color: rank === 1 ? 'white' : theme.palette.text.secondary,
                                   fontWeight: 700,
-                                  fontSize: '0.875rem',
+                                  fontSize: '1.125rem',
                                   flexShrink: 0,
-                                  boxShadow: rank === 1 ? '0 2px 6px rgba(245, 158, 11, 0.3)' : 'none',
+                                  boxShadow: rank === 1 ? '0 2px 8px rgba(245, 158, 11, 0.4)' : 'none',
                                 }}
                               >
                                 {rank}
@@ -362,13 +370,13 @@ const Reports: React.FC = () => {
                               {/* Avatar */}
                               <Avatar
                                 sx={{
-                                  width: 40,
-                                  height: 40,
+                                  width: 56,
+                                  height: 56,
                                   bgcolor: avatarColors[index % avatarColors.length],
-                                  fontSize: '0.875rem',
+                                  fontSize: '1.125rem',
                                   fontWeight: 700,
                                   flexShrink: 0,
-                                  boxShadow: `0 2px 6px ${avatarColors[index % avatarColors.length]}40`,
+                                  boxShadow: `0 2px 8px ${avatarColors[index % avatarColors.length]}40`,
                                   border: `2px solid ${theme.palette.background.paper}`,
                                 }}
                               >
@@ -378,21 +386,21 @@ const Reports: React.FC = () => {
                               {/* Nombre y ventas */}
                               <Box sx={{ flex: 1, minWidth: 0 }}>
                                 <Typography 
-                                  variant="body2" 
+                                  variant="body1" 
                                   sx={{ 
                                     fontWeight: 600, 
                                     color: theme.palette.text.primary,
-                                    fontSize: '0.75rem',
-                                    mb: 0.25,
+                                    fontSize: { xs: '0.875rem', md: '1rem' },
+                                    mb: 0.75,
                                   }}
                                 >
                                   {user.firstName} {user.lastName}
                                 </Typography>
                                 <Typography 
-                                  variant="caption" 
+                                  variant="body2" 
                                   sx={{ 
                                     color: theme.palette.text.secondary,
-                                    fontSize: '0.6875rem',
+                                    fontSize: { xs: '0.8125rem', md: '0.875rem' },
                                   }}
                                 >
                                   {user.wonDeals || 0} {user.wonDeals === 1 ? 'venta' : 'ventas'}
@@ -401,11 +409,11 @@ const Reports: React.FC = () => {
 
                               {/* Monto */}
                               <Typography 
-                                variant="body2" 
+                                variant="body1" 
                                 sx={{ 
                                   fontWeight: 600, 
                                   color: theme.palette.text.primary,
-                                  fontSize: '0.75rem',
+                                  fontSize: { xs: '0.875rem', md: '1rem' },
                                   flexShrink: 0,
                                 }}
                               >
@@ -416,7 +424,7 @@ const Reports: React.FC = () => {
                             {/* Barra de progreso */}
                             <Box sx={{ 
                               width: '100%', 
-                              height: 8, 
+                              height: 12, 
                               borderRadius: 2,
                               overflow: 'hidden',
                               bgcolor: theme.palette.mode === 'dark' 
@@ -462,13 +470,13 @@ const Reports: React.FC = () => {
               flexDirection: 'column', 
               alignItems: 'center', 
               justifyContent: 'center',
-              py: 6,
-              gap: 2,
+              py: 8,
+              gap: 2.5,
             }}>
               <Box
                 sx={{
-                  width: 100,
-                  height: 100,
+                  width: 120,
+                  height: 120,
                   borderRadius: '50%',
                   bgcolor: theme.palette.mode === 'dark' 
                     ? 'rgba(255, 255, 255, 0.05)' 
@@ -480,7 +488,7 @@ const Reports: React.FC = () => {
               >
                 <Person
                   sx={{
-                    fontSize: 48,
+                    fontSize: 56,
                     color: theme.palette.text.secondary,
                   }}
                 />
@@ -490,9 +498,9 @@ const Reports: React.FC = () => {
                   variant="h6"
                   sx={{
                     fontWeight: 600,
-                    mb: 1,
+                    mb: 1.5,
                     color: theme.palette.text.primary,
-                    fontSize: { xs: '1.1rem', md: '1.25rem' },
+                    fontSize: { xs: '1.125rem', md: '1.375rem' },
                   }}
                 >
                   No hay datos disponibles
@@ -502,7 +510,7 @@ const Reports: React.FC = () => {
                   sx={{ 
                     color: theme.palette.text.secondary,
                     lineHeight: 1.6,
-                    fontSize: { xs: '0.875rem', md: '0.9375rem' },
+                    fontSize: { xs: '0.9375rem', md: '1rem' },
                   }}
                 >
                   No hay datos de ventas por asesor disponibles en este momento.
@@ -513,11 +521,26 @@ const Reports: React.FC = () => {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardContent>
-          <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-            Usuarios con Rol de Usuario
-          </Typography>
+            <Card sx={{ 
+              borderRadius: 3, 
+              boxShadow: theme.palette.mode === 'dark' 
+                ? '0 4px 12px rgba(0,0,0,0.3)' 
+                : '0 4px 12px rgba(46, 125, 50, 0.08)',
+              bgcolor: theme.palette.background.paper,
+              border: `1px solid ${theme.palette.divider}`,
+              mt: 3,
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                boxShadow: theme.palette.mode === 'dark' 
+                  ? '0 6px 16px rgba(0,0,0,0.4)' 
+                  : '0 6px 16px rgba(46, 125, 50, 0.12)',
+                transform: 'translateY(-2px)',
+              },
+            }}>
+              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, fontSize: { xs: '0.875rem', md: '1rem' } }}>
+                  Usuarios con Rol de Usuario
+                </Typography>
 
           {users.length === 0 ? (
             <Box sx={{ textAlign: 'center', py: 4 }}>
@@ -531,11 +554,11 @@ const Reports: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 600 }}>Usuario</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Nombre</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Teléfono</TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>Acción</TableCell>
+                    <TableCell sx={{ fontWeight: 600, minWidth: { xs: 90, md: 120 }, width: { xs: 'auto', md: '10%' } }}>Usuario</TableCell>
+                    <TableCell sx={{ fontWeight: 600, minWidth: { xs: 320, md: 550 }, width: { xs: 'auto', md: '55%' } }}>Nombre</TableCell>
+                    <TableCell sx={{ fontWeight: 600, minWidth: { xs: 120, md: 160 }, width: { xs: 'auto', md: '18%' } }}>Email</TableCell>
+                    <TableCell sx={{ fontWeight: 600, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '9%' } }}>Teléfono</TableCell>
+                    <TableCell sx={{ fontWeight: 600, minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '8%' } }}>Acción</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -546,7 +569,7 @@ const Reports: React.FC = () => {
                       sx={{ cursor: 'pointer' }}
                       onClick={() => navigate(`/reports/${user.id}`)}
                     >
-                      <TableCell>
+                      <TableCell sx={{ minWidth: { xs: 90, md: 120 }, width: { xs: 'auto', md: '10%' } }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                           <Avatar
                             src={user.avatar}
@@ -563,12 +586,12 @@ const Reports: React.FC = () => {
                           </Typography>
                         </Box>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ minWidth: { xs: 320, md: 550 }, width: { xs: 'auto', md: '55%' } }}>
                         {user.firstName} {user.lastName}
                       </TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{user.phone || '--'}</TableCell>
-                      <TableCell>
+                      <TableCell sx={{ minWidth: { xs: 120, md: 160 }, width: { xs: 'auto', md: '18%' } }}>{user.email}</TableCell>
+                      <TableCell sx={{ minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '9%' } }}>{user.phone || '--'}</TableCell>
+                      <TableCell sx={{ minWidth: { xs: 80, md: 100 }, width: { xs: 'auto', md: '8%' } }}>
                         <Typography
                           variant="body2"
                           sx={{
@@ -590,6 +613,11 @@ const Reports: React.FC = () => {
           )}
         </CardContent>
       </Card>
+          </>
+        }
+        pagination={null}
+        emptyState={null}
+      />
 
       {/* Modal de Todos los Asesores */}
       <Dialog

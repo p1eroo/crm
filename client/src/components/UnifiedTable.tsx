@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Typography, useTheme } from '@mui/material';
+import { taxiMonterricoColors } from '../theme/colors';
 
 // Valor por defecto para itemsPerPage en todas las tablas
 export const DEFAULT_ITEMS_PER_PAGE = 10;
@@ -53,7 +54,9 @@ export const UnifiedTable: React.FC<UnifiedTableProps> = ({
               alignItems: 'center',
               px: { xs: 1.5, md: 2 },
               py: { xs: 1.25, md: 1.5 },
-              borderBottom: `2px solid ${theme.palette.divider}`,
+              borderBottom: `2px solid transparent`,
+              borderImage: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+              borderImageSlice: 1,
               background: theme.palette.mode === 'dark'
                 ? `linear-gradient(135deg, rgba(16, 185, 129, 0.03) 0%, transparent 100%)`
                 : `linear-gradient(135deg, rgba(16, 185, 129, 0.01) 0%, transparent 100%)`,

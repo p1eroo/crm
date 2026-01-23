@@ -28,12 +28,14 @@ import {
   Paper,
   useTheme,
 } from '@mui/material';
-import { Add, Delete, Search, CheckCircle, Visibility, Warning, Schedule, PendingActions, Edit, ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { Add, Delete, Search, CheckCircle, Visibility, Warning, Schedule, PendingActions, Edit, ChevronLeft, ChevronRight, Refresh, Launch, CheckCircleOutline, FilterList, Clear } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import EntityPreviewDrawer from '../components/EntityPreviewDrawer';
+import { UnifiedTable } from '../components/UnifiedTable';
 
 interface Task {
   id: number;
@@ -51,8 +53,10 @@ interface Task {
 const Tasks: React.FC = () => {
   const theme = useTheme();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [open, setOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [search, setSearch] = useState('');
@@ -76,6 +80,12 @@ const Tasks: React.FC = () => {
   const [totalTasks, setTotalTasks] = useState(0);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewTask, setPreviewTask] = useState<Task | null>(null);
+  const [completingTask, setCompletingTask] = useState<number | null>(null);
+  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterPriority, setFilterPriority] = useState<string>('');
+  const [filterType, setFilterType] = useState<string>('');
+  const [sortColumn, setSortColumn] = useState<string>('');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
   // Calcular estadísticas
   const today = new Date();
@@ -173,9 +183,13 @@ const Tasks: React.FC = () => {
     }
   }, [user]);
 
-  const fetchTasks = useCallback(async () => {
+  const fetchTasks = useCallback(async (isRefresh = false) => {
     try {
-      setLoading(true);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
       const params: any = {
         page: currentPage,
         limit: itemsPerPage,
@@ -209,6 +223,21 @@ const Tasks: React.FC = () => {
       // Ordenamiento
       params.sortBy = sortBy;
       
+      // Filtros adicionales
+      if (filterStatus) {
+        params.status = filterStatus;
+      }
+      if (filterPriority) {
+        params.priority = filterPriority;
+      }
+      if (filterType) {
+        params.type = filterType;
+      }
+      if (sortColumn) {
+        params.sortColumn = sortColumn;
+        params.sortDirection = sortDirection;
+      }
+      
       // Obtener tareas desde /tasks con paginación del servidor
       const tasksResponse = await api.get('/tasks', { params });
       const tasksData = tasksResponse.data.tasks || tasksResponse.data || [];
@@ -228,8 +257,108 @@ const Tasks: React.FC = () => {
       setTotalTasks(0);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }, [search, currentPage, itemsPerPage, activeFilter, sortBy]);
+  }, [search, currentPage, itemsPerPage, activeFilter, sortBy, filterStatus, filterPriority, filterType, sortColumn, sortDirection]);
+
+  const handleRefresh = () => {
+    fetchTasks(true);
+  };
+
+  const handleQuickComplete = async (task: Task, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (task.status === 'completed') return;
+    
+    setCompletingTask(task.id);
+    try {
+      if (task.isActivity) {
+        await api.put(`/activities/${task.id}`, {
+          subject: task.title || task.subject,
+          type: 'task',
+          status: 'completed',
+        });
+      } else {
+        await api.put(`/tasks/${task.id}`, {
+          ...task,
+          status: 'completed',
+        });
+      }
+      fetchTasks();
+    } catch (error) {
+      console.error('Error completing task:', error);
+    } finally {
+      setCompletingTask(null);
+    }
+  };
+
+  const handleNavigateToTask = (task: Task, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/tasks/${task.id}`);
+  };
+
+  const handleFilterByStatus = (status: string) => {
+    if (filterStatus === status) {
+      setFilterStatus('');
+      setActiveFilter(null);
+    } else {
+      setFilterStatus(status);
+      switch (status) {
+        case 'not started':
+          setActiveFilter('pending');
+          break;
+        case 'completed':
+          setActiveFilter('completed');
+          break;
+        default:
+          setActiveFilter(null);
+      }
+    }
+    setCurrentPage(1);
+  };
+
+  const handleFilterByPriority = (priority: string) => {
+    setFilterPriority(filterPriority === priority ? '' : priority);
+    setCurrentPage(1);
+  };
+
+  const handleFilterByType = (type: string) => {
+    setFilterType(filterType === type ? '' : type);
+    setCurrentPage(1);
+  };
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('desc');
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return taxiMonterricoColors.green;
+      case 'in progress':
+        return '#2196F3';
+      case 'not started':
+        return theme.palette.warning.main;
+      case 'cancelled':
+        return theme.palette.error.main;
+      default:
+        return theme.palette.text.secondary;
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    const statusMap: { [key: string]: string } = {
+      'not started': 'No iniciada',
+      'in progress': 'En progreso',
+      'completed': 'Completada',
+      'cancelled': 'Cancelada',
+    };
+    return statusMap[status.toLowerCase()] || status;
+  };
 
   useEffect(() => {
     fetchTasks();
@@ -685,68 +814,65 @@ const Tasks: React.FC = () => {
       </Card>
 
       {/* Sección de tabla */}
-      <Card sx={{ 
-        borderRadius: 3,
-        boxShadow: theme.palette.mode === 'dark' 
-          ? '0 4px 16px rgba(0,0,0,0.3)' 
-          : `0 4px 16px ${taxiMonterricoColors.greenLight}15`,
-        overflow: 'hidden',
-        bgcolor: theme.palette.background.paper,
-        border: '1px solid',
-        borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
-        transition: 'all 0.3s ease',
-        '&:hover': {
-          boxShadow: theme.palette.mode === 'dark' 
-            ? '0 8px 24px rgba(0,0,0,0.4)' 
-            : `0 8px 24px ${taxiMonterricoColors.greenLight}25`,
-        },
-      }}>
-        <Box sx={{ 
-          px: 3, 
-          pt: 3, 
-          pb: 2,
-          background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)`,
-          borderBottom: `2px solid transparent`,
-          borderImage: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
-          borderImageSlice: 1,
-        }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
-            <Box>
-              <Typography 
-                variant="h4" 
+      <UnifiedTable
+        title="Tareas"
+        actions={
+          <>
+            <Tooltip title="Actualizar tareas">
+              <IconButton
+                onClick={handleRefresh}
+                disabled={refreshing}
                 sx={{
-                  fontWeight: 700,
-                  fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
-                  background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
+                  border: `1.5px solid ${theme.palette.divider}`,
+                  borderRadius: 1.5,
+                  bgcolor: 'transparent',
+                  color: theme.palette.text.secondary,
+                  p: { xs: 0.75, sm: 0.875 },
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  '&:hover': {
+                    borderColor: taxiMonterricoColors.green,
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? 'rgba(16, 185, 129, 0.1)' 
+                      : 'rgba(16, 185, 129, 0.05)',
+                    color: taxiMonterricoColors.green,
+                    transform: 'translateY(-2px)',
+                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                  },
                 }}
               >
-                Tareas
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <Refresh sx={{ 
+                  animation: refreshing ? 'spin 1s linear infinite' : 'none',
+                  '@keyframes spin': {
+                    '0%': { transform: 'rotate(0deg)' },
+                    '100%': { transform: 'rotate(360deg)' },
+                  },
+                }} />
+              </IconButton>
+            </Tooltip>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
               <TextField
-                size="medium"
-                placeholder="Buscar"
+                size="small"
+                placeholder="Buscar tareas..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
                 InputProps={{
                   startAdornment: <Search sx={{ 
                     mr: 2.5, 
                     color: theme.palette.text.secondary, 
-                    fontSize: 38,
+                    fontSize: 20,
                     transition: 'color 0.3s ease',
                   }} />,
                 }}
                 sx={{ 
                   minWidth: 200,
                   bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
-                  borderRadius: 2,
+                  borderRadius: 1.5,
                   '& .MuiOutlinedInput-root': {
-                    fontSize: '1.4rem',
-                    borderWidth: 2,
+                    fontSize: '0.875rem',
+                    borderWidth: 1.5,
                     '& fieldset': {
                       borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)',
                     },
@@ -759,7 +885,7 @@ const Tasks: React.FC = () => {
                       boxShadow: `0 0 0 3px ${taxiMonterricoColors.greenLight}30`,
                     },
                     '& input::placeholder': {
-                      fontSize: '1.4rem',
+                      fontSize: '0.875rem',
                       opacity: 0.7,
                     },
                   },
@@ -803,6 +929,23 @@ const Tasks: React.FC = () => {
                   <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
                 </Select>
               </FormControl>
+              {totalTasks > 0 && (
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 1,
+                  px: 1.5,
+                  py: 0.5,
+                  borderRadius: 1,
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(255, 255, 255, 0.05)' 
+                    : 'rgba(0, 0, 0, 0.02)',
+                }}>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
+                    {totalTasks} {totalTasks === 1 ? 'tarea' : 'tareas'}
+                  </Typography>
+                </Box>
+              )}
               <Tooltip title="Crear nueva tarea" arrow>
                 <Button 
                   variant="contained" 
@@ -847,70 +990,302 @@ const Tasks: React.FC = () => {
                 </Button>
               </Tooltip>
             </Box>
-          </Box>
-        </Box>
-
-        <TableContainer 
-          component={Paper}
-          sx={{ 
-            overflowX: 'auto',
-            overflowY: 'hidden',
-            maxWidth: '100%',
-            borderRadius: 0,
-            border: 'none',
-            boxShadow: 'none',
-            '& .MuiPaper-root': {
-              borderRadius: 0,
-              border: 'none',
-              boxShadow: 'none',
-            },
-            '&::-webkit-scrollbar': {
-              height: 8,
-            },
-            '&::-webkit-scrollbar-track': {
-              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f1f1f1',
-            },
-            '&::-webkit-scrollbar-thumb': {
-              backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.secondary : '#888',
-              borderRadius: 4,
-              '&:hover': {
-                backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.primary : '#555',
-              },
-            },
-          }}
-        >
-          <Table sx={{ minWidth: { xs: 800, md: 'auto' } }}>
+          </>
+        }
+        header={<Box />}
+        rows={
+          <>
+            {/* Barra de filtros activos */}
+            {(filterStatus || filterPriority || filterType || activeFilter) && (
+              <Box sx={{ px: 3, pt: 2, pb: 1, display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                <FilterList sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontWeight: 600 }}>
+                  Filtros activos:
+                </Typography>
+                {activeFilter && (
+                  <Chip
+                    label={activeFilter === 'overdue' ? 'Vencidas' : activeFilter === 'dueToday' ? 'Vencen hoy' : activeFilter === 'pending' ? 'Pendientes' : 'Completadas'}
+                    size="small"
+                    onDelete={() => {
+                      setActiveFilter(null);
+                      setFilterStatus('');
+                      setCurrentPage(1);
+                    }}
+                    sx={{
+                      bgcolor: taxiMonterricoColors.green,
+                      color: 'white',
+                      fontWeight: 600,
+                      '& .MuiChip-deleteIcon': {
+                        color: 'white',
+                      },
+                    }}
+                  />
+                )}
+                {filterStatus && !activeFilter && (
+                  <Chip
+                    label={`Estado: ${getStatusLabel(filterStatus)}`}
+                    size="small"
+                    onDelete={() => {
+                      setFilterStatus('');
+                      setCurrentPage(1);
+                    }}
+                    sx={{
+                      bgcolor: `${getStatusColor(filterStatus)}20`,
+                      color: getStatusColor(filterStatus),
+                      borderColor: getStatusColor(filterStatus),
+                      fontWeight: 600,
+                    }}
+                  />
+                )}
+                {filterPriority && (
+                  <Chip
+                    label={`Prioridad: ${getPriorityLabel(filterPriority)}`}
+                    size="small"
+                    onDelete={() => {
+                      setFilterPriority('');
+                      setCurrentPage(1);
+                    }}
+                    sx={{
+                      bgcolor: filterPriority === 'urgent' || filterPriority === 'high'
+                        ? '#FFEBEE'
+                        : filterPriority === 'medium'
+                        ? '#FFF3E0'
+                        : '#E8F5E9',
+                      color: filterPriority === 'urgent' || filterPriority === 'high'
+                        ? '#C62828'
+                        : filterPriority === 'medium'
+                        ? '#E65100'
+                        : '#2E7D32',
+                      fontWeight: 600,
+                    }}
+                  />
+                )}
+                {filterType && (
+                  <Chip
+                    label={`Tipo: ${filterType}`}
+                    size="small"
+                    onDelete={() => {
+                      setFilterType('');
+                      setCurrentPage(1);
+                    }}
+                    sx={{
+                      bgcolor: `${taxiMonterricoColors.green}20`,
+                      color: taxiMonterricoColors.green,
+                      borderColor: taxiMonterricoColors.green,
+                      fontWeight: 600,
+                    }}
+                  />
+                )}
+                <Button
+                  size="small"
+                  startIcon={<Clear />}
+                  onClick={() => {
+                    setFilterStatus('');
+                    setFilterPriority('');
+                    setFilterType('');
+                    setActiveFilter(null);
+                    setCurrentPage(1);
+                  }}
+                  sx={{
+                    textTransform: 'none',
+                    fontSize: '0.75rem',
+                    color: theme.palette.text.secondary,
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(255, 255, 255, 0.05)' 
+                        : 'rgba(0, 0, 0, 0.02)',
+                    },
+                  }}
+                >
+                  Limpiar filtros
+                </Button>
+              </Box>
+            )}
+            <Box sx={{ px: 0, pb: 0, width: '100%', overflow: 'hidden' }}>
+              <TableContainer 
+                component={Paper}
+                sx={{ 
+                  overflowX: 'auto',
+                  overflowY: 'hidden',
+                  maxWidth: '100%',
+                  width: '100%',
+                  borderRadius: 0,
+                  border: 'none',
+                  boxShadow: 'none',
+                  '& .MuiPaper-root': {
+                    borderRadius: 0,
+                    border: 'none',
+                    boxShadow: 'none',
+                    width: '100%',
+                  },
+                  '& .MuiTable-root': {
+                    width: '100%',
+                  },
+                  '&::-webkit-scrollbar': {
+                    height: 8,
+                  },
+                  '&::-webkit-scrollbar-track': {
+                    backgroundColor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f1f1f1',
+                  },
+                  '&::-webkit-scrollbar-thumb': {
+                    backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.secondary : '#888',
+                    borderRadius: 4,
+                    '&:hover': {
+                      backgroundColor: theme.palette.mode === 'dark' ? theme.palette.text.primary : '#555',
+                    },
+                  },
+                }}
+              >
+          <Table sx={{ minWidth: { xs: 800, md: 'auto' }, width: '100%', tableLayout: 'auto' }}>
             <TableHead>
               <TableRow sx={{ 
                 background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)`,
-                borderTop: `2px solid transparent`,
-                borderImage: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
-                borderImageSlice: 1,
+                overflow: 'hidden',
+                width: '100%',
+                display: 'table-row',
                 borderBottom: `2px solid ${taxiMonterricoColors.greenLight}`,
                 '& .MuiTableCell-head': {
                   borderBottom: 'none',
                   fontWeight: 700,
+                  bgcolor: 'transparent',
+                  background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)`,
                 },
                 '& .MuiTableCell-head:first-of-type': {
                   borderTopLeftRadius: 0,
                 },
                 '& .MuiTableCell-head:last-of-type': {
                   borderTopRightRadius: 0,
+                  pr: 0,
                 },
               }}>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '30%' } }}>
-                  Nombre de la Tarea
+                <TableCell 
+                  onClick={() => handleSort('title')}
+                  sx={{ 
+                    fontWeight: 600, 
+                    color: theme.palette.text.primary, 
+                    fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                    py: { xs: 1.5, md: 2 }, 
+                    pl: { xs: 2, md: 3 }, 
+                    pr: 1, 
+                    minWidth: { xs: 200, md: 250 }, 
+                    width: { xs: 'auto', md: '30%' },
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(255, 255, 255, 0.05)' 
+                        : 'rgba(0, 0, 0, 0.02)',
+                    },
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    Nombre de la Tarea
+                    {sortColumn === 'title' && (
+                      <Box component="span" sx={{ fontSize: '0.7rem' }}>
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </Box>
+                    )}
+                  </Box>
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
-                  Tipo
+                <TableCell 
+                  onClick={() => handleSort('type')}
+                  sx={{ 
+                    fontWeight: 600, 
+                    color: theme.palette.text.primary, 
+                    fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                    py: { xs: 1.5, md: 2 }, 
+                    px: 1, 
+                    minWidth: { xs: 100, md: 120 }, 
+                    width: { xs: 'auto', md: '15%' },
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(255, 255, 255, 0.05)' 
+                        : 'rgba(0, 0, 0, 0.02)',
+                    },
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    Tipo
+                    {sortColumn === 'type' && (
+                      <Box component="span" sx={{ fontSize: '0.7rem' }}>
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </Box>
+                    )}
+                  </Box>
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
-                  Prioridad
+                <TableCell 
+                  onClick={() => handleSort('priority')}
+                  sx={{ 
+                    fontWeight: 600, 
+                    color: theme.palette.text.primary, 
+                    fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                    py: { xs: 1.5, md: 2 }, 
+                    px: { xs: 1, md: 1.5 }, 
+                    minWidth: { xs: 100, md: 120 }, 
+                    width: { xs: 'auto', md: '12%' },
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(255, 255, 255, 0.05)' 
+                        : 'rgba(0, 0, 0, 0.02)',
+                    },
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    Prioridad
+                    {sortColumn === 'priority' && (
+                      <Box component="span" sx={{ fontSize: '0.7rem' }}>
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </Box>
+                    )}
+                  </Box>
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
-                  Fecha de Vencimiento
+                <TableCell 
+                  onClick={() => handleSort('dueDate')}
+                  sx={{ 
+                    fontWeight: 600, 
+                    color: theme.palette.text.primary, 
+                    fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                    py: { xs: 1.5, md: 2 }, 
+                    px: { xs: 1, md: 1.5 }, 
+                    minWidth: { xs: 120, md: 150 }, 
+                    width: { xs: 'auto', md: '15%' },
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(255, 255, 255, 0.05)' 
+                        : 'rgba(0, 0, 0, 0.02)',
+                    },
+                  }}
+                >
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    Fecha de Vencimiento
+                    {sortColumn === 'dueDate' && (
+                      <Box component="span" sx={{ fontSize: '0.7rem' }}>
+                        {sortDirection === 'asc' ? '↑' : '↓'}
+                      </Box>
+                    )}
+                  </Box>
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '13%' } }}>
+                <TableCell sx={{ 
+                  fontWeight: 600, 
+                  color: theme.palette.text.primary, 
+                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                  py: { xs: 1.5, md: 2 }, 
+                  px: { xs: 1, md: 1.5 }, 
+                  minWidth: { xs: 120, md: 150 }, 
+                  width: { xs: 'auto', md: '13%' },
+                  bgcolor: 'transparent',
+                  background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)`,
+                }}>
                   Asignado a
                 </TableCell>
                 <TableCell sx={{ 
@@ -918,13 +1293,15 @@ const Tasks: React.FC = () => {
                   color: theme.palette.text.primary, 
                   fontSize: { xs: '0.75rem', md: '0.875rem' }, 
                   py: { xs: 1.5, md: 2 }, 
-                  px: 1, 
+                  pl: 1,
+                  pr: 0,
                   width: { xs: 100, md: 120 }, 
                   minWidth: { xs: 100, md: 120 },
-                  pr: { xs: 2, md: 3 }
+                  bgcolor: 'transparent',
+                  background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)`,
                 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
-                  Acciones
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', pr: { xs: 2, md: 3 } }}>
+                    Acciones
                   </Box>
                 </TableCell>
               </TableRow>
@@ -986,101 +1363,287 @@ const Tasks: React.FC = () => {
                   hover
                   onClick={() => handlePreview(task)}
                   sx={{ 
-                    '&:hover': { bgcolor: theme.palette.mode === 'dark' ? theme.palette.action.hover : '#fafafa' },
+                    '&:hover': { 
+                      bgcolor: theme.palette.mode === 'dark' ? theme.palette.action.hover : '#fafafa',
+                      transform: 'scale(1.001)',
+                    },
                     cursor: 'pointer',
-                    transition: 'background-color 0.2s',
+                    transition: 'all 0.2s ease',
+                    position: 'relative',
+                    opacity: task.status === 'completed' ? 0.7 : 1,
                   }}
                 >
                   <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '30%' } }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
-                      <Avatar
-                        sx={{
-                          width: { xs: 32, md: 40 },
-                          height: { xs: 32, md: 40 },
-                          bgcolor: taxiMonterricoColors.green,
-                          fontSize: { xs: '0.75rem', md: '0.875rem' },
-                          fontWeight: 600,
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {getInitials(task.title || task.subject || '')}
-                      </Avatar>
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          fontWeight: 500, 
-                          color: theme.palette.text.primary,
-                          fontSize: { xs: '0.75rem', md: '0.875rem' },
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {task.title || task.subject}
-                      </Typography>
+                      <Box sx={{ position: 'relative' }}>
+                        <Avatar
+                          sx={{
+                            width: { xs: 32, md: 40 },
+                            height: { xs: 32, md: 40 },
+                            bgcolor: task.status === 'completed' 
+                              ? theme.palette.success.main 
+                              : taxiMonterricoColors.green,
+                            fontSize: { xs: '0.75rem', md: '0.875rem' },
+                            fontWeight: 600,
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                            flexShrink: 0,
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              transform: 'scale(1.1)',
+                            },
+                          }}
+                        >
+                          {task.status === 'completed' ? (
+                            <CheckCircle sx={{ fontSize: { xs: 20, md: 24 }, color: 'white' }} />
+                          ) : (
+                            getInitials(task.title || task.subject || '')
+                          )}
+                        </Avatar>
+                        {task.status !== 'completed' && (
+                          <Tooltip title="Marcar como completada">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => handleQuickComplete(task, e)}
+                              disabled={completingTask === task.id}
+                              sx={{
+                                position: 'absolute',
+                                bottom: -4,
+                                right: -4,
+                                bgcolor: theme.palette.background.paper,
+                                border: `2px solid ${taxiMonterricoColors.green}`,
+                                width: 20,
+                                height: 20,
+                                p: 0,
+                                '&:hover': {
+                                  bgcolor: taxiMonterricoColors.green,
+                                  '& .MuiSvgIcon-root': {
+                                    color: 'white',
+                                  },
+                                },
+                              }}
+                            >
+                              <CheckCircleOutline sx={{ fontSize: 12, color: taxiMonterricoColors.green }} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </Box>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            fontWeight: 500, 
+                            color: theme.palette.text.primary,
+                            fontSize: { xs: '0.75rem', md: '0.875rem' },
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            textDecoration: task.status === 'completed' ? 'line-through' : 'none',
+                            mb: 0.5,
+                          }}
+                        >
+                          {task.title || task.subject}
+                        </Typography>
+                        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', flexWrap: 'wrap' }}>
+                          <Chip
+                            label={getStatusLabel(task.status)}
+                            size="small"
+                            variant={filterStatus === task.status ? "filled" : "outlined"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleFilterByStatus(task.status);
+                            }}
+                            sx={{
+                              height: 18,
+                              fontSize: '0.65rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              bgcolor: filterStatus === task.status
+                                ? `${getStatusColor(task.status)}20`
+                                : (task.status === 'completed' 
+                                  ? `${taxiMonterricoColors.green}10`
+                                  : task.status === 'in progress'
+                                  ? '#E3F2FD'
+                                  : '#FFF3E0'),
+                              borderColor: filterStatus === task.status
+                                ? getStatusColor(task.status)
+                                : theme.palette.divider,
+                              color: filterStatus === task.status
+                                ? getStatusColor(task.status)
+                                : (task.status === 'completed'
+                                  ? taxiMonterricoColors.green
+                                  : task.status === 'in progress'
+                                  ? '#2196F3'
+                                  : theme.palette.warning.main),
+                              '&:hover': {
+                                transform: 'scale(1.05)',
+                                borderColor: getStatusColor(task.status),
+                                color: getStatusColor(task.status),
+                                bgcolor: `${getStatusColor(task.status)}15`,
+                                boxShadow: 1,
+                              },
+                            }}
+                          />
+                        </Box>
+                      </Box>
+                      <Tooltip title="Ver detalles completos">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => handleNavigateToTask(task, e)}
+                          sx={{
+                            opacity: 0,
+                            transition: 'opacity 0.2s ease',
+                            '&:hover': {
+                              bgcolor: theme.palette.mode === 'dark' 
+                                ? 'rgba(91, 228, 155, 0.1)' 
+                                : 'rgba(91, 228, 155, 0.08)',
+                            },
+                            [`${TableRow}:hover &`]: {
+                              opacity: 1,
+                            },
+                          }}
+                        >
+                          <Launch sx={{ fontSize: 16, color: taxiMonterricoColors.green }} />
+                        </IconButton>
+                      </Tooltip>
                     </Box>
                   </TableCell>
                   <TableCell sx={{ px: 1, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
-                    <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                      {task.type}
-                    </Typography>
+                    <Chip
+                      label={task.type}
+                      size="small"
+                      variant={filterType === task.type ? "filled" : "outlined"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleFilterByType(task.type);
+                      }}
+                      sx={{
+                        fontSize: { xs: '0.7rem', md: '0.75rem' },
+                        height: { xs: 20, md: 24 },
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        bgcolor: filterType === task.type 
+                          ? `${taxiMonterricoColors.green}20` 
+                          : 'transparent',
+                        borderColor: filterType === task.type 
+                          ? taxiMonterricoColors.green 
+                          : theme.palette.divider,
+                        color: filterType === task.type 
+                          ? taxiMonterricoColors.green 
+                          : theme.palette.text.primary,
+                        '&:hover': {
+                          transform: 'scale(1.05)',
+                          borderColor: taxiMonterricoColors.green,
+                          color: taxiMonterricoColors.green,
+                          bgcolor: `${taxiMonterricoColors.green}15`,
+                        },
+                      }}
+                    />
                   </TableCell>
                   <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
                     <Chip
                       label={getPriorityLabel(task.priority)}
                       size="small"
+                      variant={filterPriority === task.priority ? "filled" : "filled"}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleFilterByPriority(task.priority);
+                      }}
                       sx={{ 
                         fontWeight: 500,
                         fontSize: { xs: '0.7rem', md: '0.75rem' },
                         height: { xs: 20, md: 24 },
-                        bgcolor: task.priority === 'urgent' || task.priority === 'high'
-                          ? '#FFEBEE'
-                          : task.priority === 'medium'
-                          ? '#FFF3E0'
-                          : '#E8F5E9',
-                        color: task.priority === 'urgent' || task.priority === 'high'
-                          ? '#C62828'
-                          : task.priority === 'medium'
-                          ? '#E65100'
-                          : '#2E7D32',
-                        border: 'none',
+                        bgcolor: filterPriority === task.priority
+                          ? (task.priority === 'urgent' || task.priority === 'high'
+                            ? '#C62828'
+                            : task.priority === 'medium'
+                            ? '#E65100'
+                            : '#2E7D32')
+                          : (task.priority === 'urgent' || task.priority === 'high'
+                            ? '#FFEBEE'
+                            : task.priority === 'medium'
+                            ? '#FFF3E0'
+                            : '#E8F5E9'),
+                        color: filterPriority === task.priority
+                          ? 'white'
+                          : (task.priority === 'urgent' || task.priority === 'high'
+                            ? '#C62828'
+                            : task.priority === 'medium'
+                            ? '#E65100'
+                            : '#2E7D32'),
+                        border: filterPriority === task.priority 
+                          ? `2px solid ${task.priority === 'urgent' || task.priority === 'high' ? '#C62828' : task.priority === 'medium' ? '#E65100' : '#2E7D32'}`
+                          : 'none',
                         borderRadius: 1,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        boxShadow: filterPriority === task.priority ? 3 : 0,
+                        '&:hover': {
+                          transform: 'scale(1.05)',
+                          boxShadow: 2,
+                        },
                       }}
                     />
                   </TableCell>
                   <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
                     {task.dueDate ? (
-                      <Box>
-                        <Typography 
-                          variant="body2" 
-                          sx={{ 
-                            color: theme.palette.text.primary, 
-                            fontSize: { xs: '0.75rem', md: '0.875rem' },
-                            fontWeight: 500,
-                          }}
-                        >
-                          {new Date(task.dueDate).toLocaleDateString('es-ES', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric'
-                          })}
-                        </Typography>
-                        {new Date(task.dueDate) < new Date() && task.status !== 'completed' && (
+                      <Tooltip 
+                        title={new Date(task.dueDate).toLocaleString('es-ES', { 
+                          dateStyle: 'full', 
+                          timeStyle: 'short' 
+                        })}
+                        arrow
+                      >
+                        <Box>
                           <Typography 
-                            variant="caption" 
+                            variant="body2" 
                             sx={{ 
-                              color: '#d32f2f',
-                              fontSize: '0.7rem',
+                              color: theme.palette.text.primary, 
+                              fontSize: { xs: '0.75rem', md: '0.875rem' },
                               fontWeight: 500,
-                              display: 'block',
-                              mt: 0.25
                             }}
                           >
-                            Vencida
+                            {new Date(task.dueDate).toLocaleDateString('es-ES', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric'
+                            })}
                           </Typography>
-                        )}
-                      </Box>
+                          {new Date(task.dueDate) < new Date() && task.status !== 'completed' && (
+                            <Chip
+                              label="Vencida"
+                              size="small"
+                              sx={{ 
+                                mt: 0.5,
+                                height: 18,
+                                fontSize: '0.65rem',
+                                bgcolor: '#ffebee',
+                                color: '#d32f2f',
+                                fontWeight: 600,
+                                animation: 'pulse 2s infinite',
+                                '@keyframes pulse': {
+                                  '0%, 100%': { opacity: 1 },
+                                  '50%': { opacity: 0.7 },
+                                },
+                              }}
+                            />
+                          )}
+                          {new Date(task.dueDate).toDateString() === new Date().toDateString() && task.status !== 'completed' && (
+                            <Chip
+                              label="Hoy"
+                              size="small"
+                              sx={{ 
+                                mt: 0.5,
+                                height: 18,
+                                fontSize: '0.65rem',
+                                bgcolor: '#fff3e0',
+                                color: '#e65100',
+                                fontWeight: 600,
+                              }}
+                            />
+                          )}
+                        </Box>
+                      </Tooltip>
                     ) : (
                       <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                         Sin fecha
@@ -1089,21 +1652,86 @@ const Tasks: React.FC = () => {
                   </TableCell>
                   <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '13%' } }}>
                     {task.AssignedTo ? (
-                      <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {task.AssignedTo.firstName} {task.AssignedTo.lastName}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Avatar
+                          sx={{
+                            width: 24,
+                            height: 24,
+                            bgcolor: taxiMonterricoColors.green,
+                            fontSize: '0.7rem',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {task.AssignedTo.firstName?.[0]}{task.AssignedTo.lastName?.[0]}
+                        </Avatar>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: theme.palette.text.primary, 
+                            fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis', 
+                            whiteSpace: 'nowrap' 
+                          }}
+                        >
+                          {task.AssignedTo.firstName} {task.AssignedTo.lastName}
+                        </Typography>
+                      </Box>
                     ) : task.User ? (
-                      <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {task.User.firstName} {task.User.lastName}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Avatar
+                          sx={{
+                            width: 24,
+                            height: 24,
+                            bgcolor: taxiMonterricoColors.green,
+                            fontSize: '0.7rem',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {task.User.firstName?.[0]}{task.User.lastName?.[0]}
+                        </Avatar>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            color: theme.palette.text.primary, 
+                            fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                            overflow: 'hidden', 
+                            textOverflow: 'ellipsis', 
+                            whiteSpace: 'nowrap' 
+                          }}
+                        >
+                          {task.User.firstName} {task.User.lastName}
+                        </Typography>
+                      </Box>
                     ) : (
                       <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                        --
+                        Sin asignar
                       </Typography>
                     )}
                   </TableCell>
                   <TableCell sx={{ px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 }, pr: { xs: 2, md: 3 } }}>
                     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                      <Tooltip title="Ver detalles completos">
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleNavigateToTask(task, e);
+                          }}
+                          sx={{
+                            ...pageStyles.previewIconButton,
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              transform: 'scale(1.1)',
+                              bgcolor: theme.palette.mode === 'dark' 
+                                ? 'rgba(91, 228, 155, 0.15)' 
+                                : 'rgba(91, 228, 155, 0.12)',
+                            },
+                          }}
+                        >
+                          <Launch sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                        </IconButton>
+                      </Tooltip>
                       <Tooltip title="Editar">
                         <IconButton
                           size="small"
@@ -1111,19 +1739,37 @@ const Tasks: React.FC = () => {
                             e.stopPropagation();
                             handleOpen(task);
                           }}
-                          sx={pageStyles.previewIconButton}
+                          sx={{
+                            ...pageStyles.previewIconButton,
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              transform: 'scale(1.1)',
+                              bgcolor: theme.palette.mode === 'dark' 
+                                ? 'rgba(25, 118, 210, 0.15)' 
+                                : 'rgba(25, 118, 210, 0.12)',
+                            },
+                          }}
                         >
                           <Edit sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Vista previa">
+                      <Tooltip title="Vista previa rápida">
                         <IconButton
                           size="small"
                           onClick={(e) => {
                             e.stopPropagation();
                             handlePreview(task);
                           }}
-                          sx={pageStyles.previewIconButton}
+                          sx={{
+                            ...pageStyles.previewIconButton,
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              transform: 'scale(1.1)',
+                              bgcolor: theme.palette.mode === 'dark' 
+                                ? 'rgba(91, 228, 155, 0.15)' 
+                                : 'rgba(91, 228, 155, 0.12)',
+                            },
+                          }}
                         >
                           <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
                         </IconButton>
@@ -1135,7 +1781,16 @@ const Tasks: React.FC = () => {
                             e.stopPropagation();
                             handleDelete(task.id, task.isActivity);
                           }}
-                          sx={pageStyles.deleteIcon}
+                          sx={{
+                            ...pageStyles.deleteIcon,
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              transform: 'scale(1.1)',
+                              bgcolor: theme.palette.mode === 'dark' 
+                                ? 'rgba(211, 47, 47, 0.15)' 
+                                : 'rgba(211, 47, 47, 0.12)',
+                            },
+                          }}
                         >
                           <Delete sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
                         </IconButton>
@@ -1236,7 +1891,12 @@ const Tasks: React.FC = () => {
             </Box>
           </Box>
         )}
-      </Card>
+            </Box>
+          </>
+        }
+        pagination={null}
+        emptyState={null}
+      />
 
       <Dialog 
         open={open} 
