@@ -8,12 +8,12 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   IconButton,
   Chip,
   Select,
   MenuItem,
   FormControl,
+  InputLabel,
   CircularProgress,
   Alert,
   Switch,
@@ -38,8 +38,8 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
-import { pageStyles } from '../theme/styles';
 import axios from 'axios';
+import { UnifiedTable } from '../components/UnifiedTable';
 import UserAvatar from '../components/UserAvatar';
 
 interface User {
@@ -371,187 +371,498 @@ const Users: React.FC = () => {
 
   return (
     <Box sx={{ 
-      bgcolor: theme.palette.background.default, 
-      minHeight: '100vh',
-      pb: { xs: 2, sm: 3, md: 4 },
+      p: 3,
+      '@keyframes shimmer': {
+        '0%': { transform: 'translateX(-100%)' },
+        '100%': { transform: 'translateX(100%)' },
+      },
     }}>
-      <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-        <Box>
-          <Typography variant="h4" sx={pageStyles.pageTitle}>
-            Usuarios
-          </Typography>
-          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-            Gestiona los usuarios del sistema y asigna roles
-          </Typography>
-        </Box>
-        <Button
-          variant="contained"
-          startIcon={<Add />}
-          onClick={handleCreateUser}
-          sx={{
-            bgcolor: taxiMonterricoColors.green,
-            '&:hover': {
-              bgcolor: '#158a5f',
-            },
-          }}
-        >
-          Crear Usuario
-        </Button>
-      </Box>
-
       {message && (
         <Alert 
           severity={message.type} 
           onClose={() => setMessage(null)}
-          sx={{ mb: 3 }}
+          sx={{ mb: 3, borderRadius: 2 }}
         >
           {message.text}
         </Alert>
       )}
 
-      <TableContainer component={Paper} sx={{ borderRadius: 2, boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)', bgcolor: theme.palette.background.paper }}>
-        <Table>
-          <TableHead>
-            <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#F9FAFB' }}>
-              <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary }}>Usuario</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary }}>Email</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary }}>Rol</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary }}>Estado</TableCell>
-              <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary }}>Acciones</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {users.map((userItem) => (
-              <TableRow 
-                key={userItem.id}
-                sx={{ 
-                  '&:hover': { bgcolor: theme.palette.mode === 'dark' ? theme.palette.action.hover : '#F9FAFB' },
-                  '&:last-child td': { border: 0 }
-                }}
-              >
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <UserAvatar
-                      firstName={userItem.firstName}
-                      lastName={userItem.lastName}
-                      avatar={userItem.avatar}
-                      size="medium"
-                      variant="default"
-                    />
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 500, color: theme.palette.text.primary }}>
-                        {userItem.firstName} {userItem.lastName}
+      <UnifiedTable
+        title="Usuarios"
+        actions={
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={handleCreateUser}
+            size="small"
+            sx={{
+              bgcolor: taxiMonterricoColors.green,
+              borderRadius: 1.5,
+              px: 2,
+              py: 0.75,
+              fontWeight: 600,
+              textTransform: 'none',
+              fontSize: { xs: '0.75rem', md: '0.8125rem' },
+              boxShadow: theme.palette.mode === 'dark' 
+                ? '0 2px 8px rgba(46, 125, 50, 0.3)' 
+                : '0 2px 8px rgba(46, 125, 50, 0.2)',
+              '&:hover': {
+                bgcolor: '#158a5f',
+                boxShadow: theme.palette.mode === 'dark' 
+                  ? '0 4px 12px rgba(46, 125, 50, 0.4)' 
+                  : '0 4px 12px rgba(46, 125, 50, 0.3)',
+                transform: 'translateY(-1px)',
+              },
+              transition: 'all 0.3s ease',
+            }}
+          >
+            Crear Usuario
+          </Button>
+        }
+        header={
+          <Box sx={{ width: '100%', overflow: 'hidden', position: 'relative' }}>
+            <TableContainer sx={{ 
+              width: '100%', 
+              px: 0, 
+              pb: 0,
+              position: 'relative',
+              '& .MuiTable-root': {
+                width: '100%',
+              },
+            }}>
+              <Table sx={{ width: '100%', tableLayout: 'auto' }}>
+                <TableHead>
+                  <TableRow sx={{ 
+                    background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)`,
+                    borderBottom: `2px solid ${taxiMonterricoColors.greenLight}`,
+                    width: '100%',
+                    display: 'table-row',
+                    '& .MuiTableCell-head': {
+                      borderBottom: 'none',
+                      fontWeight: 700,
+                      bgcolor: 'transparent',
+                      background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)`,
+                    },
+                    '& .MuiTableCell-head:last-of-type': {
+                      pr: 0,
+                    },
+                  }}>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, bgcolor: 'transparent', background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` }}>Usuario</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, bgcolor: 'transparent', background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` }}>Email</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, bgcolor: 'transparent', background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` }}>Rol</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, bgcolor: 'transparent', background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` }}>Estado</TableCell>
+                    <TableCell sx={{ 
+                      fontWeight: 600, 
+                      color: theme.palette.text.primary, 
+                      fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                      py: { xs: 1.5, md: 2 }, 
+                      pl: 1, 
+                      pr: 0, 
+                      bgcolor: 'transparent', 
+                      background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)`,
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', pr: { xs: 2, md: 3 } }}>
+                        Acciones
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                </TableHead>
+                </Table>
+              </TableContainer>
+            </Box>
+        }
+        rows={
+          <Box sx={{ width: '100%', overflow: 'hidden' }}>
+            <TableContainer sx={{ width: '100%', px: 0 }}>
+              <Table sx={{ width: '100%', tableLayout: 'auto' }}>
+                <TableBody>
+                  {users.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={5} sx={{ py: 8, textAlign: 'center', border: 'none' }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                    <Box
+                      sx={{
+                        width: 120,
+                        height: 120,
+                        borderRadius: '50%',
+                        bgcolor: theme.palette.mode === 'dark' 
+                          ? 'rgba(255, 255, 255, 0.05)' 
+                          : '#F3F4F6',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '64px',
+                        lineHeight: 1,
+                      }}
+                    >
+                      👤
+                    </Box>
+                    <Box sx={{ textAlign: 'center', maxWidth: '400px' }}>
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          fontWeight: 700,
+                          mb: 1,
+                          color: theme.palette.text.primary,
+                          fontSize: { xs: '1.25rem', md: '1.5rem' },
+                        }}
+                      >
+                        No hay usuarios registrados
                       </Typography>
-                      <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                        @{userItem.usuario}
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: theme.palette.text.secondary,
+                          lineHeight: 1.6,
+                          fontSize: { xs: '0.875rem', md: '0.9375rem' },
+                        }}
+                      >
+                        Crea tu primer usuario para comenzar a gestionar el sistema.
                       </Typography>
                     </Box>
                   </Box>
                 </TableCell>
-                <TableCell>
-                  <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
-                    {userItem.email}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  {updating === userItem.id ? (
-                    <CircularProgress size={20} />
-                  ) : (
-                    <FormControl size="small" sx={{ minWidth: 150 }}>
-                      <Select
-                        id={`user-role-select-${userItem.id}`}
-                        name={`user-role-${userItem.id}`}
-                        value={userItem.role}
-                        onChange={(e) => handleRoleChange(userItem.id, e.target.value)}
-                        sx={{
-                          height: 32,
-                          bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
-                          color: theme.palette.text.primary,
-                          '& .MuiSelect-select': {
-                            py: 0.5,
-                            px: 1.5,
-                            fontSize: '0.875rem',
-                          },
-                          '& .MuiOutlinedInput-notchedOutline': {
-                            borderColor: theme.palette.divider,
-                          },
-                          '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: theme.palette.text.secondary,
-                          },
-                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                            borderColor: theme.palette.primary.main,
-                          },
-                        }}
-                      >
-                        <MenuItem value="admin" sx={{ color: theme.palette.text.primary }}>Administrador</MenuItem>
-                        <MenuItem value="jefe_comercial" sx={{ color: theme.palette.text.primary }}>Jefe Comercial</MenuItem>
-                        <MenuItem value="manager" sx={{ color: theme.palette.text.primary }}>Manager</MenuItem>
-                        <MenuItem value="user" sx={{ color: theme.palette.text.primary }}>Usuario</MenuItem>
-                      </Select>
-                    </FormControl>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {updating === userItem.id ? (
-                      <CircularProgress size={20} />
-                    ) : (
-                      <>
-                        <Switch
-                          checked={userItem.isActive}
-                          onChange={(e) => handleStatusChange(userItem.id, e.target.checked)}
-                          size="small"
-                          color="success"
-                        />
-                        <Chip
-                          label={userItem.isActive ? 'Activo' : 'Inactivo'}
-                          size="small"
-                          color={userItem.isActive ? 'success' : 'default'}
-                          sx={{
-                            height: 24,
-                            fontSize: '0.75rem',
+              </TableRow>
+            ) : (
+              users.map((userItem) => (
+                <TableRow 
+                  key={userItem.id}
+                  hover
+                  sx={{ 
+                    '&:hover': { 
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(91, 228, 155, 0.08)' 
+                        : 'rgba(91, 228, 155, 0.05)',
+                      transform: 'scale(1.001)',
+                      boxShadow: `inset 0 0 0 1px ${taxiMonterricoColors.green}20`,
+                      '& .MuiTableCell-root': {
+                        '& .MuiTypography-root': {
+                          color: `${taxiMonterricoColors.green} !important`,
+                        },
+                      },
+                    },
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    position: 'relative',
+                    '&:last-child td': { border: 0 },
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: 0,
+                      bgcolor: taxiMonterricoColors.green,
+                      transition: 'width 0.3s ease',
+                    },
+                    '&:hover::before': {
+                      width: 4,
+                    },
+                  }}
+                >
+                  <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <UserAvatar
+                        firstName={userItem.firstName}
+                        lastName={userItem.lastName}
+                        avatar={userItem.avatar}
+                        size="medium"
+                        variant="default"
+                      />
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography 
+                          variant="body2" 
+                          sx={{ 
+                            fontWeight: 600, 
+                            color: theme.palette.text.primary, 
+                            fontSize: { xs: '0.75rem', md: '0.875rem' },
+                            transition: 'color 0.2s ease',
                           }}
-                        />
-                      </>
-                    )}
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Tooltip title={userItem.isActive ? 'Usuario activo' : 'Usuario inactivo'}>
-                      {userItem.isActive ? (
-                        <CheckCircle sx={{ color: '#10B981', fontSize: 20 }} />
-                      ) : (
-                        <Cancel sx={{ color: '#EF4444', fontSize: 20 }} />
-                      )}
-                    </Tooltip>
-                    <Tooltip title="Eliminar usuario">
-                      <span>
-                        <IconButton
-                          size="small"
-                          onClick={() => handleDelete(userItem)}
-                          disabled={userItem.id === user?.id}
+                        >
+                          {userItem.firstName} {userItem.lastName}
+                        </Typography>
+                        <Typography 
+                          variant="caption" 
+                          sx={{ 
+                            color: theme.palette.text.secondary, 
+                            fontSize: { xs: '0.7rem', md: '0.75rem' },
+                            transition: 'color 0.2s ease',
+                          }}
+                        >
+                          @{userItem.usuario}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ py: { xs: 1.5, md: 2 } }}>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: theme.palette.text.primary, 
+                        fontSize: { xs: '0.75rem', md: '0.875rem' },
+                        transition: 'color 0.2s ease',
+                      }}
+                    >
+                      {userItem.email}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ py: { xs: 1.5, md: 2 } }}>
+                    {updating === userItem.id ? (
+                      <CircularProgress size={20} sx={{ color: taxiMonterricoColors.green }} />
+                    ) : (
+                      <FormControl size="small" sx={{ minWidth: { xs: 120, md: 150 } }}>
+                        <Select
+                          id={`user-role-select-${userItem.id}`}
+                          name={`user-role-${userItem.id}`}
+                          value={userItem.role}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleRoleChange(userItem.id, e.target.value);
+                          }}
+                          onClick={(e) => e.stopPropagation()}
                           sx={{
-                            color: '#EF4444',
-                            '&:hover': {
-                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.2)' : '#ffebee',
+                            height: { xs: 28, md: 32 },
+                            bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
+                            color: theme.palette.text.primary,
+                            borderRadius: 1.5,
+                            border: `1px solid ${theme.palette.divider}`,
+                            transition: 'all 0.3s ease',
+                            '& .MuiSelect-select': {
+                              py: 0.5,
+                              px: 1.5,
+                              fontSize: { xs: '0.75rem', md: '0.875rem' },
+                              fontWeight: 500,
                             },
-                            '&.Mui-disabled': {
-                              color: theme.palette.text.disabled,
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              border: 'none',
+                            },
+                            '&:hover': {
+                              borderColor: taxiMonterricoColors.green,
+                              boxShadow: `0 0 0 2px ${taxiMonterricoColors.green}20`,
+                              bgcolor: theme.palette.mode === 'dark' 
+                                ? 'rgba(91, 228, 155, 0.05)' 
+                                : 'rgba(91, 228, 155, 0.03)',
+                            },
+                            '&.Mui-focused': {
+                              borderColor: taxiMonterricoColors.green,
+                              boxShadow: `0 0 0 3px ${taxiMonterricoColors.green}30`,
+                              bgcolor: theme.palette.mode === 'dark' 
+                                ? 'rgba(91, 228, 155, 0.08)' 
+                                : 'rgba(91, 228, 155, 0.05)',
+                            },
+                            '& .MuiSelect-icon': {
+                              color: taxiMonterricoColors.green,
                             },
                           }}
                         >
-                          <Delete />
-                        </IconButton>
-                      </span>
-                    </Tooltip>
-                  </Box>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                          <MenuItem 
+                            value="admin" 
+                            sx={{ 
+                              color: theme.palette.text.primary, 
+                              fontSize: { xs: '0.75rem', md: '0.875rem' },
+                              '&:hover': {
+                                bgcolor: `${taxiMonterricoColors.green}15`,
+                              },
+                              '&.Mui-selected': {
+                                bgcolor: `${taxiMonterricoColors.green}20`,
+                                color: taxiMonterricoColors.green,
+                                fontWeight: 600,
+                                '&:hover': {
+                                  bgcolor: `${taxiMonterricoColors.green}25`,
+                                },
+                              },
+                            }}
+                          >
+                            Administrador
+                          </MenuItem>
+                          <MenuItem 
+                            value="jefe_comercial" 
+                            sx={{ 
+                              color: theme.palette.text.primary, 
+                              fontSize: { xs: '0.75rem', md: '0.875rem' },
+                              '&:hover': {
+                                bgcolor: `${taxiMonterricoColors.green}15`,
+                              },
+                              '&.Mui-selected': {
+                                bgcolor: `${taxiMonterricoColors.green}20`,
+                                color: taxiMonterricoColors.green,
+                                fontWeight: 600,
+                                '&:hover': {
+                                  bgcolor: `${taxiMonterricoColors.green}25`,
+                                },
+                              },
+                            }}
+                          >
+                            Jefe Comercial
+                          </MenuItem>
+                          <MenuItem 
+                            value="manager" 
+                            sx={{ 
+                              color: theme.palette.text.primary, 
+                              fontSize: { xs: '0.75rem', md: '0.875rem' },
+                              '&:hover': {
+                                bgcolor: `${taxiMonterricoColors.green}15`,
+                              },
+                              '&.Mui-selected': {
+                                bgcolor: `${taxiMonterricoColors.green}20`,
+                                color: taxiMonterricoColors.green,
+                                fontWeight: 600,
+                                '&:hover': {
+                                  bgcolor: `${taxiMonterricoColors.green}25`,
+                                },
+                              },
+                            }}
+                          >
+                            Manager
+                          </MenuItem>
+                          <MenuItem 
+                            value="user" 
+                            sx={{ 
+                              color: theme.palette.text.primary, 
+                              fontSize: { xs: '0.75rem', md: '0.875rem' },
+                              '&:hover': {
+                                bgcolor: `${taxiMonterricoColors.green}15`,
+                              },
+                              '&.Mui-selected': {
+                                bgcolor: `${taxiMonterricoColors.green}20`,
+                                color: taxiMonterricoColors.green,
+                                fontWeight: 600,
+                                '&:hover': {
+                                  bgcolor: `${taxiMonterricoColors.green}25`,
+                                },
+                              },
+                            }}
+                          >
+                            Usuario
+                          </MenuItem>
+                        </Select>
+                      </FormControl>
+                    )}
+                  </TableCell>
+                  <TableCell sx={{ py: { xs: 1.5, md: 2 } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      {updating === userItem.id ? (
+                        <CircularProgress size={20} sx={{ color: taxiMonterricoColors.green }} />
+                      ) : (
+                        <>
+                          <Switch
+                            checked={userItem.isActive}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(userItem.id, e.target.checked);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            size="small"
+                            sx={{
+                              '& .MuiSwitch-switchBase.Mui-checked': {
+                                color: taxiMonterricoColors.green,
+                                '&:hover': {
+                                  bgcolor: `${taxiMonterricoColors.green}20`,
+                                },
+                              },
+                              '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                bgcolor: taxiMonterricoColors.green,
+                              },
+                            }}
+                          />
+                          <Chip
+                            label={userItem.isActive ? 'Activo' : 'Inactivo'}
+                            size="small"
+                            sx={{
+                              height: { xs: 20, md: 24 },
+                              fontSize: { xs: '0.7rem', md: '0.75rem' },
+                              fontWeight: 600,
+                              bgcolor: userItem.isActive 
+                                ? `${taxiMonterricoColors.green}20` 
+                                : theme.palette.mode === 'dark' 
+                                  ? 'rgba(255, 255, 255, 0.1)' 
+                                  : 'rgba(0, 0, 0, 0.05)',
+                              color: userItem.isActive 
+                                ? taxiMonterricoColors.green 
+                                : theme.palette.text.secondary,
+                              border: userItem.isActive 
+                                ? `1px solid ${taxiMonterricoColors.green}40` 
+                                : `1px solid ${theme.palette.divider}`,
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                transform: 'scale(1.05)',
+                                boxShadow: userItem.isActive 
+                                  ? `0 2px 8px ${taxiMonterricoColors.green}30` 
+                                  : 'none',
+                              },
+                            }}
+                          />
+                        </>
+                      )}
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ py: { xs: 1.5, md: 2 }, pr: { xs: 2, md: 3 } }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Tooltip title={userItem.isActive ? 'Usuario activo' : 'Usuario inactivo'}>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderRadius: '50%',
+                            p: 0.5,
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              bgcolor: userItem.isActive 
+                                ? 'rgba(16, 185, 129, 0.1)' 
+                                : 'rgba(239, 68, 68, 0.1)',
+                              transform: 'scale(1.2)',
+                            },
+                          }}
+                        >
+                          {userItem.isActive ? (
+                            <CheckCircle sx={{ color: '#10B981', fontSize: { xs: 18, md: 20 }, transition: 'all 0.2s ease' }} />
+                          ) : (
+                            <Cancel sx={{ color: '#EF4444', fontSize: { xs: 18, md: 20 }, transition: 'all 0.2s ease' }} />
+                          )}
+                        </Box>
+                      </Tooltip>
+                      <Tooltip title="Eliminar usuario">
+                        <span>
+                          <IconButton
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(userItem);
+                            }}
+                            disabled={userItem.id === user?.id}
+                            sx={{
+                              color: '#EF4444',
+                              transition: 'all 0.3s ease',
+                              borderRadius: 1.5,
+                              '&:hover': {
+                                bgcolor: theme.palette.mode === 'dark' 
+                                  ? 'rgba(211, 47, 47, 0.2)' 
+                                  : '#ffebee',
+                                transform: 'scale(1.15) rotate(5deg)',
+                                boxShadow: '0 2px 8px rgba(211, 47, 47, 0.3)',
+                              },
+                              '&.Mui-disabled': {
+                                color: theme.palette.text.disabled,
+                                opacity: 0.5,
+                              },
+                            }}
+                          >
+                            <Delete sx={{ fontSize: { xs: 18, md: 20 } }} />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        }
+      />
 
       {/* Dialog de creación de usuario */}
       <Dialog
@@ -561,13 +872,25 @@ const Users: React.FC = () => {
         fullWidth
         PaperProps={{
           sx: {
-            borderRadius: 2,
-            boxShadow: theme.palette.mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.3)' : '0 8px 24px rgba(0,0,0,0.12)',
+            borderRadius: 3,
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 8px 24px rgba(0,0,0,0.3)' 
+              : '0 8px 24px rgba(46, 125, 50, 0.12)',
             bgcolor: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
           }
         }}
       >
-        <DialogTitle sx={{ color: theme.palette.text.primary, fontWeight: 600 }}>
+        <DialogTitle sx={{ 
+          color: theme.palette.text.primary, 
+          fontWeight: 700,
+          fontSize: { xs: '1.25rem', md: '1.5rem' },
+          pb: 2,
+          borderBottom: `2px solid ${theme.palette.divider}`,
+          background: theme.palette.mode === 'dark'
+            ? `linear-gradient(135deg, rgba(46, 125, 50, 0.05) 0%, transparent 100%)`
+            : `linear-gradient(135deg, rgba(46, 125, 50, 0.02) 0%, transparent 100%)`,
+        }}>
           Crear Nuevo Usuario
         </DialogTitle>
         <DialogContent>
@@ -684,15 +1007,17 @@ const Users: React.FC = () => {
               }}
             />
             <FormControl fullWidth>
-              <TextField
+              <InputLabel id="create-role-label">Rol</InputLabel>
+              <Select
                 id="create-role"
                 name="role"
-                select
+                labelId="create-role-label"
                 label="Rol"
                 value={formData.role}
                 onChange={(e) => setFormData({ ...formData, role: e.target.value as any })}
                 sx={{
-                  '& .MuiOutlinedInput-root': {
+                  borderRadius: 1.5,
+                  '& .MuiOutlinedInput-notchedOutline': {
                     borderRadius: 1.5,
                   },
                 }}
@@ -701,12 +1026,22 @@ const Users: React.FC = () => {
                 <MenuItem value="jefe_comercial">Jefe Comercial</MenuItem>
                 <MenuItem value="manager">Manager</MenuItem>
                 <MenuItem value="user">Usuario</MenuItem>
-              </TextField>
+              </Select>
             </FormControl>
           </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 2.5, pt: 1 }}>
-          <Button onClick={handleCancelCreate} color="inherit" sx={{ color: theme.palette.text.secondary }}>
+        <DialogActions sx={{ p: 2.5, pt: 1, gap: 1 }}>
+          <Button 
+            onClick={handleCancelCreate} 
+            color="inherit" 
+            sx={{ 
+              color: theme.palette.text.secondary,
+              borderRadius: 2,
+              px: 2,
+              textTransform: 'none',
+              fontWeight: 500,
+            }}
+          >
             Cancelar
           </Button>
           <Button 
@@ -715,9 +1050,21 @@ const Users: React.FC = () => {
             disabled={creating}
             sx={{
               bgcolor: taxiMonterricoColors.green,
+              borderRadius: 2,
+              px: 3,
+              textTransform: 'none',
+              fontWeight: 600,
+              boxShadow: theme.palette.mode === 'dark' 
+                ? '0 4px 12px rgba(46, 125, 50, 0.3)' 
+                : '0 4px 12px rgba(46, 125, 50, 0.2)',
               '&:hover': {
                 bgcolor: '#158a5f',
+                boxShadow: theme.palette.mode === 'dark' 
+                  ? '0 6px 16px rgba(46, 125, 50, 0.4)' 
+                  : '0 6px 16px rgba(46, 125, 50, 0.3)',
+                transform: 'translateY(-2px)',
               },
+              transition: 'all 0.3s ease',
             }}
           >
             {creating ? <CircularProgress size={20} /> : 'Crear Usuario'}
@@ -733,9 +1080,12 @@ const Users: React.FC = () => {
         aria-describedby="delete-dialog-description"
         PaperProps={{
           sx: {
-            borderRadius: 2,
-            boxShadow: theme.palette.mode === 'dark' ? '0 8px 24px rgba(0,0,0,0.3)' : '0 8px 24px rgba(0,0,0,0.12)',
+            borderRadius: 3,
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 8px 24px rgba(0,0,0,0.3)' 
+              : '0 8px 24px rgba(211, 47, 47, 0.12)',
             bgcolor: theme.palette.background.paper,
+            border: `1px solid ${theme.palette.divider}`,
           }
         }}
         BackdropProps={{
@@ -745,8 +1095,8 @@ const Users: React.FC = () => {
           },
         }}
       >
-        <DialogContent>
-          <DialogContentText id="delete-dialog-description" sx={{ color: theme.palette.text.primary }}>
+        <DialogContent sx={{ pt: 3 }}>
+          <DialogContentText id="delete-dialog-description" sx={{ color: theme.palette.text.primary, fontSize: { xs: '0.875rem', md: '1rem' } }}>
             ¿Estás seguro de que deseas eliminar al usuario{' '}
             <strong>{userToDelete?.firstName} {userToDelete?.lastName}</strong> ({userToDelete?.email})?
             <br />
@@ -754,8 +1104,18 @@ const Users: React.FC = () => {
             Esta acción no se puede deshacer.
           </DialogContentText>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCancelDelete} color="inherit" sx={{ color: theme.palette.text.secondary }}>
+        <DialogActions sx={{ p: 2.5, pt: 1, gap: 1 }}>
+          <Button 
+            onClick={handleCancelDelete} 
+            color="inherit" 
+            sx={{ 
+              color: theme.palette.text.secondary,
+              borderRadius: 2,
+              px: 2,
+              textTransform: 'none',
+              fontWeight: 500,
+            }}
+          >
             Cancelar
           </Button>
           <Button 
@@ -763,6 +1123,20 @@ const Users: React.FC = () => {
             color="error" 
             variant="contained"
             disabled={deleting}
+            sx={{
+              borderRadius: 2,
+              px: 3,
+              textTransform: 'none',
+              fontWeight: 600,
+              boxShadow: theme.palette.mode === 'dark' 
+                ? '0 4px 12px rgba(211, 47, 47, 0.3)' 
+                : '0 4px 12px rgba(211, 47, 47, 0.2)',
+              '&:hover': {
+                boxShadow: theme.palette.mode === 'dark' 
+                  ? '0 6px 16px rgba(211, 47, 47, 0.4)' 
+                  : '0 6px 16px rgba(211, 47, 47, 0.3)',
+              },
+            }}
           >
             {deleting ? <CircularProgress size={20} /> : 'Eliminar'}
           </Button>
