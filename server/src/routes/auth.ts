@@ -397,6 +397,7 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res) => {
       lastName: user.lastName,
       role: user.Role?.name || user.role || '',
       avatar: user.avatar,
+      phone: user.phone,
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

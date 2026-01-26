@@ -9,6 +9,7 @@ import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { createTaskEvent, updateTaskEvent, deleteTaskEvent, createMeetingEvent, deleteCalendarEvent } from '../services/googleCalendar';
 import { getRoleBasedDataFilter, canModifyResource, canDeleteResource } from '../utils/rolePermissions';
 import { logSystemAction, SystemActions, EntityTypes } from '../utils/systemLogger';
+import { sendTaskNotification } from '../services/whatsapp';
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -266,7 +267,7 @@ router.post('/', async (req: AuthRequest, res) => {
     const task = await Task.create(taskData);
     const newTask = await Task.findByPk(task.id, {
       include: [
-        { model: User, as: 'AssignedTo', attributes: ['id', 'firstName', 'lastName', 'email'] },
+        { model: User, as: 'AssignedTo', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
         { model: User, as: 'CreatedBy', attributes: ['id', 'firstName', 'lastName', 'email'] },
         { model: Contact, as: 'Contact' },
         { model: Company, as: 'Company' },
@@ -296,6 +297,16 @@ router.post('/', async (req: AuthRequest, res) => {
       } catch (calendarError: any) {
         // No fallar la creación de la tarea si hay error con Google Calendar
         console.error('Error creando en Google Calendar:', calendarError.message);
+      }
+    }
+
+        // Enviar notificación de WhatsApp
+    if (newTask && newTask.AssignedTo) {
+      try {
+        await sendTaskNotification(newTask, newTask.AssignedTo);
+      } catch (whatsappError: any) {
+        // No fallar la creación de la tarea si hay error con WhatsApp
+        console.error('Error enviando WhatsApp:', whatsappError.message);
       }
     }
 
