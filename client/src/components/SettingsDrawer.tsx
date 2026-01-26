@@ -6,6 +6,8 @@ import {
   IconButton,
   useTheme,
   Chip,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import {
   Close,
@@ -21,6 +23,7 @@ import { Maximize01Icon, Minimize01Icon } from '@hugeicons/core-free-icons';
 import { useTheme as useThemeContext } from '../context/ThemeContext';
 import { useSidebar } from '../context/SidebarContext';
 import { taxiMonterricoColors } from '../theme/colors';
+import { AppearanceSettings } from './AppearanceSettings';
 
 interface SettingsDrawerProps {
   open: boolean;
@@ -114,7 +117,10 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
       ModalProps={{
         BackdropProps: {
           sx: {
-            backgroundColor: 'transparent',
+            backgroundColor: theme.palette.mode === 'dark' 
+              ? 'rgba(0, 0, 0, 0.7)' 
+              : 'rgba(0, 0, 0, 0.5)',
+            transition: 'opacity 0.3s ease',
           },
         },
       }}
@@ -125,12 +131,13 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
         sx: {
           width: { xs: '100%', sm: 370, md: 410 },
           maxWidth: '100%',
-          border: 'none',
+          borderRadius: { xs: '0', sm: '20px 12px 14px 18px' },
           boxShadow: theme.palette.mode === 'dark'
-            ? '0 8px 24px rgba(0,0,0,0.5)'
-            : '0 8px 24px rgba(0,0,0,0.15)',
+            ? '-24px 0 64px rgba(0, 0, 0, 0.35), -12px 0 32px rgba(0, 0, 0, 0.25), -4px 0 12px rgba(0, 0, 0, 0.15)'
+            : '-24px 0 64px rgba(0, 0, 0, 0.1), -12px 0 32px rgba(0, 0, 0, 0.06), -4px 0 12px rgba(0, 0, 0, 0.04)',
         },
       }}
+      transitionDuration={300}
     >
       <Box sx={{
         display: 'flex',
@@ -143,28 +150,103 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          px: 3,
-          py: 2,
+          px: 2.5,
+          py: 1.75,
+          position: 'relative',
+          // Divisor ultra refinado con gradiente corporativo sutil
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: '1px',
+            background: theme.palette.mode === 'dark'
+              ? `linear-gradient(90deg, transparent 0%, ${taxiMonterricoColors.greenLight}12 25%, ${taxiMonterricoColors.orange}18 50%, ${taxiMonterricoColors.greenLight}12 75%, transparent 100%)`
+              : `linear-gradient(90deg, transparent 0%, ${taxiMonterricoColors.green}06 25%, ${taxiMonterricoColors.orange}10 50%, ${taxiMonterricoColors.green}06 75%, transparent 100%)`,
+          },
         }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              fontWeight: 700,
+              background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              fontSize: '1.5rem',
+              letterSpacing: '-0.018em',
+              lineHeight: 1.3,
+            }}
+          >
             Settings
           </Typography>
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', gap: 0.75 }}>
             <IconButton 
               size="small" 
-              sx={{ width: 40, height: 40 }}
+              sx={{ 
+                width: 28, 
+                height: 28,
+                borderRadius: '8px',
+                transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': {
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? `${taxiMonterricoColors.greenLight}20` 
+                    : `${taxiMonterricoColors.greenLight}15`,
+                  color: taxiMonterricoColors.green,
+                  border: `1px solid ${taxiMonterricoColors.greenLight}30`,
+                },
+              }}
               onClick={toggleFullscreen}
             >
               <HugeiconsIcon 
                 icon={isFullscreen ? Minimize01Icon : Maximize01Icon} 
-                style={{ width: 24, height: 24, color: '#637381' }} 
+                style={{ 
+                  width: 16, 
+                  height: 16, 
+                  color: theme.palette.text.secondary 
+                }} 
               />
             </IconButton>
-            <IconButton size="small" sx={{ width: 40, height: 40 }}>
-              <Refresh sx={{ fontSize: 24, color: theme.palette.text.secondary }} />
+            <IconButton 
+              size="small" 
+              sx={{ 
+                width: 28, 
+                height: 28,
+                borderRadius: '8px',
+                transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': {
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? `${taxiMonterricoColors.greenLight}20` 
+                    : `${taxiMonterricoColors.greenLight}15`,
+                  color: taxiMonterricoColors.green,
+                  border: `1px solid ${taxiMonterricoColors.greenLight}30`,
+                },
+              }}
+            >
+              <Refresh sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
             </IconButton>
-            <IconButton onClick={onClose} size="small">
-              <Close />
+            <IconButton 
+              onClick={onClose} 
+              size="small"
+              sx={{
+                width: 28,
+                height: 28,
+                borderRadius: '8px',
+                transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': {
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? `${taxiMonterricoColors.greenLight}20` 
+                    : `${taxiMonterricoColors.greenLight}15`,
+                  color: taxiMonterricoColors.green,
+                  border: `1px solid ${taxiMonterricoColors.greenLight}30`,
+                },
+                '&:active': {
+                  transform: 'scale(0.95)',
+                },
+              }}
+            >
+              <Close sx={{ fontSize: 16 }} />
             </IconButton>
           </Box>
         </Box>
@@ -174,216 +256,295 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
           flex: 1,
           overflowY: 'auto',
           px: 3,
-          py: 1,
+          py: 3,
+          '&::-webkit-scrollbar': {
+            width: '6px',
+          },
+          '&::-webkit-scrollbar-track': {
+            background: 'transparent',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: theme.palette.mode === 'dark' 
+              ? 'rgba(255, 255, 255, 0.1)' 
+              : 'rgba(0, 0, 0, 0.1)',
+            borderRadius: '3px',
+            '&:hover': {
+              background: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.15)' 
+                : 'rgba(0, 0, 0, 0.15)',
+            },
+          },
         }}>
-          {/* Mode */}
-          <Box sx={{ mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                Modo
-              </Typography>
-            </Box>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              {/* Light Mode Button */}
+          {/* Mode Section */}
+          <Box sx={{ mb: 4 }}>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                fontWeight: 600,
+                fontSize: '0.75rem',
+                color: theme.palette.mode === 'dark' 
+                  ? taxiMonterricoColors.greenLight 
+                  : taxiMonterricoColors.green,
+                textTransform: 'uppercase',
+                letterSpacing: '0.1em',
+                mb: 2.5,
+                lineHeight: 1.4,
+              }}
+            >
+              Modo
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 1.5 }}>
+              {/* Light Mode Card */}
               <Box
                 onClick={() => setMode('light')}
-                sx={{
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 1,
-                  py: 2,
-                  px: 1,
-                  borderRadius: 1.5,
-                  border: `2px solid ${
-                    mode === 'light'
-                      ? taxiMonterricoColors.green
-                      : theme.palette.divider
-                  }`,
-                  bgcolor:
-                    mode === 'light'
-                      ? theme.palette.mode === 'dark'
-                        ? `${taxiMonterricoColors.green}20`
-                        : `${taxiMonterricoColors.green}10`
-                      : 'transparent',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    borderColor: taxiMonterricoColors.green,
-                    bgcolor:
-                      theme.palette.mode === 'dark'
-                        ? `${taxiMonterricoColors.green}15`
-                        : `${taxiMonterricoColors.green}08`,
-                  },
-                }}
-              >
-                <LightMode
                   sx={{
-                    fontSize: 28,
-                    color:
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'flex-start',
+                    gap: 1.5,
+                    py: 2.5,
+                    px: 2,
+                    borderRadius: '14px',
+                    border: `1.5px solid ${
                       mode === 'light'
                         ? taxiMonterricoColors.green
-                        : theme.palette.text.secondary,
-                  }}
-                />
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontSize: '0.875rem',
-                    fontWeight: mode === 'light' ? 500 : 400,
-                    color: theme.palette.text.primary,
+                        : theme.palette.divider
+                    }`,
+                    bgcolor:
+                      mode === 'light'
+                        ? theme.palette.mode === 'dark'
+                          ? `${taxiMonterricoColors.green}15`
+                          : `${taxiMonterricoColors.green}08`
+                        : theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.03)'
+                        : 'rgba(0, 0, 0, 0.02)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: mode === 'light' 
+                      ? theme.palette.mode === 'dark'
+                        ? `0 2px 8px rgba(46, 125, 50, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)`
+                        : `0 2px 8px rgba(46, 125, 50, 0.12), 0 1px 3px rgba(0, 0, 0, 0.05)`
+                      : 'none',
+                    '&:hover': {
+                      borderColor: taxiMonterricoColors.green,
+                      bgcolor:
+                        theme.palette.mode === 'dark'
+                          ? `${taxiMonterricoColors.green}12`
+                          : `${taxiMonterricoColors.green}06`,
+                      boxShadow: theme.palette.mode === 'dark'
+                        ? `0 4px 12px rgba(46, 125, 50, 0.2), 0 2px 6px rgba(0, 0, 0, 0.1)`
+                        : `0 4px 12px rgba(46, 125, 50, 0.15), 0 2px 6px rgba(0, 0, 0, 0.05)`,
+                      transform: 'translateY(-1px)',
+                    },
                   }}
                 >
-                  Light
-                </Typography>
+                  <LightMode
+                    sx={{
+                      fontSize: 28,
+                      color:
+                        mode === 'light'
+                          ? taxiMonterricoColors.green
+                          : theme.palette.text.secondary,
+                      transition: 'all 0.2s ease',
+                    }}
+                  />
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontSize: '0.875rem',
+                      fontWeight: mode === 'light' ? 600 : 500,
+                      color: mode === 'light' 
+                        ? taxiMonterricoColors.green 
+                        : theme.palette.text.primary,
+                      transition: 'all 0.2s ease',
+                      textAlign: 'center',
+                    }}
+                  >
+                    Light
+                  </Typography>
               </Box>
 
-              {/* Dark Mode Button */}
+              {/* Dark Mode Card */}
               <Box
                 onClick={() => setMode('dark')}
-                sx={{
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 1,
-                  py: 2,
-                  px: 1,
-                  borderRadius: 1.5,
-                  border: `2px solid ${
-                    mode === 'dark'
-                      ? taxiMonterricoColors.green
-                      : theme.palette.divider
-                  }`,
-                  bgcolor:
-                    mode === 'dark'
-                      ? theme.palette.mode === 'dark'
-                        ? `${taxiMonterricoColors.green}20`
-                        : `${taxiMonterricoColors.green}10`
-                      : 'transparent',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    borderColor: taxiMonterricoColors.green,
-                    bgcolor:
-                      theme.palette.mode === 'dark'
-                        ? `${taxiMonterricoColors.green}15`
-                        : `${taxiMonterricoColors.green}08`,
-                  },
-                }}
-              >
-                <DarkMode
                   sx={{
-                    fontSize: 28,
-                    color:
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'flex-start',
+                    gap: 1.5,
+                    py: 2.5,
+                    px: 2,
+                    borderRadius: '14px',
+                    border: `1.5px solid ${
                       mode === 'dark'
                         ? taxiMonterricoColors.green
-                        : theme.palette.text.secondary,
-                  }}
-                />
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontSize: '0.875rem',
-                    fontWeight: mode === 'dark' ? 500 : 400,
-                    color: theme.palette.text.primary,
+                        : theme.palette.divider
+                    }`,
+                    bgcolor:
+                      mode === 'dark'
+                        ? theme.palette.mode === 'dark'
+                          ? `${taxiMonterricoColors.green}15`
+                          : `${taxiMonterricoColors.green}08`
+                        : theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.03)'
+                        : 'rgba(0, 0, 0, 0.02)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: mode === 'dark' 
+                      ? theme.palette.mode === 'dark'
+                        ? `0 2px 8px rgba(46, 125, 50, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)`
+                        : `0 2px 8px rgba(46, 125, 50, 0.12), 0 1px 3px rgba(0, 0, 0, 0.05)`
+                      : 'none',
+                    '&:hover': {
+                      borderColor: taxiMonterricoColors.green,
+                      bgcolor:
+                        theme.palette.mode === 'dark'
+                          ? `${taxiMonterricoColors.green}12`
+                          : `${taxiMonterricoColors.green}06`,
+                      boxShadow: theme.palette.mode === 'dark'
+                        ? `0 4px 12px rgba(46, 125, 50, 0.2), 0 2px 6px rgba(0, 0, 0, 0.1)`
+                        : `0 4px 12px rgba(46, 125, 50, 0.15), 0 2px 6px rgba(0, 0, 0, 0.05)`,
+                      transform: 'translateY(-1px)',
+                    },
                   }}
                 >
-                  Dark
-                </Typography>
+                  <DarkMode
+                    sx={{
+                      fontSize: 28,
+                      color:
+                        mode === 'dark'
+                          ? taxiMonterricoColors.green
+                          : theme.palette.text.secondary,
+                      transition: 'all 0.2s ease',
+                    }}
+                  />
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontSize: '0.875rem',
+                      fontWeight: mode === 'dark' ? 600 : 500,
+                      color: mode === 'dark' 
+                        ? taxiMonterricoColors.green 
+                        : theme.palette.text.primary,
+                      transition: 'all 0.2s ease',
+                      textAlign: 'center',
+                    }}
+                  >
+                    Dark
+                  </Typography>
               </Box>
 
-              {/* System Mode Button */}
+              {/* System Mode Card */}
               <Box
                 onClick={() => setMode('system')}
                 sx={{
-                  flex: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 1,
-                  py: 2,
-                  px: 1,
-                  borderRadius: 1.5,
-                  border: `2px solid ${
-                    mode === 'system'
-                      ? taxiMonterricoColors.green
-                      : theme.palette.divider
-                  }`,
-                  bgcolor:
-                    mode === 'system'
-                      ? theme.palette.mode === 'dark'
-                        ? `${taxiMonterricoColors.green}20`
-                        : `${taxiMonterricoColors.green}10`
-                      : 'transparent',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    borderColor: taxiMonterricoColors.green,
-                    bgcolor:
-                      theme.palette.mode === 'dark'
-                        ? `${taxiMonterricoColors.green}15`
-                        : `${taxiMonterricoColors.green}08`,
-                  },
-                }}
-              >
-                <SettingsBrightness
-                  sx={{
-                    fontSize: 28,
-                    color:
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'flex-start',
+                    gap: 1.5,
+                    py: 2.5,
+                    px: 2,
+                    borderRadius: '14px',
+                    border: `1.5px solid ${
                       mode === 'system'
                         ? taxiMonterricoColors.green
-                        : theme.palette.text.secondary,
-                  }}
-                />
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontSize: '0.875rem',
-                    fontWeight: mode === 'system' ? 500 : 400,
-                    color: theme.palette.text.primary,
+                        : theme.palette.divider
+                    }`,
+                    bgcolor:
+                      mode === 'system'
+                        ? theme.palette.mode === 'dark'
+                          ? `${taxiMonterricoColors.green}15`
+                          : `${taxiMonterricoColors.green}08`
+                        : theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.03)'
+                        : 'rgba(0, 0, 0, 0.02)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: mode === 'system' 
+                      ? theme.palette.mode === 'dark'
+                        ? `0 2px 8px rgba(46, 125, 50, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)`
+                        : `0 2px 8px rgba(46, 125, 50, 0.12), 0 1px 3px rgba(0, 0, 0, 0.05)`
+                      : 'none',
+                    '&:hover': {
+                      borderColor: taxiMonterricoColors.green,
+                      bgcolor:
+                        theme.palette.mode === 'dark'
+                          ? `${taxiMonterricoColors.green}12`
+                          : `${taxiMonterricoColors.green}06`,
+                      boxShadow: theme.palette.mode === 'dark'
+                        ? `0 4px 12px rgba(46, 125, 50, 0.2), 0 2px 6px rgba(0, 0, 0, 0.1)`
+                        : `0 4px 12px rgba(46, 125, 50, 0.15), 0 2px 6px rgba(0, 0, 0, 0.05)`,
+                      transform: 'translateY(-1px)',
+                    },
                   }}
                 >
-                  System
-                </Typography>
+                  <SettingsBrightness
+                    sx={{
+                      fontSize: 28,
+                      color:
+                        mode === 'system'
+                          ? taxiMonterricoColors.green
+                          : theme.palette.text.secondary,
+                      transition: 'all 0.2s ease',
+                    }}
+                  />
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      fontSize: '0.875rem',
+                      fontWeight: mode === 'system' ? 600 : 500,
+                      color: mode === 'system' 
+                        ? taxiMonterricoColors.green 
+                        : theme.palette.text.primary,
+                      transition: 'all 0.2s ease',
+                      textAlign: 'center',
+                    }}
+                  >
+                    System
+                  </Typography>
               </Box>
             </Box>
           </Box>
 
           {/* Nav Section */}
-          <Box sx={{ mb: 4 }}>
+          <Box sx={{ mb: 5 }}>
             <Chip
-              label={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Typography variant="caption" sx={{ fontWeight: 600 }}>
-                    Nav
-                  </Typography>
-                  <Info sx={{ fontSize: 12 }} />
-                </Box>
-              }
+              label="Nav"
               sx={{
-                bgcolor: theme.palette.mode === 'dark' ? '#1F2937' : '#111827',
-                color: 'white',
-                mb: 2,
-                height: 24,
+                bgcolor: theme.palette.mode === 'dark' 
+                  ? `${taxiMonterricoColors.green}15` 
+                  : `${taxiMonterricoColors.green}08`,
+                color: theme.palette.mode === 'dark' 
+                  ? taxiMonterricoColors.greenLight 
+                  : taxiMonterricoColors.green,
+                mb: 2.5,
+                height: 26,
+                borderRadius: '12px',
+                border: theme.palette.mode === 'dark'
+                  ? `1px solid ${taxiMonterricoColors.greenLight}20`
+                  : `1px solid ${taxiMonterricoColors.green}15`,
+                boxShadow: theme.palette.mode === 'dark'
+                  ? `0 1px 3px rgba(46, 125, 50, 0.1)`
+                  : `0 1px 3px rgba(46, 125, 50, 0.08)`,
                 '& .MuiChip-label': {
                   px: 1.5,
+                  fontWeight: 600,
+                  fontSize: '0.6875rem',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.08em',
                 },
               }}
             />
 
             {/* Layout */}
-            <Box sx={{ mb: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  Layouts
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box>
+              <Box sx={{ display: 'flex', gap: 1.5 }}>
                 {layouts.map((layout) => (
                   <Box
                     key={layout.id}
@@ -392,31 +553,47 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: 1,
+                      gap: 1.25,
                     }}
                   >
                     <Box
                       onClick={() => handleLayoutChange(layout.id)}
                       sx={{
                         width: '100%',
-                        height: 80,
-                        borderRadius: 1,
-                        border: `2px solid ${
+                        height: 90,
+                        borderRadius: '14px',
+                        border: `1.5px solid ${
                           selectedLayout === layout.id
                             ? taxiMonterricoColors.green
                             : theme.palette.divider
                         }`,
                         bgcolor:
                           selectedLayout === layout.id
-                            ? `${taxiMonterricoColors.green}10`
-                            : theme.palette.action.hover,
+                            ? theme.palette.mode === 'dark'
+                              ? `${taxiMonterricoColors.green}12`
+                              : `${taxiMonterricoColors.green}08`
+                            : theme.palette.mode === 'dark'
+                            ? 'rgba(255, 255, 255, 0.03)'
+                            : 'rgba(0, 0, 0, 0.02)',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        transition: 'all 0.2s',
+                        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                        boxShadow: selectedLayout === layout.id
+                          ? theme.palette.mode === 'dark'
+                            ? `0 2px 8px rgba(46, 125, 50, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1)`
+                            : `0 2px 8px rgba(46, 125, 50, 0.12), 0 1px 3px rgba(0, 0, 0, 0.05)`
+                          : 'none',
                         '&:hover': {
                           borderColor: taxiMonterricoColors.green,
+                          bgcolor: theme.palette.mode === 'dark'
+                            ? `${taxiMonterricoColors.green}10`
+                            : `${taxiMonterricoColors.green}06`,
+                          boxShadow: theme.palette.mode === 'dark'
+                            ? `0 4px 12px rgba(46, 125, 50, 0.2), 0 2px 6px rgba(0, 0, 0, 0.1)`
+                            : `0 4px 12px rgba(46, 125, 50, 0.15), 0 2px 6px rgba(0, 0, 0, 0.05)`,
+                          transform: 'translateY(-2px)',
                         },
                       }}
                     >
@@ -750,9 +927,15 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
                     <Typography
                       variant="caption"
                       sx={{
-                        fontSize: '0.75rem',
-                        color: theme.palette.text.secondary,
-                        fontWeight: selectedLayout === layout.id ? 500 : 400,
+                        fontSize: '0.8125rem',
+                        color: selectedLayout === layout.id 
+                          ? (theme.palette.mode === 'dark' 
+                              ? taxiMonterricoColors.greenLight 
+                              : taxiMonterricoColors.green)
+                          : theme.palette.text.secondary,
+                        fontWeight: selectedLayout === layout.id ? 600 : 500,
+                        transition: 'all 0.2s ease',
+                        textAlign: 'center',
                       }}
                     >
                       {layout.label}
@@ -764,24 +947,8 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
 
           </Box>
 
-          {/* Font Section */}
-          <Box>
-            <Chip
-              label="Font"
-              sx={{
-                bgcolor: theme.palette.mode === 'dark' ? '#1F2937' : '#111827',
-                color: 'white',
-                mb: 2,
-                height: 24,
-                '& .MuiChip-label': {
-                  px: 1.5,
-                },
-              }}
-            />
-            <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-              Family
-            </Typography>
-          </Box>
+          {/* Appearance Settings Section */}
+          <AppearanceSettings />
         </Box>
       </Box>
     </Drawer>

@@ -7,6 +7,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SidebarProvider } from './context/SidebarContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { AppearanceProvider } from './context/AppearanceContext';
 import MainLayout from './components/Layout/MainLayout';
 import Login from './pages/Login';
 import { taxiMonterricoColors } from './theme/colors';
@@ -579,7 +580,9 @@ const App: React.FC = () => {
     <GoogleOAuthProvider clientId={googleClientId || 'dummy-client-id'}>
       <ThemeProvider>
         <AuthProvider>
-          <AppContent />
+          <AppearanceProvider>
+            <AppContent />
+          </AppearanceProvider>
         </AuthProvider>
       </ThemeProvider>
     </GoogleOAuthProvider>
