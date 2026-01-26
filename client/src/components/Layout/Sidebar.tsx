@@ -10,6 +10,19 @@ import {
   Typography,
   useMediaQuery,
 } from '@mui/material';
+import {
+  Dashboard as DashboardIcon,
+  Person as PersonIcon,
+  Business as BusinessIcon,
+  AttachMoney as AttachMoneyIcon,
+  Task as TaskIcon,
+  CalendarToday as CalendarTodayIcon,
+  Email as EmailIcon,
+  Assessment as AssessmentIcon,
+  Description as DescriptionIcon,
+  Security as SecurityIcon,
+  People as PeopleIcon,
+} from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useSidebar } from '../../context/SidebarContext';
 import { taxiMonterricoColors } from '../../theme/colors';
@@ -29,22 +42,22 @@ const Sidebar: React.FC = () => {
     : 300;
 
 const mainMenuItems = [
-  { text: 'Dashboard', icon: '📊', path: '/dashboard', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Contactos', icon: '👤', path: '/contacts', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Empresas', icon: '🏢', path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Negocios', icon: '💰', path: '/deals', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Tareas', icon: '📋', path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Contactos', icon: PersonIcon, path: '/contacts', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Empresas', icon: BusinessIcon, path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Negocios', icon: AttachMoneyIcon, path: '/deals', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Tareas', icon: TaskIcon, path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   // { text: 'Tickets', icon: <Support />, path: '/tickets', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Calendario', icon: '📅', path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Correos', icon: '📧', path: '/emails', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-  { text: 'Reportes', icon: '📈', path: '/reports', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Calendario', icon: CalendarTodayIcon, path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Correos', icon: EmailIcon, path: '/emails', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Reportes', icon: AssessmentIcon, path: '/reports', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   // { text: 'Campañas', icon: <Campaign />, path: '/campaigns' },
   // { text: 'Automatizaciones', icon: <Timeline />, path: '/automations' },
 ];
 
 const adminMenuItems = [
-  { text: 'Logs del Sistema', icon: '📝', path: '/system-logs', roles: ['admin'] },
-  { text: 'Roles y Permisos', icon: '🛡️', path: '/roles-permissions', roles: ['admin'] },
+  { text: 'Logs del Sistema', icon: DescriptionIcon, path: '/system-logs', roles: ['admin'] },
+  { text: 'Roles y Permisos', icon: SecurityIcon, path: '/roles-permissions', roles: ['admin'] },
 ];
 
 
@@ -198,23 +211,16 @@ const adminMenuItems = [
                   minWidth: collapsed ? 'auto' : 36,
                   justifyContent: 'center',
                   margin: collapsed ? '0 0 4px 0' : 0,
-                  fontSize: '24px',
-                  lineHeight: 1,
                   display: 'flex',
                   alignItems: 'center',
-                  filter: isSelected ? 'none' : 'none',
+                  color: isSelected 
+                    ? (theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : taxiMonterricoColors.green)
+                    : theme.palette.text.secondary,
                 }}
               >
-                <Box
-                  component="span"
-                  sx={{
-                    fontSize: '24px',
-                    lineHeight: 1,
-                    display: 'inline-block',
-                  }}
-                >
-                  {item.icon}
-                </Box>
+                {React.createElement(item.icon, {
+                  sx: { fontSize: 24 }
+                })}
               </ListItemIcon>
               {!collapsed && (
                 <Typography
@@ -303,22 +309,14 @@ const adminMenuItems = [
                 minWidth: collapsed ? 'auto' : 36,
                 justifyContent: 'center',
                 margin: collapsed ? '0 0 4px 0' : 0,
-                fontSize: '24px',
-                lineHeight: 1,
                 display: 'flex',
                 alignItems: 'center',
+                color: location.pathname === '/users'
+                  ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
+                  : '#5a5c61',
               }}
             >
-              <Box
-                component="span"
-                sx={{
-                  fontSize: '24px',
-                  lineHeight: 1,
-                  display: 'inline-block',
-                }}
-              >
-                👥
-              </Box>
+              <PeopleIcon sx={{ fontSize: 24 }} />
             </ListItemIcon>
             {!collapsed && (
               <Typography
@@ -418,22 +416,16 @@ const adminMenuItems = [
                       minWidth: collapsed ? 'auto' : 36,
                       justifyContent: 'center',
                       margin: collapsed ? '0 0 4px 0' : 0,
-                      fontSize: '24px',
-                      lineHeight: 1,
                       display: 'flex',
                       alignItems: 'center',
+                      color: isSelected 
+                        ? (theme.palette.mode === 'dark' ? '#5be49b' : '#00a76f')
+                        : '#5a5c61',
                     }}
                   >
-                    <Box
-                      component="span"
-                      sx={{
-                        fontSize: '24px',
-                        lineHeight: 1,
-                        display: 'inline-block',
-                      }}
-                    >
-                      {item.icon}
-                    </Box>
+                    {React.createElement(item.icon, {
+                      sx: { fontSize: 24 }
+                    })}
                   </ListItemIcon>
                   {!collapsed && (
                     <Typography

@@ -25,12 +25,21 @@ import {
 import { 
   Search, 
   Notifications,
-  Person,
+  Contacts as PersonIcon,
   DarkMode,
   LightMode,
   Logout,
   Menu as MenuIcon,
   Settings,
+  Dashboard as DashboardIcon,
+  Business as BusinessIcon,
+  AttachMoney as AttachMoneyIcon,
+  Task as TaskIcon,
+  CalendarToday as CalendarTodayIcon,
+  Email as EmailIcon,
+  Assessment as AssessmentIcon,
+  Description as DescriptionIcon,
+  Security as SecurityIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { taxiMonterricoColors } from '../../theme/colors';
@@ -54,19 +63,19 @@ const Header: React.FC = () => {
   
   // Items del menú para el modo horizontal (mismos que en Sidebar)
   const mainMenuItems = [
-    { text: 'Dashboard', icon: '📊', path: '/dashboard', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-    { text: 'Contactos', icon: '👤', path: '/contacts', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-    { text: 'Empresas', icon: '🏢', path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-    { text: 'Negocios', icon: '💰', path: '/deals', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-    { text: 'Tareas', icon: '📋', path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-    { text: 'Calendario', icon: '📅', path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-    { text: 'Correos', icon: '📧', path: '/emails', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
-    { text: 'Reportes', icon: '📈', path: '/reports', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Dashboard', icon: DashboardIcon, path: '/dashboard', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Contactos', icon: PersonIcon, path: '/contacts', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Empresas', icon: BusinessIcon, path: '/companies', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Negocios', icon: AttachMoneyIcon, path: '/deals', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Tareas', icon: TaskIcon, path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Calendario', icon: CalendarTodayIcon, path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Correos', icon: EmailIcon, path: '/emails', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Reportes', icon: AssessmentIcon, path: '/reports', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   ];
 
   const adminMenuItems = [
-    { text: 'Logs del Sistema', icon: '📝', path: '/system-logs', roles: ['admin'] },
-    { text: 'Roles y Permisos', icon: '🛡️', path: '/roles-permissions', roles: ['admin'] },
+    { text: 'Logs del Sistema', icon: DescriptionIcon, path: '/system-logs', roles: ['admin'] },
+    { text: 'Roles y Permisos', icon: SecurityIcon, path: '/roles-permissions', roles: ['admin'] },
   ];
 
   // Filtrar items según el rol del usuario
@@ -93,27 +102,27 @@ const Header: React.FC = () => {
     { 
       title: 'Dashboard', 
       path: '/dashboard', 
-      icon: '📊',
+      icon: DashboardIcon,
     },
     { 
       title: 'Contactos', 
       path: '/contacts', 
-      icon: '👤',
+      icon: PersonIcon,
     },
     { 
       title: 'Empresas', 
       path: '/companies', 
-      icon: '🏢',
+      icon: BusinessIcon,
     },
     { 
       title: 'Negocios', 
       path: '/deals', 
-      icon: '💰',
+      icon: AttachMoneyIcon,
     },
     { 
       title: 'Tareas', 
       path: '/tasks', 
-      icon: '📋',
+      icon: TaskIcon,
     },
     // { 
     //   title: 'Tickets', 
@@ -123,17 +132,17 @@ const Header: React.FC = () => {
     { 
       title: 'Calendario', 
       path: '/calendar', 
-      icon: '📅',
+      icon: CalendarTodayIcon,
     },
     { 
       title: 'Correos', 
       path: '/emails', 
-      icon: '📧',
+      icon: EmailIcon,
     },
     { 
       title: 'Reportes', 
       path: '/reports', 
-      icon: '📈',
+      icon: AssessmentIcon,
     },
   ];
 
@@ -620,9 +629,9 @@ const Header: React.FC = () => {
                   },
                 }}
               >
-                <Box component="span" sx={{ fontSize: '1rem', lineHeight: 1 }}>
-                  {item.icon}
-                </Box>
+                {React.createElement(item.icon, {
+                  sx: { fontSize: 20, mr: 0.5 }
+                })}
                 {item.text}
               </Button>
             );
@@ -655,9 +664,9 @@ const Header: React.FC = () => {
                   },
                 }}
               >
-                <Box component="span" sx={{ fontSize: '1rem', lineHeight: 1 }}>
-                  {item.icon}
-                </Box>
+                {React.createElement(item.icon, {
+                  sx: { fontSize: 20, mr: 0.5 }
+                })}
                 {item.text}
               </Button>
             );
@@ -1117,7 +1126,7 @@ const Header: React.FC = () => {
             },
           }}
         >
-          <Person sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
+          <PersonIcon sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
           <Typography variant="body2" sx={{ fontWeight: 500, color: theme.palette.text.primary }}>
             Editar perfil
           </Typography>
@@ -1201,10 +1210,10 @@ const Header: React.FC = () => {
                     ? 'rgba(255, 255, 255, 0.05)' 
                     : 'rgba(0, 0, 0, 0.02)',
                   color: theme.palette.text.primary,
-                  fontSize: '1.25rem',
-                  lineHeight: 1,
                 }}>
-                  {page.icon}
+                  {React.createElement(page.icon, {
+                    sx: { fontSize: 24 }
+                  })}
                 </Box>
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography variant="body2" sx={{ fontWeight: 500 }}>

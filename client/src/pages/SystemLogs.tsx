@@ -8,7 +8,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
   CircularProgress,
   Alert,
   Chip,
@@ -33,7 +32,6 @@ import {
 } from '@mui/material';
 import { 
   Search, 
-  History, 
   Refresh, 
   ExpandMore, 
   ExpandLess,

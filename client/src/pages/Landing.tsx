@@ -5,7 +5,6 @@ import {
   Container,
   Typography,
   Button,
-  Paper,
   useTheme,
 } from '@mui/material';
 import {
