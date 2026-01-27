@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import {
   Box,
   IconButton,
-  Badge,
   Snackbar,
   Alert,
   Menu,
@@ -12,19 +11,14 @@ import {
   useTheme,
   Tooltip,
   Divider,
+  Button,
+  Chip,
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
-  Button,
-  List,
-  ListItem,
-  ListItemText,
-  Chip,
 } from '@mui/material';
 import { 
   Search, 
-  Notifications,
   Contacts as PersonIcon,
   DarkMode,
   LightMode,
@@ -43,13 +37,13 @@ import {
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { taxiMonterricoColors } from '../../theme/colors';
-import api from '../../config/api';
 import { useTheme as useThemeContext } from '../../context/ThemeContext';
 import { useSidebar } from '../../context/SidebarContext';
 import { SettingsDrawer } from '../SettingsDrawer';
 import { useLocation } from 'react-router-dom';
 import logo from '../../assets/tm_login.png';
 import UserAvatar from '../UserAvatar';
+import { NotificationBell } from '../Notifications';
 
 const Header: React.FC = () => {
   const { user, logout } = useAuth();
@@ -87,12 +81,7 @@ const Header: React.FC = () => {
   );
   
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [notificationAnchorEl, setNotificationAnchorEl] = useState<null | HTMLElement>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [notificationCount, setNotificationCount] = useState(0);
-  const notificationButtonRef = useRef<HTMLButtonElement>(null);
-  const [notificationDialogOpen, setNotificationDialogOpen] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [settingsDrawerOpen, setSettingsDrawerOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -154,15 +143,6 @@ const Header: React.FC = () => {
     setAnchorEl(null);
   };
 
-
-  const handleNotificationMenu = (event: React.MouseEvent<HTMLElement>) => {
-    setNotificationAnchorEl(event.currentTarget);
-  };
-
-  const handleNotificationClose = () => {
-    setNotificationAnchorEl(null);
-  };
-
   const handleProfileClick = () => {
     navigate('/profile');
     handleClose();
@@ -189,156 +169,6 @@ const Header: React.FC = () => {
     };
   }, []);
 
-  // Obtener notificaciones de tareas y eventos
-  useEffect(() => {
-    const fetchNotifications = async (autoOpen: boolean = false) => {
-      // Verificar autenticación antes de hacer requests
-      const token = localStorage.getItem('token');
-      if (!user || !token) {
-        console.log('⚠️ Usuario no autenticado, omitiendo fetchNotifications');
-        return;
-      }
-
-      try {
-        const now = new Date();
-        now.setHours(0, 0, 0, 0); // Inicio del día actual
-        const nextWeek = new Date(now);
-        nextWeek.setDate(nextWeek.getDate() + 7); // 7 días desde hoy
-        
-        // Obtener tareas con fecha de vencimiento próxima
-        // Filtrar solo las tareas asignadas al usuario actual
-        const tasksResponse = await api.get('/tasks', {
-          params: { 
-            limit: 100,
-            assignedToId: user?.id, // Filtrar por usuario asignado
-          },
-        });
-        
-        // Validar que la respuesta sea un array
-        let tasks: any[] = [];
-        if (Array.isArray(tasksResponse.data)) {
-          tasks = tasksResponse.data;
-        } else if (tasksResponse.data?.tasks && Array.isArray(tasksResponse.data.tasks)) {
-          tasks = tasksResponse.data.tasks;
-        } else if (tasksResponse.data && typeof tasksResponse.data === 'object') {
-          // Si es un objeto pero no tiene la propiedad tasks, intentar convertir a array
-          tasks = [];
-        }
-        
-        // Filtrar tareas que vencen en los próximos 7 días y no están completadas
-        const upcomingTasks = tasks.filter((task: any) => {
-          if (!task.dueDate || task.status === 'completed') return false;
-          const dueDate = new Date(task.dueDate);
-          dueDate.setHours(0, 0, 0, 0);
-          return dueDate >= now && dueDate <= nextWeek;
-        });
-
-        // Obtener eventos de Google Calendar (si están disponibles)
-        let upcomingEvents: any[] = [];
-        try {
-          // Verificar autenticación nuevamente antes de hacer el request
-          const currentToken = localStorage.getItem('token');
-          if (!user || !currentToken) {
-            throw new Error('Usuario no autenticado');
-          }
-          const calendarResponse = await api.get('/google/events');
-          if (calendarResponse.data && Array.isArray(calendarResponse.data)) {
-            upcomingEvents = calendarResponse.data.filter((event: any) => {
-              if (!event.start?.dateTime && !event.start?.date) return false;
-              const eventDate = new Date(event.start.dateTime || event.start.date);
-              eventDate.setHours(0, 0, 0, 0);
-              return eventDate >= now && eventDate <= nextWeek;
-            });
-          }
-        } catch (error: any) {
-          // Si es un 401, significa que el usuario no tiene Google Calendar conectado
-          // o el token expiró. Esto es normal y no debería mostrar error.
-          if (error.response?.status === 401) {
-            console.log('ℹ️ Google Calendar no disponible o no conectado');
-          } else {
-            // Para otros errores, loguear pero no interrumpir el flujo
-            console.log('⚠️ Error obteniendo eventos de Google Calendar:', error.message);
-          }
-          // Continuar sin eventos de Google Calendar
-        }
-
-        const allReminders = [
-          ...upcomingTasks.map((task: any) => ({
-            type: 'task',
-            id: task.id,
-            title: task.title,
-            dueDate: task.dueDate,
-            priority: task.priority,
-            contactId: task.contactId || null,
-            companyId: task.companyId || null,
-            dealId: task.dealId || null,
-          })),
-          ...upcomingEvents.map((event: any) => ({
-            type: 'event',
-            id: event.id,
-            title: event.summary || 'Evento sin título',
-            dueDate: event.start?.dateTime || event.start?.date,
-          })),
-        ];
-
-        // Ordenar por fecha
-        allReminders.sort((a, b) => {
-          const dateA = new Date(a.dueDate).getTime();
-          const dateB = new Date(b.dueDate).getTime();
-          return dateA - dateB;
-        });
-
-        setNotifications(allReminders);
-        setNotificationCount(allReminders.length);
-
-        // Abrir el diálogo automáticamente si hay notificaciones y autoOpen es true
-        if (autoOpen && allReminders.length > 0) {
-          setNotificationDialogOpen(true);
-        }
-      } catch (error) {
-        console.error('Error fetching notifications:', error);
-        setNotifications([]);
-        setNotificationCount(0);
-      }
-    };
-
-    // Cargar notificaciones inicialmente
-    fetchNotifications(false);
-    
-    // Actualizar cada 5 minutos (sin abrir automáticamente)
-    const interval = setInterval(() => {
-      fetchNotifications(false);
-    }, 5 * 60 * 1000);
-    
-    // Escuchar eventos de actividad completada
-    const handleActivityCompleted = (event: Event) => {
-      const customEvent = event as CustomEvent;
-      const { title, timestamp } = customEvent.detail;
-      
-      // Agregar la notificación al estado
-      const newNotification = {
-        type: 'activity',
-        id: `activity-${Date.now()}`,
-        title: title,
-        dueDate: timestamp,
-      };
-      
-      setNotifications((prev) => {
-        // Evitar duplicados
-        const exists = prev.some((n) => n.id === newNotification.id);
-        if (exists) return prev;
-        return [newNotification, ...prev];
-      });
-      setNotificationCount((prev) => prev + 1);
-    };
-    
-    window.addEventListener('activityCompleted', handleActivityCompleted);
-    
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('activityCompleted', handleActivityCompleted);
-    };
-  }, [user]);
 
   // Efecto para detectar scroll
   useEffect(() => {
@@ -513,38 +343,7 @@ const Header: React.FC = () => {
             </Tooltip>
 
             {/* Notificaciones */}
-            <Tooltip title="Notificaciones">
-              <IconButton 
-                ref={notificationButtonRef}
-                size="small"
-                onClick={handleNotificationMenu}
-                sx={{ 
-                  bgcolor: 'transparent', 
-                  borderRadius: 1, 
-                  width: 40,
-                  height: 40,
-                  '&:hover': {
-                    bgcolor: theme.palette.action.hover,
-                  },
-                }}
-              >
-                <Badge 
-                  badgeContent={notificationCount > 0 ? notificationCount : undefined} 
-                  sx={{
-                    '& .MuiBadge-badge': {
-                      backgroundColor: '#ef4444',
-                      color: '#ffffff',
-                      fontSize: '0.625rem',
-                      minWidth: 16,
-                      height: 16,
-                      padding: '0 4px',
-                    },
-                  }}
-                >
-                  <Notifications sx={{ fontSize: 24, color: '#637381' }} />
-                </Badge>
-              </IconButton>
-            </Tooltip>
+            <NotificationBell />
 
             {/* Configuración */}
             <Tooltip title="Configuración">
@@ -831,38 +630,7 @@ const Header: React.FC = () => {
         </Tooltip>
 
         {/* Notificaciones */}
-        <Tooltip title="Notificaciones">
-          <IconButton 
-            ref={notificationButtonRef}
-            size="small"
-            onClick={handleNotificationMenu}
-            sx={{ 
-              bgcolor: 'transparent', 
-              borderRadius: 1, 
-              width: 40,
-              height: 40,
-              '&:hover': {
-                bgcolor: theme.palette.action.hover,
-              },
-            }}
-          >
-            <Badge 
-              badgeContent={notificationCount > 0 ? notificationCount : undefined} 
-              sx={{
-                '& .MuiBadge-badge': {
-                  backgroundColor: '#ef4444',
-                  color: '#ffffff',
-                  fontSize: '0.625rem',
-                  minWidth: 16,
-                  height: 16,
-                  padding: '0 4px',
-                },
-              }}
-            >
-              <Notifications sx={{ fontSize: 24, color: '#637381' }} />
-            </Badge>
-          </IconButton>
-        </Tooltip>
+        <NotificationBell />
 
         {/* Icono de Configuración */}
         <Tooltip title="Configuración">
@@ -895,160 +663,6 @@ const Header: React.FC = () => {
         </Box>
         </Box>
       )}
-
-      {/* Menu dropdown de notificaciones (cuando se hace clic manualmente) */}
-      <Menu
-        anchorEl={notificationAnchorEl}
-        open={Boolean(notificationAnchorEl) && !notificationDialogOpen}
-        onClose={handleNotificationClose}
-        PaperProps={{
-          sx: {
-            bgcolor: theme.palette.background.paper,
-            color: theme.palette.text.primary,
-            mt: 1,
-            minWidth: 300,
-            maxWidth: 400,
-            maxHeight: 400,
-            boxShadow: theme.shadows[3],
-            '& .MuiMenuItem-root': {
-              color: theme.palette.text.primary,
-              '&:hover': {
-                bgcolor: theme.palette.action.hover,
-              },
-            },
-          },
-        }}
-      >
-        {notifications.length === 0 ? (
-          <MenuItem disabled>
-            <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-              No hay notificaciones próximas
-            </Typography>
-          </MenuItem>
-        ) : (
-          notifications.map((notification, index) => (
-            <MenuItem key={index} onClick={handleNotificationClose}>
-              <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  {notification.title}
-                </Typography>
-                <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                  {notification.type === 'task' ? 'Tarea' : 'Evento'} • {new Date(notification.dueDate).toLocaleString('es-ES', {
-                    day: 'numeric',
-                    month: 'short',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </Typography>
-              </Box>
-            </MenuItem>
-          ))
-        )}
-      </Menu>
-
-      {/* Dialog de notificaciones */}
-      <Dialog
-        open={notificationDialogOpen}
-        onClose={() => setNotificationDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        disableAutoFocus={false}
-        disableEnforceFocus={false}
-        disableRestoreFocus={true}
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            boxShadow: theme.shadows[8],
-          },
-        }}
-      >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, pb: 1 }}>
-          <Notifications sx={{ color: taxiMonterricoColors.green, fontSize: 24 }} />
-          <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
-            Notificaciones
-          </Typography>
-        </DialogTitle>
-        <DialogContent sx={{ p: 0 }}>
-          {notifications.length === 0 ? (
-            <Box sx={{ p: 3, textAlign: 'center' }}>
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                No hay notificaciones próximas
-              </Typography>
-            </Box>
-          ) : (
-            <List sx={{ p: 0 }}>
-              {notifications.map((notification, index) => (
-                <React.Fragment key={index}>
-                  <ListItem
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      setNotificationDialogOpen(false);
-                    }}
-                    sx={{
-                      py: 2,
-                      px: 3,
-                      cursor: notification.id ? 'pointer' : 'default',
-                      '&:hover': {
-                        bgcolor: notification.id ? theme.palette.action.hover : 'transparent',
-                      },
-                    }}
-                  >
-                    <ListItemText
-                      primary={
-                        <Typography variant="body1" sx={{ fontWeight: 500, mb: 0.5 }}>
-                          {notification.title}
-                        </Typography>
-                      }
-                      secondary={
-                        <Typography component="div" variant="body2" sx={{ mt: 0.5 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Chip
-                              label={notification.type === 'task' ? 'Tarea' : 'Evento'}
-                              size="small"
-                              sx={{
-                                height: 20,
-                                fontSize: '0.7rem',
-                                bgcolor: notification.type === 'task' ? taxiMonterricoColors.green : '#2196F3',
-                                color: 'white',
-                              }}
-                            />
-                            <Typography variant="caption" component="span" sx={{ color: theme.palette.text.secondary }}>
-                              {new Date(notification.dueDate).toLocaleString('es-ES', {
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </Typography>
-                          </Box>
-                        </Typography>
-                      }
-                    />
-                  </ListItem>
-                  {index < notifications.length - 1 && <Divider />}
-                </React.Fragment>
-              ))}
-            </List>
-          )}
-        </DialogContent>
-        <DialogActions sx={{ px: 3, py: 2 }}>
-          <Button
-            onClick={() => setNotificationDialogOpen(false)}
-            variant="contained"
-            sx={{
-              bgcolor: taxiMonterricoColors.green,
-              '&:hover': {
-                bgcolor: taxiMonterricoColors.green,
-                opacity: 0.9,
-              },
-            }}
-          >
-            Entendido
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       {/* Menu dropdown del usuario */}
       <Menu

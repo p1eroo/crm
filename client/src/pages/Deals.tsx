@@ -22,6 +22,7 @@ import {
   Menu,
   useTheme,
   Collapse,
+  Autocomplete,
 } from '@mui/material';
 import { Add, Delete, AttachMoney, Visibility, ViewList, AccountTree, CalendarToday, Close, FileDownload, UploadFile, FilterList, ExpandMore, Remove, Bolt, Business, Edit, ChevronLeft, ChevronRight, ViewColumn } from '@mui/icons-material';
 import api from '../config/api';
@@ -71,6 +72,14 @@ const Deals: React.FC = () => {
   const [companies, setCompanies] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  
+  // Estados para búsqueda asíncrona de empresas y contactos
+  const [companySearch, setCompanySearch] = useState("");
+  const [contactSearch, setContactSearch] = useState("");
+  const [companyOptions, setCompanyOptions] = useState<any[]>([]);
+  const [contactOptions, setContactOptions] = useState<any[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+  const [loadingContacts, setLoadingContacts] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [dealToDelete, setDealToDelete] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -406,6 +415,79 @@ const Deals: React.FC = () => {
     };
   }, []); // Solo cargar datos una vez al montar el componente
 
+  // Función para buscar empresas de forma asíncrona
+  const searchCompanies = useCallback(async (searchTerm: string) => {
+    if (!searchTerm.trim()) {
+      setCompanyOptions([]);
+      return;
+    }
+    
+    try {
+      setLoadingCompanies(true);
+      const response = await api.get("/companies", {
+        params: {
+          search: searchTerm,
+          limit: 20, // Solo 20 resultados
+        },
+      });
+      setCompanyOptions(response.data.companies || response.data || []);
+    } catch (error) {
+      console.error("Error searching companies:", error);
+      setCompanyOptions([]);
+    } finally {
+      setLoadingCompanies(false);
+    }
+  }, []);
+
+  // Función para buscar contactos de forma asíncrona
+  const searchContacts = useCallback(async (searchTerm: string) => {
+    if (!searchTerm.trim()) {
+      setContactOptions([]);
+      return;
+    }
+    
+    try {
+      setLoadingContacts(true);
+      const response = await api.get("/contacts", {
+        params: {
+          search: searchTerm,
+          limit: 20, // Solo 20 resultados
+        },
+      });
+      setContactOptions(response.data.contacts || response.data || []);
+    } catch (error) {
+      console.error("Error searching contacts:", error);
+      setContactOptions([]);
+    } finally {
+      setLoadingContacts(false);
+    }
+  }, []);
+
+  // Debounce para búsqueda de empresas
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (companySearch) {
+        searchCompanies(companySearch);
+      } else {
+        setCompanyOptions([]);
+      }
+    }, 300); // Espera 300ms después de que el usuario deje de escribir
+
+    return () => clearTimeout(timer);
+  }, [companySearch, searchCompanies]);
+
+  // Debounce para búsqueda de contactos
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (contactSearch) {
+        searchContacts(contactSearch);
+      } else {
+        setContactOptions([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [contactSearch, searchContacts]);
 
   const handleExportToExcel = () => {
     const exportData = deals.map((deal) => ({
@@ -2543,38 +2625,112 @@ const Deals: React.FC = () => {
                 </Box>
               </MenuItem>
             </TextField>
-            <TextField
-              select
-              label="Empresa"
-              value={formData.companyId}
-              onChange={handleCompanyIdChange}
+            <Autocomplete
+              options={companyOptions}
+              getOptionLabel={(option: any) => option.name || ""}
+              value={
+                companyOptions.find((c: any) => c.id.toString() === formData.companyId) || null
+              }
+              onChange={(event, newValue: any) => {
+                setFormData({
+                  ...formData,
+                  companyId: newValue ? newValue.id.toString() : "",
+                });
+                // Agregar la empresa seleccionada a companyOptions si no está presente
+                // Esto evita que se borre cuando se ejecuta la búsqueda después del debounce
+                if (newValue && !companyOptions.find((c: any) => c.id === newValue.id)) {
+                  setCompanyOptions([newValue, ...companyOptions]);
+                }
+              }}
+              onInputChange={(event, newInputValue) => {
+                setCompanySearch(newInputValue);
+              }}
+              loading={loadingCompanies}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Empresa"
+                  placeholder="Buscar empresa..."
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 1.5,
+                    },
+                  }}
+                />
+              )}
+              renderOption={(props, option: any) => (
+                <Box component="li" {...props} key={option.id}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {option.name}
+                    </Typography>
+                    {option.ruc && (
+                      <Typography variant="caption" color="text.secondary">
+                        RUC: {option.ruc}
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+              )}
               fullWidth
-            >
-              <MenuItem value="">
-                <em>Ninguna</em>
-              </MenuItem>
-              {companies.map((company) => (
-                <MenuItem key={company.id} value={company.id.toString()}>
-                  {company.name}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              label="Contacto"
-              value={formData.contactId}
-              onChange={handleContactIdChange}
+              noOptionsText={companySearch ? "No se encontraron empresas" : "Escribe para buscar"}
+              loadingText="Buscando..."
+            />
+            <Autocomplete
+              options={contactOptions}
+              getOptionLabel={(option: any) => 
+                `${option.firstName || ""} ${option.lastName || ""}`.trim() || ""
+              }
+              value={
+                contactOptions.find((c: any) => c.id.toString() === formData.contactId) || null
+              }
+              onChange={(event, newValue: any) => {
+                setFormData({
+                  ...formData,
+                  contactId: newValue ? newValue.id.toString() : "",
+                });
+                // Agregar el contacto seleccionado a contactOptions si no está presente
+                // Esto evita que se borre cuando se ejecuta la búsqueda después del debounce
+                if (newValue && !contactOptions.find((c: any) => c.id === newValue.id)) {
+                  setContactOptions([newValue, ...contactOptions]);
+                }
+              }}
+              onInputChange={(event, newInputValue) => {
+                setContactSearch(newInputValue);
+              }}
+              loading={loadingContacts}
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Contacto"
+                  placeholder="Buscar contacto..."
+                  InputLabelProps={{ shrink: true }}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 1.5,
+                    },
+                  }}
+                />
+              )}
+              renderOption={(props, option: any) => (
+                <Box component="li" {...props} key={option.id}>
+                  <Box>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {option.firstName} {option.lastName}
+                    </Typography>
+                    {option.email && (
+                      <Typography variant="caption" color="text.secondary">
+                        {option.email}
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+              )}
               fullWidth
-            >
-              <MenuItem value="">
-                <em>Ninguno</em>
-              </MenuItem>
-              {contacts.map((contact) => (
-                <MenuItem key={contact.id} value={contact.id.toString()}>
-                  {contact.firstName} {contact.lastName}
-                </MenuItem>
-              ))}
-            </TextField>
+              noOptionsText={contactSearch ? "No se encontraron contactos" : "Escribe para buscar"}
+              loadingText="Buscando..."
+            />
           </Box>
         </DialogContent>
         <DialogActions sx={{ 

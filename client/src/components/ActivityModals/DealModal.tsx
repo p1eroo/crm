@@ -591,6 +591,11 @@ const DealModal: React.FC<DealModalProps> = ({
                     ...dealFormData,
                     companyId: newValue ? newValue.id.toString() : "",
                   });
+                  // Agregar la empresa seleccionada a companyOptions si no está presente
+                  // Esto evita que se borre cuando se ejecuta la búsqueda después del debounce
+                  if (newValue && !companyOptions.find((c: any) => c.id === newValue.id)) {
+                    setCompanyOptions([newValue, ...companyOptions]);
+                  }
                 }}
                 onInputChange={(event, newInputValue) => {
                   setCompanySearch(newInputValue);
@@ -641,6 +646,11 @@ const DealModal: React.FC<DealModalProps> = ({
                     ...dealFormData,
                     contactId: newValue ? newValue.id.toString() : "",
                   });
+                  // Agregar el contacto seleccionado a contactOptions si no está presente
+                  // Esto evita que se borre cuando se ejecuta la búsqueda después del debounce
+                  if (newValue && !contactOptions.find((c: any) => c.id === newValue.id)) {
+                    setContactOptions([newValue, ...contactOptions]);
+                  }
                 }}
                 onInputChange={(event, newInputValue) => {
                   setContactSearch(newInputValue);
