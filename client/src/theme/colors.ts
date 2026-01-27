@@ -5,6 +5,7 @@ export const taxiMonterricoColors = {
   greenLight: '#4CAF50',   // Verde claro
   greenDark: '#1B5E20',    // Verde oscuro
   greenEmerald: '#10B981', // Verde esmeralda (usado en gradientes y efectos)
+  teal: '#0d9394',         // Teal/verde azulado (usado en avatares)
   
   // Naranjas/Amarillos
   orange: '#FFA726',       // Naranja/Amarillo dorado principal

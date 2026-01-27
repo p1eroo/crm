@@ -285,7 +285,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                 sx={{
                   width: 120,
                   height: 120,
-                  bgcolor: entity.avatar ? 'transparent' : '#0d9394',
+                  bgcolor: entity.avatar ? 'transparent' : taxiMonterricoColors.teal,
                   fontSize: '3rem',
                   transition: 'all 0.3s ease',
                   cursor: 'pointer',
@@ -306,10 +306,14 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                   bottom: 0,
                   right: 0,
                   fontSize: 28,
-                  color: '#10B981',
+                  color: taxiMonterricoColors.greenEmerald,
                   bgcolor: theme.palette.background.paper,
                   borderRadius: '50%',
                   border: `2px solid ${theme.palette.background.paper}`,
+                  boxShadow: theme.palette.mode === 'dark' 
+                    ? `0 2px 8px rgba(0,0,0,0.3)` 
+                    : `0 2px 8px rgba(0,0,0,0.15)`,
+                  filter: theme.palette.mode === 'light' ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))' : 'none',
                 }}
               />
             </Box>
@@ -367,6 +371,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                   fontSize: '0.875rem',
                   fontWeight: 400,
                   color: entity.city || entity.address ? theme.palette.text.primary : theme.palette.text.disabled,
+                  fontStyle: !(entity.city || entity.address) ? 'italic' : 'normal',
                   textAlign: 'right',
                 }}
               >
@@ -388,6 +393,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                   fontSize: '0.875rem',
                   fontWeight: 400,
                   color: entity.phone || entity.mobile ? theme.palette.text.primary : theme.palette.text.disabled,
+                  fontStyle: !(entity.phone || entity.mobile) ? 'italic' : 'normal',
                   textAlign: 'right',
                 }}
               >
@@ -410,6 +416,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                   fontWeight: 400,
                   color: entity.email ? theme.palette.text.primary : theme.palette.text.disabled,
                   textAlign: 'right',
+                  fontStyle: !entity.email ? 'italic' : 'normal',
                 }}
               >
                 {entity.email || '--'}
@@ -434,6 +441,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                       (entity.Companies && entity.Companies.length > 0) || entity.Company
                         ? theme.palette.text.primary
                         : theme.palette.text.disabled,
+                      fontStyle: !((entity.Companies && entity.Companies.length > 0) || entity.Company) ? 'italic' : 'normal',
                     textAlign: 'right',
                   }}
                 >
@@ -465,12 +473,13 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                     fontSize: '0.875rem',
                     fontWeight: 400,
                     color: entity.leadStatus ? theme.palette.text.primary : theme.palette.text.disabled,
+                    fontStyle: !entity.leadStatus ? 'italic' : 'normal',
                     textAlign: 'right',
                   }}
                 >
                   {entity.leadStatus || '--'}
                 </Typography>
-                <KeyboardArrowDown sx={{ fontSize: 14, color: '#9E9E9E' }} />
+                <KeyboardArrowDown sx={{ fontSize: 14, color: theme.palette.text.secondary }} />
               </Box>
             </Box>
 
@@ -488,13 +497,14 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                   sx={{
                     fontSize: '0.875rem',
                     fontWeight: 400,
-                    color: theme.palette.text.primary,
-                    textAlign: 'right',
-                  }}
-                >
-                  {entity.lifecycleStage || '--'}
+                  color: entity.lifecycleStage ? theme.palette.text.primary : theme.palette.text.disabled,
+                  textAlign: 'right',
+                  fontStyle: !entity.lifecycleStage ? 'italic' : 'normal',
+                }}
+              >
+                {entity.lifecycleStage || '--'}
                 </Typography>
-                <KeyboardArrowDown sx={{ fontSize: 14, color: '#9E9E9E' }} />
+                <KeyboardArrowDown sx={{ fontSize: 14, color: theme.palette.text.secondary }} />
               </Box>
             </Box>
 
@@ -609,6 +619,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                   fontWeight: 400,
                   color: entity.phone ? theme.palette.text.primary : theme.palette.text.disabled,
                   textAlign: 'right',
+                  fontStyle: !entity.phone ? 'italic' : 'normal',
                 }}
               >
                 {entity.phone || '--'}
@@ -630,6 +641,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                   fontWeight: 400,
                   color: entity.email ? theme.palette.text.primary : theme.palette.text.disabled,
                   textAlign: 'right',
+                  fontStyle: !entity.email ? 'italic' : 'normal',
                 }}
               >
                 {entity.email || '--'}
@@ -650,11 +662,14 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                   sx={{
                     fontSize: '0.875rem',
                     fontWeight: 400,
-                    color: theme.palette.text.primary,
-                    textAlign: 'right',
-                  }}
-                >
-                  {[entity.address, entity.city, entity.country].filter(Boolean).join(', ') || '--'}
+                  color: [entity.address, entity.city, entity.country].filter(Boolean).length > 0 
+                    ? theme.palette.text.primary 
+                    : theme.palette.text.disabled,
+                  textAlign: 'right',
+                  fontStyle: [entity.address, entity.city, entity.country].filter(Boolean).length === 0 ? 'italic' : 'normal',
+                }}
+              >
+                {[entity.address, entity.city, entity.country].filter(Boolean).join(', ') || '--'}
                 </Typography>
               </Box>
             )}
