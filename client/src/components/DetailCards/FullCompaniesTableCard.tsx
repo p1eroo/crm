@@ -33,6 +33,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { taxiMonterricoColors } from '../../theme/colors';
+import { companyLabels } from '../../constants/companyLabels';
 
 interface Company {
   id: number;
@@ -175,7 +176,7 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mb: 2 }}>
         <TextField
           size="small"
-          placeholder="Buscar empresas"
+          placeholder={companyLabels.searchCompanies}
           value={searchValue}
           onChange={(e) => onSearchChange(e.target.value)}
           sx={{
@@ -302,7 +303,7 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
                     color: taxiMonterricoColors.green,
                   }}
                 />
-                <Typography variant="body2">Crear nueva empresa</Typography>
+                <Typography variant="body2">{companyLabels.createNewCompany}</Typography>
               </MenuItem>
             </Menu>
           </>

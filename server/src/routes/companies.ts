@@ -249,6 +249,75 @@ router.get('/', async (req: AuthRequest, res) => {
     }
     // Si no es admin ni jefe_comercial, el filtro RBAC ya está aplicado y no se sobrescribe
     
+    // Filtro por propietario (búsqueda por nombre) - DEBE IR ANTES DE LA PAGINACIÓN
+    if (filterPropietario) {
+      const filterPropietarioStr = String(filterPropietario).trim();
+      if (filterPropietarioStr) {
+        try {
+          // Buscar usuarios que coincidan con el texto del filtro
+          const matchingUsers = await User.findAll({
+            where: {
+              [Op.or]: [
+                { firstName: { [Op.iLike]: `%${filterPropietarioStr}%` } },
+                { lastName: { [Op.iLike]: `%${filterPropietarioStr}%` } },
+                sequelize.where(
+                  sequelize.fn('CONCAT', 
+                    sequelize.col('firstName'), 
+                    ' ', 
+                    sequelize.col('lastName')
+                  ),
+                  { [Op.iLike]: `%${filterPropietarioStr}%` }
+                )
+              ]
+            },
+            attributes: ['id']
+          });
+          
+          const ownerIds = matchingUsers.map(user => user.id);
+          
+          if (ownerIds.length > 0) {
+            // Aplicar el filtro ANTES de la paginación
+            // Si hay Op.and, necesitamos agregar el filtro dentro del Op.and
+            if (where[Op.and]) {
+              // Buscar si ya existe un filtro ownerId en Op.and
+              const ownerIndex = where[Op.and].findIndex((cond: any) => cond.ownerId !== undefined);
+              if (ownerIndex !== -1) {
+                // Si ya existe, combinarlo con AND usando Op.in
+                const existingOwnerFilter = where[Op.and][ownerIndex].ownerId;
+                if (existingOwnerFilter && existingOwnerFilter[Op.in]) {
+                  // Combinar los arrays de IDs (intersección)
+                  const existingIds = existingOwnerFilter[Op.in];
+                  const combinedIds = existingIds.filter((id: number) => ownerIds.includes(id));
+                  where[Op.and][ownerIndex] = { ownerId: { [Op.in]: combinedIds.length > 0 ? combinedIds : [-1] } };
+                } else {
+                  where[Op.and][ownerIndex] = { ownerId: { [Op.in]: ownerIds } };
+                }
+              } else {
+                where[Op.and].push({ ownerId: { [Op.in]: ownerIds } });
+              }
+            } else if (where.ownerId) {
+              // Si ya hay un ownerId en el nivel superior, hacer intersección
+              const existingOwnerFilter = where.ownerId;
+              if (existingOwnerFilter && existingOwnerFilter[Op.in]) {
+                const existingIds = existingOwnerFilter[Op.in];
+                const combinedIds = existingIds.filter((id: number) => ownerIds.includes(id));
+                where.ownerId = { [Op.in]: combinedIds.length > 0 ? combinedIds : [-1] };
+              } else {
+                where.ownerId = { [Op.in]: ownerIds };
+              }
+            } else {
+              where.ownerId = { [Op.in]: ownerIds };
+            }
+          } else {
+            // Si no hay usuarios que coincidan, filtrar para que no haya resultados
+            where.ownerId = { [Op.in]: [-1] }; // ID que no existe = ningún resultado
+          }
+        } catch (error) {
+          console.warn('[WARN] Error al buscar usuarios para filterPropietario:', error);
+        }
+      }
+    }
+    
     // Filtros por columna
     if (companyname) {
       addCondition({ companyname });

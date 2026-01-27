@@ -23,6 +23,7 @@ import { Search, Close, ChevronLeft, ChevronRight } from "@mui/icons-material";
 import axios from "axios";
 import api from "../../config/api";
 import { taxiMonterricoColors } from "../../theme/colors";
+import { companyLabels } from "../../constants/companyLabels";
 
 interface User {
   id: number;
@@ -411,8 +412,8 @@ const ContactModal: React.FC<ContactModalProps> = ({
               setContactDialogTab(newValue === 0 ? "create" : "existing")
             }
           >
-            <Tab label="Crear nueva" />
-            <Tab label="Agregar existente" />
+            <Tab label={companyLabels.createNew} />
+            <Tab label={companyLabels.addExisting} />
           </Tabs>
           <IconButton onClick={handleClose} size="small">
             <Close />

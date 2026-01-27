@@ -45,6 +45,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../config/api";
 import { taxiMonterricoColors } from "../theme/colors";
 import { pageStyles } from "../theme/styles";
+import { companyLabels } from "../constants/companyLabels";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import * as XLSX from "xlsx";
@@ -2791,7 +2792,7 @@ const Contacts: React.FC = () => {
               <MenuItem value="add_existing">
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <Business sx={{ fontSize: 18 }} />
-                  Agregar empresa
+                  {companyLabels.addCompany}
                 </Box>
               </MenuItem>
               <MenuItem
@@ -2800,7 +2801,7 @@ const Contacts: React.FC = () => {
               >
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <Add sx={{ fontSize: 18 }} />
-                  Crear empresa
+                  {companyLabels.createCompany}
                 </Box>
               </MenuItem>
             </TextField>

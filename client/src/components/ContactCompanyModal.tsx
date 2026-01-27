@@ -22,6 +22,7 @@ import { Search, Close, Business } from "@mui/icons-material";
 import api from "../config/api";
 import axios from "axios";
 import { taxiMonterricoColors } from "../theme/colors";
+import { companyLabels } from "../constants/companyLabels";
 
 interface User {
   id: number;
@@ -214,8 +215,8 @@ const ContactCompanyModal: React.FC<ContactCompanyModalProps> = ({
   };
 
   const handleCreateCompany = async () => {
-    if (!companyFormData.name.trim()) {
-      setNameError("El nombre de la empresa es requerido");
+    if (!companyFormData.companyname.trim()) {
+      setNameError("El nombre comercial es requerido");
       return;
     }
 
@@ -275,34 +276,47 @@ const ContactCompanyModal: React.FC<ContactCompanyModalProps> = ({
       PaperProps={{
         sx: {
           borderRadius: 2,
-          bgcolor: '#FFFFFF !important',
-          backgroundColor: '#FFFFFF !important',
-          color: '#000000 !important',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+          bgcolor: theme.palette.background.paper,
+          color: theme.palette.text.primary,
+          boxShadow: theme.palette.mode === 'dark' 
+            ? '0 8px 24px rgba(0,0,0,0.5)' 
+            : '0 8px 24px rgba(0,0,0,0.15)',
         },
       }}
     >
       <DialogTitle sx={{ 
-        bgcolor: '#FFFFFF !important',
-        color: '#000000 !important',
-        borderBottom: '2px solid',
-        borderImage: 'linear-gradient(90deg, #2E7D32 0%, #FF6F00 100%) 1',
-        background: 'linear-gradient(135deg, rgba(46, 125, 50, 0.05) 0%, rgba(255, 111, 0, 0.05) 100%)',
+        bgcolor: theme.palette.background.paper,
+        color: theme.palette.text.primary,
+        pb: 1.5,
+        pt: 2,
       }}>
         <Box
           sx={{
             display: "flex",
-            justifyContent: "flex-end",
+            justifyContent: "space-between",
             alignItems: "center",
           }}
         >
+          <Typography 
+            variant="h6" 
+            component="div"
+            sx={{
+              fontWeight: 600,
+              fontSize: '1.125rem',
+              color: theme.palette.text.primary,
+            }}
+          >
+            {mode === "create" ? companyLabels.createCompany : companyLabels.addCompany}
+          </Typography>
           <IconButton 
             onClick={handleClose} 
             size="small"
             sx={{
-              color: '#FF6F00 !important',
+              color: theme.palette.mode === 'dark' ? '#FFB74D' : '#FF6F00',
               '&:hover': {
-                bgcolor: 'rgba(255, 111, 0, 0.1)',
+                bgcolor: theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 183, 77, 0.15)' 
+                  : 'rgba(255, 111, 0, 0.1)',
               },
             }}
           >
@@ -312,59 +326,59 @@ const ContactCompanyModal: React.FC<ContactCompanyModalProps> = ({
       </DialogTitle>
 
       <DialogContent sx={{ 
-        bgcolor: '#FFFFFF !important',
-        backgroundColor: '#FFFFFF !important',
-        color: '#000000 !important',
+        bgcolor: theme.palette.background.paper,
+        color: theme.palette.text.primary,
         '& .MuiTextField-root': {
           '& .MuiOutlinedInput-root': {
-            bgcolor: '#FFFFFF !important',
-            backgroundColor: '#FFFFFF !important',
-            color: '#000000 !important',
+            bgcolor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
             '& input': {
-              color: '#000000 !important',
+              color: theme.palette.text.primary,
             },
             '& input::placeholder': {
-              color: 'rgba(0, 0, 0, 0.6) !important',
+              color: theme.palette.text.secondary,
               opacity: 1,
             },
             '& .MuiOutlinedInput-notchedOutline': {
-              borderColor: 'rgba(0, 0, 0, 0.23)',
+              borderColor: theme.palette.divider,
             },
             '&:hover .MuiOutlinedInput-notchedOutline': {
-              borderColor: '#4CAF50',
+              borderColor: taxiMonterricoColors.greenLight,
             },
             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-              borderColor: '#2E7D32 !important',
+              borderColor: `${taxiMonterricoColors.green} !important`,
               borderWidth: '2px',
             },
           },
           '& .MuiInputLabel-root': {
-            color: 'rgba(0, 0, 0, 0.6) !important',
+            color: theme.palette.text.secondary,
             '&.Mui-focused': {
-              color: '#2E7D32 !important',
+              color: `${taxiMonterricoColors.green} !important`,
             },
           },
           '& .MuiFormHelperText-root': {
-            color: 'rgba(0, 0, 0, 0.6) !important',
+            color: theme.palette.text.secondary,
           },
         },
         '& .MuiTypography-root': {
-          color: '#000000 !important',
+          color: theme.palette.text.primary,
         },
         '& .MuiList-root': {
-          bgcolor: '#FFFFFF !important',
+          bgcolor: theme.palette.background.paper,
         },
         '& .MuiListItemButton-root': {
-          color: '#000000 !important',
+          color: theme.palette.text.primary,
           '&:hover': {
-            bgcolor: 'rgba(46, 125, 50, 0.1) !important',
+            bgcolor: theme.palette.mode === 'dark'
+              ? 'rgba(46, 125, 50, 0.2)'
+              : 'rgba(46, 125, 50, 0.1)',
           },
         },
         '& .MuiListItemText-primary': {
-          color: '#000000 !important',
+          color: theme.palette.text.primary,
         },
         '& .MuiListItemText-secondary': {
-          color: 'rgba(0, 0, 0, 0.6) !important',
+          color: theme.palette.text.secondary,
         },
       }}>
         {mode === "select" ? (
@@ -385,24 +399,23 @@ const ContactCompanyModal: React.FC<ContactCompanyModalProps> = ({
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: 1.5,
-                  bgcolor: '#FFFFFF !important',
-                  backgroundColor: '#FFFFFF !important',
+                  bgcolor: theme.palette.background.paper,
                 },
                 "& input": {
-                  color: "#000000 !important",
+                  color: theme.palette.text.primary,
                 },
                 "& input::placeholder": {
-                  color: "rgba(0, 0, 0, 0.6) !important",
+                  color: theme.palette.text.secondary,
                   opacity: 1,
                 },
                 "& .MuiOutlinedInput-notchedOutline": {
-                  borderColor: "rgba(0, 0, 0, 0.23)",
+                  borderColor: theme.palette.divider,
                 },
                 "&:hover .MuiOutlinedInput-notchedOutline": {
-                  borderColor: "#4CAF50",
+                  borderColor: taxiMonterricoColors.greenLight,
                 },
                 "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                  borderColor: "#2E7D32 !important",
+                  borderColor: `${taxiMonterricoColors.green} !important`,
                   borderWidth: '2px',
                 },
               }}
@@ -441,12 +454,12 @@ const ContactCompanyModal: React.FC<ContactCompanyModalProps> = ({
                 ))}
               </List>
             ) : searchTerm.trim() ? (
-              <Typography variant="body2" sx={{ textAlign: "center", py: 4, color: '#000000 !important' }}>
+              <Typography variant="body2" sx={{ textAlign: "center", py: 4, color: theme.palette.text.primary }}>
                 No se encontraron empresas
               </Typography>
             ) : (
-              <Typography variant="body2" sx={{ textAlign: "center", py: 4, color: '#000000 !important' }}>
-                Escribe para buscar empresas
+              <Typography variant="body2" sx={{ textAlign: "center", py: 4, color: theme.palette.text.secondary }}>
+                {companyLabels.searchCompaniesPlaceholder}
               </Typography>
             )}
           </Box>
@@ -509,7 +522,6 @@ const ContactCompanyModal: React.FC<ContactCompanyModalProps> = ({
               }}
               error={!!nameError}
               helperText={nameError}
-              required
               fullWidth
               InputLabelProps={{ shrink: true }}
               sx={{
@@ -523,9 +535,13 @@ const ContactCompanyModal: React.FC<ContactCompanyModalProps> = ({
             <TextField
               label="Nombre comercial"
               value={companyFormData.companyname}
-              onChange={(e) =>
-                setCompanyFormData({ ...companyFormData, companyname: e.target.value })
-              }
+              onChange={(e) => {
+                setCompanyFormData({ ...companyFormData, companyname: e.target.value });
+                setNameError("");
+              }}
+              error={!!nameError}
+              helperText={nameError}
+              required
               fullWidth
               InputLabelProps={{ shrink: true }}
               sx={{
@@ -614,7 +630,7 @@ const ContactCompanyModal: React.FC<ContactCompanyModalProps> = ({
             </Box>
 
             {rucValidationError && (
-              <Typography variant="caption" sx={{ mt: -1, color: '#d32f2f !important' }}>
+              <Typography variant="caption" sx={{ mt: -1, color: taxiMonterricoColors.error }}>
                 {rucValidationError}
               </Typography>
             )}
@@ -624,44 +640,30 @@ const ContactCompanyModal: React.FC<ContactCompanyModalProps> = ({
 
       {mode === "create" && (
         <DialogActions sx={{ 
-          px: 3, 
+          px: 3,
+          pt: 0,
           pb: 2,
-          bgcolor: '#FFFFFF !important',
-          borderTop: '1px solid rgba(0, 0, 0, 0.12)',
+          bgcolor: theme.palette.background.paper,
+          justifyContent: "flex-end",
         }}>
-          <Button
-            onClick={handleClose}
-            sx={{
-              color: '#FF5252 !important',
-              textTransform: "none",
-              fontWeight: 600,
-              border: '2px solid #FF5252',
-              '&:hover': {
-                bgcolor: 'rgba(255, 82, 82, 0.08)',
-                borderColor: '#FF1744',
-              },
-            }}
-          >
-            Cancelar
-          </Button>
           <Button
             onClick={handleCreateCompany}
             variant="contained"
-            disabled={saving || !companyFormData.name.trim() || !!nameError || !!rucValidationError}
+            disabled={saving || !companyFormData.companyname.trim() || !!nameError || !!rucValidationError}
             sx={{
-              background: 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%) !important',
-              color: '#FFFFFF !important',
+              bgcolor: taxiMonterricoColors.green,
+              color: 'white',
               textTransform: "none",
               fontWeight: 600,
-              boxShadow: '0 4px 12px rgba(46, 125, 50, 0.3)',
+              boxShadow: `0 4px 12px ${taxiMonterricoColors.green}40`,
               "&:hover": {
-                background: 'linear-gradient(135deg, #1B5E20 0%, #2E7D32 100%) !important',
-                boxShadow: '0 6px 20px rgba(46, 125, 50, 0.4)',
+                bgcolor: taxiMonterricoColors.greenDark,
+                boxShadow: `0 6px 20px ${taxiMonterricoColors.green}50`,
                 transform: 'translateY(-2px)',
               },
               "&:disabled": {
-                background: 'rgba(0, 0, 0, 0.12) !important',
-                color: 'rgba(0, 0, 0, 0.26) !important',
+                bgcolor: theme.palette.action.disabledBackground,
+                color: theme.palette.action.disabled,
               },
             }}
           >

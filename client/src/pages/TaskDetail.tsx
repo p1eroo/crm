@@ -79,7 +79,8 @@ import {
 } from "@mui/icons-material";
 import api from "../config/api";
 import axios from "axios";
-import { taxiMonterricoColors } from "../theme/colors";
+import { taxiMonterricoColors, hexToRgba } from "../theme/colors";
+import { companyLabels } from "../constants/companyLabels";
 import {
   RecentActivitiesCard,
   LinkedContactsCard,
@@ -1114,13 +1115,13 @@ const TaskDetail: React.FC = () => {
 
   const getPriorityColor = (priority: string) => {
     const colorMap: { [key: string]: { bg: string; color: string } } = {
-      urgent: { bg: "#FFEBEE", color: "#C62828" },
-      high: { bg: "#FFEBEE", color: "#C62828" },
-      medium: { bg: "#FFF3E0", color: "#E65100" },
-      low: { bg: "#E8F5E9", color: "#2E7D32" },
+      urgent: { bg: taxiMonterricoColors.errorLight, color: taxiMonterricoColors.errorDark },
+      high: { bg: taxiMonterricoColors.errorLight, color: taxiMonterricoColors.errorDark },
+      medium: { bg: taxiMonterricoColors.warningMedium, color: taxiMonterricoColors.warningDark },
+      low: { bg: taxiMonterricoColors.successLight, color: taxiMonterricoColors.success },
     };
     return (
-      colorMap[priority?.toLowerCase()] || { bg: "#F5F5F5", color: "#757575" }
+      colorMap[priority?.toLowerCase()] || { bg: taxiMonterricoColors.grayVeryLight, color: taxiMonterricoColors.gray }
     );
   };
 
@@ -1272,13 +1273,13 @@ const TaskDetail: React.FC = () => {
       // Vencida - rojo claro
       return {
         bgcolor:
-          theme.palette.mode === "dark" ? "rgba(244, 67, 54, 0.15)" : "#FFEBEE",
+          theme.palette.mode === "dark" ? hexToRgba(taxiMonterricoColors.error, 0.15) : taxiMonterricoColors.errorLight,
       };
     } else if (diffDays <= 3) {
       // Por vencer (1-3 días) - amarillo/naranja claro
       return {
         bgcolor:
-          theme.palette.mode === "dark" ? "rgba(255, 152, 0, 0.15)" : "#FFF9C4",
+          theme.palette.mode === "dark" ? hexToRgba(taxiMonterricoColors.orangeDark, 0.15) : taxiMonterricoColors.warningLight,
       };
     } else {
       // A tiempo - verde claro
@@ -3962,8 +3963,8 @@ const TaskDetail: React.FC = () => {
                 setContactDialogTab(newValue === 0 ? "create" : "existing")
               }
             >
-              <Tab label="Crear nueva" />
-              <Tab label="Agregar existente" />
+              <Tab label={companyLabels.createNew} />
+              <Tab label={companyLabels.addExisting} />
             </Tabs>
           </Box>
 
@@ -4574,8 +4575,8 @@ const TaskDetail: React.FC = () => {
                 setCompanyDialogTab(newValue === 0 ? "create" : "existing")
               }
             >
-              <Tab label="Crear nueva" />
-              <Tab label="Agregar existente" />
+              <Tab label={companyLabels.createNew} />
+              <Tab label={companyLabels.addExisting} />
             </Tabs>
           </Box>
 
@@ -4816,7 +4817,7 @@ const TaskDetail: React.FC = () => {
             <Box sx={{ mt: 1 }}>
               <TextField
                 size="small"
-                placeholder="Buscar empresas"
+                placeholder={companyLabels.searchCompanies}
                 value={existingCompaniesSearch}
                 onChange={(e) => setExistingCompaniesSearch(e.target.value)}
                 fullWidth
@@ -5696,15 +5697,15 @@ const TaskDetail: React.FC = () => {
                     "&.Mui-selected": {
                       backgroundColor:
                         theme.palette.mode === "dark"
-                          ? "rgba(76, 175, 80, 0.3)"
-                          : "rgba(76, 175, 80, 0.15)",
+                          ? hexToRgba(taxiMonterricoColors.greenLight, 0.3)
+                          : hexToRgba(taxiMonterricoColors.greenLight, 0.15),
                       color:
                         theme.palette.mode === "dark" ? "#ffffff" : "inherit",
                       "&:hover": {
                         backgroundColor:
                           theme.palette.mode === "dark"
-                            ? "rgba(76, 175, 80, 0.4)"
-                            : "rgba(76, 175, 80, 0.2)",
+                            ? hexToRgba(taxiMonterricoColors.greenLight, 0.4)
+                            : hexToRgba(taxiMonterricoColors.greenLight, 0.2),
                       },
                     },
                   }}
@@ -5732,15 +5733,15 @@ const TaskDetail: React.FC = () => {
                     "&.Mui-selected": {
                       backgroundColor:
                         theme.palette.mode === "dark"
-                          ? "rgba(76, 175, 80, 0.3)"
-                          : "rgba(76, 175, 80, 0.15)",
+                          ? hexToRgba(taxiMonterricoColors.greenLight, 0.3)
+                          : hexToRgba(taxiMonterricoColors.greenLight, 0.15),
                       color:
                         theme.palette.mode === "dark" ? "#ffffff" : "inherit",
                       "&:hover": {
                         backgroundColor:
                           theme.palette.mode === "dark"
-                            ? "rgba(76, 175, 80, 0.4)"
-                            : "rgba(76, 175, 80, 0.2)",
+                            ? hexToRgba(taxiMonterricoColors.greenLight, 0.4)
+                            : hexToRgba(taxiMonterricoColors.greenLight, 0.2),
                       },
                     },
                   }}
@@ -5766,15 +5767,15 @@ const TaskDetail: React.FC = () => {
                     "&.Mui-selected": {
                       backgroundColor:
                         theme.palette.mode === "dark"
-                          ? "rgba(76, 175, 80, 0.3)"
-                          : "rgba(76, 175, 80, 0.15)",
+                          ? hexToRgba(taxiMonterricoColors.greenLight, 0.3)
+                          : hexToRgba(taxiMonterricoColors.greenLight, 0.15),
                       color:
                         theme.palette.mode === "dark" ? "#ffffff" : "inherit",
                       "&:hover": {
                         backgroundColor:
                           theme.palette.mode === "dark"
-                            ? "rgba(76, 175, 80, 0.4)"
-                            : "rgba(76, 175, 80, 0.2)",
+                            ? hexToRgba(taxiMonterricoColors.greenLight, 0.4)
+                            : hexToRgba(taxiMonterricoColors.greenLight, 0.2),
                       },
                     },
                   }}
@@ -5800,15 +5801,15 @@ const TaskDetail: React.FC = () => {
                     "&.Mui-selected": {
                       backgroundColor:
                         theme.palette.mode === "dark"
-                          ? "rgba(76, 175, 80, 0.3)"
-                          : "rgba(76, 175, 80, 0.15)",
+                          ? hexToRgba(taxiMonterricoColors.greenLight, 0.3)
+                          : hexToRgba(taxiMonterricoColors.greenLight, 0.15),
                       color:
                         theme.palette.mode === "dark" ? "#ffffff" : "inherit",
                       "&:hover": {
                         backgroundColor:
                           theme.palette.mode === "dark"
-                            ? "rgba(76, 175, 80, 0.4)"
-                            : "rgba(76, 175, 80, 0.2)",
+                            ? hexToRgba(taxiMonterricoColors.greenLight, 0.4)
+                            : hexToRgba(taxiMonterricoColors.greenLight, 0.2),
                       },
                     },
                   }}
@@ -5834,15 +5835,15 @@ const TaskDetail: React.FC = () => {
                     "&.Mui-selected": {
                       backgroundColor:
                         theme.palette.mode === "dark"
-                          ? "rgba(76, 175, 80, 0.3)"
-                          : "rgba(76, 175, 80, 0.15)",
+                          ? hexToRgba(taxiMonterricoColors.greenLight, 0.3)
+                          : hexToRgba(taxiMonterricoColors.greenLight, 0.15),
                       color:
                         theme.palette.mode === "dark" ? "#ffffff" : "inherit",
                       "&:hover": {
                         backgroundColor:
                           theme.palette.mode === "dark"
-                            ? "rgba(76, 175, 80, 0.4)"
-                            : "rgba(76, 175, 80, 0.2)",
+                            ? hexToRgba(taxiMonterricoColors.greenLight, 0.4)
+                            : hexToRgba(taxiMonterricoColors.greenLight, 0.2),
                       },
                     },
                   }}

@@ -283,10 +283,10 @@ const Calendar: React.FC = () => {
   // Función para obtener el color de prioridad
   const getPriorityColor = (priority?: string) => {
     const colors: { [key: string]: { bg: string; color: string } } = {
-      low: { bg: '#D1FAE5', color: '#065F46' },
-      medium: { bg: '#FEF3C7', color: '#92400E' },
-      high: { bg: '#FEE2E2', color: '#991B1B' },
-      urgent: { bg: '#FEE2E2', color: '#C62828' },
+      low: { bg: taxiMonterricoColors.successLight, color: taxiMonterricoColors.greenDark },
+      medium: { bg: taxiMonterricoColors.amberLight, color: taxiMonterricoColors.amberDark },
+      high: { bg: taxiMonterricoColors.redLight, color: taxiMonterricoColors.redDark },
+      urgent: { bg: taxiMonterricoColors.redLight, color: taxiMonterricoColors.errorDark },
     };
     return colors[priority || 'medium'] || colors.medium;
   };

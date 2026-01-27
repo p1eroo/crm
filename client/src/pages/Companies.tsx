@@ -31,8 +31,9 @@ import {
 } from '@mui/material';
 import { Add, Delete, Search, Visibility, UploadFile, FileDownload, FilterList, Close, ExpandMore, Remove, Bolt, Edit, ChevronLeft, ChevronRight, MoreVert, ViewColumn, Phone, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered } from '@mui/icons-material';
 import api from '../config/api';
-import { taxiMonterricoColors } from '../theme/colors';
+import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
+import { companyLabels } from '../constants/companyLabels';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { FormDrawer } from '../components/FormDrawer';
@@ -1923,8 +1924,8 @@ const Companies: React.FC = () => {
                         '&:hover': {
                           borderColor: taxiMonterricoColors.green,
                           bgcolor: theme.palette.mode === 'dark' 
-                            ? 'rgba(16, 185, 129, 0.1)' 
-                            : 'rgba(16, 185, 129, 0.05)',
+                            ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.1)
+                            : hexToRgba(taxiMonterricoColors.greenEmerald, 0.05),
                           color: taxiMonterricoColors.green,
                           transform: 'translateY(-2px)',
                           boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
@@ -1952,8 +1953,8 @@ const Companies: React.FC = () => {
                         '&:hover': {
                           borderColor: taxiMonterricoColors.green,
                           bgcolor: theme.palette.mode === 'dark' 
-                            ? 'rgba(16, 185, 129, 0.1)' 
-                            : 'rgba(16, 185, 129, 0.05)',
+                            ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.1)
+                            : hexToRgba(taxiMonterricoColors.greenEmerald, 0.05),
                           color: taxiMonterricoColors.green,
                           transform: 'translateY(-2px)',
                           boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
@@ -1972,7 +1973,7 @@ const Companies: React.FC = () => {
                       border: `1.5px solid ${showColumnFilters ? taxiMonterricoColors.green : theme.palette.divider}`,
                       borderRadius: 1.5,
                       bgcolor: showColumnFilters 
-                        ? (theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.08)')
+                        ? (theme.palette.mode === 'dark' ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.15) : hexToRgba(taxiMonterricoColors.greenEmerald, 0.08))
                         : 'transparent',
                       color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.secondary,
                       p: { xs: 0.75, sm: 0.875 },
@@ -1981,8 +1982,8 @@ const Companies: React.FC = () => {
                       '&:hover': {
                         borderColor: taxiMonterricoColors.green,
                         bgcolor: theme.palette.mode === 'dark' 
-                          ? 'rgba(16, 185, 129, 0.2)' 
-                          : 'rgba(16, 185, 129, 0.1)',
+                          ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.2)
+                          : hexToRgba(taxiMonterricoColors.greenEmerald, 0.1),
                         color: taxiMonterricoColors.green,
                         transform: 'translateY(-2px)',
                         boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
@@ -2039,8 +2040,8 @@ const Companies: React.FC = () => {
               component="div"
               sx={{ 
                 bgcolor: theme.palette.mode === 'dark'
-                  ? 'rgba(16, 185, 129, 0.02)'
-                  : 'rgba(16, 185, 129, 0.01)',
+                  ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.02)
+                  : hexToRgba(taxiMonterricoColors.greenEmerald, 0.01),
                 overflow: 'hidden',
                 display: 'grid',
                 gridTemplateColumns: { 
@@ -2929,7 +2930,7 @@ const Companies: React.FC = () => {
                   px: 0.75,
                   py: 0.25,
                   '&:hover': {
-                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.1)' : 'rgba(211, 47, 47, 0.05)',
+                    bgcolor: theme.palette.mode === 'dark' ? hexToRgba(taxiMonterricoColors.error, 0.1) : hexToRgba(taxiMonterricoColors.error, 0.05),
                   },
                 }}
               >
@@ -3321,7 +3322,7 @@ const Companies: React.FC = () => {
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {/* Título de sección */}
             <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: theme.palette.text.primary }}>
-              Información Básica
+              {companyLabels.basicInformation}
             </Typography>
             {/* RUC */}
             <TextField

@@ -566,14 +566,14 @@ const Campaigns: React.FC = () => {
                         fontSize: { xs: '0.7rem', md: '0.75rem' },
                         height: { xs: 20, md: 24 },
                         bgcolor: campaign.status === 'active' 
-                          ? '#E8F5E9' 
+                          ? taxiMonterricoColors.successLight 
                           : campaign.status === 'completed'
-                          ? '#E3F2FD'
+                          ? taxiMonterricoColors.infoLight
                           : campaign.status === 'paused'
-                          ? '#FFF3E0'
-                          : '#F5F5F5',
+                          ? taxiMonterricoColors.warningMedium
+                          : taxiMonterricoColors.grayVeryLight,
                         color: campaign.status === 'active'
-                          ? '#2E7D32'
+                          ? taxiMonterricoColors.success
                           : campaign.status === 'completed'
                           ? '#1976D2'
                           : campaign.status === 'paused'

@@ -36,6 +36,7 @@ import api from '../config/api';
 import { useTheme } from '@mui/material/styles';
 import { PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import UserAvatar from '../components/UserAvatar';
+import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
 
 interface User {
   id: number;
@@ -312,12 +313,12 @@ const ReportDetail: React.FC = () => {
             opacity: theme.palette.mode === 'dark' ? 0.6 : 0.4,
             background: theme.palette.mode === 'dark'
               ? `radial-gradient(circle at 20% 30%, rgba(0, 150, 136, 0.3) 0%, transparent 50%),
-                 radial-gradient(circle at 80% 70%, rgba(76, 175, 80, 0.25) 0%, transparent 50%),
-                 radial-gradient(circle at 50% 50%, rgba(255, 152, 0, 0.15) 0%, transparent 50%),
+                 radial-gradient(circle at 80% 70%, ${hexToRgba(taxiMonterricoColors.greenLight, 0.25)} 0%, transparent 50%),
+                 radial-gradient(circle at 50% 50%, ${hexToRgba(taxiMonterricoColors.orangeDark, 0.15)} 0%, transparent 50%),
                  linear-gradient(135deg, rgba(13, 71, 161, 0.2) 0%, rgba(0, 150, 136, 0.2) 100%)`
               : `radial-gradient(circle at 20% 30%, rgba(0, 150, 136, 0.2) 0%, transparent 50%),
-                 radial-gradient(circle at 80% 70%, rgba(76, 175, 80, 0.15) 0%, transparent 50%),
-                 radial-gradient(circle at 50% 50%, rgba(255, 152, 0, 0.1) 0%, transparent 50%)`,
+                 radial-gradient(circle at 80% 70%, ${hexToRgba(taxiMonterricoColors.greenLight, 0.15)} 0%, transparent 50%),
+                 radial-gradient(circle at 50% 50%, ${hexToRgba(taxiMonterricoColors.orangeDark, 0.1)} 0%, transparent 50%)`,
             '&::before': {
               content: '""',
               position: 'absolute',

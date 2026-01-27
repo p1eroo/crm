@@ -25,7 +25,7 @@ import {
 } from '@mui/material';
 import { Add, Delete, AttachMoney, Visibility, ViewList, AccountTree, CalendarToday, Close, FileDownload, UploadFile, FilterList, ExpandMore, Remove, Bolt, Business, Edit, ChevronLeft, ChevronRight, ViewColumn } from '@mui/icons-material';
 import api from '../config/api';
-import { taxiMonterricoColors } from '../theme/colors';
+import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
@@ -100,12 +100,14 @@ const Deals: React.FC = () => {
     etapa: string;
     contacto: string;
     empresa: string;
+    propietario: string;
   }>({
     nombre: '',
     monto: '',
     etapa: '',
     contacto: '',
     empresa: '',
+    propietario: '',
   });
   const [debouncedColumnFilters, setDebouncedColumnFilters] = useState(columnFilters);
   const [showColumnFilters, setShowColumnFilters] = useState(false);
@@ -337,6 +339,7 @@ const Deals: React.FC = () => {
       if (debouncedColumnFilters.contacto) params.filterContacto = debouncedColumnFilters.contacto;
       if (debouncedColumnFilters.empresa) params.filterEmpresa = debouncedColumnFilters.empresa;
       if (debouncedColumnFilters.etapa) params.filterEtapa = debouncedColumnFilters.etapa;
+      if (debouncedColumnFilters.propietario) params.filterPropietario = debouncedColumnFilters.propietario;
       
       const response = await api.get('/deals', { params });
       const dealsData = response.data.deals || response.data || [];
@@ -758,9 +761,17 @@ const Deals: React.FC = () => {
               sx={{ height: 24, fontSize: '0.7rem' }}
             />
           )}
+          {columnFilters.propietario && (
+            <Chip
+              size="small"
+              label={`Propietario: "${columnFilters.propietario}"`}
+              onDelete={() => setColumnFilters(prev => ({ ...prev, propietario: '' }))}
+              sx={{ height: 24, fontSize: '0.7rem' }}
+            />
+          )}
           <Button
             size="small"
-            onClick={() => setColumnFilters({ nombre: '', monto: '', etapa: '', contacto: '', empresa: '' })}
+            onClick={() => setColumnFilters({ nombre: '', monto: '', etapa: '', contacto: '', empresa: '', propietario: '' })}
             sx={{ 
               fontSize: '0.7rem', 
               textTransform: 'none',
@@ -791,7 +802,7 @@ const Deals: React.FC = () => {
           sx={{ 
             fontWeight: 700,
             fontSize: { xs: '1.25rem', md: '1.5rem' },
-            background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.mode === 'dark' ? '#10B981' : '#2E7D32'} 100%)`,
+            background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : taxiMonterricoColors.green} 100%)`,
             backgroundClip: 'text',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
@@ -947,8 +958,14 @@ const Deals: React.FC = () => {
                 sx={{
                   bgcolor: viewMode === 'list' 
                     ? `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`
-                    : theme.palette.background.paper,
-                  color: viewMode === 'list' ? 'white' : theme.palette.text.secondary,
+                    : theme.palette.mode === 'dark'
+                      ? theme.palette.background.paper
+                      : theme.palette.grey[100],
+                  color: viewMode === 'list' 
+                    ? 'white' 
+                    : theme.palette.mode === 'dark' 
+                      ? theme.palette.text.secondary 
+                      : theme.palette.text.primary,
                   borderRadius: 1.5,
                   p: { xs: 0.75, sm: 0.875 },
                   border: `1.5px solid ${viewMode === 'list' ? 'transparent' : theme.palette.divider}`,
@@ -974,8 +991,14 @@ const Deals: React.FC = () => {
                 sx={{
                   bgcolor: viewMode === 'funnel' 
                     ? `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`
-                    : theme.palette.background.paper,
-                  color: viewMode === 'funnel' ? 'white' : theme.palette.text.secondary,
+                    : theme.palette.mode === 'dark'
+                      ? theme.palette.background.paper
+                      : theme.palette.grey[100],
+                  color: viewMode === 'funnel' 
+                    ? 'white' 
+                    : theme.palette.mode === 'dark' 
+                      ? theme.palette.text.secondary 
+                      : theme.palette.text.primary,
                   borderRadius: 1.5,
                   p: { xs: 0.75, sm: 0.875 },
                   border: `1.5px solid ${viewMode === 'funnel' ? 'transparent' : theme.palette.divider}`,
@@ -1056,7 +1079,7 @@ const Deals: React.FC = () => {
                   : `${taxiMonterricoColors.green}03`,
                 overflow: 'hidden',
                 display: 'grid',
-                gridTemplateColumns: { xs: 'repeat(6, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 1fr 0.7fr' },
+                gridTemplateColumns: { xs: 'repeat(7, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 1fr 0.8fr 0.7fr' },
                 columnGap: { xs: 1, md: 1.5 },
                 position: 'relative',
                 '&::before': {
@@ -1207,6 +1230,32 @@ const Deals: React.FC = () => {
                 />
               )}
             </Box>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Propietario</Typography>
+                {showColumnFilters && (
+                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, propietario: '' }))} sx={{ p: 0.25, opacity: columnFilters.propietario ? 1 : 0.3 }}>
+                    <FilterList sx={{ fontSize: 14 }} />
+                  </IconButton>
+                )}
+              </Box>
+              {showColumnFilters && (
+                <TextField
+                  size="small"
+                  placeholder="Filtrar..."
+                  value={columnFilters.propietario}
+                  onChange={(e) => setColumnFilters(prev => ({ ...prev, propietario: e.target.value }))}
+                  sx={{ 
+                    width: '100%',
+                    '& .MuiOutlinedInput-root': { 
+                      height: 28, 
+                      fontSize: '0.75rem',
+                      bgcolor: theme.palette.background.paper,
+                    },
+                  }}
+                />
+              )}
+            </Box>
             <Box sx={{ 
               ...pageStyles.tableHeaderCell, 
               px: { xs: 0.75, md: 1 },
@@ -1227,7 +1276,7 @@ const Deals: React.FC = () => {
                   bgcolor: getStageCardColor(deal.stage),
                   cursor: 'pointer',
                   display: 'grid',
-                  gridTemplateColumns: { xs: 'repeat(6, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 1fr 0.7fr' },
+                  gridTemplateColumns: { xs: 'repeat(7, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 1fr 0.8fr 0.7fr' },
                   columnGap: { xs: 1, md: 1.5 },
                   minWidth: { xs: 800, md: 'auto' },
                   maxWidth: '100%',
@@ -1443,6 +1492,35 @@ const Deals: React.FC = () => {
                       </Typography>
                     )}
                       </Box>
+                {/* Nueva columna: Propietario */}
+                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                  {deal.Owner ? (
+                    <Tooltip title={`${deal.Owner.firstName} ${deal.Owner.lastName}`} arrow>
+                      <Avatar
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          bgcolor: taxiMonterricoColors.green,
+                          fontSize: '0.75rem',
+                          color: 'white',
+                        }}
+                      >
+                        {deal.Owner.firstName?.[0] || ''}{deal.Owner.lastName?.[0] || ''}
+                      </Avatar>
+                    </Tooltip>
+                  ) : (
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        color: theme.palette.text.disabled,
+                        fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                        fontWeight: 400,
+                      }}
+                    >
+                      --
+                    </Typography>
+                  )}
+                </Box>
                 <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 0.5, md: 0.75 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                     <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
                       <Tooltip title="Editar">
@@ -1673,7 +1751,7 @@ const Deals: React.FC = () => {
                     px: 0.75,
                     py: 0.25,
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(211, 47, 47, 0.1)' : 'rgba(211, 47, 47, 0.05)',
+                      bgcolor: theme.palette.mode === 'dark' ? hexToRgba(taxiMonterricoColors.error, 0.1) : hexToRgba(taxiMonterricoColors.error, 0.05),
                     },
                   }}
                 >
@@ -1740,7 +1818,7 @@ const Deals: React.FC = () => {
                             key={option.value}
                             label={option.label}
                             size="small"
-                            color={isSelected ? (stageColor.bg === '#E8F5E9' ? 'success' : stageColor.bg === '#FFEBEE' ? 'error' : 'warning') : undefined}
+                            color={isSelected ? (stageColor.bg === taxiMonterricoColors.successLight ? 'success' : stageColor.bg === taxiMonterricoColors.errorLight ? 'error' : 'warning') : undefined}
                             variant={isSelected ? 'filled' : 'outlined'}
                             onClick={() => {
                               setSelectedStages((prev) =>
@@ -1960,7 +2038,7 @@ const Deals: React.FC = () => {
                     border: `1px solid ${theme.palette.divider}`,
                   },
                   '&::-webkit-scrollbar-thumb': {
-                    background: theme.palette.mode === 'dark' ? '#9e9e9e' : '#757575',
+                    background: theme.palette.mode === 'dark' ? taxiMonterricoColors.grayDark : taxiMonterricoColors.gray,
                     borderRadius: 8,
                     border: `2px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'}`,
                     minHeight: 24,

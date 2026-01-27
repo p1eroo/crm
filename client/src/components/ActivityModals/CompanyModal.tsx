@@ -20,6 +20,7 @@ import { Search, Close, ChevronLeft, ChevronRight } from "@mui/icons-material";
 import api from "../../config/api";
 import axios from "axios";
 import { taxiMonterricoColors } from "../../theme/colors";
+import { companyLabels } from "../../constants/companyLabels";
 
 interface User {
   id: number;
@@ -600,47 +601,49 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
       }}
       PaperProps={{
         sx: {
-          bgcolor: '#FFFFFF !important',
-          color: '#000000 !important',
+          bgcolor: theme.palette.background.paper,
+          color: theme.palette.text.primary,
         },
       }}
     >
       <DialogContent sx={{ 
         pt: 2,
-        bgcolor: '#FFFFFF !important',
-        color: '#000000 !important',
+        bgcolor: theme.palette.background.paper,
+        color: theme.palette.text.primary,
         // Estilos globales para TextField dentro del Dialog
         '& .MuiTextField-root': {
           '& .MuiOutlinedInput-root': {
-            bgcolor: '#FFFFFF !important',
-            color: '#000000 !important',
+            bgcolor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
             '& fieldset': {
-              borderColor: 'rgba(0, 0, 0, 0.23)',
+              borderColor: theme.palette.divider,
             },
             '&:hover fieldset': {
-              borderColor: 'rgba(0, 0, 0, 0.5)',
+              borderColor: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.5)' 
+                : 'rgba(0, 0, 0, 0.5)',
             },
             '&.Mui-focused fieldset': {
-              borderColor: '#2E7D32 !important',
+              borderColor: `${taxiMonterricoColors.green} !important`,
               borderWidth: '2px',
             },
             '& input': {
-              color: '#000000 !important',
+              color: theme.palette.text.primary,
               '&::placeholder': {
-                color: 'rgba(0, 0, 0, 0.6)',
+                color: theme.palette.text.secondary,
                 opacity: 1,
               },
               '&:-webkit-autofill': {
-                WebkitBoxShadow: '0 0 0 1000px #FFFFFF inset !important',
-                WebkitTextFillColor: '#000000 !important',
+                WebkitBoxShadow: `0 0 0 1000px ${theme.palette.background.paper} inset !important`,
+                WebkitTextFillColor: `${theme.palette.text.primary} !important`,
                 transition: 'background-color 5000s ease-in-out 0s',
               },
             },
           },
           '& .MuiInputLabel-root': {
-            color: 'rgba(0, 0, 0, 0.6) !important',
+            color: theme.palette.text.secondary,
             '&.Mui-focused': {
-              color: '#2E7D32 !important',
+              color: `${taxiMonterricoColors.green} !important`,
             },
           },
         },
@@ -659,8 +662,8 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
               setCompanyDialogTab(newValue === 0 ? "create" : "existing")
             }
           >
-            <Tab label="Crear nueva" />
-            <Tab label="Agregar existente" />
+            <Tab label={companyLabels.createNew} />
+            <Tab label={companyLabels.addExisting} />
           </Tabs>
           <IconButton onClick={handleClose} size="small">
             <Close />
@@ -675,11 +678,11 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
               <>
                 {/* Título de sección */}
                 <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: theme.palette.text.primary }}>
-                  Información Básica
+                  {companyLabels.basicInformation}
                 </Typography>
             {/* RUC */}
             <TextField
-              label="RUC"
+              label={companyLabels.ruc}
               value={companyFormData.ruc || ""}
               onChange={(e) => {
                 const value = e.target.value.replace(/\D/g, "");
@@ -752,7 +755,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
             />
             {/* Razón social */}
             <TextField
-              label="Razón social"
+              label={companyLabels.legalName}
               value={companyFormData.companyname}
               onChange={(e) =>
                 setCompanyFormData({
@@ -769,7 +772,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
             />
             {/* Nombre comercial */}
             <TextField
-              label="Nombre comercial"
+              label={companyLabels.tradeName}
               value={companyFormData.name}
               onChange={(e) => {
                 const newName = e.target.value;
@@ -797,7 +800,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
             />
             {/* Teléfono */}
             <TextField
-              label="Teléfono"
+              label={companyLabels.phone}
               value={companyFormData.phone}
               onChange={(e) =>
                 setCompanyFormData({
@@ -814,7 +817,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
             />
             {/* Dirección */}
             <TextField
-              label="Dirección"
+              label={companyLabels.address}
               value={companyFormData.address}
               onChange={(e) =>
                 setCompanyFormData({
@@ -833,7 +836,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
             />
             {/* Distrito */}
             <TextField
-              label="Distrito"
+              label={companyLabels.district}
               value={companyFormData.city}
               onChange={(e) =>
                 setCompanyFormData({
@@ -850,7 +853,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
             />
             {/* Provincia */}
             <TextField
-              label="Provincia"
+              label={companyLabels.province}
               value={companyFormData.state}
               onChange={(e) =>
                 setCompanyFormData({
@@ -867,7 +870,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
             />
             {/* Departamento */}
             <TextField
-              label="Departamento"
+              label={companyLabels.department}
               value={companyFormData.country}
               onChange={(e) =>
                 setCompanyFormData({
@@ -1102,7 +1105,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
           <Box sx={{ mt: 1 }}>
             <TextField
               size="small"
-              placeholder="Buscar empresas"
+              placeholder={companyLabels.searchCompanies}
               value={existingCompaniesSearch}
               onChange={(e) => setExistingCompaniesSearch(e.target.value)}
               fullWidth
@@ -1285,7 +1288,14 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
           </Box>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2.5, pt: 0, justifyContent: "flex-start", gap: 0.75 }}>
+      <DialogActions sx={{ 
+        px: 3, 
+        pb: 2.5, 
+        pt: 0, 
+        justifyContent: "flex-start", 
+        gap: 0.75,
+        bgcolor: theme.palette.background.paper,
+      }}>
         {companyDialogTab === "create" && formStep === 1 ? (
           <Button
             onClick={() => setFormStep(2)}
@@ -1318,7 +1328,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
               transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
             }}
           >
-            Siguiente
+            {companyLabels.next}
           </Button>
         ) : (
           <Button
@@ -1365,10 +1375,10 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
             }}
           >
             {saving
-              ? "Guardando..."
+              ? companyLabels.saving
               : companyDialogTab === "create"
-              ? "Crear"
-              : "Agregar"}
+              ? companyLabels.create
+              : companyLabels.add}
           </Button>
         )}
       </DialogActions>

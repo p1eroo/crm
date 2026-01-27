@@ -23,7 +23,7 @@ import {
 } from "@mui/icons-material";
 import api from "../config/api";
 import EmailComposer from "../components/EmailComposer";
-import { taxiMonterricoColors } from "../theme/colors";
+import { taxiMonterricoColors, hexToRgba } from "../theme/colors";
 import {
   RecentActivitiesCard,
   LinkedCompaniesCard,
@@ -1051,19 +1051,19 @@ const ContactDetail: React.FC = () => {
       // Vencida - rojo claro
       return {
         bgcolor:
-          theme.palette.mode === "dark" ? "rgba(244, 67, 54, 0.15)" : "#FFEBEE",
+          theme.palette.mode === "dark" ? hexToRgba(taxiMonterricoColors.error, 0.15) : taxiMonterricoColors.errorLight,
       };
     } else if (diffDays <= 3) {
       // Por vencer (1-3 días) - amarillo/naranja claro
       return {
         bgcolor:
-          theme.palette.mode === "dark" ? "rgba(255, 152, 0, 0.15)" : "#FFF9C4",
+          theme.palette.mode === "dark" ? hexToRgba(taxiMonterricoColors.orangeDark, 0.15) : taxiMonterricoColors.warningLight,
       };
     } else {
       // A tiempo - verde claro
       return {
         bgcolor:
-          theme.palette.mode === "dark" ? "rgba(76, 175, 80, 0.15)" : "#E8F5E9",
+          theme.palette.mode === "dark" ? hexToRgba(taxiMonterricoColors.greenLight, 0.15) : taxiMonterricoColors.successLight,
       };
     }
   };
