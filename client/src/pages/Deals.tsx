@@ -774,279 +774,258 @@ const Deals: React.FC = () => {
         </Box>
       )}
 
-      {/* Barra de herramientas compartida - se muestra siempre */}
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          gap: 2,
-          p: 2,
-          mb: 0,
-        }}
-      >
-        <Typography 
-          variant="h5" 
-          sx={{ 
-            fontWeight: 700,
-            fontSize: { xs: '1.25rem', md: '1.5rem' },
-            background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.mode === 'dark' ? '#10B981' : '#2E7D32'} 100%)`,
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-          }}
-        >
-          Negocios
-        </Typography>
-        
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-          <FormControl 
-            size="small" 
-            sx={{ 
-              minWidth: { xs: "100%", sm: 130 },
-              order: { xs: 1, sm: 0 },
-            }}
-          >
-            <Select
-              id="deals-sort-select"
-              name="deals-sort"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              displayEmpty
-              sx={{
-                borderRadius: 1.5,
-                bgcolor: theme.palette.background.paper,
-                fontSize: { xs: "0.75rem", sm: "0.8125rem" },
-                border: `1.5px solid ${theme.palette.divider}`,
-                transition: 'all 0.2s ease',
-                "& .MuiOutlinedInput-notchedOutline": {
-                  border: 'none',
-                },
-                "&:hover": {
-                  borderColor: taxiMonterricoColors.green,
-                  boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
-                },
-                "&.Mui-focused": {
-                  borderColor: taxiMonterricoColors.green,
-                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                },
-              }}
-            >
-              <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
-              <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
-              <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
-              <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
-            </Select>
-          </FormControl>
-          
-          <Box
-            sx={{
-              display: "flex",
-              gap: { xs: 0.5, sm: 0.75 },
-              order: { xs: 3, sm: 0 },
-            }}
-          >
-            <Tooltip title={importing ? 'Importando...' : 'Importar'} arrow>
-              <IconButton
-                size="small"
-                onClick={handleImportFromExcel}
-                disabled={importing}
-                sx={{
-                  border: `1.5px solid ${theme.palette.divider}`,
-                  borderRadius: 1.5,
-                  bgcolor: 'transparent',
-                  color: theme.palette.text.secondary,
-                  p: { xs: 0.75, sm: 0.875 },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    borderColor: taxiMonterricoColors.green,
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? `${taxiMonterricoColors.green}1A` 
-                      : `${taxiMonterricoColors.green}0D`,
-                    color: taxiMonterricoColors.green,
-                    transform: 'translateY(-2px)',
-                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
-                  },
-                  '&:disabled': {
-                    opacity: 0.5,
-                  },
-                }}
-              >
-                <UploadFile sx={{ fontSize: { xs: 16, sm: 18 } }} />
-              </IconButton>
-            </Tooltip>
-            
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
-            
-            <Tooltip title="Exportar" arrow>
-              <IconButton
-                size="small"
-                onClick={handleExportToExcel}
-                sx={{
-                  border: `1.5px solid ${theme.palette.divider}`,
-                  borderRadius: 1.5,
-                  bgcolor: 'transparent',
-                  color: theme.palette.text.secondary,
-                  p: { xs: 0.75, sm: 0.875 },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    borderColor: taxiMonterricoColors.green,
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? `${taxiMonterricoColors.green}1A` 
-                      : `${taxiMonterricoColors.green}0D`,
-                    color: taxiMonterricoColors.green,
-                    transform: 'translateY(-2px)',
-                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
-                  },
-                }}
-              >
-                <FileDownload sx={{ fontSize: { xs: 16, sm: 18 } }} />
-              </IconButton>
-            </Tooltip>
-          </Box>
-          
-          <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"} arrow>
-            <IconButton
-              size="small"
-              onClick={() => setShowColumnFilters(!showColumnFilters)}
-              sx={{
-                border: `1.5px solid ${showColumnFilters ? taxiMonterricoColors.green : theme.palette.divider}`,
-                borderRadius: 1.5,
-                bgcolor: showColumnFilters 
-                  ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}14`)
-                  : 'transparent',
-                color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.secondary,
-                p: { xs: 0.75, sm: 0.875 },
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                order: { xs: 5, sm: 0 },
-                '&:hover': {
-                  borderColor: taxiMonterricoColors.green,
-                  bgcolor: theme.palette.mode === 'dark' 
-                    ? `${taxiMonterricoColors.green}33` 
-                    : `${taxiMonterricoColors.green}1A`,
-                  color: taxiMonterricoColors.green,
-                  transform: 'translateY(-2px)',
-                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
-                },
-              }}
-            >
-              <ViewColumn sx={{ fontSize: { xs: 18, sm: 20 } }} />
-            </IconButton>
-          </Tooltip>
-          
-          <Box sx={{ 
-            display: 'flex', 
-            gap: 0.5, 
-            alignItems: 'center',
-            order: { xs: 6, sm: 0 },
-          }}>
-            <Tooltip title="Ver lista" arrow>
-              <IconButton
-                onClick={() => setViewMode('list')}
-                sx={{
-                  bgcolor: viewMode === 'list' 
-                    ? `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`
-                    : theme.palette.background.paper,
-                  color: viewMode === 'list' ? 'white' : theme.palette.text.secondary,
-                  borderRadius: 1.5,
-                  p: { xs: 0.75, sm: 0.875 },
-                  border: `1.5px solid ${viewMode === 'list' ? 'transparent' : theme.palette.divider}`,
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: viewMode === 'list' ? `0 4px 12px ${taxiMonterricoColors.green}30` : 'none',
-                  '&:hover': {
-                    bgcolor: viewMode === 'list' 
-                      ? `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`
-                      : theme.palette.action.hover,
-                    transform: 'translateY(-2px)',
-                    boxShadow: viewMode === 'list' 
-                      ? `0 6px 20px ${taxiMonterricoColors.green}40`
-                      : `0 4px 12px ${taxiMonterricoColors.green}20`,
-                  },
-                }}
-              >
-                <ViewList sx={{ fontSize: { xs: 16, sm: 18 } }} />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Ver funnel" arrow>
-              <IconButton
-                onClick={() => setViewMode('funnel')}
-                sx={{
-                  bgcolor: viewMode === 'funnel' 
-                    ? `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`
-                    : theme.palette.background.paper,
-                  color: viewMode === 'funnel' ? 'white' : theme.palette.text.secondary,
-                  borderRadius: 1.5,
-                  p: { xs: 0.75, sm: 0.875 },
-                  border: `1.5px solid ${viewMode === 'funnel' ? 'transparent' : theme.palette.divider}`,
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: viewMode === 'funnel' ? `0 4px 12px ${taxiMonterricoColors.green}30` : 'none',
-                  '&:hover': {
-                    bgcolor: viewMode === 'funnel' 
-                      ? `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`
-                      : theme.palette.action.hover,
-                    transform: 'translateY(-2px)',
-                    boxShadow: viewMode === 'funnel' 
-                      ? `0 6px 20px ${taxiMonterricoColors.green}40`
-                      : `0 4px 12px ${taxiMonterricoColors.green}20`,
-                  },
-                }}
-              >
-                <AccountTree sx={{ fontSize: { xs: 16, sm: 18 } }} />
-              </IconButton>
-            </Tooltip>
-          </Box>
-          
-          <Tooltip title="Nuevo Negocio" arrow>
-            <IconButton
-              size="small"
-              onClick={() => handleOpen()}
-              sx={{
-                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
-                color: "white",
-                borderRadius: 1.5,
-                p: { xs: 0.75, sm: 0.875 },
-                boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                order: { xs: 2, sm: 0 },
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                position: 'relative',
-                overflow: 'hidden',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: '-100%',
-                  width: '100%',
-                  height: '100%',
-                  background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
-                  transition: 'left 0.5s ease',
-                },
-                '&:hover': {
-                  transform: 'translateY(-2px) scale(1.05)',
-                  boxShadow: `0 8px 20px ${taxiMonterricoColors.green}50`,
-                  background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
-                  '&::before': {
-                    left: '100%',
-                  },
-                },
-                '&:active': {
-                  transform: 'translateY(0) scale(1)',
-                },
-              }}
-            >
-              <Add sx={{ fontSize: { xs: 16, sm: 18 } }} />
-            </IconButton>
-          </Tooltip>
-        </Box>
-      </Box>
-
       {/* Contenedor principal con layout flex para tabla y panel de filtros */}
       {viewMode === 'list' && (
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', flexDirection: { xs: 'column', md: 'row' } }}>
         {/* Contenido principal usando UnifiedTable */}
         <UnifiedTable
-          title=""
-          actions={null}
+          title="Negocios"
+          actions={
+            <>
+              <FormControl 
+                size="small" 
+                sx={{ 
+                  minWidth: { xs: "100%", sm: 130 },
+                  order: { xs: 1, sm: 0 },
+                }}
+              >
+                <Select
+                  id="deals-sort-select"
+                  name="deals-sort"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  displayEmpty
+                  sx={{
+                    borderRadius: 1.5,
+                    bgcolor: theme.palette.background.paper,
+                    fontSize: { xs: "0.75rem", sm: "0.8125rem" },
+                    border: `1.5px solid ${theme.palette.divider}`,
+                    transition: 'all 0.2s ease',
+                    "& .MuiOutlinedInput-notchedOutline": {
+                      border: 'none',
+                    },
+                    "&:hover": {
+                      borderColor: taxiMonterricoColors.green,
+                      boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
+                    },
+                    "&.Mui-focused": {
+                      borderColor: taxiMonterricoColors.green,
+                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
+                    },
+                  }}
+                >
+                  <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
+                  <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
+                  <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
+                  <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
+                </Select>
+              </FormControl>
+              
+              <Box
+                sx={{
+                  display: "flex",
+                  gap: { xs: 0.5, sm: 0.75 },
+                  order: { xs: 3, sm: 0 },
+                }}
+              >
+                <Tooltip title={importing ? 'Importando...' : 'Importar'} arrow>
+                  <IconButton
+                    size="small"
+                    onClick={handleImportFromExcel}
+                    disabled={importing}
+                    sx={{
+                      border: `1.5px solid ${theme.palette.divider}`,
+                      borderRadius: 1.5,
+                      bgcolor: 'transparent',
+                      color: theme.palette.text.secondary,
+                      p: { xs: 0.75, sm: 0.875 },
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&:hover': {
+                        borderColor: taxiMonterricoColors.green,
+                        bgcolor: theme.palette.mode === 'dark' 
+                          ? 'rgba(16, 185, 129, 0.1)' 
+                          : 'rgba(16, 185, 129, 0.05)',
+                        color: taxiMonterricoColors.green,
+                        transform: 'translateY(-2px)',
+                        boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                      },
+                      '&:disabled': {
+                        opacity: 0.5,
+                      },
+                    }}
+                  >
+                    <UploadFile sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                  </IconButton>
+                </Tooltip>
+                
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
+                
+                <Tooltip title="Exportar" arrow>
+                  <IconButton
+                    size="small"
+                    onClick={handleExportToExcel}
+                    sx={{
+                      border: `1.5px solid ${theme.palette.divider}`,
+                      borderRadius: 1.5,
+                      bgcolor: 'transparent',
+                      color: theme.palette.text.secondary,
+                      p: { xs: 0.75, sm: 0.875 },
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      '&:hover': {
+                        borderColor: taxiMonterricoColors.green,
+                        bgcolor: theme.palette.mode === 'dark' 
+                          ? 'rgba(16, 185, 129, 0.1)' 
+                          : 'rgba(16, 185, 129, 0.05)',
+                        color: taxiMonterricoColors.green,
+                        transform: 'translateY(-2px)',
+                        boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                      },
+                    }}
+                  >
+                    <FileDownload sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              
+              <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"} arrow>
+                <IconButton
+                  size="small"
+                  onClick={() => setShowColumnFilters(!showColumnFilters)}
+                  sx={{
+                    border: `1.5px solid ${showColumnFilters ? taxiMonterricoColors.green : theme.palette.divider}`,
+                    borderRadius: 1.5,
+                    bgcolor: showColumnFilters 
+                      ? (theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.08)')
+                      : 'transparent',
+                    color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.secondary,
+                    p: { xs: 0.75, sm: 0.875 },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    order: { xs: 5, sm: 0 },
+                    '&:hover': {
+                      borderColor: taxiMonterricoColors.green,
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(16, 185, 129, 0.2)' 
+                        : 'rgba(16, 185, 129, 0.1)',
+                      color: taxiMonterricoColors.green,
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                    },
+                  }}
+                >
+                  <ViewColumn sx={{ fontSize: { xs: 18, sm: 20 } }} />
+                </IconButton>
+              </Tooltip>
+              
+              <Box sx={{ 
+                display: 'flex', 
+                gap: 0.5, 
+                alignItems: 'center',
+                order: { xs: 6, sm: 0 },
+              }}>
+                <Tooltip title={showColumnFilters ? "Ocultar lista" : "Ver lista"} arrow>
+                <IconButton
+                  size="small"
+                  onClick={() => setShowColumnFilters(!showColumnFilters)}
+                  sx={{
+                    border: `1.5px solid ${showColumnFilters ? taxiMonterricoColors.green : theme.palette.divider}`,
+                    borderRadius: 1.5,
+                    bgcolor: showColumnFilters 
+                      ? (theme.palette.mode === 'dark' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.08)')
+                      : 'transparent',
+                    color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.secondary,
+                    p: { xs: 0.75, sm: 0.875 },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    order: { xs: 5, sm: 0 },
+                    '&:hover': {
+                      borderColor: taxiMonterricoColors.green,
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(16, 185, 129, 0.2)' 
+                        : 'rgba(16, 185, 129, 0.1)',
+                      color: taxiMonterricoColors.green,
+                      transform: 'translateY(-2px)',
+                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+                    },
+                  }}
+                >
+                    <ViewList 
+                      sx={{ 
+                        fontSize: { xs: 18, sm: 20 },
+                        color: viewMode === 'list' ? 'white' : theme.palette.text.secondary,
+                      }} 
+                    />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Ver funnel" arrow>
+                  <IconButton
+                    onClick={() => setViewMode('funnel')}
+                    sx={{
+                      bgcolor: (viewMode as 'list' | 'funnel') === 'funnel' 
+                        ? `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`
+                        : theme.palette.background.paper,
+                      color: (viewMode as 'list' | 'funnel') === 'funnel' ? 'white' : theme.palette.text.secondary,
+                      borderRadius: 1.5,
+                      p: { xs: 0.75, sm: 0.875 },
+                      border: `1.5px solid ${(viewMode as 'list' | 'funnel') === 'funnel' ? 'transparent' : theme.palette.divider}`,
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: (viewMode as 'list' | 'funnel') === 'funnel' ? `0 4px 12px ${taxiMonterricoColors.green}30` : 'none',
+                      '&:hover': {
+                        bgcolor: (viewMode as 'list' | 'funnel') === 'funnel' 
+                          ? `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`
+                          : theme.palette.action.hover,
+                        transform: 'translateY(-2px)',
+                        boxShadow: (viewMode as 'list' | 'funnel') === 'funnel' 
+                          ? `0 6px 20px ${taxiMonterricoColors.green}40`
+                          : `0 4px 12px ${taxiMonterricoColors.green}20`,
+                      },
+                    }}
+                  >
+                    <AccountTree sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              
+              <Tooltip title="Nuevo Negocio" arrow>
+                <IconButton
+                  size="small"
+                  onClick={() => handleOpen()}
+                  sx={{
+                    background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+                    color: "white",
+                    borderRadius: 1.5,
+                    p: { xs: 0.75, sm: 0.875 },
+                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
+                    order: { xs: 2, sm: 0 },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: '-100%',
+                      width: '100%',
+                      height: '100%',
+                      background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
+                      transition: 'left 0.5s ease',
+                    },
+                    '&:hover': {
+                      transform: 'translateY(-2px) scale(1.05)',
+                      boxShadow: `0 8px 20px ${taxiMonterricoColors.green}50`,
+                      background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
+                      '&::before': {
+                        left: '100%',
+                      },
+                    },
+                    '&:active': {
+                      transform: 'translateY(0) scale(1)',
+                    },
+                  }}
+                >
+                  <Add sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                </IconButton>
+              </Tooltip>
+            </>
+          }
           header={
             <Box
               component="div"
