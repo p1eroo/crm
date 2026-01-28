@@ -3,6 +3,8 @@ import { Op } from 'sequelize';
 import { Company } from '../models/Company';
 import { Contact } from '../models/Contact';
 import { User } from '../models/User';
+import { Task } from '../models/Task';
+import { Activity } from '../models/Activity';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 import { getRoleBasedDataFilter, canModifyResource, canDeleteResource } from '../utils/rolePermissions';
 import { logSystemAction, SystemActions, EntityTypes } from '../utils/systemLogger';
@@ -528,6 +530,77 @@ router.get('/', async (req: AuthRequest, res) => {
       error: errorMessage,
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
+  }
+});
+
+// Obtener estadísticas de empresas inactivas (sin contacto en últimos 5 días)
+router.get('/inactivity-stats', async (req: AuthRequest, res) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+
+    // Aplicar filtro RBAC
+    const roleFilter = getRoleBasedDataFilter(req.userRole, req.userId);
+    
+    // Calcular fecha límite (hace 5 días)
+    const fiveDaysAgo = new Date();
+    fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+    fiveDaysAgo.setHours(0, 0, 0, 0);
+
+    // Obtener todas las empresas según permisos
+    const allCompanies = await Company.findAll({
+      where: roleFilter,
+      attributes: ['id'],
+    });
+
+    const companyIds = allCompanies.map(c => c.id);
+
+    if (companyIds.length === 0) {
+      return res.json({ inactiveCount: 0 });
+    }
+
+    // Obtener empresas que SÍ han tenido contacto en los últimos 5 días
+    // Contacto = tarea creada, reunión creada (tarea tipo 'meeting'), o email enviado (actividad tipo 'email')
+    
+    // 1. Tareas relacionadas con empresas (incluyendo reuniones)
+    const recentTasks = await Task.findAll({
+      where: {
+        companyId: { [Op.in]: companyIds },
+        createdAt: { [Op.gte]: fiveDaysAgo },
+      },
+      attributes: ['companyId'],
+    });
+
+    // 2. Actividades tipo email relacionadas con empresas
+    const recentEmails = await Activity.findAll({
+      where: {
+        companyId: { [Op.in]: companyIds },
+        type: 'email',
+        createdAt: { [Op.gte]: fiveDaysAgo },
+      },
+      attributes: ['companyId'],
+    });
+
+    // Empresas que han tenido contacto (obtener IDs únicos)
+    const companiesWithContact = new Set([
+      ...recentTasks.map((t: any) => {
+        const taskData = t.toJSON ? t.toJSON() : t;
+        return taskData.companyId;
+      }).filter((id: any): id is number => id != null),
+      ...recentEmails.map((a: any) => {
+        const activityData = a.toJSON ? a.toJSON() : a;
+        return activityData.companyId;
+      }).filter((id: any): id is number => id != null),
+    ]);
+
+    // Empresas sin contacto = total - empresas con contacto
+    const inactiveCount = companyIds.length - companiesWithContact.size;
+
+    res.json({ inactiveCount });
+  } catch (error: any) {
+    console.error('Error obteniendo estadísticas de inactividad:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

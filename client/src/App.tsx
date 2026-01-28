@@ -12,6 +12,7 @@ import MainLayout from './components/Layout/MainLayout';
 import Login from './pages/Login';
 import { taxiMonterricoColors } from './theme/colors';
 import { logWarn } from './utils/logger';
+import { NotificationProvider } from './context/NotificationContext';
 
 // Importar fuente Inter con todos los pesos necesarios
 import '@fontsource/inter/400.css';
@@ -66,18 +67,18 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
       dark: taxiMonterricoColors.orangeDark,
     },
     background: {
-      default: mode === 'light' ? '#fafafa' : '#0B1220', // Gris muy claro (casi blanco) como minimals.cc
-      paper: mode === 'light' ? '#ffffff' : '#111A2C', // Blanco puro para los cards
+      default: mode === 'light' ? '#fafafa' : '#1A2027', // Gris azulado muy oscuro, más cercano al negro
+      paper: mode === 'light' ? '#ffffff' : '#222B36', // Gris azulado oscuro para cards y elementos secundarios
     },
     text: {
       primary: mode === 'light' ? '#1F2937' : '#E5E7EB', // Gris claro premium
       secondary: mode === 'light' ? '#6B7280' : '#94A3B8', // Gris medio premium
     },
-    divider: mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(148, 163, 184, 0.16)', // Divider premium
+    divider: mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.1)', // Divider que combina con el nuevo esquema oscuro
     action: {
       active: mode === 'light' ? 'rgba(0, 0, 0, 0.54)' : 'rgba(229, 231, 235, 0.7)',
-      hover: mode === 'light' ? 'rgba(0, 0, 0, 0.04)' : 'rgba(148, 163, 184, 0.08)',
-      selected: mode === 'light' ? 'rgba(0, 0, 0, 0.08)' : 'rgba(148, 163, 184, 0.16)',
+      hover: mode === 'light' ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.08)',
+      selected: mode === 'light' ? 'rgba(0, 0, 0, 0.08)' : '#222B36',
       disabled: mode === 'light' ? 'rgba(0, 0, 0, 0.26)' : 'rgba(148, 163, 184, 0.3)',
       disabledBackground: mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(148, 163, 184, 0.12)',
     },
@@ -580,9 +581,11 @@ const App: React.FC = () => {
     <GoogleOAuthProvider clientId={googleClientId || 'dummy-client-id'}>
       <ThemeProvider>
         <AuthProvider>
-          <AppearanceProvider>
-            <AppContent />
-          </AppearanceProvider>
+          <NotificationProvider>
+            <AppearanceProvider>
+              <AppContent />
+            </AppearanceProvider>
+          </NotificationProvider>
         </AuthProvider>
       </ThemeProvider>
     </GoogleOAuthProvider>

@@ -1,6 +1,6 @@
 // Componente principal del sistema de notificaciones con ícono de campana
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   IconButton,
   Badge,
@@ -13,10 +13,11 @@ import { NotificationDetail } from './NotificationDetail';
 import { useNotifications } from '../../hooks/useNotifications';
 import { Notification } from '../../types/notification';
 import { taxiMonterricoColors } from '../../theme/colors';
+import { useNotificationPanel } from '../../context/NotificationContext';
 
 export const NotificationBell: React.FC = () => {
   const theme = useTheme();
-  const [panelOpen, setPanelOpen] = useState(false);
+  const { panelOpen, setPanelOpen } = useNotificationPanel();
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
@@ -31,11 +32,18 @@ export const NotificationBell: React.FC = () => {
   } = useNotifications();
 
   const handleTogglePanel = () => {
-    setPanelOpen(prev => !prev);
+    setPanelOpen(!panelOpen);
   };
 
   const handleClosePanel = () => {
     setPanelOpen(false);
+  };
+
+  // Función helper para verificar si una notificación vence hoy
+  const isDueToday = (notification: Notification): boolean => {
+    const message = notification.message.toLowerCase();
+    return message.includes('hoy') && 
+           (notification.type === 'task' || notification.type === 'event');
   };
 
   const handleNotificationClick = (notification: Notification) => {
@@ -44,11 +52,17 @@ export const NotificationBell: React.FC = () => {
     setPanelOpen(false);
     
     // Si está archivada, eliminarla completamente
-    // Si no está archivada, archivarla (se marca como leída y archivada)
     if (notification.archived) {
       removeNotification(notification.id);
     } else {
-      archiveNotification(notification.id);
+      // Si la notificación vence hoy o es la alerta de inactividad, solo marcarla como leída (no archivar)
+      // para que permanezca visible
+      if (isDueToday(notification) || notification.id === 'inactivity-alert') {
+        markAsRead(notification.id);
+      } else {
+        // Para otras notificaciones, archivarlas normalmente
+        archiveNotification(notification.id);
+      }
     }
   };
 
@@ -66,30 +80,6 @@ export const NotificationBell: React.FC = () => {
 
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // Cerrar panel al hacer click fuera
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (
-        anchorRef.current &&
-        !anchorRef.current.contains(target) &&
-        panelRef.current &&
-        !panelRef.current.contains(target)
-      ) {
-        setPanelOpen(false);
-      }
-    };
-
-    if (panelOpen) {
-      // Pequeño delay para evitar que se cierre inmediatamente al abrir
-      setTimeout(() => {
-        document.addEventListener('mousedown', handleClickOutside);
-      }, 100);
-      return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
-      };
-    }
-  }, [panelOpen]);
 
   return (
     <>

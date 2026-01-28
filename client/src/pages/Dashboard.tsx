@@ -1315,7 +1315,7 @@ const Dashboard: React.FC = () => {
               ? taxiMonterricoColors.greenLight
               : taxiMonterricoColors.greenDark,
             overflow: 'hidden',
-            border: `1px solid rgba(26, 174, 122, 0.2)`,
+            border: `none`,
             cursor: canEditBudget ? 'pointer' : 'default',
             position: 'relative',
             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -1456,7 +1456,7 @@ const Dashboard: React.FC = () => {
             : `${theme.palette.secondary.main}15`,
           color: theme.palette.text.primary,
           overflow: 'hidden',
-          border: `1px solid rgba(129, 53, 230, 0.2)`,
+          border: `none`,
           position: 'relative',
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           '&::before': {
@@ -1558,7 +1558,7 @@ const Dashboard: React.FC = () => {
           color: theme.palette.text.primary,
           overflow: 'hidden',
           position: 'relative',
-          border: `1px solid rgba(235, 163, 22, 0.2)`,
+          border: `none`,
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           '&::before': {
             content: '""',
@@ -1659,7 +1659,7 @@ const Dashboard: React.FC = () => {
           color: theme.palette.text.primary,
           overflow: 'hidden',
           position: 'relative',
-          border: `1px solid rgba(239, 97, 65, 0.2)`,
+          border: `none`,
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           '&::before': {
             content: '""',
@@ -1805,7 +1805,7 @@ const Dashboard: React.FC = () => {
               ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
               : '0 4px 20px rgba(0, 0, 0, 0.08)',
             bgcolor: theme.palette.background.paper,
-            border: `1px solid ${theme.palette.divider}`,
+            border: `none`,
             minHeight: { xs: 400, sm: 480 },
             position: 'relative',
             overflow: 'hidden',
@@ -1938,7 +1938,7 @@ const Dashboard: React.FC = () => {
               ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
               : '0 4px 20px rgba(0, 0, 0, 0.08)',
             bgcolor: theme.palette.background.paper,
-            border: `1px solid ${theme.palette.divider}`,
+            border: `none`,
           alignSelf: 'start',
           minHeight: { xs: 395, sm: 440 },
           position: 'relative',
@@ -2150,7 +2150,7 @@ const Dashboard: React.FC = () => {
             ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
             : '0 4px 20px rgba(0, 0, 0, 0.08)',
           bgcolor: theme.palette.background.paper,
-          border: `1px solid ${theme.palette.divider}`,
+          border: `none`,
           position: 'relative',
           overflow: 'hidden',
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -2329,7 +2329,7 @@ const Dashboard: React.FC = () => {
               ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
               : '0 4px 20px rgba(0, 0, 0, 0.08)',
             bgcolor: theme.palette.background.paper,
-            border: `1px solid ${theme.palette.divider}`,
+            border: `none`,
             position: 'relative',
             overflow: 'hidden',
             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',

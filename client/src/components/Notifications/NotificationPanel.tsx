@@ -7,14 +7,13 @@ import {
   Divider,
   Button,
   useTheme,
-  Tabs,
-  Tab,
   IconButton,
   Tooltip,
 } from '@mui/material';
 import {
   CheckCircle,
   Settings,
+  Close,
 } from '@mui/icons-material';
 import { Notification } from '../../types/notification';
 import { NotificationItem } from './NotificationItem';
@@ -29,7 +28,7 @@ interface NotificationPanelProps {
   panelRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-type TabValue = 'all' | 'unread' | 'archived';
+type TabValue = 'all' | 'unread' | 'today';
 
 export const NotificationPanel: React.FC<NotificationPanelProps> = ({
   open,
@@ -46,20 +45,37 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
   const [showTopShadow, setShowTopShadow] = useState(false);
   const [showBottomShadow, setShowBottomShadow] = useState(false);
 
+  // Función helper para verificar si una notificación vence hoy
+  const isDueToday = (notification: Notification): boolean => {
+    // Verificar si el mensaje contiene "hoy" (case insensitive)
+    const message = notification.message.toLowerCase();
+    return message.includes('hoy') && 
+           (notification.type === 'task' || notification.type === 'event');
+  };
+
   // Contar notificaciones
   // En "All" solo contamos las no archivadas
   const allNotifications = notifications.filter(n => !n.archived);
   const totalCount = allNotifications.length;
   const unreadCount = notifications.filter(n => !n.read && !n.archived).length;
-  const archivedCount = notifications.filter(n => n.archived).length;
+  const todayCount = notifications.filter(n => !n.archived && isDueToday(n)).length;
 
   // Filtrar notificaciones según el tab activo
   const filteredNotifications = notifications.filter(notification => {
+    // La notificación de inactividad siempre se muestra (excepto si está archivada manualmente)
+    // PERO en el tab "unread" también debe respetar el estado de lectura
+    if (notification.id === 'inactivity-alert') {
+      if (activeTab === 'unread') {
+        return !notification.read && !notification.archived;
+      }
+      return !notification.archived;
+    }
+    
     if (activeTab === 'unread') {
       return !notification.read && !notification.archived;
     }
-    if (activeTab === 'archived') {
-      return notification.archived;
+    if (activeTab === 'today') {
+      return !notification.archived && isDueToday(notification);
     }
     // 'all' muestra todas excepto archivadas
     return !notification.archived;
@@ -165,52 +181,50 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
   if (!open) return null;
 
   return (
+    <>
     <Box
       ref={panelRef}
       component="div"
       sx={{
         position: 'fixed',
-        top: { xs: 60, sm: 72 },
-        right: { xs: 16, sm: 24 },
-        width: { xs: 'calc(100vw - 32px)', sm: 400 },
-        maxWidth: '90vw',
-        bgcolor: theme.palette.background.paper,
-        borderRadius: 2,
-        boxShadow: theme.palette.mode === 'dark'
-          ? '0 8px 32px rgba(0, 0, 0, 0.4)'
-          : '0 8px 32px rgba(0, 0, 0, 0.15)',
-        border: `1px solid ${theme.palette.divider}`,
+        top: 0,
+        right: 0,
+        width: { xs: '100vw', sm: 420 },
+        height: '100vh',
+        bgcolor: theme.palette.mode === 'dark'
+          ? '#1A2027'
+          : '#ffffff',
+        backdropFilter: theme.palette.mode === 'light' ? 'blur(10px)' : 'none',
+        WebkitBackdropFilter: theme.palette.mode === 'light' ? 'blur(10px)' : 'none',
+        borderLeft: `none`,
         overflow: 'hidden',
         zIndex: 1400,
-        maxHeight: expanded ? 'calc(100vh - 80px)' : 'calc(100vh - 120px)',
-        minHeight: expanded ? 'calc(100vh - 80px)' : '300px',
-        height: expanded ? 'calc(100vh - 80px)' : undefined,
         display: 'flex',
         flexDirection: 'column',
-        animation: 'slideDown 0.2s ease-out',
-        '@keyframes slideDown': {
+        boxShadow: theme.palette.mode === 'dark'
+          ? '-4px 0 24px rgba(0, 0, 0, 0.4)'
+          : '-4px 0 24px rgba(0, 0, 0, 0.1)',
+        animation: 'slideInRight 0.3s ease-out',
+        '@keyframes slideInRight': {
           '0%': {
             opacity: 0,
-            transform: 'translateY(-10px)',
+            transform: 'translateX(100%)',
           },
           '100%': {
             opacity: 1,
-            transform: 'translateY(0)',
+            transform: 'translateX(0)',
           },
         },
       }}
     >
         {/* Header */}
-        <Box
-          sx={{
-            borderBottom: `1px solid ${theme.palette.divider}`,
-          }}
-        >
+        <Box>
           {/* Título e iconos */}
           <Box
             sx={{
               p: 2,
-              pb: 1,
+              pt: 2,
+              pb: 2,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -219,9 +233,10 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
             <Typography
               variant="h6"
               sx={{
-                fontWeight: 700,
-                fontSize: '1rem',
+                fontWeight: 500,
+                fontSize: '1.2rem',
                 color: theme.palette.text.primary,
+                
               }}
             >
               Notificaciones
@@ -258,80 +273,244 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
                   <Settings fontSize="small" />
                 </IconButton>
               </Tooltip>
+              {onClose && (
+                <Tooltip title="Cerrar">
+                  <IconButton
+                    size="small"
+                    onClick={onClose}
+                    sx={{
+                      color: theme.palette.text.secondary,
+                      '&:hover': {
+                        bgcolor: theme.palette.action.hover,
+                      },
+                    }}
+                  >
+                    <Close fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
             </Box>
           </Box>
 
-          {/* Tabs */}
-          <Tabs
-            value={activeTab}
-            onChange={(_, newValue) => setActiveTab(newValue as TabValue)}
+          {/* Tabs personalizados */}
+          <Box
             sx={{
-              minHeight: 'auto',
-              borderBottom: `1px solid ${theme.palette.divider}`,
-              '& .MuiTabs-indicator': {
-                height: 2,
-                borderRadius: '2px 2px 0 0',
-              },
+              display: 'flex',
+              justifyContent: 'center',
+              gap: 1,
+              px: 1.5,
+              py: 1,
+              bgcolor: theme.palette.mode === 'dark'
+                ? '#222B36'
+                : 'rgba(0, 0, 0, 0.02)',
             }}
           >
-            <Tab
-              label={`Todas ${totalCount}`}
-              value="all"
+            {/* Tab Todas */}
+            <Button
+              onClick={() => setActiveTab('all')}
               sx={{
                 textTransform: 'none',
                 fontSize: '0.8125rem',
                 fontWeight: activeTab === 'all' ? 600 : 500,
-                minHeight: 40,
-                px: 1.5,
                 color: activeTab === 'all' 
                   ? theme.palette.text.primary 
                   : theme.palette.text.secondary,
                 bgcolor: activeTab === 'all'
                   ? theme.palette.mode === 'dark'
-                    ? 'rgba(255, 255, 255, 0.05)'
-                    : 'rgba(0, 0, 0, 0.03)'
+                    ? '#141a21'
+                    : '#ffffff'
                   : 'transparent',
+                borderRadius: '8px',
+                px: 1.5,
+                py: 0.5,
+                minWidth: 130,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                boxShadow: activeTab === 'all' 
+                  ? theme.palette.mode === 'dark'
+                    ? '0 1px 3px rgba(0, 0, 0, 0.2)'
+                    : '0 1px 3px rgba(0, 0, 0, 0.1)'
+                  : 'none',
+                '&:hover': {
+                  bgcolor: activeTab === 'all'
+                    ? theme.palette.mode === 'dark'
+                      ? '#141a21'
+                      : '#ffffff'
+                    : theme.palette.action.hover,
+                },
               }}
-            />
-            <Tab
-              label={`No leídas ${unreadCount}`}
-              value="unread"
+            >
+              <Typography
+                sx={{
+                  fontSize: '0.8125rem',
+                  fontWeight: activeTab === 'all' ? 600 : 500,
+                  color: activeTab === 'all' 
+                    ? theme.palette.text.primary 
+                    : theme.palette.text.secondary,
+                }}
+              >
+                Todas
+              </Typography>
+              <Box
+                sx={{
+                  bgcolor: activeTab === 'all'
+                    ? theme.palette.mode === 'dark'
+                      ? 'rgba(0, 0, 0, 0.7)'
+                      : 'rgba(0, 0, 0, 0.85)'
+                    : theme.palette.text.secondary,
+                  color: activeTab === 'all'
+                    ? '#ffffff'
+                    : '#ffffff',
+                  borderRadius: '4px',
+                  px: 0.75,
+                  py: 0.25,
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  minWidth: 20,
+                  textAlign: 'center',
+                }}
+              >
+                {totalCount}
+              </Box>
+            </Button>
+
+            {/* Tab No leídas */}
+            <Button
+              onClick={() => setActiveTab('unread')}
               sx={{
                 textTransform: 'none',
                 fontSize: '0.8125rem',
                 fontWeight: activeTab === 'unread' ? 600 : 500,
-                minHeight: 40,
-                px: 1.5,
                 color: activeTab === 'unread' 
                   ? theme.palette.text.primary 
                   : theme.palette.text.secondary,
                 bgcolor: activeTab === 'unread'
                   ? theme.palette.mode === 'dark'
-                    ? 'rgba(255, 255, 255, 0.05)'
-                    : 'rgba(0, 0, 0, 0.03)'
+                    ? '#141a21'
+                    : '#ffffff'
                   : 'transparent',
+                borderRadius: '8px',
+                px: 1.5,
+                py: 0.5,
+                minWidth: 130,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                boxShadow: activeTab === 'unread' 
+                  ? theme.palette.mode === 'dark'
+                    ? '0 1px 3px rgba(0, 0, 0, 0.2)'
+                    : '0 1px 3px rgba(0, 0, 0, 0.1)'
+                  : 'none',
+                '&:hover': {
+                  bgcolor: activeTab === 'unread'
+                    ? theme.palette.mode === 'dark'
+                      ? '#141a21'
+                      : '#ffffff'
+                    : theme.palette.action.hover,
+                },
               }}
-            />
-            <Tab
-              label={`Archivadas ${archivedCount}`}
-              value="archived"
+            >
+              <Typography
+                sx={{
+                  fontSize: '0.8125rem',
+                  fontWeight: activeTab === 'unread' ? 600 : 500,
+                  color: activeTab === 'unread' 
+                    ? '#4FACFE'
+                    : theme.palette.text.secondary,
+                }}
+              >
+                No leidas
+              </Typography>
+              <Box
+                sx={{
+                  bgcolor: activeTab === 'unread'
+                    ? 'rgba(79, 172, 254, 0.15)'
+                    : 'rgba(79, 172, 254, 0.15)',
+                  color: activeTab === 'unread'
+                    ? '#4FACFE'
+                    : '#4FACFE',
+                  borderRadius: '4px',
+                  px: 0.75,
+                  py: 0.25,
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  minWidth: 20,
+                  textAlign: 'center',
+                }}
+              >
+                {unreadCount}
+              </Box>
+            </Button>
+
+            {/* Tab Hoy */}
+            <Button
+              onClick={() => setActiveTab('today')}
               sx={{
                 textTransform: 'none',
                 fontSize: '0.8125rem',
-                fontWeight: activeTab === 'archived' ? 600 : 500,
-                minHeight: 40,
-                px: 1.5,
-                color: activeTab === 'archived' 
+                fontWeight: activeTab === 'today' ? 600 : 500,
+                color: activeTab === 'today' 
                   ? theme.palette.text.primary 
                   : theme.palette.text.secondary,
-                bgcolor: activeTab === 'archived'
+                bgcolor: activeTab === 'today'
                   ? theme.palette.mode === 'dark'
-                    ? 'rgba(255, 255, 255, 0.05)'
-                    : 'rgba(0, 0, 0, 0.03)'
+                    ? '#141a21'
+                    : '#ffffff'
                   : 'transparent',
+                borderRadius: '8px',
+                px: 1.5,
+                py: 0.5,
+                minWidth: 130,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 0.5,
+                boxShadow: activeTab === 'today' 
+                  ? theme.palette.mode === 'dark'
+                    ? '0 1px 3px rgba(0, 0, 0, 0.2)'
+                    : '0 1px 3px rgba(0, 0, 0, 0.1)'
+                  : 'none',
+                '&:hover': {
+                  bgcolor: activeTab === 'today'
+                    ? theme.palette.mode === 'dark'
+                      ? '#141a21'
+                      : '#ffffff'
+                    : theme.palette.action.hover,
+                },
               }}
-            />
-          </Tabs>
+            >
+              <Typography
+                sx={{
+                  fontSize: '0.8125rem',
+                  fontWeight: activeTab === 'today' ? 600 : 500,
+                  color: activeTab === 'today' 
+                    ? '#4CAF50'
+                    : theme.palette.text.secondary,
+                }}
+              >
+                Hoy
+              </Typography>
+              <Box
+                sx={{
+                  bgcolor: activeTab === 'today'
+                    ? 'rgba(76, 175, 80, 0.15)'
+                    : 'rgba(76, 175, 80, 0.15)',
+                  color: activeTab === 'today'
+                    ? '#4CAF50'
+                    : '#4CAF50',
+                  borderRadius: '4px',
+                  px: 0.75,
+                  py: 0.25,
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  minWidth: 20,
+                  textAlign: 'center',
+                }}
+              >
+                {todayCount}
+              </Box>
+            </Button>
+          </Box>
         </Box>
 
         {/* Lista de notificaciones con contenedor relativo para las sombras */}
@@ -424,8 +603,8 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
               <Typography variant="body2" sx={{ mb: 1 }}>
                 {activeTab === 'unread' 
                   ? 'No hay notificaciones no leídas'
-                  : activeTab === 'archived'
-                  ? 'No hay notificaciones archivadas'
+                  : activeTab === 'today'
+                  ? 'No hay tareas o reuniones que vencen hoy'
                   : 'No hay notificaciones próximas'}
               </Typography>
               <Typography variant="caption">
@@ -434,28 +613,58 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
             </Box>
           ) : (
             <>
-              {displayedNotifications.map((notification, index) => (
-                <React.Fragment key={notification.id}>
+              {/* Alerta de inactividad destacada */}
+              {filteredNotifications
+                .filter(n => n.id === 'inactivity-alert' && !n.archived)
+                .map(notification => (
                   <NotificationItem
-                    notification={notification}
-                    onClick={() => onNotificationClick(notification)}
-                  />
-                  {index < displayedNotifications.length - 1 && (
-                    <Divider 
-                      sx={{ 
-                        mx: 1.25,
-                        my: 0.25,
-                        borderColor: theme.palette.mode === 'dark'
-                          ? 'rgba(255, 255, 255, 0.15)'
-                          : 'rgba(0, 0, 0, 0.15)',
-                        borderWidth: '1px',
-                        opacity: 1,
-                        transition: 'border-color 0.2s ease',
-                      }} 
+                  key={notification.id}
+                  notification={notification}
+                  onClick={() => onNotificationClick(notification)}
+                />
+                ))}
+              
+              {/* Separador después de la alerta de inactividad si hay más notificaciones */}
+              {displayedNotifications.filter(n => n.id !== 'inactivity-alert').length > 0 && (
+                <Box
+                  sx={{
+                    my: 0,
+                    height: '1px',
+                    minHeight: '1px',
+                    borderBottom: `1px dashed ${
+                      theme.palette.mode === 'dark'
+                        ? 'rgba(255, 255, 255, 0.11)'
+                        : 'rgba(224, 214, 214, 0.61)'
+                    }`,
+                  }}
+                />
+              )}
+              
+              {/* Resto de notificaciones (excluyendo la alerta de inactividad que ya se mostró) */}
+              {displayedNotifications
+                .filter(n => n.id !== 'inactivity-alert')
+                .map((notification, index) => (
+                  <React.Fragment key={notification.id}>
+                    <NotificationItem
+                      notification={notification}
+                      onClick={() => onNotificationClick(notification)}
                     />
-                  )}
-                </React.Fragment>
-              ))}
+                    {index < displayedNotifications.filter(n => n.id !== 'inactivity-alert').length - 1 && (
+                      <Box
+                        sx={{
+                          my: 0,
+                          height: '1px',
+                          minHeight: '1px',
+                          borderBottom: `1px dashed ${
+                            theme.palette.mode === 'dark'
+                              ? 'rgba(255, 255, 255, 0.11)'
+                              : 'rgba(224, 214, 214, 0.61)'
+                          }`,
+                        }}
+                      />
+                    )}
+                  </React.Fragment>
+                ))}
             </>
           )}
           </Box>
@@ -556,5 +765,6 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
           </Box>
         )}
     </Box>
+    </>
   );
 };

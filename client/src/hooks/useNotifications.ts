@@ -10,6 +10,25 @@ export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Función helper para determinar el mensaje según la urgencia
+  const getUrgencyMessage = (dueDate: Date, now: Date, isMeeting: boolean = false): string => {
+    const date = new Date(dueDate);
+    date.setHours(0, 0, 0, 0);
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
+    
+    const diffTime = date.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      return isMeeting ? 'Reunión hoy' : 'Tarea vence hoy';
+    } else if (diffDays === 1) {
+      return isMeeting ? 'Reunión mañana' : 'Tarea vence mañana';
+    } else {
+      return isMeeting ? 'Reunión esta semana' : 'Tarea vence esta semana';
+    }
+  };
+
   // Cargar notificaciones desde el backend
   const fetchNotifications = useCallback(async () => {
     if (!user) {
@@ -172,6 +191,17 @@ export const useNotifications = () => {
         }
       }
 
+      // Obtener empresas inactivas
+      let inactiveCompaniesCount = 0;
+      try {
+        const inactivityResponse = await api.get('/companies/inactivity-stats');
+        inactiveCompaniesCount = inactivityResponse.data?.inactiveCount || 0;
+      } catch (error: any) {
+        if (error.response?.status !== 401) {
+          console.log('Error obteniendo empresas inactivas:', error.message);
+        }
+      }
+
       // Convertir a formato Notification
       const allNotifications: Notification[] = [
         ...upcomingTasks.map((task: any) => {
@@ -182,9 +212,7 @@ export const useNotifications = () => {
             id: `task-${task.id}`,
             type: notificationType,
             title: task.title,
-            message: isMeeting 
-              ? `Reunión el ${new Date(task.dueDate).toLocaleDateString('es-ES')}`
-              : `Tarea vence el ${new Date(task.dueDate).toLocaleDateString('es-ES')}`,
+            message: getUrgencyMessage(new Date(task.dueDate), now, isMeeting),
             read: false,
             archived: false,
             createdAt: task.createdAt || new Date().toISOString(),
@@ -198,16 +226,19 @@ export const useNotifications = () => {
             },
           };
         }),
-        ...upcomingEvents.map((event: any) => ({
-          id: `event-${event.id}`,
-          type: 'event' as const,
-          title: event.summary || 'Evento sin título',
-          message: `Evento el ${new Date(event.start?.dateTime || event.start?.date).toLocaleDateString('es-ES')}`,
-          read: false,
-          archived: false,
-          createdAt: event.created || new Date().toISOString(),
-          actionUrl: undefined,
-        })),
+        ...upcomingEvents.map((event: any) => {
+          const eventDate = new Date(event.start?.dateTime || event.start?.date);
+          return {
+            id: `event-${event.id}`,
+            type: 'event' as const,
+            title: event.summary || 'Evento sin título',
+            message: getUrgencyMessage(eventDate, now, true),
+            read: false,
+            archived: false,
+            createdAt: event.created || new Date().toISOString(),
+            actionUrl: undefined,
+          };
+        }),
         // Notificaciones de contactos recientes
         ...recentContacts.map((contact: any) => ({
           id: `contact-${contact.id}`,
@@ -291,6 +322,24 @@ export const useNotifications = () => {
         }),
       ];
 
+      // Notificación de empresas inactivas
+      if (inactiveCompaniesCount > 0) {
+        allNotifications.push({
+          id: 'inactivity-alert',
+          type: 'system' as const,
+          title: 'Empresas inactivas',
+          message: `${inactiveCompaniesCount} ${inactiveCompaniesCount === 1 ? 'empresa sin contacto' : 'empresas sin contacto'} en los últimos 5 días`,
+          read: false,
+          archived: false,
+          createdAt: new Date().toISOString(),
+          actionUrl: '/companies',
+          actionLabel: 'Ver empresas',
+          metadata: {
+            inactiveCount: inactiveCompaniesCount,
+          },
+        });
+      }
+
       // Ordenar por fecha
       allNotifications.sort((a, b) => {
         const dateA = new Date(a.createdAt).getTime();
@@ -306,6 +355,20 @@ export const useNotifications = () => {
           // Combinar con las nuevas notificaciones, manteniendo solo el estado guardado (read, archived)
           // pero preservando el tipo y mensaje actualizados de la nueva notificación
           const merged = allNotifications.map(notif => {
+            // Para la notificación de inactividad, mantener el contenido actualizado pero respetar el estado de lectura
+            if (notif.id === 'inactivity-alert') {
+              const savedNotif = saved.find((s: Notification) => s.id === 'inactivity-alert');
+              if (savedNotif) {
+                // Mantener el contenido actualizado (mensaje, fecha) pero preservar el estado de lectura
+                return { 
+                  ...notif, 
+                  read: savedNotif.read ?? notif.read,
+                  archived: false // Nunca archivada
+                };
+              }
+              return notif;
+            }
+            
             const savedNotif = saved.find((s: Notification) => s.id === notif.id);
             if (savedNotif) {
               // Preservar el tipo y mensaje de la nueva notificación (puede haber cambiado)
@@ -376,7 +439,14 @@ export const useNotifications = () => {
   // Guardar estado en localStorage cuando cambien las notificaciones
   useEffect(() => {
     if (notifications.length > 0) {
-      localStorage.setItem('notifications', JSON.stringify(notifications));
+      // Guardar notificaciones, pero asegurar que la de inactividad nunca esté archivada
+      const notificationsToSave = notifications.map(notif => {
+        if (notif.id === 'inactivity-alert') {
+          return { ...notif, archived: false };
+        }
+        return notif;
+      });
+      localStorage.setItem('notifications', JSON.stringify(notificationsToSave));
     }
   }, [notifications]);
 
@@ -403,6 +473,10 @@ export const useNotifications = () => {
 
   // Archivar notificación
   const archiveNotification = useCallback((id: string) => {
+    // La notificación de inactividad no se puede archivar
+    if (id === 'inactivity-alert') {
+      return;
+    }
     setNotifications((prev) =>
       prev.map((notif) =>
         notif.id === id ? { ...notif, archived: true, read: true } : notif
