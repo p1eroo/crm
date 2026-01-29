@@ -347,7 +347,7 @@ const TaskDetail: React.FC = () => {
     title: "",
     description: "",
     type: "todo",
-    status: "not started",
+    status: "pending",
     priority: "medium",
     dueDate: "",
     assignedToId: "",
@@ -367,7 +367,7 @@ const TaskDetail: React.FC = () => {
           title: response.data.title || "",
           description: response.data.description || "",
           type: response.data.type || "todo",
-          status: response.data.status || "not started",
+          status: response.data.status || "pending",
           priority: response.data.priority || "medium",
           dueDate: response.data.dueDate
             ? response.data.dueDate.split("T")[0]
@@ -432,7 +432,7 @@ const TaskDetail: React.FC = () => {
             title: activity.subject || activity.description || "",
             description: activity.description || "",
             type: activity.type || "task",
-            status: "not started",
+            status: "pending",
             priority: "medium",
             dueDate: activity.dueDate,
             createdAt: activity.createdAt,
@@ -449,7 +449,7 @@ const TaskDetail: React.FC = () => {
             title: activity.subject || activity.description || "",
             description: activity.description || "",
             type: activity.type || "task",
-            status: "not started",
+            status: "pending",
             priority: "medium",
             dueDate: activity.dueDate ? activity.dueDate.split("T")[0] : "",
             assignedToId: activity.assignedToId
@@ -1127,7 +1127,7 @@ const TaskDetail: React.FC = () => {
 
   const getStatusLabel = (status: string) => {
     const statusMap: { [key: string]: string } = {
-      "not started": "No Iniciada",
+      "pending": "Pendiente",
       "in progress": "En Progreso",
       completed: "Completada",
       cancelled: "Cancelada",
@@ -1698,7 +1698,7 @@ const TaskDetail: React.FC = () => {
         title: newTaskData.title,
         description: newTaskData.description,
         type: "todo",
-        status: "not started",
+        status: "pending",
         priority: newTaskData.priority,
         dueDate: newTaskData.dueDate || undefined,
         dealId: task?.dealId,
@@ -3831,7 +3831,6 @@ const TaskDetail: React.FC = () => {
               }
               fullWidth
             >
-              <MenuItem value="not started">No Iniciada</MenuItem>
               <MenuItem value="in progress">En Progreso</MenuItem>
               <MenuItem value="completed">Completada</MenuItem>
               <MenuItem value="cancelled">Cancelada</MenuItem>

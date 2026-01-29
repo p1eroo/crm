@@ -183,10 +183,9 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
           </Typography>
           <Box sx={{ display: 'flex', gap: 0.75 }}>
             <IconButton 
-              size="small" 
               sx={{ 
-                width: 28, 
-                height: 28,
+                width: 40, 
+                height: 40,
                 borderRadius: '8px',
                 transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
@@ -202,17 +201,16 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
               <HugeiconsIcon 
                 icon={isFullscreen ? Minimize01Icon : Maximize01Icon} 
                 style={{ 
-                  width: 16, 
-                  height: 16, 
+                  width: 20, 
+                  height: 20, 
                   color: theme.palette.text.secondary 
                 }} 
               />
             </IconButton>
             <IconButton 
-              size="small" 
               sx={{ 
-                width: 28, 
-                height: 28,
+                width: 40, 
+                height: 40,
                 borderRadius: '8px',
                 transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
@@ -224,14 +222,13 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
                 },
               }}
             >
-              <Refresh sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
+              <Refresh sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
             </IconButton>
             <IconButton 
               onClick={onClose} 
-              size="small"
               sx={{
-                width: 28,
-                height: 28,
+                width: 40,
+                height: 40,
                 borderRadius: '8px',
                 transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
                 '&:hover': {
@@ -246,7 +243,7 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
                 },
               }}
             >
-              <Close sx={{ fontSize: 16 }} />
+              <Close sx={{ fontSize: 20 }} />
             </IconButton>
           </Box>
         </Box>

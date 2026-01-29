@@ -463,16 +463,28 @@ const Companies: React.FC = () => {
     }
     setSavingActivity(true);
     try {
-      await api.post('/tasks', {
-        title: taskData.title,
-        description: taskData.description,
-        type: taskData.type || 'todo',
-        status: 'not started',
-        priority: taskData.priority || 'medium',
-        dueDate: taskData.dueDate || undefined,
-        companyId: activityCompanyId,
-      });
-      setSuccessMessage((taskData.type === 'meeting' ? 'Reunión' : 'Tarea') + ' creada exitosamente');
+      // Si es una reunión, guardar en /activities
+      if (taskData.type === 'meeting') {
+        await api.post('/activities', {
+          type: 'meeting',
+          subject: taskData.title,
+          description: taskData.description,
+          companyId: activityCompanyId,
+        });
+        setSuccessMessage('Reunión creada exitosamente');
+      } else {
+        // Si es una tarea (todo), guardar en /tasks
+        await api.post('/tasks', {
+          title: taskData.title,
+          description: taskData.description,
+          type: 'todo',
+          status: 'pending',
+          priority: taskData.priority || 'medium',
+          dueDate: taskData.dueDate || undefined,
+          companyId: activityCompanyId,
+        });
+        setSuccessMessage('Tarea creada exitosamente');
+      }
       setTaskOpen(false);
       setTaskData({ title: '', description: '', priority: 'medium', dueDate: '', type: 'todo' });
       setActivityCompanyId(null);
@@ -2055,17 +2067,6 @@ const Companies: React.FC = () => {
                 px: { xs: 1.5, md: 2 },
                 py: { xs: 1.25, md: 1.5 },
                 borderBottom: `2px solid ${theme.palette.divider}`,
-                position: 'relative',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: '3px',
-                  background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
-                  opacity: 0.3,
-                },
               }}
             >
             <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.25, md: 0.5 } }}>

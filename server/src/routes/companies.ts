@@ -604,6 +604,117 @@ router.get('/inactivity-stats', async (req: AuthRequest, res) => {
   }
 });
 
+// Obtener lista de empresas inactivas con paginación
+router.get('/inactive', async (req: AuthRequest, res) => {
+  try {
+    if (!req.userId) {
+      return res.status(401).json({ error: 'Usuario no autenticado' });
+    }
+
+    const { page = 1, limit: limitParam = 20 } = req.query;
+    const limit = Number(limitParam) < 1 ? 20 : Number(limitParam);
+    const pageNum = Number(page) < 1 ? 1 : Number(page);
+    const offset = (pageNum - 1) * limit;
+
+    // Aplicar filtro RBAC
+    const roleFilter = getRoleBasedDataFilter(req.userRole, req.userId);
+    
+    // Calcular fecha límite (hace 5 días)
+    const fiveDaysAgo = new Date();
+    fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+    fiveDaysAgo.setHours(0, 0, 0, 0);
+
+    // Obtener todas las empresas según permisos
+    const allCompanies = await Company.findAll({
+      where: roleFilter,
+      attributes: ['id'],
+    });
+
+    const companyIds = allCompanies.map(c => c.id);
+
+    if (companyIds.length === 0) {
+      return res.json({ 
+        companies: [],
+        total: 0,
+        page: pageNum,
+        limit,
+        totalPages: 0
+      });
+    }
+
+    // Obtener empresas que SÍ han tenido contacto en los últimos 5 días
+    const recentTasks = await Task.findAll({
+      where: {
+        companyId: { [Op.in]: companyIds },
+        createdAt: { [Op.gte]: fiveDaysAgo },
+      },
+      attributes: ['companyId'],
+    });
+
+    const recentEmails = await Activity.findAll({
+      where: {
+        companyId: { [Op.in]: companyIds },
+        type: 'email',
+        createdAt: { [Op.gte]: fiveDaysAgo },
+      },
+      attributes: ['companyId'],
+    });
+
+    // Empresas que han tenido contacto (obtener IDs únicos)
+    const companiesWithContact = new Set([
+      ...recentTasks.map((t: any) => {
+        const taskData = t.toJSON ? t.toJSON() : t;
+        return taskData.companyId;
+      }).filter((id: any): id is number => id != null),
+      ...recentEmails.map((a: any) => {
+        const activityData = a.toJSON ? a.toJSON() : a;
+        return activityData.companyId;
+      }).filter((id: any): id is number => id != null),
+    ]);
+
+    // IDs de empresas sin contacto
+    const inactiveCompanyIds = companyIds.filter(id => !companiesWithContact.has(id));
+
+    if (inactiveCompanyIds.length === 0) {
+      return res.json({ 
+        companies: [],
+        total: 0,
+        page: pageNum,
+        limit,
+        totalPages: 0
+      });
+    }
+
+    // Obtener las empresas inactivas con paginación
+    const { count, rows } = await Company.findAndCountAll({
+      where: {
+        id: { [Op.in]: inactiveCompanyIds },
+        ...roleFilter,
+      },
+      include: [
+        { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName'] },
+      ],
+      limit,
+      offset,
+      order: [['name', 'ASC']],
+    });
+
+    // Transformar empresas para la respuesta
+    const companies = rows.map(company => transformCompanyForList(company));
+
+    res.json({
+      companies,
+      total: count,
+      page: pageNum,
+      limit,
+      totalPages: Math.ceil(count / limit),
+    });
+  } catch (error: any) {
+    console.error('Error obteniendo empresas inactivas:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Obtener una empresa por ID
 router.get('/:id', async (req, res) => {
   try {

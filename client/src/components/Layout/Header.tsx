@@ -671,23 +671,51 @@ const Header: React.FC = () => {
         onClose={handleClose}
         PaperProps={{
           sx: {
-            bgcolor: theme.palette.background.paper,
+            bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : theme.palette.background.paper,
             color: theme.palette.text.primary,
             mt: 1,
             minWidth: 200,
             borderRadius: 1,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            border: `1px solid ${theme.palette.divider}`,
-            '& .MuiMenuItem-root': {
-              color: theme.palette.text.primary,
-              '&:hover': {
-                bgcolor: theme.palette.action.hover,
-              },
-            },
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 8px 32px rgba(0, 0, 0, 0.6)' 
+              : '0 4px 12px rgba(0,0,0,0.15)',
+            border: 'none',
+            margin: 0,
+            
+          },
+          
+        }}
+        MenuListProps={{
+          sx: {
+            padding: '0 !important',
+            paddingTop: '0 !important',
+            paddingBottom: '0 !important',
+            bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : 'transparent',
+            border: 'none',
+            borderTop: 'none',
+            borderBottom: 'none',
           },
         }}
+        
       >
-        <Box sx={{ px: 2.5, pt: 2.5, pb: 2 }}>
+        <Box sx={{ 
+          px: 2.5, 
+          pt: 2.5, 
+          pb: 2,
+          bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : 'transparent',
+          border: 'none',
+          borderTop: 'none',
+          borderBottom: 'none',
+          margin: 0,
+          '&::before': {
+            display: 'none',
+            content: '""',
+          },
+          '&::after': {
+            display: 'none',
+            content: '""',
+          },
+        }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <UserAvatar
               firstName={user?.firstName}
@@ -727,16 +755,19 @@ const Header: React.FC = () => {
             </Box>
           </Box>
         </Box>
-        <Divider />
+        {theme.palette.mode !== 'dark' && <Divider />}
         <MenuItem 
           onClick={handleProfileClick}
           sx={{
             py: 1.5,
             px: 3,
             gap: 1.5,
-            mt: 1,
+            mt: theme.palette.mode === 'dark' ? 0 : 1,
+            bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : 'transparent',
             '&:hover': {
-              bgcolor: theme.palette.action.hover,
+              bgcolor: theme.palette.mode === 'dark'
+                ? 'rgba(255, 255, 255, 0.04)'
+                : theme.palette.action.hover,
             },
           }}
         >
@@ -745,7 +776,7 @@ const Header: React.FC = () => {
             Editar perfil
           </Typography>
         </MenuItem>
-        <Divider />
+        {theme.palette.mode !== 'dark' && <Divider />}
         <MenuItem 
           onClick={() => {
             handleClose();
@@ -756,7 +787,13 @@ const Header: React.FC = () => {
             py: 1.5,
             px: 3,
             gap: 1.5,
+            bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : 'transparent',
             color: theme.palette.error.main,
+            margin: 0,
+            marginBottom: 0,
+            border: 'none',
+            borderTop: 'none',
+            borderBottom: 'none',
             '&:hover': {
               bgcolor: theme.palette.mode === 'dark' ? `${theme.palette.error.main}20` : `${theme.palette.error.main}10`,
             },
@@ -780,76 +817,106 @@ const Header: React.FC = () => {
         disableRestoreFocus={true}
         PaperProps={{
           sx: {
-            borderRadius: 2,
+            borderRadius: 5,
             mt: { xs: 8, sm: 0 },
+            bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : theme.palette.background.paper,
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 8px 32px rgba(0, 0, 0, 0.6)' 
+              : '0 8px 32px rgba(0, 0, 0, 0.15)',
+            border: 'none',
+            '&::before': {
+              display: 'none',
+            },
           },
         }}
       >
-        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1, pb: 1 }}>
+        <DialogTitle 
+          sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 1, 
+            pb: 1,
+            bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : 'transparent',
+            borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : theme.palette.divider}`,
+          }}
+        >
           <Search sx={{ color: taxiMonterricoColors.green }} />
           <Typography component="div" sx={{ fontWeight: 600, fontSize: '1.25rem' }}>
             Buscar
           </Typography>
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : 'transparent', }}>
           <Box sx={{ mt: 2 }}>
-            {availablePages.map((page) => (
-              <MenuItem
-                key={page.path}
-                onClick={() => {
-                  navigate(page.path);
-                  setSearchModalOpen(false);
-                }}
-                sx={{
-                  py: 1.5,
-                  px: 2,
-                  borderRadius: 1,
-                  mb: 0.5,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2,
-                  '&:hover': {
-                    bgcolor: theme.palette.action.hover,
-                  },
-                }}
-              >
-                <Box sx={{
-                  display: 'flex',
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  width: 40,
-                  height: 40,
-                  borderRadius: 1,
-                  bgcolor: theme.palette.mode === 'dark' 
-                    ? 'rgba(255, 255, 255, 0.05)' 
-                    : 'rgba(0, 0, 0, 0.02)',
-                  color: theme.palette.text.primary,
-                }}>
-                  {React.createElement(page.icon, {
-                    sx: { fontSize: 24 }
-                  })}
-                </Box>
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                    {page.title}
-                  </Typography>
-                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                    {page.path}
-                  </Typography>
-                </Box>
-                <Button
-                  size="small"
-                  variant="outlined"
+            {availablePages.map((page, index) => (
+              <React.Fragment key={page.path}>
+                <MenuItem
+                  onClick={() => {
+                    navigate(page.path);
+                    setSearchModalOpen(false);
+                  }}
                   sx={{
-                    textTransform: 'none',
-                    fontSize: '0.75rem',
-                    minWidth: 'auto',
-                    px: 1.5,
+                    py: 1.5,
+                    px: 2,
+                    borderRadius: 1,
+                    mb: 0.5,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    borderLeft: 'none',
+                    borderRight: 'none',
+                  '&:hover': {
+                    bgcolor: theme.palette.mode === 'dark'
+                      ? 'rgba(255, 255, 255, 0.04)'
+                      : theme.palette.action.hover,
+                    borderLeft: 'none',
+                    borderRight: 'none',
+                  },
                   }}
                 >
-                  Ir
-                </Button>
-              </MenuItem>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                      {page.title}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                      {page.path}
+                    </Typography>
+                  </Box>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    sx={{
+                      textTransform: 'none',
+                      fontSize: '0.75rem',
+                      minWidth: 'auto',
+                      px: 1.5,
+                      bgcolor: theme.palette.mode === 'dark' ? '#2D3740' : 'transparent',
+                      borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : undefined,
+                      color: theme.palette.mode === 'dark' ? '#ffffff' : undefined,
+                      '&:hover': {
+                        bgcolor: theme.palette.mode === 'dark' ? '#374151' : undefined,
+                        borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : undefined,
+                      },
+                    }}
+                  >
+                    Ir
+                  </Button>
+                </MenuItem>
+                {index < availablePages.length - 1 && (
+                  <Box
+                    sx={{
+                      mx: 0,
+                      height: '1px',
+                      minHeight: '1px',
+                      borderBottom: `1px dashed ${
+                        theme.palette.mode === 'dark'
+                          ? 'rgba(255, 255, 255, 0.15)'
+                          : 'rgba(0, 0, 0, 0.2)'
+                      }`,
+                      mb: 0.5,
+                    }}
+                  />
+                )}
+              </React.Fragment>
             ))}
           </Box>
         </DialogContent>

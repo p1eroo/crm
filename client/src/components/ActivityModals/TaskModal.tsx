@@ -479,17 +479,44 @@ const TaskModal: React.FC<TaskModalProps> = ({
     }
     setSaving(true);
     try {
-      const response = await api.post("/tasks", {
-        title: taskData.title,
-        description: taskData.description,
-        type: taskData.type || "todo",
-        status: "not started",
-        priority: taskData.priority || "medium",
-        dueDate: taskData.dueDate || undefined,
-        [`${entityType}Id`]: Number(entityId),
-      });
-      const newTask = response.data;
-      onSave(newTask);
+      // Si es una reunión, guardar en /activities
+      if (taskData.type === 'meeting') {
+        const response = await api.post("/activities", {
+          type: "meeting",
+          subject: taskData.title,
+          description: taskData.description,
+          [`${entityType}Id`]: Number(entityId),
+        });
+        const newActivity = response.data;
+        // Convertir a formato compatible con onSave para la UI de donde se llama
+        const taskAsActivity = {
+          id: newActivity.id,
+          type: "meeting",
+          title: newActivity.subject,
+          description: newActivity.description,
+          dueDate: taskData.dueDate || undefined,
+          createdAt: newActivity.createdAt,
+          CreatedBy: newActivity.User,
+          AssignedTo: newActivity.User,
+          companyId: newActivity.companyId,
+          contactId: newActivity.contactId,
+          dealId: newActivity.dealId,
+        };
+        onSave(taskAsActivity);
+      } else {
+        // Si es una tarea (todo), guardar en /tasks
+        const response = await api.post("/tasks", {
+          title: taskData.title,
+          description: taskData.description,
+          type: 'todo',
+          status: "pending",
+          priority: taskData.priority || "medium",
+          dueDate: taskData.dueDate || undefined,
+          [`${entityType}Id`]: Number(entityId),
+        });
+        const newTask = response.data;
+        onSave(newTask);
+      }
       onClose();
     } catch (error) {
       console.error("Error saving task:", error);

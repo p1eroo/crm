@@ -49,7 +49,7 @@ export const NotificationBell: React.FC = () => {
   const handleNotificationClick = (notification: Notification) => {
     setSelectedNotification(notification);
     setDetailOpen(true);
-    setPanelOpen(false);
+    // No cerrar el panel principal, mantenerlo abierto
     
     // Si está archivada, eliminarla completamente
     if (notification.archived) {
@@ -69,6 +69,8 @@ export const NotificationBell: React.FC = () => {
   const handleCloseDetail = () => {
     setDetailOpen(false);
     setSelectedNotification(null);
+    // Mantener el panel principal abierto
+    setPanelOpen(true);
   };
 
   const handleMarkAsRead = (id: string) => {

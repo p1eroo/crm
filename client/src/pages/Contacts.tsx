@@ -1468,17 +1468,6 @@ const Contacts: React.FC = () => {
               px: { xs: 1.5, md: 2 },
               py: { xs: 1.25, md: 1.5 },
               borderBottom: `2px solid ${theme.palette.divider}`,
-              position: 'relative',
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: '3px',
-                background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
-                opacity: 0.3,
-              },
             }}
           >
             <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>

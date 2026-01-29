@@ -1161,6 +1161,11 @@ const Dashboard: React.FC = () => {
                 maxWidth: 400,
                 p: 2,
                 mt: 1,
+                bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : theme.palette.background.paper,
+                border: theme.palette.mode === 'dark' ? 'none' : `1px solid ${theme.palette.divider}`,
+                boxShadow: theme.palette.mode === 'dark' 
+                  ? '0 8px 32px rgba(0, 0, 0, 0.4)' 
+                  : '0 8px 32px rgba(0, 0, 0, 0.12)',
               }
             }}
           >
@@ -1175,13 +1180,23 @@ const Dashboard: React.FC = () => {
                 }}
                 disabled={parseInt(selectedYear) <= 2025}
                 sx={{
-                  bgcolor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.divider}`,
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(255, 255, 255, 0.05)' 
+                    : theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : theme.palette.divider}`,
+                  color: theme.palette.text.secondary,
                   '&:hover': {
-                    bgcolor: theme.palette.action.hover,
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.08)' 
+                      : theme.palette.action.hover,
+                    borderColor: theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.15)' 
+                      : theme.palette.divider,
+                    color: theme.palette.text.primary,
                   },
                   '&:disabled': {
-                    opacity: 0.5,
+                    opacity: 0.3,
+                    color: theme.palette.text.disabled,
                   },
                 }}
               >
@@ -1197,6 +1212,7 @@ const Dashboard: React.FC = () => {
                   fontWeight: 800, 
                   fontSize: '1.25rem',
                   cursor: 'pointer',
+                  color: theme.palette.text.primary,
                   '&:hover': {
                     color: taxiMonterricoColors.green,
                   },
@@ -1214,13 +1230,23 @@ const Dashboard: React.FC = () => {
                 }}
                 disabled={parseInt(selectedYear) >= currentYear}
                 sx={{
-                  bgcolor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.divider}`,
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(255, 255, 255, 0.05)' 
+                    : theme.palette.background.paper,
+                  border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : theme.palette.divider}`,
+                  color: theme.palette.text.secondary,
                   '&:hover': {
-                    bgcolor: theme.palette.action.hover,
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.08)' 
+                      : theme.palette.action.hover,
+                    borderColor: theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.15)' 
+                      : theme.palette.divider,
+                    color: theme.palette.text.primary,
                   },
                   '&:disabled': {
-                    opacity: 0.5,
+                    opacity: 0.3,
+                    color: theme.palette.text.disabled,
                   },
                 }}
               >
@@ -1254,17 +1280,32 @@ const Dashboard: React.FC = () => {
                       minHeight: 48,
                       textTransform: 'none',
                       fontSize: '0.875rem',
-                      bgcolor: isSelected ? taxiMonterricoColors.green : 'transparent',
-                      color: isSelected ? 'white' : theme.palette.text.primary,
-                      borderColor: isCurrentMonth && !isSelected 
+                      bgcolor: isSelected 
                         ? taxiMonterricoColors.green 
-                        : theme.palette.divider,
+                        : theme.palette.mode === 'dark' 
+                          ? 'rgba(255, 255, 255, 0.03)' 
+                          : 'transparent',
+                      color: isSelected 
+                        ? 'white' 
+                        : theme.palette.text.primary,
+                      borderColor: isCurrentMonth && !isSelected 
+                        ? (theme.palette.mode === 'dark' 
+                            ? 'rgba(46, 125, 50, 0.5)' 
+                            : taxiMonterricoColors.green)
+                        : (theme.palette.mode === 'dark' 
+                            ? 'rgba(255, 255, 255, 0.1)' 
+                            : theme.palette.divider),
+                      borderWidth: isCurrentMonth && !isSelected ? 2 : 1,
                       fontWeight: isCurrentMonth ? 800 : 700,
                       '&:hover': {
                         bgcolor: isSelected 
                           ? taxiMonterricoColors.greenDark 
-                          : `${taxiMonterricoColors.green}0A`,
-                        borderColor: taxiMonterricoColors.green,
+                          : theme.palette.mode === 'dark'
+                            ? 'rgba(46, 125, 50, 0.15)'
+                            : `${taxiMonterricoColors.green}0A`,
+                        borderColor: theme.palette.mode === 'dark'
+                          ? 'rgba(46, 125, 50, 0.6)'
+                          : taxiMonterricoColors.green,
                       },
                     }}
                   >
@@ -2527,8 +2568,20 @@ const Dashboard: React.FC = () => {
         fullWidth
         PaperProps={{
           sx: {
-          borderRadius: 2, 
-          bgcolor: theme.palette.background.paper,
+            borderRadius: 4,
+            bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : theme.palette.background.paper,
+            boxShadow: theme.palette.mode === 'dark'
+              ? '0 8px 32px rgba(0, 0, 0, 0.6)'
+              : '0 4px 12px rgba(0,0,0,0.15)',
+            border: 'none',
+            '&::before': {
+              display: 'none',
+              content: '""',
+            },
+            '&::after': {
+              display: 'none',
+              content: '""',
+            },
           },
         }}
       >
@@ -2537,8 +2590,12 @@ const Dashboard: React.FC = () => {
           justifyContent: 'space-between', 
           alignItems: 'center',
           pb: 1,
+          bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : 'transparent',
+          borderBottom: theme.palette.mode === 'dark' 
+            ? `1px solid rgba(255, 255, 255, 0.08)` 
+            : `1px solid ${theme.palette.divider}`,
         }}>
-          <Typography component="div" sx={{ fontWeight: 800, fontSize: '1.25rem' }}>
+          <Typography component="div" sx={{ fontWeight: 800, fontSize: '1.25rem', color: theme.palette.text.primary }}>
             Editar Presupuesto {editingBudgetMonth !== null 
               ? monthNames[editingBudgetMonth]?.label.substring(0, 3) + '.' 
               : currentMonthAbbr}
@@ -2547,11 +2604,22 @@ const Dashboard: React.FC = () => {
             onClick={() => setBudgetModalOpen(false)}
             disabled={savingBudget}
             size="small"
+            sx={{
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                bgcolor: theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.08)' 
+                  : theme.palette.action.hover,
+              },
+            }}
           >
             <Close />
           </IconButton>
         </DialogTitle>
-        <DialogContent>
+        <DialogContent sx={{ 
+          bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : 'transparent',
+          pt: 3,
+        }}>
           <TextField
             autoFocus
             margin="dense"
@@ -2565,8 +2633,36 @@ const Dashboard: React.FC = () => {
             InputProps={{
               startAdornment: <Typography sx={{ mr: 1, color: theme.palette.text.secondary, fontWeight: 800 }}>S/</Typography>,
             }}
-              sx={{ 
+            sx={{ 
               mt: 2,
+              '& .MuiOutlinedInput-root': {
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : theme.palette.background.paper,
+                '& fieldset': {
+                  borderColor: theme.palette.mode === 'dark' 
+                    ? 'rgba(255, 255, 255, 0.12)' 
+                    : theme.palette.divider,
+                },
+                '&:hover fieldset': {
+                  borderColor: theme.palette.mode === 'dark' 
+                    ? 'rgba(255, 255, 255, 0.2)' 
+                    : theme.palette.primary.main,
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: taxiMonterricoColors.green,
+                  borderWidth: 2,
+                },
+              },
+              '& .MuiInputLabel-root': {
+                color: theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.7)' 
+                  : theme.palette.text.secondary,
+                '&.Mui-focused': {
+                  color: taxiMonterricoColors.green,
+                },
+              },
+              '& .MuiInputBase-input': {
+                color: theme.palette.text.primary,
+              },
               '& input[type=number]': {
                 MozAppearance: 'textfield',
               },
@@ -2581,11 +2677,25 @@ const Dashboard: React.FC = () => {
             }}
           />
         </DialogContent>
-        <DialogActions sx={{ p: 2, pt: 1 }}>
+        <DialogActions sx={{ 
+          p: 2, 
+          pt: 1,
+          bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : 'transparent',
+          borderTop: theme.palette.mode === 'dark' 
+            ? `1px solid rgba(255, 255, 255, 0.08)` 
+            : `1px solid ${theme.palette.divider}`,
+        }}>
           <Button
             onClick={() => setBudgetModalOpen(false)}
             disabled={savingBudget}
-            sx={{ color: theme.palette.text.secondary }}
+            sx={{ 
+              color: theme.palette.text.secondary,
+              '&:hover': {
+                bgcolor: theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.08)' 
+                  : theme.palette.action.hover,
+              },
+            }}
           >
             Cancelar
           </Button>
@@ -2596,6 +2706,14 @@ const Dashboard: React.FC = () => {
             sx={{
               bgcolor: taxiMonterricoColors.green,
               '&:hover': { bgcolor: taxiMonterricoColors.greenDark },
+              '&:disabled': {
+                bgcolor: theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.12)' 
+                  : 'rgba(0, 0, 0, 0.12)',
+                color: theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.3)' 
+                  : 'rgba(0, 0, 0, 0.26)',
+              },
             }}
           >
             {savingBudget ? 'Guardando...' : 'Guardar'}

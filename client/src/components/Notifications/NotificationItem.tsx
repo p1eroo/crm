@@ -23,7 +23,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
   onClick,
 }) => {
   const theme = useTheme();
-  const iconColor = getNotificationColor(notification.type);
+  const iconColor = getNotificationColor(notification.type, notification.id);
   const isUnread = !notification.read;
 
   return (
@@ -62,7 +62,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
           
         }}
       >
-        {getNotificationIcon(notification.type)}
+        {getNotificationIcon(notification.type, notification.id)}
       </Avatar>
 
       {/* Contenido */}
@@ -88,7 +88,7 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
                 borderRadius: '50%',
                 bgcolor: '#2196F3',
                 flexShrink: 0,
-                mt: 0.25,
+                
                 ml: 0.75,
               }}
             />
@@ -102,7 +102,8 @@ export const NotificationItem: React.FC<NotificationItemProps> = ({
             WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
-            mb: 0.75,
+            mb: 1,
+            mt: 1,
             fontSize: '0.75rem',
             px: 0.8,
             lineHeight: 1.3,

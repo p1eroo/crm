@@ -13,10 +13,22 @@ import {
   CheckCircle,
   Business,
 } from '@mui/icons-material';
+import { RiAlarmWarningFill } from 'react-icons/ri';
 import { Notification } from '../../types/notification';
 import { taxiMonterricoColors } from '../../theme/colors';
 
-export const getNotificationIcon = (type: Notification['type']) => {
+// Componente wrapper para el ícono de alarma
+const AlarmIcon = () => {
+  // Usar React.createElement para evitar problemas de tipos con React 19
+  return React.createElement(RiAlarmWarningFill as any);
+};
+
+export const getNotificationIcon = (type: Notification['type'], notificationId?: string) => {
+  // Si es la notificación de inactividad, usar el ícono de alarma
+  if (notificationId === 'inactivity-alert') {
+    return <AlarmIcon />;
+  }
+
   switch (type) {
     case 'task':
       return <Assignment />;
@@ -41,7 +53,12 @@ export const getNotificationIcon = (type: Notification['type']) => {
   }
 };
 
-export const getNotificationColor = (type: Notification['type']): string => {
+export const getNotificationColor = (type: Notification['type'], notificationId?: string): string => {
+  // Si es la notificación de inactividad, usar color de advertencia (naranja)
+  if (notificationId === 'inactivity-alert') {
+    return '#FF9800'; // Naranja de advertencia
+  }
+
   switch (type) {
     case 'task':
       return taxiMonterricoColors.green;

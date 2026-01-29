@@ -328,7 +328,7 @@ export const useNotifications = () => {
           id: 'inactivity-alert',
           type: 'system' as const,
           title: 'Empresas inactivas',
-          message: `${inactiveCompaniesCount} ${inactiveCompaniesCount === 1 ? 'empresa sin contacto' : 'empresas sin contacto'} en los últimos 5 días`,
+          message: `Hoy tienes ${inactiveCompaniesCount} ${inactiveCompaniesCount === 1 ? 'empresa inactiva' : 'empresas inactivas'}`,
           read: false,
           archived: false,
           createdAt: new Date().toISOString(),

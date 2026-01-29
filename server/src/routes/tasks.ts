@@ -170,8 +170,8 @@ router.get('/', async (req: AuthRequest, res) => {
     const tasks = await Task.findAndCountAll({
       where,
       include: [
-        { model: User, as: 'AssignedTo', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
-        { model: User, as: 'CreatedBy', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
+        { model: User, as: 'AssignedTo', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'], required: false },
+        { model: User, as: 'CreatedBy', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'], required: false },
         { model: Contact, as: 'Contact', attributes: ['id', 'firstName', 'lastName'], required: false },
         { model: Company, as: 'Company', attributes: ['id', 'name'], required: false },
         { model: Deal, as: 'Deal', attributes: ['id', 'name'], required: false },
@@ -258,17 +258,29 @@ router.get('/:id', async (req, res) => {
 // Crear tarea
 router.post('/', async (req: AuthRequest, res) => {
   try {
+    // Validar que solo se permitan tareas de tipo 'todo'
+    if (req.body.type && req.body.type !== 'todo') {
+      return res.status(400).json({ 
+        error: 'Solo se permiten tareas de tipo "todo". Para crear reuniones, emails o notas, usa el endpoint /activities' 
+      });
+    }
+    
+    // Si no se proporciona startDate, establecerlo con la fecha actual
+    const startDate = req.body.startDate || new Date().toISOString().split('T')[0];
+    
     const taskData = {
       ...req.body,
+      type: 'todo', // Forzar tipo 'todo'
       createdById: req.userId,
       assignedToId: req.body.assignedToId || req.userId,
+      startDate: startDate,
     };
 
     const task = await Task.create(taskData);
     const newTask = await Task.findByPk(task.id, {
       include: [
-        { model: User, as: 'AssignedTo', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
-        { model: User, as: 'CreatedBy', attributes: ['id', 'firstName', 'lastName', 'email'] },
+        { model: User, as: 'AssignedTo', attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatar'] },
+        { model: User, as: 'CreatedBy', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'] },
         { model: Contact, as: 'Contact' },
         { model: Company, as: 'Company' },
         { model: Deal, as: 'Deal' },
@@ -278,15 +290,8 @@ router.post('/', async (req: AuthRequest, res) => {
     // Intentar crear en Google Calendar si la tarea tiene fecha límite
     if (newTask && newTask.dueDate) {
       try {
-        let calendarId: string | null = null;
-        
-        // Si es una reunión, crear evento en Google Calendar
-        if (newTask.type === 'meeting') {
-          calendarId = await createMeetingEvent(newTask, newTask.AssignedTo);
-        } else {
-          // Para otros tipos, crear tarea en Google Tasks
-          calendarId = await createTaskEvent(newTask, newTask.AssignedTo);
-        }
+        // Crear tarea en Google Tasks (ya que solo permitimos tipo 'todo')
+        const calendarId = await createTaskEvent(newTask, newTask.AssignedTo);
         
         if (calendarId) {
           // Actualizar la tarea con el ID del evento/tarea de Google Calendar
@@ -353,6 +358,13 @@ router.put('/:id', async (req: AuthRequest, res) => {
       return res.status(403).json({ error: 'No tienes permisos para modificar esta tarea' });
     }
 
+    // Validar que no se pueda cambiar el tipo a algo diferente de 'todo'
+    if (req.body.type && req.body.type !== 'todo') {
+      return res.status(400).json({ 
+        error: 'Solo se permiten tareas de tipo "todo". Para crear reuniones, emails o notas, usa el endpoint /activities' 
+      });
+    }
+
     const hadEventId = !!task.googleCalendarEventId;
     const hadDueDate = !!task.dueDate;
     const willHaveDueDate = !!req.body.dueDate;
@@ -372,20 +384,11 @@ router.put('/:id', async (req: AuthRequest, res) => {
     if (task.dueDate) {
       try {
         if (task.googleCalendarEventId) {
-          // Si es una reunión, actualizar evento (por ahora solo actualizamos tareas)
-          // Las reuniones como eventos necesitarían una función updateMeetingEvent
-          if (task.type !== 'meeting') {
-            await updateTaskEvent(task, task.googleCalendarEventId);
-          }
+          // Actualizar tarea en Google Tasks
+          await updateTaskEvent(task, task.googleCalendarEventId);
         } else {
-          // Crear nuevo evento/tarea si no existía
-          let calendarId: string | null = null;
-          
-          if (task.type === 'meeting') {
-            calendarId = await createMeetingEvent(task, task.AssignedTo);
-          } else {
-            calendarId = await createTaskEvent(task, task.AssignedTo);
-          }
+          // Crear nueva tarea en Google Tasks si no existía
+          const calendarId = await createTaskEvent(task, task.AssignedTo);
           
           if (calendarId) {
             await task.update({ googleCalendarEventId: calendarId });
@@ -396,15 +399,10 @@ router.put('/:id', async (req: AuthRequest, res) => {
         console.error('Error actualizando en Google Calendar:', calendarError.message);
       }
     } else if (hadDueDate && !willHaveDueDate && task.googleCalendarEventId) {
-      // Si se eliminó la fecha límite y había un evento/tarea, eliminarlo
+      // Si se eliminó la fecha límite y había una tarea, eliminarla
       try {
         const userId = task.assignedToId || task.createdById;
-        // Si es una reunión, eliminar evento de Google Calendar, sino eliminar tarea de Google Tasks
-        if (task.type === 'meeting') {
-          await deleteCalendarEvent(userId, task.googleCalendarEventId);
-        } else {
-          await deleteTaskEvent(userId, task.googleCalendarEventId);
-        }
+        await deleteTaskEvent(userId, task.googleCalendarEventId);
         await task.update({ googleCalendarEventId: undefined });
         await task.reload();
       } catch (calendarError: any) {

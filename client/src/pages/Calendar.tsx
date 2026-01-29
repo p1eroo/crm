@@ -194,7 +194,7 @@ const Calendar: React.FC = () => {
         id: activity.id,
         title: activity.subject || activity.description || 'Sin título',
         type: activity.type,
-        status: 'not started',
+        status: 'pending',
         priority: 'medium',
         dueDate: activity.dueDate,
         isActivity: true,
@@ -294,12 +294,12 @@ const Calendar: React.FC = () => {
   // Función para obtener el label de estado
   const getStatusLabel = (status?: string) => {
     const labels: { [key: string]: string } = {
-      'not started': 'No iniciada',
+      'pending': 'Pendiente',
       'in progress': 'En progreso',
       'completed': 'Completada',
       'cancelled': 'Cancelada',
     };
-    return labels[status || 'not started'] || 'No iniciada';
+    return labels[status || 'pending'] || 'Pendiente';
   };
 
   const modalMonth = calendarDate.getMonth();

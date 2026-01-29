@@ -1,10 +1,16 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Box, useTheme, useMediaQuery, IconButton } from "@mui/material";
 import { KeyboardArrowLeft, KeyboardArrowRight } from "@mui/icons-material";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { useSidebar } from "../../context/SidebarContext";
 import { useNotificationPanel } from "../../context/NotificationContext";
+import { LoginWelcomeModal } from "../Notifications/LoginWelcomeModal";
+import { NotificationDetail } from "../Notifications/NotificationDetail";
+import { Notification } from "../../types/notification";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import { useNotifications } from "../../hooks/useNotifications";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -17,6 +23,59 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const isHorizontal = layoutMode === "horizontal";
   const drawerWidth = collapsed ? (isMobile ? 0 : 90) : 300;
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
+  const { markAsRead } = useNotifications();
+
+  // Detectar si el usuario acaba de hacer login
+  useEffect(() => {
+    if (user) {
+      const showLoginWelcome = localStorage.getItem('showLoginWelcome');
+      if (showLoginWelcome === 'true') {
+        // Esperar un poco para que las notificaciones se carguen
+        const timer = setTimeout(() => {
+          setShowWelcomeModal(true);
+        }, 500);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [user]);
+
+  const handleCloseWelcomeModal = () => {
+    setShowWelcomeModal(false);
+    // Marcar que ya se mostró el modal para no mostrarlo de nuevo
+    localStorage.removeItem('showLoginWelcome');
+  };
+
+  const handleNotificationClick = (notification: Notification) => {
+    // Si es la notificación de empresas inactivas, abrir el drawer de detalles
+    if (notification.id === 'inactivity-alert') {
+      setSelectedNotification(notification);
+      setDetailDrawerOpen(true);
+      handleCloseWelcomeModal();
+      // Marcar como leída
+      markAsRead(notification.id);
+    } else if (notification.actionUrl) {
+      // Para otras notificaciones, navegar normalmente
+      navigate(notification.actionUrl);
+      handleCloseWelcomeModal();
+    }
+  };
+
+  const handleCloseDetailDrawer = () => {
+    setDetailDrawerOpen(false);
+    setSelectedNotification(null);
+  };
+
+  const handleMarkAsRead = (id: string) => {
+    markAsRead(id);
+    if (selectedNotification?.id === id) {
+      setSelectedNotification({ ...selectedNotification, read: true });
+    }
+  };
 
   return (
     <Box
@@ -141,6 +200,21 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </Box>
         </Box>
       </Box>
+
+      {/* Modal de bienvenida después del login */}
+      <LoginWelcomeModal
+        open={showWelcomeModal}
+        onClose={handleCloseWelcomeModal}
+        onNotificationClick={handleNotificationClick}
+      />
+
+      {/* Drawer de detalles de notificación */}
+      <NotificationDetail
+        open={detailDrawerOpen}
+        notification={selectedNotification}
+        onClose={handleCloseDetailDrawer}
+        onMarkAsRead={handleMarkAsRead}
+      />
     </Box>
   );
 };

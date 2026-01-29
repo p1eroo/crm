@@ -160,6 +160,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setTimeout(() => {
             setUser(userData);
             setLoading(false);
+            // Marcar que el usuario acaba de hacer login para mostrar el modal de bienvenida
+            localStorage.setItem('showLoginWelcome', 'true');
           }, 0);
           
           return true;
@@ -266,6 +268,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(userData);
         localStorage.setItem('user', JSON.stringify(userData));
         setLoading(false);
+        // Marcar que el usuario acaba de hacer login para mostrar el modal de bienvenida
+        localStorage.setItem('showLoginWelcome', 'true');
       }, 0);
       
       return true;

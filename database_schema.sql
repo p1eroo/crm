@@ -68,7 +68,7 @@ CREATE TYPE deal_priority_enum AS ENUM ('baja', 'media', 'alta');
 
 CREATE TYPE task_type_enum AS ENUM ('call', 'email', 'meeting', 'note', 'todo', 'other');
 
-CREATE TYPE task_status_enum AS ENUM ('not started', 'in progress', 'completed', 'cancelled');
+CREATE TYPE task_status_enum AS ENUM ('pending', 'in progress', 'completed', 'cancelled');
 
 CREATE TYPE task_priority_enum AS ENUM ('low', 'medium', 'high', 'urgent');
 

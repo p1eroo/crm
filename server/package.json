@@ -22,7 +22,8 @@
     "create-task-columns": "ts-node src/scripts/createTaskColumns.ts",
     "check-task-columns": "ts-node src/scripts/checkTaskColumns.ts",
     "create-ticket-columns": "ts-node src/scripts/createTicketColumns.ts",
-    "create-activity-columns": "ts-node src/scripts/createActivityColumns.ts"
+    "create-activity-columns": "ts-node src/scripts/createActivityColumns.ts",
+    "migrate-remove-not-started": "ts-node src/scripts/migrateRemoveNotStartedStatus.ts"
   },
   "dependencies": {
     "axios": "^1.13.2",

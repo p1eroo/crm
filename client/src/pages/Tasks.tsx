@@ -16,12 +16,12 @@ import {
   DialogContent,
   DialogActions,
   MenuItem,
+  Menu,
   Chip,
   CircularProgress,
   Card,
   CardContent,
   Divider,
-  Avatar,
   FormControl,
   Select,
   Tooltip,
@@ -34,6 +34,7 @@ import { taxiMonterricoColors } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
 import { useAuth } from '../context/AuthContext';
 import EntityPreviewDrawer from '../components/EntityPreviewDrawer';
+import UserAvatar from '../components/UserAvatar';
 
 interface Task {
   id: number;
@@ -42,9 +43,11 @@ interface Task {
   type: string;
   status: string;
   priority: string;
+  startDate?: string;
   dueDate?: string;
-  AssignedTo?: { firstName: string; lastName: string };
-  User?: { firstName: string; lastName: string }; // Para actividades
+  createdAt?: string; // Fecha de creación
+  AssignedTo?: { firstName: string; lastName: string; avatar?: string | null };
+  User?: { firstName: string; lastName: string; avatar?: string | null }; // Para actividades
   isActivity?: boolean; // Flag para identificar si viene de actividades
 }
 
@@ -61,8 +64,9 @@ const Tasks: React.FC = () => {
     title: '',
     description: '',
     type: 'todo',
-    status: 'not started',
+    status: 'pending',
     priority: 'medium',
+    startDate: '',
     dueDate: '',
     assignedToId: '',
   });
@@ -76,6 +80,8 @@ const Tasks: React.FC = () => {
   const [totalTasks, setTotalTasks] = useState(0);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewTask, setPreviewTask] = useState<Task | null>(null);
+  const [statusMenuAnchor, setStatusMenuAnchor] = useState<{ el: HTMLElement; taskId: number } | null>(null);
+  const [priorityMenuAnchor, setPriorityMenuAnchor] = useState<{ el: HTMLElement; taskId: number } | null>(null);
 
   // Calcular estadísticas
   const today = new Date();
@@ -95,7 +101,7 @@ const Tasks: React.FC = () => {
     return dueDate.getTime() === today.getTime();
   }).length;
 
-  const pendingTasks = tasks.filter(t => t.status === 'not started').length;
+  const pendingTasks = tasks.filter(t => t.status === 'pending').length;
   const completedTasks = tasks.filter(t => t.status === 'completed').length;
 
   // Calcular paginación desde el servidor
@@ -108,16 +114,6 @@ const Tasks: React.FC = () => {
     setCurrentPage(1);
   }, [activeFilter, search, sortBy]);
 
-  // Función para obtener iniciales
-  const getInitials = (title: string) => {
-    if (!title) return '--';
-    const words = title.trim().split(' ');
-    if (words.length >= 2) {
-      return `${words[0][0]}${words[1][0]}`.toUpperCase();
-    }
-    return title.substring(0, 2).toUpperCase();
-  };
-
   // Función para obtener el label de prioridad en español
   const getPriorityLabel = (priority: string) => {
     const priorityMap: { [key: string]: string } = {
@@ -127,6 +123,30 @@ const Tasks: React.FC = () => {
       'urgent': 'Urgente',
     };
     return priorityMap[priority?.toLowerCase()] || priority;
+  };
+
+  // Función para obtener el label de estado en español
+  const getStatusLabel = (status: string) => {
+    const statusMap: { [key: string]: string } = {
+      'pending': 'Pendiente',
+      'in progress': 'En Progreso',
+      'completed': 'Completada',
+      'cancelled': 'Cancelada',
+    };
+    return statusMap[status?.toLowerCase()] || status;
+  };
+
+  // Función para obtener el label de tipo en español
+  const getTypeLabel = (type: string) => {
+    const typeMap: { [key: string]: string } = {
+      'call': 'Llamada',
+      'email': 'Email',
+      'meeting': 'Reunión',
+      'note': 'Nota',
+      'todo': 'Tarea',
+      'other': 'Otro',
+    };
+    return typeMap[type?.toLowerCase()] || type;
   };
 
   // Función para vista previa
@@ -179,6 +199,7 @@ const Tasks: React.FC = () => {
       const params: any = {
         page: currentPage,
         limit: itemsPerPage,
+        type: 'todo', // Filtrar solo tareas de tipo "todo" (excluir reuniones, emails, notas, etc.)
       };
       
       // Búsqueda general
@@ -198,7 +219,7 @@ const Tasks: React.FC = () => {
             params.status = 'not completed';
             break;
           case 'pending':
-            params.status = 'not started';
+            params.status = 'pending';
             break;
           case 'completed':
             params.status = 'completed';
@@ -251,6 +272,7 @@ const Tasks: React.FC = () => {
         type: task.type,
         status: task.status,
         priority: task.priority,
+        startDate: task.startDate ? task.startDate.split('T')[0] : '',
         dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
         assignedToId: assignedToId ? assignedToId.toString() : (user?.id ? user.id.toString() : ''),
       });
@@ -260,8 +282,9 @@ const Tasks: React.FC = () => {
         title: '',
         description: '',
         type: 'todo',
-        status: 'not started',
+        status: 'pending',
         priority: 'medium',
+        startDate: '',
         dueDate: '',
         assignedToId: user?.id ? user.id.toString() : '',
       });
@@ -288,6 +311,7 @@ const Tasks: React.FC = () => {
             subject: formData.title,
             description: formData.description,
             type: 'task',
+            startDate: formData.startDate || undefined,
             dueDate: formData.dueDate || undefined,
           });
         } else {
@@ -335,6 +359,54 @@ const Tasks: React.FC = () => {
   const handleCancelDelete = () => {
     setDeleteDialogOpen(false);
     setTaskToDelete(null);
+  };
+
+  const handleStatusChange = async (taskId: number, newStatus: string) => {
+    try {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      // Si es una actividad, actualizar en /activities
+      if (task.isActivity) {
+        await api.put(`/activities/${taskId}`, {
+          status: newStatus,
+        });
+      } else {
+        // Si es una tarea normal, actualizar en /tasks
+        await api.put(`/tasks/${taskId}`, {
+          status: newStatus,
+        });
+      }
+      setStatusMenuAnchor(null);
+      fetchTasks();
+    } catch (error) {
+      console.error('Error updating task status:', error);
+      alert('Error al actualizar el estado de la tarea. Por favor, intenta nuevamente.');
+    }
+  };
+
+  const handlePriorityChange = async (taskId: number, newPriority: string) => {
+    try {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) return;
+
+      // Si es una actividad, actualizar en /activities
+      if (task.isActivity) {
+        await api.put(`/activities/${taskId}`, {
+          priority: newPriority,
+        });
+      } else {
+        // Si es una tarea normal, actualizar en /tasks
+        await api.put(`/tasks/${taskId}`, {
+          priority: newPriority,
+        });
+      }
+      setPriorityMenuAnchor(null);
+      fetchTasks();
+    } catch (error) {
+      console.error('Error updating task priority:', error);
+      alert('Error al actualizar la prioridad de la tarea. Por favor, intenta nuevamente.');
+    }
   };
 
   if (loading) {
@@ -703,8 +775,8 @@ const Tasks: React.FC = () => {
       }}>
         <Box sx={{ 
           px: 3, 
-          pt: 3, 
-          pb: 2,
+          pt: 1.5, 
+          pb: 0.5,
           background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)`,
           borderBottom: `2px solid transparent`,
           borderImage: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
@@ -728,24 +800,25 @@ const Tasks: React.FC = () => {
             </Box>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
               <TextField
-                size="medium"
+                size="small"
                 placeholder="Buscar"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 InputProps={{
                   startAdornment: <Search sx={{ 
-                    mr: 2.5, 
+                    mr: 1.5, 
                     color: theme.palette.text.secondary, 
-                    fontSize: 38,
+                    fontSize: 20,
                     transition: 'color 0.3s ease',
                   }} />,
                 }}
                 sx={{ 
-                  minWidth: 200,
+                  minWidth: 150,
+                  maxWidth: 180,
                   bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
                   borderRadius: 2,
                   '& .MuiOutlinedInput-root': {
-                    fontSize: '1.4rem',
+                    fontSize: '0.875rem',
                     borderWidth: 2,
                     '& fieldset': {
                       borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)',
@@ -759,7 +832,7 @@ const Tasks: React.FC = () => {
                       boxShadow: `0 0 0 3px ${taxiMonterricoColors.greenLight}30`,
                     },
                     '& input::placeholder': {
-                      fontSize: '1.4rem',
+                      fontSize: '0.875rem',
                       opacity: 0.7,
                     },
                   },
@@ -806,15 +879,17 @@ const Tasks: React.FC = () => {
               <Tooltip title="Crear nueva tarea" arrow>
                 <Button 
                   variant="contained" 
+                  size="small"
                   startIcon={<Add />} 
                   onClick={() => handleOpen()}
                   sx={{
                     background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`,
                     color: 'white',
                     borderRadius: 2,
-                    px: 3,
-                    py: 1.25,
-                    fontWeight: 700,
+                    px: 2,
+                    py: 0.75,
+                    fontSize: '0.875rem',
+                    fontWeight: 600,
                     textTransform: 'none',
                     boxShadow: `0 4px 12px ${taxiMonterricoColors.greenLight}40`,
                     transition: 'all 0.3s ease',
@@ -899,13 +974,19 @@ const Tasks: React.FC = () => {
                 },
               }}>
                 <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '30%' } }}>
-                  Nombre de la Tarea
+                  Nombre
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
+                  Estado
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
                   Tipo
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
                   Prioridad
+                </TableCell>
+                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
+                  Fecha de inicio
                 </TableCell>
                 <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
                   Fecha de Vencimiento
@@ -932,7 +1013,7 @@ const Tasks: React.FC = () => {
             <TableBody>
               {tasks.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} sx={{ py: 8, textAlign: 'center', border: 'none' }}>
+                  <TableCell colSpan={8} sx={{ py: 8, textAlign: 'center', border: 'none' }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                       <Box
                         sx={{
@@ -983,57 +1064,92 @@ const Tasks: React.FC = () => {
                 tasks.map((task) => (
                 <TableRow 
                   key={task.id}
-                  hover
-                  onClick={() => handlePreview(task)}
                   sx={{ 
-                    '&:hover': { bgcolor: theme.palette.action.hover },
-                    cursor: 'pointer',
-                    transition: 'background-color 0.2s',
+                    '&:hover': {
+                      bgcolor: 'transparent !important',
+                    },
+                    '&.Mui-selected': {
+                      bgcolor: 'transparent !important',
+                    },
+                    '&.Mui-selected:hover': {
+                      bgcolor: 'transparent !important',
+                    },
                   }}
                 >
                   <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '30%' } }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, md: 1.5 } }}>
-                      <Avatar
-                        sx={{
-                          width: { xs: 32, md: 40 },
-                          height: { xs: 32, md: 40 },
-                          bgcolor: taxiMonterricoColors.green,
-                          fontSize: { xs: '0.75rem', md: '0.875rem' },
-                          fontWeight: 600,
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-                          flexShrink: 0,
-                        }}
-                      >
-                        {getInitials(task.title || task.subject || '')}
-                      </Avatar>
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          fontWeight: 500, 
-                          color: theme.palette.text.primary,
-                          fontSize: { xs: '0.75rem', md: '0.875rem' },
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {task.title || task.subject}
-                      </Typography>
-                    </Box>
+                    <Typography 
+                      variant="body2" 
+                      sx={{ 
+                        fontWeight: 500, 
+                        color: theme.palette.text.primary,
+                        fontSize: { xs: '0.75rem', md: '0.875rem' },
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {task.title || task.subject}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
+                    <Chip
+                      label={getStatusLabel(task.status)}
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setStatusMenuAnchor({ el: e.currentTarget, taskId: task.id });
+                      }}
+                      sx={{ 
+                        fontWeight: 500,
+                        fontSize: { xs: '0.7rem', md: '0.75rem' },
+                        height: { xs: 20, md: 24 },
+                        cursor: 'pointer',
+                        bgcolor: task.status === 'completed'
+                          ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}15`)
+                          : task.status === 'in progress'
+                          ? (theme.palette.mode === 'dark' ? `${theme.palette.primary.main}26` : `${theme.palette.primary.main}15`)
+                          : task.status === 'pending'
+                          ? (theme.palette.mode === 'dark' ? `${theme.palette.info.main}26` : `${theme.palette.info.main}15`)
+                          : task.status === 'cancelled'
+                          ? (theme.palette.mode === 'dark' ? `${theme.palette.grey[700]}26` : `${theme.palette.grey[300]}15`)
+                          : (theme.palette.mode === 'dark' ? `${theme.palette.warning.main}26` : `${theme.palette.warning.main}15`),
+                        color: task.status === 'completed'
+                          ? taxiMonterricoColors.green
+                          : task.status === 'in progress'
+                          ? theme.palette.primary.main
+                          : task.status === 'pending'
+                          ? theme.palette.info.main
+                          : task.status === 'cancelled'
+                          ? theme.palette.text.secondary
+                          : theme.palette.warning.main,
+                        border: 'none',
+                        borderRadius: 1,
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          opacity: 0.8,
+                          transform: 'scale(1.05)',
+                        },
+                      }}
+                    />
                   </TableCell>
                   <TableCell sx={{ px: 1, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
                     <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                      {task.type}
+                      {getTypeLabel(task.type)}
                     </Typography>
                   </TableCell>
                   <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
                     <Chip
                       label={getPriorityLabel(task.priority)}
                       size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPriorityMenuAnchor({ el: e.currentTarget, taskId: task.id });
+                      }}
                       sx={{ 
                         fontWeight: 500,
                         fontSize: { xs: '0.7rem', md: '0.75rem' },
                         height: { xs: 20, md: 24 },
+                        cursor: 'pointer',
                         bgcolor: task.priority === 'urgent' || task.priority === 'high'
                           ? (theme.palette.mode === 'dark' ? `${theme.palette.error.main}26` : `${theme.palette.error.main}15`)
                           : task.priority === 'medium'
@@ -1046,8 +1162,50 @@ const Tasks: React.FC = () => {
                           : taxiMonterricoColors.green,
                         border: 'none',
                         borderRadius: 1,
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          opacity: 0.8,
+                          transform: 'scale(1.05)',
+                        },
                       }}
                     />
+                  </TableCell>
+                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
+                    {task.startDate ? (
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: theme.palette.text.primary, 
+                          fontSize: { xs: '0.75rem', md: '0.875rem' },
+                          fontWeight: 500,
+                        }}
+                      >
+                        {new Date(task.startDate).toLocaleDateString('es-ES', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric'
+                        })}
+                      </Typography>
+                    ) : task.createdAt ? (
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: theme.palette.text.primary, 
+                          fontSize: { xs: '0.75rem', md: '0.875rem' },
+                          fontWeight: 500,
+                        }}
+                      >
+                        {new Date(task.createdAt).toLocaleDateString('es-ES', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric'
+                        })}
+                      </Typography>
+                    ) : (
+                      <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
+                        Sin fecha
+                      </Typography>
+                    )}
                   </TableCell>
                   <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
                     {task.dueDate ? (
@@ -1089,13 +1247,47 @@ const Tasks: React.FC = () => {
                   </TableCell>
                   <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '13%' } }}>
                     {task.AssignedTo ? (
-                      <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {task.AssignedTo.firstName} {task.AssignedTo.lastName}
-                      </Typography>
+                      <Tooltip 
+                        title={`${task.AssignedTo.firstName} ${task.AssignedTo.lastName}`}
+                        arrow
+                      >
+                        <Box sx={{ display: 'inline-block' }}>
+                          <UserAvatar
+                            firstName={task.AssignedTo.firstName}
+                            lastName={task.AssignedTo.lastName}
+                            avatar={task.AssignedTo.avatar}
+                            sx={{
+                              width: { xs: 28, md: 32 },
+                              height: { xs: 28, md: 32 },
+                              fontSize: { xs: '0.7rem', md: '0.75rem' },
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                              flexShrink: 0,
+                              cursor: 'pointer',
+                            }}
+                          />
+                        </Box>
+                      </Tooltip>
                     ) : task.User ? (
-                      <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {task.User.firstName} {task.User.lastName}
-                      </Typography>
+                      <Tooltip 
+                        title={`${task.User.firstName} ${task.User.lastName}`}
+                        arrow
+                      >
+                        <Box sx={{ display: 'inline-block' }}>
+                          <UserAvatar
+                            firstName={task.User.firstName}
+                            lastName={task.User.lastName}
+                            avatar={task.User.avatar}
+                            sx={{
+                              width: { xs: 28, md: 32 },
+                              height: { xs: 28, md: 32 },
+                              fontSize: { xs: '0.7rem', md: '0.75rem' },
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                              flexShrink: 0,
+                              cursor: 'pointer',
+                            }}
+                          />
+                        </Box>
+                      </Tooltip>
                     ) : (
                       <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                         --
@@ -1287,7 +1479,7 @@ const Tasks: React.FC = () => {
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
             >
-              <MenuItem value="not started">No Iniciada</MenuItem>
+              <MenuItem value="pending">Pendiente</MenuItem>
               <MenuItem value="in progress">En Progreso</MenuItem>
               <MenuItem value="completed">Completada</MenuItem>
               <MenuItem value="cancelled">Cancelada</MenuItem>
@@ -1303,6 +1495,13 @@ const Tasks: React.FC = () => {
               <MenuItem value="high">Alta</MenuItem>
               <MenuItem value="urgent">Urgente</MenuItem>
             </TextField>
+            <TextField
+              label="Fecha de inicio"
+              type="date"
+              value={formData.startDate}
+              onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+            />
             <TextField
               label="Fecha Límite"
               type="date"
@@ -1371,6 +1570,178 @@ const Tasks: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Menú de selección de estado */}
+      <Menu
+        anchorEl={statusMenuAnchor?.el || null}
+        open={Boolean(statusMenuAnchor)}
+        onClose={() => setStatusMenuAnchor(null)}
+        PaperProps={{
+          sx: {
+            bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : theme.palette.background.paper,
+            minWidth: 180,
+            borderRadius: 2,
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 8px 24px rgba(0,0,0,0.3)' 
+              : '0 8px 24px rgba(0,0,0,0.12)',
+          },
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            if (statusMenuAnchor) {
+              handleStatusChange(statusMenuAnchor.taskId, 'pending');
+            }
+          }}
+          sx={{
+            color: theme.palette.text.primary,
+            '&:hover': {
+              bgcolor: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.08)' 
+                : theme.palette.action.hover,
+            },
+          }}
+        >
+          Pendiente
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            if (statusMenuAnchor) {
+              handleStatusChange(statusMenuAnchor.taskId, 'in progress');
+            }
+          }}
+          sx={{
+            color: theme.palette.text.primary,
+            '&:hover': {
+              bgcolor: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.08)' 
+                : theme.palette.action.hover,
+            },
+          }}
+        >
+          En Progreso
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            if (statusMenuAnchor) {
+              handleStatusChange(statusMenuAnchor.taskId, 'completed');
+            }
+          }}
+          sx={{
+            color: theme.palette.text.primary,
+            '&:hover': {
+              bgcolor: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.08)' 
+                : theme.palette.action.hover,
+            },
+          }}
+        >
+          Completada
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            if (statusMenuAnchor) {
+              handleStatusChange(statusMenuAnchor.taskId, 'cancelled');
+            }
+          }}
+          sx={{
+            color: theme.palette.text.primary,
+            '&:hover': {
+              bgcolor: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.08)' 
+                : theme.palette.action.hover,
+            },
+          }}
+        >
+          Cancelada
+        </MenuItem>
+      </Menu>
+
+      {/* Menú de selección de prioridad */}
+      <Menu
+        anchorEl={priorityMenuAnchor?.el || null}
+        open={Boolean(priorityMenuAnchor)}
+        onClose={() => setPriorityMenuAnchor(null)}
+        PaperProps={{
+          sx: {
+            bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : theme.palette.background.paper,
+            minWidth: 180,
+            borderRadius: 2,
+            boxShadow: theme.palette.mode === 'dark' 
+              ? '0 8px 24px rgba(0,0,0,0.3)' 
+              : '0 8px 24px rgba(0,0,0,0.12)',
+          },
+        }}
+      >
+        <MenuItem
+          onClick={() => {
+            if (priorityMenuAnchor) {
+              handlePriorityChange(priorityMenuAnchor.taskId, 'low');
+            }
+          }}
+          sx={{
+            color: theme.palette.text.primary,
+            '&:hover': {
+              bgcolor: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.08)' 
+                : theme.palette.action.hover,
+            },
+          }}
+        >
+          Baja
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            if (priorityMenuAnchor) {
+              handlePriorityChange(priorityMenuAnchor.taskId, 'medium');
+            }
+          }}
+          sx={{
+            color: theme.palette.text.primary,
+            '&:hover': {
+              bgcolor: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.08)' 
+                : theme.palette.action.hover,
+            },
+          }}
+        >
+          Media
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            if (priorityMenuAnchor) {
+              handlePriorityChange(priorityMenuAnchor.taskId, 'high');
+            }
+          }}
+          sx={{
+            color: theme.palette.text.primary,
+            '&:hover': {
+              bgcolor: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.08)' 
+                : theme.palette.action.hover,
+            },
+          }}
+        >
+          Alta
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            if (priorityMenuAnchor) {
+              handlePriorityChange(priorityMenuAnchor.taskId, 'urgent');
+            }
+          }}
+          sx={{
+            color: theme.palette.text.primary,
+            '&:hover': {
+              bgcolor: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.08)' 
+                : theme.palette.action.hover,
+            },
+          }}
+        >
+          Urgente
+        </MenuItem>
+      </Menu>
 
       {/* Entity Preview Drawer */}
       <EntityPreviewDrawer

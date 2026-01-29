@@ -1069,7 +1069,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                     textTransform: 'capitalize',
                   }}
                 >
-                  {entity.status === 'completed' ? 'Completada' : entity.status === 'in progress' ? 'En Progreso' : entity.status === 'not started' ? 'No Iniciada' : entity.status === 'cancelled' ? 'Cancelada' : entity.status}
+                  {entity.status === 'completed' ? 'Completada' : entity.status === 'in progress' ? 'En Progreso' : entity.status === 'pending' ? 'Pendiente' : entity.status === 'cancelled' ? 'Cancelada' : entity.status}
                 </Typography>
               </Box>
             )}

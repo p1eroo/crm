@@ -180,43 +180,76 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
 
   if (!open) return null;
 
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Solo cerrar si el clic fue en el backdrop, no en el panel
+    if (e.target === e.currentTarget && onClose) {
+      onClose();
+    }
+  };
+
   return (
     <>
-    <Box
-      ref={panelRef}
-      component="div"
-      sx={{
-        position: 'fixed',
-        top: 0,
-        right: 0,
-        width: { xs: '100vw', sm: 420 },
-        height: '100vh',
-        bgcolor: theme.palette.mode === 'dark'
-          ? '#1A2027'
-          : '#ffffff',
-        backdropFilter: theme.palette.mode === 'light' ? 'blur(10px)' : 'none',
-        WebkitBackdropFilter: theme.palette.mode === 'light' ? 'blur(10px)' : 'none',
-        borderLeft: `none`,
-        overflow: 'hidden',
-        zIndex: 1400,
-        display: 'flex',
-        flexDirection: 'column',
-        boxShadow: theme.palette.mode === 'dark'
-          ? '-4px 0 24px rgba(0, 0, 0, 0.4)'
-          : '-4px 0 24px rgba(0, 0, 0, 0.1)',
-        animation: 'slideInRight 0.3s ease-out',
-        '@keyframes slideInRight': {
-          '0%': {
-            opacity: 0,
-            transform: 'translateX(100%)',
+      {/* Backdrop */}
+      <Box
+        onClick={handleBackdropClick}
+        sx={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          bgcolor: theme.palette.mode === 'dark'
+            ? 'rgba(0, 0, 0, 0.5)'
+            : 'rgba(0, 0, 0, 0.3)',
+          zIndex: 1399,
+          animation: 'fadeIn 0.3s ease-out',
+          '@keyframes fadeIn': {
+            '0%': {
+              opacity: 0,
+            },
+            '100%': {
+              opacity: 1,
+            },
           },
-          '100%': {
-            opacity: 1,
-            transform: 'translateX(0)',
+        }}
+      />
+      {/* Panel */}
+      <Box
+        ref={panelRef}
+        component="div"
+        onClick={(e) => e.stopPropagation()}
+        sx={{
+          position: 'fixed',
+          top: 0,
+          right: 0,
+          width: { xs: '100vw', sm: 420 },
+          height: '100vh',
+          bgcolor: theme.palette.mode === 'dark'
+            ? '#1A2027'
+            : '#ffffff',
+          backdropFilter: theme.palette.mode === 'light' ? 'blur(10px)' : 'none',
+          WebkitBackdropFilter: theme.palette.mode === 'light' ? 'blur(10px)' : 'none',
+          borderLeft: `none`,
+          overflow: 'hidden',
+          zIndex: 1400,
+          display: 'flex',
+          flexDirection: 'column',
+          boxShadow: theme.palette.mode === 'dark'
+            ? '-4px 0 24px rgba(0, 0, 0, 0.4)'
+            : '-4px 0 24px rgba(0, 0, 0, 0.1)',
+          animation: 'slideInRight 0.3s ease-out',
+          '@keyframes slideInRight': {
+            '0%': {
+              opacity: 0,
+              transform: 'translateX(100%)',
+            },
+            '100%': {
+              opacity: 1,
+              transform: 'translateX(0)',
+            },
           },
-        },
-      }}
-    >
+        }}
+      >
         {/* Header */}
         <Box>
           {/* Título e iconos */}
@@ -354,14 +387,10 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
               </Typography>
               <Box
                 sx={{
-                  bgcolor: activeTab === 'all'
-                    ? theme.palette.mode === 'dark'
-                      ? 'rgba(0, 0, 0, 0.7)'
-                      : 'rgba(0, 0, 0, 0.85)'
-                    : theme.palette.text.secondary,
-                  color: activeTab === 'all'
-                    ? '#ffffff'
-                    : '#ffffff',
+                  bgcolor: theme.palette.mode === 'dark'
+                    ? 'rgba(0, 0, 0, 0.7)'
+                    : 'rgba(0, 0, 0, 0.85)',
+                  color: '#ffffff',
                   borderRadius: '4px',
                   px: 0.75,
                   py: 0.25,
