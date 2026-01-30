@@ -37,7 +37,7 @@ import {
   ActivitiesTabContent,
   GeneralDescriptionTab,
 } from "../components/DetailCards";
-import { NoteModal, CallModal, TaskModal, DealModal, CompanyModal, ContactModal } from "../components/ActivityModals";
+import { NoteModal, CallModal, TaskModal, MeetingModal, DealModal, CompanyModal, ContactModal } from "../components/ActivityModals";
 import type { GeneralInfoCard } from "../components/DetailCards";
 import DetailPageLayout from "../components/Layout/DetailPageLayout";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -171,7 +171,7 @@ const ContactDetail: React.FC = () => {
   const [emailOpen, setEmailOpen] = useState(false);
   const [callOpen, setCallOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
-  const [taskType, setTaskType] = useState<"todo" | "meeting">("todo");
+  const [meetingOpen, setMeetingOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [warningMessage, setWarningMessage] = useState("");
   const [emailConnectModalOpen, setEmailConnectModalOpen] = useState(false);
@@ -760,14 +760,12 @@ const ContactDetail: React.FC = () => {
   };
 
   const handleOpenTask = () => {
-    setTaskType("todo");
     setTaskOpen(true);
   };
 
 
   const handleOpenMeeting = () => {
-    setTaskType("meeting");
-    setTaskOpen(true);
+    setMeetingOpen(true);
   };
 
   // Funciones para guardar
@@ -2044,7 +2042,7 @@ const ContactDetail: React.FC = () => {
         }}
       />
 
-      {/* Modal de crear tarea/reunión */}
+      {/* Modal de crear tarea */}
       <TaskModal
         open={taskOpen}
         onClose={() => setTaskOpen(false)}
@@ -2052,11 +2050,10 @@ const ContactDetail: React.FC = () => {
         entityId={id || ""}
         entityName={contact ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim() || contact.email || "Sin nombre" : "Sin nombre"}
         user={user}
-        taskType={taskType}
         onSave={(newTask) => {
           const taskAsActivity = {
             id: newTask.id,
-            type: newTask.type,
+            type: "task",
             subject: newTask.title,
             description: newTask.description,
             dueDate: newTask.dueDate,
@@ -2072,6 +2069,39 @@ const ContactDetail: React.FC = () => {
             const exists = prevActivities.some((a: any) => a.id === newTask.id);
             if (exists) return prevActivities;
             return [taskAsActivity, ...prevActivities].sort((a: any, b: any) => {
+              const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
+              const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
+              return dateB - dateA;
+            });
+          });
+          fetchAssociatedRecords(); // Actualizar actividades
+        }}
+      />
+
+      {/* Modal de crear reunión */}
+      <MeetingModal
+        open={meetingOpen}
+        onClose={() => setMeetingOpen(false)}
+        entityType="contact"
+        entityId={id || ""}
+        entityName={contact ? `${contact.firstName || ""} ${contact.lastName || ""}`.trim() || contact.email || "Sin nombre" : "Sin nombre"}
+        user={user}
+        onSave={(newMeeting) => {
+          const meetingAsActivity = {
+            id: newMeeting.id,
+            type: "meeting",
+            subject: newMeeting.title,
+            description: newMeeting.description,
+            dueDate: newMeeting.dueDate,
+            createdAt: newMeeting.createdAt,
+            User: newMeeting.CreatedBy || newMeeting.AssignedTo,
+            contactId: newMeeting.contactId,
+          };
+          // Agregar la actividad inmediatamente al estado
+          setActivities((prevActivities) => {
+            const exists = prevActivities.some((a: any) => a.id === newMeeting.id);
+            if (exists) return prevActivities;
+            return [meetingAsActivity, ...prevActivities].sort((a: any, b: any) => {
               const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
               const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
               return dateB - dateA;

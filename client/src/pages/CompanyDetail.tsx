@@ -45,7 +45,7 @@ import {
   ActivitiesTabContent,
   GeneralDescriptionTab,
 } from "../components/DetailCards";
-import { NoteModal, CallModal, TaskModal, DealModal, CompanyModal, ContactModal } from "../components/ActivityModals";
+import { NoteModal, CallModal, TaskModal, MeetingModal, DealModal, CompanyModal, ContactModal } from "../components/ActivityModals";
 import type { GeneralInfoCard } from "../components/DetailCards";
 import DetailPageLayout from "../components/Layout/DetailPageLayout";
 import { useAuth } from "../context/AuthContext";
@@ -813,8 +813,7 @@ const CompanyDetail: React.FC = () => {
         setTaskOpen(true);
         break;
       case "meeting":
-        setTaskType("meeting");
-        setTaskOpen(true);
+        setMeetingOpen(true);
         break;
     }
   };
@@ -1511,7 +1510,7 @@ const tab2Content = (
   return (  
   <>
     <DetailPageLayout
-      pageTitle="Información de la empresa"
+      pageTitle="Detalles de la empresa"
       breadcrumbItems={[
         { label: 'Empresas', path: '/companies' },
         { label: company?.name || '' },
@@ -2076,7 +2075,7 @@ const tab2Content = (
         }}
       />
 
-      {/* Modal de crear tarea/reunión */}
+      {/* Modal de crear tarea */}
       <TaskModal
         open={taskOpen}
         onClose={() => setTaskOpen(false)}
@@ -2088,7 +2087,7 @@ const tab2Content = (
           // Convertir la tarea a formato de actividad para agregarla a la lista
           const taskAsActivity = {
             id: newTask.id,
-            type: newTask.type === "meeting" ? "meeting" : "task",
+            type: "task",
             subject: newTask.title,
             description: newTask.description,
             dueDate: newTask.dueDate,
@@ -2111,7 +2110,40 @@ const tab2Content = (
           });
           fetchAssociatedRecords(); // Actualizar actividades
         }}
-        taskType={taskType}
+      />
+
+      {/* Modal de crear reunión */}
+      <MeetingModal
+        open={meetingOpen}
+        onClose={() => setMeetingOpen(false)}
+        entityType="company"
+        entityId={id || ""}
+        entityName={company?.name || "Sin nombre"}
+        user={user}
+        onSave={(newMeeting) => {
+          // Convertir la reunión a formato de actividad para agregarla a la lista
+          const meetingAsActivity = {
+            id: newMeeting.id,
+            type: "meeting",
+            subject: newMeeting.title,
+            description: newMeeting.description,
+            dueDate: newMeeting.dueDate,
+            createdAt: newMeeting.createdAt,
+            User: newMeeting.CreatedBy || newMeeting.AssignedTo,
+            companyId: newMeeting.companyId,
+          };
+          // Agregar la actividad inmediatamente al estado
+          setActivities((prevActivities) => {
+            const exists = prevActivities.some((a: any) => a.id === newMeeting.id);
+            if (exists) return prevActivities;
+            return [meetingAsActivity, ...prevActivities].sort((a: any, b: any) => {
+              const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
+              const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
+              return dateB - dateA;
+            });
+          });
+          fetchAssociatedRecords(); // Actualizar actividades
+        }}
       />
 
       {/* Modal para agregar/crear contactos */}

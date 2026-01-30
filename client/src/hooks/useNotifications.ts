@@ -202,6 +202,120 @@ export const useNotifications = () => {
         }
       }
 
+      // Obtener reuniones con fecha y hora para alertas de 1 hora antes
+      let meetingReminders: Notification[] = [];
+      try {
+        const currentTime = new Date();
+        // Obtener todas las reuniones
+        const meetingsResponse = await api.get('/activities', {
+          params: {
+            type: 'meeting',
+            limit: 100,
+          },
+        });
+        
+        let meetings: any[] = [];
+        if (Array.isArray(meetingsResponse.data)) {
+          meetings = meetingsResponse.data;
+        } else if (meetingsResponse.data?.activities && Array.isArray(meetingsResponse.data.activities)) {
+          meetings = meetingsResponse.data.activities;
+        }
+
+        // Obtener IDs de recordatorios ya mostrados desde localStorage
+        const existingReminderIds = JSON.parse(
+          localStorage.getItem('meetingReminderIds') || '[]'
+        );
+
+        // Filtrar reuniones que están a 1 hora
+        const upcomingMeetings = meetings.filter((meeting: any) => {
+          if (!meeting.dueDate || !meeting.time) return false;
+          
+          try {
+            // Combinar fecha y hora
+            const [hours, minutes] = meeting.time.split(':').map(Number);
+            const meetingDate = new Date(meeting.dueDate);
+            meetingDate.setHours(hours, minutes, 0, 0);
+            
+            // Calcular diferencia en milisegundos
+            const diffMs = meetingDate.getTime() - currentTime.getTime();
+            const diffHours = diffMs / (1000 * 60 * 60);
+            
+            // Solo reuniones que están entre 0.9 y 1.1 horas en el futuro
+            // (ventana de 6 minutos para evitar duplicados)
+            const isWithinWindow = diffHours >= 0.9 && diffHours <= 1.1;
+            
+            // Verificar que no se haya mostrado ya este recordatorio
+            const reminderId = `meeting-reminder-${meeting.id}`;
+            const alreadyShown = existingReminderIds.includes(reminderId);
+            
+            return isWithinWindow && !alreadyShown;
+          } catch (error) {
+            console.error('Error procesando reunión:', error);
+            return false;
+          }
+        });
+
+        // Crear notificaciones de recordatorio
+        meetingReminders = upcomingMeetings.map((meeting: any) => {
+          const [hours, minutes] = meeting.time.split(':').map(Number);
+          const meetingDate = new Date(meeting.dueDate);
+          meetingDate.setHours(hours, minutes, 0, 0);
+          
+          const reminderId = `meeting-reminder-${meeting.id}`;
+          
+          // Guardar ID en localStorage para evitar duplicados
+          if (!existingReminderIds.includes(reminderId)) {
+            existingReminderIds.push(reminderId);
+            localStorage.setItem('meetingReminderIds', JSON.stringify(existingReminderIds));
+          }
+          
+          return {
+            id: reminderId,
+            type: 'reminder' as const,
+            title: meeting.subject || 'Reunión',
+            message: `Falta 1 hora para la reunión "${meeting.subject || 'Sin título'}"`,
+            read: false,
+            archived: false,
+            createdAt: new Date().toISOString(),
+            actionUrl: meeting.contactId ? `/contacts/${meeting.contactId}` :
+                       meeting.companyId ? `/companies/${meeting.companyId}` :
+                       meeting.dealId ? `/deals/${meeting.dealId}` : undefined,
+            actionLabel: 'Ver detalles',
+            metadata: {
+              meetingId: meeting.id,
+              contactId: meeting.contactId || null,
+              companyId: meeting.companyId || null,
+              dealId: meeting.dealId || null,
+            },
+          };
+        });
+
+        // Limpiar IDs de reuniones pasadas (más de 2 horas atrás)
+        const cleanedReminderIds = existingReminderIds.filter((reminderId: string) => {
+          const meetingId = reminderId.replace('meeting-reminder-', '');
+          const meeting = meetings.find((m: any) => m.id.toString() === meetingId);
+          if (!meeting || !meeting.dueDate || !meeting.time) return false;
+          
+          try {
+            const [hours, minutes] = meeting.time.split(':').map(Number);
+            const meetingDate = new Date(meeting.dueDate);
+            meetingDate.setHours(hours, minutes, 0, 0);
+            
+            // Si la reunión fue hace más de 2 horas, eliminar el ID
+            const diffMs = currentTime.getTime() - meetingDate.getTime();
+            const diffHours = diffMs / (1000 * 60 * 60);
+            return diffHours < 2;
+          } catch {
+            return false;
+          }
+        });
+        localStorage.setItem('meetingReminderIds', JSON.stringify(cleanedReminderIds));
+      } catch (error: any) {
+        if (error.response?.status !== 401) {
+          console.log('Error obteniendo reuniones para alertas:', error.message);
+        }
+      }
+
       // Convertir a formato Notification
       const allNotifications: Notification[] = [
         ...upcomingTasks.map((task: any) => {
@@ -340,6 +454,9 @@ export const useNotifications = () => {
         });
       }
 
+      // Agregar alertas de reuniones (1 hora antes)
+      allNotifications.push(...meetingReminders);
+
       // Ordenar por fecha
       allNotifications.sort((a, b) => {
         const dateA = new Date(a.createdAt).getTime();
@@ -401,10 +518,10 @@ export const useNotifications = () => {
   useEffect(() => {
     fetchNotifications();
     
-    // Actualizar cada 5 minutos
+    // Actualizar cada minuto para alertas de 1 hora antes de reuniones
     const interval = setInterval(() => {
       fetchNotifications();
-    }, 5 * 60 * 1000);
+    }, 60 * 1000); // 1 minuto
 
     // Escuchar eventos de actividad completada
     const handleActivityCompleted = (event: Event) => {

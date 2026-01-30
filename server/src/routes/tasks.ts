@@ -20,7 +20,6 @@ const cleanTask = (task: any): any => {
   const cleaned: any = {
     id: taskData.id,
     title: taskData.title,
-    type: taskData.type,
     status: taskData.status,
     priority: taskData.priority,
     assignedToId: taskData.assignedToId,
@@ -56,7 +55,6 @@ router.get('/', async (req: AuthRequest, res) => {
       status, 
       priority, 
       assignedToId, 
-      type, 
       contactId, 
       companyId, 
       dealId,
@@ -97,9 +95,6 @@ router.get('/', async (req: AuthRequest, res) => {
     }
     if (assignedToId) {
       where.assignedToId = assignedToId;
-    }
-    if (type) {
-      where.type = type;
     }
     if (contactId) {
       where.contactId = contactId;
@@ -258,19 +253,11 @@ router.get('/:id', async (req, res) => {
 // Crear tarea
 router.post('/', async (req: AuthRequest, res) => {
   try {
-    // Validar que solo se permitan tareas de tipo 'todo'
-    if (req.body.type && req.body.type !== 'todo') {
-      return res.status(400).json({ 
-        error: 'Solo se permiten tareas de tipo "todo". Para crear reuniones, emails o notas, usa el endpoint /activities' 
-      });
-    }
-    
     // Si no se proporciona startDate, establecerlo con la fecha actual
     const startDate = req.body.startDate || new Date().toISOString().split('T')[0];
     
     const taskData = {
       ...req.body,
-      type: 'todo', // Forzar tipo 'todo'
       createdById: req.userId,
       assignedToId: req.body.assignedToId || req.userId,
       startDate: startDate,
@@ -322,7 +309,7 @@ router.post('/', async (req: AuthRequest, res) => {
         SystemActions.CREATE,
         EntityTypes.TASK,
         task.id,
-        { title: task.title, type: task.type, status: task.status },
+        { title: task.title, status: task.status },
         req
       );
     }
@@ -356,13 +343,6 @@ router.put('/:id', async (req: AuthRequest, res) => {
                       task.createdById === req.userId;
     if (!canModify) {
       return res.status(403).json({ error: 'No tienes permisos para modificar esta tarea' });
-    }
-
-    // Validar que no se pueda cambiar el tipo a algo diferente de 'todo'
-    if (req.body.type && req.body.type !== 'todo') {
-      return res.status(400).json({ 
-        error: 'Solo se permiten tareas de tipo "todo". Para crear reuniones, emails o notas, usa el endpoint /activities' 
-      });
     }
 
     const hadEventId = !!task.googleCalendarEventId;

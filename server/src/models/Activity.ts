@@ -18,6 +18,8 @@ interface ActivityAttributes {
   completed?: boolean;
   gmailMessageId?: string;
   gmailThreadId?: string;
+  dueDate?: Date;
+  time?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -37,6 +39,8 @@ export class Activity extends Model<ActivityAttributes, ActivityCreationAttribut
   public completed?: boolean;
   public gmailMessageId?: string;
   public gmailThreadId?: string;
+  public dueDate?: Date;
+  public time?: string;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
@@ -115,6 +119,14 @@ Activity.init(
       allowNull: true,
     },
     gmailThreadId: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    dueDate: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    time: {
       type: DataTypes.STRING,
       allowNull: true,
     },

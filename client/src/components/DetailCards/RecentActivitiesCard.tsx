@@ -141,14 +141,7 @@ const RecentActivitiesCard: React.FC<RecentActivitiesCardProps> = ({
                       border: `1px solid ${colors.border}`,
                       bgcolor: colors.bg,
                       cursor: 'pointer',
-                      transition: 'all 0.2s ease',
                       flexShrink: 0,
-                      '&:hover': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: theme.palette.mode === 'dark' 
-                          ? '0 4px 12px rgba(0,0,0,0.4)' 
-                          : '0 4px 12px rgba(0,0,0,0.15)',
-                      },
                     }}
                   >
                     <Box sx={{ 

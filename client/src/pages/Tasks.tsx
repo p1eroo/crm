@@ -28,19 +28,26 @@ import {
   Paper,
   useTheme,
 } from '@mui/material';
-import { Add, Delete, Search, CheckCircle, Visibility, Warning, Schedule, PendingActions, Edit, ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { Add, Delete, Search, Schedule, PendingActions, Edit, ChevronLeft, ChevronRight, ArrowDropDown } from '@mui/icons-material';
+import { RiFileWarningLine } from 'react-icons/ri';
+import { IoMdCheckboxOutline } from 'react-icons/io';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { library } from '@fortawesome/fontawesome-svg-core';
+import { far } from '@fortawesome/free-regular-svg-icons';
+import byPrefixAndName from '../config/fontawesomeLight';
 import api from '../config/api';
-import { taxiMonterricoColors } from '../theme/colors';
+import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
 import { useAuth } from '../context/AuthContext';
-import EntityPreviewDrawer from '../components/EntityPreviewDrawer';
 import UserAvatar from '../components/UserAvatar';
+
+// Agregar los iconos a la librería para usar byPrefixAndName
+library.add(far);
 
 interface Task {
   id: number;
   title: string;
   subject?: string; // Para actividades
-  type: string;
   status: string;
   priority: string;
   startDate?: string;
@@ -59,11 +66,11 @@ const Tasks: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState(''); // Estado local para el input
   const [sortBy, setSortBy] = useState('newest');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    type: 'todo',
     status: 'pending',
     priority: 'medium',
     startDate: '',
@@ -78,8 +85,6 @@ const Tasks: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(7);
   const [totalTasks, setTotalTasks] = useState(0);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewTask, setPreviewTask] = useState<Task | null>(null);
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<{ el: HTMLElement; taskId: number } | null>(null);
   const [priorityMenuAnchor, setPriorityMenuAnchor] = useState<{ el: HTMLElement; taskId: number } | null>(null);
 
@@ -109,6 +114,15 @@ const Tasks: React.FC = () => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = Math.min(startIndex + itemsPerPage, totalTasks);
 
+  // Debounce para la búsqueda
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearch(searchInput);
+    }, 500); // Esperar 500ms después de que el usuario deje de escribir
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
   // Resetear a la página 1 cuando cambien los filtros
   useEffect(() => {
     setCurrentPage(1);
@@ -120,7 +134,6 @@ const Tasks: React.FC = () => {
       'low': 'Baja',
       'medium': 'Media',
       'high': 'Alta',
-      'urgent': 'Urgente',
     };
     return priorityMap[priority?.toLowerCase()] || priority;
   };
@@ -134,30 +147,6 @@ const Tasks: React.FC = () => {
       'cancelled': 'Cancelada',
     };
     return statusMap[status?.toLowerCase()] || status;
-  };
-
-  // Función para obtener el label de tipo en español
-  const getTypeLabel = (type: string) => {
-    const typeMap: { [key: string]: string } = {
-      'call': 'Llamada',
-      'email': 'Email',
-      'meeting': 'Reunión',
-      'note': 'Nota',
-      'todo': 'Tarea',
-      'other': 'Otro',
-    };
-    return typeMap[type?.toLowerCase()] || type;
-  };
-
-  // Función para vista previa
-  const handlePreview = (task: Task) => {
-    setPreviewTask(task);
-    setPreviewOpen(true);
-  };
-
-  const handleClosePreview = () => {
-    setPreviewOpen(false);
-    setPreviewTask(null);
   };
 
   const fetchUsers = useCallback(async () => {
@@ -199,7 +188,6 @@ const Tasks: React.FC = () => {
       const params: any = {
         page: currentPage,
         limit: itemsPerPage,
-        type: 'todo', // Filtrar solo tareas de tipo "todo" (excluir reuniones, emails, notas, etc.)
       };
       
       // Búsqueda general
@@ -232,7 +220,31 @@ const Tasks: React.FC = () => {
       
       // Obtener tareas desde /tasks con paginación del servidor
       const tasksResponse = await api.get('/tasks', { params });
-      const tasksData = tasksResponse.data.tasks || tasksResponse.data || [];
+      let tasksData = tasksResponse.data.tasks || tasksResponse.data || [];
+      
+      // Filtrar por fecha de vencimiento de hoy si el filtro está activo
+      if (activeFilter === 'dueToday') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        tasksData = tasksData.filter((task: Task) => {
+          if (!task.dueDate) return false;
+          const dueDate = new Date(task.dueDate);
+          dueDate.setHours(0, 0, 0, 0);
+          return dueDate.getTime() === today.getTime();
+        });
+      }
+      
+      // Filtrar por tareas vencidas si el filtro está activo
+      if (activeFilter === 'overdue') {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        tasksData = tasksData.filter((task: Task) => {
+          if (!task.dueDate) return false;
+          const dueDate = new Date(task.dueDate);
+          dueDate.setHours(0, 0, 0, 0);
+          return dueDate < today && task.status !== 'completed';
+        });
+      }
       
       const tasksFromTasks = tasksData.map((task: Task) => ({
         ...task,
@@ -242,7 +254,7 @@ const Tasks: React.FC = () => {
       // Por ahora, mantener solo tareas con paginación del servidor
       // Las actividades se pueden agregar después si es necesario
       setTasks(tasksFromTasks);
-      setTotalTasks(tasksResponse.data.total || 0);
+      setTotalTasks(tasksFromTasks.length);
     } catch (error) {
       console.error('Error fetching tasks:', error);
       setTasks([]);
@@ -269,7 +281,6 @@ const Tasks: React.FC = () => {
       setFormData({
         title: task.title || task.subject || '',
         description: description,
-        type: task.type,
         status: task.status,
         priority: task.priority,
         startDate: task.startDate ? task.startDate.split('T')[0] : '',
@@ -281,7 +292,6 @@ const Tasks: React.FC = () => {
       setFormData({
         title: '',
         description: '',
-        type: 'todo',
         status: 'pending',
         priority: 'medium',
         startDate: '',
@@ -362,49 +372,77 @@ const Tasks: React.FC = () => {
   };
 
   const handleStatusChange = async (taskId: number, newStatus: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+  
+    // Guardar el estado anterior para poder revertir en caso de error
+    const previousStatus = task.status;
+  
+    // Actualización optimista: actualizar el estado local inmediatamente
+    setTasks(prevTasks => 
+      prevTasks.map(t => 
+        t.id === taskId ? { ...t, status: newStatus } : t
+      )
+    );
+    setStatusMenuAnchor(null);
+  
+    // Actualizar en el servidor en segundo plano
     try {
-      const task = tasks.find(t => t.id === taskId);
-      if (!task) return;
-
-      // Si es una actividad, actualizar en /activities
       if (task.isActivity) {
         await api.put(`/activities/${taskId}`, {
           status: newStatus,
         });
       } else {
-        // Si es una tarea normal, actualizar en /tasks
         await api.put(`/tasks/${taskId}`, {
           status: newStatus,
         });
       }
-      setStatusMenuAnchor(null);
-      fetchTasks();
     } catch (error) {
       console.error('Error updating task status:', error);
+      // Revertir el cambio en caso de error
+      setTasks(prevTasks => 
+        prevTasks.map(t => 
+          t.id === taskId ? { ...t, status: previousStatus } : t
+        )
+      );
       alert('Error al actualizar el estado de la tarea. Por favor, intenta nuevamente.');
     }
   };
 
   const handlePriorityChange = async (taskId: number, newPriority: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+  
+    // Guardar la prioridad anterior para poder revertir en caso de error
+    const previousPriority = task.priority;
+  
+    // Actualización optimista: actualizar el estado local inmediatamente
+    setTasks(prevTasks => 
+      prevTasks.map(t => 
+        t.id === taskId ? { ...t, priority: newPriority } : t
+      )
+    );
+    setPriorityMenuAnchor(null);
+  
+    // Actualizar en el servidor en segundo plano
     try {
-      const task = tasks.find(t => t.id === taskId);
-      if (!task) return;
-
-      // Si es una actividad, actualizar en /activities
       if (task.isActivity) {
         await api.put(`/activities/${taskId}`, {
           priority: newPriority,
         });
       } else {
-        // Si es una tarea normal, actualizar en /tasks
         await api.put(`/tasks/${taskId}`, {
           priority: newPriority,
         });
       }
-      setPriorityMenuAnchor(null);
-      fetchTasks();
     } catch (error) {
       console.error('Error updating task priority:', error);
+      // Revertir el cambio en caso de error
+      setTasks(prevTasks => 
+        prevTasks.map(t => 
+          t.id === taskId ? { ...t, priority: previousPriority } : t
+        )
+      );
       alert('Error al actualizar la prioridad de la tarea. Por favor, intenta nuevamente.');
     }
   };
@@ -429,6 +467,7 @@ const Tasks: React.FC = () => {
         boxShadow: theme.palette.mode === 'dark' 
           ? '0 4px 16px rgba(0,0,0,0.3)' 
           : `0 4px 16px ${taxiMonterricoColors.greenLight}15`,
+        overflow: 'hidden',
         bgcolor: theme.palette.background.paper,
         border: '1px solid',
         borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
@@ -438,10 +477,17 @@ const Tasks: React.FC = () => {
           boxShadow: theme.palette.mode === 'dark' 
             ? '0 8px 24px rgba(0,0,0,0.4)' 
             : `0 8px 24px ${taxiMonterricoColors.greenLight}25`,
-          transform: 'translateY(-2px)',
         },
       }}>
-        <CardContent sx={{ p: { xs: 2, sm: 2.5, md: 3 } }}>
+        <CardContent sx={{ 
+          px: { xs: 1.5, sm: 2, md: 2 },
+          pt: { xs: 1.5, sm: 2, md: 2 },
+          pb: { xs: 1, sm: 1.25, md: 1.5 },
+          bgcolor: theme.palette.background.paper,
+          '&:last-child': {
+            paddingBottom: { xs: 1, sm: 1.25, md: 1.5 },
+          },
+        }}>
           <Box sx={{ display: 'flex', alignItems: 'stretch', flexWrap: { xs: 'wrap', sm: 'nowrap' }, gap: { xs: 1.5, sm: 2 } }}>
             {/* Vencidas */}
             <Box 
@@ -451,9 +497,9 @@ const Tasks: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: { xs: 'flex-start', sm: 'center' },
-                gap: { xs: 2, sm: 3, md: 4 },
+                gap: { xs: 1.5, sm: 2, md: 2.5 },
                 px: { xs: 0.75, sm: 1 },
-                py: { xs: 1, sm: 1 },
+                py: { xs: 0.5, sm: 0.5 },
                 borderRadius: 2,
                 bgcolor: activeFilter === 'overdue' ? `${theme.palette.error.main}10` : 'transparent',
                 cursor: 'pointer',
@@ -488,38 +534,29 @@ const Tasks: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: { xs: 60, sm: 75, md: 95 },
-                height: { xs: 60, sm: 75, md: 95 },
+                width: { xs: 50, sm: 60, md: 70 },
+                height: { xs: 50, sm: 60, md: 70 },
                 borderRadius: '50%',
                 background: `linear-gradient(135deg, ${theme.palette.error.main}20 0%, ${theme.palette.error.main}10 100%)`,
                 border: `2px solid ${theme.palette.error.main}30`,
                 flexShrink: 0,
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'scale(1.1) rotate(5deg)',
-                  boxShadow: `0 4px 12px ${theme.palette.error.main}40`,
-                },
+                fontSize: { xs: 28, sm: 36, md: 44 },
               }}>
-                <Warning sx={{ 
-                  color: theme.palette.error.main, 
-                  fontSize: { xs: 35, sm: 45, md: 60 },
-                  transition: 'transform 0.3s ease',
-                  '&:hover': {
-                    transform: 'scale(1.1)',
-                  },
-                }} />
+                {React.createElement(RiFileWarningLine as any, { 
+                  style: { color: theme.palette.error.main },
+                })}
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: { xs: '0.875rem', sm: '1rem', md: '1.125rem' }, fontWeight: 400, lineHeight: 1.4 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.25, fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.9375rem' }, fontWeight: 400, lineHeight: 1.3 }}>
                   Vencidas
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: { xs: '2rem', sm: '2.75rem', md: '3.5rem' }, lineHeight: 1.2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0, fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }, lineHeight: 1.2 }}>
                   {overdueTasks.toLocaleString()}
                 </Typography>
               </Box>
             </Box>
 
-            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.75, display: { xs: 'none', sm: 'block' } }} />
 
             {/* Vencen hoy */}
             <Box 
@@ -529,9 +566,9 @@ const Tasks: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: { xs: 'flex-start', sm: 'center' },
-                gap: { xs: 2, sm: 3, md: 4 },
+                gap: { xs: 1.5, sm: 2, md: 2.5 },
                 px: { xs: 0.75, sm: 1 },
-                py: { xs: 1, sm: 1 },
+                py: { xs: 0.5, sm: 0.5 },
                 borderRadius: 2,
                 bgcolor: activeFilter === 'dueToday' ? `${taxiMonterricoColors.orange}10` : 'transparent',
                 cursor: 'pointer',
@@ -566,38 +603,29 @@ const Tasks: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: { xs: 60, sm: 75, md: 95 },
-                height: { xs: 60, sm: 75, md: 95 },
+                width: { xs: 50, sm: 60, md: 70 },
+                height: { xs: 50, sm: 60, md: 70 },
                 borderRadius: '50%',
                 background: `linear-gradient(135deg, ${taxiMonterricoColors.orange}20 0%, ${taxiMonterricoColors.orange}10 100%)`,
                 border: `2px solid ${taxiMonterricoColors.orange}30`,
                 flexShrink: 0,
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'scale(1.1) rotate(5deg)',
-                  boxShadow: `0 4px 12px ${taxiMonterricoColors.orange}40`,
-                },
               }}>
                 <Schedule sx={{ 
                   color: taxiMonterricoColors.orange, 
-                  fontSize: { xs: 35, sm: 45, md: 60 },
-                  transition: 'transform 0.3s ease',
-                  '&:hover': {
-                    transform: 'scale(1.1)',
-                  },
+                  fontSize: { xs: 28, sm: 36, md: 44 },
                 }} />
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: { xs: '0.875rem', sm: '1rem', md: '1.125rem' }, fontWeight: 400, lineHeight: 1.4 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.25, fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.9375rem' }, fontWeight: 400, lineHeight: 1.3 }}>
                   Vencen hoy
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: { xs: '2rem', sm: '2.75rem', md: '3.5rem' }, lineHeight: 1.2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0, fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }, lineHeight: 1.2 }}>
                   {dueTodayTasks.toLocaleString()}
                 </Typography>
               </Box>
             </Box>
 
-            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.75, display: { xs: 'none', sm: 'block' } }} />
 
             {/* Pendientes */}
             <Box 
@@ -607,9 +635,9 @@ const Tasks: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: { xs: 'flex-start', sm: 'center' },
-                gap: { xs: 2, sm: 3, md: 4 },
+                gap: { xs: 1.5, sm: 2, md: 2.5 },
                 px: { xs: 0.75, sm: 1 },
-                py: { xs: 1, sm: 1 },
+                py: { xs: 0.5, sm: 0.5 },
                 borderRadius: 2,
                 bgcolor: activeFilter === 'pending' ? `${theme.palette.warning.main}10` : 'transparent',
                 cursor: 'pointer',
@@ -644,38 +672,29 @@ const Tasks: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: { xs: 60, sm: 75, md: 95 },
-                height: { xs: 60, sm: 75, md: 95 },
+                width: { xs: 50, sm: 60, md: 70 },
+                height: { xs: 50, sm: 60, md: 70 },
                 borderRadius: '50%',
                 background: `linear-gradient(135deg, ${theme.palette.warning.main}20 0%, ${theme.palette.warning.main}10 100%)`,
                 border: `2px solid ${theme.palette.warning.main}30`,
                 flexShrink: 0,
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'scale(1.1) rotate(5deg)',
-                  boxShadow: `0 4px 12px ${theme.palette.warning.main}40`,
-                },
               }}>
                 <PendingActions sx={{ 
                   color: theme.palette.warning.main, 
-                  fontSize: { xs: 35, sm: 45, md: 60 },
-                  transition: 'transform 0.3s ease',
-                  '&:hover': {
-                    transform: 'scale(1.1)',
-                  },
+                  fontSize: { xs: 28, sm: 36, md: 44 },
                 }} />
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: { xs: '0.875rem', sm: '1rem', md: '1.125rem' }, fontWeight: 400, lineHeight: 1.4 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.25, fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.9375rem' }, fontWeight: 400, lineHeight: 1.3 }}>
                   Pendientes
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: { xs: '2rem', sm: '2.75rem', md: '3.5rem' }, lineHeight: 1.2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0, fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }, lineHeight: 1.2 }}>
                   {pendingTasks.toLocaleString()}
                 </Typography>
               </Box>
             </Box>
 
-            <Divider orientation="vertical" flexItem sx={{ mx: 1, display: { xs: 'none', sm: 'block' } }} />
+            <Divider orientation="vertical" flexItem sx={{ mx: 0.75, display: { xs: 'none', sm: 'block' } }} />
 
             {/* Completadas */}
             <Box 
@@ -685,9 +704,9 @@ const Tasks: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: { xs: 'flex-start', sm: 'center' },
-                gap: { xs: 2, sm: 3, md: 4 },
+                gap: { xs: 1.5, sm: 2, md: 2.5 },
                 px: { xs: 0.75, sm: 1 },
-                py: { xs: 1, sm: 1 },
+                py: { xs: 0.5, sm: 0.5 },
                 borderRadius: 2,
                 bgcolor: activeFilter === 'completed' ? `${taxiMonterricoColors.green}10` : 'transparent',
                 cursor: 'pointer',
@@ -722,32 +741,25 @@ const Tasks: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: { xs: 60, sm: 75, md: 95 },
-                height: { xs: 60, sm: 75, md: 95 },
+                width: { xs: 50, sm: 60, md: 70 },
+                height: { xs: 50, sm: 60, md: 70 },
                 borderRadius: '50%',
                 background: `linear-gradient(135deg, ${taxiMonterricoColors.green}20 0%, ${taxiMonterricoColors.green}10 100%)`,
                 border: `2px solid ${taxiMonterricoColors.green}30`,
                 flexShrink: 0,
-                transition: 'all 0.3s ease',
-                '&:hover': {
-                  transform: 'scale(1.1) rotate(5deg)',
-                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}40`,
-                },
+                fontSize: { xs: 28, sm: 36, md: 44 },
               }}>
-                <CheckCircle sx={{ 
-                  color: taxiMonterricoColors.green, 
-                  fontSize: { xs: 35, sm: 45, md: 60 },
-                  transition: 'transform 0.3s ease',
-                  '&:hover': {
-                    transform: 'scale(1.1)',
+                {React.createElement(IoMdCheckboxOutline as any, { 
+                  style: { 
+                    color: taxiMonterricoColors.green,
                   },
-                }} />
+                })}
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', flexShrink: 0 }}>
-                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.5, fontSize: { xs: '0.875rem', sm: '1rem', md: '1.125rem' }, fontWeight: 400, lineHeight: 1.4 }}>
+                <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 0.25, fontSize: { xs: '0.75rem', sm: '0.875rem', md: '0.9375rem' }, fontWeight: 400, lineHeight: 1.3 }}>
                   Completadas
                 </Typography>
-                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0.5, fontSize: { xs: '2rem', sm: '2.75rem', md: '3.5rem' }, lineHeight: 1.2 }}>
+                <Typography variant="h4" sx={{ fontWeight: 700, color: theme.palette.text.primary, mb: 0, fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem' }, lineHeight: 1.2 }}>
                   {completedTasks.toLocaleString()}
                 </Typography>
               </Box>
@@ -774,77 +786,75 @@ const Tasks: React.FC = () => {
         },
       }}>
         <Box sx={{ 
-          px: 3, 
-          pt: 1.5, 
-          pb: 0.5,
-          background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)`,
-          borderBottom: `2px solid transparent`,
-          borderImage: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
-          borderImageSlice: 1,
+          px: { xs: 2, md: 3 }, 
+          pt: { xs: 2, md: 1.5 }, 
+          pb: { xs: 1.5, md: 2 },
+          bgcolor: theme.palette.background.paper,
+          borderBottom: `2px solid ${theme.palette.divider}`,
         }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0, flexWrap: { xs: 'wrap', sm: 'nowrap' }, gap: { xs: 2, sm: 0 } }}>
             <Box>
               <Typography 
-                variant="h4" 
+                variant="h5" 
                 sx={{
                   fontWeight: 700,
-                  fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
-                  background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
+                  fontSize: { xs: '1.25rem', md: '1.5rem' },
+                  background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${taxiMonterricoColors.green} 100%)`,
+                  backgroundClip: 'text',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
                 }}
               >
                 Tareas
               </Typography>
             </Box>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', gap: { xs: 1, sm: 1.5 }, alignItems: 'center', flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
               <TextField
                 size="small"
                 placeholder="Buscar"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
                 InputProps={{
                   startAdornment: <Search sx={{ 
-                    mr: 1.5, 
+                    mr: 1, 
                     color: theme.palette.text.secondary, 
-                    fontSize: 20,
-                    transition: 'color 0.3s ease',
+                    fontSize: { xs: 18, sm: 20 },
                   }} />,
                 }}
                 sx={{ 
-                  minWidth: 150,
-                  maxWidth: 180,
-                  bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
-                  borderRadius: 2,
+                  minWidth: { xs: '100%', sm: 150 },
+                  maxWidth: { xs: '100%', sm: 180 },
+                  bgcolor: theme.palette.background.paper,
+                  borderRadius: 1.5,
+                  order: { xs: 1, sm: 0 },
                   '& .MuiOutlinedInput-root': {
-                    fontSize: '0.875rem',
-                    borderWidth: 2,
+                    fontSize: { xs: '0.75rem', sm: '0.8125rem' },
+                    border: `1.5px solid ${theme.palette.divider}`,
                     '& fieldset': {
-                      borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)',
+                      border: 'none',
                     },
-                    '&:hover fieldset': {
-                      borderColor: `${taxiMonterricoColors.greenLight} !important`,
-                      boxShadow: `0 0 0 2px ${taxiMonterricoColors.greenLight}30`,
+                    '&:hover': {
+                      borderColor: taxiMonterricoColors.green,
+                      boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
                     },
-                    '&.Mui-focused fieldset': {
-                      borderColor: `${taxiMonterricoColors.green} !important`,
-                      boxShadow: `0 0 0 3px ${taxiMonterricoColors.greenLight}30`,
+                    '&.Mui-focused': {
+                      borderColor: taxiMonterricoColors.green,
+                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
                     },
                     '& input::placeholder': {
-                      fontSize: '0.875rem',
+                      fontSize: { xs: '0.75rem', sm: '0.8125rem' },
                       opacity: 0.7,
                     },
                   },
-                  '&:hover .MuiInputAdornment-root .MuiSvgIcon-root': {
-                    color: taxiMonterricoColors.greenLight,
-                  },
-                  '& .MuiOutlinedInput-root.Mui-focused .MuiInputAdornment-root .MuiSvgIcon-root': {
-                    color: taxiMonterricoColors.green,
-                  },
                 }}
               />
-              <FormControl size="small" sx={{ minWidth: 150 }}>
+              <FormControl 
+                size="small" 
+                sx={{ 
+                  minWidth: { xs: '100%', sm: 130 },
+                  order: { xs: 2, sm: 0 },
+                }}
+              >
                 <Select
                   id="tasks-sort-select"
                   name="tasks-sort"
@@ -852,21 +862,21 @@ const Tasks: React.FC = () => {
                   onChange={(e) => setSortBy(e.target.value)}
                   displayEmpty
                   sx={{
-                    borderRadius: 2,
-                    borderWidth: 2,
-                    borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)',
-                    bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
-                    transition: 'all 0.3s ease',
+                    borderRadius: 1.5,
+                    bgcolor: theme.palette.background.paper,
+                    fontSize: { xs: '0.75rem', sm: '0.8125rem' },
+                    border: `1.5px solid ${theme.palette.divider}`,
+                    transition: 'all 0.2s ease',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      border: 'none',
+                    },
                     '&:hover': {
-                      borderColor: `${taxiMonterricoColors.greenLight} !important`,
-                      boxShadow: `0 0 0 2px ${taxiMonterricoColors.greenLight}30`,
+                      borderColor: taxiMonterricoColors.green,
+                      boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
                     },
                     '&.Mui-focused': {
-                      borderColor: `${taxiMonterricoColors.green} !important`,
-                      boxShadow: `0 0 0 3px ${taxiMonterricoColors.greenLight}30`,
-                    },
-                    '& .MuiSelect-icon': {
-                      color: taxiMonterricoColors.green,
+                      borderColor: taxiMonterricoColors.green,
+                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
                     },
                   }}
                 >
@@ -876,23 +886,18 @@ const Tasks: React.FC = () => {
                   <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
                 </Select>
               </FormControl>
-              <Tooltip title="Crear nueva tarea" arrow>
-                <Button 
-                  variant="contained" 
+              <Tooltip title="Nueva Tarea" arrow>
+                <IconButton
                   size="small"
-                  startIcon={<Add />} 
                   onClick={() => handleOpen()}
                   sx={{
-                    background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`,
-                    color: 'white',
-                    borderRadius: 2,
-                    px: 2,
-                    py: 0.75,
-                    fontSize: '0.875rem',
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    boxShadow: `0 4px 12px ${taxiMonterricoColors.greenLight}40`,
-                    transition: 'all 0.3s ease',
+                    background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+                    color: "white",
+                    borderRadius: 1.5,
+                    p: { xs: 0.75, sm: 0.875 },
+                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
+                    order: { xs: 3, sm: 0 },
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     position: 'relative',
                     overflow: 'hidden',
                     '&::before': {
@@ -902,13 +907,13 @@ const Tasks: React.FC = () => {
                       left: '-100%',
                       width: '100%',
                       height: '100%',
-                      background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+                      background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
                       transition: 'left 0.5s ease',
                     },
                     '&:hover': {
-                      transform: 'translateY(-2px) scale(1.02)',
-                      boxShadow: `0 8px 20px ${taxiMonterricoColors.greenLight}60`,
-                      background: `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`,
+                      transform: 'translateY(-2px) scale(1.05)',
+                      boxShadow: `0 8px 20px ${taxiMonterricoColors.green}50`,
+                      background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
                       '&::before': {
                         left: '100%',
                       },
@@ -918,8 +923,8 @@ const Tasks: React.FC = () => {
                     },
                   }}
                 >
-                  Nueva Tarea
-                </Button>
+                  <Add sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                </IconButton>
               </Tooltip>
             </Box>
           </Box>
@@ -934,10 +939,12 @@ const Tasks: React.FC = () => {
             borderRadius: 0,
             border: 'none',
             boxShadow: 'none',
+            paddingRight: 0,
             '& .MuiPaper-root': {
               borderRadius: 0,
               border: 'none',
               boxShadow: 'none',
+              paddingRight: 0,
             },
             '&::-webkit-scrollbar': {
               height: 8,
@@ -957,63 +964,112 @@ const Tasks: React.FC = () => {
           <Table sx={{ minWidth: { xs: 800, md: 'auto' } }}>
             <TableHead>
               <TableRow sx={{ 
-                background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)`,
-                borderTop: `2px solid transparent`,
-                borderImage: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
-                borderImageSlice: 1,
-                borderBottom: `2px solid ${taxiMonterricoColors.greenLight}`,
+                bgcolor: theme.palette.mode === 'dark'
+                  ? '#222B32'
+                  : hexToRgba(taxiMonterricoColors.greenEmerald, 0.01),
+                borderBottom: `2px solid ${theme.palette.divider}`,
                 '& .MuiTableCell-head': {
                   borderBottom: 'none',
-                  fontWeight: 700,
-                },
-                '& .MuiTableCell-head:first-of-type': {
-                  borderTopLeftRadius: 0,
-                },
-                '& .MuiTableCell-head:last-of-type': {
-                  borderTopRightRadius: 0,
+                  fontWeight: 600,
+                  bgcolor: 'transparent',
                 },
               }}>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '30%' } }}>
+                <TableCell sx={{ 
+                  fontWeight: 600, 
+                  color: theme.palette.text.primary, 
+                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                  py: { xs: 1.5, md: 1.25 }, 
+                  pl: { xs: 2, md: 3 }, 
+                  pr: { xs: 0.5, md: 1 }, 
+                  minWidth: { xs: 180, md: 200 }, 
+                  width: { xs: 'auto', md: '22%' },
+                  bgcolor: 'transparent'
+                }}>
                   Nombre
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
+                <TableCell sx={{ 
+                  fontWeight: 600, 
+                  color: theme.palette.text.primary, 
+                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                  py: { xs: 1.5, md: 1.25 }, 
+                  pl: { xs: 1, md: 1.5 }, 
+                  pr: { xs: 1.5, md: 2 }, 
+                  minWidth: { xs: 100, md: 120 }, 
+                  width: { xs: 'auto', md: '14%' },
+                  bgcolor: 'transparent'
+                }}>
                   Estado
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: 1, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
-                  Tipo
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
-                  Prioridad
-                </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
+                <TableCell sx={{ 
+                  fontWeight: 600, 
+                  color: theme.palette.text.primary, 
+                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                  py: { xs: 1.5, md: 1.25 }, 
+                  px: { xs: 1.5, md: 2 }, 
+                  minWidth: { xs: 120, md: 150 }, 
+                  width: { xs: 'auto', md: '14%' },
+                  bgcolor: 'transparent'
+                }}>
                   Fecha de inicio
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
+                <TableCell sx={{ 
+                  fontWeight: 600, 
+                  color: theme.palette.text.primary, 
+                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                  py: { xs: 1.5, md: 1.25 }, 
+                  pl: { xs: 1.5, md: 2 }, 
+                  pr: { xs: 1.5, md: 2 }, 
+                  minWidth: { xs: 140, md: 170 }, 
+                  width: { xs: 'auto', md: '15%' },
+                  bgcolor: 'transparent'
+                }}>
                   Fecha de Vencimiento
                 </TableCell>
-                <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '13%' } }}>
+                <TableCell sx={{ 
+                  fontWeight: 600, 
+                  color: theme.palette.text.primary, 
+                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                  py: { xs: 1.5, md: 1.25 }, 
+                  pl: { xs: 1.5, md: 2 }, 
+                  pr: { xs: 3, md: 4 }, 
+                  minWidth: { xs: 100, md: 120 }, 
+                  width: { xs: 'auto', md: '10%' },
+                  bgcolor: 'transparent'
+                }}>
                   Asignado a
                 </TableCell>
                 <TableCell sx={{ 
                   fontWeight: 600, 
                   color: theme.palette.text.primary, 
                   fontSize: { xs: '0.75rem', md: '0.875rem' }, 
-                  py: { xs: 1.5, md: 2 }, 
-                  px: 1, 
+                  py: { xs: 1.5, md: 1.25 }, 
+                  pl: { xs: 4, md: 5 }, 
+                  pr: { xs: 0.5, md: 1 }, 
+                  minWidth: { xs: 100, md: 120 }, 
+                  width: { xs: 'auto', md: '13%' },
+                  bgcolor: 'transparent'
+                }}>
+                  Prioridad
+                </TableCell>
+                <TableCell sx={{ 
+                  fontWeight: 600, 
+                  color: theme.palette.text.primary, 
+                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                  py: { xs: 1.5, md: 1.25 }, 
+                  pl: { xs: 5, md: 6 },
+                  pr: { xs: 0.5, md: 1 },
                   width: { xs: 100, md: 120 }, 
                   minWidth: { xs: 100, md: 120 },
-                  pr: { xs: 2, md: 3 }
+                  bgcolor: 'transparent'
                 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }}>
                   Acciones
-                  </Box>
                 </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {tasks.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} sx={{ py: 8, textAlign: 'center', border: 'none' }}>
+                  <TableCell colSpan={7} sx={{ py: 8, textAlign: 'center', border: 'none' }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                       <Box
                         sx={{
@@ -1061,22 +1117,33 @@ const Tasks: React.FC = () => {
                   </TableCell>
                 </TableRow>
               ) : (
-                tasks.map((task) => (
+                tasks.map((task, index) => (
                 <TableRow 
                   key={task.id}
                   sx={{ 
+                    bgcolor: theme.palette.background.paper,
+                    borderBottom: theme.palette.mode === 'light' 
+                      ? '1px solid rgba(0, 0, 0, 0.08)' 
+                      : '1px solid rgba(255, 255, 255, 0.08)',
+                    '& .MuiTableCell-root': {
+                      borderBottom: 'none',
+                    },
                     '&:hover': {
-                      bgcolor: 'transparent !important',
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(255, 255, 255, 0.02)' 
+                        : 'rgba(0, 0, 0, 0.02)',
                     },
                     '&.Mui-selected': {
                       bgcolor: 'transparent !important',
                     },
                     '&.Mui-selected:hover': {
-                      bgcolor: 'transparent !important',
+                      bgcolor: theme.palette.mode === 'dark' 
+                        ? 'rgba(255, 255, 255, 0.02)' 
+                        : 'rgba(0, 0, 0, 0.02)',
                     },
                   }}
                 >
-                  <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: 1, minWidth: { xs: 200, md: 250 }, width: { xs: 'auto', md: '30%' } }}>
+                  <TableCell sx={{ py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, pr: { xs: 0.5, md: 1 }, minWidth: { xs: 180, md: 200 }, width: { xs: 'auto', md: '22%' } }}>
                     <Typography 
                       variant="body2" 
                       sx={{ 
@@ -1091,86 +1158,57 @@ const Tasks: React.FC = () => {
                       {task.title || task.subject}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
-                    <Chip
-                      label={getStatusLabel(task.status)}
-                      size="small"
+                  <TableCell sx={{ pl: { xs: 1, md: 1.5 }, pr: { xs: 1.5, md: 2 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '14%' } }}>
+                    <Box
                       onClick={(e) => {
                         e.stopPropagation();
                         setStatusMenuAnchor({ el: e.currentTarget, taskId: task.id });
                       }}
                       sx={{ 
-                        fontWeight: 500,
-                        fontSize: { xs: '0.7rem', md: '0.75rem' },
-                        height: { xs: 20, md: 24 },
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 0.25,
                         cursor: 'pointer',
-                        bgcolor: task.status === 'completed'
-                          ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}15`)
-                          : task.status === 'in progress'
-                          ? (theme.palette.mode === 'dark' ? `${theme.palette.primary.main}26` : `${theme.palette.primary.main}15`)
-                          : task.status === 'pending'
-                          ? (theme.palette.mode === 'dark' ? `${theme.palette.info.main}26` : `${theme.palette.info.main}15`)
-                          : task.status === 'cancelled'
-                          ? (theme.palette.mode === 'dark' ? `${theme.palette.grey[700]}26` : `${theme.palette.grey[300]}15`)
-                          : (theme.palette.mode === 'dark' ? `${theme.palette.warning.main}26` : `${theme.palette.warning.main}15`),
-                        color: task.status === 'completed'
-                          ? taxiMonterricoColors.green
-                          : task.status === 'in progress'
-                          ? theme.palette.primary.main
-                          : task.status === 'pending'
-                          ? theme.palette.info.main
-                          : task.status === 'cancelled'
-                          ? theme.palette.text.secondary
-                          : theme.palette.warning.main,
-                        border: 'none',
-                        borderRadius: 1,
                         transition: 'all 0.2s ease',
                         '&:hover': {
                           opacity: 0.8,
-                          transform: 'scale(1.05)',
                         },
                       }}
-                    />
+                    >
+                      <Typography
+                        sx={{ 
+                          fontWeight: 500,
+                          fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                          color: task.status === 'completed'
+                            ? '#10B981'
+                            : task.status === 'in progress'
+                            ? '#8B5CF6'
+                            : task.status === 'pending'
+                            ? '#EF4444'
+                            : task.status === 'cancelled'
+                            ? theme.palette.text.secondary
+                            : theme.palette.warning.main,
+                        }}
+                      >
+                        {getStatusLabel(task.status)}
+                      </Typography>
+                      <ArrowDropDown 
+                        sx={{ 
+                          fontSize: { xs: '0.875rem', md: '1rem' },
+                          color: task.status === 'completed'
+                            ? '#10B981'
+                            : task.status === 'in progress'
+                            ? '#8B5CF6'
+                            : task.status === 'pending'
+                            ? '#EF4444'
+                            : task.status === 'cancelled'
+                            ? theme.palette.text.secondary
+                            : theme.palette.warning.main,
+                        }} 
+                      />
+                    </Box>
                   </TableCell>
-                  <TableCell sx={{ px: 1, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '15%' } }}>
-                    <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                      {getTypeLabel(task.type)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '12%' } }}>
-                    <Chip
-                      label={getPriorityLabel(task.priority)}
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPriorityMenuAnchor({ el: e.currentTarget, taskId: task.id });
-                      }}
-                      sx={{ 
-                        fontWeight: 500,
-                        fontSize: { xs: '0.7rem', md: '0.75rem' },
-                        height: { xs: 20, md: 24 },
-                        cursor: 'pointer',
-                        bgcolor: task.priority === 'urgent' || task.priority === 'high'
-                          ? (theme.palette.mode === 'dark' ? `${theme.palette.error.main}26` : `${theme.palette.error.main}15`)
-                          : task.priority === 'medium'
-                          ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}26` : `${taxiMonterricoColors.orange}15`)
-                          : (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}15`),
-                        color: task.priority === 'urgent' || task.priority === 'high'
-                          ? theme.palette.error.main
-                          : task.priority === 'medium'
-                          ? taxiMonterricoColors.orangeDark
-                          : taxiMonterricoColors.green,
-                        border: 'none',
-                        borderRadius: 1,
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          opacity: 0.8,
-                          transform: 'scale(1.05)',
-                        },
-                      }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
+                  <TableCell sx={{ px: { xs: 1.5, md: 2 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '14%' } }}>
                     {task.startDate ? (
                       <Typography 
                         variant="body2" 
@@ -1207,7 +1245,7 @@ const Tasks: React.FC = () => {
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '15%' } }}>
+                  <TableCell sx={{ pl: { xs: 1.5, md: 2 }, pr: { xs: 1.5, md: 2 }, minWidth: { xs: 140, md: 170 }, width: { xs: 'auto', md: '15%' } }}>
                     {task.dueDate ? (
                       <Box>
                         <Typography 
@@ -1245,57 +1283,101 @@ const Tasks: React.FC = () => {
                       </Typography>
                     )}
                   </TableCell>
-                  <TableCell sx={{ px: { xs: 1, md: 1.5 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '13%' } }}>
-                    {task.AssignedTo ? (
-                      <Tooltip 
-                        title={`${task.AssignedTo.firstName} ${task.AssignedTo.lastName}`}
-                        arrow
-                      >
-                        <Box sx={{ display: 'inline-block' }}>
-                          <UserAvatar
-                            firstName={task.AssignedTo.firstName}
-                            lastName={task.AssignedTo.lastName}
-                            avatar={task.AssignedTo.avatar}
-                            sx={{
-                              width: { xs: 28, md: 32 },
-                              height: { xs: 28, md: 32 },
-                              fontSize: { xs: '0.7rem', md: '0.75rem' },
-                              boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-                              flexShrink: 0,
-                              cursor: 'pointer',
-                            }}
-                          />
-                        </Box>
-                      </Tooltip>
-                    ) : task.User ? (
-                      <Tooltip 
-                        title={`${task.User.firstName} ${task.User.lastName}`}
-                        arrow
-                      >
-                        <Box sx={{ display: 'inline-block' }}>
-                          <UserAvatar
-                            firstName={task.User.firstName}
-                            lastName={task.User.lastName}
-                            avatar={task.User.avatar}
-                            sx={{
-                              width: { xs: 28, md: 32 },
-                              height: { xs: 28, md: 32 },
-                              fontSize: { xs: '0.7rem', md: '0.75rem' },
-                              boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-                              flexShrink: 0,
-                              cursor: 'pointer',
-                            }}
-                          />
-                        </Box>
-                      </Tooltip>
-                    ) : (
-                      <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
-                        --
-                      </Typography>
-                    )}
+                  <TableCell sx={{ pl: { xs: 1.5, md: 2 }, pr: { xs: 3, md: 4 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '10%' } }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
+                      {task.AssignedTo ? (
+                        <Tooltip 
+                          title={`${task.AssignedTo.firstName} ${task.AssignedTo.lastName}`}
+                          arrow
+                        >
+                          <Box sx={{ display: 'inline-block' }}>
+                            <UserAvatar
+                              firstName={task.AssignedTo.firstName}
+                              lastName={task.AssignedTo.lastName}
+                              avatar={task.AssignedTo.avatar}
+                              sx={{
+                                width: { xs: 28, md: 32 },
+                                height: { xs: 28, md: 32 },
+                                fontSize: { xs: '0.7rem', md: '0.75rem' },
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                                flexShrink: 0,
+                                cursor: 'pointer',
+                              }}
+                            />
+                          </Box>
+                        </Tooltip>
+                      ) : task.User ? (
+                        <Tooltip 
+                          title={`${task.User.firstName} ${task.User.lastName}`}
+                          arrow
+                        >
+                          <Box sx={{ display: 'inline-block' }}>
+                            <UserAvatar
+                              firstName={task.User.firstName}
+                              lastName={task.User.lastName}
+                              avatar={task.User.avatar}
+                              sx={{
+                                width: { xs: 28, md: 32 },
+                                height: { xs: 28, md: 32 },
+                                fontSize: { xs: '0.7rem', md: '0.75rem' },
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                                flexShrink: 0,
+                                cursor: 'pointer',
+                              }}
+                            />
+                          </Box>
+                        </Tooltip>
+                      ) : (
+                        <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
+                          --
+                        </Typography>
+                      )}
+                    </Box>
                   </TableCell>
-                  <TableCell sx={{ px: 1, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 }, pr: { xs: 2, md: 3 } }}>
-                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                  <TableCell sx={{ pl: { xs: 4, md: 5 }, pr: { xs: 0.5, md: 1 }, minWidth: { xs: 100, md: 120 }, width: { xs: 'auto', md: '13%' } }}>
+                    <Box
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPriorityMenuAnchor({ el: e.currentTarget, taskId: task.id });
+                      }}
+                      sx={{ 
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 0.25,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          opacity: 0.8,
+                        },
+                      }}
+                    >
+                      <Typography
+                        sx={{ 
+                          fontWeight: 500,
+                          fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                          color: task.priority === 'high'
+                            ? theme.palette.error.main
+                            : task.priority === 'medium'
+                            ? taxiMonterricoColors.orangeDark
+                            : taxiMonterricoColors.green,
+                        }}
+                      >
+                        {getPriorityLabel(task.priority)}
+                      </Typography>
+                      <ArrowDropDown 
+                        sx={{ 
+                          fontSize: { xs: '0.875rem', md: '1rem' },
+                          color: task.priority === 'high'
+                            ? theme.palette.error.main
+                            : task.priority === 'medium'
+                            ? taxiMonterricoColors.orangeDark
+                            : taxiMonterricoColors.green,
+                        }} 
+                      />
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ pl: { xs: 5, md: 6 }, pr: { xs: 0.5, md: 1 }, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
+                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', justifyContent: 'flex-start' }}>
                       <Tooltip title="Editar">
                         <IconButton
                           size="small"
@@ -1303,21 +1385,16 @@ const Tasks: React.FC = () => {
                             e.stopPropagation();
                             handleOpen(task);
                           }}
-                          sx={pageStyles.previewIconButton}
+                          sx={{
+                            color: theme.palette.text.secondary,
+                            padding: { xs: 0.5, md: 1 },
+                            '&:hover': {
+                              color: taxiMonterricoColors.green,
+                              bgcolor: `${taxiMonterricoColors.green}15`,
+                            },
+                          }}
                         >
                           <Edit sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Vista previa">
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handlePreview(task);
-                          }}
-                          sx={pageStyles.previewIconButton}
-                        >
-                          <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Eliminar">
@@ -1462,19 +1539,6 @@ const Tasks: React.FC = () => {
             />
             <TextField
               select
-              label="Tipo"
-              value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-            >
-              <MenuItem value="call">Llamada</MenuItem>
-              <MenuItem value="email">Email</MenuItem>
-              <MenuItem value="meeting">Reunión</MenuItem>
-              <MenuItem value="note">Nota</MenuItem>
-              <MenuItem value="todo">Tarea</MenuItem>
-              <MenuItem value="other">Otro</MenuItem>
-            </TextField>
-            <TextField
-              select
               label="Estado"
               value={formData.status}
               onChange={(e) => setFormData({ ...formData, status: e.target.value })}
@@ -1493,7 +1557,6 @@ const Tasks: React.FC = () => {
               <MenuItem value="low">Baja</MenuItem>
               <MenuItem value="medium">Media</MenuItem>
               <MenuItem value="high">Alta</MenuItem>
-              <MenuItem value="urgent">Urgente</MenuItem>
             </TextField>
             <TextField
               label="Fecha de inicio"
@@ -1578,7 +1641,7 @@ const Tasks: React.FC = () => {
         onClose={() => setStatusMenuAnchor(null)}
         PaperProps={{
           sx: {
-            bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : theme.palette.background.paper,
+            bgcolor: theme.palette.background.paper,
             minWidth: 180,
             borderRadius: 2,
             boxShadow: theme.palette.mode === 'dark' 
@@ -1638,23 +1701,6 @@ const Tasks: React.FC = () => {
         >
           Completada
         </MenuItem>
-        <MenuItem
-          onClick={() => {
-            if (statusMenuAnchor) {
-              handleStatusChange(statusMenuAnchor.taskId, 'cancelled');
-            }
-          }}
-          sx={{
-            color: theme.palette.text.primary,
-            '&:hover': {
-              bgcolor: theme.palette.mode === 'dark' 
-                ? 'rgba(255, 255, 255, 0.08)' 
-                : theme.palette.action.hover,
-            },
-          }}
-        >
-          Cancelada
-        </MenuItem>
       </Menu>
 
       {/* Menú de selección de prioridad */}
@@ -1664,7 +1710,7 @@ const Tasks: React.FC = () => {
         onClose={() => setPriorityMenuAnchor(null)}
         PaperProps={{
           sx: {
-            bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : theme.palette.background.paper,
+            bgcolor: theme.palette.background.paper,
             minWidth: 180,
             borderRadius: 2,
             boxShadow: theme.palette.mode === 'dark' 
@@ -1724,33 +1770,8 @@ const Tasks: React.FC = () => {
         >
           Alta
         </MenuItem>
-        <MenuItem
-          onClick={() => {
-            if (priorityMenuAnchor) {
-              handlePriorityChange(priorityMenuAnchor.taskId, 'urgent');
-            }
-          }}
-          sx={{
-            color: theme.palette.text.primary,
-            '&:hover': {
-              bgcolor: theme.palette.mode === 'dark' 
-                ? 'rgba(255, 255, 255, 0.08)' 
-                : theme.palette.action.hover,
-            },
-          }}
-        >
-          Urgente
-        </MenuItem>
       </Menu>
 
-      {/* Entity Preview Drawer */}
-      <EntityPreviewDrawer
-        open={previewOpen}
-        onClose={handleClosePreview}
-        entityType="task"
-        entityId={previewTask?.id || null}
-        entityData={previewTask}
-      />
     </Box>
   );
 };

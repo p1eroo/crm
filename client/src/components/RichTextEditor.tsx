@@ -592,12 +592,14 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
           display: 'flex',
           alignItems: 'center',
           p: 0.5,
-          borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : '#e0e0e0'}`,
+          borderBottom: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
           flexWrap: 'wrap',
-          backgroundColor: theme.palette.mode === 'dark' ? '#374151' : '#fafafa',
+          backgroundColor: 'transparent',
           position: 'relative',
+          gap: 0.25,
         }}
       >
+        {/* Grupo 1: Formato básico de texto */}
         <IconButton
           size="small"
           sx={{ 
@@ -670,6 +672,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
         >
           <FormatStrikethrough fontSize="small" />
         </IconButton>
+
+        {/* Separador */}
+        <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: '24px', alignSelf: 'center', borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)' }} />
+
+        {/* Grupo 2: Alineación */}
         <IconButton
           size="small"
           sx={{ 
@@ -730,7 +737,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
         >
           <FormatAlignJustify fontSize="small" />
         </IconButton>
-        <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: '20px', borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : undefined }} />
+
+        {/* Separador */}
+        <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: '24px', alignSelf: 'center', borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)' }} />
+
+        {/* Grupo 3: Listas */}
         <IconButton
           size="small"
           sx={{ 
@@ -767,7 +778,11 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
         >
           <FormatListNumbered fontSize="small" />
         </IconButton>
-        <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: '20px', borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : undefined }} />
+
+        {/* Separador */}
+        <Divider orientation="vertical" flexItem sx={{ mx: 0.5, height: '24px', alignSelf: 'center', borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.12)' }} />
+
+        {/* Grupo 4: Inserción de elementos */}
         <IconButton
           size="small"
           sx={{ 

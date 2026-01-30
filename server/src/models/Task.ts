@@ -9,7 +9,6 @@ interface TaskAttributes {
   id: number;
   title: string;
   description?: string;
-  type: 'call' | 'email' | 'meeting' | 'note' | 'todo' | 'other';
   status: 'pending' | 'in progress' | 'completed' | 'cancelled';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   dueDate?: Date;
@@ -29,7 +28,6 @@ export class Task extends Model<TaskAttributes, TaskCreationAttributes> implemen
   public id!: number;
   public title!: string;
   public description?: string;
-  public type!: 'call' | 'email' | 'meeting' | 'note' | 'todo' | 'other';
   public status!: 'pending' | 'in progress' | 'completed' | 'cancelled';
   public priority!: 'low' | 'medium' | 'high' | 'urgent';
   public dueDate?: Date;
@@ -63,10 +61,6 @@ Task.init(
     description: {
       type: DataTypes.TEXT,
       allowNull: true,
-    },
-    type: {
-      type: DataTypes.ENUM('call', 'email', 'meeting', 'note', 'todo', 'other'),
-      allowNull: false,
     },
     status: {
       type: DataTypes.ENUM('pending', 'in progress', 'completed', 'cancelled'),

@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Box,
   Typography,
   TextField,
   Button,
   IconButton,
-  useTheme,
   Popover,
+  useTheme,
 } from "@mui/material";
 import {
   Close,
@@ -15,8 +15,8 @@ import {
   ChevronRight,
 } from "@mui/icons-material";
 import { taxiMonterricoColors } from "../../theme/colors";
-import { formatDatePeru } from "../../utils/dateUtils";
 import api from "../../config/api";
+import { formatDatePeru } from "../../utils/dateUtils";
 
 interface User {
   id: number;
@@ -25,22 +25,17 @@ interface User {
   email?: string;
 }
 
-interface CallModalProps {
+interface MeetingModalProps {
   open: boolean;
   onClose: () => void;
   entityType: "deal" | "company" | "contact" | "task" | "ticket";
   entityId: number | string;
   entityName: string;
   user: User | null;
-  onSave: (newActivity: any) => void;
-  // Opcional: IDs de entidades relacionadas para asociar la llamada
-  relatedEntityIds?: {
-    contactId?: number;
-    companyId?: number;
-  };
+  onSave: (newTask: any) => void;
 }
 
-const CallModal: React.FC<CallModalProps> = ({
+const MeetingModal: React.FC<MeetingModalProps> = ({
   open,
   onClose,
   entityType,
@@ -48,17 +43,17 @@ const CallModal: React.FC<CallModalProps> = ({
   entityName,
   user,
   onSave,
-  relatedEntityIds = {},
 }) => {
   const theme = useTheme();
-  const [callData, setCallData] = useState({
-    subject: "",
+  const [taskData, setTaskData] = useState({
+    title: "",
     description: "",
-    duration: "",
-    date: "",
     time: "",
+    dueDate: "",
+    type: "meeting",
   });
   const [saving, setSaving] = useState(false);
+  const descriptionEditorRef = useRef<HTMLDivElement>(null);
   const [datePickerAnchorEl, setDatePickerAnchorEl] =
     useState<HTMLElement | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -67,54 +62,122 @@ const CallModal: React.FC<CallModalProps> = ({
   // Resetear estados cuando se abre/cierra el modal
   useEffect(() => {
     if (!open) {
-      setCallData({ subject: "", description: "", duration: "", date: "", time: "" });
+      setTaskData({
+        title: "",
+        description: "",
+        time: "",
+        dueDate: "",
+        type: "meeting",
+      });
       setDatePickerAnchorEl(null);
       setSelectedDate(null);
+    } else {
+      // Asegurar que siempre sea "meeting"
+      setTaskData((prev) => ({
+        ...prev,
+        type: "meeting",
+      }));
     }
   }, [open]);
 
-  const handleSaveCall = useCallback(async () => {
-    if (!callData.subject.trim()) {
+  useEffect(() => {
+    if (descriptionEditorRef.current && open) {
+      if (taskData.description !== descriptionEditorRef.current.innerHTML) {
+        descriptionEditorRef.current.innerHTML = taskData.description || "";
+      }
+    }
+  }, [taskData.description, open]);
+
+  const handleOpenDatePicker = (event: React.MouseEvent<HTMLElement>) => {
+    if (taskData.dueDate) {
+      const dateMatch = taskData.dueDate.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (dateMatch) {
+        const year = parseInt(dateMatch[1], 10);
+        const month = parseInt(dateMatch[2], 10) - 1;
+        const day = parseInt(dateMatch[3], 10);
+        const date = new Date(year, month, day);
+        setSelectedDate(date);
+        setCurrentMonth(date);
+      } else {
+        const date = new Date(taskData.dueDate);
+        setSelectedDate(date);
+        setCurrentMonth(date);
+      }
+    } else {
+      const today = new Date();
+      setSelectedDate(null);
+      setCurrentMonth(today);
+    }
+    setDatePickerAnchorEl(event.currentTarget);
+  };
+
+  const handleDateSelect = (year: number, month: number, day: number) => {
+    const date = new Date(year, month - 1, day);
+    setSelectedDate(date);
+    const formattedDate = `${year}-${String(month).padStart(2, "0")}-${String(
+      day
+    ).padStart(2, "0")}`;
+    setTaskData({ ...taskData, dueDate: formattedDate });
+    setDatePickerAnchorEl(null);
+  };
+
+  const handleClearDate = () => {
+    setSelectedDate(null);
+    setTaskData({ ...taskData, dueDate: "" });
+    setDatePickerAnchorEl(null);
+  };
+
+  const handleToday = () => {
+    const today = new Date();
+    const peruToday = new Date(
+      today.toLocaleString("en-US", { timeZone: "America/Lima" })
+    );
+    const year = peruToday.getFullYear();
+    const month = peruToday.getMonth() + 1;
+    const day = peruToday.getDate();
+    handleDateSelect(year, month, day);
+  };
+
+  const handleSaveTask = useCallback(async () => {
+    if (!taskData.title.trim()) {
       return;
     }
     setSaving(true);
     try {
-      // Preparar datos de la actividad de llamada
-      const activityData: any = {
-        subject: callData.subject,
-        description: callData.description,
-        duration: callData.duration || undefined,
-        date: callData.date || undefined,
-        time: callData.time || undefined,
+      // Siempre guardar como reunión
+      const response = await api.post("/activities", {
+        type: "meeting",
+        subject: taskData.title,
+        description: taskData.description,
+        dueDate: taskData.dueDate || undefined,
+        time: taskData.time || undefined,
         [`${entityType}Id`]: Number(entityId),
-      };
-
-      // Agregar IDs de entidades relacionadas si están disponibles
-      if (relatedEntityIds.contactId) {
-        activityData.contactId = relatedEntityIds.contactId;
-      }
-      if (relatedEntityIds.companyId) {
-        activityData.companyId = relatedEntityIds.companyId;
-      }
-
-      // Crear actividad de llamada
-      const response = await api.post("/activities/calls", activityData);
+      });
       const newActivity = response.data;
-
-      // Llamar al callback con la actividad creada
-      onSave(newActivity);
-
-      // Cerrar modal y resetear estados
+      // Convertir a formato compatible con onSave para la UI de donde se llama
+      const taskAsActivity = {
+        id: newActivity.id,
+        type: "meeting",
+        title: newActivity.subject,
+        description: newActivity.description,
+        dueDate: taskData.dueDate || undefined,
+        createdAt: newActivity.createdAt,
+        CreatedBy: newActivity.User,
+        AssignedTo: newActivity.User,
+        companyId: newActivity.companyId,
+        contactId: newActivity.contactId,
+        dealId: newActivity.dealId,
+      };
+      onSave(taskAsActivity);
       onClose();
-      setCallData({ subject: "", description: "", duration: "", date: "", time: "" });
-    } catch (error: any) {
-      console.error("Error saving call:", error);
+    } catch (error) {
+      console.error("Error saving meeting:", error);
     } finally {
       setSaving(false);
     }
-  }, [callData, entityType, entityId, relatedEntityIds, onSave, onClose]);
+  }, [taskData, entityType, entityId, onSave, onClose]);
 
-  // Atajos de teclado para el modal de llamada
+  // Atajos de teclado
   useEffect(() => {
     if (!open) return;
 
@@ -122,8 +185,8 @@ const CallModal: React.FC<CallModalProps> = ({
       // Ctrl/Cmd + Enter para guardar desde cualquier lugar
       if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
         e.preventDefault();
-        if (!saving && callData.subject.trim()) {
-          handleSaveCall();
+        if (!saving && taskData.title.trim()) {
+          handleSaveTask();
         }
       }
       // Esc para cancelar
@@ -136,7 +199,7 @@ const CallModal: React.FC<CallModalProps> = ({
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [open, saving, callData.subject, handleSaveCall, onClose]);
+  }, [open, saving, taskData.title, handleSaveTask, onClose]);
 
   const formatDateDisplay = (dateString: string) => {
     return formatDatePeru(dateString);
@@ -188,56 +251,6 @@ const CallModal: React.FC<CallModalProps> = ({
 
   const weekDays = ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sa"];
 
-  const handleOpenDatePicker = (event: React.MouseEvent<HTMLElement>) => {
-    if (callData.date) {
-      const dateMatch = callData.date.match(/^(\d{4})-(\d{2})-(\d{2})/);
-      if (dateMatch) {
-        const year = parseInt(dateMatch[1], 10);
-        const month = parseInt(dateMatch[2], 10) - 1;
-        const day = parseInt(dateMatch[3], 10);
-        const date = new Date(year, month, day);
-        setSelectedDate(date);
-        setCurrentMonth(date);
-      } else {
-        const date = new Date(callData.date);
-        setSelectedDate(date);
-        setCurrentMonth(date);
-      }
-    } else {
-      const today = new Date();
-      setSelectedDate(null);
-      setCurrentMonth(today);
-    }
-    setDatePickerAnchorEl(event.currentTarget);
-  };
-
-  const handleDateSelect = (year: number, month: number, day: number) => {
-    const date = new Date(year, month - 1, day);
-    setSelectedDate(date);
-    const formattedDate = `${year}-${String(month).padStart(2, "0")}-${String(
-      day
-    ).padStart(2, "0")}`;
-    setCallData({ ...callData, date: formattedDate });
-    setDatePickerAnchorEl(null);
-  };
-
-  const handleClearDate = () => {
-    setSelectedDate(null);
-    setCallData({ ...callData, date: "" });
-    setDatePickerAnchorEl(null);
-  };
-
-  const handleToday = () => {
-    const today = new Date();
-    const peruToday = new Date(
-      today.toLocaleString("en-US", { timeZone: "America/Lima" })
-    );
-    const year = peruToday.getFullYear();
-    const month = peruToday.getMonth() + 1;
-    const day = peruToday.getDate();
-    handleDateSelect(year, month, day);
-  };
-
   if (!open) return null;
 
   return (
@@ -248,10 +261,10 @@ const CallModal: React.FC<CallModalProps> = ({
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
-          width: { xs: "50vw", sm: "500px", md: "500px" },
+          width: { xs: "50vw", sm: "700px", md: "550px" },
           maxWidth: { xs: "95vw", sm: "95vw" },
-          height: { xs: "85vh", sm: "80vh" },
-          maxHeight: { xs: "85vh", sm: "720px" },
+          height: { xs: "85vh", sm: "60vh" },
+          maxHeight: { xs: "85vh", sm: "680px" },
           bgcolor: `${theme.palette.background.paper} !important`,
           color: `${theme.palette.text.primary} !important`,
           border: "none",
@@ -284,22 +297,20 @@ const CallModal: React.FC<CallModalProps> = ({
             justifyContent: "space-between",
             minHeight: { xs: "64px", md: "60px" },
             px: { xs: 3, md: 4 },
-            borderBottom: `1px solid ${theme.palette.divider}`, // Agregar esta línea
+            borderBottom: `1px solid ${theme.palette.divider}`,
           }}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-            <Typography
-              variant="h5"
-              sx={{
-                color: theme.palette.text.primary,
-                fontWeight: 700,
-                fontSize: { xs: "1.1rem", md: "1.25rem" },
-                letterSpacing: "-0.02em",
-              }}
-            >
-              Llamada
-            </Typography>
-          </Box>
+          <Typography
+            variant="h5"
+            sx={{
+              color: theme.palette.text.primary,
+              fontWeight: 700,
+              fontSize: { xs: "1.1rem", md: "1.25rem" },
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Reunión
+          </Typography>
           <IconButton
             sx={{
               color: theme.palette.text.secondary,
@@ -317,7 +328,6 @@ const CallModal: React.FC<CallModalProps> = ({
           </IconButton>
         </Box>
 
-        {/* Contenido */}
         <Box
           sx={{
             flexGrow: 1,
@@ -327,141 +337,26 @@ const CallModal: React.FC<CallModalProps> = ({
             pt: 2,
             pb: { xs: 3, md: 4 },
             overflow: "hidden",
-            overflowY: "auto",
             minHeight: 0,
             gap: 2,
-            "&::-webkit-scrollbar": {
-              width: "8px",
-            },
-            "&::-webkit-scrollbar-track": {
-              backgroundColor: "transparent",
-              borderRadius: "4px",
-            },
-            "&::-webkit-scrollbar-thumb": {
-              backgroundColor:
-                theme.palette.mode === "dark"
-                  ? "rgba(255,255,255,0.2)"
-                  : "rgba(0,0,0,0.2)",
-              borderRadius: "4px",
-              "&:hover": {
-                backgroundColor:
-                  theme.palette.mode === "dark"
-                    ? "rgba(255,255,255,0.3)"
-                    : "rgba(0,0,0,0.3)",
-              },
-              transition: "background-color 0.2s ease",
-            },
           }}
         >
-          <TextField
-            placeholder="Asunto"
-            value={callData.subject}
-            onChange={(e) =>
-              setCallData({ ...callData, subject: e.target.value })
-            }
-            required
-            fullWidth
-            sx={{
-              "& input": {
-                color: `${theme.palette.text.primary} !important`,
-                "&::placeholder": {
-                  color: `${theme.palette.text.secondary} !important`,
-                  opacity: 1,
-                },
-              },
-              "& .MuiOutlinedInput-root": {
-                borderRadius: 2,
-                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                "& fieldset": {
-                  borderWidth: "2px",
-                  borderColor: theme.palette.divider,
-                },
-                "&:hover fieldset": {
-                  borderColor: theme.palette.divider,
-                },
-                "&.Mui-focused fieldset": {
-                  borderColor: theme.palette.divider,
-                  borderWidth: "2px",
-                },
-              },
-            }}
-            onKeyDown={(e) => {
-              // Enter para guardar (solo en el campo de asunto)
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                if (!saving && callData.subject.trim()) {
-                  handleSaveCall();
-                }
-              }
-              // Esc para cancelar
-              if (e.key === "Escape") {
-                onClose();
-              }
-            }}
-          />
-          <TextField
-            placeholder="Fecha"
-            value={callData.date ? formatDateDisplay(callData.date) : ""}
-            onClick={handleOpenDatePicker}
-            fullWidth
-            InputProps={{
-              readOnly: true,
-              endAdornment: (
-                <IconButton
-                  size="small"
-                  onClick={handleOpenDatePicker}
-                  sx={{
-                    color: theme.palette.text.secondary,
-                    mr: 0.5,
-                    "&:hover": {
-                      backgroundColor: "transparent",
-                      color: taxiMonterricoColors.green,
-                    },
-                  }}
-                >
-                  <CalendarToday sx={{ fontSize: 18 }} />
-                </IconButton>
-              ),
-            }}
-            sx={{
-              cursor: "pointer",
-              "& input": {
-                color: `${theme.palette.text.primary} !important`,
-                "&::placeholder": {
-                  color: `${theme.palette.text.secondary} !important`,
-                  opacity: 1,
-                },
-              },
-              "& .MuiOutlinedInput-root": {
-                borderRadius: 2,
-                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                "& fieldset": {
-                  borderWidth: "2px",
-                  borderColor: theme.palette.divider,
-                },
-                "&:hover fieldset": {
-                  borderColor: theme.palette.divider,
-                },
-                "&.Mui-focused fieldset": {
-                  borderColor: theme.palette.divider,
-                  borderWidth: "2px",
-                },
-              },
-            }}
-          />
-          <Box
-            sx={{
-              display: "flex",
-              gap: 2,
-              width: "100%",
-            }}
-          >
+          {/* Título */}
+          <Box sx={{ mb: 0.5 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                mb: 0.75,
+                color: theme.palette.text.secondary,
+                fontWeight: 500,
+              }}
+            >
+              Título
+            </Typography>
             <TextField
-              placeholder="Hora"
-              type="time"
-              value={callData.time}
+              value={taskData.title}
               onChange={(e) =>
-                setCallData({ ...callData, time: e.target.value })
+                setTaskData({ ...taskData, title: e.target.value })
               }
               fullWidth
               sx={{
@@ -470,22 +365,6 @@ const CallModal: React.FC<CallModalProps> = ({
                   "&::placeholder": {
                     color: `${theme.palette.text.secondary} !important`,
                     opacity: 1,
-                  },
-                  "&::-webkit-calendar-picker-indicator": {
-                    filter: theme.palette.mode === "dark" ? "invert(1)" : "none",
-                    cursor: "pointer",
-                  },
-                  "&::-webkit-datetime-edit-text": {
-                    color: `${theme.palette.text.primary} !important`,
-                  },
-                  "&::-webkit-datetime-edit-hour-field": {
-                    color: `${theme.palette.text.primary} !important`,
-                  },
-                  "&::-webkit-datetime-edit-minute-field": {
-                    color: `${theme.palette.text.primary} !important`,
-                  },
-                  "&::-webkit-datetime-edit-ampm-field": {
-                    color: `${theme.palette.text.primary} !important`,
                   },
                 },
                 "& .MuiOutlinedInput-root": {
@@ -502,95 +381,213 @@ const CallModal: React.FC<CallModalProps> = ({
                     borderColor: theme.palette.divider,
                     borderWidth: "2px",
                   },
-                  "& .MuiInputAdornment-root .MuiSvgIcon-root": {
-                    color: theme.palette.mode === "dark" ? theme.palette.common.white : theme.palette.text.secondary,
-                  },
+                },
+                "& .MuiInputBase-input": {
+                  py: 1,
                 },
               }}
-            />
-            <TextField
-              placeholder="Duración (minutos)"
-              type="number"
-              value={callData.duration}
-              onChange={(e) =>
-                setCallData({ ...callData, duration: e.target.value })
-              }
-              fullWidth
-              sx={{
-                "& input": {
-                  color: `${theme.palette.text.primary} !important`,
-                  "&::placeholder": {
-                    color: `${theme.palette.text.secondary} !important`,
-                    opacity: 1,
-                  },
-                },
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 2,
-                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                  "& fieldset": {
-                    borderWidth: "2px",
-                    borderColor: theme.palette.divider,
-                  },
-                  "&:hover fieldset": {
-                    borderColor: theme.palette.divider,
-                  },
-                  "&.Mui-focused fieldset": {
-                    borderColor: theme.palette.divider,
-                    borderWidth: "2px",
-                  },
-                },
+              onKeyDown={(e) => {
+                // Enter para guardar (solo en el campo de título)
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (!saving && taskData.title.trim()) {
+                    handleSaveTask();
+                  }
+                }
+                // Esc para cancelar
+                if (e.key === "Escape") {
+                  onClose();
+                }
               }}
             />
           </Box>
-          <TextField
-            placeholder="Notas de la llamada"
-            multiline
-            rows={8}
-            value={callData.description}
-            onChange={(e) =>
-              setCallData({ ...callData, description: e.target.value })
-            }
-            fullWidth
+
+          {/* Hora y Fecha */}
+          <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
+            <Box sx={{ flex: 1 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  mb: 0.75,
+                  color: theme.palette.text.secondary,
+                  fontWeight: 500,
+                }}
+              >
+                Hora
+              </Typography>
+              <TextField
+                type="time"
+                value={taskData.time}
+                onChange={(e) =>
+                  setTaskData({ ...taskData, time: e.target.value })
+                }
+                fullWidth
+                sx={{
+                  "& input": {
+                    color: `${theme.palette.text.primary} !important`,
+                    "&::placeholder": {
+                      color: `${theme.palette.text.secondary} !important`,
+                      opacity: 1,
+                    },
+                    "&::-webkit-calendar-picker-indicator": {
+                      filter: theme.palette.mode === "dark" ? "invert(1)" : "none",
+                      cursor: "pointer",
+                    },
+                    "&::-webkit-datetime-edit-text": {
+                      color: `${theme.palette.text.primary} !important`,
+                    },
+                    "&::-webkit-datetime-edit-hour-field": {
+                      color: `${theme.palette.text.primary} !important`,
+                    },
+                    "&::-webkit-datetime-edit-minute-field": {
+                      color: `${theme.palette.text.primary} !important`,
+                    },
+                    "&::-webkit-datetime-edit-ampm-field": {
+                      color: `${theme.palette.text.primary} !important`,
+                    },
+                  },
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    "& fieldset": {
+                      borderWidth: "2px",
+                      borderColor: theme.palette.divider,
+                    },
+                    "&:hover fieldset": {
+                      borderColor: theme.palette.divider,
+                    },
+                    "&.Mui-focused fieldset": {
+                      borderColor: theme.palette.divider,
+                      borderWidth: "2px",
+                    },
+                    "& .MuiInputAdornment-root .MuiSvgIcon-root": {
+                      color: theme.palette.mode === "dark" ? theme.palette.common.white : theme.palette.text.secondary,
+                    },
+                  },
+                  "& .MuiInputBase-input": {
+                    py: 1,
+                  },
+                }}
+              />
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  mb: 0.75,
+                  color: theme.palette.text.secondary,
+                  fontWeight: 500,
+                }}
+              >
+                Fecha
+              </Typography>
+              <TextField
+                value={
+                  taskData.dueDate ? formatDateDisplay(taskData.dueDate) : ""
+                }
+                onClick={handleOpenDatePicker}
+                fullWidth
+                InputProps={{
+                  readOnly: true,
+                  endAdornment: (
+                    <IconButton
+                      size="small"
+                      onClick={handleOpenDatePicker}
+                      sx={{
+                        color: theme.palette.text.secondary,
+                        mr: 0.5,
+                        "&:hover": {
+                          backgroundColor: "transparent",
+                          color: taxiMonterricoColors.orange,
+                        },
+                      }}
+                    >
+                      <CalendarToday sx={{ fontSize: 18 }} />
+                    </IconButton>
+                  ),
+                }}
+                sx={{
+                  cursor: "pointer",
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                    "& fieldset": {
+                      borderWidth: "2px",
+                      borderColor: theme.palette.divider,
+                    },
+                    "&:hover fieldset": {
+                      borderColor: theme.palette.divider,
+                    },
+                    "&.Mui-focused fieldset": {
+                      borderColor: theme.palette.divider,
+                      borderWidth: "2px",
+                    },
+                  },
+                  "& .MuiInputBase-input": {
+                    py: 1,
+                    cursor: "pointer",
+                  },
+                }}
+              />
+            </Box>
+          </Box>
+
+          {/* Editor de texto */}
+          <Box
+            ref={descriptionEditorRef}
+            contentEditable
+            suppressContentEditableWarning
+            onInput={(e) => {
+              const html = (e.target as HTMLElement).innerHTML;
+              if (html !== taskData.description) {
+                setTaskData({ ...taskData, description: html });
+              }
+            }}
             sx={{
-              "& textarea": {
-                color: `${theme.palette.text.primary} !important`,
-                paddingTop: "0px",
-                "&::placeholder": {
-                  color: `${theme.palette.text.secondary} !important`,
-                  opacity: 1,
-                },
+              flex: 1,
+              minHeight: 0,
+              overflowY: "auto",
+              overflowX: "hidden",
+              pt: 1.5,
+              pb: 1.5,
+              px: 1.5,
+              borderRadius: 2,
+              border: `2px solid ${theme.palette.divider}`,
+              outline: "none",
+              lineHeight: 1.5,
+              color: theme.palette.text.primary,
+              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+              "&:focus": {
+                borderColor: theme.palette.divider,
               },
-              "& .MuiOutlinedInput-root": {
-                borderRadius: 2,
-                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                minHeight: "300px",
-                "& .MuiInputBase-input": {
-                  paddingTop: "4px !important",
-                  paddingLeft: "0px !important",
-                  paddingRight: "14px !important",
-                  paddingBottom: "8px !important",
-                },
-                "& fieldset": {
-                  borderWidth: "2px",
-                  borderColor: theme.palette.divider,
-                },
-                "&:hover fieldset": {
-                  borderColor: theme.palette.divider,
-                },
-                "&.Mui-focused fieldset": {
-                  borderColor: theme.palette.divider,
-                  borderWidth: "2px",
-                },
+              "&:empty:before": {
+                content: '"Observaciones"',
+                color: theme.palette.text.secondary,
+                opacity: 1,
+              },
+              "&::-webkit-scrollbar": {
+                width: "6px",
+              },
+              "&::-webkit-scrollbar-track": {
+                backgroundColor: "transparent",
+              },
+              "&::-webkit-scrollbar-thumb": {
+                backgroundColor:
+                  theme.palette.mode === "dark"
+                    ? "rgba(255,255,255,0.2)"
+                    : "rgba(0,0,0,0.2)",
+                borderRadius: "3px",
               },
             }}
           />
+
         </Box>
 
         {/* Footer con botones */}
         <Box
           sx={{
             px: 4,
-            py: 2,
+            py: 1.5,
             borderTop: `1px solid ${theme.palette.divider}`,
             bgcolor: `${theme.palette.background.paper} !important`,
             display: "flex",
@@ -603,8 +600,8 @@ const CallModal: React.FC<CallModalProps> = ({
             variant="outlined"
             sx={{
               textTransform: "none",
-              px: 2,
-              py: 1,
+              px: 1.5,
+              py: 0.5,
               borderColor: theme.palette.error.main,
               color: theme.palette.error.main,
               fontWeight: 600,
@@ -618,20 +615,20 @@ const CallModal: React.FC<CallModalProps> = ({
             Cancelar
           </Button>
           <Button
-            onClick={handleSaveCall}
+            onClick={handleSaveTask}
             variant="contained"
-            disabled={saving || !callData.subject.trim()}
+            disabled={saving || !taskData.title.trim()}
             sx={{
               textTransform: "none",
+              px: 2,
+              py: 0.5,
               bgcolor: saving
                 ? theme.palette.action.disabledBackground
                 : taxiMonterricoColors.green,
               color: "white",
-            fontWeight: 600,
-            px: 3,
-            py: 0.5,
-            borderRadius: 2,
-            boxShadow: saving
+              fontWeight: 600,
+              borderRadius: 2,
+              boxShadow: saving
                 ? "none"
                 : `0 4px 12px ${taxiMonterricoColors.green}40`,
               transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
@@ -658,6 +655,31 @@ const CallModal: React.FC<CallModalProps> = ({
           </Button>
         </Box>
       </Box>
+      {/* Overlay de fondo cuando la ventana está abierta */}
+      <Box
+        sx={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor:
+            theme.palette.mode === "dark"
+              ? "rgba(0, 0, 0, 0.7)"
+              : "rgba(0, 0, 0, 0.5)",
+          zIndex: 1499,
+          animation: "fadeIn 0.3s ease-out",
+          "@keyframes fadeIn": {
+            "0%": {
+              opacity: 0,
+            },
+            "100%": {
+              opacity: 1,
+            },
+          },
+        }}
+        onClick={onClose}
+      />
 
       {/* Date Picker Popover */}
       <Popover
@@ -927,34 +949,8 @@ const CallModal: React.FC<CallModalProps> = ({
           </Box>
         </Box>
       </Popover>
-
-      {/* Overlay de fondo cuando la ventana está abierta */}
-      <Box
-        sx={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor:
-            theme.palette.mode === "dark"
-              ? "rgba(0, 0, 0, 0.7)"
-              : "rgba(0, 0, 0, 0.5)",
-          zIndex: 1499,
-          animation: "fadeIn 0.3s ease-out",
-          "@keyframes fadeIn": {
-            "0%": {
-              opacity: 0,
-            },
-            "100%": {
-              opacity: 1,
-            },
-          },
-        }}
-        onClick={onClose}
-      />
     </>
   );
 };
 
-export default CallModal;
+export default MeetingModal;

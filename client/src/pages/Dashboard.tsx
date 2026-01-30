@@ -1346,9 +1346,7 @@ const Dashboard: React.FC = () => {
           sx={{ 
             minHeight: { xs: 140, sm: 160, md: 185 },
             borderRadius: 3,
-            boxShadow: theme.palette.mode === 'dark'
-              ? '0 4px 20px rgba(26, 174, 122, 0.15)'
-              : '0 4px 20px rgba(26, 174, 122, 0.1)',
+            boxShadow: 'none',
             bgcolor: theme.palette.mode === 'dark' 
               ? `${taxiMonterricoColors.green}1A`
               : `${taxiMonterricoColors.green}15`,
@@ -1374,9 +1372,7 @@ const Dashboard: React.FC = () => {
             },
             '&:hover': {
               transform: 'translateY(-8px)',
-              boxShadow: theme.palette.mode === 'dark'
-                ? '0 12px 40px rgba(26, 174, 122, 0.3)'
-                : '0 12px 40px rgba(26, 174, 122, 0.2)',
+              boxShadow: 'none',
               borderColor: taxiMonterricoColors.greenLight,
               '&::before': {
                 transform: 'scaleX(1)',
@@ -1489,9 +1485,7 @@ const Dashboard: React.FC = () => {
         <Card sx={{ 
           minHeight: { xs: 140, sm: 160, md: 185 },
           borderRadius: 3,
-          boxShadow: theme.palette.mode === 'dark'
-            ? '0 4px 20px rgba(129, 53, 230, 0.15)'
-            : '0 4px 20px rgba(129, 53, 230, 0.1)',
+          boxShadow: 'none',
           bgcolor: theme.palette.mode === 'dark' 
             ? `${theme.palette.secondary.main}1A`
             : `${theme.palette.secondary.main}15`,
@@ -1514,9 +1508,7 @@ const Dashboard: React.FC = () => {
           },
           '&:hover': {
             transform: 'translateY(-8px)',
-            boxShadow: theme.palette.mode === 'dark'
-              ? '0 12px 40px rgba(129, 53, 230, 0.3)'
-              : '0 12px 40px rgba(129, 53, 230, 0.2)',
+            boxShadow: 'none',
             borderColor: theme.palette.secondary.main,
             '&::before': {
               transform: 'scaleX(1)',
@@ -1590,9 +1582,7 @@ const Dashboard: React.FC = () => {
         <Card sx={{ 
           minHeight: { xs: 140, sm: 160, md: 185 },
           borderRadius: 3,
-          boxShadow: theme.palette.mode === 'dark'
-            ? '0 4px 20px rgba(235, 163, 22, 0.15)'
-            : '0 4px 20px rgba(235, 163, 22, 0.1)',
+          boxShadow: 'none',
           bgcolor: theme.palette.mode === 'dark' 
             ? `${taxiMonterricoColors.orange}1A`
             : `${taxiMonterricoColors.orange}15`,
@@ -1615,9 +1605,7 @@ const Dashboard: React.FC = () => {
           },
           '&:hover': {
             transform: 'translateY(-8px)',
-            boxShadow: theme.palette.mode === 'dark'
-              ? '0 12px 40px rgba(235, 163, 22, 0.3)'
-              : '0 12px 40px rgba(235, 163, 22, 0.2)',
+            boxShadow: 'none',
             borderColor: taxiMonterricoColors.orangeDark,
             '&::before': {
               transform: 'scaleX(1)',
@@ -1691,9 +1679,7 @@ const Dashboard: React.FC = () => {
         <Card sx={{ 
           minHeight: { xs: 140, sm: 160, md: 185 },
           borderRadius: 3,
-          boxShadow: theme.palette.mode === 'dark'
-            ? '0 4px 20px rgba(239, 97, 65, 0.15)'
-            : '0 4px 20px rgba(239, 97, 65, 0.1)',
+          boxShadow: 'none',
           bgcolor: theme.palette.mode === 'dark' 
             ? `${theme.palette.error.main}1A`
             : `${theme.palette.error.main}15`,
@@ -1716,9 +1702,7 @@ const Dashboard: React.FC = () => {
           },
           '&:hover': {
             transform: 'translateY(-8px)',
-            boxShadow: theme.palette.mode === 'dark'
-              ? '0 12px 40px rgba(239, 97, 65, 0.3)'
-              : '0 12px 40px rgba(239, 97, 65, 0.2)',
+            boxShadow: 'none',
             borderColor: theme.palette.error.main,
             '&::before': {
               transform: 'scaleX(1)',

@@ -169,6 +169,20 @@ const NoteModal: React.FC<NoteModalProps> = ({
     }
   }, [open, fetchAssociationsForNote]);
 
+  // Deshabilitar scroll del body cuando el modal está abierto
+  useEffect(() => {
+    if (open) {
+      // Guardar el estilo original del body
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      // Deshabilitar scroll
+      document.body.style.overflow = 'hidden';
+      // Restaurar el scroll cuando el modal se cierra
+      return () => {
+        document.body.style.overflow = originalStyle;
+      };
+    }
+  }, [open]);
+
   const handleSaveNote = useCallback(async () => {
     if (!noteData.description.trim()) {
       return;
@@ -505,14 +519,16 @@ const NoteModal: React.FC<NoteModalProps> = ({
           top: "50%",
           left: "50%",
           transform: "translate(-50%, -50%)",
-          width: { xs: "95vw", sm: "1100px", md: "1200px" },
-          maxWidth: { xs: "95vw", sm: "95vw" },
+          width: { xs: "95vw", sm: "500px", md: "600px" },
+          maxWidth: { xs: "95vw", sm: "85vw" },
           height: { xs: "85vh", sm: "80vh" },
-          maxHeight: { xs: "85vh", sm: "800px" },
+          maxHeight: { xs: "85vh", sm: "750px" },
           backgroundColor: `${theme.palette.background.paper} !important`,
           color: `${theme.palette.text.primary} !important`,
-          boxShadow: `0 8px 32px ${taxiMonterricoColors.greenLight}30`,
-          border: "1px solid",
+          boxShadow: theme.palette.mode === 'dark'
+            ? '0 8px 32px rgba(0,0,0,0.5)'
+            : '0 8px 32px rgba(0,0,0,0.15)',
+          border: "none",
           borderColor: theme.palette.divider,
           zIndex: 1500,
           display: "flex",
@@ -537,13 +553,10 @@ const NoteModal: React.FC<NoteModalProps> = ({
         <Box
           sx={{
             px: 3,
-            py: 2.5,
-            background: `linear-gradient(135deg, ${taxiMonterricoColors.green}15 0%, ${taxiMonterricoColors.orange}15 100%)`,
-            borderBottom: `2px solid transparent`,
-            borderImage: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
-            borderImageSlice: 1,
-            backgroundColor: `${theme.palette.background.paper} !important`,
-            color: `${theme.palette.text.primary} !important`,
+            py: 1.5,
+            backgroundColor: theme.palette.background.paper,
+            borderBottom: `1px solid ${theme.palette.divider}`,
+            color: theme.palette.text.primary,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -556,11 +569,7 @@ const NoteModal: React.FC<NoteModalProps> = ({
                 fontWeight: 700,
                 fontSize: "1.375rem",
                 letterSpacing: "-0.02em",
-                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                backgroundClip: "text",
-                color: `${theme.palette.text.primary} !important`,
+                color: theme.palette.text.primary,
               }}
             >
               Nota
@@ -569,11 +578,11 @@ const NoteModal: React.FC<NoteModalProps> = ({
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
             <IconButton
               sx={{
-                color: taxiMonterricoColors.orange,
+                color: theme.palette.text.secondary,
                 transition: "all 0.3s ease",
                 "&:hover": {
-                  bgcolor: `${taxiMonterricoColors.orange}15`,
-                  transform: "rotate(90deg)",
+                  bgcolor: theme.palette.action.hover,
+                  color: theme.palette.text.primary,
                 },
               }}
               size="small"
@@ -585,68 +594,33 @@ const NoteModal: React.FC<NoteModalProps> = ({
         </Box>
 
         {/* Campo de título/asunto */}
-        <Box sx={{ px: 3, pb: 2, bgcolor: `${theme.palette.background.paper} !important`, background: `linear-gradient(to bottom, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)` }}>
+        <Box sx={{ px: 3, pb: 2, bgcolor: `${theme.palette.background.paper} !important` }}>
           <Typography
             variant="body2"
             sx={{
-              color: `${theme.palette.text.secondary} !important`,
-              fontSize: "0.875rem",
+              color: `#ffffff`,
+              fontSize: "1rem",
               mb: 0.5,
+              mt: 2,
               fontWeight: 500,
             }}
           >
-            para: {getEntityTypeLabel()} · {entityName}
+            Para: {entityName}
           </Typography>
           <Typography
             variant="body2"
             sx={{
               color: `${theme.palette.text.secondary} !important`,
-              fontSize: "0.75rem",
+              fontSize: "0.9rem",
               mb: 1.5,
+              mt: 1,
               fontWeight: 400,
               display: "flex",
               alignItems: "center",
               gap: 0.5,
             }}
           >
-            <Box
-              component="span"
-              sx={{
-                fontSize: "0.875rem",
-                opacity: 0.6,
-              }}
-            >
-              📄
-            </Box>
-            {(() => {
-              const now = new Date();
-              const peruDate = new Date(
-                now.toLocaleString("en-US", { timeZone: "America/Lima" })
-              );
-              const months = [
-                "enero",
-                "febrero",
-                "marzo",
-                "abril",
-                "mayo",
-                "junio",
-                "julio",
-                "agosto",
-                "septiembre",
-                "octubre",
-                "noviembre",
-                "diciembre",
-              ];
-              const day = peruDate.getDate();
-              const month = months[peruDate.getMonth()];
-              const hours = String(peruDate.getHours()).padStart(2, "0");
-              const minutes = String(peruDate.getMinutes()).padStart(2, "0");
-              const userName =
-                user?.firstName && user?.lastName
-                  ? `${user.firstName} ${user.lastName}`
-                  : user?.email || "Usuario";
-              return `Hoy, ${day} de ${month}, ${hours}:${minutes} • ${userName} •`;
-            })()}
+           
           </Typography>
           <TextField
             fullWidth
@@ -665,17 +639,15 @@ const NoteModal: React.FC<NoteModalProps> = ({
                   borderColor: theme.palette.divider,
                 },
                 "&:hover fieldset": {
-                  borderColor: `${taxiMonterricoColors.greenLight} !important`,
-                  boxShadow: `0 0 0 2px ${taxiMonterricoColors.greenLight}30`,
+                  borderColor: theme.palette.divider,
                 },
                 "&.Mui-focused fieldset": {
-                  borderColor: `${taxiMonterricoColors.green} !important`,
-                  boxShadow: `0 0 0 3px ${taxiMonterricoColors.greenLight}30`,
+                  borderColor: theme.palette.divider,
                 },
                 "& input": {
                   color: `${theme.palette.text.primary} !important`,
                   "&::placeholder": {
-                    color: `${theme.palette.text.secondary} !important`,
+                    color: `${theme.palette.text.disabled} !important`,
                     opacity: 1,
                   },
                 },
@@ -692,8 +664,7 @@ const NoteModal: React.FC<NoteModalProps> = ({
               "& .MuiInputLabel-root": {
                 color: `${theme.palette.text.secondary} !important`,
                 "&.Mui-focused": {
-                  color: `${taxiMonterricoColors.green} !important`,
-                  fontWeight: 600,
+                  color: `${theme.palette.text.secondary} !important`,
                 },
               },
             }}
@@ -745,15 +716,6 @@ const NoteModal: React.FC<NoteModalProps> = ({
                 overflow: "hidden",
                 minHeight: 0,
                 backgroundColor: `${theme.palette.background.paper} !important`,
-                transition: "all 0.3s ease",
-                "&:hover": {
-                  borderColor: `${taxiMonterricoColors.greenLight}`,
-                  boxShadow: `0 0 0 2px ${taxiMonterricoColors.greenLight}30`,
-                },
-                "&:focus-within": {
-                  borderColor: `${taxiMonterricoColors.green}`,
-                  boxShadow: `0 0 0 3px ${taxiMonterricoColors.greenLight}30`,
-                },
               }}
             >
               <RichTextEditor
@@ -770,10 +732,11 @@ const NoteModal: React.FC<NoteModalProps> = ({
           <Box
             sx={{
               px: 3,
-              py: 1,
+              py: 2,
               display: "flex",
               alignItems: "center",
               mt: -2,
+              mb: 0.5,
               gap: 0,
               flexWrap: "wrap",
               flexShrink: 0,
@@ -809,8 +772,8 @@ const NoteModal: React.FC<NoteModalProps> = ({
               <Typography
                 variant="caption"
                 sx={{
-                  color: theme.palette.text.secondary,
-                  fontSize: "0.75rem",
+                  color: '#ffffff',
+                  fontSize: "0.8rem",
                   fontWeight: 500,
                   mr: 0.5,
                 }}
@@ -820,8 +783,8 @@ const NoteModal: React.FC<NoteModalProps> = ({
               <Typography
                 variant="caption"
                 sx={{
-                  color: theme.palette.text.secondary,
-                  fontSize: "0.75rem",
+                  color: '#ffffff',
+                  fontSize: "0.8rem",
                   fontWeight: 400,
                   mr: 0.5,
                 }}
@@ -936,23 +899,44 @@ const NoteModal: React.FC<NoteModalProps> = ({
         <Box
           sx={{
             px: 3,
-            py: 2.5,
+            py: 1.5,
             borderTop: `1px solid ${theme.palette.divider}`,
             backgroundColor: `${theme.palette.background.paper} !important`,
             display: "flex",
-            justifyContent: "flex-start",
+            justifyContent: "flex-end",
             alignItems: "center",
             gap: 2,
           }}
         >
+          <Button
+            onClick={onClose}
+            variant="outlined"
+            disabled={saving}
+            sx={{
+              textTransform: "none",
+              px: 2,
+              py: 1,
+              borderColor: theme.palette.error.main,
+              color: theme.palette.error.main,
+              fontWeight: 600,
+              borderRadius: 2,
+              "&:hover": {
+                borderColor: theme.palette.error.dark,
+                backgroundColor: `${theme.palette.error.main}15`,
+                color: theme.palette.error.dark,
+              },
+            }}
+          >
+            Cancelar
+          </Button>
           <Button
             onClick={handleSaveNote}
             variant="contained"
             disabled={saving || !noteData.description.trim()}
             sx={{
               textTransform: "none",
-              px: 4,
-              py: 1.5,
+              px: 2,
+              py: 1,
               background: saving
                 ? theme.palette.action.disabledBackground
                 : `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`,
@@ -1010,9 +994,7 @@ const NoteModal: React.FC<NoteModalProps> = ({
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: theme.palette.mode === "dark"
-              ? `${theme.palette.common.black}80`
-              : `${theme.palette.common.black}80`,
+          backgroundColor: "rgba(0, 0, 0, 0.5)",
           zIndex: 1499,
           animation: "fadeIn 0.3s ease-out",
           "@keyframes fadeIn": {

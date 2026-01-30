@@ -31,7 +31,7 @@ import {
   ActivitiesTabContent,
   GeneralDescriptionTab,
 } from "../components/DetailCards";
-import { NoteModal, CallModal, TaskModal, DealModal, CompanyModal, ContactModal } from "../components/ActivityModals";
+import { NoteModal, CallModal, TaskModal, MeetingModal, DealModal, CompanyModal, ContactModal } from "../components/ActivityModals";
 import type { GeneralInfoCard } from "../components/DetailCards";
 import { useAuth } from "../context/AuthContext";
 import DetailPageLayout from "../components/Layout/DetailPageLayout";
@@ -103,7 +103,7 @@ const DealDetail: React.FC = () => {
   const [noteOpen, setNoteOpen] = useState(false);
   const [callOpen, setCallOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
-  const [taskType, setTaskType] = useState<"todo" | "meeting">("todo");
+  const [meetingOpen, setMeetingOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({
     name: '',
@@ -764,11 +764,9 @@ const DealDetail: React.FC = () => {
     if (type === "note") {
       setNoteOpen(true);
     } else if (type === "task") {
-      setTaskType("todo");
       setTaskOpen(true);
     } else if (type === "meeting") {
-      setTaskType("meeting");
-      setTaskOpen(true);
+      setMeetingOpen(true);
     } else if (type === "call") {
       setCallOpen(true);
     }
@@ -1699,12 +1697,11 @@ const DealDetail: React.FC = () => {
         entityId={id || ""}
         entityName={deal?.name || "Sin nombre"}
         user={user}
-        taskType={taskType}
         onSave={(newTask) => {
           // Convertir la tarea a formato de actividad para agregarla a la lista
           const taskAsActivity = {
             id: newTask.id,
-            type: newTask.type === "meeting" ? "meeting" : "task",
+            type: "task",
             subject: newTask.title,
             description: newTask.description,
             dueDate: newTask.dueDate,
@@ -1720,6 +1717,40 @@ const DealDetail: React.FC = () => {
             const exists = prevActivities.some((a: any) => a.id === newTask.id);
             if (exists) return prevActivities;
             return [taskAsActivity, ...prevActivities].sort((a: any, b: any) => {
+              const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
+              const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
+              return dateB - dateA;
+            });
+          });
+          fetchActivities(); // Actualizar actividades
+        }}
+      />
+
+      {/* Modal de crear reunión */}
+      <MeetingModal
+        open={meetingOpen}
+        onClose={() => setMeetingOpen(false)}
+        entityType="deal"
+        entityId={id || ""}
+        entityName={deal?.name || "Sin nombre"}
+        user={user}
+        onSave={(newMeeting) => {
+          // Convertir la reunión a formato de actividad para agregarla a la lista
+          const meetingAsActivity = {
+            id: newMeeting.id,
+            type: "meeting",
+            subject: newMeeting.title,
+            description: newMeeting.description,
+            dueDate: newMeeting.dueDate,
+            createdAt: newMeeting.createdAt,
+            User: newMeeting.CreatedBy || newMeeting.AssignedTo,
+            dealId: newMeeting.dealId,
+          };
+          // Agregar la actividad inmediatamente al estado
+          setActivities((prevActivities) => {
+            const exists = prevActivities.some((a: any) => a.id === newMeeting.id);
+            if (exists) return prevActivities;
+            return [meetingAsActivity, ...prevActivities].sort((a: any, b: any) => {
               const dateA = new Date(a.createdAt || a.dueDate || 0).getTime();
               const dateB = new Date(b.createdAt || b.dueDate || 0).getTime();
               return dateB - dateA;

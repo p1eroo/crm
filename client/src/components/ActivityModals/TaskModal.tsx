@@ -603,41 +603,49 @@ const TaskModal: React.FC<TaskModalProps> = ({
 
   return (
     <>
-      <Dialog
-        open={open}
-        onClose={onClose}
-        maxWidth={false}
-        fullWidth={false}
-        PaperProps={{
-          sx: {
-            borderRadius: 2,
-            maxHeight: "98vh",
-            width: "700px",
-            maxWidth: "90vw",
-            backgroundColor:
-              theme.palette.mode === "dark"
-                ? "#1F2937"
-                : theme.palette.background.paper,
-            boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
-            border: "none",
+      <Box
+        sx={{
+          position: "fixed",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: { xs: "50vw", sm: "700px", md: "550px" },
+          maxWidth: { xs: "95vw", sm: "95vw" },
+          height: { xs: "85vh", sm: "90vh" },
+          maxHeight: { xs: "85vh", sm: "680px" },
+          bgcolor: `${theme.palette.background.paper} !important`,
+          color: `${theme.palette.text.primary} !important`,
+          border: "none",
+          borderRadius: 3,
+          zIndex: 1500,
+          display: "flex",
+          flexDirection: "column",
+          overflow: "hidden",
+          animation: "fadeInScale 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+          "@keyframes fadeInScale": {
+            "0%": {
+              opacity: 0,
+              transform: "translate(-50%, -50%) scale(0.95)",
+            },
+            "100%": {
+              opacity: 1,
+              transform: "translate(-50%, -50%) scale(1)",
+            },
           },
         }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <Box
           sx={{
-            backgroundColor:
-              theme.palette.mode === "dark"
-                ? "#1F2937"
-                : theme.palette.background.paper,
+            backgroundColor: "transparent",
             color: theme.palette.text.primary,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            minHeight: 48,
-            px: 2,
-            pt: 1.5,
-            pb: 0.5,
+            minHeight: { xs: "64px", md: "60px" },
+            px: { xs: 3, md: 4 },
+            borderBottom: `1px solid ${theme.palette.divider}`,
           }}
         >
           <Typography
@@ -668,105 +676,76 @@ const TaskModal: React.FC<TaskModalProps> = ({
           </IconButton>
         </Box>
 
-        <DialogContent
+        <Box
           sx={{
-            px: 2,
-            pb: 1,
-            pt: 0.5,
-            backgroundColor:
-              theme.palette.mode === "dark"
-                ? "#1F2937"
-                : theme.palette.background.paper,
+            flexGrow: 1,
+            display: "flex",
+            flexDirection: "column",
+            px: { xs: 3, md: 4 },
+            pt: 2,
+            pb: { xs: 3, md: 4 },
+            overflow: "hidden",
+            minHeight: 0,
+            gap: 2,
           }}
         >
           {/* Título */}
-          <TextField
-            label="Título"
-            value={taskData.title}
-            onChange={(e) =>
-              setTaskData({ ...taskData, title: e.target.value })
-            }
-            fullWidth
-            InputLabelProps={{
-              shrink: !!taskData.title,
-            }}
-            sx={{
-              mb: 1.5,
-              "& .MuiOutlinedInput-root": {
-                borderRadius: 0.5,
-                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                "& fieldset": {
-                  borderWidth: 0,
-                  border: "none",
-                  top: 0,
-                },
-                "&:hover fieldset": {
-                  border: "none",
-                },
-                "&.Mui-focused fieldset": {
-                  borderWidth: "2px !important",
-                  borderColor: `${taxiMonterricoColors.orange} !important`,
-                  borderStyle: "solid !important",
-                  top: 0,
-                },
-              },
-              "& .MuiOutlinedInput-notchedOutline": {
-                borderWidth: "0px !important",
-                "& legend": {
-                  width: 0,
-                  display: "none",
-                },
-              },
-              "& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline":
-                {
-                  borderWidth: "2px !important",
-                  borderColor: `${taxiMonterricoColors.green} !important`,
-                  borderStyle: "solid !important",
-                  "& legend": {
-                    width: 0,
-                    display: "none",
+          <Box sx={{ mb: 0.5 }}>
+            <Typography
+              variant="body2"
+              sx={{
+                mb: 0.75,
+                color: theme.palette.text.secondary,
+                fontWeight: 500,
+              }}
+            >
+              Título
+            </Typography>
+            <TextField
+              value={taskData.title}
+              onChange={(e) =>
+                setTaskData({ ...taskData, title: e.target.value })
+              }
+              fullWidth
+              sx={{
+                "& input": {
+                  color: `${theme.palette.text.primary} !important`,
+                  "&::placeholder": {
+                    color: `${theme.palette.text.secondary} !important`,
+                    opacity: 1,
                   },
                 },
-              "& .MuiInputLabel-root": {
-                fontWeight: 500,
-                position: "absolute",
-                left: 12,
-                top: "50%",
-                transform: "translateY(-50%)",
-                pointerEvents: "none",
-                zIndex: 0,
-                backgroundColor: "transparent",
-                padding: 0,
-                margin: 0,
-                "&.Mui-focused": {
-                  color: taxiMonterricoColors.orange,
-                  transform: "translateY(-50%)",
-                  backgroundColor: "transparent",
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 2,
+                  transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                  "& fieldset": {
+                    borderWidth: "2px",
+                    borderColor: theme.palette.divider,
+                  },
+                  "&:hover fieldset": {
+                    borderColor: theme.palette.divider,
+                  },
+                  "&.Mui-focused fieldset": {
+                    borderColor: theme.palette.divider,
+                    borderWidth: "2px",
+                  },
                 },
-                "&.MuiInputLabel-shrink": {
-                  display: "none",
-                },
-              },
-              "& .MuiInputBase-input": {
-                position: "relative",
-                zIndex: 1,
-                py: 1,
-              },
-            }}
-            onKeyDown={(e) => {
-              // Enter para guardar (solo en el campo de título)
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                if (!saving && taskData.title.trim()) {
-                  handleSaveTask();
+              }}
+              onKeyDown={(e) => {
+                // Enter para guardar (solo en el campo de título)
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (!saving && taskData.title.trim()) {
+                    handleSaveTask();
+                  }
                 }
-              }
-              // Esc para cancelar
-              if (e.key === "Escape") {
-                onClose();
-              }
-            }}
-          />
+                // Esc para cancelar
+                if (e.key === "Escape") {
+                  onClose();
+                }
+              }}
+            />
+          </Box>
 
           {/* Prioridad y Fecha límite */}
           <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
@@ -790,38 +769,73 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 fullWidth
                 SelectProps={{
                   MenuProps: {
+                    disablePortal: false,
+                    disableScrollLock: true,
+                    style: {
+                      zIndex: 1600,
+                    },
+                    slotProps: {
+                      root: {
+                        style: {
+                          zIndex: 1600,
+                        },
+                      },
+                    },
                     PaperProps: {
                       sx: {
                         borderRadius: 2,
                         mt: 1,
+                        zIndex: "1600 !important",
+                        backgroundColor: theme.palette.background.paper,
+                        boxShadow: theme.palette.mode === "dark" 
+                          ? "0 8px 32px rgba(0, 0, 0, 0.4)"
+                          : "0 8px 32px rgba(0, 0, 0, 0.15)",
+                        maxHeight: 300,
+                        border: `1px solid ${theme.palette.divider}`,
+                        "& .MuiMenuItem-root": {
+                          color: theme.palette.text.primary,
+                          py: 1,
+                          "&:hover": {
+                            backgroundColor: theme.palette.action.hover,
+                          },
+                          "&.Mui-selected": {
+                            backgroundColor: `${taxiMonterricoColors.green}20`,
+                            color: taxiMonterricoColors.green,
+                            "&:hover": {
+                              backgroundColor: `${taxiMonterricoColors.green}30`,
+                            },
+                          },
+                        },
                       },
+                    },
+                    anchorOrigin: {
+                      vertical: "bottom",
+                      horizontal: "left",
+                    },
+                    transformOrigin: {
+                      vertical: "top",
+                      horizontal: "left",
                     },
                   },
                 }}
                 sx={{
                   "& .MuiOutlinedInput-root": {
-                    borderRadius: 0.5,
+                    borderRadius: 2,
                     transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                     "& fieldset": {
                       borderWidth: "2px",
                       borderColor: theme.palette.divider,
                     },
                     "&:hover fieldset": {
-                      borderColor: taxiMonterricoColors.orange,
+                      borderColor: theme.palette.divider,
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: taxiMonterricoColors.orange,
+                      borderColor: theme.palette.divider,
                       borderWidth: "2px",
                     },
                   },
                   "& .MuiInputBase-input": {
                     py: 1,
-                  },
-                  "& .MuiInputLabel-root": {
-                    fontWeight: 500,
-                    "&.Mui-focused": {
-                      color: taxiMonterricoColors.orange,
-                    },
                   },
                 }}
               >
@@ -833,9 +847,6 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 </MenuItem>
                 <MenuItem value="high" sx={{ py: 0.75 }}>
                   Alta
-                </MenuItem>
-                <MenuItem value="urgent" sx={{ py: 0.75 }}>
-                  Urgente
                 </MenuItem>
               </TextField>
             </Box>
@@ -878,17 +889,17 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 sx={{
                   cursor: "pointer",
                   "& .MuiOutlinedInput-root": {
-                    borderRadius: 0.5,
+                    borderRadius: 2,
                     transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
                     "& fieldset": {
                       borderWidth: "2px",
                       borderColor: theme.palette.divider,
                     },
                     "&:hover fieldset": {
-                      borderColor: taxiMonterricoColors.orange,
+                      borderColor: theme.palette.divider,
                     },
                     "&.Mui-focused fieldset": {
-                      borderColor: taxiMonterricoColors.orange,
+                      borderColor: theme.palette.divider,
                       borderWidth: "2px",
                     },
                   },
@@ -896,20 +907,13 @@ const TaskModal: React.FC<TaskModalProps> = ({
                     py: 1,
                     cursor: "pointer",
                   },
-                  "& .MuiInputLabel-root": {
-                    fontWeight: 500,
-                    "&.Mui-focused": {
-                      color: taxiMonterricoColors.orange,
-                    },
-                  },
                 }}
               />
             </Box>
           </Box>
-          <Divider sx={{ my: 1.5 }} />
 
           {/* Editor de texto enriquecido */}
-          <Box sx={{ position: "relative" }}>
+          <Box sx={{ position: "relative", flex: 1, minHeight: 0, maxHeight: "100%", display: "flex", flexDirection: "column", overflow: "hidden" }}>
             <Box
               ref={descriptionEditorRef}
               contentEditable
@@ -921,20 +925,27 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 }
               }}
               sx={{
-                minHeight: "300px",
-                maxHeight: "500px",
+                flex: 1,
+                minHeight: 0,
                 overflowY: "auto",
-                pt: 0,
+                overflowX: "hidden",
+                pt: 1.5,
                 pb: 1.5,
-                px: 1,
-                borderRadius: 0.5,
-                border: "none",
+                px: 1.5,
+                borderRadius: "8px 8px 0 0",
+                border: `2px solid ${theme.palette.divider}`,
+                borderBottom: "none",
                 outline: "none",
                 lineHeight: 1.5,
                 color: theme.palette.text.primary,
+                transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+                "&:focus": {
+                  borderColor: theme.palette.divider,
+                },
                 "&:empty:before": {
                   content: '"Descripción"',
-                  color: theme.palette.text.disabled,
+                  color: theme.palette.text.secondary,
+                  opacity: 1,
                 },
                 "&::-webkit-scrollbar": {
                   width: "6px",
@@ -954,42 +965,43 @@ const TaskModal: React.FC<TaskModalProps> = ({
             {/* Toolbar */}
             <Box
               sx={{
-                position: "absolute",
-                bottom: 0.5,
-                left: 4,
-                right: 4,
+                flexShrink: 0,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                gap: 0.5,
+                gap: 0.25,
                 backgroundColor: "transparent",
-                borderRadius: 1,
-                p: 0.5,
-                border: "none",
+                borderRadius: "0 0 8px 8px",
+                p: 0.75,
+                borderLeft: `2px solid ${theme.palette.divider}`,
+                borderRight: `2px solid ${theme.palette.divider}`,
+                borderBottom: `2px solid ${theme.palette.divider}`,
+                borderTop: `1px solid ${theme.palette.divider}`,
               }}
             >
               <Box
                 sx={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 0.5,
+                  gap: 0.25,
                   flexWrap: "nowrap",
                 }}
               >
                 <IconButton
                   size="small"
                   sx={{
-                    p: 0.75,
+                    p: 0.5,
+                    minWidth: 32,
                     backgroundColor: activeFormats.bold
                       ? theme.palette.mode === "dark"
                         ? "rgba(255,255,255,0.15)"
-                        : "#e0e0e0"
+                        : "rgba(0,0,0,0.08)"
                       : "transparent",
                     "&:hover": {
                       backgroundColor:
                         theme.palette.mode === "dark"
                           ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
+                          : "rgba(0,0,0,0.05)",
                     },
                   }}
                   onClick={() => {
@@ -1003,17 +1015,18 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <IconButton
                   size="small"
                   sx={{
-                    p: 0.75,
+                    p: 0.5,
+                    minWidth: 32,
                     backgroundColor: activeFormats.italic
                       ? theme.palette.mode === "dark"
                         ? "rgba(255,255,255,0.15)"
-                        : "#e0e0e0"
+                        : "rgba(0,0,0,0.08)"
                       : "transparent",
                     "&:hover": {
                       backgroundColor:
                         theme.palette.mode === "dark"
                           ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
+                          : "rgba(0,0,0,0.05)",
                     },
                   }}
                   onClick={() => {
@@ -1027,17 +1040,18 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <IconButton
                   size="small"
                   sx={{
-                    p: 0.75,
+                    p: 0.5,
+                    minWidth: 32,
                     backgroundColor: activeFormats.underline
                       ? theme.palette.mode === "dark"
                         ? "rgba(255,255,255,0.15)"
-                        : "#e0e0e0"
+                        : "rgba(0,0,0,0.08)"
                       : "transparent",
                     "&:hover": {
                       backgroundColor:
                         theme.palette.mode === "dark"
                           ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
+                          : "rgba(0,0,0,0.05)",
                     },
                   }}
                   onClick={() => {
@@ -1051,17 +1065,18 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <IconButton
                   size="small"
                   sx={{
-                    p: 0.75,
+                    p: 0.5,
+                    minWidth: 32,
                     backgroundColor: activeFormats.strikeThrough
                       ? theme.palette.mode === "dark"
                         ? "rgba(255,255,255,0.15)"
-                        : "#e0e0e0"
+                        : "rgba(0,0,0,0.08)"
                       : "transparent",
                     "&:hover": {
                       backgroundColor:
                         theme.palette.mode === "dark"
                           ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
+                          : "rgba(0,0,0,0.05)",
                     },
                   }}
                   onClick={() => {
@@ -1075,13 +1090,14 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <IconButton
                   size="small"
                   sx={{
-                    p: 0.75,
+                    p: 0.5,
+                    minWidth: 32,
                     color: theme.palette.text.secondary,
                     "&:hover": {
                       backgroundColor:
                         theme.palette.mode === "dark"
                           ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
+                          : "rgba(0,0,0,0.05)",
                       color: theme.palette.text.primary,
                     },
                   }}
@@ -1096,13 +1112,14 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <IconButton
                   size="small"
                   sx={{
-                    p: 0.75,
+                    p: 0.5,
+                    minWidth: 32,
                     color: theme.palette.text.secondary,
                     "&:hover": {
                       backgroundColor:
                         theme.palette.mode === "dark"
                           ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
+                          : "rgba(0,0,0,0.05)",
                       color: theme.palette.text.primary,
                     },
                   }}
@@ -1117,13 +1134,14 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <IconButton
                   size="small"
                   sx={{
-                    p: 0.75,
+                    p: 0.5,
+                    minWidth: 32,
                     color: theme.palette.text.secondary,
                     "&:hover": {
                       backgroundColor:
                         theme.palette.mode === "dark"
                           ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
+                          : "rgba(0,0,0,0.05)",
                       color: theme.palette.text.primary,
                     },
                   }}
@@ -1138,13 +1156,14 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <IconButton
                   size="small"
                   sx={{
-                    p: 0.75,
+                    p: 0.5,
+                    minWidth: 32,
                     color: theme.palette.text.secondary,
                     "&:hover": {
                       backgroundColor:
                         theme.palette.mode === "dark"
                           ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
+                          : "rgba(0,0,0,0.05)",
                       color: theme.palette.text.primary,
                     },
                   }}
@@ -1160,28 +1179,29 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   orientation="vertical"
                   flexItem
                   sx={{
-                    mx: 0.5,
-                    height: "20px",
+                    mx: 0.25,
+                    height: "18px",
                     borderColor:
                       theme.palette.mode === "dark"
                         ? "rgba(255,255,255,0.1)"
-                        : undefined,
+                        : "rgba(0,0,0,0.1)",
                   }}
                 />
                 <IconButton
                   size="small"
                   sx={{
-                    p: 0.75,
+                    p: 0.5,
+                    minWidth: 32,
                     backgroundColor: activeFormats.unorderedList
                       ? theme.palette.mode === "dark"
                         ? "rgba(255,255,255,0.15)"
-                        : "#e0e0e0"
+                        : "rgba(0,0,0,0.08)"
                       : "transparent",
                     "&:hover": {
                       backgroundColor:
                         theme.palette.mode === "dark"
                           ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
+                          : "rgba(0,0,0,0.05)",
                     },
                   }}
                   onClick={() => {
@@ -1195,17 +1215,18 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <IconButton
                   size="small"
                   sx={{
-                    p: 0.75,
+                    p: 0.5,
+                    minWidth: 32,
                     backgroundColor: activeFormats.orderedList
                       ? theme.palette.mode === "dark"
                         ? "rgba(255,255,255,0.15)"
-                        : "#e0e0e0"
+                        : "rgba(0,0,0,0.08)"
                       : "transparent",
                     "&:hover": {
                       backgroundColor:
                         theme.palette.mode === "dark"
                           ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
+                          : "rgba(0,0,0,0.05)",
                     },
                   }}
                   onClick={() => {
@@ -1220,29 +1241,30 @@ const TaskModal: React.FC<TaskModalProps> = ({
                   orientation="vertical"
                   flexItem
                   sx={{
-                    mx: 0.5,
-                    height: "20px",
+                    mx: 0.25,
+                    height: "18px",
                     borderColor:
                       theme.palette.mode === "dark"
                         ? "rgba(255,255,255,0.1)"
-                        : undefined,
+                        : "rgba(0,0,0,0.1)",
                   }}
                 />
                 <IconButton
                   size="small"
                   sx={{
-                    p: 0.75,
+                    p: 0.5,
+                    minWidth: 32,
                     color: theme.palette.text.secondary,
                     backgroundColor: linkDialogOpen
                       ? theme.palette.mode === "dark"
                         ? "rgba(255,255,255,0.15)"
-                        : "#e0e0e0"
+                        : "rgba(0,0,0,0.08)"
                       : "transparent",
                     "&:hover": {
                       backgroundColor:
                         theme.palette.mode === "dark"
                           ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
+                          : "rgba(0,0,0,0.05)",
                       color: theme.palette.text.primary,
                     },
                   }}
@@ -1254,13 +1276,14 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <IconButton
                   size="small"
                   sx={{
-                    p: 0.75,
+                    p: 0.5,
+                    minWidth: 32,
                     color: theme.palette.text.secondary,
                     "&:hover": {
                       backgroundColor:
                         theme.palette.mode === "dark"
                           ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
+                          : "rgba(0,0,0,0.05)",
                       color: theme.palette.text.primary,
                     },
                   }}
@@ -1272,13 +1295,14 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 <IconButton
                   size="small"
                   sx={{
-                    p: 0.75,
+                    p: 0.5,
+                    minWidth: 32,
                     color: theme.palette.text.secondary,
                     "&:hover": {
                       backgroundColor:
                         theme.palette.mode === "dark"
                           ? "rgba(255,255,255,0.1)"
-                          : "#e0e0e0",
+                          : "rgba(0,0,0,0.05)",
                       color: theme.palette.text.primary,
                     },
                   }}
@@ -1364,36 +1388,34 @@ const TaskModal: React.FC<TaskModalProps> = ({
               }
             }}
           />
-        </DialogContent>
+        </Box>
 
-        <DialogActions
+        {/* Footer con botones */}
+        <Box
           sx={{
-            px: 2,
-            pb: 1.5,
-            pt: 0.5,
-            gap: 0.75,
-            borderTop: `1px solid ${
-              theme.palette.mode === "dark"
-                ? "rgba(255,255,255,0.1)"
-                : theme.palette.divider
-            }`,
-            backgroundColor:
-              theme.palette.mode === "dark"
-                ? "#1F2937"
-                : theme.palette.background.paper,
+            px: 4,
+            py: 1.5,
+            borderTop: `1px solid ${theme.palette.divider}`,
+            bgcolor: `${theme.palette.background.paper} !important`,
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 2,
           }}
         >
           <Button
             onClick={onClose}
-            size="small"
+            variant="outlined"
             sx={{
               textTransform: "none",
-              color: theme.palette.text.secondary,
-              fontWeight: 500,
-              px: 2,
+              px: 1.5,
               py: 0.5,
+              borderColor: theme.palette.error.main,
+              color: theme.palette.error.main,
+              fontWeight: 600,
+              borderRadius: 2,
               "&:hover": {
-                bgcolor: theme.palette.action.hover,
+                borderColor: theme.palette.error.dark,
+                bgcolor: `${theme.palette.error.main}15`,
               },
             }}
           >
@@ -1402,35 +1424,72 @@ const TaskModal: React.FC<TaskModalProps> = ({
           <Button
             onClick={handleSaveTask}
             variant="contained"
-            size="small"
             disabled={saving || !taskData.title.trim()}
             sx={{
               textTransform: "none",
-              fontWeight: 500,
               px: 2,
               py: 0.5,
-              bgcolor: taskData.title.trim()
-                ? taxiMonterricoColors.green
-                : theme.palette.action.disabledBackground,
+              bgcolor: saving
+                ? theme.palette.action.disabledBackground
+                : taxiMonterricoColors.green,
               color: "white",
+              fontWeight: 600,
+              borderRadius: 2,
+              boxShadow: saving
+                ? "none"
+                : `0 4px 12px ${taxiMonterricoColors.green}40`,
+              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
               "&:hover": {
-                bgcolor: taskData.title.trim()
-                  ? taxiMonterricoColors.green
-                  : theme.palette.action.disabledBackground,
-                opacity: 0.9,
+                bgcolor: saving
+                  ? theme.palette.action.disabledBackground
+                  : taxiMonterricoColors.greenDark,
+                boxShadow: saving
+                  ? "none"
+                  : `0 6px 16px ${taxiMonterricoColors.green}50`,
+                transform: "translateY(-2px)",
               },
-              "&:disabled": {
+              "&:active": {
+                transform: "translateY(0)",
+              },
+              "&.Mui-disabled": {
                 bgcolor: theme.palette.action.disabledBackground,
                 color: theme.palette.action.disabled,
+                boxShadow: "none",
               },
             }}
           >
             {saving ? "Guardando..." : "Guardar"}
           </Button>
-        </DialogActions>
+        </Box>
+      </Box>
+      {/* Overlay de fondo cuando la ventana está abierta */}
+      <Box
+        sx={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor:
+            theme.palette.mode === "dark"
+              ? "rgba(0, 0, 0, 0.7)"
+              : "rgba(0, 0, 0, 0.5)",
+          zIndex: 1499,
+          animation: "fadeIn 0.3s ease-out",
+          "@keyframes fadeIn": {
+            "0%": {
+              opacity: 0,
+            },
+            "100%": {
+              opacity: 1,
+            },
+          },
+        }}
+        onClick={onClose}
+      />
 
-        {/* Popup flotante para insertar enlace */}
-        {linkDialogOpen && (
+      {/* Popup flotante para insertar enlace */}
+      {linkDialogOpen && (
           <>
             {/* Overlay para cerrar al hacer clic fuera */}
             <Box
@@ -1623,10 +1682,10 @@ const TaskModal: React.FC<TaskModalProps> = ({
               </Box>
             </Box>
           </>
-        )}
+      )}
 
-        {/* Dialog para insertar tabla */}
-        <Dialog
+      {/* Dialog para insertar tabla */}
+      <Dialog
           open={tableDialogOpen}
           onClose={handleCloseTableDialog}
           maxWidth="xs"
@@ -1739,13 +1798,13 @@ const TaskModal: React.FC<TaskModalProps> = ({
             </Button>
           </DialogActions>
         </Dialog>
-      </Dialog>
 
       {/* Date Picker Popover */}
       <Popover
         open={Boolean(datePickerAnchorEl)}
         anchorEl={datePickerAnchorEl}
         onClose={() => setDatePickerAnchorEl(null)}
+        disablePortal={false}
         anchorOrigin={{
           vertical: "bottom",
           horizontal: "left",
@@ -1753,6 +1812,13 @@ const TaskModal: React.FC<TaskModalProps> = ({
         transformOrigin={{
           vertical: "top",
           horizontal: "left",
+        }}
+        slotProps={{
+          root: {
+            style: {
+              zIndex: 1600,
+            },
+          },
         }}
         PaperProps={{
           sx: {
@@ -1764,6 +1830,8 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 : "0 8px 32px rgba(0,0,0,0.12)",
             mt: 0.5,
             maxWidth: 280,
+            zIndex: "1600 !important",
+            backgroundColor: theme.palette.background.paper,
           },
         }}
       >
