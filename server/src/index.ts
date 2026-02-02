@@ -36,6 +36,7 @@ import reportRoutes from './routes/reports';
 import searchRoutes from './routes/search';
 import systemLogRoutes from './routes/systemLogs';
 import roleRoutes from './routes/roles';
+import massEmailRoutes from './routes/massEmail';
 import { setCacheHeaders } from './middleware/cacheHeaders';
 
 const app = express();
@@ -132,6 +133,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/system-logs', systemLogRoutes);
 app.use('/api/roles', roleRoutes);
+app.use('/api/mass-email', massEmailRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

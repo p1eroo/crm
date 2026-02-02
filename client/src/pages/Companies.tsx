@@ -1891,7 +1891,7 @@ const Companies: React.FC = () => {
                     displayEmpty
                     sx={{
                       borderRadius: 1.5,
-                      bgcolor: theme.palette.background.paper,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                       fontSize: { xs: "0.75rem", sm: "0.8125rem" },
                       border: `1.5px solid ${theme.palette.divider}`,
                       transition: 'all 0.2s ease',
@@ -2052,7 +2052,7 @@ const Companies: React.FC = () => {
               component="div"
               sx={{ 
                 bgcolor: theme.palette.mode === 'dark'
-                  ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.02)
+                  ? '#1c252e'
                   : hexToRgba(taxiMonterricoColors.greenEmerald, 0.01),
                 overflow: 'hidden',
                 display: 'grid',
@@ -2089,7 +2089,7 @@ const Companies: React.FC = () => {
                     '& .MuiOutlinedInput-root': { 
                       height: 28, 
                       fontSize: '0.75rem',
-                      bgcolor: theme.palette.background.paper,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     },
                   }}
                 />
@@ -2115,7 +2115,7 @@ const Companies: React.FC = () => {
                     '& .MuiOutlinedInput-root': { 
                       height: 28, 
                       fontSize: '0.75rem',
-                      bgcolor: theme.palette.background.paper,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     },
                   }}
                 />
@@ -2149,7 +2149,7 @@ const Companies: React.FC = () => {
                     '& .MuiOutlinedInput-root': { 
                       height: 28, 
                       fontSize: '0.75rem',
-                      bgcolor: theme.palette.background.paper,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     },
                   }}
                 />
@@ -2175,7 +2175,7 @@ const Companies: React.FC = () => {
                     '& .MuiOutlinedInput-root': { 
                       height: 28, 
                       fontSize: '0.75rem',
-                      bgcolor: theme.palette.background.paper,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     },
                   }}
                 />
@@ -2201,7 +2201,7 @@ const Companies: React.FC = () => {
                     '& .MuiOutlinedInput-root': { 
                       height: 28, 
                       fontSize: '0.75rem',
-                      bgcolor: theme.palette.background.paper,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     },
                   }}
                 />
@@ -2227,7 +2227,7 @@ const Companies: React.FC = () => {
                     '& .MuiOutlinedInput-root': { 
                       height: 28, 
                       fontSize: '0.75rem',
-                      bgcolor: theme.palette.background.paper,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     },
                   }}
                 />
@@ -2253,7 +2253,7 @@ const Companies: React.FC = () => {
                     '& .MuiOutlinedInput-root': { 
                       height: 28, 
                       fontSize: '0.75rem',
-                      bgcolor: theme.palette.background.paper,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     },
                   }}
                 />
@@ -2285,7 +2285,7 @@ const Companies: React.FC = () => {
                   component="div"
                   onClick={() => navigate(`/companies/${company.id}`)}
                   sx={{ 
-                    bgcolor: theme.palette.background.paper,
+                    bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     cursor: 'pointer',
                     transition: 'all 0.2s ease',
                     display: 'grid',
@@ -2877,7 +2877,7 @@ const Companies: React.FC = () => {
         <Box
           sx={{
             width: { xs: '100%', md: 400 },
-            bgcolor: theme.palette.background.paper,
+            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
             borderLeft: { xs: 'none', md: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}` },
             borderTop: { xs: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`, md: 'none' },
             borderRadius: 2,

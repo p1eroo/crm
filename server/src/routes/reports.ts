@@ -1,11 +1,66 @@
 import express from 'express';
-import { Op, Sequelize } from 'sequelize';
+import { Op, Sequelize, QueryTypes } from 'sequelize';
 import { Contact } from '../models/Contact';
 import { Deal } from '../models/Deal';
+import { Company } from '../models/Company';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 router.use(authenticateToken);
+
+// Empresas por etapa, agrupadas por asesor (ownerId). Solo usuarios con rol "user".
+router.get('/companies-by-user', async (req: AuthRequest, res) => {
+  try {
+    const results = await Company.sequelize!.query(`
+      SELECT c."ownerId" as "userId", c."lifecycleStage" as stage, COUNT(c.id)::integer as count
+      FROM companies c
+      INNER JOIN users u ON u.id = c."ownerId"
+      INNER JOIN roles r ON r.id = u."roleId"
+      WHERE r.name = 'user' AND c."ownerId" IS NOT NULL
+      GROUP BY c."ownerId", c."lifecycleStage"
+      ORDER BY c."ownerId", c."lifecycleStage"
+    `, { type: QueryTypes.SELECT }) as Array<{ userId: number; stage: string; count: number }>;
+
+    const byUser: Record<number, Array<{ stage: string; count: number }>> = {};
+    (results || []).forEach((row) => {
+      const uid = row.userId;
+      if (!byUser[uid]) byUser[uid] = [];
+      byUser[uid].push({ stage: row.stage || 'lead', count: row.count || 0 });
+    });
+
+    res.json({ byUser });
+  } catch (error: any) {
+    console.error('Error en /reports/companies-by-user:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Negocios (deals) por etapa, agrupados por asesor (ownerId). Solo usuarios con rol "user".
+router.get('/deals-by-user', async (req: AuthRequest, res) => {
+  try {
+    const results = await Deal.sequelize!.query(`
+      SELECT d."ownerId" as "userId", d.stage as stage, COUNT(d.id)::integer as count
+      FROM deals d
+      INNER JOIN users u ON u.id = d."ownerId"
+      INNER JOIN roles r ON r.id = u."roleId"
+      WHERE r.name = 'user'
+      GROUP BY d."ownerId", d.stage
+      ORDER BY d."ownerId", d.stage
+    `, { type: QueryTypes.SELECT }) as Array<{ userId: number; stage: string; count: number }>;
+
+    const byUser: Record<number, Array<{ stage: string; count: number }>> = {};
+    (results || []).forEach((row) => {
+      const uid = row.userId;
+      if (!byUser[uid]) byUser[uid] = [];
+      byUser[uid].push({ stage: row.stage || 'lead', count: row.count || 0 });
+    });
+
+    res.json({ byUser });
+  } catch (error: any) {
+    console.error('Error en /reports/deals-by-user:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Función para calcular la semana del año (ISO 8601)
 function getWeekNumber(date: Date): number {

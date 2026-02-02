@@ -466,7 +466,7 @@ const Tasks: React.FC = () => {
           ? '0 4px 16px rgba(0,0,0,0.3)' 
           : `0 4px 16px ${taxiMonterricoColors.greenLight}15`,
         overflow: 'hidden',
-        bgcolor: theme.palette.background.paper,
+        bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
         border: '1px solid',
         borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
         mb: 2.5,
@@ -481,7 +481,7 @@ const Tasks: React.FC = () => {
           px: { xs: 1.5, sm: 2, md: 2 },
           pt: { xs: 1.5, sm: 2, md: 2 },
           pb: { xs: 1, sm: 1.25, md: 1.5 },
-          bgcolor: theme.palette.background.paper,
+          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
           '&:last-child': {
             paddingBottom: { xs: 1, sm: 1.25, md: 1.5 },
           },
@@ -773,7 +773,7 @@ const Tasks: React.FC = () => {
           ? '0 4px 16px rgba(0,0,0,0.3)' 
           : `0 4px 16px ${taxiMonterricoColors.greenLight}15`,
         overflow: 'hidden',
-        bgcolor: theme.palette.background.paper,
+        bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
         border: '1px solid',
         borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
         transition: 'all 0.3s ease',
@@ -787,7 +787,7 @@ const Tasks: React.FC = () => {
           px: { xs: 2, md: 3 }, 
           pt: { xs: 2, md: 1.5 }, 
           pb: { xs: 1.5, md: 2 },
-          bgcolor: theme.palette.background.paper,
+          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
           borderBottom: `2px solid ${theme.palette.divider}`,
         }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0, flexWrap: { xs: 'wrap', sm: 'nowrap' }, gap: { xs: 2, sm: 0 } }}>
@@ -861,7 +861,7 @@ const Tasks: React.FC = () => {
                   displayEmpty
                   sx={{
                     borderRadius: 1.5,
-                    bgcolor: theme.palette.background.paper,
+                    bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     fontSize: { xs: '0.75rem', sm: '0.8125rem' },
                     border: `1.5px solid ${theme.palette.divider}`,
                     transition: 'all 0.2s ease',
@@ -943,7 +943,9 @@ const Tasks: React.FC = () => {
               border: 'none',
               boxShadow: 'none',
               paddingRight: 0,
+              bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined,
             },
+            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined,
             '&::-webkit-scrollbar': {
               height: 8,
             },
@@ -963,7 +965,7 @@ const Tasks: React.FC = () => {
             <TableHead>
               <TableRow sx={{ 
                 bgcolor: theme.palette.mode === 'dark'
-                  ? '#222B32'
+                  ? '#1c252e'
                   : hexToRgba(taxiMonterricoColors.greenEmerald, 0.01),
                 borderBottom: `2px solid ${theme.palette.divider}`,
                 '& .MuiTableCell-head': {
@@ -1119,25 +1121,26 @@ const Tasks: React.FC = () => {
                 <TableRow 
                   key={task.id}
                   sx={{ 
-                    bgcolor: theme.palette.background.paper,
+                    bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     borderBottom: theme.palette.mode === 'light' 
                       ? '1px solid rgba(0, 0, 0, 0.08)' 
                       : '1px solid rgba(255, 255, 255, 0.08)',
                     '& .MuiTableCell-root': {
                       borderBottom: 'none',
                     },
+                    transition: 'all 0.2s ease',
                     '&:hover': {
-                      bgcolor: theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.02)' 
-                        : 'rgba(0, 0, 0, 0.02)',
+                      boxShadow: theme.palette.mode === 'dark'
+                        ? 'inset 0 0 0 9999px rgba(255, 255, 255, 0.015)'
+                        : 'inset 0 0 0 9999px rgba(0, 0, 0, 0.012)',
                     },
                     '&.Mui-selected': {
                       bgcolor: 'transparent !important',
                     },
                     '&.Mui-selected:hover': {
-                      bgcolor: theme.palette.mode === 'dark' 
-                        ? 'rgba(255, 255, 255, 0.02)' 
-                        : 'rgba(0, 0, 0, 0.02)',
+                      boxShadow: theme.palette.mode === 'dark'
+                        ? 'inset 0 0 0 9999px rgba(255, 255, 255, 0.015)'
+                        : 'inset 0 0 0 9999px rgba(0, 0, 0, 0.012)',
                     },
                   }}
                 >
@@ -1420,7 +1423,7 @@ const Tasks: React.FC = () => {
         {totalTasks > 0 && (
           <Box
             sx={{
-              bgcolor: theme.palette.background.paper,
+              bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
               borderRadius: '0 0 6px 6px',
               boxShadow: theme.palette.mode === 'dark' ? '0 1px 3px rgba(0,0,0,0.2)' : '0 1px 3px rgba(0,0,0,0.05)',
               borderTop: 'none',

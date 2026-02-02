@@ -909,7 +909,7 @@ const Deals: React.FC = () => {
               displayEmpty
               sx={{
                 borderRadius: 1.5,
-                bgcolor: theme.palette.background.paper,
+                bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                 fontSize: { xs: "0.75rem", sm: "0.8125rem" },
                 border: `1.5px solid ${theme.palette.divider}`,
                 transition: 'all 0.2s ease',
@@ -1157,7 +1157,7 @@ const Deals: React.FC = () => {
               component="div"
               sx={{ 
                 bgcolor: theme.palette.mode === 'dark'
-                  ? `${taxiMonterricoColors.green}05`
+                  ? '#1c252e'
                   : `${taxiMonterricoColors.green}03`,
                 overflow: 'hidden',
                 display: 'grid',
@@ -1191,7 +1191,7 @@ const Deals: React.FC = () => {
                     '& .MuiOutlinedInput-root': { 
                       height: 28, 
                       fontSize: '0.75rem',
-                      bgcolor: theme.palette.background.paper,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     },
                   }}
                 />
@@ -1217,7 +1217,7 @@ const Deals: React.FC = () => {
                     '& .MuiOutlinedInput-root': { 
                       height: 28, 
                       fontSize: '0.75rem',
-                      bgcolor: theme.palette.background.paper,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     },
                   }}
                 />
@@ -1243,7 +1243,7 @@ const Deals: React.FC = () => {
                     '& .MuiOutlinedInput-root': { 
                       height: 28, 
                       fontSize: '0.75rem',
-                      bgcolor: theme.palette.background.paper,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     },
                   }}
                 />
@@ -1269,7 +1269,7 @@ const Deals: React.FC = () => {
                     '& .MuiOutlinedInput-root': { 
                       height: 28, 
                       fontSize: '0.75rem',
-                      bgcolor: theme.palette.background.paper,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     },
                   }}
                 />
@@ -1295,7 +1295,7 @@ const Deals: React.FC = () => {
                     '& .MuiOutlinedInput-root': { 
                       height: 28, 
                       fontSize: '0.75rem',
-                      bgcolor: theme.palette.background.paper,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     },
                   }}
                 />
@@ -1321,7 +1321,7 @@ const Deals: React.FC = () => {
                     '& .MuiOutlinedInput-root': { 
                       height: 28, 
                       fontSize: '0.75rem',
-                      bgcolor: theme.palette.background.paper,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     },
                   }}
                 />
@@ -1344,7 +1344,7 @@ const Deals: React.FC = () => {
                 component="div"
                 onClick={() => navigate(`/deals/${deal.id}`)}
                   sx={{ 
-                  bgcolor: getStageCardColor(deal.stage),
+                  bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                   cursor: 'pointer',
                   display: 'grid',
                   gridTemplateColumns: { xs: 'repeat(7, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 1fr 0.8fr 0.7fr' },
@@ -1363,8 +1363,7 @@ const Deals: React.FC = () => {
                       : '1px solid rgba(255, 255, 255, 0.1)')
                     : 'none',
                   '&:hover': {
-                    bgcolor: getStageCardColor(deal.stage),
-                    opacity: 0.9,
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
                   },
                 }}
               >
@@ -1452,28 +1451,44 @@ const Deals: React.FC = () => {
                     S/ {deal.amount.toLocaleString()}
                     </Typography>
                 </Box>
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }} onClick={(e) => e.stopPropagation()}>
-                    <Chip
-                      label={getStageLabel(deal.stage)}
-                      size="small"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        e.preventDefault();
-                        handleStageMenuOpen(e, deal.id);
-                      }}
-                      disabled={updatingStage[deal.id]}
-                      sx={{ 
+                <Box
+                  sx={{
+                    px: { xs: 0.75, md: 1 },
+                    py: { xs: 0.5, md: 0.75 },
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'flex-start',
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStageMenuOpen(e, deal.id);
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 0.25,
+                      cursor: updatingStage[deal.id] ? 'wait' : 'pointer',
+                      '&:hover': { opacity: 0.8 },
+                    }}
+                  >
+                    <Typography
+                      sx={{
                         fontWeight: 500,
-                      fontSize: { xs: '0.75rem', md: '0.8125rem' },
-                      height: { xs: 22, md: 24 },
-                      cursor: 'pointer',
-                        bgcolor: getStageCardColor(deal.stage),
+                        fontSize: { xs: '0.75rem', md: '0.8125rem' },
                         color: getStageColor(deal.stage).color,
-                        '&:hover': {
-                          opacity: 0.8,
-                        },
+                      }}
+                    >
+                      {getStageLabel(deal.stage)}
+                    </Typography>
+                    <ExpandMore
+                      sx={{
+                        fontSize: { xs: '0.875rem', md: '1rem' },
+                        color: getStageColor(deal.stage).color,
                       }}
                     />
+                  </Box>
                     <Menu
                       anchorEl={stageMenuAnchor[deal.id]}
                       open={Boolean(stageMenuAnchor[deal.id])}
@@ -1769,7 +1784,7 @@ const Deals: React.FC = () => {
           <Box
             sx={{
               width: { xs: '100%', md: 400 },
-              bgcolor: theme.palette.background.paper,
+              bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
               borderLeft: { xs: 'none', md: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}` },
               borderTop: { xs: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`, md: 'none' },
               borderRadius: 2,
@@ -2285,7 +2300,7 @@ const Deals: React.FC = () => {
                           sx={{
                             cursor: isDragging && draggedDeal?.id === deal.id ? 'grabbing' : 'default',
                             opacity: isDragging && draggedDeal?.id === deal.id ? 0.3 : 1,
-                            bgcolor: theme.palette.background.paper,
+                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                             borderRadius: 1.5,
                             boxShadow: theme.palette.mode === 'dark'
                               ? '0 1px 3px rgba(0,0,0,0.2)'

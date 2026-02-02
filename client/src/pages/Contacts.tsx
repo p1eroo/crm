@@ -1286,7 +1286,7 @@ const Contacts: React.FC = () => {
                 displayEmpty
                 sx={{
                   borderRadius: 1.5,
-                  bgcolor: theme.palette.background.paper,
+                  bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                   fontSize: { xs: "0.75rem", sm: "0.8125rem" },
                   border: `1.5px solid ${theme.palette.divider}`,
                   transition: 'all 0.2s ease',
@@ -1490,7 +1490,7 @@ const Contacts: React.FC = () => {
                     '& .MuiOutlinedInput-root': { 
                       height: 28, 
                       fontSize: '0.75rem',
-                      bgcolor: theme.palette.background.paper,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     },
                   }}
                 />
@@ -1516,7 +1516,7 @@ const Contacts: React.FC = () => {
                     '& .MuiOutlinedInput-root': { 
                       height: 28, 
                       fontSize: '0.75rem',
-                      bgcolor: theme.palette.background.paper,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     },
                   }}
                 />
@@ -1542,7 +1542,7 @@ const Contacts: React.FC = () => {
                     '& .MuiOutlinedInput-root': { 
                       height: 28, 
                       fontSize: '0.75rem',
-                      bgcolor: theme.palette.background.paper,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     },
                   }}
                 />
@@ -1568,7 +1568,7 @@ const Contacts: React.FC = () => {
                     '& .MuiOutlinedInput-root': { 
                       height: 28, 
                       fontSize: '0.75rem',
-                      bgcolor: theme.palette.background.paper,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     },
                   }}
                 />
@@ -1594,7 +1594,7 @@ const Contacts: React.FC = () => {
                     '& .MuiOutlinedInput-root': { 
                       height: 28, 
                       fontSize: '0.75rem',
-                      bgcolor: theme.palette.background.paper,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                     },
                   }}
                 />
@@ -1619,7 +1619,7 @@ const Contacts: React.FC = () => {
                 component="div"
                 onClick={() => navigate(`/contacts/${contact.id}`)}
                 sx={{
-                  bgcolor: theme.palette.background.paper,
+                  bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                   cursor: "pointer",
                   transition: "all 0.2s ease",
                   display: "grid",
@@ -1636,7 +1636,9 @@ const Contacts: React.FC = () => {
                   py: { xs: 1, md: 1.25 },
                   borderBottom: `1px solid ${theme.palette.divider}`,
                   '&:hover': {
-                    bgcolor: theme.palette.action.hover,
+                    boxShadow: theme.palette.mode === 'dark'
+                      ? 'inset 0 0 0 9999px rgba(255, 255, 255, 0.015)'
+                      : 'inset 0 0 0 9999px rgba(0, 0, 0, 0.012)',
                   },
                 }}
               >

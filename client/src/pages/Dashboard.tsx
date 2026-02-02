@@ -28,6 +28,8 @@ import {
   ChevronLeft,
   ChevronRight,
 } from '@mui/icons-material';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCoins, faTags, faBuilding, faPeopleGroup } from '@fortawesome/free-solid-svg-icons';
 import {
   AreaChart,
   Area,
@@ -1323,18 +1325,13 @@ const Dashboard: React.FC = () => {
           onClick={canEditBudget ? handleBudgetCardClick : undefined}
           sx={{ 
             minHeight: { xs: 140, sm: 160, md: 185 },
-            borderRadius: 3,
+            borderRadius: 4,
             boxShadow: 'none',
-            bgcolor: theme.palette.mode === 'dark' 
-              ? `${taxiMonterricoColors.green}1A`
-              : `${taxiMonterricoColors.green}15`,
-            color: theme.palette.mode === 'dark' 
-              ? taxiMonterricoColors.greenLight
-              : taxiMonterricoColors.greenDark,
+            bgcolor: 'rgb(212, 249, 226)',
+            color: '#004B50',
             overflow: 'hidden',
-            border: `none`,
+            border: 'none',
             cursor: canEditBudget ? 'pointer' : 'default',
-            position: 'relative',
           }}
         >
           <CardContent sx={{ 
@@ -1355,33 +1352,21 @@ const Dashboard: React.FC = () => {
                 gap: 5,
                 flex: 1,
               }}>
-                <Box
-                  className="kpi-icon"
-                  sx={{
-                    p: 1.5,
-                    borderRadius: 2,
-                    background: 'linear-gradient(135deg, rgba(26, 174, 122, 0.15) 0%, rgba(26, 174, 122, 0.05) 100%)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    border: '1px solid rgba(26, 174, 122, 0.2)',
-                    fontSize: '36px',
-                    lineHeight: 1,
-                  }}
-                >
-                  💰
-                </Box>
+                <FontAwesomeIcon 
+                  icon={faCoins} 
+                  style={{
+                    color: "#1aae7a",
+                    fontSize: 36,
+                  }} 
+                />
                 <Box sx={{ textAlign: 'left' }}>
                   <Typography 
                     variant="body2" 
                     sx={{ 
-                      color: theme.palette.mode === 'dark' 
-                        ? taxiMonterricoColors.greenLight
-                        : taxiMonterricoColors.greenDark,
+                      color: '#004B50',
                       mb: 1.5,
                       fontSize: '0.875rem',
-                      fontWeight: 800,
+                      fontWeight: 600,
                       lineHeight: 1.2,
                     }}
                   >
@@ -1390,12 +1375,10 @@ const Dashboard: React.FC = () => {
                   <Typography 
                     variant="h6" 
                     sx={{ 
-                      fontWeight: 800, 
+                      fontWeight: 600, 
                       fontSize: '1.5rem',
                       lineHeight: 1.2,
-                      color: theme.palette.mode === 'dark' 
-                        ? taxiMonterricoColors.greenLight
-                        : taxiMonterricoColors.greenDark,
+                      color: '#004B50',
                     }}
                   >
                     S/ {monthlyBudget.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
@@ -1410,8 +1393,10 @@ const Dashboard: React.FC = () => {
                 position: 'absolute',
                 right: { xs: 16, sm: 20, md: 24 },
                 top: { xs: 16, sm: 20, md: 24 },
+                minWidth: 0,
+                minHeight: 0,
               }}>
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width={140} height={80}>
                   <LineChart data={[
                     { value: 20 },
                     { value: 35 },
@@ -1424,7 +1409,7 @@ const Dashboard: React.FC = () => {
                     <Line 
                       type="monotone" 
                       dataKey="value" 
-                      stroke={taxiMonterricoColors.greenLight} 
+                      stroke="#1aae7a" 
                       strokeWidth={2}
                       dot={false}
                     />
@@ -1438,15 +1423,12 @@ const Dashboard: React.FC = () => {
         {/* Orders In Line */}
         <Card sx={{ 
           minHeight: { xs: 140, sm: 160, md: 185 },
-          borderRadius: 3,
+          borderRadius: 4,
           boxShadow: 'none',
-          bgcolor: theme.palette.mode === 'dark' 
-            ? `${theme.palette.secondary.main}1A`
-            : `${theme.palette.secondary.main}15`,
+          bgcolor: '#edd6ff',
           color: theme.palette.text.primary,
           overflow: 'hidden',
-          border: `none`,
-          position: 'relative',
+          border: 'none',
         }}>
           <CardContent sx={{ 
             p: { xs: 2, sm: 2.5, md: 3 },
@@ -1458,33 +1440,21 @@ const Dashboard: React.FC = () => {
               alignItems: 'flex-start',
               gap: 5,
             }}>
-              <Box
-                className="kpi-icon"
-                sx={{
-                  p: 1.5,
-                  borderRadius: 2,
-                  background: 'linear-gradient(135deg, rgba(129, 53, 230, 0.15) 0%, rgba(129, 53, 230, 0.05) 100%)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  border: '1px solid rgba(129, 53, 230, 0.2)',
-                  fontSize: '36px',
-                  lineHeight: 1,
-                }}
-              >
-                🏷️
-              </Box>
+              <FontAwesomeIcon 
+                icon={faTags} 
+                style={{
+                  color: "#8135e6",
+                  fontSize: 36,
+                }} 
+              />
               <Box sx={{ textAlign: 'left' }}>
                 <Typography 
                   variant="body2" 
                   sx={{ 
-                    color: theme.palette.mode === 'dark' 
-                      ? theme.palette.secondary.light
-                      : theme.palette.secondary.dark,
+                    color: '#27097a',
                     mb: 1.5,
                     fontSize: '0.875rem',
-                    fontWeight: 800,
+                    fontWeight: 600,
                     lineHeight: 1.2,
                   }}
                 >
@@ -1493,12 +1463,10 @@ const Dashboard: React.FC = () => {
                 <Typography 
                   variant="h6" 
                   sx={{ 
-                    fontWeight: 800, 
+                    fontWeight: 600, 
                     fontSize: '1.5rem',
                     lineHeight: 1.2,
-                    color: theme.palette.mode === 'dark' 
-                      ? theme.palette.secondary.light
-                      : theme.palette.secondary.dark,
+                    color: '#27097a',
                   }}
                 >
                   {ordersInLine}
@@ -1511,15 +1479,13 @@ const Dashboard: React.FC = () => {
         {/* New Clients */}
         <Card sx={{ 
           minHeight: { xs: 140, sm: 160, md: 185 },
-          borderRadius: 3,
+          borderRadius: 4,
           boxShadow: 'none',
-          bgcolor: theme.palette.mode === 'dark' 
-            ? `${taxiMonterricoColors.orange}1A`
-            : `${taxiMonterricoColors.orange}15`,
+          bgcolor: '#fff1c9',
           color: theme.palette.text.primary,
           overflow: 'hidden',
           position: 'relative',
-          border: `none`,
+          border: 'none',
         }}>
           <CardContent sx={{ 
             p: { xs: 2, sm: 2.5, md: 3 },
@@ -1531,33 +1497,21 @@ const Dashboard: React.FC = () => {
               alignItems: 'flex-start',
               gap: 5,
             }}>
-              <Box
-                className="kpi-icon"
-                sx={{
-                  p: 1.5,
-                  borderRadius: 2,
-                  background: 'linear-gradient(135deg, rgba(235, 163, 22, 0.15) 0%, rgba(235, 163, 22, 0.05) 100%)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  border: '1px solid rgba(235, 163, 22, 0.2)',
-                  fontSize: '36px',
-                  lineHeight: 1,
-                }}
-              >
-                🏢
-              </Box>
+              <FontAwesomeIcon 
+                icon={faBuilding} 
+                style={{
+                  color: "#eba316",
+                  fontSize: 36,
+                }} 
+              />
               <Box sx={{ textAlign: 'left' }}>
                 <Typography 
                   variant="body2" 
                   sx={{ 
-                    color: theme.palette.mode === 'dark' 
-                      ? taxiMonterricoColors.orangeLight
-                      : taxiMonterricoColors.orangeDark,
+                    color: '#944100',
                     mb: 1.5,
                     fontSize: '0.875rem',
-                    fontWeight: 800,
+                    fontWeight: 600,
                     lineHeight: 1.2,
                   }}
                 >
@@ -1566,12 +1520,10 @@ const Dashboard: React.FC = () => {
                 <Typography 
                   variant="h6" 
                   sx={{ 
-                    fontWeight: 800, 
+                    fontWeight: 600, 
                     fontSize: '1.5rem',
                     lineHeight: 1.2,
-                    color: theme.palette.mode === 'dark' 
-                      ? taxiMonterricoColors.orangeLight
-                      : taxiMonterricoColors.orangeDark,
+                    color: '#944100',
                   }}
                 >
                   {newCompanies}
@@ -1584,15 +1536,13 @@ const Dashboard: React.FC = () => {
         {/* Team KPI */}
         <Card sx={{ 
           minHeight: { xs: 140, sm: 160, md: 185 },
-          borderRadius: 3,
+          borderRadius: 4,
           boxShadow: 'none',
-          bgcolor: theme.palette.mode === 'dark' 
-            ? `${theme.palette.error.main}1A`
-            : `${theme.palette.error.main}15`,
+          bgcolor: '#ffe4d5',
           color: theme.palette.text.primary,
           overflow: 'hidden',
           position: 'relative',
-          border: `none`,
+          border: 'none',
         }}>
           <CardContent sx={{ 
             p: { xs: 2, sm: 2.5, md: 3 },
@@ -1604,33 +1554,21 @@ const Dashboard: React.FC = () => {
               alignItems: 'flex-start',
               gap: 5,
             }}>
-              <Box
-                className="kpi-icon"
-                sx={{
-                  p: 1.5,
-                  borderRadius: 2,
-                  background: 'linear-gradient(135deg, rgba(239, 97, 65, 0.15) 0%, rgba(239, 97, 65, 0.05) 100%)',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  border: '1px solid rgba(239, 97, 65, 0.2)',
-                  fontSize: '36px',
-                  lineHeight: 1,
-                }}
-              >
-                👥
-              </Box>
+              <FontAwesomeIcon 
+                icon={faPeopleGroup} 
+                style={{
+                  color: "#ef6141",
+                  fontSize: 36,
+                }} 
+              />
               <Box sx={{ textAlign: 'left' }}>
                 <Typography 
                   variant="body2" 
                   sx={{ 
-                    color: theme.palette.mode === 'dark' 
-                      ? theme.palette.error.light
-                      : theme.palette.error.dark,
+                    color: '#b24930',
                     mb: 1.5,
                     fontSize: '0.875rem',
-                    fontWeight: 800,
+                    fontWeight: 600,
                     lineHeight: 1.2,
                   }}
                 >
@@ -1644,12 +1582,10 @@ const Dashboard: React.FC = () => {
                   <Typography 
                     variant="h6" 
                     sx={{ 
-                      fontWeight: 800, 
+                      fontWeight: 600, 
                       fontSize: '1.5rem',
                       lineHeight: 1.2,
-                      color: theme.palette.mode === 'dark' 
-                        ? theme.palette.error.light
-                        : theme.palette.error.dark,
+                      color: '#b24930',
                     }}
                   >
                     {teamKPI.toFixed(1)}%
@@ -1664,14 +1600,14 @@ const Dashboard: React.FC = () => {
                       <TrendingUp 
                         sx={{ 
                           fontSize: 20,
-                          color: theme.palette.error.dark,
+                          color: '#7a0916',
                         }} 
                       />
                     ) : (
                       <TrendingDown 
                         sx={{ 
                           fontSize: 20,
-                          color: theme.palette.error.dark,
+                          color: '#7a0916',
                         }} 
                       />
                     )}
@@ -1679,8 +1615,8 @@ const Dashboard: React.FC = () => {
                       variant="body2" 
                       sx={{ 
                         fontSize: '0.875rem',
-                        color: theme.palette.error.dark,
-                        fontWeight: 800,
+                        color: '#7a0916',
+                        fontWeight: 600,
                       }}
                     >
                       {Math.abs(kpiChangePercent).toFixed(1)}%
@@ -1711,7 +1647,7 @@ const Dashboard: React.FC = () => {
             boxShadow: theme.palette.mode === 'dark' 
               ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
               : '0 4px 20px rgba(0, 0, 0, 0.08)',
-            bgcolor: theme.palette.background.paper,
+            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
             border: `none`,
             minHeight: { xs: 400, sm: 480 },
             position: 'relative',
@@ -1816,7 +1752,7 @@ const Dashboard: React.FC = () => {
           boxShadow: theme.palette.mode === 'dark' 
               ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
               : '0 4px 20px rgba(0, 0, 0, 0.08)',
-            bgcolor: theme.palette.background.paper,
+            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
             border: `none`,
           alignSelf: 'start',
           minHeight: { xs: 395, sm: 440 },
@@ -2000,7 +1936,7 @@ const Dashboard: React.FC = () => {
           boxShadow: theme.palette.mode === 'dark' 
             ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
             : '0 4px 20px rgba(0, 0, 0, 0.08)',
-          bgcolor: theme.palette.background.paper,
+          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
           border: `none`,
           position: 'relative',
           overflow: 'hidden',
@@ -2151,7 +2087,7 @@ const Dashboard: React.FC = () => {
             boxShadow: theme.palette.mode === 'dark' 
               ? '0 4px 20px rgba(0, 0, 0, 0.3)' 
               : '0 4px 20px rgba(0, 0, 0, 0.08)',
-            bgcolor: theme.palette.background.paper,
+            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
             border: `none`,
             position: 'relative',
             overflow: 'hidden', 

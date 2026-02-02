@@ -258,7 +258,7 @@ const SystemLogs: React.FC = () => {
                 size="small"
                 sx={{ 
                   minWidth: { xs: '100%', sm: 200 },
-                  bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
+                  bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'white',
                   borderRadius: 1.5,
                   fontSize: '0.875rem',
                   '& .MuiOutlinedInput-root': {
@@ -291,7 +291,7 @@ const SystemLogs: React.FC = () => {
                   sx={{
                     borderRadius: 1.5,
                     fontSize: '0.8125rem',
-                    bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
+                    bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'white',
                     '& .MuiSelect-icon': {
                       color: taxiMonterricoColors.green,
                     },
@@ -356,27 +356,28 @@ const SystemLogs: React.FC = () => {
               <Table sx={{ width: '100%', tableLayout: 'auto' }}>
                 <TableHead>
                   <TableRow sx={{ 
-                    background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)`,
+                    bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined,
+                    background: theme.palette.mode === 'light' ? `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` : undefined,
                     borderBottom: `2px solid ${taxiMonterricoColors.greenLight}`,
                     width: '100%',
                     display: 'table-row',
                     '& .MuiTableCell-head': {
                       borderBottom: 'none',
                       fontWeight: 700,
-                      bgcolor: 'transparent',
-                      background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)`,
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent',
+                      background: theme.palette.mode === 'light' ? `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` : undefined,
                     },
                     '& .MuiTableCell-head:last-of-type': {
                       pr: 0,
                     },
                   }}>
-                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, bgcolor: 'transparent', background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` }}>Fecha</TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, bgcolor: 'transparent', background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` }}>Usuario</TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, bgcolor: 'transparent', background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` }}>Acción</TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, bgcolor: 'transparent', background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` }}>Entidad</TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, bgcolor: 'transparent', background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` }}>ID</TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, bgcolor: 'transparent', background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` }}>Detalles</TableCell>
-                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: 1, pr: 0, bgcolor: 'transparent', background: `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` }}>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: { xs: 2, md: 3 }, bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent', background: theme.palette.mode === 'light' ? `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` : undefined }}>Fecha</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent', background: theme.palette.mode === 'light' ? `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` : undefined }}>Usuario</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent', background: theme.palette.mode === 'light' ? `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` : undefined }}>Acción</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent', background: theme.palette.mode === 'light' ? `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` : undefined }}>Entidad</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent', background: theme.palette.mode === 'light' ? `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` : undefined }}>ID</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent', background: theme.palette.mode === 'light' ? `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` : undefined }}>Detalles</TableCell>
+                    <TableCell sx={{ fontWeight: 600, color: theme.palette.text.primary, fontSize: { xs: '0.75rem', md: '0.875rem' }, py: { xs: 1.5, md: 2 }, pl: 1, pr: 0, bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent', background: theme.palette.mode === 'light' ? `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, ${taxiMonterricoColors.orange}08 100%)` : undefined }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', pr: { xs: 2, md: 3 } }}>
                         IP
                       </Box>
@@ -834,7 +835,7 @@ const SystemLogs: React.FC = () => {
             boxShadow: theme.palette.mode === 'dark' 
               ? '0 8px 24px rgba(0,0,0,0.3)' 
               : '0 8px 24px rgba(46, 125, 50, 0.12)',
-            bgcolor: theme.palette.background.paper,
+            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
             border: `1px solid ${theme.palette.divider}`,
           },
         }}

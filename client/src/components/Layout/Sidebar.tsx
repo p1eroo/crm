@@ -50,6 +50,7 @@ const mainMenuItems = [
   // { text: 'Tickets', icon: <Support />, path: '/tickets', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Calendario', icon: CalendarTodayIcon, path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Correos', icon: EmailIcon, path: '/emails', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+  { text: 'Masivo', icon: EmailIcon, path: '/emails/masivo', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   { text: 'Reportes', icon: AssessmentIcon, path: '/reports', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   // { text: 'Campañas', icon: <Campaign />, path: '/campaigns' },
   // { text: 'Automatizaciones', icon: <Timeline />, path: '/automations' },

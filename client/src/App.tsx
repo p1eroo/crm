@@ -32,6 +32,7 @@ const Tasks = lazy(() => import('./pages/Tasks'));
 const TaskDetail = lazy(() => import('./pages/TaskDetail'));
 const Tickets = lazy(() => import('./pages/Tickets'));
 const Emails = lazy(() => import('./pages/Emails'));
+const MassEmail = lazy(() => import('./pages/MassEmail'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Users = lazy(() => import('./pages/Users'));
 const SystemLogs = lazy(() => import('./pages/SystemLogs'));
@@ -455,6 +456,16 @@ const AppContent: React.FC = () => {
                     <SidebarProvider>
                       <MainLayout>
                         <Emails />
+                      </MainLayout>
+                    </SidebarProvider>
+                  }
+                />
+                <Route
+                  path="/emails/masivo"
+                  element={
+                    <SidebarProvider>
+                      <MainLayout>
+                        <MassEmail />
                       </MainLayout>
                     </SidebarProvider>
                   }

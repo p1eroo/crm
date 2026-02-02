@@ -91,14 +91,18 @@ export const NotificationBell: React.FC = () => {
           size="small"
           onClick={handleTogglePanel}
           sx={{
-            bgcolor: 'transparent',
-            borderRadius: 1,
+            bgcolor: theme.palette.mode === 'dark' 
+              ? 'rgba(255, 255, 255, 0.08)' 
+              : 'rgba(0, 0, 0, 0.05)',
+            borderRadius: 2.5,
             width: 40,
             height: 40,
             position: 'relative',
             transition: 'all 0.2s ease',
             '&:hover': {
-              bgcolor: theme.palette.action.hover,
+              bgcolor: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.12)' 
+                : 'rgba(0, 0, 0, 0.08)',
               transform: 'scale(1.05)',
             },
           }}

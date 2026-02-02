@@ -15,7 +15,6 @@ import {
   LightMode,
   SettingsBrightness,
   Info,
-  Refresh,
 } from '@mui/icons-material';
 import { HugeiconsIcon } from '@hugeicons/react';
 // @ts-ignore - TypeScript module resolution issue with @hugeicons/core-free-icons
@@ -206,23 +205,6 @@ export const SettingsDrawer: React.FC<SettingsDrawerProps> = ({ open, onClose })
                   color: theme.palette.text.secondary 
                 }} 
               />
-            </IconButton>
-            <IconButton 
-              sx={{ 
-                width: 40, 
-                height: 40,
-                borderRadius: '8px',
-                transition: 'all 0.15s cubic-bezier(0.4, 0, 0.2, 1)',
-                '&:hover': {
-                  bgcolor: theme.palette.mode === 'dark' 
-                    ? `${taxiMonterricoColors.greenLight}20` 
-                    : `${taxiMonterricoColors.greenLight}15`,
-                  color: taxiMonterricoColors.green,
-                  border: `1px solid ${taxiMonterricoColors.greenLight}30`,
-                },
-              }}
-            >
-              <Refresh sx={{ fontSize: 20, color: theme.palette.text.secondary }} />
             </IconButton>
             <IconButton 
               onClick={onClose} 

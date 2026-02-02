@@ -111,7 +111,7 @@ const RolesAndPermissions: React.FC = () => {
           boxShadow: theme.palette.mode === 'dark' 
             ? '0 4px 12px rgba(0,0,0,0.3)' 
             : '0 4px 12px rgba(46, 125, 50, 0.08)',
-          bgcolor: theme.palette.background.paper,
+          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
           border: `1px solid ${theme.palette.divider}`,
           p: 3,
         }}>
@@ -146,7 +146,7 @@ const RolesAndPermissions: React.FC = () => {
                 boxShadow: theme.palette.mode === 'dark' 
                   ? '0 4px 12px rgba(0,0,0,0.3)' 
                   : '0 4px 12px rgba(46, 125, 50, 0.08)',
-                bgcolor: theme.palette.background.paper,
+                bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                 border: `1px solid ${theme.palette.divider}`,
                 transition: 'all 0.3s ease',
                 position: 'relative',

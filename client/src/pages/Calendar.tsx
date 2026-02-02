@@ -282,11 +282,12 @@ const Calendar: React.FC = () => {
 
   // Función para obtener el color de prioridad
   const getPriorityColor = (priority?: string) => {
+    const isDark = theme.palette.mode === 'dark';
     const colors: { [key: string]: { bg: string; color: string } } = {
-      low: { bg: taxiMonterricoColors.successLight, color: taxiMonterricoColors.greenDark },
-      medium: { bg: taxiMonterricoColors.amberLight, color: taxiMonterricoColors.amberDark },
-      high: { bg: taxiMonterricoColors.redLight, color: taxiMonterricoColors.redDark },
-      urgent: { bg: taxiMonterricoColors.redLight, color: taxiMonterricoColors.errorDark },
+      low: { bg: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', color: isDark ? 'rgba(255,255,255,0.85)' : theme.palette.text.secondary },
+      medium: { bg: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', color: theme.palette.text.primary },
+      high: { bg: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)', color: theme.palette.text.primary },
+      urgent: { bg: isDark ? 'rgba(255,255,255,0.14)' : 'rgba(0,0,0,0.12)', color: theme.palette.text.primary },
     };
     return colors[priority || 'medium'] || colors.medium;
   };
@@ -317,32 +318,52 @@ const Calendar: React.FC = () => {
       backgroundColor: theme.palette.background.default, 
       minHeight: '100vh',
       pb: { xs: 2, sm: 3, md: 4 },
-      px: { xs: 2, sm: 3, md: 4 },
+      px: { xs: 1.5, sm: 2, md: 3 },
+      maxWidth: 1600,
+      mx: 'auto',
     }}>
+      {/* Barra de título - misma estructura que Deals / Negocios */}
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 2,
+          p: 2,
+          mb: 0,
+        }}
+      >
+        <Typography
+          variant="h5"
+          sx={{
+            fontWeight: 700,
+            fontSize: { xs: '1.25rem', md: '1.5rem' },
+          }}
+          style={{
+            background: `linear-gradient(135deg, ${theme.palette.text.primary} 0%, ${theme.palette.mode === 'dark' ? taxiMonterricoColors.greenLight : taxiMonterricoColors.green} 100%)`,
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            color: 'transparent',
+            WebkitTextFillColor: 'transparent',
+          }}
+        >
+          Calendario
+        </Typography>
+      </Box>
       {/* Card principal del calendario */}
       <Card
         sx={{
           bgcolor: theme.palette.mode === 'dark' 
-            ? 'rgba(255, 255, 255, 0.05)' 
+            ? '#1c252e' 
             : theme.palette.background.paper,
           borderRadius: 2,
           p: 0,
           boxShadow: theme.palette.mode === 'dark' 
-            ? '0 8px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(46, 125, 50, 0.1)' 
-            : '0 8px 24px rgba(46, 125, 50, 0.12), 0 0 0 1px rgba(46, 125, 50, 0.08)',
+            ? '0 8px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05)' 
+            : '0 8px 24px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.06)',
           overflow: 'hidden',
           border: 'none',
-          position: 'relative',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '4px',
-            background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
-            zIndex: 1,
-          },
         }}
       >
         {/* Barra superior dentro del Card */}
@@ -350,14 +371,11 @@ const Calendar: React.FC = () => {
           display: 'flex', 
           justifyContent: 'space-between', 
           alignItems: 'center',
-          mb: { xs: 2, sm: 2.5, md: 3 },
+          mb: { xs: 2, sm: 2.5, md: 0 },
           pb: 2,
           px: { xs: 1.5, md: 2 },
           pt: { xs: 1.5, md: 2 },
-          borderBottom: `2px solid ${theme.palette.divider}`,
-          background: theme.palette.mode === 'dark'
-            ? `linear-gradient(135deg, rgba(46, 125, 50, 0.05) 0%, transparent 100%)`
-            : `linear-gradient(135deg, rgba(46, 125, 50, 0.02) 0%, transparent 100%)`,
+          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined,
           borderRadius: '8px 8px 0 0',
         }}>
           {/* Iconos de vista (izquierda) */}
@@ -365,15 +383,15 @@ const Calendar: React.FC = () => {
             <IconButton
               size="small"
               sx={{
-                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
-                color: 'white',
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : theme.palette.action.selected,
+                color: theme.palette.text.primary,
                 borderRadius: 1.5,
                 transition: 'all 0.2s ease',
-                boxShadow: `0 2px 6px ${taxiMonterricoColors.green}30`,
+                boxShadow: theme.palette.mode === 'dark' ? '0 2px 6px rgba(0,0,0,0.2)' : '0 2px 6px rgba(0,0,0,0.08)',
                 '&:hover': {
                   transform: 'translateY(-1px)',
-                  boxShadow: `0 4px 8px ${taxiMonterricoColors.green}40`,
-                  background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
+                  bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.15)' : theme.palette.action.hover,
+                  boxShadow: theme.palette.mode === 'dark' ? '0 4px 8px rgba(0,0,0,0.25)' : '0 4px 8px rgba(0,0,0,0.1)',
                 },
               }}
             >
@@ -388,8 +406,8 @@ const Calendar: React.FC = () => {
                 transition: 'all 0.2s ease',
                 '&:hover': {
                   bgcolor: theme.palette.action.hover,
-                  borderColor: taxiMonterricoColors.green,
-                  color: taxiMonterricoColors.green,
+                  borderColor: theme.palette.text.secondary,
+                  color: theme.palette.text.primary,
                   transform: 'translateY(-1px)',
                 },
               }}
@@ -415,8 +433,8 @@ const Calendar: React.FC = () => {
                 transition: 'all 0.2s ease',
                 '&:hover': {
                   bgcolor: theme.palette.action.hover,
-                  borderColor: taxiMonterricoColors.green,
-                  color: taxiMonterricoColors.green,
+                  borderColor: theme.palette.text.secondary,
+                  color: theme.palette.text.primary,
                   transform: 'translateX(-2px)',
                 },
               }}
@@ -430,10 +448,7 @@ const Calendar: React.FC = () => {
                 textAlign: 'center', 
                 fontWeight: 800,
                 fontSize: { xs: '1.2rem', md: '1.5rem' },
-                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                color: theme.palette.text.primary,
                 letterSpacing: '-0.03em',
                 textTransform: 'capitalize',
               }}
@@ -455,8 +470,8 @@ const Calendar: React.FC = () => {
                 transition: 'all 0.2s ease',
                 '&:hover': {
                   bgcolor: theme.palette.action.hover,
-                  borderColor: taxiMonterricoColors.green,
-                  color: taxiMonterricoColors.green,
+                  borderColor: theme.palette.text.secondary,
+                  color: theme.palette.text.primary,
                   transform: 'translateX(2px)',
                 },
               }}
@@ -476,8 +491,8 @@ const Calendar: React.FC = () => {
                 transition: 'all 0.2s ease',
                 '&:hover': {
                   bgcolor: theme.palette.action.hover,
-                  borderColor: taxiMonterricoColors.green,
-                  color: taxiMonterricoColors.green,
+                  borderColor: theme.palette.text.secondary,
+                  color: theme.palette.text.primary,
                 },
               }}
             >
@@ -493,24 +508,21 @@ const Calendar: React.FC = () => {
           gap: 0,
           mb: 0,
           px: { xs: 1.5, md: 2 },
-          py: 1.5,
-          background: theme.palette.mode === 'dark'
-            ? `linear-gradient(135deg, rgba(46, 125, 50, 0.08) 0%, rgba(46, 125, 50, 0.03) 100%)`
-            : `linear-gradient(135deg, rgba(46, 125, 50, 0.06) 0%, rgba(46, 125, 50, 0.02) 100%)`,
-          borderBottom: `1px solid ${theme.palette.divider}`,
+          py: 1,
+          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined,
+          borderTop: theme.palette.mode === 'dark' ? '1px solid rgba(255,255,255,0.08)' : `1px solid ${theme.palette.divider}`,
+          borderBottom: theme.palette.mode === 'dark' ? '1px solid rgba(255,255,255,0.08)' : `1px solid ${theme.palette.divider}`,
         }}>
-              {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day, index) => (
+              {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day) => (
                 <Typography
                   key={day}
                   variant="caption"
                   sx={{ 
                     textAlign: 'center', 
                     fontWeight: 800, 
-                    color: index === 0 || index === 6 
-                      ? taxiMonterricoColors.green 
-                      : theme.palette.text.secondary,
+                    color: theme.palette.text.secondary,
                     fontSize: { xs: '0.75rem', md: '0.8125rem' },
-                    py: 1,
+                    py: 0.25,
                     textTransform: 'uppercase',
                     letterSpacing: '0.08em',
                     position: 'relative',
@@ -535,21 +547,23 @@ const Calendar: React.FC = () => {
                     <Box 
                       key={index} 
                       sx={{ 
-                        minHeight: 110,
-                        borderRight: index % 7 !== 6 ? `1px solid ${theme.palette.divider}` : 'none',
-                        borderBottom: `1px solid ${theme.palette.divider}`,
+                        minHeight: 96,
+                        borderRight: index % 7 !== 6 ? (theme.palette.mode === 'dark' ? '1px solid rgba(255,255,255,0.08)' : `1px solid ${theme.palette.divider}`) : 'none',
+                        borderBottom: theme.palette.mode === 'dark' ? '1px solid rgba(255,255,255,0.08)' : `1px solid ${theme.palette.divider}`,
+                        bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined,
                       }} 
                     />
                   );
                 }
 
+                // Solo reuniones y tareas (sin eventos de Google ni notas)
                 const allDayEvents = getAllEventsForDay(
                   calendarDay.day,
                   modalYear,
                   modalMonth,
                   allTasksWithDates,
-                  googleCalendarEvents,
-                  notes,
+                  [], // sin eventos de Google Calendar
+                  [], // sin notas
                   meetings
                 );
                 
@@ -569,16 +583,14 @@ const Calendar: React.FC = () => {
                       }
                     }}
                     sx={{
-                      minHeight: 110,
-                      borderRight: index % 7 !== 6 ? `1px solid ${theme.palette.divider}` : 'none',
-                      borderBottom: `1px solid ${theme.palette.divider}`,
+                      minHeight: 96,
+                      borderRight: index % 7 !== 6 ? (theme.palette.mode === 'dark' ? '1px solid rgba(255,255,255,0.08)' : `1px solid ${theme.palette.divider}`) : 'none',
+                      borderBottom: theme.palette.mode === 'dark' ? '1px solid rgba(255,255,255,0.08)' : `1px solid ${theme.palette.divider}`,
                       borderRadius: 0,
-                      p: 1,
-                      bgcolor: calendarDay.isCurrentMonth
-                        ? theme.palette.background.paper
-                        : (theme.palette.mode === 'dark'
-                          ? 'rgba(255, 255, 255, 0.02)'
-                          : 'rgba(0, 0, 0, 0.02)'),
+                      p: 0.5,
+                      bgcolor: theme.palette.mode === 'dark'
+                        ? '#1c252e'
+                        : (calendarDay.isCurrentMonth ? theme.palette.background.paper : 'rgba(0, 0, 0, 0.02)'),
                       display: 'flex',
                       flexDirection: 'column',
                       cursor: calendarDay.isCurrentMonth ? 'pointer' : 'default',
@@ -586,13 +598,13 @@ const Calendar: React.FC = () => {
                       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                       '&:hover': calendarDay.isCurrentMonth ? {
                         bgcolor: theme.palette.mode === 'dark' 
-                          ? 'rgba(46, 125, 50, 0.15)' 
-                          : 'rgba(46, 125, 50, 0.06)',
+                          ? 'rgba(255,255,255,0.06)' 
+                          : 'rgba(0,0,0,0.04)',
                         transform: 'scale(1.02)',
                         zIndex: 1,
                         boxShadow: theme.palette.mode === 'dark'
-                          ? '0 4px 12px rgba(46, 125, 50, 0.2)'
-                          : '0 4px 12px rgba(46, 125, 50, 0.15)',
+                          ? '0 4px 12px rgba(0,0,0,0.2)'
+                          : '0 4px 12px rgba(0,0,0,0.08)',
                       } : {},
                     }}
                   >
@@ -601,7 +613,7 @@ const Calendar: React.FC = () => {
                       display: 'flex',
                       justifyContent: 'flex-end',
                       alignItems: 'center',
-                      mb: 0.5,
+                      mb: 0.25,
                     }}>
                       <Typography
                         variant="body2"
@@ -616,21 +628,21 @@ const Calendar: React.FC = () => {
                           height: dayIsToday ? 32 : 'auto',
                           borderRadius: dayIsToday ? '50%' : 0,
                           background: dayIsToday 
-                            ? `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`
+                            ? (theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.12)')
                             : 'transparent',
                           color: dayIsToday 
-                            ? 'white'
+                            ? (theme.palette.mode === 'dark' ? '#fff' : theme.palette.text.primary)
                             : (calendarDay.isCurrentMonth
                               ? theme.palette.text.primary
                               : theme.palette.text.disabled),
                           boxShadow: dayIsToday 
-                            ? `0 4px 12px ${taxiMonterricoColors.green}50, 0 0 0 2px ${taxiMonterricoColors.green}20`
+                            ? (theme.palette.mode === 'dark' ? '0 4px 12px rgba(0,0,0,0.25), 0 0 0 2px rgba(255,255,255,0.08)' : '0 4px 12px rgba(0,0,0,0.1), 0 0 0 2px rgba(0,0,0,0.06)')
                             : 'none',
                           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                           '&:hover': calendarDay.isCurrentMonth && !dayIsToday ? {
                             bgcolor: theme.palette.mode === 'dark'
-                              ? 'rgba(46, 125, 50, 0.2)'
-                              : 'rgba(46, 125, 50, 0.1)',
+                              ? 'rgba(255,255,255,0.08)'
+                              : 'rgba(0,0,0,0.06)',
                             borderRadius: '50%',
                             width: 28,
                             height: 28,
@@ -645,7 +657,7 @@ const Calendar: React.FC = () => {
                     <Box sx={{
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: 0.5,
+                      gap: 0.25,
                       flex: 1,
                       overflow: 'hidden',
                     }}>
@@ -655,20 +667,20 @@ const Calendar: React.FC = () => {
                           sx={{
                             bgcolor: event.color,
                             color: '#fff',
-                            borderRadius: 1,
-                            px: 0.75,
-                            py: 0.4,
-                            fontSize: '0.7rem',
+                            borderRadius: 0.75,
+                            px: 0.5,
+                            py: 0.25,
+                            fontSize: '0.65rem',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                             cursor: 'pointer',
                             fontWeight: 500,
-                            boxShadow: `0 2px 4px ${event.color}40`,
+                            boxShadow: theme.palette.mode === 'dark' ? '0 2px 4px rgba(0,0,0,0.25)' : '0 2px 4px rgba(0,0,0,0.1)',
                             transition: 'all 0.2s ease',
                             '&:hover': {
                               transform: 'translateX(2px)',
-                              boxShadow: `0 3px 8px ${event.color}50`,
+                              boxShadow: theme.palette.mode === 'dark' ? '0 3px 8px rgba(0,0,0,0.3)' : '0 3px 8px rgba(0,0,0,0.12)',
                               opacity: 0.95,
                             },
                           }}

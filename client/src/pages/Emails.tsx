@@ -453,7 +453,7 @@ const Emails: React.FC = () => {
     <Box sx={{ flex: 1, pb: 1, display: 'flex' }}>
       <Paper
         sx={{
-          bgcolor: 'transparent',
+          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent',
           borderRadius: 2,
           px: 0,
           pt: 0,
@@ -755,7 +755,7 @@ const Emails: React.FC = () => {
                 borderRadius: 2,
                 borderWidth: 2,
                 borderColor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.2)',
-                bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : 'white',
+                bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'white',
                 transition: 'all 0.3s ease',
                 '&:hover': {
                   borderColor: `${taxiMonterricoColors.greenLight} !important`,

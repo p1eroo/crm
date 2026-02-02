@@ -64,6 +64,7 @@ const Header: React.FC = () => {
     { text: 'Tareas', icon: TaskIcon, path: '/tasks', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
     { text: 'Calendario', icon: CalendarTodayIcon, path: '/calendar', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
     { text: 'Correos', icon: EmailIcon, path: '/emails', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
+    { text: 'Masivo', icon: EmailIcon, path: '/emails/masivo', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
     { text: 'Reportes', icon: AssessmentIcon, path: '/reports', roles: ['admin', 'user', 'manager', 'jefe_comercial'] },
   ];
 
@@ -126,6 +127,11 @@ const Header: React.FC = () => {
     { 
       title: 'Correos', 
       path: '/emails', 
+      icon: EmailIcon,
+    },
+    { 
+      title: 'Masivo', 
+      path: '/emails/masivo', 
       icon: EmailIcon,
     },
     { 
@@ -325,12 +331,16 @@ const Header: React.FC = () => {
                 size="small"
                 onClick={toggleTheme}
                 sx={{ 
-                  bgcolor: 'transparent', 
-                  borderRadius: 1, 
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(255, 255, 255, 0.08)' 
+                    : 'rgba(0, 0, 0, 0.05)',
+                  borderRadius: 2.5,
                   width: 40,
                   height: 40,
                   '&:hover': {
-                    bgcolor: theme.palette.action.hover,
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.12)' 
+                      : 'rgba(0, 0, 0, 0.08)',
                   },
                 }}
               >
@@ -351,12 +361,16 @@ const Header: React.FC = () => {
                 size="small"
                 onClick={() => setSettingsDrawerOpen(true)}
                 sx={{ 
-                  bgcolor: 'transparent', 
-                  borderRadius: 1, 
+                  bgcolor: theme.palette.mode === 'dark' 
+                    ? 'rgba(255, 255, 255, 0.08)' 
+                    : 'rgba(0, 0, 0, 0.05)',
+                  borderRadius: 2.5,
                   width: 40,
                   height: 40,
                   '&:hover': {
-                    bgcolor: theme.palette.action.hover,
+                    bgcolor: theme.palette.mode === 'dark' 
+                      ? 'rgba(255, 255, 255, 0.12)' 
+                      : 'rgba(0, 0, 0, 0.08)',
                   },
                 }}
               >
@@ -612,12 +626,16 @@ const Header: React.FC = () => {
             size="small"
             onClick={toggleTheme}
             sx={{ 
-              bgcolor: 'transparent', 
-              borderRadius: 1, 
+              bgcolor: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.08)' 
+                : 'rgba(0, 0, 0, 0.05)',
+              borderRadius: 2.5,
               width: 40,
               height: 40,
               '&:hover': {
-                bgcolor: theme.palette.action.hover,
+                bgcolor: theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.12)' 
+                  : 'rgba(0, 0, 0, 0.08)',
               },
             }}
           >
@@ -638,12 +656,16 @@ const Header: React.FC = () => {
             size="small"
             onClick={() => setSettingsDrawerOpen(true)}
             sx={{ 
-              bgcolor: 'transparent', 
-              borderRadius: 1, 
+              bgcolor: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.08)' 
+                : 'rgba(0, 0, 0, 0.05)',
+              borderRadius: 2.5,
               width: 40,
               height: 40,
               '&:hover': {
-                bgcolor: theme.palette.action.hover,
+                bgcolor: theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.12)' 
+                  : 'rgba(0, 0, 0, 0.08)',
               },
             }}
           >

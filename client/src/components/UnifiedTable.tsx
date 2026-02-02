@@ -28,7 +28,7 @@ export const UnifiedTable: React.FC<UnifiedTableProps> = ({
     <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
       <Box
         sx={{
-          bgcolor: theme.palette.background.paper,
+          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
           borderRadius: 3,
           overflow: 'hidden',
           boxShadow: theme.palette.mode === 'dark' 
@@ -55,9 +55,8 @@ export const UnifiedTable: React.FC<UnifiedTableProps> = ({
               px: { xs: 1.5, md: 2 },
               py: { xs: 1.25, md: 1.5 },
               borderBottom: `2px solid ${theme.palette.divider}`,
-              background: theme.palette.mode === 'dark'
-                ? `linear-gradient(135deg, ${taxiMonterricoColors.green}08 0%, transparent 100%)`
-                : `linear-gradient(135deg, ${taxiMonterricoColors.green}03 0%, transparent 100%)`,
+              bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined,
+              background: theme.palette.mode === 'light' ? `linear-gradient(135deg, ${taxiMonterricoColors.green}03 0%, transparent 100%)` : undefined,
             }}
           >
             <Typography variant="h5" sx={{ 
@@ -91,7 +90,7 @@ export const UnifiedTable: React.FC<UnifiedTableProps> = ({
         {pagination && (
           <Box
             sx={{
-              bgcolor: theme.palette.background.paper,
+              bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
               borderRadius: '0 0 8px 8px',
               boxShadow: 'none',
               border: 'none',
