@@ -1100,18 +1100,6 @@ const Dashboard: React.FC = () => {
           >
             HOLA, {user?.firstName?.toUpperCase() || 'USUARIO'}
           </Typography>
-          <Box
-            component="span"
-            sx={{
-              fontSize: { xs: '1.75rem', sm: '2.25rem', md: '2.75rem' },
-              lineHeight: 1,
-              display: 'inline-block',
-              filter: 'none',
-              color: 'inherit',
-            }}
-          >
-            👋🏽
-          </Box>
         </Box>
         <Box sx={{ 
           display: 'flex', 
@@ -1129,13 +1117,6 @@ const Dashboard: React.FC = () => {
               border: `1.5px solid ${taxiMonterricoColors.green}`,
               borderRadius: 1.5,
               color: taxiMonterricoColors.green,
-              transition: 'all 0.2s ease',
-              '&:hover': {
-                borderColor: taxiMonterricoColors.greenDark,
-                bgcolor: 'rgba(46, 125, 50, 0.08)',
-                transform: 'scale(1.05)',
-                boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-              },
             }}
           >
             <CalendarToday sx={{ fontSize: 22 }} />
@@ -1322,9 +1303,6 @@ const Dashboard: React.FC = () => {
               bgcolor: taxiMonterricoColors.green,
               color: 'white',
               borderRadius: 1,
-              '&:hover': { 
-                bgcolor: taxiMonterricoColors.greenDark 
-              },
             }}
           >
             <Download sx={{ fontSize: 22 }} />
@@ -1357,30 +1335,6 @@ const Dashboard: React.FC = () => {
             border: `none`,
             cursor: canEditBudget ? 'pointer' : 'default',
             position: 'relative',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '4px',
-              background: `linear-gradient(90deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
-              transform: 'scaleX(0)',
-              transformOrigin: 'left',
-              transition: 'transform 0.3s ease',
-            },
-            '&:hover': {
-              transform: 'translateY(-8px)',
-              boxShadow: 'none',
-              borderColor: taxiMonterricoColors.greenLight,
-              '&::before': {
-                transform: 'scaleX(1)',
-              },
-              '& .kpi-icon': {
-                transform: 'scale(1.1) rotate(5deg)',
-              },
-            },
           }}
         >
           <CardContent sx={{ 
@@ -1493,30 +1447,6 @@ const Dashboard: React.FC = () => {
           overflow: 'hidden',
           border: `none`,
           position: 'relative',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '4px',
-            background: `linear-gradient(90deg, ${theme.palette.secondary.main} 0%, ${theme.palette.secondary.light} 100%)`,
-            transform: 'scaleX(0)',
-            transformOrigin: 'left',
-            transition: 'transform 0.3s ease',
-          },
-          '&:hover': {
-            transform: 'translateY(-8px)',
-            boxShadow: 'none',
-            borderColor: theme.palette.secondary.main,
-            '&::before': {
-              transform: 'scaleX(1)',
-            },
-            '& .kpi-icon': {
-              transform: 'scale(1.1) rotate(5deg)',
-            },
-          },
         }}>
           <CardContent sx={{ 
             p: { xs: 2, sm: 2.5, md: 3 },
@@ -1590,30 +1520,6 @@ const Dashboard: React.FC = () => {
           overflow: 'hidden',
           position: 'relative',
           border: `none`,
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '4px',
-            background: `linear-gradient(90deg, ${taxiMonterricoColors.orangeDark} 0%, ${taxiMonterricoColors.orange} 100%)`,
-            transform: 'scaleX(0)',
-            transformOrigin: 'left',
-            transition: 'transform 0.3s ease',
-          },
-          '&:hover': {
-            transform: 'translateY(-8px)',
-            boxShadow: 'none',
-            borderColor: taxiMonterricoColors.orangeDark,
-            '&::before': {
-              transform: 'scaleX(1)',
-            },
-            '& .kpi-icon': {
-              transform: 'scale(1.1) rotate(5deg)',
-            },
-          },
         }}>
           <CardContent sx={{ 
             p: { xs: 2, sm: 2.5, md: 3 },
@@ -1687,30 +1593,6 @@ const Dashboard: React.FC = () => {
           overflow: 'hidden',
           position: 'relative',
           border: `none`,
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '4px',
-            background: `linear-gradient(90deg, ${theme.palette.error.main} 0%, ${theme.palette.error.light} 100%)`,
-            transform: 'scaleX(0)',
-            transformOrigin: 'left',
-            transition: 'transform 0.3s ease',
-          },
-          '&:hover': {
-            transform: 'translateY(-8px)',
-            boxShadow: 'none',
-            borderColor: theme.palette.error.main,
-            '&::before': {
-              transform: 'scaleX(1)',
-            },
-            '& .kpi-icon': {
-              transform: 'scale(1.1) rotate(5deg)',
-            },
-          },
         }}>
           <CardContent sx={{ 
             p: { xs: 2, sm: 2.5, md: 3 },
@@ -1834,28 +1716,6 @@ const Dashboard: React.FC = () => {
             minHeight: { xs: 400, sm: 480 },
             position: 'relative',
             overflow: 'hidden',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '4px',
-              background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
-              opacity: 0,
-              transition: 'opacity 0.3s ease',
-            },
-            '&:hover': {
-              transform: 'translateY(-4px)',
-              boxShadow: theme.palette.mode === 'dark'
-                ? '0 12px 40px rgba(16, 185, 129, 0.2)'
-                : '0 12px 40px rgba(16, 185, 129, 0.15)',
-              borderColor: taxiMonterricoColors.green,
-              '&::before': {
-                opacity: 1,
-              },
-            },
           }}
         >
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
@@ -1891,12 +1751,6 @@ const Dashboard: React.FC = () => {
                   borderRadius: 1.5,
                   border: `1px solid ${theme.palette.divider}`,
                   transition: 'all 0.2s ease',
-                  '&:hover': {
-                    bgcolor: theme.palette.action.hover,
-                    borderColor: taxiMonterricoColors.green,
-                    color: taxiMonterricoColors.green,
-                    transform: 'rotate(90deg)',
-                  },
                   '& svg': {
                     fontSize: 18,
                   },
@@ -1967,30 +1821,8 @@ const Dashboard: React.FC = () => {
           alignSelf: 'start',
           minHeight: { xs: 395, sm: 440 },
           position: 'relative',
-          overflow: 'hidden',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '4px',
-            background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
-            opacity: 0,
-            transition: 'opacity 0.3s ease',
-          },
-          '&:hover': {
-            transform: 'translateY(-4px)',
-            boxShadow: theme.palette.mode === 'dark'
-              ? '0 12px 40px rgba(16, 185, 129, 0.2)'
-              : '0 12px 40px rgba(16, 185, 129, 0.15)',
-            borderColor: taxiMonterricoColors.green,
-            '&::before': {
-              opacity: 1,
-            },
-          },
-        }}>
+          overflow: 'hidden', 
+        }}> 
           <CardContent sx={{ p: { xs: 2, md: 2.5 }, pt: { xs: 1.75, md: 2.25 } }}>
             <Box sx={{ 
               display: 'flex', 
@@ -2024,12 +1856,6 @@ const Dashboard: React.FC = () => {
                   borderRadius: 1.5,
                   border: `1px solid ${theme.palette.divider}`,
                   transition: 'all 0.2s ease',
-                  '&:hover': {
-                    bgcolor: theme.palette.action.hover,
-                    borderColor: taxiMonterricoColors.green,
-                    color: taxiMonterricoColors.green,
-                    transform: 'rotate(90deg)',
-                  },
                   '& svg': {
                     fontSize: 18,
                   },
@@ -2178,28 +2004,6 @@ const Dashboard: React.FC = () => {
           border: `none`,
           position: 'relative',
           overflow: 'hidden',
-          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '4px',
-            background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
-            opacity: 0,
-            transition: 'opacity 0.3s ease',
-          },
-          '&:hover': {
-            transform: 'translateY(-4px)',
-            boxShadow: theme.palette.mode === 'dark'
-              ? '0 12px 40px rgba(16, 185, 129, 0.2)'
-              : '0 12px 40px rgba(16, 185, 129, 0.15)',
-            borderColor: taxiMonterricoColors.green,
-            '&::before': {
-              opacity: 1,
-            },
-          },
         }}>
           <CardContent sx={{ p: { xs: 2, md: 3 } }}>
             <Box sx={{ 
@@ -2234,12 +2038,6 @@ const Dashboard: React.FC = () => {
                   borderRadius: 1.5,
                   border: `1px solid ${theme.palette.divider}`,
                   transition: 'all 0.2s ease',
-                  '&:hover': {
-                    bgcolor: theme.palette.action.hover,
-                    borderColor: taxiMonterricoColors.green,
-                    color: taxiMonterricoColors.green,
-                    transform: 'rotate(90deg)',
-                  },
                   '& svg': {
                     fontSize: 18,
                   },
@@ -2356,29 +2154,7 @@ const Dashboard: React.FC = () => {
             bgcolor: theme.palette.background.paper,
             border: `none`,
             position: 'relative',
-            overflow: 'hidden',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-            '&::before': {
-              content: '""',
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              height: '4px',
-              background: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
-              opacity: 0,
-              transition: 'opacity 0.3s ease',
-            },
-            '&:hover': {
-              transform: 'translateY(-4px)',
-              boxShadow: theme.palette.mode === 'dark'
-                ? '0 12px 40px rgba(16, 185, 129, 0.2)'
-                : '0 12px 40px rgba(16, 185, 129, 0.15)',
-              borderColor: taxiMonterricoColors.green,
-              '&::before': {
-                opacity: 1,
-              },
-            },
+            overflow: 'hidden', 
           }}>
             <CardContent sx={{ p: { xs: 2, md: 3 } }}>
               <Box sx={{ 
@@ -2413,12 +2189,6 @@ const Dashboard: React.FC = () => {
                     borderRadius: 1.5,
                     border: `1px solid ${theme.palette.divider}`,
                     transition: 'all 0.2s ease',
-                    '&:hover': {
-                      bgcolor: theme.palette.action.hover,
-                      borderColor: taxiMonterricoColors.green,
-                      color: taxiMonterricoColors.green,
-                      transform: 'rotate(90deg)',
-                    },
                     '& svg': {
                       fontSize: 18,
                     },

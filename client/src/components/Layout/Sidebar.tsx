@@ -83,8 +83,8 @@ const adminMenuItems = [
           bgcolor: theme.palette.background.default,
           border: 'none', // Eliminar todos los bordes primero
           borderRight: theme.palette.mode === 'light' 
-            ? `1px solid ${theme.palette.divider}` 
-            : `1px solid ${theme.palette.divider}`, // Solo borde derecho
+            ? `0.5px solid ${theme.palette.divider}` 
+            : `0.5px solid ${theme.palette.divider}`, // Solo borde derecho
           borderTop: 'none', // Asegurar que no haya borde superior
           borderBottom: 'none', // Asegurar que no haya borde inferior
           borderLeft: 'none', // Asegurar que no haya borde izquierdo

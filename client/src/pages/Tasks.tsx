@@ -200,11 +200,9 @@ const Tasks: React.FC = () => {
         switch (activeFilter) {
           case 'overdue':
             // Filtrar por tareas vencidas (se manejará en el servidor con dueDate)
-            params.status = 'not completed'; // Excluir completadas
             break;
           case 'dueToday':
             // Filtrar por tareas de hoy (se manejará en el servidor)
-            params.status = 'not completed';
             break;
           case 'pending':
             params.status = 'pending';
@@ -254,7 +252,7 @@ const Tasks: React.FC = () => {
       // Por ahora, mantener solo tareas con paginación del servidor
       // Las actividades se pueden agregar después si es necesario
       setTasks(tasksFromTasks);
-      setTotalTasks(tasksFromTasks.length);
+      setTotalTasks(tasksResponse.data.total || tasksFromTasks.length);
     } catch (error) {
       console.error('Error fetching tasks:', error);
       setTasks([]);
