@@ -91,30 +91,6 @@ const ActivityDetailDialog: React.FC<ActivityDetailDialogProps> = ({
     return `${displayHours}:${minutes} ${period}`;
   };
 
-  // Convertir hora de formato AM/PM a formato 24h
-  const convertTimeTo24h = (timeString: string) => {
-    if (!timeString) return '';
-    const [time, period] = timeString.split(' ');
-    const [hours, minutes] = time.split(':');
-    let hour24 = parseInt(hours);
-    if (period === 'PM' && hour24 !== 12) {
-      hour24 += 12;
-    } else if (period === 'AM' && hour24 === 12) {
-      hour24 = 0;
-    }
-    return `${hour24.toString().padStart(2, '0')}:${minutes}`;
-  };
-
-  // Convertir hora de formato 24h a formato AM/PM para mostrar
-  const convertTimeTo12h = (timeString: string) => {
-    if (!timeString) return '';
-    const [hours, minutes] = timeString.split(':');
-    const hour24 = parseInt(hours);
-    const period = hour24 >= 12 ? 'PM' : 'AM';
-    const hour12 = hour24 % 12 || 12;
-    return `${hour12}:${minutes} ${period}`;
-  };
-
   const handleSave = async () => {
     if (!activity) return;
     

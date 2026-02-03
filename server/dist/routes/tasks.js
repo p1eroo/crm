@@ -14,6 +14,7 @@ const auth_1 = require("../middleware/auth");
 const googleCalendar_1 = require("../services/googleCalendar");
 const rolePermissions_1 = require("../utils/rolePermissions");
 const systemLogger_1 = require("../utils/systemLogger");
+const whatsapp_1 = require("../services/whatsapp");
 const router = express_1.default.Router();
 router.use(auth_1.authenticateToken);
 // Función para limpiar tareas eliminando campos null y objetos relacionados null
@@ -22,7 +23,6 @@ const cleanTask = (task) => {
     const cleaned = {
         id: taskData.id,
         title: taskData.title,
-        type: taskData.type,
         status: taskData.status,
         priority: taskData.priority,
         assignedToId: taskData.assignedToId,
@@ -59,7 +59,7 @@ const cleanTask = (task) => {
 // Obtener todas las tareas
 router.get('/', async (req, res) => {
     try {
-        const { page = 1, limit: limitParam = 50, status, priority, assignedToId, type, contactId, companyId, dealId, search, sortBy = 'newest', // newest, oldest, name, nameDesc, dueDate
+        const { page = 1, limit: limitParam = 50, status, priority, assignedToId, contactId, companyId, dealId, search, sortBy = 'newest', // newest, oldest, name, nameDesc, dueDate
         // Filtros por columna
         filterTitulo, filterEstado, filterPrioridad, } = req.query;
         // Limitar el tamaño máximo de página para evitar sobrecarga
@@ -87,9 +87,6 @@ router.get('/', async (req, res) => {
         }
         if (assignedToId) {
             where.assignedToId = assignedToId;
-        }
-        if (type) {
-            where.type = type;
         }
         if (contactId) {
             where.contactId = contactId;
@@ -158,8 +155,8 @@ router.get('/', async (req, res) => {
         const tasks = await Task_1.Task.findAndCountAll({
             where,
             include: [
-                { model: User_1.User, as: 'AssignedTo', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
-                { model: User_1.User, as: 'CreatedBy', attributes: ['id', 'firstName', 'lastName', 'email'], required: false },
+                { model: User_1.User, as: 'AssignedTo', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'], required: false },
+                { model: User_1.User, as: 'CreatedBy', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'], required: false },
                 { model: Contact_1.Contact, as: 'Contact', attributes: ['id', 'firstName', 'lastName'], required: false },
                 { model: Company_1.Company, as: 'Company', attributes: ['id', 'name'], required: false },
                 { model: Deal_1.Deal, as: 'Deal', attributes: ['id', 'name'], required: false },
@@ -246,16 +243,19 @@ router.get('/:id', async (req, res) => {
 // Crear tarea
 router.post('/', async (req, res) => {
     try {
+        // Si no se proporciona startDate, establecerlo con la fecha actual
+        const startDate = req.body.startDate || new Date().toISOString().split('T')[0];
         const taskData = {
             ...req.body,
             createdById: req.userId,
             assignedToId: req.body.assignedToId || req.userId,
+            startDate: startDate,
         };
         const task = await Task_1.Task.create(taskData);
         const newTask = await Task_1.Task.findByPk(task.id, {
             include: [
-                { model: User_1.User, as: 'AssignedTo', attributes: ['id', 'firstName', 'lastName', 'email'] },
-                { model: User_1.User, as: 'CreatedBy', attributes: ['id', 'firstName', 'lastName', 'email'] },
+                { model: User_1.User, as: 'AssignedTo', attributes: ['id', 'firstName', 'lastName', 'email', 'phone', 'avatar'] },
+                { model: User_1.User, as: 'CreatedBy', attributes: ['id', 'firstName', 'lastName', 'email', 'avatar'] },
                 { model: Contact_1.Contact, as: 'Contact' },
                 { model: Company_1.Company, as: 'Company' },
                 { model: Deal_1.Deal, as: 'Deal' },
@@ -264,15 +264,8 @@ router.post('/', async (req, res) => {
         // Intentar crear en Google Calendar si la tarea tiene fecha límite
         if (newTask && newTask.dueDate) {
             try {
-                let calendarId = null;
-                // Si es una reunión, crear evento en Google Calendar
-                if (newTask.type === 'meeting') {
-                    calendarId = await (0, googleCalendar_1.createMeetingEvent)(newTask, newTask.AssignedTo);
-                }
-                else {
-                    // Para otros tipos, crear tarea en Google Tasks
-                    calendarId = await (0, googleCalendar_1.createTaskEvent)(newTask, newTask.AssignedTo);
-                }
+                // Crear tarea en Google Tasks (ya que solo permitimos tipo 'todo')
+                const calendarId = await (0, googleCalendar_1.createTaskEvent)(newTask, newTask.AssignedTo);
                 if (calendarId) {
                     // Actualizar la tarea con el ID del evento/tarea de Google Calendar
                     await newTask.update({ googleCalendarEventId: calendarId });
@@ -285,9 +278,19 @@ router.post('/', async (req, res) => {
                 console.error('Error creando en Google Calendar:', calendarError.message);
             }
         }
+        // Enviar notificación de WhatsApp
+        if (newTask && newTask.AssignedTo) {
+            try {
+                await (0, whatsapp_1.sendTaskNotification)(newTask, newTask.AssignedTo);
+            }
+            catch (whatsappError) {
+                // No fallar la creación de la tarea si hay error con WhatsApp
+                console.error('Error enviando WhatsApp:', whatsappError.message);
+            }
+        }
         // Registrar log
         if (req.userId) {
-            await (0, systemLogger_1.logSystemAction)(req.userId, systemLogger_1.SystemActions.CREATE, systemLogger_1.EntityTypes.TASK, task.id, { title: task.title, type: task.type, status: task.status }, req);
+            await (0, systemLogger_1.logSystemAction)(req.userId, systemLogger_1.SystemActions.CREATE, systemLogger_1.EntityTypes.TASK, task.id, { title: task.title, status: task.status }, req);
         }
         res.status(201).json(cleanTask(newTask));
     }
@@ -334,21 +337,12 @@ router.put('/:id', async (req, res) => {
         if (task.dueDate) {
             try {
                 if (task.googleCalendarEventId) {
-                    // Si es una reunión, actualizar evento (por ahora solo actualizamos tareas)
-                    // Las reuniones como eventos necesitarían una función updateMeetingEvent
-                    if (task.type !== 'meeting') {
-                        await (0, googleCalendar_1.updateTaskEvent)(task, task.googleCalendarEventId);
-                    }
+                    // Actualizar tarea en Google Tasks
+                    await (0, googleCalendar_1.updateTaskEvent)(task, task.googleCalendarEventId);
                 }
                 else {
-                    // Crear nuevo evento/tarea si no existía
-                    let calendarId = null;
-                    if (task.type === 'meeting') {
-                        calendarId = await (0, googleCalendar_1.createMeetingEvent)(task, task.AssignedTo);
-                    }
-                    else {
-                        calendarId = await (0, googleCalendar_1.createTaskEvent)(task, task.AssignedTo);
-                    }
+                    // Crear nueva tarea en Google Tasks si no existía
+                    const calendarId = await (0, googleCalendar_1.createTaskEvent)(task, task.AssignedTo);
                     if (calendarId) {
                         await task.update({ googleCalendarEventId: calendarId });
                         await task.reload();
@@ -360,16 +354,10 @@ router.put('/:id', async (req, res) => {
             }
         }
         else if (hadDueDate && !willHaveDueDate && task.googleCalendarEventId) {
-            // Si se eliminó la fecha límite y había un evento/tarea, eliminarlo
+            // Si se eliminó la fecha límite y había una tarea, eliminarla
             try {
                 const userId = task.assignedToId || task.createdById;
-                // Si es una reunión, eliminar evento de Google Calendar, sino eliminar tarea de Google Tasks
-                if (task.type === 'meeting') {
-                    await (0, googleCalendar_1.deleteCalendarEvent)(userId, task.googleCalendarEventId);
-                }
-                else {
-                    await (0, googleCalendar_1.deleteTaskEvent)(userId, task.googleCalendarEventId);
-                }
+                await (0, googleCalendar_1.deleteTaskEvent)(userId, task.googleCalendarEventId);
                 await task.update({ googleCalendarEventId: undefined });
                 await task.reload();
             }

@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   Box,
   Typography,
-  Divider,
   Button,
   useTheme,
   IconButton,
@@ -95,7 +94,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
       console.log(`📬 Expandido: ${expanded}`);
       console.log(`📬 Notificaciones visibles:`, filteredNotifications.map(n => ({ id: n.id, title: n.title, archived: n.archived })));
     }
-  }, [open, activeTab, filteredNotifications.length, expanded]);
+  }, [open, activeTab, filteredNotifications, notifications.length, expanded]);
 
   // Función para verificar la posición del scroll
   const checkScrollPosition = () => {

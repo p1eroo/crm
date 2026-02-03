@@ -54,8 +54,8 @@ const Calendar: React.FC = () => {
   
   // Estados para Google Calendar
   const [googleCalendarConnected, setGoogleCalendarConnected] = useState(false);
-  const [googleCalendarEvents, setGoogleCalendarEvents] = useState<any[]>([]);
-  const [notes, setNotes] = useState<any[]>([]);
+  const [, setGoogleCalendarEvents] = useState<any[]>([]);
+  const [, setNotes] = useState<any[]>([]);
   const [meetings, setMeetings] = useState<any[]>([]);
   
   // Estados para el modal de detalles del evento

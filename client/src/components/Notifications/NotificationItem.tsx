@@ -6,11 +6,9 @@ import {
   Typography,
   Avatar,
   useTheme,
-  Chip,
 } from '@mui/material';
 import { Notification } from '../../types/notification';
 import { formatNotificationTime } from '../../utils/formatNotificationTime';
-import { taxiMonterricoColors } from '../../theme/colors';
 import { getNotificationIcon, getNotificationColor, getNotificationTypeLabel } from './notificationUtils';
 
 interface NotificationItemProps {

@@ -36,6 +36,10 @@ const cleanActivity = (activity) => {
         cleaned.taskId = activityData.taskId;
     if (activityData.completed != null)
         cleaned.completed = activityData.completed;
+    if (activityData.dueDate != null)
+        cleaned.dueDate = activityData.dueDate;
+    if (activityData.time != null)
+        cleaned.time = activityData.time;
     // Solo incluir relaciones si existen
     if (activityData.User)
         cleaned.User = activityData.User;

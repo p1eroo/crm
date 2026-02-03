@@ -81,6 +81,14 @@ Activity.init({
         type: sequelize_1.DataTypes.STRING,
         allowNull: true,
     },
+    dueDate: {
+        type: sequelize_1.DataTypes.DATE,
+        allowNull: true,
+    },
+    time: {
+        type: sequelize_1.DataTypes.STRING,
+        allowNull: true,
+    },
 }, {
     sequelize: database_1.sequelize,
     tableName: 'activities',

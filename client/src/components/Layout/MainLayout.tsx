@@ -4,7 +4,6 @@ import { KeyboardArrowLeft, KeyboardArrowRight } from "@mui/icons-material";
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 import { useSidebar } from "../../context/SidebarContext";
-import { useNotificationPanel } from "../../context/NotificationContext";
 import { LoginWelcomeModal } from "../Notifications/LoginWelcomeModal";
 import { NotificationDetail } from "../Notifications/NotificationDetail";
 import { Notification } from "../../types/notification";

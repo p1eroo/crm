@@ -329,6 +329,7 @@ router.get('/me', auth_1.authenticateToken, async (req, res) => {
             lastName: user.lastName,
             role: user.Role?.name || user.role || '',
             avatar: user.avatar,
+            phone: user.phone,
         });
     }
     catch (error) {

@@ -498,17 +498,6 @@ const NoteModal: React.FC<NoteModalProps> = ({
     onClose,
   ]);
 
-  const getEntityTypeLabel = () => {
-    const typeMap: { [key: string]: string } = {
-      deal: "Negocio",
-      company: "Empresa",
-      contact: "Contacto",
-      task: "Tarea",
-      ticket: "Ticket",
-    };
-    return typeMap[entityType] || "Entidad";
-  };
-
   if (!open) return null;
 
   return (

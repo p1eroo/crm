@@ -8,9 +8,12 @@ const sequelize_1 = require("sequelize");
 const Company_1 = require("../models/Company");
 const Contact_1 = require("../models/Contact");
 const User_1 = require("../models/User");
+const Task_1 = require("../models/Task");
+const Activity_1 = require("../models/Activity");
 const auth_1 = require("../middleware/auth");
 const rolePermissions_1 = require("../utils/rolePermissions");
 const systemLogger_1 = require("../utils/systemLogger");
+const database_1 = require("../config/database");
 const router = express_1.default.Router();
 router.use(auth_1.authenticateToken);
 // Función para limpiar empresas eliminando campos null y objetos relacionados null
@@ -245,6 +248,72 @@ router.get('/', async (req, res) => {
             }
         }
         // Si no es admin ni jefe_comercial, el filtro RBAC ya está aplicado y no se sobrescribe
+        // Filtro por propietario (búsqueda por nombre) - DEBE IR ANTES DE LA PAGINACIÓN
+        if (filterPropietario) {
+            const filterPropietarioStr = String(filterPropietario).trim();
+            if (filterPropietarioStr) {
+                try {
+                    // Buscar usuarios que coincidan con el texto del filtro
+                    const matchingUsers = await User_1.User.findAll({
+                        where: {
+                            [sequelize_1.Op.or]: [
+                                { firstName: { [sequelize_1.Op.iLike]: `%${filterPropietarioStr}%` } },
+                                { lastName: { [sequelize_1.Op.iLike]: `%${filterPropietarioStr}%` } },
+                                database_1.sequelize.where(database_1.sequelize.fn('CONCAT', database_1.sequelize.col('firstName'), ' ', database_1.sequelize.col('lastName')), { [sequelize_1.Op.iLike]: `%${filterPropietarioStr}%` })
+                            ]
+                        },
+                        attributes: ['id']
+                    });
+                    const ownerIds = matchingUsers.map(user => user.id);
+                    if (ownerIds.length > 0) {
+                        // Aplicar el filtro ANTES de la paginación
+                        // Si hay Op.and, necesitamos agregar el filtro dentro del Op.and
+                        if (where[sequelize_1.Op.and]) {
+                            // Buscar si ya existe un filtro ownerId en Op.and
+                            const ownerIndex = where[sequelize_1.Op.and].findIndex((cond) => cond.ownerId !== undefined);
+                            if (ownerIndex !== -1) {
+                                // Si ya existe, combinarlo con AND usando Op.in
+                                const existingOwnerFilter = where[sequelize_1.Op.and][ownerIndex].ownerId;
+                                if (existingOwnerFilter && existingOwnerFilter[sequelize_1.Op.in]) {
+                                    // Combinar los arrays de IDs (intersección)
+                                    const existingIds = existingOwnerFilter[sequelize_1.Op.in];
+                                    const combinedIds = existingIds.filter((id) => ownerIds.includes(id));
+                                    where[sequelize_1.Op.and][ownerIndex] = { ownerId: { [sequelize_1.Op.in]: combinedIds.length > 0 ? combinedIds : [-1] } };
+                                }
+                                else {
+                                    where[sequelize_1.Op.and][ownerIndex] = { ownerId: { [sequelize_1.Op.in]: ownerIds } };
+                                }
+                            }
+                            else {
+                                where[sequelize_1.Op.and].push({ ownerId: { [sequelize_1.Op.in]: ownerIds } });
+                            }
+                        }
+                        else if (where.ownerId) {
+                            // Si ya hay un ownerId en el nivel superior, hacer intersección
+                            const existingOwnerFilter = where.ownerId;
+                            if (existingOwnerFilter && existingOwnerFilter[sequelize_1.Op.in]) {
+                                const existingIds = existingOwnerFilter[sequelize_1.Op.in];
+                                const combinedIds = existingIds.filter((id) => ownerIds.includes(id));
+                                where.ownerId = { [sequelize_1.Op.in]: combinedIds.length > 0 ? combinedIds : [-1] };
+                            }
+                            else {
+                                where.ownerId = { [sequelize_1.Op.in]: ownerIds };
+                            }
+                        }
+                        else {
+                            where.ownerId = { [sequelize_1.Op.in]: ownerIds };
+                        }
+                    }
+                    else {
+                        // Si no hay usuarios que coincidan, filtrar para que no haya resultados
+                        where.ownerId = { [sequelize_1.Op.in]: [-1] }; // ID que no existe = ningún resultado
+                    }
+                }
+                catch (error) {
+                    console.warn('[WARN] Error al buscar usuarios para filterPropietario:', error);
+                }
+            }
+        }
         // Filtros por columna
         if (companyname) {
             addCondition({ companyname });
@@ -445,6 +514,163 @@ router.get('/', async (req, res) => {
             error: errorMessage,
             details: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
+    }
+});
+// Obtener estadísticas de empresas inactivas (sin contacto en últimos 5 días)
+router.get('/inactivity-stats', async (req, res) => {
+    try {
+        if (!req.userId) {
+            return res.status(401).json({ error: 'Usuario no autenticado' });
+        }
+        // Aplicar filtro RBAC
+        const roleFilter = (0, rolePermissions_1.getRoleBasedDataFilter)(req.userRole, req.userId);
+        // Calcular fecha límite (hace 5 días)
+        const fiveDaysAgo = new Date();
+        fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+        fiveDaysAgo.setHours(0, 0, 0, 0);
+        // Obtener todas las empresas según permisos
+        const allCompanies = await Company_1.Company.findAll({
+            where: roleFilter,
+            attributes: ['id'],
+        });
+        const companyIds = allCompanies.map(c => c.id);
+        if (companyIds.length === 0) {
+            return res.json({ inactiveCount: 0 });
+        }
+        // Obtener empresas que SÍ han tenido contacto en los últimos 5 días
+        // Contacto = tarea creada, reunión creada (tarea tipo 'meeting'), o email enviado (actividad tipo 'email')
+        // 1. Tareas relacionadas con empresas (incluyendo reuniones)
+        const recentTasks = await Task_1.Task.findAll({
+            where: {
+                companyId: { [sequelize_1.Op.in]: companyIds },
+                createdAt: { [sequelize_1.Op.gte]: fiveDaysAgo },
+            },
+            attributes: ['companyId'],
+        });
+        // 2. Actividades tipo email relacionadas con empresas
+        const recentEmails = await Activity_1.Activity.findAll({
+            where: {
+                companyId: { [sequelize_1.Op.in]: companyIds },
+                type: 'email',
+                createdAt: { [sequelize_1.Op.gte]: fiveDaysAgo },
+            },
+            attributes: ['companyId'],
+        });
+        // Empresas que han tenido contacto (obtener IDs únicos)
+        const companiesWithContact = new Set([
+            ...recentTasks.map((t) => {
+                const taskData = t.toJSON ? t.toJSON() : t;
+                return taskData.companyId;
+            }).filter((id) => id != null),
+            ...recentEmails.map((a) => {
+                const activityData = a.toJSON ? a.toJSON() : a;
+                return activityData.companyId;
+            }).filter((id) => id != null),
+        ]);
+        // Empresas sin contacto = total - empresas con contacto
+        const inactiveCount = companyIds.length - companiesWithContact.size;
+        res.json({ inactiveCount });
+    }
+    catch (error) {
+        console.error('Error obteniendo estadísticas de inactividad:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+// Obtener lista de empresas inactivas con paginación
+router.get('/inactive', async (req, res) => {
+    try {
+        if (!req.userId) {
+            return res.status(401).json({ error: 'Usuario no autenticado' });
+        }
+        const { page = 1, limit: limitParam = 20 } = req.query;
+        const limit = Number(limitParam) < 1 ? 20 : Number(limitParam);
+        const pageNum = Number(page) < 1 ? 1 : Number(page);
+        const offset = (pageNum - 1) * limit;
+        // Aplicar filtro RBAC
+        const roleFilter = (0, rolePermissions_1.getRoleBasedDataFilter)(req.userRole, req.userId);
+        // Calcular fecha límite (hace 5 días)
+        const fiveDaysAgo = new Date();
+        fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+        fiveDaysAgo.setHours(0, 0, 0, 0);
+        // Obtener todas las empresas según permisos
+        const allCompanies = await Company_1.Company.findAll({
+            where: roleFilter,
+            attributes: ['id'],
+        });
+        const companyIds = allCompanies.map(c => c.id);
+        if (companyIds.length === 0) {
+            return res.json({
+                companies: [],
+                total: 0,
+                page: pageNum,
+                limit,
+                totalPages: 0
+            });
+        }
+        // Obtener empresas que SÍ han tenido contacto en los últimos 5 días
+        const recentTasks = await Task_1.Task.findAll({
+            where: {
+                companyId: { [sequelize_1.Op.in]: companyIds },
+                createdAt: { [sequelize_1.Op.gte]: fiveDaysAgo },
+            },
+            attributes: ['companyId'],
+        });
+        const recentEmails = await Activity_1.Activity.findAll({
+            where: {
+                companyId: { [sequelize_1.Op.in]: companyIds },
+                type: 'email',
+                createdAt: { [sequelize_1.Op.gte]: fiveDaysAgo },
+            },
+            attributes: ['companyId'],
+        });
+        // Empresas que han tenido contacto (obtener IDs únicos)
+        const companiesWithContact = new Set([
+            ...recentTasks.map((t) => {
+                const taskData = t.toJSON ? t.toJSON() : t;
+                return taskData.companyId;
+            }).filter((id) => id != null),
+            ...recentEmails.map((a) => {
+                const activityData = a.toJSON ? a.toJSON() : a;
+                return activityData.companyId;
+            }).filter((id) => id != null),
+        ]);
+        // IDs de empresas sin contacto
+        const inactiveCompanyIds = companyIds.filter(id => !companiesWithContact.has(id));
+        if (inactiveCompanyIds.length === 0) {
+            return res.json({
+                companies: [],
+                total: 0,
+                page: pageNum,
+                limit,
+                totalPages: 0
+            });
+        }
+        // Obtener las empresas inactivas con paginación
+        const { count, rows } = await Company_1.Company.findAndCountAll({
+            where: {
+                id: { [sequelize_1.Op.in]: inactiveCompanyIds },
+                ...roleFilter,
+            },
+            include: [
+                { model: User_1.User, as: 'Owner', attributes: ['id', 'firstName', 'lastName'] },
+            ],
+            limit,
+            offset,
+            order: [['name', 'ASC']],
+        });
+        // Transformar empresas para la respuesta
+        const companies = rows.map(company => transformCompanyForList(company));
+        res.json({
+            companies,
+            total: count,
+            page: pageNum,
+            limit,
+            totalPages: Math.ceil(count / limit),
+        });
+    }
+    catch (error) {
+        console.error('Error obteniendo empresas inactivas:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 // Obtener una empresa por ID

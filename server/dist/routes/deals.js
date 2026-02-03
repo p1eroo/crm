@@ -13,6 +13,7 @@ const DealContact_1 = require("../models/DealContact");
 const DealCompany_1 = require("../models/DealCompany");
 const DealDeal_1 = require("../models/DealDeal");
 const auth_1 = require("../middleware/auth");
+const database_1 = require("../config/database");
 const rolePermissions_1 = require("../utils/rolePermissions");
 const systemLogger_1 = require("../utils/systemLogger");
 const router = express_1.default.Router();
@@ -76,7 +77,7 @@ router.get('/', async (req, res) => {
         owners, // Array: ["me", "unassigned", "1", "2"]
         sortBy = 'newest', // newest, oldest, name, nameDesc
         // Filtros por columna
-        filterNombre, filterContacto, filterEmpresa, filterEtapa, } = req.query;
+        filterNombre, filterContacto, filterEmpresa, filterEtapa, filterPropietario, } = req.query;
         // Limitar el tamaño máximo de página para evitar sobrecarga
         const maxLimit = 100;
         const requestedLimit = Number(limitParam);
@@ -227,6 +228,72 @@ router.get('/', async (req, res) => {
             }
             else {
                 where[sequelize_1.Op.or] = companyConditions;
+            }
+        }
+        // Filtro por propietario (búsqueda por nombre) - DEBE IR ANTES DE LA PAGINACIÓN
+        if (filterPropietario) {
+            const filterPropietarioStr = String(filterPropietario).trim();
+            if (filterPropietarioStr) {
+                try {
+                    // Buscar usuarios que coincidan con el texto del filtro
+                    const matchingUsers = await User_1.User.findAll({
+                        where: {
+                            [sequelize_1.Op.or]: [
+                                { firstName: { [sequelize_1.Op.iLike]: `%${filterPropietarioStr}%` } },
+                                { lastName: { [sequelize_1.Op.iLike]: `%${filterPropietarioStr}%` } },
+                                database_1.sequelize.where(database_1.sequelize.fn('CONCAT', database_1.sequelize.col('firstName'), ' ', database_1.sequelize.col('lastName')), { [sequelize_1.Op.iLike]: `%${filterPropietarioStr}%` })
+                            ]
+                        },
+                        attributes: ['id']
+                    });
+                    const ownerIds = matchingUsers.map(user => user.id);
+                    if (ownerIds.length > 0) {
+                        // Aplicar el filtro ANTES de la paginación
+                        // Si hay Op.and, necesitamos agregar el filtro dentro del Op.and
+                        if (where[sequelize_1.Op.and]) {
+                            // Buscar si ya existe un filtro ownerId en Op.and
+                            const ownerIndex = where[sequelize_1.Op.and].findIndex((cond) => cond.ownerId !== undefined);
+                            if (ownerIndex !== -1) {
+                                // Si ya existe, combinarlo con AND usando Op.in
+                                const existingOwnerFilter = where[sequelize_1.Op.and][ownerIndex].ownerId;
+                                if (existingOwnerFilter && existingOwnerFilter[sequelize_1.Op.in]) {
+                                    // Combinar los arrays de IDs (intersección)
+                                    const existingIds = existingOwnerFilter[sequelize_1.Op.in];
+                                    const combinedIds = existingIds.filter((id) => ownerIds.includes(id));
+                                    where[sequelize_1.Op.and][ownerIndex] = { ownerId: { [sequelize_1.Op.in]: combinedIds.length > 0 ? combinedIds : [-1] } };
+                                }
+                                else {
+                                    where[sequelize_1.Op.and][ownerIndex] = { ownerId: { [sequelize_1.Op.in]: ownerIds } };
+                                }
+                            }
+                            else {
+                                where[sequelize_1.Op.and].push({ ownerId: { [sequelize_1.Op.in]: ownerIds } });
+                            }
+                        }
+                        else if (where.ownerId) {
+                            // Si ya hay un ownerId en el nivel superior, hacer intersección
+                            const existingOwnerFilter = where.ownerId;
+                            if (existingOwnerFilter && existingOwnerFilter[sequelize_1.Op.in]) {
+                                const existingIds = existingOwnerFilter[sequelize_1.Op.in];
+                                const combinedIds = existingIds.filter((id) => ownerIds.includes(id));
+                                where.ownerId = { [sequelize_1.Op.in]: combinedIds.length > 0 ? combinedIds : [-1] };
+                            }
+                            else {
+                                where.ownerId = { [sequelize_1.Op.in]: ownerIds };
+                            }
+                        }
+                        else {
+                            where.ownerId = { [sequelize_1.Op.in]: ownerIds };
+                        }
+                    }
+                    else {
+                        // Si no hay usuarios que coincidan, filtrar para que no haya resultados
+                        where.ownerId = { [sequelize_1.Op.in]: [-1] }; // ID que no existe = ningún resultado
+                    }
+                }
+                catch (error) {
+                    console.warn('[WARN] Error al buscar usuarios para filterPropietario:', error);
+                }
             }
         }
         // Configurar includes

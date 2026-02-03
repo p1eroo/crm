@@ -186,7 +186,7 @@ const CompanyDetail: React.FC = () => {
   const [emailOpen, setEmailOpen] = useState(false);
   const [callOpen, setCallOpen] = useState(false);
   const [taskOpen, setTaskOpen] = useState(false);
-  const [taskType, setTaskType] = useState<"todo" | "meeting">("todo");
+  const [, setTaskType] = useState<"todo" | "meeting">("todo");
   const [meetingOpen, setMeetingOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);

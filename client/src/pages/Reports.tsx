@@ -21,7 +21,6 @@ import {
   useTheme,
 } from '@mui/material';
 import { Person, Search, ChevronLeft, ChevronRight } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
 import api from '../config/api';
 import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
 
@@ -117,7 +116,6 @@ const Reports: React.FC = () => {
       color: theme.palette.primary.main,
     };
   };
-  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

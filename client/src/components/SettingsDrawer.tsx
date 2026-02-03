@@ -6,15 +6,12 @@ import {
   IconButton,
   useTheme,
   Chip,
-  Switch,
-  FormControlLabel,
 } from '@mui/material';
 import {
   Close,
   DarkMode,
   LightMode,
   SettingsBrightness,
-  Info,
 } from '@mui/icons-material';
 import { HugeiconsIcon } from '@hugeicons/react';
 // @ts-ignore - TypeScript module resolution issue with @hugeicons/core-free-icons

@@ -71,6 +71,7 @@ const reports_1 = __importDefault(require("./routes/reports"));
 const search_1 = __importDefault(require("./routes/search"));
 const systemLogs_1 = __importDefault(require("./routes/systemLogs"));
 const roles_1 = __importDefault(require("./routes/roles"));
+const massEmail_1 = __importDefault(require("./routes/massEmail"));
 const cacheHeaders_1 = require("./middleware/cacheHeaders");
 const app = (0, express_1.default)();
 const PORT = parseInt(process.env.PORT || '5000', 10);
@@ -157,6 +158,7 @@ app.use('/api/reports', reports_1.default);
 app.use('/api/search', search_1.default);
 app.use('/api/system-logs', systemLogs_1.default);
 app.use('/api/roles', roles_1.default);
+app.use('/api/mass-email', massEmail_1.default);
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', message: 'CRM API is running' });

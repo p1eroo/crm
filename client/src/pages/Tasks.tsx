@@ -17,7 +17,6 @@ import {
   DialogActions,
   MenuItem,
   Menu,
-  Chip,
   CircularProgress,
   Card,
   CardContent,
@@ -31,17 +30,14 @@ import {
 import { Add, Delete, Search, Schedule, PendingActions, Edit, ChevronLeft, ChevronRight, ArrowDropDown } from '@mui/icons-material';
 import { RiFileWarningLine } from 'react-icons/ri';
 import { IoMdCheckboxOutline } from 'react-icons/io';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { far } from '@fortawesome/free-regular-svg-icons';
-import byPrefixAndName from '../config/fontawesomeLight';
 import api from '../config/api';
 import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
 import { useAuth } from '../context/AuthContext';
 import UserAvatar from '../components/UserAvatar';
 
-// Agregar los iconos a la librería para usar byPrefixAndName
 library.add(far);
 
 interface Task {

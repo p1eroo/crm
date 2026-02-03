@@ -462,18 +462,18 @@ router.get('/stats', async (req, res) => {
             totalLeads = 0;
         }
         // Tareas completadas vs nuevas
-        // Usar valores correctos del enum: 'not started', 'in progress', 'completed', 'cancelled'
+        // Usar valores correctos del enum: 'pending', 'in progress', 'completed', 'cancelled'
         let completedTasks = 0;
         let newTasks = 0;
         try {
             completedTasks = await Task_1.Task.count({
                 where: { ...dateFilter, status: 'completed' }
             });
-            // Las tareas nuevas son las que están 'not started' o 'in progress'
+            // Las tareas nuevas son las que están 'pending' o 'in progress'
             newTasks = await Task_1.Task.count({
                 where: {
                     ...dateFilter,
-                    status: { [sequelize_1.Op.in]: ['not started', 'in progress'] }
+                    status: { [sequelize_1.Op.in]: ['pending', 'in progress'] }
                 }
             });
         }
@@ -502,7 +502,7 @@ router.get('/stats', async (req, res) => {
                 const newResult = await database_1.sequelize.query(`
           SELECT COUNT(id)::integer as count
           FROM tasks
-          WHERE status IN ('not started', 'in progress') ${whereClause}
+          WHERE status IN ('pending', 'in progress') ${whereClause}
         `, {
                     replacements,
                     type: sequelize_1.QueryTypes.SELECT,

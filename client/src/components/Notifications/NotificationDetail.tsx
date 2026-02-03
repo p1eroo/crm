@@ -7,7 +7,6 @@ import {
   Box,
   Avatar,
   Chip,
-  Divider,
   useTheme,
   IconButton,
   List,
@@ -17,19 +16,12 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { Close, Business } from '@mui/icons-material';
-import { RiAlarmWarningFill } from 'react-icons/ri';
 import { Notification } from '../../types/notification';
 import { formatNotificationDateTime } from '../../utils/formatNotificationTime';
 import { getNotificationIcon, getNotificationColor, getNotificationTypeLabel } from './notificationUtils';
 import { taxiMonterricoColors } from '../../theme/colors';
 import { useNavigate } from 'react-router-dom';
 import api from '../../config/api';
-
-// Componente wrapper para el ícono de alarma con tipos correctos
-const AlarmIcon = ({ style }: { style?: React.CSSProperties }) => {
-  // Usar React.createElement para evitar problemas de tipos con React 19
-  return React.createElement(RiAlarmWarningFill as any, { style });
-};
 
 interface NotificationDetailProps {
   open: boolean;
@@ -61,7 +53,6 @@ export const NotificationDetail: React.FC<NotificationDetailProps> = ({
   const [loadingCompanies, setLoadingCompanies] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [totalCompanies, setTotalCompanies] = useState(0);
   const limit = 20;
 
   const isInactivityAlert = notification?.id === 'inactivity-alert';
@@ -90,7 +81,6 @@ export const NotificationDetail: React.FC<NotificationDetailProps> = ({
         });
         setInactiveCompanies(response.data.companies || []);
         setTotalPages(response.data.totalPages || 1);
-        setTotalCompanies(response.data.total || 0);
       } catch (error: any) {
         console.error('Error obteniendo empresas inactivas:', error);
         setInactiveCompanies([]);

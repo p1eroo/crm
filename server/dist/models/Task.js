@@ -27,10 +27,11 @@ Task.init({
     type: {
         type: sequelize_1.DataTypes.ENUM('call', 'email', 'meeting', 'note', 'todo', 'other'),
         allowNull: false,
+        defaultValue: 'todo',
     },
     status: {
-        type: sequelize_1.DataTypes.ENUM('not started', 'in progress', 'completed', 'cancelled'),
-        defaultValue: 'not started',
+        type: sequelize_1.DataTypes.ENUM('pending', 'in progress', 'completed', 'cancelled'),
+        defaultValue: 'pending',
     },
     priority: {
         type: sequelize_1.DataTypes.ENUM('low', 'medium', 'high', 'urgent'),

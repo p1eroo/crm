@@ -69,8 +69,8 @@ const Deals: React.FC = () => {
     companyId: '',
     contactId: '',
   });
-  const [companies, setCompanies] = useState<any[]>([]);
-  const [contacts, setContacts] = useState<any[]>([]);
+  const [, setCompanies] = useState<any[]>([]);
+  const [, setContacts] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   
   // Estados para búsqueda asíncrona de empresas y contactos
@@ -618,14 +618,6 @@ const Deals: React.FC = () => {
 
   const handlePriorityChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData((prev) => ({ ...prev, priority: e.target.value as 'baja' | 'media' | 'alta' }));
-  }, []);
-
-  const handleCompanyIdChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, companyId: e.target.value }));
-  }, []);
-
-  const handleContactIdChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, contactId: e.target.value }));
   }, []);
 
   const handleSubmit = async () => {
