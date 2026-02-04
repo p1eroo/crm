@@ -138,8 +138,20 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
           borderRadius: 0,
           border: `1px solid ${theme.palette.divider}`,
           backgroundColor: theme.palette.background.paper,
-          // Deshabilitar transiciones solo para propiedades relacionadas con el tema
           transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        }),
+      },
+    },
+    // Popover: Paper con mismo look que Calendar (#1c252e, misma sombra) — aplica a todos los Popovers
+    MuiPopover: {
+      styleOverrides: {
+        paper: ({ theme }: { theme: Theme }) => ({
+          backgroundColor: `${theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper} !important`,
+          border: 'none',
+          borderRadius: 8,
+          boxShadow: theme.palette.mode === 'dark'
+            ? '0 8px 24px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05)'
+            : '0 8px 24px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.06)',
         }),
       },
     },

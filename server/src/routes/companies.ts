@@ -2,6 +2,7 @@ import express from 'express';
 import { Op } from 'sequelize';
 import { Company } from '../models/Company';
 import { Contact } from '../models/Contact';
+import { Deal } from '../models/Deal';
 import { User } from '../models/User';
 import { Task } from '../models/Task';
 import { Activity } from '../models/Activity';
@@ -1064,6 +1065,49 @@ router.delete('/:id/contacts/:contactId', async (req, res) => {
     console.error('Error removing contact association:', error);
     console.error('Error stack:', error.stack);
     res.status(500).json({ error: error.message || 'Error al eliminar la asociación' });
+  }
+});
+
+// Agregar negocios asociados a una empresa (desde modal "Crear negocio" en detalle de empresa)
+router.post('/:id/deals', async (req: AuthRequest, res) => {
+  try {
+    const company = await Company.findByPk(req.params.id, {
+      include: [{ model: Deal, as: 'Deals', attributes: ['id'] }],
+    });
+
+    if (!company) {
+      return res.status(404).json({ error: 'Empresa no encontrada' });
+    }
+
+    if (!canModifyResource(req.userRole, req.userId, company.ownerId)) {
+      return res.status(403).json({ error: 'No tienes permisos para modificar esta empresa' });
+    }
+
+    const { dealIds } = req.body;
+    if (!Array.isArray(dealIds) || dealIds.length === 0) {
+      return res.status(400).json({ error: 'Se requiere un array de dealIds' });
+    }
+
+    const currentDeals = (company as any).Deals || [];
+    const currentDealIds = currentDeals.map((d: any) => d.id);
+    const newDealIds = dealIds.filter((id: number) => !currentDealIds.includes(id));
+
+    if (newDealIds.length > 0) {
+      await (company as any).addDeals(newDealIds);
+    }
+
+    const updatedCompany = await Company.findByPk(company.id, {
+      include: [
+        { model: User, as: 'Owner', attributes: ['id', 'firstName', 'lastName', 'email'] },
+        { model: Contact, as: 'Contacts', attributes: ['id', 'firstName', 'lastName', 'email', 'phone'] },
+        { model: Deal, as: 'Deals', attributes: ['id', 'name', 'amount', 'stage', 'closeDate'] },
+      ],
+    });
+
+    res.status(200).json(cleanCompany(updatedCompany, true));
+  } catch (error: any) {
+    console.error('Error adding deals to company:', error);
+    res.status(500).json({ error: error.message || 'Error al asociar los negocios' });
   }
 });
 
