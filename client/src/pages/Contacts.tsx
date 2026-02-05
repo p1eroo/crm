@@ -2352,17 +2352,17 @@ const Contacts: React.FC = () => {
         title={editingContact ? "Editar Contacto" : "Nuevo Contacto"}
         onSubmit={handleSubmit}
         submitLabel={editingContact ? "Actualizar" : "Crear"}
+        variant="panel"
       >
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {/* Selección de tipo de identificación */}
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            {/* Tipo de identificación: opciones a la izquierda, campo a la derecha */}
+            <Box sx={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 2, mb: 1.5, flexWrap: 'wrap' }}>
               <RadioGroup
                 row
                 value={idType}
                 onChange={(e) => {
                   const newType = e.target.value as "dni" | "cee";
                   setIdType(newType);
-                  // Limpiar campos al cambiar de tipo
                   if (newType === "dni") {
                     setFormData((prev) => ({ ...prev, cee: "", dni: "" }));
                     setCeeError("");
@@ -2473,11 +2473,12 @@ const Contacts: React.FC = () => {
                   />
               </RadioGroup>
 
-              {/* Campo de entrada según el tipo seleccionado */}
-              <Box>
+              {/* Campo de entrada a la derecha */}
+              <Box sx={{ flex: 1, minWidth: 0 }}>
                   {idType === "dni" ? (
                     <TextField
-                      label="DNI"
+                      size="small"
+                      placeholder="DNI"
                       value={formData.dni}
                       onChange={async (e) => {
                         const value = e.target.value.replace(/\D/g, ""); // Solo números
@@ -2548,7 +2549,8 @@ const Contacts: React.FC = () => {
                     />
                   ) : (
                     <TextField
-                      label="CEE"
+                      size="small"
+                      placeholder="CEE"
                       value={formData.cee}
                       onChange={async (e) => {
                         // Convertir a mayúsculas respetando caracteres especiales del español
@@ -2622,253 +2624,116 @@ const Contacts: React.FC = () => {
               </Box>
             </Box>
 
-            {/* Nombre */}
-            <TextField
-              label="Nombre"
-              value={formData.firstName}
-              onChange={handleFirstNameChange}
-              error={!!formErrors.firstName}
-              helperText={formErrors.firstName}
-              fullWidth
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 1.5,
-                },
-              }}
-            />
-            {/* Apellido */}
-            <TextField
-              label="Apellido"
-              value={formData.lastName}
-              onChange={handleLastNameChange}
-              error={!!formErrors.lastName}
-              helperText={formErrors.lastName}
-              fullWidth
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 1.5,
-                },
-              }}
-            />
-
-            {/* Email */}
-            <TextField
-              label="Email"
-              type="email"
-              value={formData.email}
-              onChange={handleEmailChange}
-              error={!!formErrors.email || !!emailValidationError}
-              helperText={formErrors.email || emailValidationError}
-              fullWidth
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 1.5,
-                },
-              }}
-            />
-            {/* Teléfono */}
-            <TextField
-              label="Teléfono"
-              value={formData.phone}
-              onChange={handlePhoneChange}
-              fullWidth
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 1.5,
-                },
-              }}
-            />
-
-            {/* Dirección */}
-            <TextField
-              label="Dirección"
-              value={formData.address}
-              onChange={handleAddressChange}
-              multiline
-              rows={2}
-              fullWidth
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 1.5,
-                },
-              }}
-            />
-
-            {/* Distrito */}
-            <TextField
-              label="Distrito"
-              value={formData.city}
-              onChange={handleCityChange}
-              fullWidth
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 1.5,
-                },
-              }}
-            />
-            {/* Provincia */}
-            <TextField
-              label="Provincia"
-              value={formData.state}
-              onChange={handleStateChange}
-              fullWidth
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 1.5,
-                },
-              }}
-            />
-            {/* Departamento */}
-            <TextField
-              label="Departamento"
-              value={formData.country}
-              onChange={handleCountryChange}
-              fullWidth
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 1.5,
-                },
-              }}
-            />
-
-            {/* Empresa Principal */}
-            <TextField
-              select
-              label="Empresa Principal"
-              value={formData.companyId || ""}
-              onChange={(e) => {
-                if (e.target.value === "add_existing") {
-                  setAddCompanyModalOpen(true);
-                } else if (e.target.value === "create_new") {
-                  setCreateCompanyModalOpen(true);
-                }
-              }}
-              error={!!formErrors.companyId}
-              helperText={formErrors.companyId}
-              required
-              fullWidth
-              SelectProps={{
-                MenuProps: {
-                  disableScrollLock: true,
-                  disablePortal: true,
-                  PaperProps: {
-                    sx: {
-                      maxHeight: 300,
-                      zIndex: '2000 !important',
-                      position: 'absolute',
-                    },
-                  },
-                  anchorOrigin: {
-                    vertical: 'bottom',
-                    horizontal: 'left',
-                  },
-                  transformOrigin: {
-                    vertical: 'top',
-                    horizontal: 'left',
-                  },
-                },
-              }}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 1.5,
-                },
-              }}
-            >
-              {formData.companyId && selectedCompanyName && (
-                <MenuItem value={formData.companyId} disabled>
-                  {selectedCompanyName}
-                </MenuItem>
-              )}
-              {formData.companyId && <Divider />}
-              <MenuItem value="add_existing">
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Business sx={{ fontSize: 18 }} />
-                  {companyLabels.addCompany}
-                </Box>
-              </MenuItem>
-              <MenuItem
-                value="create_new"
-                sx={{ color: taxiMonterricoColors.green }}
-              >
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Add sx={{ fontSize: 18 }} />
-                  {companyLabels.createCompany}
-                </Box>
-              </MenuItem>
-            </TextField>
-
-            {/* Cargo */}
-            <TextField
-              label="Cargo"
-              value={formData.jobTitle}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, jobTitle: e.target.value }))
-              }
-              fullWidth
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 1.5,
-                },
-              }}
-            />
-            {/* Etapa del Ciclo de Vida */}
-            <TextField
-              select
-              label="Etapa del Ciclo de Vida"
-              value={formData.lifecycleStage}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  lifecycleStage: e.target.value,
-                }))
-              }
-              fullWidth
-              SelectProps={{
-                MenuProps: {
-                  disableScrollLock: true,
-                  disablePortal: true,
-                  PaperProps: {
-                    sx: {
-                      maxHeight: 300,
-                      zIndex: '2000 !important',
-                      position: 'absolute',
-                    },
-                  },
-                  anchorOrigin: {
-                    vertical: 'bottom',
-                    horizontal: 'left',
-                  },
-                  transformOrigin: {
-                    vertical: 'top',
-                    horizontal: 'left',
-                  },
-                },
-              }}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 1.5,
-                },
-              }}
-            >
-                <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
-                <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
-                <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
-                <MenuItem value="lead">Lead</MenuItem>
-                <MenuItem value="contacto">Contacto</MenuItem>
-                <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
-                <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-                <MenuItem value="propuesta_economica">
-                  Propuesta Económica
-                </MenuItem>
-                <MenuItem value="negociacion">Negociación</MenuItem>
-                <MenuItem value="licitacion">Licitación</MenuItem>
-                <MenuItem value="licitacion_etapa_final">
-                  Licitación Etapa Final
-                </MenuItem>
-                <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
-                <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
-                <MenuItem value="activo">Activo</MenuItem>
-              </TextField>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 4, rowGap: 0.5, alignItems: 'start' }}>
+              <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
+                Nombre <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>Apellido <Typography component="span" sx={{ color: 'error.main' }}>*</Typography></Typography>
+              <Box sx={{ minWidth: 0 }}>
+                <TextField size="small" value={formData.firstName} onChange={handleFirstNameChange} error={!!formErrors.firstName} helperText={formErrors.firstName} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+              </Box>
+              <Box sx={{ minWidth: 0 }}>
+                <TextField size="small" value={formData.lastName} onChange={handleLastNameChange} error={!!formErrors.lastName} helperText={formErrors.lastName} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+              </Box>
+              <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Email</Typography>
+              <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Teléfono</Typography>
+              <Box sx={{ minWidth: 0 }}>
+                <TextField size="small" type="email" value={formData.email} onChange={handleEmailChange} error={!!formErrors.email || !!emailValidationError} helperText={formErrors.email || emailValidationError} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+              </Box>
+              <Box sx={{ minWidth: 0 }}>
+                <TextField size="small" value={formData.phone} onChange={handlePhoneChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+              </Box>
+              <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5, gridColumn: '1 / -1' }}>Dirección</Typography>
+              <Box sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
+                <TextField size="small" value={formData.address} onChange={handleAddressChange} multiline rows={2} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+              </Box>
+              <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Distrito</Typography>
+              <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Provincia</Typography>
+              <Box sx={{ minWidth: 0 }}>
+                <TextField size="small" value={formData.city} onChange={handleCityChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+              </Box>
+              <Box sx={{ minWidth: 0 }}>
+                <TextField size="small" value={formData.state} onChange={handleStateChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+              </Box>
+              <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Departamento</Typography>
+              <Box />
+              <Box sx={{ minWidth: 0 }}>
+                <TextField size="small" value={formData.country} onChange={handleCountryChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+              </Box>
+              <Box />
+              <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Empresa Principal <Typography component="span" sx={{ color: 'error.main' }}>*</Typography></Typography>
+              <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Cargo</Typography>
+              <Box sx={{ minWidth: 0 }}>
+                <TextField
+                  select
+                  size="small"
+                  value={formData.companyId || ""}
+                  onChange={(e) => {
+                    if (e.target.value === "add_existing") setAddCompanyModalOpen(true);
+                    else if (e.target.value === "create_new") setCreateCompanyModalOpen(true);
+                  }}
+                  error={!!formErrors.companyId}
+                  helperText={formErrors.companyId}
+                  fullWidth
+                  inputProps={{ style: { fontSize: '1rem' } }}
+                  InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                  SelectProps={{
+                    displayEmpty: true,
+                    renderValue: (v) => (v && selectedCompanyName ? selectedCompanyName : ''),
+                    MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } },
+                  }}
+                >
+                  {formData.companyId && selectedCompanyName && <MenuItem value={formData.companyId} disabled>{selectedCompanyName}</MenuItem>}
+                  {formData.companyId && <Divider />}
+                  <MenuItem value="add_existing">
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}><Business sx={{ fontSize: 18 }} />{companyLabels.addCompany}</Box>
+                  </MenuItem>
+                  <MenuItem value="create_new" sx={{ color: taxiMonterricoColors.green }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}><Add sx={{ fontSize: 18 }} />{companyLabels.createCompany}</Box>
+                  </MenuItem>
+                </TextField>
+              </Box>
+              <Box sx={{ minWidth: 0 }}>
+                <TextField
+                  size="small"
+                  value={formData.jobTitle}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, jobTitle: e.target.value }))}
+                  fullWidth
+                  inputProps={{ style: { fontSize: '1rem' } }}
+                  InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                />
+              </Box>
+              <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Etapa del Ciclo de Vida</Typography>
+              <Box />
+              <Box sx={{ minWidth: 0 }}>
+                <TextField
+                  select
+                  size="small"
+                  value={formData.lifecycleStage}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, lifecycleStage: e.target.value }))}
+                  fullWidth
+                  inputProps={{ style: { fontSize: '1rem' } }}
+                  InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                  SelectProps={{ MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
+                >
+                  <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
+                  <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
+                  <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+                  <MenuItem value="lead">Lead</MenuItem>
+                  <MenuItem value="contacto">Contacto</MenuItem>
+                  <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+                  <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+                  <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
+                  <MenuItem value="negociacion">Negociación</MenuItem>
+                  <MenuItem value="licitacion">Licitación</MenuItem>
+                  <MenuItem value="licitacion_etapa_final">Licitación Etapa Final</MenuItem>
+                  <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+                  <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
+                  <MenuItem value="activo">Activo</MenuItem>
+                </TextField>
+              </Box>
+              <Box />
+            </Box>
         </Box>
       </FormDrawer>
 

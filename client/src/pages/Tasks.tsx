@@ -37,6 +37,7 @@ import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
 import { useAuth } from '../context/AuthContext';
 import UserAvatar from '../components/UserAvatar';
+import { FormDrawer } from '../components/FormDrawer';
 
 library.add(far);
 
@@ -71,6 +72,7 @@ const Tasks: React.FC = () => {
     priority: 'medium',
     startDate: '',
     dueDate: '',
+    estimatedTime: '',
     assignedToId: '',
   });
   const [users, setUsers] = useState<any[]>([]);
@@ -279,6 +281,7 @@ const Tasks: React.FC = () => {
         priority: task.priority,
         startDate: task.startDate ? task.startDate.split('T')[0] : '',
         dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
+        estimatedTime: '',
         assignedToId: assignedToId ? assignedToId.toString() : (user?.id ? user.id.toString() : ''),
       });
     } else {
@@ -290,6 +293,7 @@ const Tasks: React.FC = () => {
         priority: 'medium',
         startDate: '',
         dueDate: '',
+        estimatedTime: '',
         assignedToId: user?.id ? user.id.toString() : '',
       });
     }
@@ -1504,95 +1508,169 @@ const Tasks: React.FC = () => {
         )}
       </Card>
 
-      <Dialog 
-        open={open} 
-        onClose={handleClose} 
-        maxWidth="sm" 
-        fullWidth
-        BackdropProps={{
-          sx: {
-            backdropFilter: 'blur(4px)',
-            backgroundColor: 'rgba(0, 0, 0, 0.5)',
-          }
-        }}
+      {/* Panel deslizable para Nueva/Editar Tarea */}
+      <FormDrawer
+        open={open}
+        onClose={handleClose}
+        title={editingTask ? 'Editar Tarea' : 'Nueva Tarea'}
+        onSubmit={handleSubmit}
+        submitLabel={editingTask ? 'Actualizar' : 'Crear'}
+        variant="panel"
       >
-        <DialogTitle>
-          {editingTask ? 'Editar Tarea' : 'Nueva Tarea'}
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField
-              label="Título"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              required
-            />
-            <TextField
-              label="Descripción"
-              multiline
-              rows={3}
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            />
-            <TextField
-              select
-              label="Estado"
-              value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-            >
-              <MenuItem value="pending">Pendiente</MenuItem>
-              <MenuItem value="in progress">En Progreso</MenuItem>
-              <MenuItem value="completed">Completada</MenuItem>
-              <MenuItem value="cancelled">Cancelada</MenuItem>
-            </TextField>
-            <TextField
-              select
-              label="Prioridad"
-              value={formData.priority}
-              onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-            >
-              <MenuItem value="low">Baja</MenuItem>
-              <MenuItem value="medium">Media</MenuItem>
-              <MenuItem value="high">Alta</MenuItem>
-            </TextField>
-            <TextField
-              label="Fecha de inicio"
-              type="date"
-              value={formData.startDate}
-              onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              label="Fecha Límite"
-              type="date"
-              value={formData.dueDate}
-              onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-            />
-            {users.length > 0 && (
-              <TextField
-                select
-                label="Asignado a"
-                value={formData.assignedToId}
-                onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
-                InputLabelProps={{ shrink: true }}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gridTemplateRows: 'auto auto',
+                  columnGap: 4,
+                  rowGap: 1,
+                  alignItems: 'start',
+                }}
               >
-                {users.map((userItem) => (
-                  <MenuItem key={userItem.id} value={userItem.id.toString()}>
-                    {userItem.firstName} {userItem.lastName}
-                  </MenuItem>
-                ))}
-              </TextField>
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancelar</Button>
-          <Button onClick={handleSubmit} variant="contained">
-            {editingTask ? 'Actualizar' : 'Crear'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+                <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>Título <Typography component="span" sx={{ color: 'error.main' }}>*</Typography></Typography>
+                <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>Fecha de inicio</Typography>
+                <Box sx={{ minWidth: 0 }}>
+                  <TextField
+                    size="small"
+                    value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    required
+                    fullWidth
+                    placeholder="Título"
+                    inputProps={{ style: { fontSize: '1rem' } }}
+                    InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                  />
+                </Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <TextField
+                    size="small"
+                    type="date"
+                    value={formData.startDate}
+                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                    InputLabelProps={{ shrink: true }}
+                    fullWidth
+                    inputProps={{ style: { fontSize: '1rem' } }}
+                    InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                  />
+                </Box>
+                <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Hora estimada</Typography>
+                <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Fecha Límite</Typography>
+                <Box sx={{ minWidth: 0 }}>
+                  <TextField
+                    size="small"
+                    type="time"
+                    value={formData.estimatedTime}
+                    onChange={(e) => setFormData({ ...formData, estimatedTime: e.target.value })}
+                    fullWidth
+                    inputProps={{ style: { fontSize: '1rem' } }}
+                    InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                  />
+                </Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <TextField
+                    size="small"
+                    type="date"
+                    value={formData.dueDate}
+                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                    InputLabelProps={{ shrink: true }}
+                    fullWidth
+                    inputProps={{ style: { fontSize: '1rem' } }}
+                    InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                  />
+                </Box>
+                <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Estado</Typography>
+                <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Prioridad</Typography>
+                <Box sx={{ minWidth: 0 }}>
+                  <TextField
+                    select
+                    size="small"
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    fullWidth
+                    inputProps={{ style: { fontSize: '1rem' } }}
+                    InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    SelectProps={{
+                      MenuProps: {
+                        sx: { zIndex: 1700 },
+                        slotProps: { root: { sx: { zIndex: 1700 } } },
+                        PaperProps: { sx: { zIndex: 1700 } },
+                      },
+                    }}
+                  >
+                    <MenuItem value="pending">Pendiente</MenuItem>
+                    <MenuItem value="in progress">En Progreso</MenuItem>
+                    <MenuItem value="completed">Completada</MenuItem>
+                    <MenuItem value="cancelled">Cancelada</MenuItem>
+                  </TextField>
+                </Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <TextField
+                    select
+                    size="small"
+                    value={formData.priority}
+                    onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                    fullWidth
+                    inputProps={{ style: { fontSize: '1rem' } }}
+                    InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    SelectProps={{
+                      MenuProps: {
+                        sx: { zIndex: 1700 },
+                        slotProps: { root: { sx: { zIndex: 1700 } } },
+                        PaperProps: { sx: { zIndex: 1700 } },
+                      },
+                    }}
+                  >
+                    <MenuItem value="low">Baja</MenuItem>
+                    <MenuItem value="medium">Media</MenuItem>
+                    <MenuItem value="high">Alta</MenuItem>
+                  </TextField>
+                </Box>
+                {users.length > 0 && (
+                  <>
+                    <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Asignado a</Typography>
+                    <Box />
+                    <Box sx={{ minWidth: 0 }}>
+                      <TextField
+                        select
+                        size="small"
+                        value={formData.assignedToId}
+                        onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
+                        fullWidth
+                        inputProps={{ style: { fontSize: '1rem' } }}
+                        InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                        SelectProps={{
+                        MenuProps: {
+                          sx: { zIndex: 1700 },
+                          slotProps: { root: { sx: { zIndex: 1700 } } },
+                          PaperProps: { sx: { zIndex: 1700 } },
+                        },
+                      }}
+                      >
+                        {users.map((userItem) => (
+                          <MenuItem key={userItem.id} value={userItem.id.toString()}>
+                            {userItem.firstName} {userItem.lastName}
+                          </MenuItem>
+                        ))}
+                      </TextField>
+                    </Box>
+                    <Box />
+                  </>
+                )}
+                <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>Descripción</Typography>
+                <Box sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
+                  <TextField
+                    multiline
+                    rows={5}
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    fullWidth
+                    placeholder="Descripción"
+                  />
+                </Box>
+              </Box>
+            </Box>
+      </FormDrawer>
       {/* Modal de Confirmación de Eliminación */}
       <Dialog
         open={deleteDialogOpen}

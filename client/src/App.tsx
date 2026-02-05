@@ -182,14 +182,13 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
         }),
       },
     },
-    // MuiDrawer: background default/paper, border-right divider
+    // MuiDrawer: permitir animación (slide en temporary, width en permanent/sidebar)
     MuiDrawer: {
       styleOverrides: {
         paper: ({ theme }: { theme: Theme }) => ({
           backgroundColor: theme.palette.background.default,
           borderRight: `1px solid ${theme.palette.divider}`,
-          // Sin transiciones para propiedades relacionadas con el tema
-          transition: 'none',
+          transition: 'transform 225ms cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         }),
       },
     },

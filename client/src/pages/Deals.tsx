@@ -29,12 +29,16 @@ import api from '../config/api';
 import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import * as XLSX from 'xlsx';
 import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from '../components/UnifiedTable';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faHandshake } from "@fortawesome/free-solid-svg-icons";
 import EntityPreviewDrawer from '../components/EntityPreviewDrawer';
 import UserAvatar from '../components/UserAvatar';
+import { FormDrawer } from '../components/FormDrawer';
+import ContactCompanyModal from '../components/ContactCompanyModal';
+import { companyLabels } from '../constants/companyLabels';
 
 interface Deal {
   id: number;
@@ -54,6 +58,7 @@ interface Deal {
 const Deals: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
+  const { user } = useAuth();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -122,6 +127,8 @@ const Deals: React.FC = () => {
   const [showColumnFilters, setShowColumnFilters] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewDeal, setPreviewDeal] = useState<Deal | null>(null);
+  const [addCompanyModalOpen, setAddCompanyModalOpen] = useState(false);
+  const [createCompanyModalOpen, setCreateCompanyModalOpen] = useState(false);
   
   // Etapas del pipeline
   const stages = [
@@ -579,6 +586,12 @@ const Deals: React.FC = () => {
         companyId: deal.companyId?.toString() || '',
         contactId: deal.contactId?.toString() || '',
       });
+      if (deal.companyId && (deal as any).Company) {
+        setCompanyOptions((prev) => {
+          if (prev.some((c: any) => c.id === deal.companyId)) return prev;
+          return [{ id: deal.companyId, name: (deal as any).Company?.name || '' }, ...prev];
+        });
+      }
     } else {
       setEditingDeal(null);
       setFormData({
@@ -597,6 +610,26 @@ const Deals: React.FC = () => {
   const handleClose = () => {
     setOpen(false);
     setEditingDeal(null);
+  };
+
+  const handleCompanySelected = (company?: any) => {
+    if (company && company.id) {
+      setFormData((prev) => ({ ...prev, companyId: company.id.toString() }));
+      if (!companyOptions.find((c: any) => c.id === company.id)) {
+        setCompanyOptions((prev) => [company, ...prev]);
+      }
+    }
+    setAddCompanyModalOpen(false);
+  };
+
+  const handleCompanyCreated = (company: any) => {
+    if (company && company.id) {
+      setFormData((prev) => ({ ...prev, companyId: company.id.toString() }));
+      if (!companyOptions.find((c: any) => c.id === company.id)) {
+        setCompanyOptions((prev) => [company, ...prev]);
+      }
+    }
+    setCreateCompanyModalOpen(false);
   };
 
   // Handlers memoizados para evitar re-renders innecesarios
@@ -2430,361 +2463,228 @@ const Deals: React.FC = () => {
           </Box>
         )}
 
-      <Dialog 
-        open={open} 
-        onClose={handleClose} 
-        maxWidth="sm" 
-        fullWidth
-        BackdropProps={{
-          sx: {
-            backdropFilter: 'blur(4px)',
-            backgroundColor: theme.palette.mode === 'dark'
-              ? `${theme.palette.common.black}80`
-              : `${theme.palette.common.black}80`,
-          }
-        }}
-        PaperProps={{
-          sx: {
-            bgcolor: `${theme.palette.background.paper} !important`,
-            color: `${theme.palette.text.primary} !important`,
-            borderRadius: 3,
-            boxShadow: theme.palette.mode === 'dark'
-              ? '0 8px 24px rgba(0,0,0,0.5)'
-              : '0 8px 24px rgba(0,0,0,0.15)',
-          },
-        }}
+      <FormDrawer
+        open={open}
+        onClose={handleClose}
+        title={editingDeal ? 'Editar Negocio' : 'Nuevo Negocio'}
+        onSubmit={handleSubmit}
+        submitLabel={editingDeal ? 'Actualizar' : 'Crear'}
+        variant="panel"
       >
-        <DialogTitle sx={{
-          borderBottom: `2px solid ${theme.palette.divider}`,
-          borderImage: `linear-gradient(90deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%) 1`,
-          background: `linear-gradient(135deg, ${taxiMonterricoColors.green}0D 0%, ${taxiMonterricoColors.orange}0D 100%)`,
-          bgcolor: `${theme.palette.background.paper} !important`,
-          pb: 2,
-        }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography sx={{ 
-              fontWeight: 700,
-              fontSize: { xs: '1.25rem', md: '1.5rem' },
-              background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}>
-              {editingDeal ? 'Editar Negocio' : 'Nuevo Negocio'}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              columnGap: 4,
+              rowGap: 1,
+              alignItems: 'start',
+            }}
+          >
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
+              Nombre <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
             </Typography>
-            <IconButton
-              onClick={handleClose}
-              size="small"
-              sx={{
-                color: `${taxiMonterricoColors.orange} !important`,
-                borderRadius: 1.5,
-                border: '1.5px solid transparent',
-                transition: 'all 0.2s ease',
-                '&:hover': {
-                  bgcolor: `${taxiMonterricoColors.orange}1A`,
-                  borderColor: taxiMonterricoColors.orange,
-                  transform: 'rotate(90deg)',
-                },
-              }}
-            >
-              <Close />
-            </IconButton>
-          </Box>
-        </DialogTitle>
-        <DialogContent sx={{ 
-          pt: 3,
-          bgcolor: `${theme.palette.background.paper} !important`,
-          color: `${theme.palette.text.primary} !important`,
-          background: theme.palette.mode === 'dark'
-            ? `linear-gradient(180deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`
-            : `linear-gradient(180deg, ${theme.palette.background.paper} 0%, ${theme.palette.grey[50]} 100%)`,
-          // Estilos globales para TextField dentro del Dialog
-          '& .MuiTextField-root': {
-            '& .MuiOutlinedInput-root': {
-              bgcolor: `${theme.palette.background.paper} !important`,
-              color: `${theme.palette.text.primary} !important`,
-              '& fieldset': {
-                borderColor: theme.palette.divider,
-              },
-              '&:hover fieldset': {
-                borderColor: taxiMonterricoColors.greenLight,
-                boxShadow: `0 0 0 2px ${taxiMonterricoColors.greenLight}1A`,
-              },
-              '&.Mui-focused fieldset': {
-                borderColor: `${taxiMonterricoColors.green} !important`,
-                borderWidth: '2px',
-                boxShadow: `0 0 0 3px ${taxiMonterricoColors.green}26`,
-              },
-              '& input': {
-                color: `${theme.palette.text.primary} !important`,
-                '&::placeholder': {
-                  color: theme.palette.text.secondary,
-                  opacity: 1,
-                },
-                '&:-webkit-autofill': {
-                  WebkitBoxShadow: `0 0 0 1000px ${theme.palette.background.paper} inset !important`,
-                  WebkitTextFillColor: `${theme.palette.text.primary} !important`,
-                  transition: 'background-color 5000s ease-in-out 0s',
-                },
-              },
-            },
-            '& .MuiInputLabel-root': {
-              color: `${theme.palette.text.secondary} !important`,
-              fontWeight: 500,
-              '&.Mui-focused': {
-                color: `${taxiMonterricoColors.green} !important`,
-                fontWeight: 600,
-              },
-            },
-          },
-          // Estilos para Select
-          '& .MuiSelect-root': {
-            bgcolor: `${theme.palette.background.paper} !important`,
-            color: `${theme.palette.text.primary} !important`,
-          },
-          '& .MuiOutlinedInput-root': {
-            '& .MuiSelect-select': {
-              color: `${theme.palette.text.primary} !important`,
-            },
-            '&:hover': {
-              '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: taxiMonterricoColors.greenLight,
-              },
-            },
-            '&.Mui-focused': {
-              '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: `${taxiMonterricoColors.green} !important`,
-                borderWidth: '2px',
-                boxShadow: `0 0 0 3px ${taxiMonterricoColors.green}26`,
-              },
-            },
-          },
-          '& .MuiSelect-icon': {
-            color: taxiMonterricoColors.green,
-          },
-        }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField
-              label="Nombre"
-              value={formData.name}
-              onChange={handleNameChange}
-              required
-            />
-            <TextField
-              label="Monto"
-              type="number"
-              value={formData.amount}
-              onChange={handleAmountChange}
-              required
-            />
-            <TextField
-              select
-              label="Etapa"
-              value={formData.stage}
-              onChange={handleStageFormChange}
-            >
-              {stageOptions.map((option) => (
-                <MenuItem key={option.value} value={option.value}>
-                  {option.label}
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
+              Monto <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
+            </Typography>
+            <Box sx={{ minWidth: 0 }}>
+              <TextField
+                size="small"
+                value={formData.name}
+                onChange={handleNameChange}
+                required
+                fullWidth
+                placeholder="Nombre"
+                inputProps={{ style: { fontSize: '1rem' } }}
+                InputProps={{ sx: { '& input': { py: 1.05 } } }}
+              />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <TextField
+                size="small"
+                type="number"
+                value={formData.amount}
+                onChange={handleAmountChange}
+                required
+                fullWidth
+                placeholder="Monto"
+                inputProps={{ style: { fontSize: '1rem' } }}
+                InputProps={{ sx: { '& input': { py: 1.05 } } }}
+              />
+            </Box>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Etapa</Typography>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Fecha de Cierre</Typography>
+            <Box sx={{ minWidth: 0 }}>
+              <TextField
+                select
+                size="small"
+                value={formData.stage}
+                onChange={handleStageFormChange}
+                fullWidth
+                inputProps={{ style: { fontSize: '1rem' } }}
+                InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                SelectProps={{
+                  MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } },
+                }}
+              >
+                {stageOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    {option.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <TextField
+                size="small"
+                type="date"
+                value={formData.closeDate}
+                onChange={handleCloseDateChange}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+                inputProps={{ style: { fontSize: '1rem' } }}
+                InputProps={{ sx: { '& input': { py: 1.05 } } }}
+              />
+            </Box>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Prioridad</Typography>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Empresa</Typography>
+            <Box sx={{ minWidth: 0 }}>
+              <TextField
+                select
+                size="small"
+                value={formData.priority}
+                onChange={handlePriorityChange}
+                fullWidth
+                inputProps={{ style: { fontSize: '1rem' } }}
+                InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                SelectProps={{
+                  MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } },
+                }}
+              >
+                <MenuItem value="baja">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: taxiMonterricoColors.green }} />
+                    Baja
+                  </Box>
                 </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              label="Fecha de Cierre"
-              type="date"
-              value={formData.closeDate}
-              onChange={handleCloseDateChange}
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              select
-              label="Prioridad"
-              value={formData.priority}
-              onChange={handlePriorityChange}
-            >
-              <MenuItem value="baja">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: taxiMonterricoColors.green }} />
-                  Baja
-                </Box>
-              </MenuItem>
-              <MenuItem value="media">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: taxiMonterricoColors.orange }} />
-                  Media
-                </Box>
-              </MenuItem>
-              <MenuItem value="alta">
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: theme.palette.error.main }} />
-                  Alta
-                </Box>
-              </MenuItem>
-            </TextField>
-            <Autocomplete
-              options={companyOptions}
-              getOptionLabel={(option: any) => option.name || ""}
-              value={
-                companyOptions.find((c: any) => c.id.toString() === formData.companyId) || null
-              }
-              onChange={(event, newValue: any) => {
-                setFormData({
-                  ...formData,
-                  companyId: newValue ? newValue.id.toString() : "",
-                });
-                // Agregar la empresa seleccionada a companyOptions si no está presente
-                // Esto evita que se borre cuando se ejecuta la búsqueda después del debounce
-                if (newValue && !companyOptions.find((c: any) => c.id === newValue.id)) {
-                  setCompanyOptions([newValue, ...companyOptions]);
-                }
-              }}
-              onInputChange={(event, newInputValue) => {
-                setCompanySearch(newInputValue);
-              }}
-              loading={loadingCompanies}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Empresa"
-                  placeholder="Buscar empresa..."
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-              )}
-              renderOption={(props, option: any) => (
-                <Box component="li" {...props} key={option.id}>
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {option.name}
-                    </Typography>
-                    {option.ruc && (
-                      <Typography variant="caption" color="text.secondary">
-                        RUC: {option.ruc}
-                      </Typography>
-                    )}
+                <MenuItem value="media">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: taxiMonterricoColors.orange }} />
+                    Media
                   </Box>
-                </Box>
-              )}
-              fullWidth
-              noOptionsText={companySearch ? "No se encontraron empresas" : "Escribe para buscar"}
-              loadingText="Buscando..."
-            />
-            <Autocomplete
-              options={contactOptions}
-              getOptionLabel={(option: any) => 
-                `${option.firstName || ""} ${option.lastName || ""}`.trim() || ""
-              }
-              value={
-                contactOptions.find((c: any) => c.id.toString() === formData.contactId) || null
-              }
-              onChange={(event, newValue: any) => {
-                setFormData({
-                  ...formData,
-                  contactId: newValue ? newValue.id.toString() : "",
-                });
-                // Agregar el contacto seleccionado a contactOptions si no está presente
-                // Esto evita que se borre cuando se ejecuta la búsqueda después del debounce
-                if (newValue && !contactOptions.find((c: any) => c.id === newValue.id)) {
-                  setContactOptions([newValue, ...contactOptions]);
-                }
-              }}
-              onInputChange={(event, newInputValue) => {
-                setContactSearch(newInputValue);
-              }}
-              loading={loadingContacts}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Contacto"
-                  placeholder="Buscar contacto..."
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-              )}
-              renderOption={(props, option: any) => (
-                <Box component="li" {...props} key={option.id}>
-                  <Box>
-                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                      {option.firstName} {option.lastName}
-                    </Typography>
-                    {option.email && (
-                      <Typography variant="caption" color="text.secondary">
-                        {option.email}
-                      </Typography>
-                    )}
+                </MenuItem>
+                <MenuItem value="alta">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: theme.palette.error.main }} />
+                    Alta
                   </Box>
-                </Box>
-              )}
-              fullWidth
-              noOptionsText={contactSearch ? "No se encontraron contactos" : "Escribe para buscar"}
-              loadingText="Buscando..."
-            />
+                </MenuItem>
+              </TextField>
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <TextField
+                select
+                size="small"
+                value={formData.companyId || ''}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  if (v === 'add_existing') setAddCompanyModalOpen(true);
+                  else if (v === 'create_new') setCreateCompanyModalOpen(true);
+                }}
+                fullWidth
+                inputProps={{ style: { fontSize: '1rem' } }}
+                InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                SelectProps={{
+                  displayEmpty: true,
+                  renderValue: (v) => {
+                    if (!v) return '';
+                    const c = companyOptions.find((x: any) => x.id.toString() === v);
+                    return c?.name || '';
+                  },
+                  MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } },
+                }}
+              >
+                {formData.companyId && (() => {
+                  const c = companyOptions.find((x: any) => x.id.toString() === formData.companyId);
+                  return c ? <MenuItem value={formData.companyId} disabled>{c.name}</MenuItem> : null;
+                })()}
+                {formData.companyId && <Divider />}
+                <MenuItem value="add_existing">
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Business sx={{ fontSize: 18 }} />
+                    {companyLabels.addCompany}
+                  </Box>
+                </MenuItem>
+                <MenuItem value="create_new" sx={{ color: taxiMonterricoColors.green }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Add sx={{ fontSize: 18 }} />
+                    {companyLabels.createCompany}
+                  </Box>
+                </MenuItem>
+              </TextField>
+            </Box>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Contacto</Typography>
+            <Box />
+            <Box sx={{ minWidth: 0 }}>
+              <Autocomplete
+                options={contactOptions}
+                getOptionLabel={(option: any) => `${option.firstName || ""} ${option.lastName || ""}`.trim() || ""}
+                value={contactOptions.find((c: any) => c.id.toString() === formData.contactId) || null}
+                onChange={(event, newValue: any) => {
+                  setFormData({ ...formData, contactId: newValue ? newValue.id.toString() : "" });
+                  if (newValue && !contactOptions.find((c: any) => c.id === newValue.id)) {
+                    setContactOptions([newValue, ...contactOptions]);
+                  }
+                }}
+                onInputChange={(event, newInputValue) => setContactSearch(newInputValue)}
+                loading={loadingContacts}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    size="small"
+                    placeholder="Buscar contacto..."
+                    inputProps={{ ...params.inputProps, style: { fontSize: '1rem' } }}
+                    InputProps={{ ...params.InputProps, sx: { '& input': { py: 1.05 } } }}
+                  />
+                )}
+                renderOption={(props, option: any) => (
+                  <Box component="li" {...props} key={option.id}>
+                    <Box>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>{option.firstName} {option.lastName}</Typography>
+                      {option.email && (
+                        <Typography variant="caption" color="text.secondary">{option.email}</Typography>
+                      )}
+                    </Box>
+                  </Box>
+                )}
+                fullWidth
+                noOptionsText={contactSearch ? "No se encontraron contactos" : "Escribe para buscar"}
+                loadingText="Buscando..."
+              />
+            </Box>
+            <Box />
           </Box>
-        </DialogContent>
-        <DialogActions sx={{ 
-          px: 3, 
-          py: 2, 
-          borderTop: `1px solid ${theme.palette.divider}`,
-          bgcolor: `${theme.palette.background.paper} !important`,
-        }}>
-          <Button 
-            onClick={handleClose}
-            sx={{
-              color: `${theme.palette.error.main} !important`,
-              borderColor: `${theme.palette.error.main} !important`,
-              borderWidth: '2px',
-              bgcolor: `${theme.palette.background.paper} !important`,
-              fontWeight: 600,
-              px: 3,
-              py: 1,
-              borderRadius: 2,
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              '&:hover': {
-                borderColor: `${theme.palette.error.dark} !important`,
-                borderWidth: '2px',
-                backgroundColor: `${theme.palette.error.main}14 !important`,
-                transform: 'translateY(-2px)',
-                boxShadow: `0 4px 12px ${theme.palette.error.main}33`,
-              },
-            }}
-            variant="outlined"
-          >
-            Cancelar
-          </Button>
-          <Button 
-            onClick={handleSubmit} 
-            variant="contained"
-            sx={{
-              background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%) !important`,
-              color: `${theme.palette.common.white} !important`,
-              fontWeight: 600,
-              px: 3,
-              py: 1,
-              borderRadius: 2,
-              boxShadow: `0 4px 12px ${taxiMonterricoColors.green}4D`,
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              '&:hover': {
-                background: `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%) !important`,
-                boxShadow: `0 6px 20px ${taxiMonterricoColors.green}66`,
-                transform: 'translateY(-2px)',
-              },
-              '&:active': {
-                transform: 'translateY(0)',
-              },
-            }}
-          >
-            {editingDeal ? 'Actualizar' : 'Crear'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </Box>
+      </FormDrawer>
+
+      {/* Modal para agregar empresa existente */}
+      <ContactCompanyModal
+        open={addCompanyModalOpen}
+        onClose={() => setAddCompanyModalOpen(false)}
+        user={user}
+        onSelect={handleCompanySelected}
+        onCreate={handleCompanyCreated}
+        mode="select"
+      />
+      {/* Modal para crear nueva empresa */}
+      <ContactCompanyModal
+        open={createCompanyModalOpen}
+        onClose={() => setCreateCompanyModalOpen(false)}
+        user={user}
+        onSelect={handleCompanySelected}
+        onCreate={handleCompanyCreated}
+        mode="create"
+      />
 
       {/* Popover de Filtros Avanzados */}
       {/* Entity Preview Drawer */}

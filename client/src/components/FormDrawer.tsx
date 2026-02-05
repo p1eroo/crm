@@ -7,6 +7,7 @@ import {
   Button,
   useTheme,
 } from '@mui/material';
+import type { Theme } from '@mui/material/styles';
 import { Close } from '@mui/icons-material';
 import { taxiMonterricoColors } from '../theme/colors';
 
@@ -16,9 +17,46 @@ interface FormDrawerProps {
   title: string;
   onSubmit: () => void;
   submitLabel?: string;
+  cancelLabel?: string;
   children: React.ReactNode;
   width?: { xs?: string; sm?: number; md?: number };
+  /** Estilo "panel": mismo look que el drawer Nueva Tarea (encabezado simple, botones pill, animación). */
+  variant?: 'default' | 'panel';
 }
+
+const panelPaperProps = (theme: Theme) => ({
+  width: { xs: '100%' as const, sm: 720, md: 800 },
+  maxWidth: '100%',
+  bgcolor: theme.palette.background.paper,
+  background: theme.palette.mode === 'dark'
+    ? `linear-gradient(180deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`
+    : `linear-gradient(180deg, ${theme.palette.background.paper} 0%, ${theme.palette.grey[50]} 100%)`,
+  boxShadow: theme.palette.mode === 'dark'
+    ? '-8px 0 24px rgba(0,0,0,0.4)'
+    : '-8px 0 24px rgba(0,0,0,0.12)',
+  border: 'none',
+  transition: 'transform 400ms cubic-bezier(0.4, 0, 0.2, 1)',
+});
+
+const panelContentSx = (theme: Theme) => ({
+  flex: 1,
+  overflow: 'auto',
+  mx: -3,
+  py: 3,
+  mb: -3,
+  maxWidth: 710,
+  alignSelf: 'center',
+  width: '100%',
+  '& .MuiOutlinedInput-root': {
+    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+      borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+      borderWidth: '1px',
+    },
+    '&:hover .MuiOutlinedInput-notchedOutline': {
+      borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+    },
+  },
+});
 
 export const FormDrawer: React.FC<FormDrawerProps> = ({
   open,
@@ -26,16 +64,95 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
   title,
   onSubmit,
   submitLabel = 'Crear',
+  cancelLabel = 'Cancelar',
   children,
   width = { xs: '100%', sm: 380, md: 420 },
+  variant = 'default',
 }) => {
   const theme = useTheme();
+  const isPanel = variant === 'panel';
+
+  const drawerCommon = {
+    anchor: 'right' as const,
+    open,
+    onClose,
+    sx: { zIndex: 1600 },
+  };
+
+  if (isPanel) {
+    return (
+      <Drawer
+        {...drawerCommon}
+        variant="temporary"
+        transitionDuration={{ enter: 400, exit: 300 }}
+        ModalProps={{ keepMounted: true }}
+        slotProps={{
+          backdrop: {
+            sx: {
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              transition: 'opacity 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+            },
+          },
+          transition: { timeout: { enter: 400, exit: 300 } },
+        }}
+        PaperProps={{ sx: panelPaperProps(theme) }}
+      >
+        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 4, py: 3 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              {title}
+            </Typography>
+            <IconButton onClick={onClose} size="small" aria-label="Cerrar">
+              <Close />
+            </IconButton>
+          </Box>
+          <Box sx={panelContentSx(theme)}>
+            {children}
+          </Box>
+          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-start', px: 5.5, py: 2 }}>
+            <Button
+              onClick={onClose}
+              sx={{
+                borderRadius: '5px',
+                px: 2.5,
+                py: 1.25,
+                bgcolor: theme.palette.mode === 'dark' ? 'rgba(180, 80, 90, 0.35)' : 'rgba(185, 28, 28, 0.15)',
+                color: theme.palette.mode === 'dark' ? '#F87171' : '#DC2626',
+                textTransform: 'none',
+                fontWeight: 600,
+                '&:hover': {
+                  bgcolor: theme.palette.mode === 'dark' ? '#D25B5B' : '#E07A7A',
+                  color: '#fff',
+                },
+              }}
+            >
+              {cancelLabel}
+            </Button>
+            <Button
+              onClick={onSubmit}
+              variant="contained"
+              sx={{
+                borderRadius: '5px',
+                px: 2.5,
+                py: 1.25,
+                bgcolor: taxiMonterricoColors.greenLight,
+                color: '#fff',
+                textTransform: 'none',
+                fontWeight: 600,
+                '&:hover': { bgcolor: taxiMonterricoColors.green },
+              }}
+            >
+              {submitLabel}
+            </Button>
+          </Box>
+        </Box>
+      </Drawer>
+    );
+  }
 
   return (
     <Drawer
-      anchor="right"
-      open={open}
-      onClose={onClose}
+      {...drawerCommon}
       ModalProps={{
         BackdropProps: {
           sx: {
@@ -45,9 +162,6 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
           },
         },
       }}
-      sx={{
-        zIndex: 1600,
-      }}
       PaperProps={{
         sx: {
           width,
@@ -55,43 +169,34 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
           bgcolor: theme.palette.background.paper,
           color: theme.palette.text.primary,
           boxShadow: 'none',
-          border: 'none', // Quitar el borde derecho del estilo global de MuiDrawer
+          border: 'none',
           '& *': {
-            '&::-webkit-scrollbar': {
-              width: '8px',
-            },
+            '&::-webkit-scrollbar': { width: '8px' },
             '&::-webkit-scrollbar-track': {
-              bgcolor: theme.palette.mode === 'dark' 
-                ? theme.palette.background.default 
-                : theme.palette.grey[100],
+              bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : theme.palette.grey[100],
             },
             '&::-webkit-scrollbar-thumb': {
               bgcolor: theme.palette.mode === 'dark'
                 ? theme.palette.action.disabledBackground
                 : theme.palette.action.disabled,
               borderRadius: '4px',
-              '&:hover': {
-                bgcolor: theme.palette.action.hover,
-              },
+              '&:hover': { bgcolor: theme.palette.action.hover },
             },
           },
         },
       }}
     >
-      <Box sx={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
+      <Box sx={{
+        display: 'flex',
+        flexDirection: 'column',
         height: '100%',
         bgcolor: theme.palette.background.paper,
         color: theme.palette.text.primary,
-        '& *': {
-          color: 'inherit',
-        },
+        '& *': { color: 'inherit' },
       }}>
-        {/* Header del Drawer */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
           alignItems: 'center',
           px: 3,
           py: 2,
@@ -101,7 +206,7 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
             : `linear-gradient(135deg, ${taxiMonterricoColors.green}0D 0%, ${taxiMonterricoColors.orange}0D 100%)`,
           bgcolor: theme.palette.background.paper,
         }}>
-          <Typography variant="h6" sx={{ 
+          <Typography variant="h6" sx={{
             fontWeight: 700,
             background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
             backgroundClip: 'text',
@@ -110,8 +215,8 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
           }}>
             {title}
           </Typography>
-          <IconButton 
-            onClick={onClose} 
+          <IconButton
+            onClick={onClose}
             size="small"
             sx={{
               color: `${taxiMonterricoColors.orange} !important`,
@@ -129,12 +234,11 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
           </IconButton>
         </Box>
 
-        {/* Contenido del formulario con scroll */}
-        <Box sx={{ 
-          flex: 1, 
-          overflowY: 'auto', 
+        <Box sx={{
+          flex: 1,
+          overflowY: 'auto',
           overflowX: 'visible',
-          px: 3, 
+          px: 3,
           py: 2,
           position: 'relative',
           bgcolor: theme.palette.background.paper,

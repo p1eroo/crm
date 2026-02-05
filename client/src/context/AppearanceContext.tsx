@@ -88,21 +88,22 @@ export const AppearanceProvider: React.FC<{ children: ReactNode }> = ({ children
       document.documentElement.style.fontSize = fontSizePx;
     }
     
-    // Aplicar estilo global con transición suave para todos los elementos
+    // Aplicar estilo global para tamaño de fuente.
+    // No usar transition con !important en * ni en elementos genéricos: anula las animaciones
+    // del Drawer (Slide), Sidebar (width) y otros componentes que usan transiciones inline.
     const style = document.createElement('style');
     style.id = 'dynamic-font-size';
     style.textContent = `
-      * {
+      :root {
         --base-font-size: ${fontSizePx};
-        transition: font-size 0.15s ease-out !important;
       }
       body, html {
         font-size: ${fontSizePx} !important;
-        transition: font-size 0.15s ease-out !important;
+        transition: font-size 0.15s ease-out;
       }
-      /* Asegurar que todos los elementos de texto escalen suavemente */
-      p, span, div, a, li, td, th, label, input, textarea, select, button {
-        transition: font-size 0.15s ease-out !important;
+      /* Transición de font-size solo en elementos de texto, sin !important para no pisar Drawer/Modal */
+      p, span, a, li, td, th, label, input, textarea, select, button {
+        transition: font-size 0.15s ease-out;
       }
     `;
     

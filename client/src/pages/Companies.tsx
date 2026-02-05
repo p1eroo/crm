@@ -3319,332 +3319,180 @@ const Companies: React.FC = () => {
         title={editingCompany ? 'Editar Empresa' : 'Nueva Empresa'}
         onSubmit={handleSubmit}
         submitLabel={editingCompany ? 'Actualizar' : 'Crear'}
+        variant="panel"
       >
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {/* Título de sección */}
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: theme.palette.text.primary }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 4, rowGap: 0.5, alignItems: 'start' }}>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', gridColumn: '1 / -1' }}>
               {companyLabels.basicInformation}
             </Typography>
-            {/* RUC */}
-            <TextField
-              label="RUC"
-              value={formData.ruc}
-              onChange={handleRucChange}
-              error={!!rucError || !!rucValidationError}
-              helperText={rucError || rucValidationError}
-              inputProps={{ maxLength: 11 }}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      onClick={handleSearchRuc}
-                      disabled={loadingRuc || !formData.ruc || formData.ruc.length < 11}
-                      sx={{
-                        color: taxiMonterricoColors.green,
-                        '&:hover': {
-                          bgcolor: `${taxiMonterricoColors.green}15`,
-                        },
-                        '&.Mui-disabled': {
-                          color: theme.palette.text.disabled,
-                        },
-                      }}
-                    >
-                      {loadingRuc ? (
-                        <CircularProgress size={20} />
-                      ) : (
-                        <Search />
-                      )}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-              fullWidth
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            />
-            {/* Razón social */}
-            <TextField
-              label="Razón social"
-              value={formData.companyname}
-              onChange={handleCompanyNameChange}
-              fullWidth
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            />
-            {/* Nombre comercial */}
-            <TextField
-              label="Nombre comercial"
-              value={formData.name}
-              onChange={handleNameChange}
-              error={!!nameError}
-              helperText={nameError}
-              fullWidth
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            />
-            {/* Teléfono */}
-            <TextField
-              label="Teléfono"
-              value={formData.phone}
-              onChange={handlePhoneChange}
-              fullWidth
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            />
-            {/* Dirección */}
-            <TextField
-              label="Dirección"
-              value={formData.address}
-              onChange={handleAddressChange}
-              multiline
-              rows={2}
-              fullWidth
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            />
-            {/* Distrito */}
-            <TextField
-              label="Distrito"
-              value={formData.city}
-              onChange={handleCityChange}
-              fullWidth
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            />
-            {/* Provincia */}
-            <TextField
-              label="Provincia"
-              value={formData.state}
-              onChange={handleStateChange}
-              fullWidth
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            />
-            {/* Departamento */}
-            <TextField
-              label="Departamento"
-              value={formData.country}
-              onChange={handleCountryChange}
-              fullWidth
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            />
-            {/* Título de sección */}
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, mt: 1, color: theme.palette.text.primary }}>
-              Información Comercial
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
+              RUC <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
             </Typography>
-            {/* Dominio */}
-            <TextField
-              label="Dominio"
-              value={formData.domain}
-              onChange={handleDomainChange}
-              fullWidth
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            />
-            {/* LinkedIn */}
-            <TextField
-              label="LinkedIn"
-              value={formData.linkedin}
-              onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })}
-              placeholder="https://www.linkedin.com/company/..."
-              fullWidth
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            />
-            {/* Correo */}
-            <TextField
-              label="Correo"
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              fullWidth
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            />
-            {/* Origen de lead */}
-            <TextField
-              select
-              label="Origen de lead"
-              value={formData.leadSource || ''}
-              onChange={(e) => setFormData({ ...formData, leadSource: e.target.value })}
-              fullWidth
-              SelectProps={{
-                MenuProps: {
-                  disableScrollLock: true,
-                  disablePortal: true,
-                  PaperProps: {
-                    sx: {
-                      maxHeight: 300,
-                      zIndex: '2000 !important',
-                      position: 'absolute',
-                    },
-                  },
-                  anchorOrigin: {
-                    vertical: 'bottom',
-                    horizontal: 'left',
-                  },
-                  transformOrigin: {
-                    vertical: 'top',
-                    horizontal: 'left',
-                  },
-                },
-              }}
-              sx={{
-                '& .MuiOutlinedInput-root': {
-                  borderRadius: 1.5,
-                }
-              }}
-            >
-              <MenuItem value="">-- Seleccionar --</MenuItem>
-              <MenuItem value="referido">Referido</MenuItem>
-              <MenuItem value="base">Base</MenuItem>
-              <MenuItem value="entorno">Entorno</MenuItem>
-              <MenuItem value="feria">Feria</MenuItem>
-              <MenuItem value="masivo">Masivo</MenuItem>
-            </TextField>
-            {/* Etapa del Ciclo de Vida */}
-            <TextField
-              select
-              label="Etapa del Ciclo de Vida"
-              value={formData.lifecycleStage}
-              onChange={(e) => setFormData({ ...formData, lifecycleStage: e.target.value })}
-              fullWidth
-              SelectProps={{
-                MenuProps: {
-                  disableScrollLock: true,
-                  disablePortal: true,
-                  PaperProps: {
-                    sx: {
-                      maxHeight: 300,
-                      zIndex: '2000 !important',
-                      position: 'absolute',
-                    },
-                  },
-                  anchorOrigin: {
-                    vertical: 'bottom',
-                    horizontal: 'left',
-                  },
-                  transformOrigin: {
-                    vertical: 'top',
-                    horizontal: 'left',
-                  },
-                },
-              }}
-            >
-              <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
-              <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
-              <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
-              <MenuItem value="lead">Lead</MenuItem>
-              <MenuItem value="contacto">Contacto</MenuItem>
-              <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
-              <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-              <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
-              <MenuItem value="negociacion">Negociación</MenuItem>
-              <MenuItem value="licitacion">Licitación</MenuItem>
-              <MenuItem value="licitacion_etapa_final">Licitación Etapa Final</MenuItem>
-              <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
-              <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
-              <MenuItem value="activo">Activo</MenuItem>
-            </TextField>
-            {/* Facturación */}
-            <TextField
-              fullWidth
-              type="number"
-              label="Facturación"
-              value={formData.estimatedRevenue}
-              onChange={(e) => setFormData({ ...formData, estimatedRevenue: e.target.value })}
-              InputProps={{
-                startAdornment: <InputAdornment position="start">S/</InputAdornment>,
-              }}
-            />
-            {/* Propietario - Solo visible para jefe_comercial y admin */}
-            {(user?.role === 'admin' || user?.role === 'jefe_comercial') && (
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>Razón social</Typography>
+            <Box sx={{ minWidth: 0 }}>
+              <TextField
+                size="small"
+                value={formData.ruc}
+                onChange={handleRucChange}
+                error={!!rucError || !!rucValidationError}
+                helperText={rucError || rucValidationError}
+                inputProps={{ maxLength: 11, style: { fontSize: '1rem' } }}
+                InputProps={{
+                  sx: { '& input': { py: 1.05 } },
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={handleSearchRuc}
+                        disabled={loadingRuc || !formData.ruc || formData.ruc.length < 11}
+                        sx={{ color: taxiMonterricoColors.green, '&:hover': { bgcolor: `${taxiMonterricoColors.green}15` }, '&.Mui-disabled': { color: theme.palette.text.disabled } }}
+                      >
+                        {loadingRuc ? <CircularProgress size={20} /> : <Search />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+                fullWidth
+              />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <TextField size="small" value={formData.companyname} onChange={handleCompanyNameChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+            </Box>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>
+              Nombre comercial <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Teléfono</Typography>
+            <Box sx={{ minWidth: 0 }}>
+              <TextField size="small" value={formData.name} onChange={handleNameChange} error={!!nameError} helperText={nameError} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <TextField size="small" value={formData.phone} onChange={handlePhoneChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+            </Box>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5, gridColumn: '1 / -1' }}>Dirección</Typography>
+            <Box sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
+              <TextField size="small" value={formData.address} onChange={handleAddressChange} multiline rows={2} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+            </Box>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Distrito</Typography>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Provincia</Typography>
+            <Box sx={{ minWidth: 0 }}>
+              <TextField size="small" value={formData.city} onChange={handleCityChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <TextField size="small" value={formData.state} onChange={handleStateChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+            </Box>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Departamento</Typography>
+            <Box />
+            <Box sx={{ minWidth: 0 }}>
+              <TextField size="small" value={formData.country} onChange={handleCountryChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+            </Box>
+            <Box />
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5, gridColumn: '1 / -1' }}>Información Comercial</Typography>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Dominio</Typography>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>LinkedIn</Typography>
+            <Box sx={{ minWidth: 0 }}>
+              <TextField size="small" value={formData.domain} onChange={handleDomainChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <TextField size="small" value={formData.linkedin} onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })} placeholder="https://www.linkedin.com/company/..." fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+            </Box>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Correo</Typography>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Origen de lead</Typography>
+            <Box sx={{ minWidth: 0 }}>
+              <TextField size="small" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
               <TextField
                 select
-                label="Propietario"
-                value={formData.ownerId || ''}
-                onChange={(e) => setFormData({ ...formData, ownerId: e.target.value })}
+                size="small"
+                value={formData.leadSource || ''}
+                onChange={(e) => setFormData({ ...formData, leadSource: e.target.value })}
                 fullWidth
-                SelectProps={{
-                  MenuProps: {
-                    disableScrollLock: true,
-                    disablePortal: true,
-                    PaperProps: {
-                      sx: {
-                        maxHeight: 300,
-                        zIndex: '2000 !important',
-                        position: 'absolute',
-                      },
-                    },
-                  },
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    borderRadius: 1.5,
-                  }
-                }}
+                inputProps={{ style: { fontSize: '1rem' } }}
+                InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                SelectProps={{ MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
               >
-                <MenuItem value="">Sin asignar</MenuItem>
-                {users
-                  .filter((userOption) => userOption.role === 'user')
-                  .map((userOption) => (
-                    <MenuItem key={userOption.id} value={userOption.id.toString()}>
-                      {userOption.firstName} {userOption.lastName}
-                    </MenuItem>
-                  ))}
+                <MenuItem value="">-- Seleccionar --</MenuItem>
+                <MenuItem value="referido">Referido</MenuItem>
+                <MenuItem value="base">Base</MenuItem>
+                <MenuItem value="entorno">Entorno</MenuItem>
+                <MenuItem value="feria">Feria</MenuItem>
+                <MenuItem value="masivo">Masivo</MenuItem>
               </TextField>
+            </Box>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Etapa del Ciclo de Vida</Typography>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Facturación</Typography>
+            <Box sx={{ minWidth: 0 }}>
+              <TextField
+                select
+                size="small"
+                value={formData.lifecycleStage}
+                onChange={(e) => setFormData({ ...formData, lifecycleStage: e.target.value })}
+                fullWidth
+                inputProps={{ style: { fontSize: '1rem' } }}
+                InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                SelectProps={{ MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
+              >
+                <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
+                <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
+                <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+                <MenuItem value="lead">Lead</MenuItem>
+                <MenuItem value="contacto">Contacto</MenuItem>
+                <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+                <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+                <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
+                <MenuItem value="negociacion">Negociación</MenuItem>
+                <MenuItem value="licitacion">Licitación</MenuItem>
+                <MenuItem value="licitacion_etapa_final">Licitación Etapa Final</MenuItem>
+                <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+                <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
+                <MenuItem value="activo">Activo</MenuItem>
+              </TextField>
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <TextField
+                size="small"
+                type="number"
+                value={formData.estimatedRevenue}
+                onChange={(e) => setFormData({ ...formData, estimatedRevenue: e.target.value })}
+                fullWidth
+                inputProps={{ style: { fontSize: '1rem' } }}
+                InputProps={{ startAdornment: <InputAdornment position="start">S/</InputAdornment>, sx: { '& input': { py: 1.05 } } }}
+              />
+            </Box>
+            {(user?.role === 'admin' || user?.role === 'jefe_comercial') && (
+              <>
+                <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Propietario</Typography>
+                <Box />
+                <Box sx={{ minWidth: 0 }}>
+                  <TextField
+                    select
+                    size="small"
+                    value={formData.ownerId || ''}
+                    onChange={(e) => setFormData({ ...formData, ownerId: e.target.value })}
+                    fullWidth
+                    inputProps={{ style: { fontSize: '1rem' } }}
+                    InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    SelectProps={{ MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
+                  >
+                    <MenuItem value="">Sin asignar</MenuItem>
+                    {users.filter((u) => u.role === 'user').map((userOption) => (
+                      <MenuItem key={userOption.id} value={userOption.id.toString()}>{userOption.firstName} {userOption.lastName}</MenuItem>
+                    ))}
+                  </TextField>
+                </Box>
+                <Box />
+              </>
             )}
-            {/* Cliente Recuperado */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5, gridColumn: '1 / -1' }}>Cliente Recuperado</Typography>
+            <Box sx={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 1 }}>
               <Checkbox
                 checked={formData.isRecoveredClient}
                 onChange={(e) => setFormData({ ...formData, isRecoveredClient: e.target.checked })}
-                sx={{
-                  color: taxiMonterricoColors.green,
-                  '&.Mui-checked': {
-                    color: taxiMonterricoColors.green,
-                  },
-                }}
+                sx={{ color: taxiMonterricoColors.green, '&.Mui-checked': { color: taxiMonterricoColors.green } }}
               />
-              <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>
-                Cliente Recuperado
-              </Typography>
+              <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>Cliente Recuperado</Typography>
             </Box>
-            
+          </Box>
         </Box>
       </FormDrawer>
 

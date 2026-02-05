@@ -96,6 +96,7 @@ const adminMenuItems = [
           position: 'fixed',
           height: '100vh',
           top: 0,
+          transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         },
       }}
     >
