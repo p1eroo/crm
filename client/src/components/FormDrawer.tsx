@@ -18,18 +18,28 @@ interface FormDrawerProps {
   onSubmit: () => void;
   submitLabel?: string;
   cancelLabel?: string;
+  /** Deshabilita el botón de envío (p. ej. mientras se guarda). */
+  submitDisabled?: boolean;
   children: React.ReactNode;
   width?: { xs?: string; sm?: number; md?: number };
   /** Estilo "panel": mismo look que el drawer Nueva Tarea (encabezado simple, botones pill, animación). */
   variant?: 'default' | 'panel';
 }
 
+const DARK_PAPER = '#1c252e'; // mismo que tablas/drawer en modo oscuro
+
 const panelPaperProps = (theme: Theme) => ({
   width: { xs: '100%' as const, sm: 720, md: 800 },
   maxWidth: '100%',
-  bgcolor: theme.palette.background.paper,
+  height: '100vh',
+  maxHeight: '100vh',
+  flex: 'none',
+  overflow: 'hidden',
+  display: 'flex',
+  flexDirection: 'column',
+  bgcolor: theme.palette.mode === 'dark' ? DARK_PAPER : theme.palette.background.paper,
   background: theme.palette.mode === 'dark'
-    ? `linear-gradient(180deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`
+    ? `linear-gradient(180deg, ${DARK_PAPER} 0%, ${theme.palette.background.default} 100%)`
     : `linear-gradient(180deg, ${theme.palette.background.paper} 0%, ${theme.palette.grey[50]} 100%)`,
   boxShadow: theme.palette.mode === 'dark'
     ? '-8px 0 24px rgba(0,0,0,0.4)'
@@ -40,20 +50,29 @@ const panelPaperProps = (theme: Theme) => ({
 
 const panelContentSx = (theme: Theme) => ({
   flex: 1,
+  minHeight: 0,
   overflow: 'auto',
+  overflowX: 'hidden',
   mx: -3,
   py: 3,
+  pb: 4,
   mb: -3,
   maxWidth: 710,
   alignSelf: 'center',
   width: '100%',
   '& .MuiOutlinedInput-root': {
+    borderRadius: 1,
+    '& .MuiOutlinedInput-notchedOutline': {
+      borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : 'rgba(0, 0, 0, 0.23)',
+      borderWidth: '1px',
+      borderRadius: 1,
+    },
     '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-      borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+      borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : 'rgba(0, 0, 0, 0.23)',
       borderWidth: '1px',
     },
     '&:hover .MuiOutlinedInput-notchedOutline': {
-      borderColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.23)' : 'rgba(0, 0, 0, 0.23)',
+      borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : 'rgba(0, 0, 0, 0.23)',
     },
   },
 });
@@ -65,6 +84,7 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
   onSubmit,
   submitLabel = 'Crear',
   cancelLabel = 'Cancelar',
+  submitDisabled = false,
   children,
   width = { xs: '100%', sm: 380, md: 420 },
   variant = 'default',
@@ -97,8 +117,8 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
         }}
         PaperProps={{ sx: panelPaperProps(theme) }}
       >
-        <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 4, py: 3 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 4, py: 3, flexShrink: 0 }}>
             <Typography variant="h6" sx={{ fontWeight: 600 }}>
               {title}
             </Typography>
@@ -109,7 +129,7 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
           <Box sx={panelContentSx(theme)}>
             {children}
           </Box>
-          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-start', px: 5.5, py: 2 }}>
+          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-start', px: 5.5, py: 2, flexShrink: 0 }}>
             <Button
               onClick={onClose}
               sx={{
@@ -131,6 +151,7 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
             <Button
               onClick={onSubmit}
               variant="contained"
+              disabled={submitDisabled}
               sx={{
                 borderRadius: '5px',
                 px: 2.5,
@@ -166,7 +187,7 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
         sx: {
           width,
           maxWidth: '100%',
-          bgcolor: theme.palette.background.paper,
+          bgcolor: theme.palette.mode === 'dark' ? DARK_PAPER : theme.palette.background.paper,
           color: theme.palette.text.primary,
           boxShadow: 'none',
           border: 'none',
@@ -190,7 +211,7 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        bgcolor: theme.palette.background.paper,
+        bgcolor: theme.palette.mode === 'dark' ? DARK_PAPER : theme.palette.background.paper,
         color: theme.palette.text.primary,
         '& *': { color: 'inherit' },
       }}>
@@ -204,7 +225,7 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
           background: theme.palette.mode === 'dark'
             ? `linear-gradient(135deg, ${taxiMonterricoColors.green}15 0%, ${taxiMonterricoColors.orange}15 100%)`
             : `linear-gradient(135deg, ${taxiMonterricoColors.green}0D 0%, ${taxiMonterricoColors.orange}0D 100%)`,
-          bgcolor: theme.palette.background.paper,
+          bgcolor: theme.palette.mode === 'dark' ? DARK_PAPER : theme.palette.background.paper,
         }}>
           <Typography variant="h6" sx={{
             fontWeight: 700,
@@ -241,15 +262,15 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
           px: 3,
           py: 2,
           position: 'relative',
-          bgcolor: theme.palette.background.paper,
+          bgcolor: theme.palette.mode === 'dark' ? DARK_PAPER : theme.palette.background.paper,
           color: theme.palette.text.primary,
           background: theme.palette.mode === 'dark'
-            ? `linear-gradient(180deg, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`
+            ? `linear-gradient(180deg, ${DARK_PAPER} 0%, ${theme.palette.background.default} 100%)`
             : `linear-gradient(180deg, ${theme.palette.background.paper} 0%, ${theme.palette.grey[50]} 100%)`,
           '& .MuiPopover-root': {
             zIndex: '2000 !important',
             '& .MuiPaper-root': {
-              bgcolor: theme.palette.background.paper,
+              bgcolor: theme.palette.mode === 'dark' ? DARK_PAPER : theme.palette.background.paper,
               color: theme.palette.text.primary,
               boxShadow: theme.palette.mode === 'dark'
                 ? '0 8px 24px rgba(0,0,0,0.5) !important'
@@ -499,6 +520,7 @@ export const FormDrawer: React.FC<FormDrawerProps> = ({
             <Button 
               onClick={onSubmit} 
               variant="contained"
+              disabled={submitDisabled}
               sx={{
                 background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%) !important`,
                 color: `${theme.palette.common.white} !important`,

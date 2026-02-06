@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -29,6 +29,7 @@ import {
   Checkbox,
   Popover,
 } from '@mui/material';
+import type { Theme } from '@mui/material/styles';
 import { Add, Delete, Search, Visibility, UploadFile, FileDownload, FilterList, Close, ExpandMore, Remove, Bolt, Edit, ChevronLeft, ChevronRight, MoreVert, ViewColumn, Phone, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
@@ -65,6 +66,289 @@ interface Company {
   Owner?: { firstName: string; lastName: string };
 }
 
+const getInitialFormData = (editingCompany: Company | null) => {
+  if (editingCompany) {
+    return {
+      name: editingCompany.name,
+      domain: editingCompany.domain || '',
+      linkedin: (editingCompany as any).linkedin || '',
+      companyname: editingCompany.companyname || '',
+      phone: editingCompany.phone || '',
+      email: (editingCompany as any).email || '',
+      leadSource: (editingCompany as any).leadSource || '',
+      lifecycleStage: editingCompany.lifecycleStage,
+      estimatedRevenue: (editingCompany as any).estimatedRevenue || '',
+      ruc: editingCompany.ruc || '',
+      address: editingCompany.address || '',
+      city: editingCompany.city || '',
+      state: editingCompany.state || '',
+      country: editingCompany.country || '',
+      isRecoveredClient: (editingCompany as any).isRecoveredClient || false,
+      ownerId: editingCompany.ownerId?.toString() || '',
+    };
+  }
+  return {
+    name: '', domain: '', linkedin: '', companyname: '', phone: '', email: '',
+    leadSource: '', lifecycleStage: 'lead', estimatedRevenue: '', ruc: '',
+    address: '', city: '', state: '', country: '', isRecoveredClient: false, ownerId: '',
+  };
+};
+
+type CompanyFormContentProps = {
+  initialData: ReturnType<typeof getInitialFormData>;
+  formDataRef: React.MutableRefObject<{ formData: ReturnType<typeof getInitialFormData>; setFormData: React.Dispatch<React.SetStateAction<ReturnType<typeof getInitialFormData>>> }>;
+  user: any;
+  users: any[];
+  editingCompany: Company | null;
+  theme: Theme;
+  rucError: string;
+  nameError: string;
+  rucValidationError: string;
+  loadingRuc: boolean;
+  setRucError: (v: string) => void;
+  setNameError: (v: string) => void;
+  setRucValidationError: (v: string) => void;
+  setLoadingRuc: (v: boolean) => void;
+  onRucChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, formData: ReturnType<typeof getInitialFormData>) => void;
+  onCompanyNameChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onNameChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, formData: ReturnType<typeof getInitialFormData>) => void;
+  onPhoneChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onAddressChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onCityChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onStateChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onCountryChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onDomainChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onSearchRuc: () => void;
+  onFormDataChange: (updates: Partial<ReturnType<typeof getInitialFormData>>) => void;
+};
+
+const CompanyFormContent: React.FC<CompanyFormContentProps> = (props) => {
+  const {
+    initialData,
+    formDataRef,
+    user,
+    users,
+    editingCompany,
+    theme,
+    rucError,
+    nameError,
+    rucValidationError,
+    loadingRuc,
+    setRucError,
+    setNameError,
+    setRucValidationError,
+    setLoadingRuc,
+    onRucChange,
+    onCompanyNameChange,
+    onNameChange,
+    onPhoneChange,
+    onAddressChange,
+    onCityChange,
+    onStateChange,
+    onCountryChange,
+    onDomainChange,
+    onSearchRuc,
+    onFormDataChange,
+  } = props;
+  const [formData, setFormData] = useState(initialData);
+  useEffect(() => {
+    formDataRef.current = { formData, setFormData };
+  });
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 4, rowGap: 0.5, alignItems: 'start' }}>
+        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
+          RUC <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
+        </Typography>
+        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>Razón social</Typography>
+        <Box sx={{ minWidth: 0 }}>
+          <TextField
+            size="small"
+            value={formData.ruc}
+            onChange={(e) => onRucChange(e, formData)}
+            error={!!rucError || !!rucValidationError}
+            helperText={rucError || rucValidationError}
+            inputProps={{ maxLength: 11, style: { fontSize: '1rem' } }}
+            InputProps={{
+              sx: { '& input': { py: 1.05 } },
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={onSearchRuc}
+                    disabled={loadingRuc || !formData.ruc || formData.ruc.length < 11}
+                    sx={{ color: taxiMonterricoColors.green, '&:hover': { bgcolor: `${taxiMonterricoColors.green}15` }, '&.Mui-disabled': { color: theme.palette.text.disabled } }}
+                  >
+                    {loadingRuc ? <CircularProgress size={20} /> : <Search />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+            fullWidth
+          />
+        </Box>
+        <Box sx={{ minWidth: 0 }}>
+          <TextField size="small" value={formData.companyname} onChange={onCompanyNameChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+        </Box>
+        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>
+          Nombre comercial <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
+        </Typography>
+        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Teléfono</Typography>
+        <Box sx={{ minWidth: 0 }}>
+          <TextField size="small" value={formData.name} onChange={(e) => onNameChange(e, formData)} error={!!nameError} helperText={nameError} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+        </Box>
+        <Box sx={{ minWidth: 0 }}>
+          <TextField size="small" value={formData.phone} onChange={onPhoneChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+        </Box>
+        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Distrito</Typography>
+        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Provincia</Typography>
+        <Box sx={{ minWidth: 0 }}>
+          <TextField size="small" value={formData.city} onChange={onCityChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+        </Box>
+        <Box sx={{ minWidth: 0 }}>
+          <TextField size="small" value={formData.state} onChange={onStateChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+        </Box>
+        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Departamento</Typography>
+        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Dirección</Typography>
+        <Box sx={{ minWidth: 0 }}>
+          <TextField size="small" value={formData.country} onChange={onCountryChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+        </Box>
+        <Box sx={{ minWidth: 0 }}>
+          <TextField size="small" value={formData.address} onChange={onAddressChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+        </Box>
+        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Dominio</Typography>
+        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>LinkedIn</Typography>
+        <Box sx={{ minWidth: 0 }}>
+          <TextField size="small" value={formData.domain} onChange={onDomainChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+        </Box>
+        <Box sx={{ minWidth: 0 }}>
+          <TextField size="small" value={formData.linkedin} onChange={(e) => onFormDataChange({ linkedin: e.target.value })} placeholder="https://www.linkedin.com/company/..." fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+        </Box>
+        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Correo</Typography>
+        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Origen de lead</Typography>
+        <Box sx={{ minWidth: 0 }}>
+          <TextField size="small" type="email" value={formData.email} onChange={(e) => onFormDataChange({ email: e.target.value })} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
+        </Box>
+        <Box sx={{ minWidth: 0 }}>
+          <TextField
+            select
+            size="small"
+            value={formData.leadSource || ''}
+            onChange={(e) => onFormDataChange({ leadSource: e.target.value })}
+            fullWidth
+            inputProps={{ style: { fontSize: '1rem' } }}
+            InputProps={{ sx: { '& input': { py: 1.05 } } }}
+            SelectProps={{ MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
+          >
+            <MenuItem value="">-- Seleccionar --</MenuItem>
+            <MenuItem value="referido">Referido</MenuItem>
+            <MenuItem value="base">Base</MenuItem>
+            <MenuItem value="entorno">Entorno</MenuItem>
+            <MenuItem value="feria">Feria</MenuItem>
+            <MenuItem value="masivo">Masivo</MenuItem>
+          </TextField>
+        </Box>
+        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Etapa del Ciclo de Vida</Typography>
+        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Facturación</Typography>
+        <Box sx={{ minWidth: 0 }}>
+          <TextField
+            select
+            size="small"
+            value={formData.lifecycleStage}
+            onChange={(e) => onFormDataChange({ lifecycleStage: e.target.value })}
+            fullWidth
+            inputProps={{ style: { fontSize: '1rem' } }}
+            InputProps={{ sx: { '& input': { py: 1.05 } } }}
+            SelectProps={{ MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
+          >
+            <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
+            <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
+            <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+            <MenuItem value="lead">Lead</MenuItem>
+            <MenuItem value="contacto">Contacto</MenuItem>
+            <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+            <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+            <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
+            <MenuItem value="negociacion">Negociación</MenuItem>
+            <MenuItem value="licitacion">Licitación</MenuItem>
+            <MenuItem value="licitacion_etapa_final">Licitación Etapa Final</MenuItem>
+            <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+            <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
+            <MenuItem value="activo">Activo</MenuItem>
+          </TextField>
+        </Box>
+        <Box sx={{ minWidth: 0 }}>
+          <TextField
+            size="small"
+            type="number"
+            value={formData.estimatedRevenue}
+            onChange={(e) => onFormDataChange({ estimatedRevenue: e.target.value })}
+            fullWidth
+            inputProps={{ style: { fontSize: '1rem' } }}
+            InputProps={{ startAdornment: <InputAdornment position="start">S/</InputAdornment>, sx: { '& input': { py: 1.05 } } }}
+          />
+        </Box>
+        {(user?.role === 'admin' || user?.role === 'jefe_comercial') ? (
+          <>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Propietario</Typography>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Cliente Recuperado</Typography>
+            <Box sx={{ minWidth: 0 }}>
+              <TextField
+                select
+                size="small"
+                value={formData.ownerId || ''}
+                onChange={(e) => onFormDataChange({ ownerId: e.target.value })}
+                fullWidth
+                inputProps={{ style: { fontSize: '1rem' } }}
+                InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                SelectProps={{ MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
+              >
+                <MenuItem value="">Sin asignar</MenuItem>
+                {users.filter((u) => u.role === 'user').map((userOption) => (
+                  <MenuItem key={userOption.id} value={userOption.id.toString()}>{userOption.firstName} {userOption.lastName}</MenuItem>
+                ))}
+              </TextField>
+            </Box>
+            <Box sx={{ minWidth: 0 }}>
+              <TextField
+                select
+                size="small"
+                value={formData.isRecoveredClient ? 'si' : 'no'}
+                onChange={(e) => onFormDataChange({ isRecoveredClient: e.target.value === 'si' })}
+                fullWidth
+                inputProps={{ style: { fontSize: '1rem' } }}
+                InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                SelectProps={{ MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
+              >
+                <MenuItem value="no">No</MenuItem>
+                <MenuItem value="si">Sí</MenuItem>
+              </TextField>
+            </Box>
+          </>
+        ) : (
+          <>
+            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5, gridColumn: '1 / -1' }}>Cliente Recuperado</Typography>
+            <Box sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
+              <TextField
+                select
+                size="small"
+                value={formData.isRecoveredClient ? 'si' : 'no'}
+                onChange={(e) => onFormDataChange({ isRecoveredClient: e.target.value === 'si' })}
+                fullWidth
+                inputProps={{ style: { fontSize: '1rem' } }}
+                InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                SelectProps={{ MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
+              >
+                <MenuItem value="no">No</MenuItem>
+                <MenuItem value="si">Sí</MenuItem>
+              </TextField>
+            </Box>
+          </>
+        )}
+      </Box>
+    </Box>
+  );
+};
+
 const Companies: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
@@ -77,23 +361,9 @@ const Companies: React.FC = () => {
   const [search] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [totalCompanies, setTotalCompanies] = useState(0);
-  const [formData, setFormData] = useState({
-    name: '',
-    domain: '',
-    linkedin: '',
-    companyname: '',
-    phone: '',
-    email: '',
-    leadSource: '',
-    lifecycleStage: 'lead',
-    estimatedRevenue: '',
-    ruc: '',
-    address: '',
-    city: '',
-    state: '',
-    country: '',
-    isRecoveredClient: false,
-    ownerId: '',
+  const companyFormDataRef = useRef<{ formData: ReturnType<typeof getInitialFormData>; setFormData: React.Dispatch<React.SetStateAction<ReturnType<typeof getInitialFormData>>> }>({
+    formData: getInitialFormData(null),
+    setFormData: () => {},
   });
   const [loadingRuc, setLoadingRuc] = useState(false);
   const [rucError, setRucError] = useState('');
@@ -332,63 +602,58 @@ const Companies: React.FC = () => {
     }
   }, [validateCompanyName, validateCompanyRuc]);
 
-  // Handlers memoizados para evitar re-renders innecesarios
-  const handleRucChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  // Handlers que actualizan el estado del formulario en el hijo (vía ref) para no re-renderizar toda la página al escribir
+  const handleRucChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, formData: ReturnType<typeof getInitialFormData>) => {
     const value = e.target.value.replace(/\D/g, '');
     const limitedValue = value.slice(0, 11);
-    setFormData((prev) => ({ ...prev, ruc: limitedValue }));
+    companyFormDataRef.current?.setFormData((prev) => ({ ...prev, ruc: limitedValue }));
     setRucError('');
-    
     if (limitedValue.length === 11) {
       validateCompanyRuc(limitedValue);
-      // Validar nombre si tiene contenido
-      if (formData.name && formData.name.trim() !== '') {
-        validateCompanyName(formData.name);
-      }
+      if (formData?.name && formData.name.trim() !== '') validateCompanyName(formData.name);
     } else {
       setRucValidationError('');
-      // Validar nombre si tiene contenido
-      if (formData.name && formData.name.trim() !== '') {
-        validateCompanyName(formData.name);
-      }
+      if (formData?.name && formData.name.trim() !== '') validateCompanyName(formData.name);
     }
-  }, [formData.name, validateCompanyRuc, validateCompanyName]);
+  }, [validateCompanyRuc, validateCompanyName]);
 
-  const handleCompanyNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, companyname: e.target.value }));
+  const handleCompanyNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    companyFormDataRef.current?.setFormData((prev) => ({ ...prev, companyname: e.target.value }));
   }, []);
 
-  const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, formData: ReturnType<typeof getInitialFormData>) => {
     const newName = e.target.value;
-    setFormData((prev) => ({ ...prev, name: newName }));
-    if (!newName.trim()) {
-      setNameError('');
-    }
-    validateAllFields(newName, formData.ruc);
-  }, [formData.ruc, validateAllFields]);
+    companyFormDataRef.current?.setFormData((prev) => ({ ...prev, name: newName }));
+    if (!newName.trim()) setNameError('');
+    validateAllFields(newName, formData?.ruc ?? '');
+  }, [validateAllFields]);
 
-  const handlePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, phone: e.target.value }));
+  const handlePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    companyFormDataRef.current?.setFormData((prev) => ({ ...prev, phone: e.target.value }));
   }, []);
 
-  const handleAddressChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, address: e.target.value }));
+  const handleAddressChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    companyFormDataRef.current?.setFormData((prev) => ({ ...prev, address: e.target.value }));
   }, []);
 
-  const handleCityChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, city: e.target.value }));
+  const handleCityChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    companyFormDataRef.current?.setFormData((prev) => ({ ...prev, city: e.target.value }));
   }, []);
 
-  const handleStateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, state: e.target.value }));
+  const handleStateChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    companyFormDataRef.current?.setFormData((prev) => ({ ...prev, state: e.target.value }));
   }, []);
 
-  const handleCountryChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, country: e.target.value }));
+  const handleCountryChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    companyFormDataRef.current?.setFormData((prev) => ({ ...prev, country: e.target.value }));
   }, []);
 
-  const handleDomainChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, domain: e.target.value }));
+  const handleDomainChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    companyFormDataRef.current?.setFormData((prev) => ({ ...prev, domain: e.target.value }));
+  }, []);
+
+  const handleFormDataChange = useCallback((updates: Partial<ReturnType<typeof getInitialFormData>>) => {
+    companyFormDataRef.current?.setFormData((prev) => ({ ...prev, ...updates }));
   }, []);
 
   // Función para vista previa
@@ -1127,47 +1392,7 @@ const Companies: React.FC = () => {
   };
 
   const handleOpen = (company?: Company) => {
-    if (company) {
-      setEditingCompany(company);
-      setFormData({
-        name: company.name,
-        domain: company.domain || '',
-        linkedin: (company as any).linkedin || '',
-        companyname: company.companyname || '',
-        phone: company.phone || '',
-        email: (company as any).email || '',
-        leadSource: (company as any).leadSource || '',
-        lifecycleStage: company.lifecycleStage,
-        estimatedRevenue: (company as any).estimatedRevenue || '',
-        ruc: company.ruc || '',
-        address: company.address || '',
-        city: company.city || '',
-        state: company.state || '',
-        country: company.country || '',
-        isRecoveredClient: (company as any).isRecoveredClient || false,
-        ownerId: company.ownerId?.toString() || '',
-      });
-    } else {
-      setEditingCompany(null);
-      setFormData({
-        name: '',
-        domain: '',
-        linkedin: '',
-        companyname: '',
-        phone: '',
-        email: '',
-        leadSource: '',
-        lifecycleStage: 'lead',
-        estimatedRevenue: '',
-        ruc: '',
-        address: '',
-        city: '',
-        state: '',
-        country: '',
-        isRecoveredClient: false,
-        ownerId: '',
-      });
-    }
+    setEditingCompany(company ?? null);
     setRucError('');
     setRucInfo(null);
     setRucDebts(null);
@@ -1187,7 +1412,8 @@ const Companies: React.FC = () => {
   };
 
   const handleSearchRuc = async () => {
-    if (!formData.ruc || formData.ruc.length < 11) {
+    const formData = companyFormDataRef.current?.formData;
+    if (!formData?.ruc || formData.ruc.length < 11) {
       setRucError('El RUC debe tener 11 dígitos');
       return;
     }
@@ -1196,9 +1422,7 @@ const Companies: React.FC = () => {
     setRucError('');
 
     try {
-      // Obtener el token de la API de Factiliza desde variables de entorno
       const factilizaToken = process.env.REACT_APP_FACTILIZA_TOKEN || '';
-      
       if (!factilizaToken) {
         setRucError('Token de API no configurado. Por favor, configure REACT_APP_FACTILIZA_TOKEN');
         setLoadingRuc(false);
@@ -1224,7 +1448,6 @@ const Companies: React.FC = () => {
         // Guardar toda la información para mostrarla en el panel lateral
         setRucInfo(data);
         
-        // Actualizar el formulario con los datos obtenidos
         const updatedFormData = {
           ...formData,
           name: newName,
@@ -1234,7 +1457,7 @@ const Companies: React.FC = () => {
           state: data.provincia || '',
           country: data.departamento || 'Perú',
         };
-        setFormData(updatedFormData);
+        companyFormDataRef.current?.setFormData(updatedFormData);
 
         // Consultar deudas automáticamente después de obtener la información del RUC
         await handleSearchDebts(currentRuc);
@@ -1458,69 +1681,31 @@ const Companies: React.FC = () => {
     setNameError('');
     setRucValidationError('');
     setErrorMessage(null);
-    setFormData({
-      name: '',
-      domain: '',
-      linkedin: '',
-      companyname: '',
-      phone: '',
-      email: '',
-      leadSource: '',
-      lifecycleStage: 'lead',
-      estimatedRevenue: '',
-      ruc: '',
-      address: '',
-      city: '',
-      state: '',
-      country: '',
-      isRecoveredClient: false,
-      ownerId: '',
-    });
-    
-    // Limpiar timeouts pendientes
-    if (nameValidationTimeoutRef.current) {
-      clearTimeout(nameValidationTimeoutRef.current);
-    }
-    if (rucValidationTimeoutRef.current) {
-      clearTimeout(rucValidationTimeoutRef.current);
-    }
+    if (nameValidationTimeoutRef.current) clearTimeout(nameValidationTimeoutRef.current);
+    if (rucValidationTimeoutRef.current) clearTimeout(rucValidationTimeoutRef.current);
   };
 
   const handleSubmit = async () => {
-    // Validar que el nombre sea requerido
+    const formData = companyFormDataRef.current?.formData;
+    if (!formData) return;
     if (!formData.name || !formData.name.trim()) {
       setNameError('El nombre de la empresa es requerido');
       setErrorMessage('Por favor, completa el nombre de la empresa antes de guardar.');
       return;
     }
-
-    // Validar antes de enviar
     if (nameError) {
       setErrorMessage('Por favor, corrige el error en el nombre antes de guardar.');
       return;
     }
-
     if (rucValidationError) {
       setErrorMessage('Por favor, corrige el error en el RUC antes de guardar.');
       return;
     }
-
     try {
-      const submitData: any = {
-        ...formData,
-      };
-
-      // Manejar ownerId solo si el usuario tiene permisos (admin o jefe_comercial)
+      const submitData: any = { ...formData };
       if (user && (user.role === 'admin' || user.role === 'jefe_comercial')) {
-        if (formData.ownerId && formData.ownerId.trim() !== '') {
-          submitData.ownerId = Number(formData.ownerId);
-        } else {
-          // Si está vacío, enviar null para que el backend lo maneje
-          submitData.ownerId = null;
-        }
+        submitData.ownerId = formData.ownerId?.trim() ? Number(formData.ownerId) : null;
       }
-      // Si el usuario no tiene permisos, no incluimos ownerId y el backend usará req.userId automáticamente
-
       if (editingCompany) {
         await api.put(`/companies/${editingCompany.id}`, submitData);
       } else {
@@ -1530,22 +1715,13 @@ const Companies: React.FC = () => {
       fetchCompanies();
     } catch (error: any) {
       console.error('Error saving company:', error);
-      
-      // Manejar errores del servidor
       if (error.response?.status === 400 && error.response?.data?.error) {
         const errorMessage = error.response.data.error;
         const duplicateField = error.response.data.duplicateField;
         const field = error.response.data.field;
-        
-        if (field === 'name' || duplicateField === 'name') {
-          setNameError(errorMessage);
-          // El error ya se muestra en el campo, no necesitamos Snackbar adicional
-        } else if (duplicateField === 'ruc') {
-          setRucValidationError(errorMessage);
-          // El error ya se muestra en el campo, no necesitamos Snackbar adicional
-        } else {
-          setErrorMessage(errorMessage);
-        }
+        if (field === 'name' || duplicateField === 'name') setNameError(errorMessage);
+        else if (duplicateField === 'ruc') setRucValidationError(errorMessage);
+        else setErrorMessage(errorMessage);
       } else {
         setErrorMessage('Error al guardar la empresa. Por favor, intenta nuevamente.');
       }
@@ -3321,179 +3497,36 @@ const Companies: React.FC = () => {
         submitLabel={editingCompany ? 'Actualizar' : 'Crear'}
         variant="panel"
       >
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 4, rowGap: 0.5, alignItems: 'start' }}>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', gridColumn: '1 / -1' }}>
-              {companyLabels.basicInformation}
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
-              RUC <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>Razón social</Typography>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField
-                size="small"
-                value={formData.ruc}
-                onChange={handleRucChange}
-                error={!!rucError || !!rucValidationError}
-                helperText={rucError || rucValidationError}
-                inputProps={{ maxLength: 11, style: { fontSize: '1rem' } }}
-                InputProps={{
-                  sx: { '& input': { py: 1.05 } },
-                  endAdornment: (
-                    <InputAdornment position="end">
-                      <IconButton
-                        onClick={handleSearchRuc}
-                        disabled={loadingRuc || !formData.ruc || formData.ruc.length < 11}
-                        sx={{ color: taxiMonterricoColors.green, '&:hover': { bgcolor: `${taxiMonterricoColors.green}15` }, '&.Mui-disabled': { color: theme.palette.text.disabled } }}
-                      >
-                        {loadingRuc ? <CircularProgress size={20} /> : <Search />}
-                      </IconButton>
-                    </InputAdornment>
-                  ),
-                }}
-                fullWidth
-              />
-            </Box>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField size="small" value={formData.companyname} onChange={handleCompanyNameChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
-            </Box>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>
-              Nombre comercial <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Teléfono</Typography>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField size="small" value={formData.name} onChange={handleNameChange} error={!!nameError} helperText={nameError} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
-            </Box>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField size="small" value={formData.phone} onChange={handlePhoneChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
-            </Box>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5, gridColumn: '1 / -1' }}>Dirección</Typography>
-            <Box sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
-              <TextField size="small" value={formData.address} onChange={handleAddressChange} multiline rows={2} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
-            </Box>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Distrito</Typography>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Provincia</Typography>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField size="small" value={formData.city} onChange={handleCityChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
-            </Box>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField size="small" value={formData.state} onChange={handleStateChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
-            </Box>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Departamento</Typography>
-            <Box />
-            <Box sx={{ minWidth: 0 }}>
-              <TextField size="small" value={formData.country} onChange={handleCountryChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
-            </Box>
-            <Box />
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5, gridColumn: '1 / -1' }}>Información Comercial</Typography>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Dominio</Typography>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>LinkedIn</Typography>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField size="small" value={formData.domain} onChange={handleDomainChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
-            </Box>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField size="small" value={formData.linkedin} onChange={(e) => setFormData({ ...formData, linkedin: e.target.value })} placeholder="https://www.linkedin.com/company/..." fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
-            </Box>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Correo</Typography>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Origen de lead</Typography>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField size="small" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
-            </Box>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField
-                select
-                size="small"
-                value={formData.leadSource || ''}
-                onChange={(e) => setFormData({ ...formData, leadSource: e.target.value })}
-                fullWidth
-                inputProps={{ style: { fontSize: '1rem' } }}
-                InputProps={{ sx: { '& input': { py: 1.05 } } }}
-                SelectProps={{ MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
-              >
-                <MenuItem value="">-- Seleccionar --</MenuItem>
-                <MenuItem value="referido">Referido</MenuItem>
-                <MenuItem value="base">Base</MenuItem>
-                <MenuItem value="entorno">Entorno</MenuItem>
-                <MenuItem value="feria">Feria</MenuItem>
-                <MenuItem value="masivo">Masivo</MenuItem>
-              </TextField>
-            </Box>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Etapa del Ciclo de Vida</Typography>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Facturación</Typography>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField
-                select
-                size="small"
-                value={formData.lifecycleStage}
-                onChange={(e) => setFormData({ ...formData, lifecycleStage: e.target.value })}
-                fullWidth
-                inputProps={{ style: { fontSize: '1rem' } }}
-                InputProps={{ sx: { '& input': { py: 1.05 } } }}
-                SelectProps={{ MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
-              >
-                <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
-                <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
-                <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
-                <MenuItem value="lead">Lead</MenuItem>
-                <MenuItem value="contacto">Contacto</MenuItem>
-                <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
-                <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-                <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
-                <MenuItem value="negociacion">Negociación</MenuItem>
-                <MenuItem value="licitacion">Licitación</MenuItem>
-                <MenuItem value="licitacion_etapa_final">Licitación Etapa Final</MenuItem>
-                <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
-                <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
-                <MenuItem value="activo">Activo</MenuItem>
-              </TextField>
-            </Box>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField
-                size="small"
-                type="number"
-                value={formData.estimatedRevenue}
-                onChange={(e) => setFormData({ ...formData, estimatedRevenue: e.target.value })}
-                fullWidth
-                inputProps={{ style: { fontSize: '1rem' } }}
-                InputProps={{ startAdornment: <InputAdornment position="start">S/</InputAdornment>, sx: { '& input': { py: 1.05 } } }}
-              />
-            </Box>
-            {(user?.role === 'admin' || user?.role === 'jefe_comercial') && (
-              <>
-                <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Propietario</Typography>
-                <Box />
-                <Box sx={{ minWidth: 0 }}>
-                  <TextField
-                    select
-                    size="small"
-                    value={formData.ownerId || ''}
-                    onChange={(e) => setFormData({ ...formData, ownerId: e.target.value })}
-                    fullWidth
-                    inputProps={{ style: { fontSize: '1rem' } }}
-                    InputProps={{ sx: { '& input': { py: 1.05 } } }}
-                    SelectProps={{ MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
-                  >
-                    <MenuItem value="">Sin asignar</MenuItem>
-                    {users.filter((u) => u.role === 'user').map((userOption) => (
-                      <MenuItem key={userOption.id} value={userOption.id.toString()}>{userOption.firstName} {userOption.lastName}</MenuItem>
-                    ))}
-                  </TextField>
-                </Box>
-                <Box />
-              </>
-            )}
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5, gridColumn: '1 / -1' }}>Cliente Recuperado</Typography>
-            <Box sx={{ gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Checkbox
-                checked={formData.isRecoveredClient}
-                onChange={(e) => setFormData({ ...formData, isRecoveredClient: e.target.checked })}
-                sx={{ color: taxiMonterricoColors.green, '&.Mui-checked': { color: taxiMonterricoColors.green } }}
-              />
-              <Typography variant="body2" sx={{ color: theme.palette.text.primary }}>Cliente Recuperado</Typography>
-            </Box>
-          </Box>
-        </Box>
+        {open && (
+          <CompanyFormContent
+            key={editingCompany?.id ?? 'new'}
+            initialData={getInitialFormData(editingCompany)}
+            formDataRef={companyFormDataRef}
+            user={user}
+            users={users}
+            editingCompany={editingCompany}
+            theme={theme}
+            rucError={rucError}
+            nameError={nameError}
+            rucValidationError={rucValidationError}
+            loadingRuc={loadingRuc}
+            setRucError={setRucError}
+            setNameError={setNameError}
+            setRucValidationError={setRucValidationError}
+            setLoadingRuc={setLoadingRuc}
+            onRucChange={handleRucChange}
+            onCompanyNameChange={handleCompanyNameChange}
+            onNameChange={handleNameChange}
+            onPhoneChange={handlePhoneChange}
+            onAddressChange={handleAddressChange}
+            onCityChange={handleCityChange}
+            onStateChange={handleStateChange}
+            onCountryChange={handleCountryChange}
+            onDomainChange={handleDomainChange}
+            onSearchRuc={handleSearchRuc}
+            onFormDataChange={handleFormDataChange}
+          />
+        )}
       </FormDrawer>
 
       {/* Modal de Confirmación de Eliminación */}
@@ -3642,7 +3675,7 @@ const Companies: React.FC = () => {
             )}
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={pageStyles.dialogActions}>
           {!importing && (
             <Button 
               onClick={() => {
@@ -3650,12 +3683,7 @@ const Companies: React.FC = () => {
                 setImportProgress({ current: 0, total: 0, success: 0, errors: 0, errorList: [] });
               }}
               variant="contained"
-              sx={{
-                bgcolor: taxiMonterricoColors.green,
-                '&:hover': {
-                  bgcolor: taxiMonterricoColors.greenDark,
-                },
-              }}
+              sx={pageStyles.saveButton}
             >
               Cerrar
             </Button>
@@ -4582,47 +4610,18 @@ const Companies: React.FC = () => {
             <Box sx={{ px: 2 }}>
               <Divider sx={{ mt: 0.25, mb: 1.5 }} />
             </Box>
-            <DialogActions sx={{ px: 2, pb: 1.5, pt: 0.5, gap: 0.75 }}>
+            <DialogActions sx={pageStyles.dialogActions}>
               <Button 
                 onClick={() => setTaskOpen(false)} 
-                size="small"
-                sx={{ 
-                  textTransform: 'none',
-                  color: theme.palette.text.secondary,
-                  fontWeight: 500,
-                  px: 2,
-                  py: 0.5,
-                  fontSize: '0.75rem',
-                  '&:hover': {
-                    bgcolor: theme.palette.action.hover,
-                  }
-                }}
+                sx={pageStyles.cancelButton}
               >
                 Cancelar
               </Button>
               <Button 
                 onClick={handleSaveTask} 
                 variant="contained" 
-                size="small"
                 disabled={savingActivity || !taskData.title.trim()}
-                sx={{ 
-                  textTransform: 'none',
-                  fontWeight: 500,
-                  px: 2,
-                  py: 0.5,
-                  fontSize: '0.75rem',
-                  bgcolor: taskData.title.trim() ? taxiMonterricoColors.green : theme.palette.action.disabledBackground,
-                  color: 'white',
-                  '&:hover': {
-                    bgcolor: taskData.title.trim() ? taxiMonterricoColors.green : theme.palette.action.disabledBackground,
-                    opacity: 0.9,
-                  },
-                  '&:disabled': {
-                    bgcolor: theme.palette.action.disabledBackground,
-                    color: theme.palette.action.disabled,
-                    boxShadow: 'none',
-                  }
-                }}
+                sx={pageStyles.saveButton}
               >
                 {savingActivity ? 'Guardando...' : 'Guardar'}
               </Button>

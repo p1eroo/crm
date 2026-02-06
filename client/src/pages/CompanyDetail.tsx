@@ -32,6 +32,7 @@ import { fas, faEnvelope } from "@fortawesome/free-solid-svg-icons";
 import api from "../config/api";
 import EmailComposer from "../components/EmailComposer";
 import { taxiMonterricoColors, hexToRgba } from "../theme/colors";
+import { pageStyles } from "../theme/styles";
 import {
   RecentActivitiesCard,
   LinkedContactsCard,
@@ -1841,20 +1842,15 @@ const tab2Content = (
               </Alert>
             )}
           </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseEditDialog} disabled={saving}>
+          <DialogActions sx={pageStyles.dialogActions}>
+            <Button onClick={handleCloseEditDialog} disabled={saving} sx={pageStyles.cancelButton}>
               Cancelar
             </Button>
             <Button 
               onClick={handleSaveCompany} 
               variant="contained"
               disabled={saving || !editFormData.name.trim()}
-              sx={{
-                bgcolor: taxiMonterricoColors.green,
-                "&:hover": {
-                  bgcolor: taxiMonterricoColors.greenDark,
-                },
-              }}
+              sx={pageStyles.saveButton}
             >
               {saving ? "Guardando..." : "Guardar"}
             </Button>
@@ -2325,36 +2321,20 @@ const tab2Content = (
             {contactToRemove?.name} ya no se asociará con {company?.name}.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ p: 2, gap: 1 }}>
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button
             onClick={() => {
               setRemoveContactDialogOpen(false);
               setContactToRemove(null);
             }}
-            sx={{
-              textTransform: "none",
-              color: theme.palette.text.secondary,
-              borderColor: theme.palette.divider,
-              "&:hover": {
-                borderColor: theme.palette.divider,
-                backgroundColor: theme.palette.action.hover,
-              },
-            }}
-            variant="outlined"
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
           <Button
             onClick={handleConfirmRemoveContact}
             variant="contained"
-            sx={{
-              textTransform: "none",
-              bgcolor: "#FF9800",
-              color: "white",
-              "&:hover": {
-                bgcolor: "#F57C00",
-              },
-            }}
+            sx={pageStyles.deleteButton}
           >
             Eliminar asociación
           </Button>
@@ -2387,22 +2367,13 @@ const tab2Content = (
             {companyToRemove?.name} ya no se asociará con {company?.name}.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ p: 2, gap: 1 }}>
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button
             onClick={() => {
               setRemoveCompanyDialogOpen(false);
               setCompanyToRemove(null);
             }}
-            sx={{
-              textTransform: "none",
-              color: theme.palette.text.secondary,
-              borderColor: theme.palette.divider,
-              "&:hover": {
-                borderColor: theme.palette.divider,
-                backgroundColor: theme.palette.action.hover,
-              },
-            }}
-            variant="outlined"
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
@@ -2410,18 +2381,7 @@ const tab2Content = (
             onClick={handleConfirmRemoveCompany}
             variant="contained"
             disabled={saving}
-            sx={{
-              textTransform: "none",
-              bgcolor: "#FF9800",
-              color: "white",
-              "&:hover": {
-                bgcolor: "#F57C00",
-              },
-              "&:disabled": {
-                bgcolor: theme.palette.action.disabledBackground,
-                color: theme.palette.action.disabled,
-              },
-            }}
+            sx={pageStyles.deleteButton}
           >
             {saving ? "Eliminando..." : "Eliminar asociación"}
           </Button>
@@ -2454,36 +2414,20 @@ const tab2Content = (
             {dealToRemove?.name} ya no se asociará con {company?.name}.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ p: 2, gap: 1 }}>
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button
             onClick={() => {
               setRemoveDealDialogOpen(false);
               setDealToRemove(null);
             }}
-            sx={{
-              textTransform: "none",
-              color: theme.palette.text.secondary,
-              borderColor: theme.palette.divider,
-              "&:hover": {
-                borderColor: theme.palette.divider,
-                backgroundColor: theme.palette.action.hover,
-              },
-            }}
-            variant="outlined"
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
           <Button
             onClick={handleConfirmRemoveDeal}
             variant="contained"
-            sx={{
-              textTransform: "none",
-              bgcolor: "#FF9800",
-              color: "white",
-              "&:hover": {
-                bgcolor: "#F57C00",
-              },
-            }}
+            sx={pageStyles.deleteButton}
           >
             Eliminar asociación
           </Button>

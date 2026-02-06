@@ -929,23 +929,11 @@ const Tickets: React.FC = () => {
             Esta acción no se puede deshacer. El ticket será eliminado permanentemente del sistema.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ 
-          px: 3, 
-          py: 2,
-          borderTop: `1px solid ${theme.palette.divider}`,
-          gap: 1,
-        }}>
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button 
             onClick={handleCancelDelete}
             disabled={deleting}
-            sx={{
-              textTransform: 'none',
-              color: theme.palette.text.secondary,
-              fontWeight: 500,
-              '&:hover': {
-                bgcolor: theme.palette.action.hover,
-              }
-            }}
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
@@ -953,20 +941,7 @@ const Tickets: React.FC = () => {
             onClick={handleConfirmDelete}
             disabled={deleting}
             variant="contained"
-            sx={{
-              textTransform: 'none',
-              fontWeight: 500,
-              borderRadius: 1.5,
-              px: 2.5,
-              bgcolor: theme.palette.error.main,
-              '&:hover': {
-                bgcolor: theme.palette.error.dark,
-              },
-              '&.Mui-disabled': {
-                bgcolor: theme.palette.error.light,
-                color: theme.palette.common.white,
-              }
-            }}
+            sx={pageStyles.deleteButton}
             startIcon={deleting ? <CircularProgress size={16} sx={{ color: theme.palette.common.white }} /> : <Delete />}
           >
             {deleting ? 'Eliminando...' : 'Eliminar'}

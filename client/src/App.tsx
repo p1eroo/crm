@@ -69,7 +69,7 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
     },
     background: {
       default: mode === 'light' ? '#fafafa' : '#1A2027', // Gris azulado muy oscuro, más cercano al negro
-      paper: mode === 'light' ? '#ffffff' : '#222B36', // Gris azulado oscuro para cards y elementos secundarios
+      paper: mode === 'light' ? '#ffffff' : '#1c252e', // Mismo tono que las tablas en modo oscuro
     },
     text: {
       primary: mode === 'light' ? '#1F2937' : '#E5E7EB', // Gris claro premium
@@ -79,7 +79,7 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
     action: {
       active: mode === 'light' ? 'rgba(0, 0, 0, 0.54)' : 'rgba(229, 231, 235, 0.7)',
       hover: mode === 'light' ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.08)',
-      selected: mode === 'light' ? 'rgba(0, 0, 0, 0.08)' : '#222B36',
+      selected: mode === 'light' ? 'rgba(0, 0, 0, 0.08)' : '#1c252e',
       disabled: mode === 'light' ? 'rgba(0, 0, 0, 0.26)' : 'rgba(148, 163, 184, 0.3)',
       disabledBackground: mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(148, 163, 184, 0.12)',
     },
@@ -131,14 +131,25 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
     },
   },
   components: {
-    // MuiPaper: borderRadius 16, border 1px con divider, background paper
+    // MuiPaper: borderRadius 16, border 1px con divider, background paper (mismo #1c252e que tablas en dark)
     MuiPaper: {
       styleOverrides: {
         root: ({ theme }: { theme: Theme }) => ({
           borderRadius: 0,
           border: `1px solid ${theme.palette.divider}`,
-          backgroundColor: theme.palette.background.paper,
+          backgroundColor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
           transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+        }),
+      },
+    },
+    // MuiDialog: forzar Paper del modal al mismo tono que tablas/drawer en dark (!important para ganar a PaperProps.sx)
+    MuiDialog: {
+      styleOverrides: {
+        paper: ({ theme }: { theme: Theme }) => ({
+          ...(theme.palette.mode === 'dark' && {
+            backgroundColor: '#1c252e !important',
+            background: '#1c252e !important',
+          }),
         }),
       },
     },

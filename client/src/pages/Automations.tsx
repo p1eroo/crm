@@ -23,6 +23,7 @@ import {
 } from '@mui/material';
 import { Add, Edit, Delete } from '@mui/icons-material';
 import api from '../config/api';
+import { pageStyles } from '../theme/styles';
 
 interface Automation {
   id: number;
@@ -210,9 +211,9 @@ const Automations: React.FC = () => {
             />
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancelar</Button>
-          <Button onClick={handleSubmit} variant="contained">
+        <DialogActions sx={pageStyles.dialogActions}>
+          <Button onClick={handleClose} sx={pageStyles.cancelButton}>Cancelar</Button>
+          <Button onClick={handleSubmit} variant="contained" sx={pageStyles.saveButton}>
             {editingAutomation ? 'Actualizar' : 'Crear'}
           </Button>
         </DialogActions>

@@ -24,6 +24,7 @@ import axios from "axios";
 import api from "../../config/api";
 import { taxiMonterricoColors } from "../../theme/colors";
 import { companyLabels } from "../../constants/companyLabels";
+import { pageStyles } from "../../theme/styles";
 
 interface User {
   id: number;
@@ -1008,7 +1009,7 @@ const ContactModal: React.FC<ContactModalProps> = ({
           </Box>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2.5, pt: 0, justifyContent: "flex-start", gap: 0.75 }}>
+      <DialogActions sx={pageStyles.dialogActions}>
         <Button
           onClick={
             contactDialogTab === "create"
@@ -1017,35 +1018,7 @@ const ContactModal: React.FC<ContactModalProps> = ({
           }
           variant="contained"
           disabled={saving}
-          sx={{
-            textTransform: "none",
-            fontWeight: 600,
-            px: 4,
-            py: 0.875,
-            fontSize: "0.9375rem",
-            bgcolor: taxiMonterricoColors.green,
-            color: "white",
-            borderRadius: 0.5,
-            boxShadow: saving
-              ? "none"
-              : `0 4px 12px ${taxiMonterricoColors.green}40`,
-            "&:hover": {
-              bgcolor: taxiMonterricoColors.greenDark,
-              boxShadow: saving
-                ? "none"
-                : `0 6px 16px ${taxiMonterricoColors.green}50`,
-              transform: "translateY(-2px)",
-            },
-            "&:active": {
-              transform: "translateY(0)",
-            },
-            "&.Mui-disabled": {
-              bgcolor: theme.palette.action.disabledBackground,
-              color: theme.palette.action.disabled,
-              boxShadow: "none",
-            },
-            transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-          }}
+          sx={pageStyles.saveButton}
         >
           {saving
             ? "Guardando..."

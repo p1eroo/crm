@@ -3047,7 +3047,7 @@ const Contacts: React.FC = () => {
             </TextField>
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button
             onClick={() => {
               setCreateCompanyDialogOpen(false);
@@ -3066,7 +3066,7 @@ const Contacts: React.FC = () => {
               });
               setRucError("");
             }}
-            sx={{ textTransform: "none" }}
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
@@ -3074,14 +3074,7 @@ const Contacts: React.FC = () => {
             onClick={handleCreateCompany}
             variant="contained"
             disabled={!companyFormData.name.trim()}
-            sx={{
-              textTransform: "none",
-              bgcolor: taxiMonterricoColors.green,
-              "&:hover": {
-                bgcolor: taxiMonterricoColors.green,
-                opacity: 0.9,
-              },
-            }}
+            sx={pageStyles.saveButton}
           >
             Crear
           </Button>
@@ -3199,7 +3192,7 @@ const Contacts: React.FC = () => {
             )}
           </Box>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={pageStyles.dialogActions}>
           {!importing && (
             <Button
               onClick={() => {
@@ -3213,12 +3206,7 @@ const Contacts: React.FC = () => {
                 });
               }}
               variant="contained"
-              sx={{
-                bgcolor: taxiMonterricoColors.green,
-                "&:hover": {
-                  bgcolor: taxiMonterricoColors.greenDark,
-                },
-              }}
+              sx={pageStyles.saveButton}
             >
               Cerrar
             </Button>

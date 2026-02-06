@@ -36,6 +36,7 @@ import {
   ChevronRight,
 } from "@mui/icons-material";
 import { taxiMonterricoColors } from "../../theme/colors";
+import { pageStyles } from "../../theme/styles";
 import api from "../../config/api";
 import { formatDatePeru } from "../../utils/dateUtils";
 
@@ -1391,33 +1392,10 @@ const TaskModal: React.FC<TaskModalProps> = ({
         </Box>
 
         {/* Footer con botones */}
-        <Box
-          sx={{
-            px: 4,
-            py: 1.5,
-            borderTop: `1px solid ${theme.palette.divider}`,
-            bgcolor: `${theme.palette.background.paper} !important`,
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: 2,
-          }}
-        >
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button
             onClick={onClose}
-            variant="outlined"
-            sx={{
-              textTransform: "none",
-              px: 1.5,
-              py: 0.5,
-              borderColor: theme.palette.error.main,
-              color: theme.palette.error.main,
-              fontWeight: 600,
-              borderRadius: 2,
-              "&:hover": {
-                borderColor: theme.palette.error.dark,
-                bgcolor: `${theme.palette.error.main}15`,
-              },
-            }}
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
@@ -1425,42 +1403,11 @@ const TaskModal: React.FC<TaskModalProps> = ({
             onClick={handleSaveTask}
             variant="contained"
             disabled={saving || !taskData.title.trim()}
-            sx={{
-              textTransform: "none",
-              px: 2,
-              py: 0.5,
-              bgcolor: saving
-                ? theme.palette.action.disabledBackground
-                : taxiMonterricoColors.green,
-              color: "white",
-              fontWeight: 600,
-              borderRadius: 2,
-              boxShadow: saving
-                ? "none"
-                : `0 4px 12px ${taxiMonterricoColors.green}40`,
-              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-              "&:hover": {
-                bgcolor: saving
-                  ? theme.palette.action.disabledBackground
-                  : taxiMonterricoColors.greenDark,
-                boxShadow: saving
-                  ? "none"
-                  : `0 6px 16px ${taxiMonterricoColors.green}50`,
-                transform: "translateY(-2px)",
-              },
-              "&:active": {
-                transform: "translateY(0)",
-              },
-              "&.Mui-disabled": {
-                bgcolor: theme.palette.action.disabledBackground,
-                color: theme.palette.action.disabled,
-                boxShadow: "none",
-              },
-            }}
+            sx={pageStyles.saveButton}
           >
             {saving ? "Guardando..." : "Guardar"}
           </Button>
-        </Box>
+        </DialogActions>
       </Box>
       {/* Overlay de fondo cuando la ventana está abierta */}
       <Box
@@ -1760,16 +1707,10 @@ const TaskModal: React.FC<TaskModalProps> = ({
               />
             </Box>
           </DialogContent>
-          <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
+          <DialogActions sx={pageStyles.dialogActions}>
             <Button
               onClick={handleCloseTableDialog}
-              sx={{
-                textTransform: "none",
-                color: theme.palette.text.secondary,
-                "&:hover": {
-                  backgroundColor: theme.palette.action.hover,
-                },
-              }}
+              sx={pageStyles.cancelButton}
             >
               Cancelar
             </Button>
@@ -1782,17 +1723,7 @@ const TaskModal: React.FC<TaskModalProps> = ({
                 parseInt(tableRows) <= 0 ||
                 parseInt(tableCols) <= 0
               }
-              sx={{
-                textTransform: "none",
-                backgroundColor: theme.palette.primary.main,
-                "&:hover": {
-                  backgroundColor: theme.palette.primary.dark,
-                },
-                "&:disabled": {
-                  backgroundColor: theme.palette.action.disabledBackground,
-                  color: theme.palette.action.disabled,
-                },
-              }}
+              sx={pageStyles.saveButton}
             >
               Aceptar
             </Button>

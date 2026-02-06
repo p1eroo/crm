@@ -285,7 +285,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                 sx={{
                   width: 120,
                   height: 120,
-                  bgcolor: entity.avatar ? 'transparent' : taxiMonterricoColors.teal,
+                  bgcolor: entity.avatar ? 'transparent' : (theme.palette.mode === 'dark' ? theme.palette.grey[700] : theme.palette.grey[400]),
                   fontSize: '3rem',
                   transition: 'all 0.3s ease',
                   cursor: 'pointer',
@@ -306,7 +306,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                   bottom: 0,
                   right: 0,
                   fontSize: 28,
-                  color: taxiMonterricoColors.greenEmerald,
+                  color: theme.palette.text.secondary,
                   bgcolor: theme.palette.background.paper,
                   borderRadius: '50%',
                   border: `2px solid ${theme.palette.background.paper}`,
@@ -550,7 +550,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                 sx={{
                   width: 120,
                   height: 120,
-                  bgcolor: entity.logo ? 'transparent' : '#0d9394',
+                  bgcolor: entity.logo ? 'transparent' : (theme.palette.mode === 'dark' ? theme.palette.grey[700] : theme.palette.grey[400]),
                   fontSize: '3rem',
                   transition: 'all 0.3s ease',
                   cursor: 'pointer',
@@ -764,7 +764,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                 sx={{
                   width: 120,
                   height: 120,
-                  bgcolor: '#0d9394',
+                  bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[700] : theme.palette.grey[400],
                   fontSize: '3rem',
                   transition: 'all 0.3s ease',
                   cursor: 'pointer',
@@ -947,7 +947,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                       width: 8,
                       height: 8,
                       borderRadius: '50%',
-                      bgcolor: entity.priority === 'baja' ? '#20B2AA' : entity.priority === 'media' ? '#F59E0B' : '#EF4444',
+                      bgcolor: entity.priority === 'baja' ? theme.palette.grey[500] : entity.priority === 'media' ? '#F59E0B' : '#EF4444',
                     }}
                   />
                   <Typography
@@ -979,7 +979,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                 sx={{
                   width: 120,
                   height: 120,
-                  bgcolor: taxiMonterricoColors.green,
+                  bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[700] : theme.palette.grey[400],
                   fontSize: '3rem',
                   transition: 'all 0.3s ease',
                   cursor: 'pointer',
@@ -1089,7 +1089,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                       width: 8,
                       height: 8,
                       borderRadius: '50%',
-                      bgcolor: entity.priority === 'low' ? '#20B2AA' : entity.priority === 'medium' ? '#F59E0B' : entity.priority === 'high' ? '#EF4444' : '#EF4444',
+                      bgcolor: entity.priority === 'low' ? theme.palette.grey[500] : entity.priority === 'medium' ? '#F59E0B' : entity.priority === 'high' ? '#EF4444' : '#EF4444',
                     }}
                   />
                   <Typography
@@ -1270,17 +1270,19 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
       anchor="right"
       open={open}
       onClose={onClose}
-      ModalProps={{
-        BackdropProps: {
-          sx: {
-            backgroundColor: theme.palette.mode === 'dark'
-              ? 'rgba(76, 82, 76, 0.63)'
-              : '#464f4666',
-          },
-        },
-      }}
+      variant="temporary"
+      transitionDuration={{ enter: 400, exit: 300 }}
       sx={{
         zIndex: 1600,
+      }}
+      slotProps={{
+        backdrop: {
+          sx: {
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            transition: 'opacity 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+          },
+        },
+        transition: { timeout: { enter: 400, exit: 300 } },
       }}
       PaperProps={{
         sx: {
@@ -1288,48 +1290,60 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
           maxWidth: '95vw',
           display: 'flex',
           flexDirection: 'column',
+          bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+          background: theme.palette.mode === 'dark'
+            ? `linear-gradient(180deg, #1c252e 0%, ${theme.palette.background.default} 100%)`
+            : `linear-gradient(180deg, ${theme.palette.background.paper} 0%, ${theme.palette.grey[50]} 100%)`,
           boxShadow: theme.palette.mode === 'dark'
-            ? '0 8px 24px rgba(0,0,0,0.5)'
-            : '0 8px 24px rgba(0,0,0,0.15)',
+            ? '-8px 0 24px rgba(0,0,0,0.4)'
+            : '-8px 0 24px rgba(0,0,0,0.12)',
           border: 'none',
         },
       }}
     >
-      {/* Header */}
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          p: 2,
-          borderBottom: `1px solid ${theme.palette.divider}`,
-        }}
-      >
-        <Typography variant="h6" sx={{ fontWeight: 600 }}>
-          Vista Previa
-        </Typography>
-        <IconButton onClick={onClose} size="small">
-          <Close />
-        </IconButton>
-      </Box>
+      <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+        {/* Header */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            px: 4,
+            py: 3,
+            flexShrink: 0,
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 600 }}>
+            Vista Previa
+          </Typography>
+          <IconButton onClick={onClose} size="small" aria-label="Cerrar">
+            <Close />
+          </IconButton>
+        </Box>
 
-      {/* Content */}
-      <Box
-        sx={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          p: 2,
-          overflow: 'auto',
-          '&::-webkit-scrollbar': {
-            display: 'none',
-            width: 0,
-            height: 0,
-          },
-          scrollbarWidth: 'none',
-          msOverflowStyle: 'none',
-        }}
-      >
+        {/* Content */}
+        <Box
+          sx={{
+            flex: 1,
+            minHeight: 0,
+            overflow: 'auto',
+            overflowX: 'hidden',
+            mx: -3,
+            py: 3,
+            pb: 4,
+            mb: -3,
+            maxWidth: 710,
+            alignSelf: 'center',
+            width: '100%',
+            '&::-webkit-scrollbar': {
+              display: 'none',
+              width: 0,
+              height: 0,
+            },
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          }}
+        >
         {loading ? (
           <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px" sx={{ width: '100%' }}>
             <CircularProgress />
@@ -1986,6 +2000,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
             </Box>
           </>
         )}
+        </Box>
       </Box>
     </Drawer>
   );

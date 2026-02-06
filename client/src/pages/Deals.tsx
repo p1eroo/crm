@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Box,
   Typography,
@@ -105,6 +105,8 @@ const Deals: React.FC = () => {
   // Estados para drag and drop
   const [draggedDeal, setDraggedDeal] = useState<Deal | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const pipelineScrollRef = useRef<HTMLDivElement | null>(null);
+  const autoScrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   
   // Estados para filtros por columna
@@ -750,6 +752,61 @@ const Deals: React.FC = () => {
     }
   };
 
+  // Auto-scroll durante el drag
+  useEffect(() => {
+    if (!isDragging || !pipelineScrollRef.current) {
+      if (autoScrollIntervalRef.current) {
+        clearInterval(autoScrollIntervalRef.current);
+        autoScrollIntervalRef.current = null;
+      }
+      return;
+    }
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!pipelineScrollRef.current) return;
+
+      const container = pipelineScrollRef.current;
+      const rect = container.getBoundingClientRect();
+      const scrollThreshold = 100; // Distancia desde el borde para activar scroll
+      const scrollSpeed = 10; // Velocidad de scroll
+
+      // Limpiar intervalo anterior si existe
+      if (autoScrollIntervalRef.current) {
+        clearInterval(autoScrollIntervalRef.current);
+        autoScrollIntervalRef.current = null;
+      }
+
+      // Detectar si está cerca del borde izquierdo
+      if (e.clientX - rect.left < scrollThreshold && container.scrollLeft > 0) {
+        autoScrollIntervalRef.current = setInterval(() => {
+          if (pipelineScrollRef.current) {
+            pipelineScrollRef.current.scrollLeft = Math.max(0, pipelineScrollRef.current.scrollLeft - scrollSpeed);
+          }
+        }, 16); // ~60fps
+      }
+      // Detectar si está cerca del borde derecho
+      else if (rect.right - e.clientX < scrollThreshold && 
+               container.scrollLeft < container.scrollWidth - container.clientWidth) {
+        autoScrollIntervalRef.current = setInterval(() => {
+          if (pipelineScrollRef.current) {
+            const maxScroll = container.scrollWidth - container.clientWidth;
+            pipelineScrollRef.current.scrollLeft = Math.min(maxScroll, pipelineScrollRef.current.scrollLeft + scrollSpeed);
+          }
+        }, 16); // ~60fps
+      }
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      if (autoScrollIntervalRef.current) {
+        clearInterval(autoScrollIntervalRef.current);
+        autoScrollIntervalRef.current = null;
+      }
+    };
+  }, [isDragging]);
+
   // Handlers para drag and drop
   const handleDragStart = (e: React.DragEvent, deal: Deal) => {
     setDraggedDeal(deal);
@@ -759,6 +816,12 @@ const Deals: React.FC = () => {
   };
 
   const handleDragEnd = (e: React.DragEvent) => {
+    // Limpiar auto-scroll
+    if (autoScrollIntervalRef.current) {
+      clearInterval(autoScrollIntervalRef.current);
+      autoScrollIntervalRef.current = null;
+    }
+    
     setTimeout(() => {
       setIsDragging(false);
       setDraggedDeal(null);
@@ -2116,11 +2179,12 @@ const Deals: React.FC = () => {
               maxWidth: '100%',
               overflow: 'hidden',
               position: 'relative',
-              height: 'calc(100vh - 300px)',
-              maxHeight: 'calc(100vh - 300px)',
+              height: 'calc(100vh - 200px)',
+              maxHeight: 'calc(100vh - 200px)',
             }}
           >
               <Box
+                ref={pipelineScrollRef}
                 className="pipeline-scroll-container"
                 sx={{
                   display: 'flex',
@@ -2178,8 +2242,8 @@ const Deals: React.FC = () => {
                     width: 300,
                     display: 'flex',
                     flexDirection: 'column',
-                    height: 'calc(100vh - 300px)',
-                    maxHeight: 'calc(100vh - 300px)',
+                    height: 'calc(100vh - 200px)',
+                    maxHeight: 'calc(100vh - 200px)',
                     overflow: 'hidden',
                     borderRadius: 2,
                     bgcolor: getStageCardColor(stage.id),
@@ -2341,6 +2405,22 @@ const Deals: React.FC = () => {
                           }}
                         >
                           <CardContent sx={{ p: 2, '&:last-child': { pb: 2 }, flexShrink: 0 }}>
+                            {/* Empresa vinculada - ahora arriba del nombre */}
+                            {deal.Company && (
+                              <Typography 
+                                variant="caption" 
+                                sx={{ 
+                                  mb: 0.5,
+                                  color: theme.palette.text.secondary,
+                                  fontSize: '0.75rem',
+                                  fontWeight: 500,
+                                  display: 'block',
+                                }}
+                              >
+                                {deal.Company.name}
+                              </Typography>
+                            )}
+                            
                             {/* Título del Deal */}
                             <Typography 
                               variant="subtitle2" 
@@ -2349,7 +2429,7 @@ const Deals: React.FC = () => {
                               sx={{ 
                                 mb: 0.75,
                                 color: theme.palette.text.primary,
-                                fontSize: '0.8125rem',
+                                fontSize: '0.875rem',
                                 lineHeight: 1.4,
                                 cursor: 'pointer',
                                 '&:hover': {
@@ -2368,19 +2448,19 @@ const Deals: React.FC = () => {
                                 fontWeight={600}
                                 sx={{ 
                                   color: theme.palette.text.primary,
-                                  fontSize: '0.75rem',
+                                  fontSize: '0.8125rem',
                                 }}
                               >
                                 {formatCurrency(parseAmount(deal.amount))}
                               </Typography>
                               {deal.closeDate && (
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  <CalendarToday sx={{ fontSize: 12, color: theme.palette.text.secondary }} />
+                                  <CalendarToday sx={{ fontSize: 13, color: theme.palette.text.secondary }} />
                                   <Typography 
                                     variant="caption" 
                                     sx={{ 
                                       color: theme.palette.text.secondary,
-                                      fontSize: '0.6875rem',
+                                      fontSize: '0.75rem',
                                     }}
                                   >
                                     {new Date(deal.closeDate).toLocaleDateString('es-ES', {
@@ -2403,7 +2483,7 @@ const Deals: React.FC = () => {
                                     variant="caption" 
                                     sx={{ 
                                       color: theme.palette.text.secondary,
-                                      fontSize: '0.6875rem',
+                                      fontSize: '0.75rem',
                                       overflow: 'hidden',
                                       textOverflow: 'ellipsis',
                                       whiteSpace: 'nowrap',
@@ -2415,11 +2495,8 @@ const Deals: React.FC = () => {
                               )}
                             </Box>
 
-                            {/* Separador */}
-                            <Divider sx={{ my: 1, borderColor: theme.palette.divider }} />
-
-                            {/* Contactos y Empresas relacionados */}
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                            {/* Contactos relacionados */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 1 }}>
                               {deal.Contact && (
                                 <Tooltip title={`${deal.Contact.firstName} ${deal.Contact.lastName}`} arrow>
                                   <UserAvatar
@@ -2429,25 +2506,6 @@ const Deals: React.FC = () => {
                                     variant="minimal"
                                     sx={{ cursor: 'pointer' }}
                                   />
-                                </Tooltip>
-                              )}
-                              {deal.Company && (
-                                <Tooltip title={deal.Company.name} arrow>
-                                  <Box
-                                    sx={{
-                                      width: 24,
-                                      height: 24,
-                                      borderRadius: '50%',
-                                      bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      justifyContent: 'center',
-                                      border: `1px solid ${theme.palette.divider}`,
-                                      cursor: 'pointer',
-                                    }}
-                                  >
-                                    <Business sx={{ fontSize: 14, color: theme.palette.text.secondary }} />
-                                  </Box>
                                 </Tooltip>
                               )}
                             </Box>

@@ -44,6 +44,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
+import { pageStyles } from '../theme/styles';
 import { UnifiedTable } from '../components/UnifiedTable';
 
 interface SystemLog {
@@ -883,28 +884,11 @@ const SystemLogs: React.FC = () => {
               : detailsDialog.details}
           </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 2.5, pt: 1, gap: 1 }}>
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button
             onClick={() => setDetailsDialog({ open: false, details: null, title: '' })}
             variant="contained"
-            sx={{
-              bgcolor: taxiMonterricoColors.green,
-              borderRadius: 2,
-              px: 3,
-              textTransform: 'none',
-              fontWeight: 600,
-              boxShadow: theme.palette.mode === 'dark' 
-                ? '0 4px 12px rgba(46, 125, 50, 0.3)' 
-                : '0 4px 12px rgba(46, 125, 50, 0.2)',
-              '&:hover': {
-                bgcolor: '#158a5f',
-                boxShadow: theme.palette.mode === 'dark' 
-                  ? '0 6px 16px rgba(46, 125, 50, 0.4)' 
-                  : '0 6px 16px rgba(46, 125, 50, 0.3)',
-                transform: 'translateY(-2px)',
-              },
-              transition: 'all 0.3s ease',
-            }}
+            sx={pageStyles.saveButton}
           >
             Cerrar
           </Button>

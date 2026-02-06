@@ -28,6 +28,7 @@ import {
   FormatAlignRight,
   FormatAlignJustify,
 } from '@mui/icons-material';
+import { pageStyles } from '../theme/styles';
 
 interface RichTextEditorProps {
   value: string;
@@ -1110,16 +1111,10 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
             />
           </Box>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2.5, pt: 1 }}>
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button
             onClick={handleCloseTableDialog}
-            sx={{
-              textTransform: 'none',
-              color: theme.palette.text.secondary,
-              '&:hover': {
-                backgroundColor: theme.palette.action.hover,
-              },
-            }}
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
@@ -1127,17 +1122,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({ value, onChange, placeh
             onClick={handleInsertTable}
             variant="contained"
             disabled={!tableRows || !tableCols || parseInt(tableRows) <= 0 || parseInt(tableCols) <= 0}
-            sx={{
-              textTransform: 'none',
-              backgroundColor: theme.palette.primary.main,
-              '&:hover': {
-                backgroundColor: theme.palette.primary.dark,
-              },
-              '&:disabled': {
-                backgroundColor: theme.palette.action.disabledBackground,
-                color: theme.palette.action.disabled,
-              },
-            }}
+            sx={pageStyles.saveButton}
           >
             Aceptar
           </Button>

@@ -38,6 +38,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
+import { pageStyles } from '../theme/styles';
 import axios from 'axios';
 import { UnifiedTable } from '../components/UnifiedTable';
 import UserAvatar from '../components/UserAvatar';
@@ -1031,17 +1032,10 @@ const Users: React.FC = () => {
             </FormControl>
           </Box>
         </DialogContent>
-        <DialogActions sx={{ p: 2.5, pt: 1, gap: 1 }}>
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button 
             onClick={handleCancelCreate} 
-            color="inherit" 
-            sx={{ 
-              color: theme.palette.text.secondary,
-              borderRadius: 2,
-              px: 2,
-              textTransform: 'none',
-              fontWeight: 500,
-            }}
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
@@ -1049,24 +1043,7 @@ const Users: React.FC = () => {
             onClick={handleSubmitCreate} 
             variant="contained"
             disabled={creating}
-            sx={{
-              bgcolor: taxiMonterricoColors.green,
-              borderRadius: 2,
-              px: 3,
-              textTransform: 'none',
-              fontWeight: 600,
-              boxShadow: theme.palette.mode === 'dark' 
-                ? '0 4px 12px rgba(46, 125, 50, 0.3)' 
-                : '0 4px 12px rgba(46, 125, 50, 0.2)',
-              '&:hover': {
-                bgcolor: '#158a5f',
-                boxShadow: theme.palette.mode === 'dark' 
-                  ? '0 6px 16px rgba(46, 125, 50, 0.4)' 
-                  : '0 6px 16px rgba(46, 125, 50, 0.3)',
-                transform: 'translateY(-2px)',
-              },
-              transition: 'all 0.3s ease',
-            }}
+            sx={pageStyles.saveButton}
           >
             {creating ? <CircularProgress size={20} /> : 'Crear Usuario'}
           </Button>
@@ -1105,39 +1082,18 @@ const Users: React.FC = () => {
             Esta acción no se puede deshacer.
           </DialogContentText>
         </DialogContent>
-        <DialogActions sx={{ p: 2.5, pt: 1, gap: 1 }}>
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button 
             onClick={handleCancelDelete} 
-            color="inherit" 
-            sx={{ 
-              color: theme.palette.text.secondary,
-              borderRadius: 2,
-              px: 2,
-              textTransform: 'none',
-              fontWeight: 500,
-            }}
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
           <Button 
             onClick={handleConfirmDelete} 
-            color="error" 
             variant="contained"
             disabled={deleting}
-            sx={{
-              borderRadius: 2,
-              px: 3,
-              textTransform: 'none',
-              fontWeight: 600,
-              boxShadow: theme.palette.mode === 'dark' 
-                ? '0 4px 12px rgba(211, 47, 47, 0.3)' 
-                : '0 4px 12px rgba(211, 47, 47, 0.2)',
-              '&:hover': {
-                boxShadow: theme.palette.mode === 'dark' 
-                  ? '0 6px 16px rgba(211, 47, 47, 0.4)' 
-                  : '0 6px 16px rgba(211, 47, 47, 0.3)',
-              },
-            }}
+            sx={pageStyles.deleteButton}
           >
             {deleting ? <CircularProgress size={20} /> : 'Eliminar'}
           </Button>

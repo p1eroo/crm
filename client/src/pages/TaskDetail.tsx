@@ -80,6 +80,7 @@ import {
 import api from "../config/api";
 import axios from "axios";
 import { taxiMonterricoColors, hexToRgba } from "../theme/colors";
+import { pageStyles } from "../theme/styles";
 import { companyLabels } from "../constants/companyLabels";
 import {
   RecentActivitiesCard,
@@ -3878,9 +3879,9 @@ const TaskDetail: React.FC = () => {
             />
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
-          <Button onClick={handleSave} variant="contained" disabled={saving}>
+        <DialogActions sx={pageStyles.dialogActions}>
+          <Button onClick={() => setEditDialogOpen(false)} sx={pageStyles.cancelButton}>Cancelar</Button>
+          <Button onClick={handleSave} variant="contained" disabled={saving} sx={pageStyles.saveButton}>
             {saving ? "Guardando..." : "Guardar"}
           </Button>
         </DialogActions>
@@ -3898,13 +3899,13 @@ const TaskDetail: React.FC = () => {
             puede deshacer.
           </Typography>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancelar</Button>
+        <DialogActions sx={pageStyles.dialogActions}>
+          <Button onClick={() => setDeleteDialogOpen(false)} sx={pageStyles.cancelButton}>Cancelar</Button>
           <Button
             onClick={handleDelete}
-            color="error"
             variant="contained"
             disabled={deleting}
+            sx={pageStyles.deleteButton}
           >
             {deleting ? "Eliminando..." : "Eliminar"}
           </Button>
@@ -4440,7 +4441,7 @@ const TaskDetail: React.FC = () => {
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 2, justifyContent: "space-between" }}>
+        <DialogActions sx={{ ...pageStyles.dialogActions, justifyContent: "space-between" }}>
           <Box>
             {contactDialogTab === "existing" && (
               <Typography variant="body2" color="text.secondary">
@@ -4473,20 +4474,7 @@ const TaskDetail: React.FC = () => {
                 setExistingContactsSearch("");
                 setDniError("");
               }}
-              sx={{
-                textTransform: "none",
-                color: taxiMonterricoColors.orange,
-                fontWeight: 500,
-                px: 2,
-                py: 0.5,
-                fontSize: "0.75rem",
-                "&:hover": {
-                  bgcolor:
-                    theme.palette.mode === "dark"
-                      ? "rgba(255, 152, 0, 0.15)"
-                      : "rgba(255, 152, 0, 0.08)",
-                },
-              }}
+              sx={pageStyles.cancelButton}
             >
               Cancelar
             </Button>
@@ -4502,22 +4490,7 @@ const TaskDetail: React.FC = () => {
                 (contactDialogTab === "existing" && !selectedExistingContact) ||
                 (contactDialogTab === "create" && !contactFormData.email.trim())
               }
-              sx={{
-                textTransform: "none",
-                fontWeight: 500,
-                px: 2,
-                py: 0.5,
-                fontSize: "0.75rem",
-                bgcolor: taxiMonterricoColors.green,
-                "&:hover": {
-                  bgcolor: taxiMonterricoColors.green,
-                  opacity: 0.9,
-                },
-                "&:disabled": {
-                  bgcolor: theme.palette.action.disabledBackground,
-                  color: theme.palette.action.disabled,
-                },
-              }}
+              sx={pageStyles.saveButton}
             >
               {saving ? "Guardando..." : "Crear"}
             </Button>
@@ -4887,7 +4860,7 @@ const TaskDetail: React.FC = () => {
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 2, justifyContent: "space-between" }}>
+        <DialogActions sx={{ ...pageStyles.dialogActions, justifyContent: "space-between" }}>
           <Box>
             {companyDialogTab === "existing" && (
               <Typography variant="body2" color="text.secondary">
@@ -4918,20 +4891,7 @@ const TaskDetail: React.FC = () => {
                 setExistingCompaniesSearch("");
                 setRucError("");
               }}
-              sx={{
-                textTransform: "none",
-                color: taxiMonterricoColors.orange,
-                fontWeight: 500,
-                px: 2,
-                py: 0.5,
-                fontSize: "0.75rem",
-                "&:hover": {
-                  bgcolor:
-                    theme.palette.mode === "dark"
-                      ? "rgba(255, 152, 0, 0.15)"
-                      : "rgba(255, 152, 0, 0.08)",
-                },
-              }}
+              sx={pageStyles.cancelButton}
             >
               Cancelar
             </Button>
@@ -4941,21 +4901,7 @@ const TaskDetail: React.FC = () => {
                   onClick={handleCreateCompany}
                   variant="contained"
                   disabled={saving || !companyFormData.name.trim()}
-                  sx={{
-                    textTransform: "none",
-                    fontWeight: 500,
-                    px: 2,
-                    py: 0.5,
-                    fontSize: "0.75rem",
-                    bgcolor: "#9E9E9E",
-                    "&:hover": {
-                      bgcolor: "#757575",
-                    },
-                    "&:disabled": {
-                      bgcolor: theme.palette.action.disabledBackground,
-                      color: theme.palette.action.disabled,
-                    },
-                  }}
+                  sx={pageStyles.saveButton}
                 >
                   {saving ? "Guardando..." : "Crear"}
                 </Button>
@@ -4981,21 +4927,7 @@ const TaskDetail: React.FC = () => {
                   }}
                   variant="contained"
                   disabled={saving || !companyFormData.name.trim()}
-                  sx={{
-                    textTransform: "none",
-                    fontWeight: 500,
-                    px: 2,
-                    py: 0.5,
-                    fontSize: "0.75rem",
-                    bgcolor: "#9E9E9E",
-                    "&:hover": {
-                      bgcolor: "#757575",
-                    },
-                    "&:disabled": {
-                      bgcolor: theme.palette.action.disabledBackground,
-                      color: theme.palette.action.disabled,
-                    },
-                  }}
+                  sx={pageStyles.saveButton}
                 >
                   Crear y agregar otro
                 </Button>
@@ -5005,21 +4937,7 @@ const TaskDetail: React.FC = () => {
                 onClick={handleAddExistingCompany}
                 variant="contained"
                 disabled={saving || !selectedExistingCompany}
-                sx={{
-                  textTransform: "none",
-                  fontWeight: 500,
-                  px: 2,
-                  py: 0.5,
-                  fontSize: "0.75rem",
-                  bgcolor: "#9E9E9E",
-                  "&:hover": {
-                    bgcolor: "#757575",
-                  },
-                  "&:disabled": {
-                    bgcolor: theme.palette.action.disabledBackground,
-                    color: theme.palette.action.disabled,
-                  },
-                }}
+                sx={pageStyles.saveButton}
               >
                 {saving ? "Guardando..." : "Guardar"}
               </Button>
@@ -5337,7 +5255,7 @@ const TaskDetail: React.FC = () => {
             </Box>
           )}
         </DialogContent>
-        <DialogActions sx={{ p: 2, justifyContent: "flex-end", gap: 1 }}>
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button
             onClick={() => {
               setAddDealDialogOpen(false);
@@ -5354,23 +5272,7 @@ const TaskDetail: React.FC = () => {
               setSelectedExistingDeal(null);
               setExistingDealsSearch("");
             }}
-            sx={{
-              textTransform: "none",
-              color: taxiMonterricoColors.green,
-              fontWeight: 500,
-              px: 2,
-              py: 0.5,
-              fontSize: "0.75rem",
-              bgcolor: "transparent",
-              border: `1px solid ${taxiMonterricoColors.green}`,
-              "&:hover": {
-                bgcolor:
-                  theme.palette.mode === "dark"
-                    ? "rgba(46, 125, 50, 0.15)"
-                    : "rgba(46, 125, 50, 0.08)",
-                borderColor: taxiMonterricoColors.green,
-              },
-            }}
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
@@ -5387,23 +5289,7 @@ const TaskDetail: React.FC = () => {
               (dealDialogTab === "create" &&
                 (!dealFormData.name.trim() || !dealFormData.amount.trim()))
             }
-            sx={{
-              textTransform: "none",
-              fontWeight: 500,
-              px: 2,
-              py: 0.5,
-              fontSize: "0.75rem",
-              bgcolor: taxiMonterricoColors.green,
-              color: "white",
-              "&:hover": {
-                bgcolor: taxiMonterricoColors.green,
-                opacity: 0.9,
-              },
-              "&:disabled": {
-                bgcolor: theme.palette.action.disabledBackground,
-                color: theme.palette.action.disabled,
-              },
-            }}
+            sx={pageStyles.saveButton}
           >
             {saving ? "Guardando..." : "Crear"}
           </Button>
@@ -7643,50 +7529,18 @@ const TaskDetail: React.FC = () => {
         <Box sx={{ px: 2 }}>
           <Divider sx={{ mt: 0.25, mb: 1.5 }} />
         </Box>
-        <DialogActions sx={{ px: 2, pb: 1.5, pt: 0.5, gap: 0.75 }}>
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button
             onClick={() => setTaskOpen(false)}
-            size="small"
-            sx={{
-              textTransform: "none",
-              color: theme.palette.text.secondary,
-              fontWeight: 500,
-              px: 2,
-              py: 0.5,
-              fontSize: "0.75rem",
-              "&:hover": {
-                bgcolor: theme.palette.action.hover,
-              },
-            }}
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
           <Button
             onClick={handleSaveNewTask}
             variant="contained"
-            size="small"
             disabled={saving || !newTaskData.title.trim()}
-            sx={{
-              textTransform: "none",
-              fontWeight: 500,
-              px: 2,
-              py: 0.5,
-              fontSize: "0.75rem",
-              bgcolor: newTaskData.title.trim()
-                ? taxiMonterricoColors.green
-                : theme.palette.action.disabledBackground,
-              color: "white",
-              "&:hover": {
-                bgcolor: newTaskData.title.trim()
-                  ? taxiMonterricoColors.green
-                  : theme.palette.action.disabledBackground,
-                opacity: 0.9,
-              },
-              "&:disabled": {
-                bgcolor: theme.palette.action.disabledBackground,
-                color: theme.palette.action.disabled,
-              },
-            }}
+            sx={pageStyles.saveButton}
           >
             {saving ? "Guardando..." : "Guardar"}
           </Button>

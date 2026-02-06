@@ -32,6 +32,7 @@ import {
   ArrowForward,
 } from '@mui/icons-material';
 import { taxiMonterricoColors } from '../theme/colors';
+import { pageStyles } from '../theme/styles';
 
 export interface Notification {
   id: string | number;
@@ -610,13 +611,10 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                 </Box>
               </Box>
             </DialogContent>
-            <DialogActions sx={{ px: 2, py: 1.5, borderTop: `1px solid ${theme.palette.divider}` }}>
+            <DialogActions sx={pageStyles.dialogActions}>
               <Button
                 onClick={() => setDetailDialogOpen(false)}
-                sx={{
-                  textTransform: 'none',
-                  color: theme.palette.text.secondary,
-                }}
+                sx={pageStyles.cancelButton}
               >
                 Cerrar
               </Button>
@@ -627,14 +625,7 @@ const NotificationDropdown: React.FC<NotificationDropdownProps> = ({
                 }}
                 variant="contained"
                 endIcon={<ArrowForward />}
-                sx={{
-                  textTransform: 'none',
-                  bgcolor: taxiMonterricoColors.green,
-                  '&:hover': {
-                    bgcolor: taxiMonterricoColors.green,
-                    opacity: 0.9,
-                  },
-                }}
+                sx={pageStyles.saveButton}
               >
                 Ver más detalles
               </Button>

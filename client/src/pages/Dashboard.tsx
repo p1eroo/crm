@@ -48,6 +48,7 @@ import {
   ReferenceLine,
 } from 'recharts';
 import api from '../config/api';
+import { pageStyles } from '../theme/styles';
 import { useAuth } from '../context/AuthContext';
 import { taxiMonterricoColors } from '../theme/colors';
 import * as XLSX from 'xlsx';
@@ -2367,25 +2368,11 @@ const Dashboard: React.FC = () => {
             }}
           />
         </DialogContent>
-        <DialogActions sx={{ 
-          p: 2, 
-          pt: 1,
-          bgcolor: theme.palette.mode === 'dark' ? '#1E252C' : 'transparent',
-          borderTop: theme.palette.mode === 'dark' 
-            ? `1px solid rgba(255, 255, 255, 0.08)` 
-            : `1px solid ${theme.palette.divider}`,
-        }}>
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button
             onClick={() => setBudgetModalOpen(false)}
             disabled={savingBudget}
-            sx={{ 
-              color: theme.palette.text.secondary,
-              '&:hover': {
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 255, 255, 0.08)' 
-                  : theme.palette.action.hover,
-              },
-            }}
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
@@ -2393,18 +2380,7 @@ const Dashboard: React.FC = () => {
             onClick={handleSaveBudget}
             variant="contained"
             disabled={savingBudget || !budgetValue || parseFloat(budgetValue) < 0}
-            sx={{
-              bgcolor: taxiMonterricoColors.green,
-              '&:hover': { bgcolor: taxiMonterricoColors.greenDark },
-              '&:disabled': {
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 255, 255, 0.12)' 
-                  : 'rgba(0, 0, 0, 0.12)',
-                color: theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 255, 255, 0.3)' 
-                  : 'rgba(0, 0, 0, 0.26)',
-              },
-            }}
+            sx={pageStyles.saveButton}
           >
             {savingBudget ? 'Guardando...' : 'Guardar'}
           </Button>

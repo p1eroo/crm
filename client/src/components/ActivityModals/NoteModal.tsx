@@ -26,6 +26,7 @@ import {
 } from "@mui/icons-material";
 import RichTextEditor from "../RichTextEditor";
 import { taxiMonterricoColors } from "../../theme/colors";
+import { pageStyles } from "../../theme/styles";
 import api from "../../config/api";
 
 interface User {
@@ -885,36 +886,11 @@ const NoteModal: React.FC<NoteModalProps> = ({
         </Box>
 
         {/* Footer con botones */}
-        <Box
-          sx={{
-            px: 3,
-            py: 1.5,
-            borderTop: `1px solid ${theme.palette.divider}`,
-            backgroundColor: `${theme.palette.background.paper} !important`,
-            display: "flex",
-            justifyContent: "flex-end",
-            alignItems: "center",
-            gap: 2,
-          }}
-        >
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button
             onClick={onClose}
-            variant="outlined"
             disabled={saving}
-            sx={{
-              textTransform: "none",
-              px: 2,
-              py: 1,
-              borderColor: theme.palette.error.main,
-              color: theme.palette.error.main,
-              fontWeight: 600,
-              borderRadius: 2,
-              "&:hover": {
-                borderColor: theme.palette.error.dark,
-                backgroundColor: `${theme.palette.error.main}15`,
-                color: theme.palette.error.dark,
-              },
-            }}
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
@@ -922,58 +898,11 @@ const NoteModal: React.FC<NoteModalProps> = ({
             onClick={handleSaveNote}
             variant="contained"
             disabled={saving || !noteData.description.trim()}
-            sx={{
-              textTransform: "none",
-              px: 2,
-              py: 1,
-              background: saving
-                ? theme.palette.action.disabledBackground
-                : `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`,
-              color: theme.palette.common.white,
-              fontWeight: 700,
-              borderRadius: 2,
-              boxShadow: saving
-                ? "none"
-                : `0 4px 12px ${taxiMonterricoColors.greenLight}40`,
-              transition: "all 0.3s ease",
-              position: "relative",
-              overflow: "hidden",
-              "&::before": {
-                content: '""',
-                position: "absolute",
-                top: 0,
-                left: "-100%",
-                width: "100%",
-                height: "100%",
-                background: `linear-gradient(90deg, transparent, ${theme.palette.common.white}40, transparent)`,
-                transition: "left 0.5s ease",
-              },
-              "&:hover": {
-                background: saving
-                  ? theme.palette.action.disabledBackground
-                  : `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`,
-                boxShadow: saving
-                  ? "none"
-                  : `0 8px 20px ${taxiMonterricoColors.greenLight}60`,
-                transform: "translateY(-2px)",
-                "&::before": {
-                  left: "100%",
-                },
-              },
-              "&:active": {
-                transform: "translateY(0)",
-              },
-              "&.Mui-disabled": {
-                backgroundColor: theme.palette.action.disabledBackground,
-                color: theme.palette.action.disabled,
-                boxShadow: "none",
-                background: theme.palette.action.disabledBackground,
-              },
-            }}
+            sx={pageStyles.saveButton}
           >
             {saving ? "Guardando..." : "Crear nota"}
           </Button>
-        </Box>
+        </DialogActions>
       </Box>
       {/* Overlay de fondo cuando la ventana está abierta */}
       <Box
@@ -1759,18 +1688,10 @@ const NoteModal: React.FC<NoteModalProps> = ({
             </Box>
           </Box>
         </Box>
-        <DialogActions
-          sx={{
-            p: 1,
-            pt: 1.5,
-            pb: 1,
-            borderTop: `1px solid ${theme.palette.divider}`,
-            backgroundColor: theme.palette.background.paper,
-          }}
-        >
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button
             onClick={() => setNoteAssociatePopoverAnchor(null)}
-            sx={{ textTransform: "none" }}
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
@@ -1874,13 +1795,7 @@ const NoteModal: React.FC<NoteModalProps> = ({
               setNoteAssociatePopoverAnchor(null);
             }}
             variant="contained"
-            sx={{
-              textTransform: "none",
-              backgroundColor: taxiMonterricoColors.green,
-              "&:hover": {
-                backgroundColor: taxiMonterricoColors.greenDark,
-              },
-            }}
+            sx={pageStyles.saveButton}
           >
             Guardar
           </Button>

@@ -16,6 +16,7 @@ import {
 import { Close, Send } from "@mui/icons-material";
 import RichTextEditor from "./RichTextEditor";
 import { taxiMonterricoColors } from "../theme/colors";
+import { pageStyles } from "../theme/styles";
 
 interface EmailComposerProps {
   open: boolean;
@@ -373,32 +374,10 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
         </Box>
       </DialogContent>
 
-      <DialogActions
-        sx={{
-          px: 3,
-          py: 1.5,
-          borderTop: `1px solid ${theme.palette.divider}`,
-          justifyContent: "flex-end",
-          bgcolor: `${theme.palette.background.paper} !important`,
-          gap: 1.5,
-        }}
-      >
+      <DialogActions sx={pageStyles.dialogActions}>
         <Button
           onClick={handleClose}
-          variant="outlined"
-          sx={{
-            textTransform: "none",
-            px: 2,
-            py: 1,
-            borderColor: theme.palette.error.main,
-            color: theme.palette.error.main,
-            fontWeight: 600,
-            borderRadius: 2,
-            "&:hover": {
-              borderColor: theme.palette.error.dark,
-              bgcolor: `${theme.palette.error.main}15`,
-            },
-          }}
+          sx={pageStyles.cancelButton}
         >
           Cancelar
         </Button>
@@ -414,50 +393,7 @@ const EmailComposer: React.FC<EmailComposerProps> = ({
             body === "<br>" ||
             body === ""
           }
-          sx={{
-            textTransform: "none",
-            px: 3,
-            py: 1,
-            background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`,
-            color: theme.palette.common.white,
-            fontWeight: 700,
-            borderRadius: 2,
-            boxShadow: sending
-              ? "none"
-              : `0 4px 12px ${taxiMonterricoColors.greenLight}40`,
-            transition: "all 0.3s ease",
-            position: "relative",
-            overflow: "hidden",
-            "&::before": {
-              content: '""',
-              position: "absolute",
-              top: 0,
-              left: "-100%",
-              width: "100%",
-              height: "100%",
-              background: `linear-gradient(90deg, transparent, ${theme.palette.common.white}4D, transparent)`,
-              transition: "left 0.5s ease",
-            },
-            "&:hover": {
-              background: `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`,
-              boxShadow: sending
-                ? "none"
-                : `0 8px 20px ${taxiMonterricoColors.greenLight}60`,
-              transform: "translateY(-2px)",
-              "&::before": {
-                left: "100%",
-              },
-            },
-            "&:active": {
-              transform: "translateY(0)",
-            },
-            "&.Mui-disabled": {
-              backgroundColor: theme.palette.action.disabledBackground,
-              color: theme.palette.action.disabled,
-              boxShadow: "none",
-              background: theme.palette.action.disabledBackground,
-            },
-          }}
+          sx={pageStyles.saveButton}
         >
           {sending ? "Enviando..." : "Enviar"}
         </Button>

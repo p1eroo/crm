@@ -7,6 +7,7 @@ import {
   IconButton,
   useTheme,
   Popover,
+  DialogActions,
 } from "@mui/material";
 import {
   Close,
@@ -15,6 +16,7 @@ import {
   ChevronRight,
 } from "@mui/icons-material";
 import { taxiMonterricoColors } from "../../theme/colors";
+import { pageStyles } from "../../theme/styles";
 import { formatDatePeru } from "../../utils/dateUtils";
 import api from "../../config/api";
 
@@ -587,33 +589,10 @@ const CallModal: React.FC<CallModalProps> = ({
         </Box>
 
         {/* Footer con botones */}
-        <Box
-          sx={{
-            px: 4,
-            py: 2,
-            borderTop: `1px solid ${theme.palette.divider}`,
-            bgcolor: `${theme.palette.background.paper} !important`,
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: 2,
-          }}
-        >
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button
             onClick={onClose}
-            variant="outlined"
-            sx={{
-              textTransform: "none",
-              px: 2,
-              py: 1,
-              borderColor: theme.palette.error.main,
-              color: theme.palette.error.main,
-              fontWeight: 600,
-              borderRadius: 2,
-              "&:hover": {
-                borderColor: theme.palette.error.dark,
-                bgcolor: `${theme.palette.error.main}15`,
-              },
-            }}
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
@@ -621,42 +600,11 @@ const CallModal: React.FC<CallModalProps> = ({
             onClick={handleSaveCall}
             variant="contained"
             disabled={saving || !callData.subject.trim()}
-            sx={{
-              textTransform: "none",
-              bgcolor: saving
-                ? theme.palette.action.disabledBackground
-                : taxiMonterricoColors.green,
-              color: "white",
-            fontWeight: 600,
-            px: 3,
-            py: 0.5,
-            borderRadius: 2,
-            boxShadow: saving
-                ? "none"
-                : `0 4px 12px ${taxiMonterricoColors.green}40`,
-              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-              "&:hover": {
-                bgcolor: saving
-                  ? theme.palette.action.disabledBackground
-                  : taxiMonterricoColors.greenDark,
-                boxShadow: saving
-                  ? "none"
-                  : `0 6px 16px ${taxiMonterricoColors.green}50`,
-                transform: "translateY(-2px)",
-              },
-              "&:active": {
-                transform: "translateY(0)",
-              },
-              "&.Mui-disabled": {
-                bgcolor: theme.palette.action.disabledBackground,
-                color: theme.palette.action.disabled,
-                boxShadow: "none",
-              },
-            }}
+            sx={pageStyles.saveButton}
           >
             {saving ? "Guardando..." : "Guardar"}
           </Button>
-        </Box>
+        </DialogActions>
       </Box>
 
       {/* Date Picker Popover */}

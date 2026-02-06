@@ -31,6 +31,7 @@ import {
 import { Add, Delete, Search, Campaign as CampaignIcon, TrendingUp, Computer, Visibility, CheckCircle } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
+import { pageStyles } from '../theme/styles';
 
 interface Campaign {
   id: number;
@@ -746,9 +747,9 @@ const Campaigns: React.FC = () => {
             />
           </Box>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>Cancelar</Button>
-          <Button onClick={handleSubmit} variant="contained">
+        <DialogActions sx={pageStyles.dialogActions}>
+          <Button onClick={handleClose} sx={pageStyles.cancelButton}>Cancelar</Button>
+          <Button onClick={handleSubmit} variant="contained" sx={pageStyles.saveButton}>
             {editingCampaign ? 'Actualizar' : 'Crear'}
           </Button>
         </DialogActions>
@@ -781,23 +782,11 @@ const Campaigns: React.FC = () => {
             Esta acción no se puede deshacer. La campaña será eliminada permanentemente del sistema.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ 
-          px: 3, 
-          py: 2,
-          borderTop: '1px solid #e0e0e0',
-          gap: 1,
-        }}>
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button 
             onClick={handleCancelDelete}
             disabled={deleting}
-            sx={{
-              textTransform: 'none',
-              color: '#757575',
-              fontWeight: 500,
-              '&:hover': {
-                bgcolor: '#f5f5f5',
-              }
-            }}
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
@@ -805,20 +794,7 @@ const Campaigns: React.FC = () => {
             onClick={handleConfirmDelete}
             disabled={deleting}
             variant="contained"
-            sx={{
-              textTransform: 'none',
-              fontWeight: 500,
-              borderRadius: 1.5,
-              px: 2.5,
-              bgcolor: '#d32f2f',
-              '&:hover': {
-                bgcolor: '#b71c1c',
-              },
-              '&.Mui-disabled': {
-                bgcolor: '#ffcdd2',
-                color: '#ffffff',
-              }
-            }}
+            sx={pageStyles.deleteButton}
             startIcon={deleting ? <CircularProgress size={16} sx={{ color: '#ffffff' }} /> : <Delete />}
           >
             {deleting ? 'Eliminando...' : 'Eliminar'}

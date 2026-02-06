@@ -333,7 +333,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({
               px: 1.5,
               py: 1,
               bgcolor: theme.palette.mode === 'dark'
-                ? '#222B36'
+                ? '#1c252e'
                 : 'rgba(0, 0, 0, 0.02)',
             }}
           >

@@ -24,6 +24,7 @@ import {
 import api from "../config/api";
 import EmailComposer from "../components/EmailComposer";
 import { taxiMonterricoColors, hexToRgba } from "../theme/colors";
+import { pageStyles } from "../theme/styles";
 import {
   RecentActivitiesCard,
   LinkedCompaniesCard,
@@ -1801,20 +1802,15 @@ const ContactDetail: React.FC = () => {
                   </Alert>
                 )}
               </DialogContent>
-              <DialogActions>
-                <Button onClick={handleCloseEditDialog} disabled={savingEdit}>
+              <DialogActions sx={pageStyles.dialogActions}>
+                <Button onClick={handleCloseEditDialog} disabled={savingEdit} sx={pageStyles.cancelButton}>
                   Cancelar
                 </Button>
                 <Button 
                   onClick={handleSubmitEdit} 
                   variant="contained"
                   disabled={savingEdit || !editFormData.firstName.trim() || !editFormData.lastName.trim()}
-                  sx={{
-                    bgcolor: taxiMonterricoColors.green,
-                    "&:hover": {
-                      bgcolor: taxiMonterricoColors.greenDark,
-                    },
-                  }}
+                  sx={pageStyles.saveButton}
                 >
                   {savingEdit ? "Guardando..." : "Guardar"}
                 </Button>
@@ -2290,36 +2286,20 @@ const ContactDetail: React.FC = () => {
             {companyToRemove?.name} ya no se asociará con {contact?.firstName} {contact?.lastName}.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ p: 2, gap: 1 }}>
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button
             onClick={() => {
               setRemoveCompanyDialogOpen(false);
               setCompanyToRemove(null);
             }}
-            sx={{
-              textTransform: "none",
-              color: theme.palette.text.secondary,
-              borderColor: theme.palette.divider,
-              "&:hover": {
-                borderColor: theme.palette.divider,
-                backgroundColor: theme.palette.action.hover,
-              },
-            }}
-            variant="outlined"
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
           <Button
             onClick={handleConfirmRemoveCompany}
             variant="contained"
-            sx={{
-              textTransform: "none",
-              bgcolor: "#FF9800",
-              color: "white",
-              "&:hover": {
-                bgcolor: "#F57C00",
-              },
-            }}
+            sx={pageStyles.deleteButton}
           >
             Eliminar asociación
           </Button>
@@ -2353,36 +2333,20 @@ const ContactDetail: React.FC = () => {
             {contactToRemove?.name} ya no se asociará con {contact?.firstName} {contact?.lastName}.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ p: 2, gap: 1 }}>
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button
             onClick={() => {
               setRemoveContactDialogOpen(false);
               setContactToRemove(null);
             }}
-            sx={{
-              textTransform: "none",
-              color: theme.palette.text.secondary,
-              borderColor: theme.palette.divider,
-              "&:hover": {
-                borderColor: theme.palette.divider,
-                backgroundColor: theme.palette.action.hover,
-              },
-            }}
-            variant="outlined"
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
           <Button
             onClick={handleConfirmRemoveContact}
             variant="contained"
-            sx={{
-              textTransform: "none",
-              bgcolor: "#FF9800",
-              color: "white",
-              "&:hover": {
-                bgcolor: "#F57C00",
-              },
-            }}
+            sx={pageStyles.deleteButton}
           >
             Eliminar asociación
           </Button>
@@ -2416,36 +2380,20 @@ const ContactDetail: React.FC = () => {
             {dealToRemove?.name} ya no se asociará con {contact?.firstName} {contact?.lastName}.
           </Typography>
         </DialogContent>
-        <DialogActions sx={{ p: 2, gap: 1 }}>
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button
             onClick={() => {
               setRemoveDealDialogOpen(false);
               setDealToRemove(null);
             }}
-            sx={{
-              textTransform: "none",
-              color: theme.palette.text.secondary,
-              borderColor: theme.palette.divider,
-              "&:hover": {
-                borderColor: theme.palette.divider,
-                backgroundColor: theme.palette.action.hover,
-              },
-            }}
-            variant="outlined"
+            sx={pageStyles.cancelButton}
           >
             Cancelar
           </Button>
           <Button
             onClick={handleConfirmRemoveDeal}
             variant="contained"
-            sx={{
-              textTransform: "none",
-              bgcolor: "#FF9800",
-              color: "white",
-              "&:hover": {
-                bgcolor: "#F57C00",
-              },
-            }}
+            sx={pageStyles.deleteButton}
           >
             Eliminar asociación
           </Button>

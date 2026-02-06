@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { Close, CalendarToday } from '@mui/icons-material';
 import api from '../../config/api';
+import { pageStyles } from '../../theme/styles';
 
 interface Activity {
   id: number;
@@ -537,33 +538,11 @@ const ActivityDetailDialog: React.FC<ActivityDetailDialogProps> = ({
         )}
       </DialogContent>
 
-      <DialogActions
-        sx={{
-          px: 3,
-          py: 2,
-          bgcolor: `${theme.palette.background.paper} !important`,
-          borderTop: `none`,
-        }}
-      >
+      <DialogActions sx={pageStyles.dialogActions}>
         <Button
           onClick={isEditing ? handleCancel : onClose}
-          variant="outlined"
           disabled={saving}
-          sx={{
-            textTransform: 'none',
-            px: 2,
-            py: 0.5,
-            borderRadius: 1.5,
-            borderColor: '#4caf50',
-            color: '#4caf50',
-            '&:hover': {
-              borderColor: '#45a049',
-              bgcolor: theme.palette.mode === 'dark'
-                ? 'rgba(76, 175, 80, 0.1)'
-                : 'rgba(76, 175, 80, 0.08)',
-              color: '#45a049',
-            },
-          }}
+          sx={pageStyles.cancelButton}
         >
           {isEditing ? 'Cancelar' : 'Cerrar'}
         </Button>
@@ -571,20 +550,7 @@ const ActivityDetailDialog: React.FC<ActivityDetailDialogProps> = ({
           onClick={isEditing ? handleSave : () => setIsEditing(true)}
           variant="contained"
           disabled={saving}
-          sx={{
-            textTransform: 'none',
-            px: 2,
-            py: 0.5,
-            borderRadius: 1.5,
-            bgcolor: theme.palette.primary.main,
-            color: theme.palette.primary.contrastText,
-            '&:hover': {
-              bgcolor: theme.palette.primary.dark,
-            },
-            '&:disabled': {
-              opacity: 0.6,
-            },
-          }}
+          sx={pageStyles.saveButton}
         >
           {saving ? 'Guardando...' : (isEditing ? 'Guardar' : 'Editar')}
         </Button>

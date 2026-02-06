@@ -16,6 +16,7 @@ import { Close } from '@mui/icons-material';
 import { Notification } from '../../types/notification';
 import { NotificationItem } from './NotificationItem';
 import { useNotifications } from '../../hooks/useNotifications';
+import { pageStyles } from '../../theme/styles';
 
 interface LoginWelcomeModalProps {
   open: boolean;
@@ -171,23 +172,11 @@ export const LoginWelcomeModal: React.FC<LoginWelcomeModalProps> = ({
         )}
       </DialogContent>
 
-      <DialogActions
-        sx={{
-          px: 3,
-          py: 2,
-          borderTop: `1px solid ${theme.palette.divider}`,
-          bgcolor: theme.palette.mode === 'dark' ? '#141A21' : 'transparent',
-          justifyContent: 'center',
-        }}
-      >
+      <DialogActions sx={pageStyles.dialogActions}>
         <Button
           onClick={onClose}
           variant="contained"
-          sx={{
-            textTransform: 'none',
-            fontWeight: 500,
-            minWidth: '120px',
-          }}
+          sx={pageStyles.saveButton}
         >
           Entendido
         </Button>

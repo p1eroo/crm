@@ -26,8 +26,12 @@ import {
   Tooltip,
   Paper,
   useTheme,
+  Avatar,
+  InputAdornment,
+  LinearProgress,
+  Autocomplete,
 } from '@mui/material';
-import { Add, Delete, Search, Schedule, PendingActions, Edit, ChevronLeft, ChevronRight, ArrowDropDown } from '@mui/icons-material';
+import { Add, Delete, Search, Schedule, PendingActions, Edit, Visibility, ChevronLeft, ChevronRight, ArrowDropDown, CalendarToday } from '@mui/icons-material';
 import { RiFileWarningLine } from 'react-icons/ri';
 import { IoMdCheckboxOutline } from 'react-icons/io';
 import { library } from '@fortawesome/fontawesome-svg-core';
@@ -49,11 +53,48 @@ interface Task {
   priority: string;
   startDate?: string;
   dueDate?: string;
-  createdAt?: string; // Fecha de creación
+  createdAt?: string;
+  description?: string;
+  companyId?: number;
+  contactId?: number;
   AssignedTo?: { firstName: string; lastName: string; avatar?: string | null };
   User?: { firstName: string; lastName: string; avatar?: string | null }; // Para actividades
-  isActivity?: boolean; // Flag para identificar si viene de actividades
+  Company?: { id: number; name: string };
+  Contact?: { id: number; firstName: string; lastName: string };
+  isActivity?: boolean;
 }
+
+const getCompanyInitials = (name: string): string => {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  return (name || '').slice(0, 2).toUpperCase() || '—';
+};
+
+const getContactInitials = (firstName: string, lastName: string): string => {
+  const f = (firstName || '').trim()[0] || '';
+  const l = (lastName || '').trim()[0] || '';
+  return `${f}${l}`.toUpperCase() || '—';
+};
+
+const getAvatarColors = (str: string): { bg: string; color: string } => {
+  let hash = 0;
+  for (let i = 0; i < (str || '').length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  const hue = (hash & 0x7fffffff) % 360;
+  return {
+    bg: `hsl(${hue}, 38%, 92%)`,
+    color: `hsl(${hue}, 62%, 42%)`,
+  };
+};
+
+const initialsAvatarSx = {
+  width: { xs: 28, md: 32 },
+  height: { xs: 28, md: 32 },
+  fontSize: { xs: '0.7rem', md: '0.75rem' },
+  fontWeight: 600,
+  textShadow: '0 1px 2px rgba(0,0,0,0.06)',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+  flexShrink: 0,
+};
 
 const Tasks: React.FC = () => {
   const theme = useTheme();
@@ -74,8 +115,12 @@ const Tasks: React.FC = () => {
     dueDate: '',
     estimatedTime: '',
     assignedToId: '',
+    companyId: '',
+    contactId: '',
   });
   const [users, setUsers] = useState<any[]>([]);
+  const [companies, setCompanies] = useState<{ id: number; name: string }[]>([]);
+  const [contacts, setContacts] = useState<{ id: number; firstName: string; lastName: string }[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<{ id: number; isActivity?: boolean } | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -85,6 +130,19 @@ const Tasks: React.FC = () => {
   const [totalTasks, setTotalTasks] = useState(0);
   const [statusMenuAnchor, setStatusMenuAnchor] = useState<{ el: HTMLElement; taskId: number } | null>(null);
   const [priorityMenuAnchor, setPriorityMenuAnchor] = useState<{ el: HTMLElement; taskId: number } | null>(null);
+  const [completeModalOpen, setCompleteModalOpen] = useState(false);
+  const [completeModalTask, setCompleteModalTask] = useState<Task | null>(null);
+  const [completeModalViewOnly, setCompleteModalViewOnly] = useState(false);
+  const [completeObservations, setCompleteObservations] = useState('');
+  const [completeDate, setCompleteDate] = useState('');
+  const [completeTime, setCompleteTime] = useState('');
+  const [completing, setCompleting] = useState(false);
+  const [linkPromptOpen, setLinkPromptOpen] = useState(false);
+  const [taskJustCompletedForLink, setTaskJustCompletedForLink] = useState<Task | null>(null);
+  const LINK_PROMPT_TOTAL_MS = 8000;
+  const [linkPromptRemainingMs, setLinkPromptRemainingMs] = useState(LINK_PROMPT_TOTAL_MS);
+  const [companySearchInput, setCompanySearchInput] = useState('');
+  const [contactSearchInput, setContactSearchInput] = useState('');
 
   // Calcular estadísticas
   const today = new Date();
@@ -180,6 +238,19 @@ const Tasks: React.FC = () => {
     }
   }, [user]);
 
+  const fetchCompaniesAndContacts = useCallback(async () => {
+    try {
+      const [companiesRes, contactsRes] = await Promise.all([
+        api.get('/companies', { params: { limit: 1000 } }),
+        api.get('/contacts', { params: { limit: 1000 } }),
+      ]);
+      setCompanies(companiesRes.data.companies || companiesRes.data || []);
+      setContacts(contactsRes.data.contacts || contactsRes.data || []);
+    } catch (error) {
+      console.error('Error fetching companies/contacts:', error);
+    }
+  }, []);
+
   const fetchTasks = useCallback(async () => {
     try {
       setLoading(true);
@@ -268,12 +339,46 @@ const Tasks: React.FC = () => {
     fetchUsers();
   }, [fetchUsers]);
 
+  useEffect(() => {
+    fetchCompaniesAndContacts();
+  }, [fetchCompaniesAndContacts]);
+
+  useEffect(() => {
+    if (!linkPromptOpen || !taskJustCompletedForLink) return;
+    const interval = setInterval(() => {
+      setLinkPromptRemainingMs((prev) => {
+        if (prev <= 100) {
+          clearInterval(interval);
+          setLinkPromptOpen(false);
+          setTaskJustCompletedForLink(null);
+          return 0;
+        }
+        return prev - 100;
+      });
+    }, 100);
+    return () => clearInterval(interval);
+  }, [linkPromptOpen, taskJustCompletedForLink]);
+
+  const getDescriptionWithoutCompletada = (desc: string) => {
+    const idx = (desc || '').indexOf('\n\n--- Completada ---');
+    return idx >= 0 ? (desc || '').slice(0, idx).trim() : (desc || '');
+  };
+
+  const getCompletadaSection = (desc: string) => {
+    const idx = (desc || '').indexOf('\n\n--- Completada ---');
+    return idx >= 0 ? (desc || '').slice(idx) : '';
+  };
+
   const handleOpen = (task?: Task) => {
+    setCompanySearchInput('');
+    setContactSearchInput('');
     if (task) {
       setEditingTask(task);
-      // Si es una actividad, obtener la descripción si existe
-      const description = (task as any).description || '';
+      const fullDescription = (task as any).description || '';
+      const description = getDescriptionWithoutCompletada(fullDescription);
       const assignedToId = (task as any).assignedToId || '';
+      const companyId = (task as any).companyId;
+      const contactId = (task as any).contactId;
       setFormData({
         title: task.title || task.subject || '',
         description: description,
@@ -283,6 +388,8 @@ const Tasks: React.FC = () => {
         dueDate: task.dueDate ? task.dueDate.split('T')[0] : '',
         estimatedTime: '',
         assignedToId: assignedToId ? assignedToId.toString() : (user?.id ? user.id.toString() : ''),
+        companyId: companyId != null ? companyId.toString() : '',
+        contactId: contactId != null ? contactId.toString() : '',
       });
     } else {
       setEditingTask(null);
@@ -295,36 +402,67 @@ const Tasks: React.FC = () => {
         dueDate: '',
         estimatedTime: '',
         assignedToId: user?.id ? user.id.toString() : '',
+        companyId: '',
+        contactId: '',
       });
     }
+    setOpen(true);
+  };
+
+  const openNewTaskLinkedTo = (task: Task) => {
+    setCompanySearchInput('');
+    setContactSearchInput('');
+    setEditingTask(null);
+    const companyId = (task as any).companyId;
+    const contactId = (task as any).contactId;
+    setFormData({
+      title: '',
+      description: '',
+      status: 'pending',
+      priority: 'medium',
+      startDate: '',
+      dueDate: '',
+      estimatedTime: '',
+      assignedToId: user?.id ? user.id.toString() : '',
+      companyId: companyId != null ? companyId.toString() : '',
+      contactId: contactId != null ? contactId.toString() : '',
+    });
     setOpen(true);
   };
 
   const handleClose = () => {
     setOpen(false);
     setEditingTask(null);
+    setCompanySearchInput('');
+    setContactSearchInput('');
   };
 
   const handleSubmit = async () => {
     try {
-      const submitData = {
+      const submitData: any = {
         ...formData,
         assignedToId: formData.assignedToId ? parseInt(formData.assignedToId) : (user?.id || undefined),
       };
-      
+      if (formData.companyId) submitData.companyId = parseInt(formData.companyId);
+      else submitData.companyId = null;
+      if (formData.contactId) submitData.contactId = parseInt(formData.contactId);
+      else submitData.contactId = null;
+
       if (editingTask) {
-        // Si es una actividad, actualizar en /activities
+        const completadaSection = getCompletadaSection((editingTask as any).description || '');
+        const descriptionToSave = completadaSection
+          ? `${(formData.description || '').trim()}${(formData.description || '').trim() ? '\n\n' : ''}${completadaSection}`
+          : formData.description;
         if (editingTask.isActivity) {
           await api.put(`/activities/${editingTask.id}`, {
             subject: formData.title,
-            description: formData.description,
+            description: descriptionToSave,
             type: 'task',
             startDate: formData.startDate || undefined,
             dueDate: formData.dueDate || undefined,
           });
         } else {
-          // Si es una tarea normal, actualizar en /tasks
-          await api.put(`/tasks/${editingTask.id}`, submitData);
+          await api.put(`/tasks/${editingTask.id}`, { ...submitData, description: descriptionToSave });
         }
       } else {
         await api.post('/tasks', submitData);
@@ -369,41 +507,110 @@ const Tasks: React.FC = () => {
     setTaskToDelete(null);
   };
 
-  const handleStatusChange = async (taskId: number, newStatus: string) => {
+  const handleStatusChange = async (taskId: number, newStatus: string, extraPayload?: { description?: string }) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
-  
-    // Guardar el estado anterior para poder revertir en caso de error
+
     const previousStatus = task.status;
-  
-    // Actualización optimista: actualizar el estado local inmediatamente
-    setTasks(prevTasks => 
-      prevTasks.map(t => 
+
+    setTasks(prevTasks =>
+      prevTasks.map(t =>
         t.id === taskId ? { ...t, status: newStatus } : t
       )
     );
     setStatusMenuAnchor(null);
-  
-    // Actualizar en el servidor en segundo plano
+
     try {
       if (task.isActivity) {
-        await api.put(`/activities/${taskId}`, {
-          status: newStatus,
-        });
+        await api.put(`/activities/${taskId}`, { status: newStatus });
       } else {
-        await api.put(`/tasks/${taskId}`, {
-          status: newStatus,
-        });
+        await api.put(`/tasks/${taskId}`, { status: newStatus, ...extraPayload });
       }
     } catch (error) {
       console.error('Error updating task status:', error);
-      // Revertir el cambio en caso de error
-      setTasks(prevTasks => 
-        prevTasks.map(t => 
+      setTasks(prevTasks =>
+        prevTasks.map(t =>
           t.id === taskId ? { ...t, status: previousStatus } : t
         )
       );
       alert('Error al actualizar el estado de la tarea. Por favor, intenta nuevamente.');
+    }
+  };
+
+  const handleOpenCompleteModal = (task: Task) => {
+    setStatusMenuAnchor(null);
+    setCompleteModalTask(task);
+    setCompleteObservations('');
+    const now = new Date();
+    setCompleteDate(now.toISOString().slice(0, 10));
+    setCompleteTime(now.toTimeString().slice(0, 5));
+    setCompleteModalOpen(true);
+  };
+
+  const handleCloseCompleteModal = () => {
+    setCompleteModalOpen(false);
+    setCompleteModalTask(null);
+    setCompleteModalViewOnly(false);
+    setCompleteObservations('');
+    setCompleteDate('');
+    setCompleteTime('');
+  };
+
+  const handleOpenCompleteModalView = (task: Task) => {
+    setCompleteModalTask(task);
+    setCompleteObservations((task as any).description || '');
+    setCompleteModalViewOnly(true);
+    setCompleteModalOpen(true);
+  };
+
+  const handleCompleteWithObservations = async () => {
+    if (!completeModalTask) return;
+    const task = completeModalTask;
+    const taskId = task.id;
+    const previousStatus = task.status;
+
+    setCompleting(true);
+    const dateStr = completeDate || new Date().toISOString().slice(0, 10);
+    const timeStr = completeTime || new Date().toTimeString().slice(0, 5);
+    const completedAtLabel = completeDate || completeTime
+      ? `Completada el ${dateStr.split('-').reverse().join('/')} a las ${timeStr}\n\n`
+      : '';
+    const newDescription = `${(task as any).description || ''}\n\n--- Completada ---\n${completedAtLabel}${completeObservations.trim()}`.trim();
+    const descriptionPayload = newDescription !== ((task as any).description || '').trim() ? newDescription : undefined;
+
+    setTasks(prevTasks =>
+      prevTasks.map(t =>
+        t.id === taskId ? { ...t, status: 'completed', ...(descriptionPayload != null ? { description: descriptionPayload } : {}) } : t
+      )
+    );
+
+    try {
+      if (task.isActivity) {
+        await api.put(`/activities/${taskId}`, { status: 'completed', ...(descriptionPayload != null ? { description: descriptionPayload } : {}) });
+      } else {
+        await api.put(`/tasks/${taskId}`, {
+          status: 'completed',
+          ...(descriptionPayload != null ? { description: descriptionPayload } : {}),
+        });
+      }
+      const hadCompany = (task as any).companyId != null;
+      handleCloseCompleteModal();
+      fetchTasks();
+      if (hadCompany) {
+        setTaskJustCompletedForLink(task);
+        setLinkPromptRemainingMs(LINK_PROMPT_TOTAL_MS);
+        setLinkPromptOpen(true);
+      }
+    } catch (error) {
+      console.error('Error al completar la tarea:', error);
+      setTasks(prevTasks =>
+        prevTasks.map(t =>
+          t.id === taskId ? { ...t, status: previousStatus } : t
+        )
+      );
+      alert('Error al completar la tarea. Por favor, intenta nuevamente.');
+    } finally {
+      setCompleting(false);
     }
   };
 
@@ -1043,6 +1250,32 @@ const Tasks: React.FC = () => {
                   color: theme.palette.text.primary, 
                   fontSize: { xs: '0.75rem', md: '0.875rem' }, 
                   py: { xs: 1.5, md: 1.25 }, 
+                  pl: { xs: 1.5, md: 2 }, 
+                  pr: { xs: 1.5, md: 2 }, 
+                  minWidth: { xs: 72, md: 88 }, 
+                  width: { xs: 'auto', md: '8%' },
+                  bgcolor: 'transparent'
+                }}>
+                  Empresa
+                </TableCell>
+                <TableCell sx={{ 
+                  fontWeight: 600, 
+                  color: theme.palette.text.primary, 
+                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                  py: { xs: 1.5, md: 1.25 }, 
+                  pl: { xs: 1.5, md: 2 }, 
+                  pr: { xs: 1.5, md: 2 }, 
+                  minWidth: { xs: 72, md: 88 }, 
+                  width: { xs: 'auto', md: '8%' },
+                  bgcolor: 'transparent'
+                }}>
+                  Contacto
+                </TableCell>
+                <TableCell sx={{ 
+                  fontWeight: 600, 
+                  color: theme.palette.text.primary, 
+                  fontSize: { xs: '0.75rem', md: '0.875rem' }, 
+                  py: { xs: 1.5, md: 1.25 }, 
                   pl: { xs: 4, md: 5 }, 
                   pr: { xs: 0.5, md: 1 }, 
                   minWidth: { xs: 100, md: 120 }, 
@@ -1069,7 +1302,7 @@ const Tasks: React.FC = () => {
             <TableBody>
               {tasks.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} sx={{ py: 8, textAlign: 'center', border: 'none' }}>
+                  <TableCell colSpan={9} sx={{ py: 8, textAlign: 'center', border: 'none' }}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
                       <Box
                         sx={{
@@ -1303,6 +1536,7 @@ const Tasks: React.FC = () => {
                                 boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
                                 flexShrink: 0,
                                 cursor: 'pointer',
+                                border: 'none',
                               }}
                             />
                           </Box>
@@ -1324,6 +1558,7 @@ const Tasks: React.FC = () => {
                                 boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
                                 flexShrink: 0,
                                 cursor: 'pointer',
+                                border: 'none',
                               }}
                             />
                           </Box>
@@ -1332,6 +1567,44 @@ const Tasks: React.FC = () => {
                         <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
                           --
                         </Typography>
+                      )}
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ pl: { xs: 1.5, md: 2 }, pr: { xs: 1.5, md: 2 }, minWidth: { xs: 72, md: 88 }, width: { xs: 'auto', md: '8%' } }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
+                      {task.Company?.name ? (
+                        <Tooltip title={task.Company.name} arrow>
+                          <Avatar
+                            sx={{
+                              ...initialsAvatarSx,
+                              bgcolor: getAvatarColors(task.Company.name).bg,
+                              color: getAvatarColors(task.Company.name).color,
+                            }}
+                          >
+                            {getCompanyInitials(task.Company.name)}
+                          </Avatar>
+                        </Tooltip>
+                      ) : (
+                        <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>—</Typography>
+                      )}
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ pl: { xs: 1.5, md: 2 }, pr: { xs: 1.5, md: 2 }, minWidth: { xs: 72, md: 88 }, width: { xs: 'auto', md: '8%' } }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-start', alignItems: 'center' }}>
+                      {task.Contact ? (
+                        <Tooltip title={`${task.Contact.firstName} ${task.Contact.lastName}`.trim()} arrow>
+                          <Avatar
+                            sx={{
+                              ...initialsAvatarSx,
+                              bgcolor: getAvatarColors(`${task.Contact.firstName} ${task.Contact.lastName}`).bg,
+                              color: getAvatarColors(`${task.Contact.firstName} ${task.Contact.lastName}`).color,
+                            }}
+                          >
+                            {getContactInitials(task.Contact.firstName, task.Contact.lastName)}
+                          </Avatar>
+                        </Tooltip>
+                      ) : (
+                        <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>—</Typography>
                       )}
                     </Box>
                   </TableCell>
@@ -1378,7 +1651,41 @@ const Tasks: React.FC = () => {
                     </Box>
                   </TableCell>
                   <TableCell sx={{ pl: { xs: 5, md: 6 }, pr: { xs: 0.5, md: 1 }, width: { xs: 100, md: 120 }, minWidth: { xs: 100, md: 120 } }}>
-                    <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', justifyContent: 'flex-start' }}>
+                    <Box sx={{ display: 'flex', gap: 0.75, alignItems: 'center', justifyContent: 'flex-start' }}>
+                      <Tooltip title={task.status === 'completed' ? 'Ver información de completada' : 'Disponible cuando la tarea esté completada'}>
+                        <span>
+                          <IconButton
+                            size="small"
+                            disabled={task.status !== 'completed'}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenCompleteModalView(task);
+                            }}
+                            sx={{
+                              width: 36,
+                              height: 36,
+                              padding: 0,
+                              borderRadius: 1.5,
+                              border: '1.5px solid',
+                              borderColor: '#3682f8',
+                              color: '#3682f8',
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(54, 130, 248, 0.08)' : '#e3f2fd',
+                              '&:hover': {
+                                borderColor: '#2563eb',
+                                color: '#2563eb',
+                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(54, 130, 248, 0.18)' : '#bbdefb',
+                              },
+                              '&.Mui-disabled': {
+                                borderColor: theme.palette.mode === 'dark' ? 'rgba(54, 130, 248, 0.35)' : 'rgba(54, 130, 248, 0.4)',
+                                color: theme.palette.mode === 'dark' ? 'rgba(54, 130, 248, 0.45)' : 'rgba(54, 130, 248, 0.5)',
+                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+                              },
+                            }}
+                          >
+                            <Visibility sx={{ fontSize: '1.1rem' }} />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
                       <Tooltip title="Editar">
                         <IconButton
                           size="small"
@@ -1387,15 +1694,22 @@ const Tasks: React.FC = () => {
                             handleOpen(task);
                           }}
                           sx={{
-                            color: theme.palette.text.secondary,
-                            padding: { xs: 0.5, md: 1 },
+                            width: 36,
+                            height: 36,
+                            padding: 0,
+                            borderRadius: 1.5,
+                            border: '1.5px solid',
+                            borderColor: taxiMonterricoColors.green,
+                            color: taxiMonterricoColors.green,
+                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(34, 197, 94, 0.08)' : '#dcfce7',
                             '&:hover': {
-                              color: taxiMonterricoColors.green,
-                              bgcolor: `${taxiMonterricoColors.green}15`,
+                              borderColor: taxiMonterricoColors.greenDark,
+                              color: taxiMonterricoColors.greenDark,
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(34, 197, 94, 0.18)' : '#bbf7d0',
                             },
                           }}
                         >
-                          <Edit sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                          <Edit sx={{ fontSize: '1.1rem' }} />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Eliminar">
@@ -1405,9 +1719,23 @@ const Tasks: React.FC = () => {
                             e.stopPropagation();
                             handleDelete(task.id, task.isActivity);
                           }}
-                          sx={pageStyles.deleteIcon}
+                          sx={{
+                            width: 36,
+                            height: 36,
+                            padding: 0,
+                            borderRadius: 1.5,
+                            border: '1.5px solid',
+                            borderColor: '#f83636',
+                            color: '#f83636',
+                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(248, 54, 54, 0.08)' : '#fee2e2',
+                            '&:hover': {
+                              borderColor: '#dc2626',
+                              color: '#dc2626',
+                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(248, 54, 54, 0.18)' : '#fecaca',
+                            },
+                          }}
                         >
-                          <Delete sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
+                          <Delete sx={{ fontSize: '1.1rem' }} />
                         </IconButton>
                       </Tooltip>
                     </Box>
@@ -1539,7 +1867,22 @@ const Tasks: React.FC = () => {
                     fullWidth
                     placeholder="Título"
                     inputProps={{ style: { fontSize: '1rem' } }}
-                    InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    InputProps={{ 
+                      sx: { 
+                        '& input': { py: 1.05 },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                          borderWidth: '1px',
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                          borderWidth: '1px',
+                        },
+                      } 
+                    }}
                   />
                 </Box>
                 <Box sx={{ minWidth: 0 }}>
@@ -1551,7 +1894,22 @@ const Tasks: React.FC = () => {
                     InputLabelProps={{ shrink: true }}
                     fullWidth
                     inputProps={{ style: { fontSize: '1rem' } }}
-                    InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    InputProps={{ 
+                      sx: { 
+                        '& input': { py: 1.05 },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                          borderWidth: '1px',
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                          borderWidth: '1px',
+                        },
+                      } 
+                    }}
                   />
                 </Box>
                 <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Hora estimada</Typography>
@@ -1564,7 +1922,22 @@ const Tasks: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, estimatedTime: e.target.value })}
                     fullWidth
                     inputProps={{ style: { fontSize: '1rem' } }}
-                    InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    InputProps={{ 
+                      sx: { 
+                        '& input': { py: 1.05 },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                          borderWidth: '1px',
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                          borderWidth: '1px',
+                        },
+                      } 
+                    }}
                   />
                 </Box>
                 <Box sx={{ minWidth: 0 }}>
@@ -1576,7 +1949,22 @@ const Tasks: React.FC = () => {
                     InputLabelProps={{ shrink: true }}
                     fullWidth
                     inputProps={{ style: { fontSize: '1rem' } }}
-                    InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    InputProps={{ 
+                      sx: { 
+                        '& input': { py: 1.05 },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                          borderWidth: '1px',
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                          borderWidth: '1px',
+                        },
+                      } 
+                    }}
                   />
                 </Box>
                 <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Estado</Typography>
@@ -1589,7 +1977,22 @@ const Tasks: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                     fullWidth
                     inputProps={{ style: { fontSize: '1rem' } }}
-                    InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    InputProps={{ 
+                      sx: { 
+                        '& input': { py: 1.05 },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                          borderWidth: '1px',
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                          borderWidth: '1px',
+                        },
+                      } 
+                    }}
                     SelectProps={{
                       MenuProps: {
                         sx: { zIndex: 1700 },
@@ -1601,7 +2004,6 @@ const Tasks: React.FC = () => {
                     <MenuItem value="pending">Pendiente</MenuItem>
                     <MenuItem value="in progress">En Progreso</MenuItem>
                     <MenuItem value="completed">Completada</MenuItem>
-                    <MenuItem value="cancelled">Cancelada</MenuItem>
                   </TextField>
                 </Box>
                 <Box sx={{ minWidth: 0 }}>
@@ -1612,7 +2014,22 @@ const Tasks: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
                     fullWidth
                     inputProps={{ style: { fontSize: '1rem' } }}
-                    InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    InputProps={{ 
+                      sx: { 
+                        '& input': { py: 1.05 },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                          borderWidth: '1px',
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                          borderWidth: '1px',
+                        },
+                      } 
+                    }}
                     SelectProps={{
                       MenuProps: {
                         sx: { zIndex: 1700 },
@@ -1626,6 +2043,166 @@ const Tasks: React.FC = () => {
                     <MenuItem value="high">Alta</MenuItem>
                   </TextField>
                 </Box>
+                <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Empresa</Typography>
+                <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Contacto</Typography>
+                <Box sx={{ minWidth: 0 }}>
+                  {editingTask && formData.companyId ? (
+                    <TextField
+                      size="small"
+                      value={companies.find((c) => c.id === parseInt(formData.companyId || '0', 10))?.name || ''}
+                      fullWidth
+                      disabled
+                      inputProps={{ style: { fontSize: '1rem' } }}
+                      InputProps={{ 
+                        sx: { 
+                          '& input': { py: 1.05 },
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                            borderWidth: '1px',
+                          },
+                        }
+                      }}
+                    />
+                  ) : (
+                    <Autocomplete
+                      size="small"
+                      options={companies}
+                      getOptionLabel={(option) => option.name || ''}
+                      value={companies.find((c) => c.id === parseInt(formData.companyId || '0', 10)) || null}
+                      onChange={(_, newValue) => {
+                        setFormData({ 
+                          ...formData, 
+                          companyId: newValue ? newValue.id.toString() : '', 
+                          contactId: '' 
+                        });
+                        setCompanySearchInput('');
+                      }}
+                      onInputChange={(_, newInputValue, reason) => {
+                        if (reason === 'reset') {
+                          // Cuando se resetea (selección de opción), limpiar el input
+                          setCompanySearchInput('');
+                        } else {
+                          // Cuando el usuario escribe, actualizar el input
+                          setCompanySearchInput(newInputValue);
+                        }
+                      }}
+                      inputValue={companySearchInput}
+                      open={companySearchInput.length > 0 && companySearchInput.trim().length > 0}
+                      openOnFocus={false}
+                      onClose={() => setCompanySearchInput('')}
+                      isOptionEqualToValue={(option, value) => option.id === value.id}
+                      filterOptions={(options, { inputValue }) => {
+                        if (!inputValue || inputValue.trim().length === 0) return [];
+                        const searchTerm = inputValue.toLowerCase().trim();
+                        const filtered = options.filter((option) =>
+                          option.name.toLowerCase().includes(searchTerm)
+                        );
+                        return filtered;
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          placeholder="Buscar empresa..."
+                          inputProps={{ ...params.inputProps, style: { fontSize: '1rem' } }}
+                          InputProps={{ 
+                            ...params.InputProps,
+                            sx: { 
+                              '& input': { py: 1.05 },
+                              '& .MuiOutlinedInput-notchedOutline': {
+                                borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                                borderWidth: '1px',
+                              },
+                              '&:hover .MuiOutlinedInput-notchedOutline': {
+                                borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                              },
+                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                                borderWidth: '1px',
+                              },
+                            }
+                          }}
+                        />
+                      )}
+                      ListboxProps={{
+                        sx: { maxHeight: 300 },
+                      }}
+                      slotProps={{
+                        popper: {
+                          sx: { zIndex: 1700 },
+                        },
+                      }}
+                      noOptionsText={companySearchInput.trim().length > 0 ? "No se encontraron empresas" : null}
+                    />
+                  )}
+                </Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <Autocomplete
+                    size="small"
+                    options={contacts}
+                    getOptionLabel={(option) => `${option.firstName} ${option.lastName}`.trim() || ''}
+                    value={contacts.find((c) => c.id === parseInt(formData.contactId || '0', 10)) || null}
+                    onChange={(_, newValue) => {
+                      setFormData({ 
+                        ...formData, 
+                        contactId: newValue ? newValue.id.toString() : '' 
+                      });
+                      setContactSearchInput('');
+                    }}
+                    onInputChange={(_, newInputValue, reason) => {
+                      if (reason === 'reset') {
+                        setContactSearchInput('');
+                      } else {
+                        setContactSearchInput(newInputValue);
+                      }
+                    }}
+                    inputValue={contactSearchInput}
+                    open={contactSearchInput.length > 0 && contactSearchInput.trim().length > 0}
+                    openOnFocus={false}
+                    onClose={() => setContactSearchInput('')}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    filterOptions={(options, { inputValue }) => {
+                      if (!inputValue || inputValue.trim().length === 0) return [];
+                      const searchTerm = inputValue.toLowerCase().trim();
+                      const filtered = options.filter((option) =>
+                        `${option.firstName} ${option.lastName}`.toLowerCase().includes(searchTerm)
+                      );
+                      return filtered;
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder="Buscar contacto..."
+                        inputProps={{ ...params.inputProps, style: { fontSize: '1rem' } }}
+                        InputProps={{ 
+                          ...params.InputProps,
+                          sx: { 
+                            '& input': { py: 1.05 },
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                              borderWidth: '1px',
+                            },
+                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                              borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                            },
+                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                              borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                              borderWidth: '1px',
+                            },
+                          }
+                        }}
+                      />
+                    )}
+                    ListboxProps={{
+                      sx: { maxHeight: 300 },
+                    }}
+                    slotProps={{
+                      popper: {
+                        sx: { zIndex: 1700 },
+                      },
+                    }}
+                    noOptionsText={contactSearchInput.trim().length > 0 ? "No se encontraron contactos" : null}
+                  />
+                </Box>
                 {users.length > 0 && (
                   <>
                     <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Asignado a</Typography>
@@ -1638,7 +2215,22 @@ const Tasks: React.FC = () => {
                         onChange={(e) => setFormData({ ...formData, assignedToId: e.target.value })}
                         fullWidth
                         inputProps={{ style: { fontSize: '1rem' } }}
-                        InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    InputProps={{ 
+                      sx: { 
+                        '& input': { py: 1.05 },
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                          borderWidth: '1px',
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                          borderWidth: '1px',
+                        },
+                      } 
+                    }}
                         SelectProps={{
                         MenuProps: {
                           sx: { zIndex: 1700 },
@@ -1666,6 +2258,21 @@ const Tasks: React.FC = () => {
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     fullWidth
                     placeholder="Descripción"
+                    InputProps={{ 
+                      sx: { 
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                          borderWidth: '1px',
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                          borderWidth: '1px',
+                        },
+                      } 
+                    }}
                   />
                 </Box>
               </Box>
@@ -1705,6 +2312,237 @@ const Tasks: React.FC = () => {
             startIcon={deleting ? <CircularProgress size={16} sx={{ color: theme.palette.common.white }} /> : <Delete />}
           >
             {deleting ? 'Eliminando...' : 'Eliminar'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Modal al marcar tarea como Completada */}
+      <Dialog
+        open={completeModalOpen}
+        onClose={handleCloseCompleteModal}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{
+          sx: {
+            ...pageStyles.dialog,
+            border: 'none',
+            borderRadius: 4,
+            minHeight: '70vh',
+            ...(theme.palette.mode === 'dark' && {
+              backgroundColor: '#1c252e !important',
+              bgcolor: '#1c252e',
+            }),
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: theme.palette.text.primary }}>
+          {completeModalTask?.title ?? 'Completar tarea'}
+        </DialogTitle>
+        <DialogContent sx={{ ...pageStyles.dialogContent, pt: 5, pb: 3, overflow: 'visible' }}>
+          {!completeModalViewOnly && (
+            <Box sx={{ mb: 2, mt: 1 }}>
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 1, fontWeight: 500 }}>
+                Fecha completa
+              </Typography>
+              <TextField
+                type="date"
+                value={completeDate}
+                onChange={(e) => setCompleteDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end" sx={{ pointerEvents: 'none', mr: 0.5 }}>
+                      <CalendarToday sx={{ color: theme.palette.text.secondary, fontSize: 20 }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  mb: 2,
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    '& fieldset': {
+                      border: '2px solid',
+                      borderColor: theme.palette.divider,
+                      borderRadius: 2,
+                    },
+                    '&:hover fieldset': {
+                      borderColor: theme.palette.divider,
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: theme.palette.primary.main,
+                      borderWidth: '2px',
+                    },
+                  },
+                  '& input::-webkit-calendar-picker-indicator': {
+                    opacity: 0,
+                    position: 'absolute',
+                    right: 0,
+                    width: '100%',
+                    height: '100%',
+                    cursor: 'pointer',
+                  },
+                }}
+              />
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 1, fontWeight: 500 }}>
+                Hora
+              </Typography>
+              <TextField
+                type="time"
+                value={completeTime}
+                onChange={(e) => setCompleteTime(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                fullWidth
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end" sx={{ pointerEvents: 'none', mr: 0.5 }}>
+                      <Schedule sx={{ color: theme.palette.text.secondary, fontSize: 20 }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                    '& fieldset': {
+                      border: '2px solid',
+                      borderColor: theme.palette.divider,
+                      borderRadius: 2,
+                    },
+                    '&:hover fieldset': {
+                      borderColor: theme.palette.divider,
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: theme.palette.primary.main,
+                      borderWidth: '2px',
+                    },
+                  },
+                  '& input::-webkit-calendar-picker-indicator': {
+                    opacity: 0,
+                    position: 'absolute',
+                    right: 0,
+                    width: '100%',
+                    height: '100%',
+                    cursor: 'pointer',
+                  },
+                }}
+              />
+            </Box>
+          )}
+          <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 1, fontWeight: 500 }}>
+            Observaciones
+          </Typography>
+          <TextField
+            multiline
+            rows={8}
+            value={completeObservations}
+            onChange={(e) => setCompleteObservations(e.target.value)}
+            fullWidth
+            disabled={completeModalViewOnly}
+            InputProps={completeModalViewOnly ? { readOnly: true } : undefined}
+            sx={{
+              mb: 2,
+              mt: 0,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+                '& fieldset': {
+                  border: '2px solid',
+                  borderColor: theme.palette.divider,
+                  borderRadius: 2,
+                },
+                '&:hover fieldset': {
+                  borderColor: theme.palette.divider,
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: theme.palette.primary.main,
+                  borderWidth: '2px',
+                },
+              },
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={pageStyles.dialogActions}>
+          {completeModalViewOnly ? (
+            <Button
+              onClick={handleCloseCompleteModal}
+              sx={pageStyles.cancelButton}
+            >
+              Cerrar
+            </Button>
+          ) : (
+            <>
+              <Button
+                onClick={handleCloseCompleteModal}
+                sx={pageStyles.cancelButton}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleCompleteWithObservations}
+                disabled={completing}
+                sx={pageStyles.saveButton}
+              >
+                {completing ? 'Completando...' : 'Completar'}
+              </Button>
+            </>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      {/* Aviso: crear nueva tarea vinculada a la misma empresa */}
+      <Dialog
+        open={linkPromptOpen}
+        onClose={() => {
+          setLinkPromptOpen(false);
+          setTaskJustCompletedForLink(null);
+        }}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            minWidth: 320,
+            bgcolor: theme.palette.background.paper,
+          },
+        }}
+      >
+        <DialogContent sx={{ pt: 2.5, pb: 1 }}>
+          <Typography variant="body1" sx={{ color: theme.palette.text.primary, mb: 2 }}>
+            ¿Desea crear una nueva tarea vinculada a la misma empresa?
+          </Typography>
+          <LinearProgress
+            variant="determinate"
+            value={(linkPromptRemainingMs / LINK_PROMPT_TOTAL_MS) * 100}
+            sx={{
+              height: 6,
+              borderRadius: 1,
+              bgcolor: theme.palette.action.hover,
+              '& .MuiLinearProgress-bar': {
+                bgcolor: taxiMonterricoColors.green,
+              },
+            }}
+          />
+        </DialogContent>
+        <DialogActions sx={pageStyles.dialogActions}>
+          <Button
+            onClick={() => {
+              setLinkPromptOpen(false);
+              setTaskJustCompletedForLink(null);
+            }}
+            sx={pageStyles.cancelButton}
+          >
+            No gracias
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => {
+              if (taskJustCompletedForLink) {
+                openNewTaskLinkedTo(taskJustCompletedForLink);
+              }
+              setLinkPromptOpen(false);
+              setTaskJustCompletedForLink(null);
+            }}
+            sx={pageStyles.saveButton}
+          >
+            Crear
           </Button>
         </DialogActions>
       </Dialog>
@@ -1762,7 +2600,8 @@ const Tasks: React.FC = () => {
         <MenuItem
           onClick={() => {
             if (statusMenuAnchor) {
-              handleStatusChange(statusMenuAnchor.taskId, 'completed');
+              const t = tasks.find(t => t.id === statusMenuAnchor.taskId);
+              if (t) handleOpenCompleteModal(t);
             }
           }}
           sx={{

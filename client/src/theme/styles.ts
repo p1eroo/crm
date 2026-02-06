@@ -97,11 +97,15 @@ export const pageStyles = {
   } as SxProps<Theme>,
 
   /**
-   * Estilo para diálogos con sombra suave
+   * Estilo para diálogos: mismo fondo que drawer/tablas en dark (#1c252e).
+   * Valor fijo en dark para que no dependa de caché ni de theme.palette.background.paper.
    */
   dialog: {
     borderRadius: 2,
-    boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+    boxShadow: (theme: Theme) => theme.palette.mode === 'dark'
+      ? '0 8px 24px rgba(0,0,0,0.3)'
+      : '0 8px 24px rgba(0,0,0,0.12)',
+    bgcolor: (theme: Theme) => theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
   } as SxProps<Theme>,
 
   /**
@@ -247,14 +251,21 @@ export const pageStyles = {
   } as SxProps<Theme>,
 
   /**
-   * Botón de cancelar en diálogos
+   * Botón de cancelar en diálogos (estilo estándar)
    */
   cancelButton: {
+    borderRadius: '8px',
+    px: 2.5,
+    py: 1.25,
+    bgcolor: '#5A2C30',
+    color: '#F08B8B',
     textTransform: 'none' as const,
-    color: (theme: Theme) => theme.palette.text.secondary,
-    fontWeight: 500,
+    fontWeight: 600,
+    border: 'none',
+    boxShadow: 'none',
     '&:hover': {
-      bgcolor: (theme: Theme) => theme.palette.action.hover,
+      bgcolor: '#D25B5B',
+      color: '#fff',
     },
   } as SxProps<Theme>,
 
@@ -277,27 +288,36 @@ export const pageStyles = {
   } as SxProps<Theme>,
 
   /**
-   * Botón de guardar/crear en diálogos
+   * Botón de guardar/crear/actualizar en diálogos (estilo estándar)
    */
   saveButton: {
-    textTransform: 'none' as const,
-    fontWeight: 500,
-    borderRadius: 1.5,
+    borderRadius: '8px',
     px: 2.5,
-    bgcolor: taxiMonterricoColors.green,
+    py: 1.25,
+    bgcolor: '#4CAF50',
+    color: '#FFFFFF',
+    textTransform: 'none' as const,
+    fontWeight: 600,
     '&:hover': {
-      bgcolor: taxiMonterricoColors.greenDark,
+      bgcolor: '#45a049',
+      color: '#FFFFFF',
+    },
+    '&.Mui-disabled': {
+      bgcolor: '#81C784',
+      color: '#FFFFFF',
+      opacity: 0.6,
     },
   } as SxProps<Theme>,
 
   /**
-   * Contenedor de acciones de diálogo
+   * Contenedor de acciones de diálogo (alineado a la izquierda por defecto)
    */
   dialogActions: {
     px: 3,
     py: 2,
     borderTop: (theme: Theme) => `1px solid ${theme.palette.divider}`,
     gap: 1,
+    justifyContent: 'flex-start',
   } as SxProps<Theme>,
 
   /**

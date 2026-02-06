@@ -21,6 +21,7 @@ import { Search, Close, ChevronLeft, ChevronRight } from "@mui/icons-material";
 import api from "../../config/api";
 import { taxiMonterricoColors } from "../../theme/colors";
 import { companyLabels } from "../../constants/companyLabels";
+import { pageStyles } from "../../theme/styles";
 
 interface User {
   id: number;
@@ -882,7 +883,7 @@ const DealModal: React.FC<DealModalProps> = ({
           </Box>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: 3, py: 2.5, justifyContent: "flex-start" }}>
+      <DialogActions sx={pageStyles.dialogActions}>
         <Button
           onClick={
             dealDialogTab === "create"
@@ -897,24 +898,7 @@ const DealModal: React.FC<DealModalProps> = ({
             (dealDialogTab === "create" &&
               (!dealFormData.name.trim() || !dealFormData.amount.trim()))
           }
-          sx={{
-            textTransform: "none",
-            fontWeight: 500,
-            px: 2,
-            py: 0.875,
-            fontSize: "0.75rem",
-            borderRadius: 0.5,
-            bgcolor: taxiMonterricoColors.green,
-            color: "white",
-            "&:hover": {
-              bgcolor: taxiMonterricoColors.green,
-              opacity: 0.9,
-            },
-            "&:disabled": {
-              bgcolor: theme.palette.action.disabledBackground,
-              color: theme.palette.action.disabled,
-            },
-          }}
+          sx={pageStyles.saveButton}
         >
           {saving
             ? "Guardando..."

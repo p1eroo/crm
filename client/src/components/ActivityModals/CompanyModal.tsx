@@ -21,6 +21,7 @@ import api from "../../config/api";
 import axios from "axios";
 import { taxiMonterricoColors } from "../../theme/colors";
 import { companyLabels } from "../../constants/companyLabels";
+import { pageStyles } from "../../theme/styles";
 
 interface User {
   id: number;
@@ -676,10 +677,6 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
           >
             {formStep === 1 ? (
               <>
-                {/* Título de sección */}
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: theme.palette.text.primary }}>
-                  {companyLabels.basicInformation}
-                </Typography>
             {/* RUC */}
             <TextField
               label={companyLabels.ruc}
@@ -905,10 +902,6 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
                 >
                   Atrás
                 </Button>
-                {/* Título de sección */}
-                <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: theme.palette.text.primary }}>
-                  Información Comercial
-                </Typography>
             {/* Dominio */}
             <TextField
               label="Dominio"
@@ -1288,45 +1281,14 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
           </Box>
         )}
       </DialogContent>
-      <DialogActions sx={{ 
-        px: 3, 
-        pb: 2.5, 
-        pt: 0, 
-        justifyContent: "flex-start", 
-        gap: 0.75,
-        bgcolor: theme.palette.background.paper,
-      }}>
+      <DialogActions sx={pageStyles.dialogActions}>
         {companyDialogTab === "create" && formStep === 1 ? (
           <Button
             onClick={() => setFormStep(2)}
             variant="contained"
             disabled={!companyFormData.name.trim() || !!nameError || !!rucValidationError}
             endIcon={<ChevronRight />}
-            sx={{
-              textTransform: "none",
-              fontWeight: 600,
-              px: 4,
-              py: 0.875,
-              fontSize: "0.9375rem",
-              bgcolor: taxiMonterricoColors.green,
-              color: "white",
-              borderRadius: 0.5,
-              boxShadow: `0 4px 12px ${taxiMonterricoColors.green}40`,
-              "&:hover": {
-                bgcolor: taxiMonterricoColors.greenDark,
-                boxShadow: `0 6px 16px ${taxiMonterricoColors.green}50`,
-                transform: "translateY(-2px)",
-              },
-              "&:active": {
-                transform: "translateY(0)",
-              },
-              "&:disabled": {
-                bgcolor: theme.palette.action.disabledBackground,
-                color: theme.palette.action.disabled,
-                boxShadow: "none",
-              },
-              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-            }}
+            sx={pageStyles.saveButton}
           >
             {companyLabels.next}
           </Button>
@@ -1344,35 +1306,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
                 selectedExistingCompanies.filter((id) => !excludedCompanyIds.includes(id)).length === 0) ||
               (companyDialogTab === "create" && (!companyFormData.name.trim() || !!nameError || !!rucValidationError || !!domainError))
             }
-            sx={{
-              textTransform: "none",
-              fontWeight: 600,
-              px: 4,
-              py: 1.25,
-              fontSize: "0.9375rem",
-              bgcolor: taxiMonterricoColors.green,
-              color: "white",
-              borderRadius: 0.5,
-              boxShadow: saving
-                ? "none"
-                : `0 4px 12px ${taxiMonterricoColors.green}40`,
-              "&:hover": {
-                bgcolor: taxiMonterricoColors.greenDark,
-                boxShadow: saving
-                  ? "none"
-                  : `0 6px 16px ${taxiMonterricoColors.green}50`,
-                transform: "translateY(-2px)",
-              },
-              "&:active": {
-                transform: "translateY(0)",
-              },
-              "&:disabled": {
-                bgcolor: theme.palette.action.disabledBackground,
-                color: theme.palette.action.disabled,
-                boxShadow: "none",
-              },
-              transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-            }}
+            sx={pageStyles.saveButton}
           >
             {saving
               ? companyLabels.saving

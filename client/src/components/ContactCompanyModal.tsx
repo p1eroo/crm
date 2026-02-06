@@ -23,6 +23,7 @@ import api from "../config/api";
 import axios from "axios";
 import { taxiMonterricoColors } from "../theme/colors";
 import { companyLabels } from "../constants/companyLabels";
+import { pageStyles } from "../theme/styles";
 
 interface User {
   id: number;
@@ -639,33 +640,12 @@ const ContactCompanyModal: React.FC<ContactCompanyModalProps> = ({
       </DialogContent>
 
       {mode === "create" && (
-        <DialogActions sx={{ 
-          px: 3,
-          pt: 0,
-          pb: 2,
-          bgcolor: theme.palette.background.paper,
-          justifyContent: "flex-end",
-        }}>
+        <DialogActions sx={pageStyles.dialogActions}>
           <Button
             onClick={handleCreateCompany}
             variant="contained"
             disabled={saving || !companyFormData.companyname.trim() || !!nameError || !!rucValidationError}
-            sx={{
-              bgcolor: taxiMonterricoColors.green,
-              color: 'white',
-              textTransform: "none",
-              fontWeight: 600,
-              boxShadow: `0 4px 12px ${taxiMonterricoColors.green}40`,
-              "&:hover": {
-                bgcolor: taxiMonterricoColors.greenDark,
-                boxShadow: `0 6px 20px ${taxiMonterricoColors.green}50`,
-                transform: 'translateY(-2px)',
-              },
-              "&:disabled": {
-                bgcolor: theme.palette.action.disabledBackground,
-                color: theme.palette.action.disabled,
-              },
-            }}
+            sx={pageStyles.saveButton}
           >
             {saving ? "Creando..." : "Crear"}
           </Button>
