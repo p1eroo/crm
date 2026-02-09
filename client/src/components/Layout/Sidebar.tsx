@@ -81,7 +81,9 @@ const adminMenuItems = [
           boxSizing: 'border-box',
           overflowX: 'hidden',
           overflowY: 'visible',
-          bgcolor: theme.palette.background.default,
+          bgcolor: theme.palette.mode === 'dark' ? '#1c252e !important' : theme.palette.background.default,
+          backgroundColor: theme.palette.mode === 'dark' ? '#1c252e !important' : theme.palette.background.default,
+          background: theme.palette.mode === 'dark' ? '#1c252e !important' : theme.palette.background.default,
           border: 'none', // Eliminar todos los bordes primero
           borderRight: theme.palette.mode === 'light' 
             ? `0.5px solid ${theme.palette.divider}` 

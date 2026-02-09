@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -36,6 +36,8 @@ import { NoteModal, CallModal, TaskModal, MeetingModal, DealModal, CompanyModal,
 import type { GeneralInfoCard } from "../components/DetailCards";
 import { useAuth } from "../context/AuthContext";
 import DetailPageLayout from "../components/Layout/DetailPageLayout";
+import { FormDrawer } from "../components/FormDrawer";
+import { DealFormContent, getInitialDealFormData, type DealFormData } from "../components/DealFormContent";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendar, faClock } from "@fortawesome/free-regular-svg-icons";
 import { library } from "@fortawesome/fontawesome-svg-core";
@@ -106,19 +108,13 @@ const DealDetail: React.FC = () => {
   const [taskOpen, setTaskOpen] = useState(false);
   const [meetingOpen, setMeetingOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editFormData, setEditFormData] = useState({
-    name: '',
-    amount: '',
-    stage: 'lead',
-    closeDate: '',
-    priority: 'baja' as 'baja' | 'media' | 'alta',
-    companyId: '',
-    contactId: '',
+  const dealFormDataRef = useRef<{ formData: DealFormData; setFormData: React.Dispatch<React.SetStateAction<DealFormData>> }>({
+    formData: getInitialDealFormData(null),
+    setFormData: () => {},
   });
   const [savingEdit, setSavingEdit] = useState(false);
   const [saving, setSaving] = useState(false);
   const [activitySearch, setActivitySearch] = useState("");
-  const [companySearch, setCompanySearch] = useState("");
   const [dealSearch, setDealSearch] = useState("");
   const [contactSearch, setContactSearch] = useState("");
   const [companySortField, setCompanySortField] = useState<
@@ -141,6 +137,16 @@ const DealDetail: React.FC = () => {
     "create" | "existing"
   >("create");
   const [allCompanies, setAllCompanies] = useState<any[]>([]);
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<any[]>([]);
+  
+  // Estados para búsqueda asíncrona de empresas
+  const [companySearch, setCompanySearch] = useState("");
+  const [companyOptions, setCompanyOptions] = useState<any[]>([]);
+  const [loadingCompanies, setLoadingCompanies] = useState(false);
+  
+  // Estados para búsqueda de contactos (filtrado local)
+  const [contactSearchInput, setContactSearchInput] = useState("");
 
   // Función para ordenar empresas
   const handleSortCompanies = (field: "name" | "domain" | "phone") => {
@@ -186,22 +192,28 @@ const DealDetail: React.FC = () => {
       setDeal(response.data);
 
       // Obtener todos los contactos relacionados al deal (relación muchos a muchos)
-      // Solo usar la relación muchos a muchos (Contacts), no el contacto principal (Contact)
-      if (response.data.Contacts && Array.isArray(response.data.Contacts)) {
-        // Usar siempre la lista de Contacts, incluso si está vacía
+      // Usar la relación muchos a muchos (Contacts) si existe, sino usar el contacto principal (Contact) como fallback
+      if (response.data.Contacts && Array.isArray(response.data.Contacts) && response.data.Contacts.length > 0) {
+        // Usar la lista de Contacts si tiene elementos
         setDealContacts(response.data.Contacts);
+      } else if (response.data.Contact) {
+        // Si no hay contactos en la relación muchos a muchos, usar el contacto principal como fallback
+        setDealContacts([response.data.Contact]);
       } else {
-        // Si no hay contactos en la relación muchos a muchos, dejar el array vacío
+        // Si no hay contactos en ninguna relación, dejar el array vacío
         setDealContacts([]);
       }
 
       // Obtener todas las empresas relacionadas al deal (relación muchos a muchos)
-      // Solo usar la relación muchos a muchos (Companies), no la empresa principal (Company)
-      if (response.data.Companies && Array.isArray(response.data.Companies)) {
-        // Usar siempre la lista de Companies, incluso si está vacía
+      // Usar la relación muchos a muchos (Companies) si existe, sino usar la empresa principal (Company) como fallback
+      if (response.data.Companies && Array.isArray(response.data.Companies) && response.data.Companies.length > 0) {
+        // Usar la lista de Companies si tiene elementos
         setDealCompanies(response.data.Companies);
+      } else if (response.data.Company) {
+        // Si no hay empresas en la relación muchos a muchos, usar la empresa principal como fallback
+        setDealCompanies([response.data.Company]);
       } else {
-        // Si no hay empresas en la relación muchos a muchos, dejar el array vacío
+        // Si no hay empresas en ninguna relación, dejar el array vacío
         setDealCompanies([]);
       }
 
@@ -438,10 +450,61 @@ const DealDetail: React.FC = () => {
     try {
       const response = await api.get("/companies", { params: { limit: 1000 } });
       setAllCompanies(response.data.companies || response.data || []);
+      setCompanies(response.data.companies || response.data || []);
     } catch (error) {
       console.error("Error fetching all companies:", error);
     }
   };
+
+  // Cargar contactos al inicio
+  useEffect(() => {
+    const fetchContacts = async () => {
+      try {
+        const response = await api.get("/contacts", { params: { limit: 1000 } });
+        setContacts(response.data.contacts || response.data || []);
+      } catch (error) {
+        console.error("Error fetching contacts:", error);
+      }
+    };
+    fetchContacts();
+  }, []);
+
+  // Función para buscar empresas de forma asíncrona
+  const searchCompanies = useCallback(async (searchTerm: string) => {
+    if (!searchTerm.trim()) {
+      setCompanyOptions([]);
+      return;
+    }
+    
+    try {
+      setLoadingCompanies(true);
+      const response = await api.get("/companies", {
+        params: {
+          search: searchTerm,
+          limit: 20,
+        },
+      });
+      setCompanyOptions(response.data.companies || response.data || []);
+    } catch (error) {
+      console.error("Error searching companies:", error);
+      setCompanyOptions([]);
+    } finally {
+      setLoadingCompanies(false);
+    }
+  }, []);
+
+  // Debounce para búsqueda de empresas
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (companySearch) {
+        searchCompanies(companySearch);
+      } else {
+        setCompanyOptions([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [companySearch, searchCompanies]);
 
   const handleRemoveCompanyClick = (companyId: number, companyName?: string) => {
     setContactToRemove({ id: companyId, name: companyName || "" });
@@ -675,18 +738,15 @@ const DealDetail: React.FC = () => {
 
   const handleOpenEditDialog = () => {
     if (deal) {
-      setEditFormData({
-        name: deal.name || '',
-        amount: deal.amount?.toString() || '',
-        stage: deal.stage || 'lead',
-        closeDate: deal.closeDate ? deal.closeDate.split('T')[0] : '',
-        priority: (deal.priority as 'baja' | 'media' | 'alta') || 'baja',
-        companyId: deal.Company?.id?.toString() || '',
-        contactId: deal.Contact?.id?.toString() || '',
-      });
+      const initialData = getInitialDealFormData(deal);
+      dealFormDataRef.current.setFormData(initialData);
       // Cargar companies si no están cargados
-      if (allCompanies.length === 0) {
+      if (companies.length === 0) {
         fetchAllCompanies();
+      }
+      // Agregar la empresa del deal a companyOptions si existe
+      if (deal.Company?.id && !companyOptions.find((c: any) => c.id === deal.Company?.id)) {
+        setCompanyOptions([{ id: deal.Company.id, name: deal.Company.name || '' }, ...companyOptions]);
       }
       setEditDialogOpen(true);
     }
@@ -694,32 +754,27 @@ const DealDetail: React.FC = () => {
 
   const handleCloseEditDialog = () => {
     setEditDialogOpen(false);
-    setEditFormData({
-      name: '',
-      amount: '',
-      stage: 'lead',
-      closeDate: '',
-      priority: 'baja' as 'baja' | 'media' | 'alta',
-      companyId: '',
-      contactId: '',
-    });
+    dealFormDataRef.current.setFormData(getInitialDealFormData(null));
   };
 
   const handleSubmitEdit = async () => {
-    if (!deal || !editFormData.name.trim() || !editFormData.amount.trim()) {
+    if (!deal) return;
+    
+    const formData = dealFormDataRef.current.formData;
+    if (!formData.name.trim() || !formData.amount.trim()) {
       return;
     }
     
     setSavingEdit(true);
     try {
       const data = {
-        name: editFormData.name,
-        amount: parseFloat(editFormData.amount) || 0,
-        stage: editFormData.stage,
-        closeDate: editFormData.closeDate || null,
-        priority: editFormData.priority,
-        companyId: editFormData.companyId ? parseInt(editFormData.companyId) : null,
-        contactId: editFormData.contactId ? parseInt(editFormData.contactId) : null,
+        name: formData.name,
+        amount: parseFloat(formData.amount) || 0,
+        stage: formData.stage,
+        closeDate: formData.closeDate || null,
+        priority: formData.priority,
+        companyId: formData.companyId ? parseInt(formData.companyId) : null,
+        contactId: formData.contactId ? parseInt(formData.contactId) : null,
       };
       
       await api.put(`/deals/${deal.id}`, data);
@@ -1120,226 +1175,29 @@ const DealDetail: React.FC = () => {
           tab2Content={tab2Content}
           loading={loading}
           editDialog={
-            <Dialog
+            <FormDrawer
               open={editDialogOpen}
               onClose={handleCloseEditDialog}
-              maxWidth="sm"
-              fullWidth
-              PaperProps={{
-                sx: {
-                  bgcolor: `${theme.palette.background.paper} !important`,
-                  color: `${theme.palette.text.primary} !important`,
-                  borderRadius: 3,
-                  boxShadow: `0 8px 32px ${taxiMonterricoColors.greenLight}30`,
-                },
-              }}
+              title="Editar Negocio"
+              onSubmit={handleSubmitEdit}
+              submitLabel={savingEdit ? 'Guardando...' : 'Actualizar'}
+              submitDisabled={savingEdit || !dealFormDataRef.current.formData.name.trim() || !dealFormDataRef.current.formData.amount.trim()}
+              variant="panel"
             >
-              <DialogTitle
-                sx={{
-                  background: `linear-gradient(135deg, ${taxiMonterricoColors.green}15 0%, ${taxiMonterricoColors.orange}15 100%)`,
-                  borderBottom: `2px solid transparent`,
-                  borderImage: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
-                  borderImageSlice: 1,
-                  pb: 2,
-                  position: 'relative',
-                  '& .MuiTypography-root': {
-                    background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                    fontWeight: 700,
-                    fontSize: '1.25rem',
-                  },
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Typography sx={{ 
-                    background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.orange} 100%)`,
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text',
-                    fontWeight: 700,
-                    fontSize: '1.25rem',
-                  }}>
-                    Editar Negocio
-                  </Typography>
-                  <IconButton
-                    onClick={handleCloseEditDialog}
-                    sx={{
-                      color: taxiMonterricoColors.orange,
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        bgcolor: `${taxiMonterricoColors.orange}15`,
-                        transform: 'rotate(90deg)',
-                      },
-                    }}
-                  >
-                    <Close />
-                  </IconButton>
-                </Box>
-              </DialogTitle>
-              <DialogContent
-                sx={{
-                  bgcolor: `${theme.palette.background.paper} !important`,
-                  background: theme.palette.mode === 'dark'
-                    ? `linear-gradient(to bottom, ${theme.palette.background.paper} 0%, ${theme.palette.background.default} 100%)`
-                    : `linear-gradient(to bottom, ${theme.palette.background.paper} 0%, ${theme.palette.grey[50]} 100%)`,
-                  pt: 3,
-                  '& .MuiTextField-root': {
-                    '& .MuiOutlinedInput-root': {
-                      bgcolor: `${theme.palette.background.paper} !important`,
-                      color: `${theme.palette.text.primary} !important`,
-                      '& fieldset': {
-                        borderColor: theme.palette.divider,
-                      },
-                      '&:hover fieldset': {
-                        borderColor: `${taxiMonterricoColors.greenLight} !important`,
-                        boxShadow: `0 0 0 2px ${taxiMonterricoColors.greenLight}30`,
-                      },
-                      '&.Mui-focused fieldset': {
-                        borderColor: `${taxiMonterricoColors.green} !important`,
-                        boxShadow: `0 0 0 3px ${taxiMonterricoColors.greenLight}30`,
-                      },
-                      '& input': {
-                        color: `${theme.palette.text.primary} !important`,
-                        '&::placeholder': {
-                          color: `${theme.palette.text.secondary} !important`,
-                          opacity: 1,
-                        },
-                      },
-                      '& input:-webkit-autofill': {
-                        WebkitBoxShadow: `0 0 0 100px ${theme.palette.background.paper} inset !important`,
-                        WebkitTextFillColor: `${theme.palette.text.primary} !important`,
-                      },
-                    },
-                    '& .MuiInputLabel-root': {
-                      color: `${theme.palette.text.secondary} !important`,
-                      '&.Mui-focused': {
-                        color: `${taxiMonterricoColors.green} !important`,
-                        fontWeight: 600,
-                      },
-                    },
-                    '& .MuiSelect-icon': {
-                      color: taxiMonterricoColors.green,
-                    },
-                  },
-                }}
-              >
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-                  <TextField
-                    label="Nombre"
-                    value={editFormData.name}
-                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                    required
-                    fullWidth
-                  />
-                  <TextField
-                    label="Monto"
-                    type="number"
-                    value={editFormData.amount}
-                    onChange={(e) => setEditFormData({ ...editFormData, amount: e.target.value })}
-                    required
-                    fullWidth
-                  />
-                  <TextField
-                    select
-                    label="Etapa"
-                    value={editFormData.stage}
-                    onChange={(e) => setEditFormData({ ...editFormData, stage: e.target.value })}
-                    fullWidth
-                  >
-                    {stageOptions.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                  <TextField
-                    label="Fecha de Cierre"
-                    type="date"
-                    value={editFormData.closeDate}
-                    onChange={(e) => setEditFormData({ ...editFormData, closeDate: e.target.value })}
-                    InputLabelProps={{ shrink: true }}
-                    fullWidth
-                  />
-                  <TextField
-                    select
-                    label="Prioridad"
-                    value={editFormData.priority}
-                    onChange={(e) => setEditFormData({ ...editFormData, priority: e.target.value as 'baja' | 'media' | 'alta' })}
-                    fullWidth
-                  >
-                    <MenuItem value="baja">
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: taxiMonterricoColors.green }} />
-                        Baja
-                      </Box>
-                    </MenuItem>
-                    <MenuItem value="media">
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: taxiMonterricoColors.orange }} />
-                        Media
-                      </Box>
-                    </MenuItem>
-                    <MenuItem value="alta">
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: theme.palette.error.main }} />
-                        Alta
-                      </Box>
-                    </MenuItem>
-                  </TextField>
-                  <TextField
-                    select
-                    label="Empresa"
-                    value={editFormData.companyId}
-                    onChange={(e) => setEditFormData({ ...editFormData, companyId: e.target.value })}
-                    fullWidth
-                  >
-                    <MenuItem value="">
-                      <em>Ninguna</em>
-                    </MenuItem>
-                    {allCompanies.map((company: any) => (
-                      <MenuItem key={company.id} value={company.id.toString()}>
-                        {company.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                  <TextField
-                    select
-                    label="Contacto"
-                    value={editFormData.contactId}
-                    onChange={(e) => setEditFormData({ ...editFormData, contactId: e.target.value })}
-                    fullWidth
-                  >
-                    <MenuItem value="">
-                      <em>Ninguno</em>
-                    </MenuItem>
-                    {(dealContacts || []).map((contact: any) => (
-                      <MenuItem key={contact.id} value={contact.id.toString()}>
-                        {contact.firstName} {contact.lastName}
-                      </MenuItem>
-                    ))}
-                  </TextField>
-                </Box>
-              </DialogContent>
-              <DialogActions sx={pageStyles.dialogActions}>
-                <Button 
-                  onClick={handleCloseEditDialog} 
-                  disabled={savingEdit}
-                  sx={pageStyles.cancelButton}
-                >
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={handleSubmitEdit} 
-                  variant="contained"
-                  disabled={savingEdit || !editFormData.name.trim() || !editFormData.amount.trim()}
-                  sx={pageStyles.saveButton}
-                >
-                  {savingEdit ? 'Guardando...' : 'Actualizar'}
-                </Button>
-              </DialogActions>
-            </Dialog>
+              <DealFormContent
+                initialData={getInitialDealFormData(deal)}
+                formDataRef={dealFormDataRef}
+                theme={theme}
+                companies={companies}
+                companyOptions={companyOptions}
+                companySearch={companySearch}
+                setCompanySearch={setCompanySearch}
+                loadingCompanies={loadingCompanies}
+                contacts={contacts}
+                contactSearchInput={contactSearchInput}
+                setContactSearchInput={setContactSearchInput}
+              />
+            </FormDrawer>
           }
         />
   
@@ -1358,6 +1216,7 @@ const DealDetail: React.FC = () => {
         defaultContactId={deal?.Contact?.id}
         excludedDealIds={(dealDeals || []).map((d: any) => d.id)}
         getStageLabel={getStageLabel}
+        useDrawerForCreate
         onSave={async () => {
           await fetchDeal();
           setAddDealDialogOpen(false);
@@ -1380,6 +1239,7 @@ const DealDetail: React.FC = () => {
         }
         excludedContactIds={(dealContacts || []).map((c: any) => c.id)}
         associatedContacts={dealContacts || []}
+        useDrawerForCreate
         onSave={async () => {
           await fetchDeal();
           setAddContactDialogOpen(false);
@@ -1396,6 +1256,7 @@ const DealDetail: React.FC = () => {
         user={user}
         initialTab={companyDialogTab}
         excludedCompanyIds={(dealCompanies || []).map((c: any) => c.id)}
+        useDrawerForCreate
         onSave={async () => {
           await fetchDeal();
           setAddCompanyDialogOpen(false);

@@ -187,12 +187,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             sx={{
               flex: 1,
               bgcolor: theme.palette.background.default,
-              px: { xs: 3.5, sm: 5, md: 6, lg: 5, xl: 8 },
+              pl: { xs: 3.5, sm: 5, md: 6, lg: 5, xl: 8 },
+              pr: { xs: 4.5, sm: 6, md: 7, lg: 6, xl: 9 },
               pt: isHorizontal ? { xs: 3, sm: 4 } : { xs: 1.5, sm: 2.5 },
               pb: 0,
               width: "100%",
-              maxWidth: { lg: "1400px", xl: "1600px" },
-              mx: "auto",
+              maxWidth: { lg: "1680px", xl: "1680px" },
+              marginLeft: "auto",
+              marginRight: "auto",
+              boxSizing: "border-box",
             }}
           >
             {children}

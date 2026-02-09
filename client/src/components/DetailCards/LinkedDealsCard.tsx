@@ -8,7 +8,9 @@ import { taxiMonterricoColors } from '../../theme/colors';
 interface Deal {
   id: number;
   name: string;
-  amount?: number;
+  amount?: string | number;
+  closeDate?: string;
+  stage?: string;
 }
 
 interface LinkedDealsCardProps {
@@ -38,13 +40,17 @@ const LinkedDealsCard: React.FC<LinkedDealsCardProps> = ({
   };
 
   return (
-    <Card sx={{ 
-      borderRadius: 2,
-      boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
-      bgcolor: theme.palette.background.paper,
-      border: "none",
+    <Card 
+      elevation={0}
+      sx={{ 
+        borderRadius: 2,
+        boxShadow: theme.palette.mode === 'dark' ? '0 2px 8px rgba(0,0,0,0.3) !important' : '0 2px 8px rgba(0,0,0,0.1) !important',
+        bgcolor: theme.palette.mode === 'dark' ? '#1c252e !important' : theme.palette.background.paper,
+        backgroundColor: theme.palette.mode === 'dark' ? '#1c252e !important' : theme.palette.background.paper,
+        background: theme.palette.mode === 'dark' ? '#1c252e !important' : theme.palette.background.paper,
+        border: "none !important",
     }}>
-      <CardContent>
+      <CardContent sx={{ bgcolor: 'transparent', backgroundColor: 'transparent' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
           <AttachMoney sx={{ fontSize: 28, color: theme.palette.text.secondary }} />
           <Typography variant="h6" sx={{ fontWeight: 600, color: theme.palette.text.primary }}>
@@ -79,11 +85,6 @@ const LinkedDealsCard: React.FC<LinkedDealsCardProps> = ({
                   <Typography variant="body2" sx={{ fontWeight: 500, fontSize: '0.875rem', color: theme.palette.text.primary }}>
                     {deal.name || 'Sin nombre'}
                   </Typography>
-                  {deal.amount && (
-                    <Typography variant="body2" sx={{ fontSize: '0.875rem', color: theme.palette.text.secondary }}>
-                      S/ {deal.amount.toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                    </Typography>
-                  )}
                 </Box>
               ))}
             </Box>

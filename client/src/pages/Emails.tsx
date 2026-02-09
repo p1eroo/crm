@@ -76,6 +76,7 @@ const Emails: React.FC = () => {
   const [threadMessages, setThreadMessages] = useState<any[]>([]);
   const [loadingThread, setLoadingThread] = useState(false);
   const [collapsedMessages, setCollapsedMessages] = useState<Set<string>>(new Set());
+  const [connectingEmail, setConnectingEmail] = useState(false);
   const emailsPerPage = 20;
 
   const fetchFolderCounts = useCallback(async () => {
@@ -391,6 +392,30 @@ const Emails: React.FC = () => {
   const isUnread = (labelIds: string[]) => labelIds.includes('UNREAD'); // Si tiene UNREAD, no está leído
   const isStarred = (labelIds: string[]) => labelIds.includes('STARRED');
 
+  // Verificar si el error es de cuenta no conectada
+  const isNoAccountError = error && (
+    error.includes('No hay cuenta de Google conectada') ||
+    error.includes('no hay cuenta de Google conectada') ||
+    error.includes('conecta tu correo')
+  );
+
+  // Función para conectar cuenta de Google
+  const handleEmailConnect = async () => {
+    setConnectingEmail(true);
+    try {
+      const response = await api.get("/google/auth");
+      if (response.data.authUrl) {
+        window.location.href = response.data.authUrl;
+      } else {
+        throw new Error("No se pudo obtener la URL de autorización");
+      }
+    } catch (err: any) {
+      console.error("Error iniciando conexión con Google:", err);
+      setError(err.response?.data?.message || "Error al conectar con Google. Por favor, intenta nuevamente.");
+      setConnectingEmail(false);
+    }
+  };
+
   const handleToggleRead = async (email: Email, e: React.MouseEvent) => {
     e.stopPropagation(); // Evitar que se abra el email al hacer clic en el icono
     
@@ -448,6 +473,111 @@ const Emails: React.FC = () => {
       }
     }
   };
+
+  // Si no hay cuenta conectada, mostrar solo la vista de conexión
+  if (isNoAccountError && !loading) {
+    return (
+      <Box sx={{ flex: 1, pb: 1, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+        <Paper
+          sx={{
+            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : 'transparent',
+            borderRadius: 2,
+            px: 6,
+            py: 8,
+            flex: 1,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            maxWidth: '1500px',
+            width: '90%',
+            mx: 'auto',
+            minHeight: 'calc(100vh - 150px)',
+          }}
+        >
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              py: 10,
+              px: 4,
+              width: '100%',
+            }}
+          >
+            <Box
+              sx={{
+                width: 160,
+                height: 160,
+                borderRadius: '50%',
+                bgcolor: theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.05)' 
+                  : theme.palette.grey[100],
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '80px',
+                lineHeight: 1,
+              }}
+            >
+              📧
+            </Box>
+            <Box sx={{ textAlign: 'center', maxWidth: '700px', width: '100%' }}>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontWeight: 700,
+                  mb: 2,
+                  color: theme.palette.text.primary,
+                  fontSize: { xs: '1.5rem', md: '1.75rem' },
+                }}
+              >
+                No hay cuenta conectada
+              </Typography>
+              <Typography 
+                variant="body1" 
+                sx={{ 
+                  color: theme.palette.text.secondary,
+                  lineHeight: 1.6,
+                  mb: 4,
+                  fontSize: { xs: '0.9375rem', md: '1rem' },
+                }}
+              >
+                Conecta tu cuenta de Google para comenzar a gestionar tus correos electrónicos.
+              </Typography>
+              <Button
+                variant="contained"
+                onClick={handleEmailConnect}
+                disabled={connectingEmail}
+                startIcon={connectingEmail ? <CircularProgress size={20} /> : <Send />}
+                sx={{
+                  background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenLight} 100%)`,
+                  color: 'white',
+                  textTransform: 'none',
+                  px: 4,
+                  py: 1.5,
+                  borderRadius: 2,
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  boxShadow: `0 4px 12px ${taxiMonterricoColors.greenLight}40`,
+                  '&:hover': {
+                    background: `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`,
+                    boxShadow: `0 6px 16px ${taxiMonterricoColors.greenLight}60`,
+                  },
+                  '&:disabled': {
+                    opacity: 0.7,
+                  },
+                }}
+              >
+                {connectingEmail ? 'Conectando...' : 'Conectar cuenta de Google'}
+              </Button>
+            </Box>
+          </Box>
+        </Paper>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ flex: 1, pb: 1, display: 'flex' }}>
@@ -819,28 +949,6 @@ const Emails: React.FC = () => {
             p: 1,
           }}
         >
-          {error && (
-            <Alert 
-              severity="error" 
-              sx={{ 
-                m: 2,
-                borderRadius: 2,
-                border: '1px solid',
-                borderColor: theme.palette.error.main,
-                boxShadow: `0 4px 12px ${theme.palette.error.main}33`,
-                '& .MuiAlert-icon': {
-                  fontSize: 28,
-                },
-                '& .MuiAlert-message': {
-                  fontWeight: 500,
-                },
-              }} 
-              onClose={() => setError('')}
-            >
-              {error}
-            </Alert>
-          )}
-
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1 }}>
               <CircularProgress />
@@ -895,9 +1003,7 @@ const Emails: React.FC = () => {
                     fontSize: { xs: '0.875rem', md: '0.9375rem' },
                   }}
                 >
-                  {error 
-                    ? 'Conecta tu cuenta de Google para comenzar a gestionar tus correos electrónicos.'
-                    : 'No hay correos en esta carpeta. Usa el botón "Redactar" para crear un nuevo correo.'}
+                  No hay correos en esta carpeta. Usa el botón "Redactar" para crear un nuevo correo.
                 </Typography>
               </Box>
             </Box>

@@ -176,6 +176,7 @@ const Reports: React.FC = () => {
   const [moreDealsAnchor, setMoreDealsAnchor] = useState<{ el: HTMLElement; userId: number } | null>(null);
   const [hiddenStageIndices, setHiddenStageIndices] = useState<Set<number>>(new Set());
   const [companiesPopoverAnchor, setCompaniesPopoverAnchor] = useState<HTMLElement | null>(null);
+  const [companiesAnchorPosition, setCompaniesAnchorPosition] = useState<{ left: number; top: number } | null>(null);
   const [companiesModalStage, setCompaniesModalStage] = useState<string | null>(null);
   const chartContainerRef = React.useRef<HTMLDivElement>(null);
   const clickAnchorRef = React.useRef<HTMLDivElement>(null);
@@ -189,6 +190,7 @@ const Reports: React.FC = () => {
   const [chartAdvisorFilter, setChartAdvisorFilter] = useState<number | null>(null);
   const [chartOriginFilter, setChartOriginFilter] = useState<string | null>(null);
   const [chartPeriodFilter, setChartPeriodFilter] = useState<string>('');
+  const [etapaFilterAnchorEl, setEtapaFilterAnchorEl] = useState<HTMLElement | null>(null);
   const [chartCompaniesByUser, setChartCompaniesByUser] = useState<Record<number, Array<{ stage: string; count: number }>>>({});
   const [chartDealsAdvisorFilter, setChartDealsAdvisorFilter] = useState<number | null>(null);
   const [activitiesByType, setActivitiesByType] = useState<Record<string, number>>({});
@@ -284,13 +286,25 @@ const Reports: React.FC = () => {
     }
   };
 
-  const handleOpenCompaniesList = (stageKey: string, stageLabel: string, anchorEl: HTMLElement | null) => {
+  const handleOpenCompaniesList = (stageKey: string, stageLabel: string, clientX?: number, clientY?: number) => {
     setCompaniesModalStage(stageKey);
     setCompaniesModalStageLabel(stageLabel);
-    setCompaniesPopoverAnchor(anchorEl ?? chartContainerRef.current);
+    if (clientX !== undefined && clientY !== undefined) {
+      setCompaniesAnchorPosition({ left: clientX, top: clientY });
+    } else {
+      // Fallback: usar el contenedor del gráfico
+      setCompaniesPopoverAnchor(chartContainerRef.current);
+    }
     setCompaniesModalPage(1);
     fetchCompaniesList(stageKey, 1);
   };
+
+  // Abrir el popover después de que el ancla se haya renderizado con la posición correcta
+  useEffect(() => {
+    if (companiesAnchorPosition != null && companiesModalStage != null && clickAnchorRef.current) {
+      setCompaniesPopoverAnchor(clickAnchorRef.current);
+    }
+  }, [companiesAnchorPosition, companiesModalStage]);
 
   const fetchActivitiesByType = async () => {
     try {
@@ -611,25 +625,11 @@ const Reports: React.FC = () => {
 
   return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
-      {/* Resumen del periodo (si hay datos) */}
-      {stats?.deals?.userPerformance && stats.deals.userPerformance.length > 0 && (
-        <Box sx={{ mb: 2, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'center' }}>
-          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-            Total del periodo: <strong style={{ color: theme.palette.text.primary }}>
-              S/ {stats.deals.userPerformance.reduce((sum: number, u: any) => sum + (u.wonDealsValue || 0), 0).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-            </strong>
-          </Typography>
-          <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-            Asesores: <strong style={{ color: theme.palette.text.primary }}>{stats.deals.userPerformance.length}</strong>
-          </Typography>
-        </Box>
-      )}
-
-      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, mb: 2, alignItems: 'flex-start' }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: { xs: 2, md: 1.25 }, mb: 2, alignItems: 'flex-start' }}>
       {/* Card: Conteo por etapa de empresas (gráfico Pie Chart.js) - mismo diseño que bloque Asesores */}
       <Card
         sx={{
-          maxWidth: 660,
+          maxWidth: { xs: 660, md: 800 },
           flex: { md: '0 0 auto' },
           borderRadius: 3,
           boxShadow: theme.palette.mode === 'dark'
@@ -673,16 +673,16 @@ const Reports: React.FC = () => {
           sx={{
             px: { xs: 2, md: 3 },
             pt: 1,
-            pb: 1,
+            pb: 0,
             bgcolor: reportsCardBg,
           }}
         >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 2, sm: 1.5 }, flexWrap: 'wrap' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500, minWidth: 44 }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-end', gap: { xs: 2, sm: 1.5 }, flexWrap: { xs: 'wrap', md: 'nowrap' } }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, flex: { xs: '1 1 100%', md: '0 0 auto' }, minWidth: { md: 0 } }}>
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
                 Asesor
               </Typography>
-              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 160 }, maxWidth: { sm: 160 } }}>
+              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 }, maxWidth: { sm: 140 }, width: { md: 140 } }}>
                 <Select
                   value={chartAdvisorFilter === null ? '' : String(chartAdvisorFilter)}
                   onChange={(e) => setChartAdvisorFilter(e.target.value === '' ? null : Number(e.target.value))}
@@ -727,11 +727,11 @@ const Reports: React.FC = () => {
                 </Select>
               </FormControl>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500, minWidth: 44 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, flex: { xs: '1 1 auto', md: '0 0 auto' }, minWidth: { md: 0 } }}>
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
                 Origen
               </Typography>
-              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 130 }, maxWidth: { sm: 130 } }}>
+              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 120 }, maxWidth: { sm: 120 }, width: { md: 120 } }}>
                 <Select
                   value={chartOriginFilter === null ? '' : chartOriginFilter}
                   onChange={(e) => setChartOriginFilter(e.target.value === '' ? null : e.target.value)}
@@ -777,8 +777,11 @@ const Reports: React.FC = () => {
                 </Select>
               </FormControl>
             </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 155 }, maxWidth: { sm: 155 } }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, flex: { xs: '1 1 auto', md: '0 0 auto' }, minWidth: { md: 0 } }}>
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
+                Período
+              </Typography>
+              <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 140 }, maxWidth: { sm: 140 }, width: { md: 140 } }}>
                 <Select
                   value={chartPeriodFilter}
                   onChange={(e) => setChartPeriodFilter(e.target.value)}
@@ -822,9 +825,123 @@ const Reports: React.FC = () => {
                 </Select>
               </FormControl>
             </Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0.5, flex: { xs: '1 1 auto', md: '0 0 auto' }, minWidth: { md: 0 } }}>
+              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 500 }}>
+                Etapa
+              </Typography>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={(e) => setEtapaFilterAnchorEl(e.currentTarget)}
+                sx={{
+                  minWidth: { xs: '100%', sm: 140 },
+                  maxWidth: { sm: 140 },
+                  width: { md: 140 },
+                  justifyContent: 'space-between',
+                  borderRadius: 1.5,
+                  bgcolor: reportsCardBg,
+                  fontSize: { xs: '0.75rem', sm: '0.8125rem' },
+                  border: `1.5px solid ${theme.palette.divider}`,
+                  color: theme.palette.text.primary,
+                  textTransform: 'none',
+                  py: 1,
+                  '&:hover': {
+                    borderColor: taxiMonterricoColors.green,
+                    boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
+                    bgcolor: reportsCardBg,
+                  },
+                }}
+              >
+                {hiddenStageIndices.size === 0
+                  ? 'Todas visibles'
+                  : `${hiddenStageIndices.size} oculta${hiddenStageIndices.size === 1 ? '' : 's'}`}
+                <ChevronRight sx={{ transform: 'rotate(90deg)', fontSize: 20 }} />
+              </Button>
+              <Popover
+                open={Boolean(etapaFilterAnchorEl)}
+                anchorEl={etapaFilterAnchorEl}
+                onClose={() => setEtapaFilterAnchorEl(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+                transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+                PaperProps={{
+                  sx: {
+                    bgcolor: reportsCardBg,
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: 1.5,
+                    mt: 1,
+                    p: 1.5,
+                    minWidth: 280,
+                    maxWidth: 360,
+                  },
+                }}
+              >
+                <Typography variant="caption" sx={{ color: theme.palette.text.secondary, display: 'block', mb: 1 }}>
+                  Clic en una etapa para ocultarla o mostrarla en el gráfico
+                </Typography>
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: 0.75,
+                  }}
+                >
+                  {companyStagesChartData.labels.map((label, i) => {
+                    const color = PIE_STAGE_COLORS[i % PIE_STAGE_COLORS.length];
+                    const isHidden = hiddenStageIndices.has(i);
+                    return (
+                      <Box
+                        key={`etapa-filter-${i}-${label}`}
+                        onClick={() => {
+                          setHiddenStageIndices((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(i)) next.delete(i);
+                            else next.add(i);
+                            return next;
+                          });
+                        }}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1,
+                          cursor: 'pointer',
+                          borderRadius: 1,
+                          px: 1,
+                          py: 0.75,
+                          opacity: isHidden ? 0.5 : 1,
+                          '&:hover': {
+                            bgcolor: theme.palette.action.hover,
+                            opacity: isHidden ? 0.7 : 1,
+                          },
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            bgcolor: color,
+                            flexShrink: 0,
+                          }}
+                        />
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: theme.palette.text.primary,
+                            fontWeight: 500,
+                            textDecoration: isHidden ? 'line-through' : 'none',
+                          }}
+                        >
+                          {label}
+                        </Typography>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </Popover>
+            </Box>
           </Box>
         </Box>
-        <Box sx={{ px: { xs: 2, md: 3 }, pt: 2, pb: { xs: 1.5, md: 2 }, bgcolor: reportsCardBg }}>
+        <Box sx={{ px: { xs: 2, md: 3 }, pt: 0, pb: { xs: 1.5, md: 2 }, bgcolor: reportsCardBg }}>
           {companyStagesChartData.series.some((v) => v > 0) ? (
             (() => {
               const visibleIndices = companyStagesChartData.labels
@@ -833,6 +950,118 @@ const Reports: React.FC = () => {
               const chartLabels = visibleIndices.map((i) => companyStagesChartData.labels[i]);
               const chartSeries = visibleIndices.map((i) => companyStagesChartData.series[i]);
               const chartBg = visibleIndices.map((i) => PIE_STAGE_COLORS[i % PIE_STAGE_COLORS.length]);
+              
+              // Preparar datos para el funnel chart
+              const funnelData = chartSeries.filter((val) => val > 0);
+              const funnelLabels = chartLabels.filter((_, i) => chartSeries[i] > 0);
+              const funnelStageKeys = visibleIndices
+                .filter((_, i) => chartSeries[i] > 0)
+                .map((i) => companyStagesChartData.stageKeys[i]);
+              const funnelColors = chartBg.filter((_, i) => chartSeries[i] > 0);
+
+              const funnelChartHeight = Math.max(140, Math.min(420, funnelData.length * 52));
+              // Opciones del gráfico de embudo
+              const funnelOptions: ApexOptions = {
+                chart: {
+                  type: 'bar',
+                  height: funnelChartHeight,
+                  dropShadow: {
+                    enabled: true,
+                  },
+                  toolbar: { show: false },
+                  fontFamily: 'inherit',
+                  selection: { enabled: false },
+                  events: {
+                    dataPointSelection: (event: MouseEvent, chartContext: unknown, config: { dataPointIndex: number }) => {
+                      const index = config?.dataPointIndex ?? -1;
+                      if (index >= 0 && index < funnelStageKeys.length) {
+                        const stageKey = funnelStageKeys[index];
+                        const stageLabel = funnelLabels[index];
+                        if (stageKey) {
+                          handleOpenCompaniesList(stageKey, stageLabel, event.clientX, event.clientY);
+                        }
+                      }
+                    },
+                    click: (event: MouseEvent, chartContext: unknown, config: { dataPointIndex?: number }) => {
+                      // Manejar clic en el gráfico
+                      if (config?.dataPointIndex !== undefined) {
+                        const index = config.dataPointIndex;
+                        if (index >= 0 && index < funnelStageKeys.length) {
+                          const stageKey = funnelStageKeys[index];
+                          const stageLabel = funnelLabels[index];
+                          if (stageKey) {
+                            handleOpenCompaniesList(stageKey, stageLabel, event.clientX, event.clientY);
+                          }
+                        }
+                      }
+                    },
+                  },
+                },
+                plotOptions: {
+                  bar: {
+                    borderRadius: 0,
+                    horizontal: true,
+                    barHeight: '80%',
+                    isFunnel: true,
+                    distributed: true,
+                    dataLabels: {
+                      position: 'center',
+                    },
+                  },
+                },
+                states: {
+                  active: {
+                    filter: {
+                      type: 'none',
+                    },
+                  },
+                  hover: {
+                    filter: {
+                      type: 'none',
+                    },
+                  },
+                },
+                dataLabels: {
+                  enabled: true,
+                  formatter: function (val: number, opt: any) {
+                    return opt.w.globals.labels[opt.dataPointIndex] + ':  ' + val;
+                  },
+                  dropShadow: {
+                    enabled: true,
+                  },
+                  style: {
+                    colors: [theme.palette.mode === 'dark' ? '#fff' : '#000'],
+                    fontSize: '12px',
+                    fontWeight: 600,
+                  },
+                },
+                xaxis: {
+                  categories: funnelLabels,
+                  labels: {
+                    style: {
+                      colors: theme.palette.text.secondary,
+                    },
+                  },
+                },
+                grid: {
+                  padding: { top: 0, right: 0, bottom: 0, left: 0 },
+                },
+                colors: funnelColors,
+                legend: {
+                  show: false,
+                },
+                tooltip: {
+                  theme: theme.palette.mode === 'dark' ? 'dark' : 'light',
+                },
+              };
+
+              const funnelSeries = [
+                {
+                  name: 'Empresas',
+                  data: funnelData,
+                },
+              ];
+
               return (
                 <Box
                   ref={chartContainerRef}
@@ -841,48 +1070,22 @@ const Reports: React.FC = () => {
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: 2,
-                    minHeight: 260,
+                    width: '100%',
+                    pt: 0,
                   }}
                 >
-                  <Box sx={{ flex: '0 0 auto', width: { xs: '100%', sm: 260 }, maxWidth: 300, cursor: 'pointer' }}>
-                    {chartSeries.length > 0 ? (
-                      <Pie
-                        data={{
-                          labels: chartLabels,
-                          datasets: [
-                            {
-                              label: 'Empresas',
-                              data: chartSeries,
-                              backgroundColor: chartBg,
-                              borderColor: chartBg,
-                              borderWidth: 0,
-                            },
-                          ],
-                        }}
-                        options={{
-                          responsive: true,
-                          maintainAspectRatio: true,
-                          plugins: {
-                            legend: { display: false },
-                          },
-                          onClick: (evt, elements, _chart) => {
-                            if (elements.length > 0) {
-                              const visibleIndex = elements[0].index;
-                              const fullIndex = visibleIndices[visibleIndex];
-                              const stageKey = companyStagesChartData.stageKeys[fullIndex];
-                              const stageLabel = companyStagesChartData.labels[fullIndex];
-                              if (stageKey == null) return;
-                              const nativeEvent = (evt as unknown as { native?: { clientX: number; clientY: number } })?.native;
-                              if (nativeEvent && clickAnchorRef.current) {
-                                clickAnchorRef.current.style.left = `${nativeEvent.clientX}px`;
-                                clickAnchorRef.current.style.top = `${nativeEvent.clientY}px`;
-                                handleOpenCompaniesList(stageKey, stageLabel, clickAnchorRef.current);
-                              } else {
-                                handleOpenCompaniesList(stageKey, stageLabel, chartContainerRef.current);
-                              }
-                            }
-                          },
-                        }}
+                  <Box 
+                    sx={{ flex: '0 0 auto', width: '100%', cursor: 'pointer', mt: -1 }}
+                    onClickCapture={(e) => {
+                      // Capturar posición del clic para el popover
+                    }}
+                  >
+                    {funnelData.length > 0 ? (
+                      <ReactApexChart
+                        options={funnelOptions}
+                        series={funnelSeries}
+                        type="bar"
+                        height={funnelChartHeight}
                       />
                     ) : (
                       <Box sx={{ height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -891,62 +1094,6 @@ const Reports: React.FC = () => {
                         </Typography>
                       </Box>
                     )}
-                  </Box>
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))',
-                      gap: 1,
-                      justifyContent: 'center',
-                      width: '100%',
-                      maxWidth: 560,
-                    }}
-                  >
-                    {companyStagesChartData.labels.map((label, i) => {
-                      const color = PIE_STAGE_COLORS[i % PIE_STAGE_COLORS.length];
-                      const isHidden = hiddenStageIndices.has(i);
-                      return (
-                        <Box
-                          key={`${label}-${i}`}
-                          onClick={() => {
-                            setHiddenStageIndices((prev) => {
-                              const next = new Set(prev);
-                              if (next.has(i)) next.delete(i);
-                              else next.add(i);
-                              return next;
-                            });
-                          }}
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1.5,
-                            cursor: 'pointer',
-                            opacity: isHidden ? 0.5 : 1,
-                            '&:hover': { opacity: isHidden ? 0.7 : 0.85 },
-                          }}
-                        >
-                          <Box
-                            sx={{
-                              width: 10,
-                              height: 10,
-                              borderRadius: '50%',
-                              bgcolor: color,
-                              flexShrink: 0,
-                            }}
-                          />
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              color: theme.palette.text.primary,
-                              fontWeight: 500,
-                              textDecoration: isHidden ? 'line-through' : 'none',
-                            }}
-                          >
-                            {label}
-                          </Typography>
-                        </Box>
-                      );
-                    })}
                   </Box>
                 </Box>
               );
@@ -1473,26 +1620,33 @@ const Reports: React.FC = () => {
       </Card>
       </Box>
 
-      {/* Ancla invisible en la posición del clic para el Popover de empresas */}
-      <div
-        ref={clickAnchorRef}
-        style={{
-          position: 'fixed',
-          left: 0,
-          top: 0,
-          width: 1,
-          height: 1,
-          pointerEvents: 'none',
-          opacity: 0,
-          zIndex: 0,
-        }}
-        aria-hidden="true"
-      />
+      {/* Ancla invisible para Popover de empresas: en portal a body para que position:fixed sea respecto al viewport */}
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            ref={clickAnchorRef}
+            style={{
+              position: 'fixed',
+              left: companiesAnchorPosition?.left ?? 0,
+              top: companiesAnchorPosition?.top ?? 0,
+              width: 1,
+              height: 1,
+              pointerEvents: 'none',
+              opacity: 0,
+              zIndex: 0,
+            }}
+            aria-hidden="true"
+          />,
+          document.body
+        )}
       {/* Popover: lista de empresas por etapa al hacer clic en el gráfico (estilo "Asociado con") */}
       <Popover
         open={Boolean(companiesPopoverAnchor)}
         anchorEl={companiesPopoverAnchor}
-        onClose={() => setCompaniesPopoverAnchor(null)}
+        onClose={() => {
+          setCompaniesPopoverAnchor(null);
+          setCompaniesAnchorPosition(null);
+        }}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         transformOrigin={{ vertical: 'top', horizontal: 'center' }}
         sx={{ zIndex: 1600 }}

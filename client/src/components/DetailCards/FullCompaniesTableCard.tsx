@@ -147,18 +147,22 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
 
   return (
     <Card
+      elevation={0}
       sx={{
         borderRadius: 2,
         boxShadow:
           theme.palette.mode === 'dark'
-            ? '0 2px 8px rgba(0,0,0,0.3)'
-            : '0 2px 8px rgba(0,0,0,0.1)',
-        bgcolor: theme.palette.background.paper,
+            ? '0 2px 8px rgba(0,0,0,0.3) !important'
+            : '0 2px 8px rgba(0,0,0,0.1) !important',
+        bgcolor: theme.palette.mode === 'dark' ? '#1c252e !important' : theme.palette.background.paper,
+        backgroundColor: theme.palette.mode === 'dark' ? '#1c252e !important' : theme.palette.background.paper,
+        background: theme.palette.mode === 'dark' ? '#1c252e !important' : theme.palette.background.paper,
         px: 2,
         py: 2,
         display: 'flex',
         flexDirection: 'column',
         mt: 2,
+        border: "none !important",
       }}
     >
       <Typography
@@ -251,7 +255,9 @@ const FullCompaniesTableCard: React.FC<FullCompaniesTableCardProps> = ({
                     theme.palette.mode === 'dark'
                       ? '0 4px 20px rgba(0,0,0,0.5)'
                       : '0 4px 20px rgba(0,0,0,0.15)',
-                  bgcolor: theme.palette.background.paper,
+                  bgcolor: theme.palette.mode === 'dark' ? '#1c252e !important' : theme.palette.background.paper,
+                  backgroundColor: theme.palette.mode === 'dark' ? '#1c252e !important' : theme.palette.background.paper,
+                  background: theme.palette.mode === 'dark' ? '#1c252e !important' : theme.palette.background.paper,
                 },
               }}
             >

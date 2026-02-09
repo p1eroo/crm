@@ -25,6 +25,7 @@ import api from "../../config/api";
 import { taxiMonterricoColors } from "../../theme/colors";
 import { companyLabels } from "../../constants/companyLabels";
 import { pageStyles } from "../../theme/styles";
+import { FormDrawer } from "../FormDrawer";
 
 interface User {
   id: number;
@@ -45,6 +46,8 @@ interface ContactModalProps {
   initialTab?: "create" | "existing";
   defaultCompanyId?: number | string;
   associatedContacts?: any[];
+  /** Si es true, al crear nuevo contacto se muestra el FormDrawer (panel lateral) en lugar del diálogo */
+  useDrawerForCreate?: boolean;
 }
 
 const ContactModal: React.FC<ContactModalProps> = ({
@@ -59,6 +62,7 @@ const ContactModal: React.FC<ContactModalProps> = ({
   initialTab = "create",
   defaultCompanyId,
   associatedContacts = [],
+  useDrawerForCreate = false,
 }) => {
   const theme = useTheme();
   const [contactDialogTab, setContactDialogTab] = useState<"create" | "existing">(initialTab);
@@ -69,7 +73,7 @@ const ContactModal: React.FC<ContactModalProps> = ({
   const [saving, setSaving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
   
   const [contactFormData, setContactFormData] = useState({
     identificationType: "dni" as "dni" | "cee",
@@ -391,37 +395,7 @@ const ContactModal: React.FC<ContactModalProps> = ({
     onClose();
   };
 
-  return (
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      maxWidth="sm"
-      fullWidth
-    >
-      <DialogContent sx={{ pt: 2 }}>
-        <Box sx={{ 
-          borderBottom: 1, 
-          borderColor: "divider", 
-          mb: 2,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}>
-          <Tabs
-            value={contactDialogTab === "create" ? 0 : 1}
-            onChange={(e, newValue) =>
-              setContactDialogTab(newValue === 0 ? "create" : "existing")
-            }
-          >
-            <Tab label={companyLabels.createNew} />
-            <Tab label={companyLabels.addExisting} />
-          </Tabs>
-          <IconButton onClick={handleClose} size="small">
-            <Close />
-          </IconButton>
-        </Box>
-
-        {contactDialogTab === "create" ? (
+  const createFormContent = (
           <Box
             sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}
           >
@@ -811,203 +785,273 @@ const ContactModal: React.FC<ContactModalProps> = ({
               </TextField>
             </Box>
           </Box>
-        ) : (
-          <Box sx={{ mt: 1 }}>
-            <TextField
-              size="small"
-              placeholder="Buscar contactos"
-              value={existingContactsSearch}
-              onChange={(e) => setExistingContactsSearch(e.target.value)}
-              fullWidth
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <Search sx={{ color: taxiMonterricoColors.green }} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{
-                mb: 2,
-                "& .MuiOutlinedInput-root": {
-                  borderRadius: 1.5,
-                },
-              }}
-            />
-            <Box>
-              {loadingAllContacts ? (
-                <Box
-                  sx={{ display: "flex", justifyContent: "center", py: 4 }}
-                >
-                  <CircularProgress size={24} />
-                </Box>
-              ) : allContacts.length === 0 ? (
-                <Box sx={{ textAlign: "center", py: 4 }}>
-                  <Typography variant="body2" color="text.secondary">
-                    No se encontraron contactos
-                  </Typography>
-                </Box>
-              ) : (
-                <>
-                  <Box sx={{ maxHeight: 320, overflowY: "auto" }}>
-                    {allContacts.map((contact: any) => {
-                      const isAlreadyAssociated = excludedContactIds.length > 0
-                        ? excludedContactIds.includes(contact.id)
-                        : (associatedContacts || []).some(
-                            (c: any) => c.id === contact.id
-                          );
-                      const isSelected = selectedExistingContacts.includes(contact.id);
-                      
-                      return (
-                        <Box
-                          key={contact.id}
-                          onClick={() => {
-                            if (isAlreadyAssociated) {
-                              return;
-                            }
-                            
-                            if (isSelected) {
-                              setSelectedExistingContacts(
-                                selectedExistingContacts.filter((id) => id !== contact.id)
-                              );
-                            } else {
-                              setSelectedExistingContacts([
-                                ...selectedExistingContacts,
-                                contact.id,
-                              ]);
-                            }
-                          }}
-                          sx={{
-                            p: 1.5,
-                            borderRadius: 1,
-                            mb: 1,
-                            cursor: isAlreadyAssociated ? "not-allowed" : "pointer",
-                            bgcolor: isSelected
-                              ? theme.palette.mode === "dark"
-                                ? "rgba(46, 125, 50, 0.2)"
-                                : "rgba(46, 125, 50, 0.1)"
-                              : "transparent",
-                            border: `1px solid ${
-                              isSelected
-                                ? taxiMonterricoColors.green
-                                : theme.palette.divider
-                            }`,
-                            opacity: isAlreadyAssociated ? 0.7 : 1,
-                            "&:hover": {
-                              bgcolor: isAlreadyAssociated
-                                ? "transparent"
-                                : theme.palette.action.hover,
-                            },
-                          }}
-                        >
-                          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                            <Checkbox
-                              checked={isSelected}
-                              disabled={isAlreadyAssociated}
-                              size="small"
-                              sx={{
-                                p: 0,
-                                color: taxiMonterricoColors.green,
-                                "&.Mui-checked": {
-                                  color: taxiMonterricoColors.green,
-                                },
-                                "&.Mui-disabled": {
-                                  color: theme.palette.text.disabled,
-                                  opacity: 0.6,
-                                },
-                              }}
-                            />
-                            <Box sx={{ flex: 1 }}>
-                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                {contact.firstName} {contact.lastName}
-                                {contact.email && (
-                                  <Typography component="span" variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 400, ml: 0.5 }}>
-                                    ({contact.email})
-                                  </Typography>
-                                )}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </Box>
-                      );
-                    })}
-                  </Box>
-                  
-                  {totalPages > 1 && (
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 1,
-                        mt: 2,
-                        pb: 2,
-                        borderBottom: `1px solid ${theme.palette.divider}`,
-                      }}
-                    >
-                      <IconButton
-                        onClick={handlePreviousPage}
-                        disabled={currentPage === 1}
-                        size="small"
-                        sx={{
-                          color:
-                            currentPage === 1
-                              ? theme.palette.text.disabled
-                              : taxiMonterricoColors.green,
-                          "&:hover": {
-                            backgroundColor:
-                              theme.palette.mode === "dark"
-                                ? "rgba(46, 125, 50, 0.1)"
-                                : "rgba(46, 125, 50, 0.05)",
-                          },
-                          "&.Mui-disabled": {
-                            color: theme.palette.text.disabled,
-                          },
-                        }}
-                      >
-                        <ChevronLeft />
-                      </IconButton>
+  );
 
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          color: theme.palette.text.primary,
-                          minWidth: "60px",
-                          textAlign: "center",
-                          fontSize: "0.875rem",
-                        }}
-                      >
-                        {currentPage} / {totalPages}
-                      </Typography>
-
-                      <IconButton
-                        onClick={handleNextPage}
-                        disabled={currentPage === totalPages}
-                        size="small"
-                        sx={{
-                          color:
-                            currentPage === totalPages
-                              ? theme.palette.text.disabled
-                              : taxiMonterricoColors.green,
-                          "&:hover": {
-                            backgroundColor:
-                              theme.palette.mode === "dark"
-                                ? "rgba(46, 125, 50, 0.1)"
-                                : "rgba(46, 125, 50, 0.05)",
-                          },
-                          "&.Mui-disabled": {
-                            color: theme.palette.text.disabled,
-                          },
-                        }}
-                      >
-                        <ChevronRight />
-                      </IconButton>
-                    </Box>
-                  )}
-                </>
-              )}
-            </Box>
+  const existingFormContent = (
+    <Box sx={{ mt: 1 }}>
+      <TextField
+        size="small"
+        placeholder="Buscar contactos"
+        value={existingContactsSearch}
+        onChange={(e) => setExistingContactsSearch(e.target.value)}
+        fullWidth
+        InputProps={{
+          endAdornment: (
+            <InputAdornment position="end">
+              <Search sx={{ color: taxiMonterricoColors.green }} />
+            </InputAdornment>
+          ),
+        }}
+        sx={{
+          mb: 2,
+          "& .MuiOutlinedInput-root": {
+            borderRadius: 1.5,
+          },
+        }}
+      />
+      <Box>
+        {loadingAllContacts ? (
+          <Box
+            sx={{ display: "flex", justifyContent: "center", py: 4 }}
+          >
+            <CircularProgress size={24} />
           </Box>
+        ) : allContacts.length === 0 ? (
+          <Box sx={{ textAlign: "center", py: 4 }}>
+            <Typography variant="body2" color="text.secondary">
+              No se encontraron contactos
+            </Typography>
+          </Box>
+        ) : (
+          <>
+            <Box sx={{ maxHeight: 560, overflowY: "auto" }}>
+              {allContacts.map((contact: any) => {
+                const isAlreadyAssociated = excludedContactIds.length > 0
+                  ? excludedContactIds.includes(contact.id)
+                  : (associatedContacts || []).some(
+                      (c: any) => c.id === contact.id
+                    );
+                const isSelected = selectedExistingContacts.includes(contact.id);
+
+                return (
+                  <Box
+                    key={contact.id}
+                    onClick={() => {
+                      if (isAlreadyAssociated) {
+                        return;
+                      }
+
+                      if (isSelected) {
+                        setSelectedExistingContacts(
+                          selectedExistingContacts.filter((id) => id !== contact.id)
+                        );
+                      } else {
+                        setSelectedExistingContacts([
+                          ...selectedExistingContacts,
+                          contact.id,
+                        ]);
+                      }
+                    }}
+                    sx={{
+                      p: 1.5,
+                      borderRadius: 1,
+                      mb: 1,
+                      cursor: isAlreadyAssociated ? "not-allowed" : "pointer",
+                      bgcolor: isSelected
+                        ? theme.palette.mode === "dark"
+                          ? "rgba(46, 125, 50, 0.2)"
+                          : "rgba(46, 125, 50, 0.1)"
+                        : "transparent",
+                      border: `1px solid ${
+                        isSelected
+                          ? taxiMonterricoColors.green
+                          : theme.palette.divider
+                      }`,
+                      opacity: isAlreadyAssociated ? 0.7 : 1,
+                      "&:hover": {
+                        bgcolor: isAlreadyAssociated
+                          ? "transparent"
+                          : theme.palette.action.hover,
+                      },
+                    }}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Checkbox
+                        checked={isSelected}
+                        disabled={isAlreadyAssociated}
+                        size="small"
+                        sx={{
+                          p: 0,
+                          color: taxiMonterricoColors.green,
+                          "&.Mui-checked": {
+                            color: taxiMonterricoColors.green,
+                          },
+                          "&.Mui-disabled": {
+                            color: theme.palette.text.disabled,
+                            opacity: 0.6,
+                          },
+                        }}
+                      />
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                          {contact.firstName} {contact.lastName}
+                          {contact.email && (
+                            <Typography component="span" variant="body2" sx={{ color: theme.palette.text.secondary, fontWeight: 400, ml: 0.5 }}>
+                              ({contact.email})
+                            </Typography>
+                          )}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Box>
+                );
+              })}
+            </Box>
+
+            {totalPages > 1 && (
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 1,
+                  mt: 2,
+                  pb: 2,
+                  borderBottom: `1px solid ${theme.palette.divider}`,
+                }}
+              >
+                <IconButton
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1}
+                  size="small"
+                  sx={{
+                    color:
+                      currentPage === 1
+                        ? theme.palette.text.disabled
+                        : taxiMonterricoColors.green,
+                    "&:hover": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(46, 125, 50, 0.1)"
+                          : "rgba(46, 125, 50, 0.05)",
+                    },
+                    "&.Mui-disabled": {
+                      color: theme.palette.text.disabled,
+                    },
+                  }}
+                >
+                  <ChevronLeft />
+                </IconButton>
+
+                <Typography
+                  variant="body2"
+                  sx={{
+                    color: theme.palette.text.primary,
+                    minWidth: "60px",
+                    textAlign: "center",
+                    fontSize: "0.875rem",
+                  }}
+                >
+                  {currentPage} / {totalPages}
+                </Typography>
+
+                <IconButton
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages}
+                  size="small"
+                  sx={{
+                    color:
+                      currentPage === totalPages
+                        ? theme.palette.text.disabled
+                        : taxiMonterricoColors.green,
+                    "&:hover": {
+                      backgroundColor:
+                        theme.palette.mode === "dark"
+                          ? "rgba(46, 125, 50, 0.1)"
+                          : "rgba(46, 125, 50, 0.05)",
+                    },
+                    "&.Mui-disabled": {
+                      color: theme.palette.text.disabled,
+                    },
+                  }}
+                >
+                  <ChevronRight />
+                </IconButton>
+              </Box>
+            )}
+          </>
         )}
+      </Box>
+    </Box>
+  );
+
+  if (useDrawerForCreate && open && contactDialogTab === "create") {
+    return (
+      <FormDrawer
+        open={open}
+        onClose={handleClose}
+        title="Nuevo Contacto"
+        onSubmit={handleCreateContact}
+        submitLabel={saving ? "Guardando..." : "Crear"}
+        submitDisabled={saving}
+        variant="panel"
+      >
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          {createFormContent}
+        </Box>
+      </FormDrawer>
+    );
+  }
+
+  if (useDrawerForCreate && open && contactDialogTab === "existing") {
+    return (
+      <FormDrawer
+        open={open}
+        onClose={handleClose}
+        title="Agregar contacto existente"
+        onSubmit={handleAddExistingContacts}
+        submitLabel={saving ? "Guardando..." : "Agregar"}
+        submitDisabled={saving}
+        variant="panel"
+      >
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          {existingFormContent}
+        </Box>
+      </FormDrawer>
+    );
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+    >
+      <DialogContent sx={{ pt: 2 }}>
+        <Box sx={{ 
+          borderBottom: 1, 
+          borderColor: "divider", 
+          mb: 2,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}>
+          <Tabs
+            value={contactDialogTab === "create" ? 0 : 1}
+            onChange={(e, newValue) =>
+              setContactDialogTab(newValue === 0 ? "create" : "existing")
+            }
+          >
+            <Tab label={companyLabels.createNew} />
+            <Tab label={companyLabels.addExisting} />
+          </Tabs>
+          <IconButton onClick={handleClose} size="small">
+            <Close />
+          </IconButton>
+        </Box>
+
+        {contactDialogTab === "create" ? createFormContent : existingFormContent}
       </DialogContent>
       <DialogActions sx={pageStyles.dialogActions}>
         <Button

@@ -41,6 +41,7 @@ import {
 import { NoteModal, CallModal, TaskModal, MeetingModal, DealModal, CompanyModal, ContactModal } from "../components/ActivityModals";
 import type { GeneralInfoCard } from "../components/DetailCards";
 import DetailPageLayout from "../components/Layout/DetailPageLayout";
+import { FormDrawer } from "../components/FormDrawer";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendar, faClock } from "@fortawesome/free-regular-svg-icons";
 import { library } from "@fortawesome/fontawesome-svg-core";
@@ -1495,327 +1496,279 @@ const ContactDetail: React.FC = () => {
           tab2Content={tab2Content}
           loading={loading}
           editDialog={
-            <Dialog
+            <FormDrawer
               open={editDialogOpen}
               onClose={handleCloseEditDialog}
-              maxWidth="sm"
-              fullWidth
+              title="Editar Contacto"
+              onSubmit={handleSubmitEdit}
+              submitLabel={savingEdit ? "Guardando..." : "Guardar"}
+              submitDisabled={savingEdit || !editFormData.firstName.trim() || !editFormData.lastName.trim()}
+              variant="panel"
             >
-              <DialogTitle>Editar Contacto</DialogTitle>
-              <DialogContent>
-                <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
-                  <Box sx={{ display: "flex", gap: 2 }}>
-                    <TextField
-                      label="Nombre"
-                      value={editFormData.firstName}
-                      onChange={(e) =>
-                        setEditFormData({ ...editFormData, firstName: e.target.value })
-                      }
-                      InputLabelProps={{ shrink: true }}
-                      required
-                      sx={{
-                        flex: 1,
-                        "& .MuiOutlinedInput-root": {
-                          borderRadius: 1.5,
-                        },
-                      }}
-                    />
-                    <TextField
-                      label="Apellido"
-                      value={editFormData.lastName}
-                      onChange={(e) =>
-                        setEditFormData({ ...editFormData, lastName: e.target.value })
-                      }
-                      InputLabelProps={{ shrink: true }}
-                      required
-                      sx={{
-                        flex: 1,
-                        "& .MuiOutlinedInput-root": {
-                          borderRadius: 1.5,
-                        },
-                      }}
-                    />
-                  </Box>
-                  <TextField
-                    label="Correo"
-                    type="email"
-                    value={editFormData.email}
-                    onChange={(e) =>
-                      setEditFormData({ ...editFormData, email: e.target.value })
-                    }
-                    InputLabelProps={{ shrink: true }}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        borderRadius: 1.5,
-                      },
-                    }}
-                  />
-                  <Box sx={{ display: "flex", gap: 2 }}>
-                    <TextField
-                      label="Teléfono"
-                      value={editFormData.phone}
-                      onChange={(e) =>
-                        setEditFormData({ ...editFormData, phone: e.target.value })
-                      }
-                      InputLabelProps={{ shrink: true }}
-                      sx={{
-                        flex: 1,
-                        "& .MuiOutlinedInput-root": {
-                          borderRadius: 1.5,
-                        },
-                      }}
-                    />
-                    <TextField
-                      label="Móvil"
-                      value={editFormData.mobile}
-                      onChange={(e) =>
-                        setEditFormData({ ...editFormData, mobile: e.target.value })
-                      }
-                      InputLabelProps={{ shrink: true }}
-                      sx={{
-                        flex: 1,
-                        "& .MuiOutlinedInput-root": {
-                          borderRadius: 1.5,
-                        },
-                      }}
-                    />
-                  </Box>
-                  <TextField
-                    label="Cargo"
-                    value={editFormData.jobTitle}
-                    onChange={(e) =>
-                      setEditFormData({ ...editFormData, jobTitle: e.target.value })
-                    }
-                    InputLabelProps={{ shrink: true }}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        borderRadius: 1.5,
-                      },
-                    }}
-                  />
-                  <TextField
-                    label="Dirección"
-                    value={editFormData.address}
-                    onChange={(e) =>
-                      setEditFormData({ ...editFormData, address: e.target.value })
-                    }
-                    multiline
-                    rows={2}
-                    InputLabelProps={{ shrink: true }}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        borderRadius: 1.5,
-                      },
-                    }}
-                  />
-                  <Box sx={{ display: "flex", gap: 2 }}>
-                    <TextField
-                      label="Ciudad"
-                      value={editFormData.city}
-                      onChange={(e) =>
-                        setEditFormData({ ...editFormData, city: e.target.value })
-                      }
-                      InputLabelProps={{ shrink: true }}
-                      sx={{
-                        flex: 1,
-                        "& .MuiOutlinedInput-root": {
-                          borderRadius: 1.5,
-                        },
-                      }}
-                    />
-                    <TextField
-                      label="Estado/Provincia"
-                      value={editFormData.state}
-                      onChange={(e) =>
-                        setEditFormData({ ...editFormData, state: e.target.value })
-                      }
-                      InputLabelProps={{ shrink: true }}
-                      sx={{
-                        flex: 1,
-                        "& .MuiOutlinedInput-root": {
-                          borderRadius: 1.5,
-                        },
-                      }}
-                    />
-                  </Box>
-                  <Box sx={{ display: "flex", gap: 2 }}>
-                    <TextField
-                      label="País"
-                      value={editFormData.country}
-                      onChange={(e) =>
-                        setEditFormData({ ...editFormData, country: e.target.value })
-                      }
-                      InputLabelProps={{ shrink: true }}
-                      sx={{
-                        flex: 1,
-                        "& .MuiOutlinedInput-root": {
-                          borderRadius: 1.5,
-                        },
-                      }}
-                    />
-                    <TextField
-                      label="Código Postal"
-                      value={editFormData.postalCode}
-                      onChange={(e) =>
-                        setEditFormData({ ...editFormData, postalCode: e.target.value })
-                      }
-                      InputLabelProps={{ shrink: true }}
-                      sx={{
-                        flex: 1,
-                        "& .MuiOutlinedInput-root": {
-                          borderRadius: 1.5,
-                        },
-                      }}
-                    />
-                  </Box>
-                  <TextField
-                    label="Sitio Web"
-                    value={editFormData.website}
-                    onChange={(e) =>
-                      setEditFormData({ ...editFormData, website: e.target.value })
-                    }
-                    InputLabelProps={{ shrink: true }}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        borderRadius: 1.5,
-                      },
-                    }}
-                  />
-                  <Box sx={{ display: "flex", gap: 2 }}>
-                    <TextField
-                      label="LinkedIn"
-                      value={editFormData.linkedin}
-                      onChange={(e) =>
-                        setEditFormData({ ...editFormData, linkedin: e.target.value })
-                      }
-                      InputLabelProps={{ shrink: true }}
-                      placeholder="https://www.linkedin.com/in/..."
-                      sx={{
-                        flex: 1,
-                        "& .MuiOutlinedInput-root": {
-                          borderRadius: 1.5,
-                        },
-                      }}
-                    />
-                    <TextField
-                      label="Facebook"
-                      value={editFormData.facebook}
-                      onChange={(e) =>
-                        setEditFormData({ ...editFormData, facebook: e.target.value })
-                      }
-                      InputLabelProps={{ shrink: true }}
-                      sx={{
-                        flex: 1,
-                        "& .MuiOutlinedInput-root": {
-                          borderRadius: 1.5,
-                        },
-                      }}
-                    />
-                  </Box>
-                  <Box sx={{ display: "flex", gap: 2 }}>
-                    <TextField
-                      label="Twitter"
-                      value={editFormData.twitter}
-                      onChange={(e) =>
-                        setEditFormData({ ...editFormData, twitter: e.target.value })
-                      }
-                      InputLabelProps={{ shrink: true }}
-                      sx={{
-                        flex: 1,
-                        "& .MuiOutlinedInput-root": {
-                          borderRadius: 1.5,
-                        },
-                      }}
-                    />
-                    <TextField
-                      label="GitHub"
-                      value={editFormData.github}
-                      onChange={(e) =>
-                        setEditFormData({ ...editFormData, github: e.target.value })
-                      }
-                      InputLabelProps={{ shrink: true }}
-                      sx={{
-                        flex: 1,
-                        "& .MuiOutlinedInput-root": {
-                          borderRadius: 1.5,
-                        },
-                      }}
-                    />
-                  </Box>
-                  <TextField
-                    label="YouTube"
-                    value={editFormData.youtube}
-                    onChange={(e) =>
-                      setEditFormData({ ...editFormData, youtube: e.target.value })
-                    }
-                    InputLabelProps={{ shrink: true }}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        borderRadius: 1.5,
-                      },
-                    }}
-                  />
-                  <TextField
-                    select
-                    label="Etapa del Ciclo de Vida"
-                    value={editFormData.lifecycleStage}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        lifecycleStage: e.target.value,
-                      })
-                    }
-                    InputLabelProps={{ shrink: true }}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        borderRadius: 1.5,
-                      },
-                    }}
-                  >
-                    <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
-                    <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
-                    <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
-                    <MenuItem value="lead">Lead</MenuItem>
-                    <MenuItem value="contacto">Contacto</MenuItem>
-                    <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
-                    <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-                    <MenuItem value="propuesta_economica">
-                      Propuesta Económica
-                    </MenuItem>
-                    <MenuItem value="negociacion">Negociación</MenuItem>
-                    <MenuItem value="licitacion">Licitación</MenuItem>
-                    <MenuItem value="licitacion_etapa_final">
-                      Licitación Etapa Final
-                    </MenuItem>
-                    <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
-                    <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
-                    <MenuItem value="activo">Activo</MenuItem>
-                  </TextField>
-                </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {errorMessage && (
                   <Alert
                     severity="error"
                     onClose={() => setErrorMessage("")}
-                    sx={{ mx: 2, mb: 2 }}
+                    sx={{ mb: 2 }}
                   >
                     {errorMessage}
                   </Alert>
                 )}
-              </DialogContent>
-              <DialogActions sx={pageStyles.dialogActions}>
-                <Button onClick={handleCloseEditDialog} disabled={savingEdit} sx={pageStyles.cancelButton}>
-                  Cancelar
-                </Button>
-                <Button 
-                  onClick={handleSubmitEdit} 
-                  variant="contained"
-                  disabled={savingEdit || !editFormData.firstName.trim() || !editFormData.lastName.trim()}
-                  sx={pageStyles.saveButton}
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: '1fr 1fr',
+                    columnGap: 4,
+                    rowGap: 1,
+                    alignItems: 'start',
+                  }}
                 >
-                  {savingEdit ? "Guardando..." : "Guardar"}
-                </Button>
-              </DialogActions>
-            </Dialog>
+                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
+                    Nombre <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
+                    Apellido <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
+                  </Typography>
+                  <Box sx={{ minWidth: 0 }}>
+                    <TextField
+                      size="small"
+                      value={editFormData.firstName}
+                      onChange={(e) => setEditFormData({ ...editFormData, firstName: e.target.value })}
+                      required
+                      fullWidth
+                      placeholder="Nombre"
+                      inputProps={{ style: { fontSize: '1rem' } }}
+                      InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    />
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <TextField
+                      size="small"
+                      value={editFormData.lastName}
+                      onChange={(e) => setEditFormData({ ...editFormData, lastName: e.target.value })}
+                      required
+                      fullWidth
+                      placeholder="Apellido"
+                      inputProps={{ style: { fontSize: '1rem' } }}
+                      InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    />
+                  </Box>
+                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>Correo</Typography>
+                  <Box sx={{ minWidth: 0, gridColumn: '1 / -1' }}>
+                    <TextField
+                      size="small"
+                      type="email"
+                      value={editFormData.email}
+                      onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                      fullWidth
+                      placeholder="Correo"
+                      inputProps={{ style: { fontSize: '1rem' } }}
+                      InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    />
+                  </Box>
+                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Teléfono</Typography>
+                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Móvil</Typography>
+                  <Box sx={{ minWidth: 0 }}>
+                    <TextField
+                      size="small"
+                      value={editFormData.phone}
+                      onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                      fullWidth
+                      placeholder="Teléfono"
+                      inputProps={{ style: { fontSize: '1rem' } }}
+                      InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    />
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <TextField
+                      size="small"
+                      value={editFormData.mobile}
+                      onChange={(e) => setEditFormData({ ...editFormData, mobile: e.target.value })}
+                      fullWidth
+                      placeholder="Móvil"
+                      inputProps={{ style: { fontSize: '1rem' } }}
+                      InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    />
+                  </Box>
+                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>Cargo</Typography>
+                  <Box sx={{ minWidth: 0, gridColumn: '1 / -1' }}>
+                    <TextField
+                      size="small"
+                      value={editFormData.jobTitle}
+                      onChange={(e) => setEditFormData({ ...editFormData, jobTitle: e.target.value })}
+                      fullWidth
+                      placeholder="Cargo"
+                      inputProps={{ style: { fontSize: '1rem' } }}
+                      InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    />
+                  </Box>
+                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>Dirección</Typography>
+                  <Box sx={{ minWidth: 0, gridColumn: '1 / -1' }}>
+                    <TextField
+                      size="small"
+                      value={editFormData.address}
+                      onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
+                      multiline
+                      rows={2}
+                      fullWidth
+                      placeholder="Dirección"
+                      inputProps={{ style: { fontSize: '1rem' } }}
+                    />
+                  </Box>
+                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Ciudad</Typography>
+                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Estado/Provincia</Typography>
+                  <Box sx={{ minWidth: 0 }}>
+                    <TextField
+                      size="small"
+                      value={editFormData.city}
+                      onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+                      fullWidth
+                      placeholder="Ciudad"
+                      inputProps={{ style: { fontSize: '1rem' } }}
+                      InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    />
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <TextField
+                      size="small"
+                      value={editFormData.state}
+                      onChange={(e) => setEditFormData({ ...editFormData, state: e.target.value })}
+                      fullWidth
+                      placeholder="Estado/Provincia"
+                      inputProps={{ style: { fontSize: '1rem' } }}
+                      InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    />
+                  </Box>
+                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>País</Typography>
+                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Código Postal</Typography>
+                  <Box sx={{ minWidth: 0 }}>
+                    <TextField
+                      size="small"
+                      value={editFormData.country}
+                      onChange={(e) => setEditFormData({ ...editFormData, country: e.target.value })}
+                      fullWidth
+                      placeholder="País"
+                      inputProps={{ style: { fontSize: '1rem' } }}
+                      InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    />
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <TextField
+                      size="small"
+                      value={editFormData.postalCode}
+                      onChange={(e) => setEditFormData({ ...editFormData, postalCode: e.target.value })}
+                      fullWidth
+                      placeholder="Código Postal"
+                      inputProps={{ style: { fontSize: '1rem' } }}
+                      InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    />
+                  </Box>
+                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>Sitio Web</Typography>
+                  <Box sx={{ minWidth: 0, gridColumn: '1 / -1' }}>
+                    <TextField
+                      size="small"
+                      value={editFormData.website}
+                      onChange={(e) => setEditFormData({ ...editFormData, website: e.target.value })}
+                      fullWidth
+                      placeholder="Sitio Web"
+                      inputProps={{ style: { fontSize: '1rem' } }}
+                      InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    />
+                  </Box>
+                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>LinkedIn</Typography>
+                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Facebook</Typography>
+                  <Box sx={{ minWidth: 0 }}>
+                    <TextField
+                      size="small"
+                      value={editFormData.linkedin}
+                      onChange={(e) => setEditFormData({ ...editFormData, linkedin: e.target.value })}
+                      fullWidth
+                      placeholder="https://www.linkedin.com/in/..."
+                      inputProps={{ style: { fontSize: '1rem' } }}
+                      InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    />
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <TextField
+                      size="small"
+                      value={editFormData.facebook}
+                      onChange={(e) => setEditFormData({ ...editFormData, facebook: e.target.value })}
+                      fullWidth
+                      placeholder="Facebook"
+                      inputProps={{ style: { fontSize: '1rem' } }}
+                      InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    />
+                  </Box>
+                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Twitter</Typography>
+                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>GitHub</Typography>
+                  <Box sx={{ minWidth: 0 }}>
+                    <TextField
+                      size="small"
+                      value={editFormData.twitter}
+                      onChange={(e) => setEditFormData({ ...editFormData, twitter: e.target.value })}
+                      fullWidth
+                      placeholder="Twitter"
+                      inputProps={{ style: { fontSize: '1rem' } }}
+                      InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    />
+                  </Box>
+                  <Box sx={{ minWidth: 0 }}>
+                    <TextField
+                      size="small"
+                      value={editFormData.github}
+                      onChange={(e) => setEditFormData({ ...editFormData, github: e.target.value })}
+                      fullWidth
+                      placeholder="GitHub"
+                      inputProps={{ style: { fontSize: '1rem' } }}
+                      InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    />
+                  </Box>
+                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>YouTube</Typography>
+                  <Box sx={{ minWidth: 0, gridColumn: '1 / -1' }}>
+                    <TextField
+                      size="small"
+                      value={editFormData.youtube}
+                      onChange={(e) => setEditFormData({ ...editFormData, youtube: e.target.value })}
+                      fullWidth
+                      placeholder="YouTube"
+                      inputProps={{ style: { fontSize: '1rem' } }}
+                      InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                    />
+                  </Box>
+                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>Etapa del Ciclo de Vida</Typography>
+                  <Box sx={{ minWidth: 0, gridColumn: '1 / -1' }}>
+                    <TextField
+                      select
+                      size="small"
+                      value={editFormData.lifecycleStage}
+                      onChange={(e) => setEditFormData({ ...editFormData, lifecycleStage: e.target.value })}
+                      fullWidth
+                      inputProps={{ style: { fontSize: '1rem' } }}
+                      InputProps={{ sx: { '& input': { py: 1.05 } } }}
+                      SelectProps={{
+                        MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } },
+                      }}
+                    >
+                      <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
+                      <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
+                      <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
+                      <MenuItem value="lead">Lead</MenuItem>
+                      <MenuItem value="contacto">Contacto</MenuItem>
+                      <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
+                      <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
+                      <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
+                      <MenuItem value="negociacion">Negociación</MenuItem>
+                      <MenuItem value="licitacion">Licitación</MenuItem>
+                      <MenuItem value="licitacion_etapa_final">Licitación Etapa Final</MenuItem>
+                      <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
+                      <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
+                      <MenuItem value="activo">Activo</MenuItem>
+                    </TextField>
+                  </Box>
+                </Box>
+              </Box>
+            </FormDrawer>
           }
         />
   
@@ -2117,6 +2070,7 @@ const ContactDetail: React.FC = () => {
         user={user}
         initialTab={companyDialogTab}
         excludedCompanyIds={(associatedCompanies || []).map((c: any) => c.id)}
+        useDrawerForCreate
         onSave={async () => {
           await fetchAssociatedRecords();
           setAddCompanyOpen(false);
@@ -2135,6 +2089,7 @@ const ContactDetail: React.FC = () => {
         defaultCompanyId={contact?.Company?.id || contact?.Companies?.[0]?.id}
         excludedContactIds={(associatedContacts || []).map((c: any) => c.id)}
         associatedContacts={associatedContacts || []}
+        useDrawerForCreate
         onSave={async () => {
           await fetchAssociatedRecords();
           setAddContactOpen(false);
@@ -2156,6 +2111,7 @@ const ContactDetail: React.FC = () => {
         defaultContactId={contact?.id}
         excludedDealIds={(associatedDeals || []).map((d: any) => d.id)}
         getStageLabel={getStageLabel}
+        useDrawerForCreate
         onSave={async () => {
           await fetchAssociatedRecords();
           setAddDealOpen(false);

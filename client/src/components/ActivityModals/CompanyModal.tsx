@@ -22,6 +22,8 @@ import axios from "axios";
 import { taxiMonterricoColors } from "../../theme/colors";
 import { companyLabels } from "../../constants/companyLabels";
 import { pageStyles } from "../../theme/styles";
+import { FormDrawer } from "../FormDrawer";
+import { CompanyFormContent, getInitialFormData, type CompanyFormData } from "../CompanyFormContent";
 
 interface User {
   id: number;
@@ -41,6 +43,8 @@ interface CompanyModalProps {
   onSave: (newCompany?: any) => void; // Callback cuando se crea/agrega una empresa
   excludedCompanyIds?: number[]; // IDs de empresas ya asociadas (para marcarlas pero no excluirlas)
   initialTab?: "create" | "existing"; // Tab inicial
+  /** Si es true, crear/agregar empresa se muestra en FormDrawer (panel lateral) en lugar del diálogo */
+  useDrawerForCreate?: boolean;
 }
 
 const CompanyModal: React.FC<CompanyModalProps> = ({
@@ -53,6 +57,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
   onSave,
   excludedCompanyIds = [],
   initialTab = "create",
+  useDrawerForCreate = false,
 }) => {
   const theme = useTheme();
   const [companyDialogTab, setCompanyDialogTab] = useState<"create" | "existing">(
@@ -68,7 +73,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
   const [saving, setSaving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
   const [loadingRuc, setLoadingRuc] = useState(false);
   const [rucError, setRucError] = useState("");
   const [nameError, setNameError] = useState("");
@@ -76,6 +81,10 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
   const [domainError, setDomainError] = useState("");
   const nameValidationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const rucValidationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const drawerCompanyFormDataRef = useRef<{ formData: CompanyFormData; setFormData: React.Dispatch<React.SetStateAction<CompanyFormData>> }>({
+    formData: getInitialFormData(null),
+    setFormData: () => {},
+  });
   const [users, setUsers] = useState<any[]>([]);
   const [companyFormData, setCompanyFormData] = useState({
     name: "",
@@ -395,9 +404,10 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
     }
   };
 
-  const handleCreateCompany = async () => {
+  const handleCreateCompany = async (dataOverride?: CompanyFormData | typeof companyFormData) => {
+    const source = dataOverride ?? companyFormData;
     // Validar nombre requerido
-    if (!companyFormData.name || !companyFormData.name.trim()) {
+    if (!source.name || !(typeof source.name === 'string' ? source.name : '').trim()) {
       setNameError('El nombre de la empresa es requerido');
       return;
     }
@@ -410,13 +420,13 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
     try {
       setSaving(true);
       const submitData: any = {
-        ...companyFormData,
+        ...source,
       };
 
       // Manejar ownerId solo si el usuario tiene permisos (admin o jefe_comercial)
       if (user && (user.role === 'admin' || user.role === 'jefe_comercial')) {
-        if (companyFormData.ownerId) {
-          submitData.ownerId = Number(companyFormData.ownerId);
+        if (source.ownerId) {
+          submitData.ownerId = Number(source.ownerId);
         } else {
           submitData.ownerId = null;
         }
@@ -428,7 +438,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
       if (submitData.estimatedRevenue === '' || submitData.estimatedRevenue === null || submitData.estimatedRevenue === undefined) {
         submitData.estimatedRevenue = null;
       } else {
-        const parsed = parseFloat(submitData.estimatedRevenue as string);
+        const parsed = parseFloat(String(submitData.estimatedRevenue));
         submitData.estimatedRevenue = isNaN(parsed) ? null : parsed;
       }
 
@@ -591,87 +601,80 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
     }
   };
 
-  return (
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      maxWidth="sm"
-      fullWidth
-      sx={{
-        zIndex: 1700, // Mayor que FormDrawer (1600) para que aparezca por encima
-      }}
-      PaperProps={{
-        sx: {
-          bgcolor: theme.palette.background.paper,
-          color: theme.palette.text.primary,
-        },
-      }}
-    >
-      <DialogContent sx={{ 
-        pt: 2,
-        bgcolor: theme.palette.background.paper,
-        color: theme.palette.text.primary,
-        // Estilos globales para TextField dentro del Dialog
-        '& .MuiTextField-root': {
-          '& .MuiOutlinedInput-root': {
-            bgcolor: theme.palette.background.paper,
-            color: theme.palette.text.primary,
-            '& fieldset': {
-              borderColor: theme.palette.divider,
-            },
-            '&:hover fieldset': {
-              borderColor: theme.palette.mode === 'dark' 
-                ? 'rgba(255, 255, 255, 0.5)' 
-                : 'rgba(0, 0, 0, 0.5)',
-            },
-            '&.Mui-focused fieldset': {
-              borderColor: `${taxiMonterricoColors.green} !important`,
-              borderWidth: '2px',
-            },
-            '& input': {
-              color: theme.palette.text.primary,
-              '&::placeholder': {
-                color: theme.palette.text.secondary,
-                opacity: 1,
-              },
-              '&:-webkit-autofill': {
-                WebkitBoxShadow: `0 0 0 1000px ${theme.palette.background.paper} inset !important`,
-                WebkitTextFillColor: `${theme.palette.text.primary} !important`,
-                transition: 'background-color 5000s ease-in-out 0s',
-              },
-            },
-          },
-          '& .MuiInputLabel-root': {
-            color: theme.palette.text.secondary,
-            '&.Mui-focused': {
-              color: `${taxiMonterricoColors.green} !important`,
-            },
-          },
-        },
-      }}>
-        <Box sx={{ 
-          borderBottom: 1, 
-          borderColor: "divider", 
-          mb: 2,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}>
-          <Tabs
-            value={companyDialogTab === "create" ? 0 : 1}
-            onChange={(e, newValue) =>
-              setCompanyDialogTab(newValue === 0 ? "create" : "existing")
-            }
-          >
-            <Tab label={companyLabels.createNew} />
-            <Tab label={companyLabels.addExisting} />
-          </Tabs>
-          <IconButton onClick={handleClose} size="small">
-            <Close />
-          </IconButton>
-        </Box>
+  // Handlers para CompanyFormContent en el drawer (misma vista que página Empresas)
+  const handleDrawerRucChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, formData: CompanyFormData) => {
+    const value = e.target.value.replace(/\D/g, "").slice(0, 11);
+    setRucError("");
+    if (value.length === 11) {
+      validateCompanyRuc(value);
+      if (formData?.name?.trim()) validateCompanyName(formData.name);
+    } else {
+      setRucValidationError("");
+      if (formData?.name?.trim()) validateCompanyName(formData.name);
+    }
+  }, [validateCompanyRuc, validateCompanyName]);
 
-        {companyDialogTab === "create" ? (
+  const handleDrawerNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, formData: CompanyFormData) => {
+    const newName = e.target.value;
+    if (!newName.trim()) setNameError("");
+    else validateCompanyName(newName);
+    if (formData?.ruc?.length === 11) validateCompanyRuc(formData.ruc);
+  }, [validateCompanyName, validateCompanyRuc]);
+
+  const handleDrawerSearchRuc = useCallback(async () => {
+    const formData = drawerCompanyFormDataRef.current?.formData;
+    if (!formData?.ruc || formData.ruc.length < 11) {
+      setRucError("El RUC debe tener 11 dígitos");
+      return;
+    }
+    setLoadingRuc(true);
+    setRucError("");
+    try {
+      const factilizaToken = process.env.REACT_APP_FACTILIZA_TOKEN || "";
+      if (!factilizaToken) {
+        setRucError("Token de API no configurado. Configure REACT_APP_FACTILIZA_TOKEN");
+        setLoadingRuc(false);
+        return;
+      }
+      const response = await axios.get(`https://api.factiliza.com/v1/ruc/info/${formData.ruc}`, {
+        headers: { Authorization: `Bearer ${factilizaToken}` },
+      });
+      if (response.data?.success && response.data?.data) {
+        const data = response.data.data;
+        drawerCompanyFormDataRef.current?.setFormData((prev) => ({
+          ...prev,
+          name: data.nombre_o_razon_social || "",
+          companyname: data.tipo_contribuyente || "",
+          address: data.direccion_completa || data.direccion || "",
+          city: data.distrito || "",
+          state: data.provincia || "",
+          country: data.departamento || "Perú",
+        }));
+        const newName = data.nombre_o_razon_social || "";
+        if (newName.trim()) validateCompanyName(newName);
+        validateCompanyRuc(formData.ruc);
+      } else {
+        setRucError("No se encontró información para este RUC");
+      }
+    } catch (err: any) {
+      setRucError(err.response?.status === 400 ? "RUC no válido o no encontrado" : "Error al buscar RUC");
+    } finally {
+      setLoadingRuc(false);
+    }
+  }, [validateCompanyName, validateCompanyRuc]);
+
+  const handleCreateCompanyFromRef = useCallback(async () => {
+    const formData = drawerCompanyFormDataRef.current?.formData;
+    if (!formData) return;
+    if (!formData.name?.trim()) {
+      setNameError("El nombre de la empresa es requerido");
+      return;
+    }
+    if (nameError || rucValidationError) return;
+    await handleCreateCompany(formData);
+  }, [nameError, rucValidationError, handleCreateCompany]);
+
+  const createFormContent = (
           <Box
             sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}
           >
@@ -1094,7 +1097,9 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
               </>
             )}
           </Box>
-        ) : (
+  );
+
+  const existingFormContent = (
           <Box sx={{ mt: 1 }}>
             <TextField
               size="small"
@@ -1111,7 +1116,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
                 ),
               }}
             />
-            <Box sx={{ maxHeight: 400, overflowY: "auto" }}>
+            <Box sx={{ maxHeight: 680, overflowY: "auto" }}>
               {loadingAllCompanies ? (
                 <Box
                   sx={{ display: "flex", justifyContent: "center", py: 4 }}
@@ -1279,7 +1284,152 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
               )}
             </Box>
           </Box>
-        )}
+  );
+
+  if (useDrawerForCreate && open && companyDialogTab === "create") {
+    return (
+      <FormDrawer
+        open={open}
+        onClose={handleClose}
+        title="Nueva Empresa"
+        onSubmit={handleCreateCompanyFromRef}
+        submitLabel={saving ? companyLabels.saving : companyLabels.create}
+        submitDisabled={saving || !!nameError || !!rucValidationError || !!domainError}
+        variant="panel"
+      >
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          <CompanyFormContent
+            key="drawer-create-company"
+            initialData={getInitialFormData(null)}
+            formDataRef={drawerCompanyFormDataRef}
+            user={user}
+            users={users}
+            editingCompany={null}
+            theme={theme}
+            rucError={rucError}
+            nameError={nameError}
+            rucValidationError={rucValidationError}
+            loadingRuc={loadingRuc}
+            setRucError={setRucError}
+            setNameError={setNameError}
+            setRucValidationError={setRucValidationError}
+            setLoadingRuc={setLoadingRuc}
+            onRucChange={handleDrawerRucChange}
+            onCompanyNameChange={(e) => drawerCompanyFormDataRef.current?.setFormData((prev) => ({ ...prev, companyname: e.target.value }))}
+            onNameChange={handleDrawerNameChange}
+            onPhoneChange={(e) => drawerCompanyFormDataRef.current?.setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+            onAddressChange={(e) => drawerCompanyFormDataRef.current?.setFormData((prev) => ({ ...prev, address: e.target.value }))}
+            onCityChange={(e) => drawerCompanyFormDataRef.current?.setFormData((prev) => ({ ...prev, city: e.target.value }))}
+            onStateChange={(e) => drawerCompanyFormDataRef.current?.setFormData((prev) => ({ ...prev, state: e.target.value }))}
+            onCountryChange={(e) => drawerCompanyFormDataRef.current?.setFormData((prev) => ({ ...prev, country: e.target.value }))}
+            onDomainChange={(e) => drawerCompanyFormDataRef.current?.setFormData((prev) => ({ ...prev, domain: e.target.value }))}
+            onSearchRuc={handleDrawerSearchRuc}
+            onFormDataChange={(updates) => drawerCompanyFormDataRef.current?.setFormData((prev) => ({ ...prev, ...updates }))}
+          />
+        </Box>
+      </FormDrawer>
+    );
+  }
+
+  if (useDrawerForCreate && open && companyDialogTab === "existing") {
+    return (
+      <FormDrawer
+        open={open}
+        onClose={handleClose}
+        title="Agregar empresa existente"
+        onSubmit={handleAddExistingCompanies}
+        submitLabel={saving ? companyLabels.saving : companyLabels.add}
+        submitDisabled={saving || selectedExistingCompanies.filter((id) => !excludedCompanyIds.includes(id)).length === 0}
+        variant="panel"
+      >
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          {existingFormContent}
+        </Box>
+      </FormDrawer>
+    );
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+      sx={{
+        zIndex: 1700, // Mayor que FormDrawer (1600) para que aparezca por encima
+      }}
+      PaperProps={{
+        sx: {
+          bgcolor: theme.palette.background.paper,
+          color: theme.palette.text.primary,
+        },
+      }}
+    >
+      <DialogContent sx={{ 
+        pt: 2,
+        bgcolor: theme.palette.background.paper,
+        color: theme.palette.text.primary,
+        // Estilos globales para TextField dentro del Dialog
+        '& .MuiTextField-root': {
+          '& .MuiOutlinedInput-root': {
+            bgcolor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+            '& fieldset': {
+              borderColor: theme.palette.divider,
+            },
+            '&:hover fieldset': {
+              borderColor: theme.palette.mode === 'dark' 
+                ? 'rgba(255, 255, 255, 0.5)' 
+                : 'rgba(0, 0, 0, 0.5)',
+            },
+            '&.Mui-focused fieldset': {
+              borderColor: `${taxiMonterricoColors.green} !important`,
+              borderWidth: '2px',
+            },
+            '& input': {
+              color: theme.palette.text.primary,
+              '&::placeholder': {
+                color: theme.palette.text.secondary,
+                opacity: 1,
+              },
+              '&:-webkit-autofill': {
+                WebkitBoxShadow: `0 0 0 1000px ${theme.palette.background.paper} inset !important`,
+                WebkitTextFillColor: `${theme.palette.text.primary} !important`,
+                transition: 'background-color 5000s ease-in-out 0s',
+              },
+            },
+          },
+          '& .MuiInputLabel-root': {
+            color: theme.palette.text.secondary,
+            '&.Mui-focused': {
+              color: `${taxiMonterricoColors.green} !important`,
+            },
+          },
+        },
+      }}>
+        <Box sx={{ 
+          borderBottom: 1, 
+          borderColor: "divider", 
+          mb: 2,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}>
+          <Tabs
+            value={companyDialogTab === "create" ? 0 : 1}
+            onChange={(e, newValue) =>
+              setCompanyDialogTab(newValue === 0 ? "create" : "existing")
+            }
+          >
+            <Tab label={companyLabels.createNew} />
+            <Tab label={companyLabels.addExisting} />
+          </Tabs>
+          <IconButton onClick={handleClose} size="small">
+            <Close />
+          </IconButton>
+        </Box>
+
+        {companyDialogTab === "create" ? createFormContent : existingFormContent}
       </DialogContent>
       <DialogActions sx={pageStyles.dialogActions}>
         {companyDialogTab === "create" && formStep === 1 ? (
@@ -1296,7 +1446,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
           <Button
             onClick={
               companyDialogTab === "create"
-                ? handleCreateCompany
+                ? () => handleCreateCompany()
                 : handleAddExistingCompanies
             }
             variant="contained"

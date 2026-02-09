@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -24,6 +24,7 @@ import {
 import {
   Email,
   Close,
+  Search,
 } from "@mui/icons-material";
 import { faCalendar, faClock } from "@fortawesome/free-regular-svg-icons";
 import { library } from "@fortawesome/fontawesome-svg-core";
@@ -48,10 +49,12 @@ import {
 } from "../components/DetailCards";
 import { NoteModal, CallModal, TaskModal, MeetingModal, DealModal, CompanyModal, ContactModal } from "../components/ActivityModals";
 import type { GeneralInfoCard } from "../components/DetailCards";
+import { FormDrawer } from "../components/FormDrawer";
 import DetailPageLayout from "../components/Layout/DetailPageLayout";
 import { useAuth } from "../context/AuthContext";
 import { Building2 } from "lucide-react";
 import { log } from "../utils/logger";
+import { CompanyFormContent, getInitialFormData, type CompanyFormData } from "../components/CompanyFormContent";
 
 // Agregar los iconos a la librería para usar byPrefixAndName
 library.add(far);
@@ -191,30 +194,20 @@ const CompanyDetail: React.FC = () => {
   const [meetingOpen, setMeetingOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editFormData, setEditFormData] = useState({
-    name: "",
-    domain: "",
-    linkedin: "",
-    companyname: "",
-    phone: "",
-    phone2: "",
-    phone3: "",
-    lifecycleStage: "lead",
-    ruc: "",
-    address: "",
-    city: "",
-    state: "",
-    country: "",
-    email: "",
-    leadSource: "",
-    estimatedRevenue: "",
-    isRecoveredClient: false,
-  });
   const [successMessage, setSuccessMessage] = useState("");
   const [warningMessage, setWarningMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [emailConnectModalOpen, setEmailConnectModalOpen] = useState(false);
   const [connectingEmail, setConnectingEmail] = useState(false);
+  const [users, setUsers] = useState<any[]>([]);
+  const [rucError, setRucError] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [rucValidationError, setRucValidationError] = useState('');
+  const [loadingRuc, setLoadingRuc] = useState(false);
+  const companyFormDataRef = useRef<{ formData: CompanyFormData; setFormData: React.Dispatch<React.SetStateAction<CompanyFormData>> }>({
+    formData: getInitialFormData(null),
+    setFormData: () => {},
+  });
 
   const fetchCompany = useCallback(async () => {
     try {
@@ -577,58 +570,95 @@ const CompanyDetail: React.FC = () => {
     return labels[stage] || stage;
   };
 
+  // Fetch usuarios para el selector de propietario
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await api.get('/users');
+        setUsers(response.data);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      }
+    };
+    fetchUsers();
+  }, []);
+
   const handleOpenEditDialog = () => {
     if (company) {
-      setEditFormData({
-        name: company.name || "",
-        domain: company.domain || "",
-        linkedin: company.linkedin || "",
-        companyname: company.companyname || "",
-        phone: company.phone || "",
-        phone2: (company as any).phone2 || "",
-        phone3: (company as any).phone3 || "",
-        lifecycleStage: company.lifecycleStage || "lead",
-        ruc: (company as any).ruc || "",
-        address: company.address || "",
-        city: company.city || "",
-        state: company.state || "",
-        country: company.country || "",
-        email: (company as any).email || "",
-        leadSource: (company as any).leadSource || "",
-        estimatedRevenue: (company as any).estimatedRevenue || "",
-        isRecoveredClient: (company as any).isRecoveredClient || false,
-      });
+      const initialData = getInitialFormData(company);
+      companyFormDataRef.current.setFormData(initialData);
       setEditDialogOpen(true);
       setErrorMessage("");
+      setRucError('');
+      setNameError('');
+      setRucValidationError('');
     }
   };
 
   const handleCloseEditDialog = () => {
     setEditDialogOpen(false);
-    setEditFormData({
-      name: "",
-      domain: "",
-      linkedin: "",
-      companyname: "",
-      phone: "",
-      phone2: "",
-      phone3: "",
-      lifecycleStage: "lead",
-      ruc: "",
-      address: "",
-      city: "",
-      state: "",
-      country: "",
-      email: "",
-      leadSource: "",
-      estimatedRevenue: "",
-      isRecoveredClient: false,
-    });
+    companyFormDataRef.current.setFormData(getInitialFormData(null));
     setErrorMessage("");
+    setRucError('');
+    setNameError('');
+    setRucValidationError('');
   };
 
+  // Handlers simplificados para el formulario
+  const handleRucChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, formData: CompanyFormData) => {
+    const value = e.target.value.replace(/\D/g, '');
+    const limitedValue = value.slice(0, 11);
+    companyFormDataRef.current?.setFormData((prev) => ({ ...prev, ruc: limitedValue }));
+    setRucError('');
+  }, []);
+
+  const handleCompanyNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    companyFormDataRef.current?.setFormData((prev) => ({ ...prev, companyname: e.target.value }));
+  }, []);
+
+  const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, formData: CompanyFormData) => {
+    const newName = e.target.value;
+    companyFormDataRef.current?.setFormData((prev) => ({ ...prev, name: newName }));
+    if (!newName.trim()) setNameError('');
+  }, []);
+
+  const handlePhoneChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    companyFormDataRef.current?.setFormData((prev) => ({ ...prev, phone: e.target.value }));
+  }, []);
+
+  const handleAddressChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    companyFormDataRef.current?.setFormData((prev) => ({ ...prev, address: e.target.value }));
+  }, []);
+
+  const handleCityChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    companyFormDataRef.current?.setFormData((prev) => ({ ...prev, city: e.target.value }));
+  }, []);
+
+  const handleStateChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    companyFormDataRef.current?.setFormData((prev) => ({ ...prev, state: e.target.value }));
+  }, []);
+
+  const handleCountryChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    companyFormDataRef.current?.setFormData((prev) => ({ ...prev, country: e.target.value }));
+  }, []);
+
+  const handleDomainChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    companyFormDataRef.current?.setFormData((prev) => ({ ...prev, domain: e.target.value }));
+  }, []);
+
+  const handleFormDataChange = useCallback((updates: Partial<CompanyFormData>) => {
+    companyFormDataRef.current?.setFormData((prev) => ({ ...prev, ...updates }));
+  }, []);
+
+  const handleSearchRuc = useCallback(async () => {
+    // Función simplificada - puedes agregar lógica de búsqueda de RUC si es necesario
+    setLoadingRuc(true);
+    setTimeout(() => setLoadingRuc(false), 500);
+  }, []);
+
   const handleSaveCompany = async () => {
-    if (!company || !editFormData.name.trim()) {
+    const formData = companyFormDataRef.current?.formData;
+    if (!company || !formData || !formData.name.trim()) {
       return;
     }
 
@@ -638,30 +668,37 @@ const CompanyDetail: React.FC = () => {
       
       // Preparar los datos para enviar, convirtiendo valores vacíos a null
       const dataToSend: any = {
-        ...editFormData,
+        ...formData,
       };
       
       // Manejar estimatedRevenue
       if (
-        editFormData.estimatedRevenue === "" ||
-        editFormData.estimatedRevenue === null ||
-        editFormData.estimatedRevenue === undefined
+        formData.estimatedRevenue === "" ||
+        formData.estimatedRevenue === null ||
+        formData.estimatedRevenue === undefined
       ) {
         dataToSend.estimatedRevenue = null;
       } else {
-        const parsed = parseFloat(editFormData.estimatedRevenue as string);
+        const parsed = parseFloat(formData.estimatedRevenue as string);
         dataToSend.estimatedRevenue = isNaN(parsed) ? null : parsed;
       }
       
       // Manejar leadSource
       dataToSend.leadSource =
-        editFormData.leadSource === "" ? null : editFormData.leadSource;
+        formData.leadSource === "" ? null : formData.leadSource;
       
       // Manejar email
-      dataToSend.email = editFormData.email === "" ? null : editFormData.email;
+      dataToSend.email = formData.email === "" ? null : formData.email;
       
       // Asegurarse de que isRecoveredClient sea boolean
-      dataToSend.isRecoveredClient = Boolean(editFormData.isRecoveredClient);
+      dataToSend.isRecoveredClient = Boolean(formData.isRecoveredClient);
+      
+      // Manejar ownerId
+      if (formData.ownerId) {
+        dataToSend.ownerId = parseInt(formData.ownerId) || null;
+      } else {
+        dataToSend.ownerId = null;
+      }
       
       log("Datos a enviar:", dataToSend);
       
@@ -1531,331 +1568,57 @@ const tab2Content = (
       tab2Content={tab2Content}
       loading={loading}
       editDialog={
-        <Dialog
+        <FormDrawer
           open={editDialogOpen}
           onClose={handleCloseEditDialog}
-          maxWidth="sm"
-          fullWidth
+          title="Editar Empresa"
+          onSubmit={handleSaveCompany}
+          submitLabel={saving ? "Guardando..." : "Guardar"}
+          submitDisabled={saving || !companyFormDataRef.current?.formData?.name.trim()}
+          variant="panel"
         >
-          <DialogTitle>Editar Empresa</DialogTitle>
-          <DialogContent>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
-              <TextField
-                label="Nombre"
-                value={editFormData.name}
-                onChange={(e) =>
-                  setEditFormData({ ...editFormData, name: e.target.value })
-                }
-                InputLabelProps={{ shrink: true }}
-                required
-                disabled
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <TextField
-                label="RUC"
-                value={editFormData.ruc}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/\D/g, "");
-                  const limitedValue = value.slice(0, 11);
-                  setEditFormData({ ...editFormData, ruc: limitedValue });
-                }}
-                inputProps={{ maxLength: 11 }}
-                InputLabelProps={{ shrink: true }}
-                disabled
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <Box sx={{ display: "flex", gap: 2 }}>
-                <TextField
-                  label="Dominio"
-                  value={editFormData.domain}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, domain: e.target.value })
-                  }
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    flex: 1,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-                <TextField
-                  label="LinkedIn"
-                  value={editFormData.linkedin}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, linkedin: e.target.value })
-                  }
-                  InputLabelProps={{ shrink: true }}
-                  placeholder="https://www.linkedin.com/company/..."
-                  sx={{
-                    flex: 1,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-              </Box>
-              <Box sx={{ display: "flex", gap: 2 }}>
-                <TextField
-                  label="Teléfono"
-                  value={editFormData.phone}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, phone: e.target.value })
-                  }
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    flex: 1,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-                <TextField
-                  label="Teléfono 2"
-                  value={editFormData.phone2}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, phone2: e.target.value })
-                  }
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    flex: 1,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-                <TextField
-                  label="Teléfono 3"
-                  value={editFormData.phone3}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, phone3: e.target.value })
-                  }
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    flex: 1,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-              </Box>
-              <TextField
-                label="Correo"
-                type="email"
-                value={editFormData.email}
-                onChange={(e) =>
-                  setEditFormData({ ...editFormData, email: e.target.value })
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <TextField
-                select
-                label="Origen de lead"
-                value={editFormData.leadSource}
-                onChange={(e) =>
-                  setEditFormData({ ...editFormData, leadSource: e.target.value })
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              >
-                <MenuItem value="">--</MenuItem>
-                <MenuItem value="referido">Referido</MenuItem>
-                <MenuItem value="base">Base</MenuItem>
-                <MenuItem value="entorno">Entorno</MenuItem>
-                <MenuItem value="feria">Feria</MenuItem>
-                <MenuItem value="masivo">Masivo</MenuItem>
-              </TextField>
-              <TextField
-                label="Potencial de Facturación Estimado"
-                type="number"
-                value={editFormData.estimatedRevenue}
-                onChange={(e) =>
-                  setEditFormData({
-                    ...editFormData,
-                    estimatedRevenue: e.target.value,
-                  })
-                }
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">S/</InputAdornment>
-                  ),
-                }}
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={editFormData.isRecoveredClient}
-                    onChange={(e) =>
-                      setEditFormData({
-                        ...editFormData,
-                        isRecoveredClient: e.target.checked,
-                      })
-                    }
-                  />
-                }
-                label="Cliente Recuperado"
-              />
-              <TextField
-                label="Razón social"
-                value={editFormData.companyname}
-                onChange={(e) =>
-                  setEditFormData({
-                    ...editFormData,
-                    companyname: e.target.value,
-                  })
-                }
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <TextField
-                label="Dirección"
-                value={editFormData.address}
-                onChange={(e) =>
-                  setEditFormData({ ...editFormData, address: e.target.value })
-                }
-                multiline
-                rows={2}
-                InputLabelProps={{ shrink: true }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 1.5,
-                  },
-                }}
-              />
-              <Box sx={{ display: "flex", gap: 2 }}>
-                <TextField
-                  label="Distrito"
-                  value={editFormData.city}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, city: e.target.value })
-                  }
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    flex: 1,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-                <TextField
-                  label="Provincia"
-                  value={editFormData.state}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, state: e.target.value })
-                  }
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    flex: 1,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-                <TextField
-                  label="Departamento"
-                  value={editFormData.country}
-                  onChange={(e) =>
-                    setEditFormData({ ...editFormData, country: e.target.value })
-                  }
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    flex: 1,
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
-                />
-              </Box>
-              <FormControl fullWidth>
-                <TextField
-                  select
-                  label="Etapa del Ciclo de Vida"
-                  value={editFormData.lifecycleStage}
-                  onChange={(e) =>
-                    setEditFormData({
-                      ...editFormData,
-                      lifecycleStage: e.target.value,
-                    })
-                  }
-                  InputLabelProps={{ shrink: true }}
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 1.5,
-                    },
-                  }}
+          {editDialogOpen && company && (
+            <>
+              {errorMessage && (
+                <Alert
+                  severity="error"
+                  onClose={() => setErrorMessage("")}
+                  sx={{ mb: 2 }}
                 >
-                  <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
-                  <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
-                  <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
-                  <MenuItem value="lead">Lead</MenuItem>
-                  <MenuItem value="contacto">Contacto</MenuItem>
-                  <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
-                  <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-                  <MenuItem value="propuesta_economica">
-                    Propuesta Económica
-                  </MenuItem>
-                  <MenuItem value="negociacion">Negociación</MenuItem>
-                  <MenuItem value="licitacion">Licitación</MenuItem>
-                  <MenuItem value="licitacion_etapa_final">
-                    Licitación Etapa Final
-                  </MenuItem>
-                  <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
-                  <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
-                  <MenuItem value="activo">Activo</MenuItem>
-                </TextField>
-              </FormControl>
-            </Box>
-            {errorMessage && (
-              <Alert
-                severity="error"
-                onClose={() => setErrorMessage("")}
-                sx={{ mx: 2, mb: 2 }}
-              >
-                {errorMessage}
-              </Alert>
-            )}
-          </DialogContent>
-          <DialogActions sx={pageStyles.dialogActions}>
-            <Button onClick={handleCloseEditDialog} disabled={saving} sx={pageStyles.cancelButton}>
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleSaveCompany} 
-              variant="contained"
-              disabled={saving || !editFormData.name.trim()}
-              sx={pageStyles.saveButton}
-            >
-              {saving ? "Guardando..." : "Guardar"}
-            </Button>
-          </DialogActions>
-        </Dialog>
+                  {errorMessage}
+                </Alert>
+              )}
+              <CompanyFormContent
+                key={company.id}
+                initialData={getInitialFormData(company)}
+                formDataRef={companyFormDataRef}
+                user={user}
+                users={users}
+                editingCompany={company}
+                theme={theme}
+                rucError={rucError}
+                nameError={nameError}
+                rucValidationError={rucValidationError}
+                loadingRuc={loadingRuc}
+                setRucError={setRucError}
+                setNameError={setNameError}
+                setRucValidationError={setRucValidationError}
+                setLoadingRuc={setLoadingRuc}
+                onRucChange={handleRucChange}
+                onCompanyNameChange={handleCompanyNameChange}
+                onNameChange={handleNameChange}
+                onPhoneChange={handlePhoneChange}
+                onAddressChange={handleAddressChange}
+                onCityChange={handleCityChange}
+                onStateChange={handleStateChange}
+                onCountryChange={handleCountryChange}
+                onDomainChange={handleDomainChange}
+                onSearchRuc={handleSearchRuc}
+                onFormDataChange={handleFormDataChange}
+              />
+            </>
+          )}
+        </FormDrawer>
       }
     />
 
@@ -2154,6 +1917,7 @@ const tab2Content = (
         defaultCompanyId={company?.id}
         excludedContactIds={(associatedContacts || []).map((c: any) => c.id)}
         associatedContacts={associatedContacts || []}
+        useDrawerForCreate
         onSave={async () => {
           await fetchAssociatedRecords();
           setAddContactOpen(false); 
@@ -2172,6 +1936,7 @@ const tab2Content = (
         user={user}
         initialTab={companyDialogTab}
         excludedCompanyIds={(associatedCompanies || []).map((c: any) => c.id)}
+        useDrawerForCreate
         onSave={async () => {
           await fetchAssociatedRecords();
           setAddCompanyOpen(false);
@@ -2190,6 +1955,7 @@ const tab2Content = (
         defaultCompanyId={company?.id}
         excludedDealIds={(associatedDeals || []).map((d: any) => d.id)}
         getStageLabel={getStageLabel}
+        useDrawerForCreate
         onSave={async () => {
           await fetchAssociatedRecords();
           setAddDealOpen(false);

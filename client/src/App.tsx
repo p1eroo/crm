@@ -131,12 +131,12 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
     },
   },
   components: {
-    // MuiPaper: borderRadius 16, border 1px con divider, background paper (mismo #1c252e que tablas en dark)
+    // MuiPaper: borderRadius 16, border none, background paper (mismo #1c252e que tablas en dark)
     MuiPaper: {
       styleOverrides: {
         root: ({ theme }: { theme: Theme }) => ({
           borderRadius: 0,
-          border: `1px solid ${theme.palette.divider}`,
+          border: 'none',
           backgroundColor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
           transition: 'transform 0.2s ease, box-shadow 0.2s ease',
         }),
@@ -166,13 +166,13 @@ const getTheme = (mode: 'light' | 'dark') => createTheme({
         }),
       },
     },
-    // MuiCard: misma lógica + sombra suave
+    // MuiCard: mismo color que MuiPaper (card izquierda) para unificar cards derecha/izquierda
     MuiCard: {
       styleOverrides: {
         root: ({ theme }: { theme: Theme }) => ({
           borderRadius: 16,
-          border: `1px solid ${theme.palette.divider}`,
-          backgroundColor: theme.palette.background.paper,
+          border: 'none',
+          backgroundColor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
           boxShadow: theme.palette.mode === 'dark' 
             ? '0 2px 8px rgba(0, 0, 0, 0.3)' 
             : '0 2px 8px rgba(0, 0, 0, 0.1)',

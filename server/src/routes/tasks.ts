@@ -87,26 +87,7 @@ router.get('/', async (req: AuthRequest, res) => {
       where.title = { [Op.iLike]: `%${search}%` };
     }
     
-    if (status) {
-      where.status = status;
-    }
-    if (priority) {
-      where.priority = priority;
-    }
-    if (assignedToId) {
-      where.assignedToId = assignedToId;
-    }
-    if (contactId) {
-      where.contactId = contactId;
-    }
-    if (companyId) {
-      where.companyId = companyId;
-    }
-    if (dealId) {
-      where.dealId = dealId;
-    }
-    
-    // Filtros por columna
+    // Filtros por columna (tienen prioridad absoluta sobre los filtros simples)
     if (filterTitulo) {
       if (where.title) {
         where.title = { [Op.and]: [
@@ -118,28 +99,62 @@ router.get('/', async (req: AuthRequest, res) => {
       }
     }
     
+    // Filtro de estado por columna (prioridad sobre status)
     if (filterEstado) {
-      const filterEstadoStr = String(filterEstado);
-      if (where.status) {
-        // Si ya existe filtro por status, verificar si coincide
-        if (String(where.status).toLowerCase() !== filterEstadoStr.toLowerCase()) {
-          where.status = { [Op.in]: [] }; // No hay coincidencias
-        }
-      } else {
-        where.status = { [Op.iLike]: `%${filterEstadoStr}%` };
-      }
+      const filterEstadoStr = String(filterEstado).trim().toLowerCase();
+      // Mapear valores comunes a los valores exactos del ENUM
+      const statusMap: { [key: string]: string } = {
+        'pending': 'pending',
+        'pendiente': 'pending',
+        'in progress': 'in progress',
+        'en progreso': 'in progress',
+        'completed': 'completed',
+        'completada': 'completed',
+        'cancelled': 'cancelled',
+        'cancelada': 'cancelled',
+      };
+      const mappedStatus = statusMap[filterEstadoStr] || filterEstadoStr;
+      // Usar igualdad exacta para ENUMs, no Op.iLike
+      where.status = mappedStatus;
+    } else if (status) {
+      // Solo aplicar filtro de status si no hay filtro de columna para estado
+      where.status = status;
     }
     
+    // Filtro de prioridad por columna (prioridad sobre priority)
     if (filterPrioridad) {
-      const filterPrioridadStr = String(filterPrioridad);
-      if (where.priority) {
-        // Si ya existe filtro por priority, verificar si coincide
-        if (String(where.priority).toLowerCase() !== filterPrioridadStr.toLowerCase()) {
-          where.priority = { [Op.in]: [] }; // No hay coincidencias
-        }
-      } else {
-        where.priority = { [Op.iLike]: `%${filterPrioridadStr}%` };
-      }
+      const filterPrioridadStr = String(filterPrioridad).trim().toLowerCase();
+      // Mapear valores comunes a los valores exactos del ENUM
+      const priorityMap: { [key: string]: string } = {
+        'low': 'low',
+        'baja': 'low',
+        'medium': 'medium',
+        'media': 'medium',
+        'high': 'high',
+        'alta': 'high',
+        'urgent': 'urgent',
+        'urgente': 'urgent',
+      };
+      const mappedPriority = priorityMap[filterPrioridadStr] || filterPrioridadStr;
+      // Usar igualdad exacta para ENUMs
+      where.priority = mappedPriority;
+    } else if (priority) {
+      // Solo aplicar filtro de priority si no hay filtro de columna para prioridad
+      where.priority = priority;
+    }
+    
+    // Otros filtros que no tienen conflictos con filtros de columna
+    if (assignedToId) {
+      where.assignedToId = assignedToId;
+    }
+    if (contactId) {
+      where.contactId = contactId;
+    }
+    if (companyId) {
+      where.companyId = companyId;
+    }
+    if (dealId) {
+      where.dealId = dealId;
     }
     
     // Ordenamiento

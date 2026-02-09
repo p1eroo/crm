@@ -24,7 +24,7 @@ import {
   Collapse,
   Autocomplete,
 } from '@mui/material';
-import { Add, Delete, AttachMoney, Visibility, ViewList, AccountTree, CalendarToday, Close, FileDownload, UploadFile, FilterList, ExpandMore, Remove, Bolt, Business, Edit, ChevronLeft, ChevronRight, ViewColumn } from '@mui/icons-material';
+import { Add, Delete, AttachMoney, Visibility, ViewList, AccountTree, CalendarToday, Close, FileDownload, FilterList, ExpandMore, Remove, Bolt, Business, Edit, ChevronLeft, ChevronRight } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
 import { pageStyles } from '../theme/styles';
@@ -37,8 +37,7 @@ import { faHandshake } from "@fortawesome/free-solid-svg-icons";
 import EntityPreviewDrawer from '../components/EntityPreviewDrawer';
 import UserAvatar from '../components/UserAvatar';
 import { FormDrawer } from '../components/FormDrawer';
-import ContactCompanyModal from '../components/ContactCompanyModal';
-import { companyLabels } from '../constants/companyLabels';
+import { DealFormContent, getInitialDealFormData, type DealFormData } from '../components/DealFormContent';
 
 interface Deal {
   id: number;
@@ -65,26 +64,21 @@ const Deals: React.FC = () => {
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [search] = useState('');
   const [sortBy, setSortBy] = useState('newest');
-  const [formData, setFormData] = useState({
-    name: '',
-    amount: '',
-    stage: 'lead',
-    closeDate: '',
-    priority: 'baja' as 'baja' | 'media' | 'alta',
-    companyId: '',
-    contactId: '',
+  const dealFormDataRef = useRef<{ formData: DealFormData; setFormData: React.Dispatch<React.SetStateAction<DealFormData>> }>({
+    formData: getInitialDealFormData(null),
+    setFormData: () => {},
   });
-  const [, setCompanies] = useState<any[]>([]);
-  const [, setContacts] = useState<any[]>([]);
+  const [companies, setCompanies] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   
-  // Estados para búsqueda asíncrona de empresas y contactos
+  // Estados para búsqueda asíncrona de empresas
   const [companySearch, setCompanySearch] = useState("");
-  const [contactSearch, setContactSearch] = useState("");
   const [companyOptions, setCompanyOptions] = useState<any[]>([]);
-  const [contactOptions, setContactOptions] = useState<any[]>([]);
   const [loadingCompanies, setLoadingCompanies] = useState(false);
-  const [loadingContacts, setLoadingContacts] = useState(false);
+  
+  // Estados para búsqueda de contactos (filtrado local)
+  const [contactSearchInput, setContactSearchInput] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [dealToDelete, setDealToDelete] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -99,9 +93,7 @@ const Deals: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(DEFAULT_ITEMS_PER_PAGE);
   const [totalDeals, setTotalDeals] = useState(0);
-  const [importing, setImporting] = useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  
+
   // Estados para drag and drop
   const [draggedDeal, setDraggedDeal] = useState<Deal | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -114,23 +106,17 @@ const Deals: React.FC = () => {
     nombre: string;
     monto: string;
     etapa: string;
-    contacto: string;
-    empresa: string;
     propietario: string;
   }>({
     nombre: '',
     monto: '',
     etapa: '',
-    contacto: '',
-    empresa: '',
     propietario: '',
   });
   const [debouncedColumnFilters, setDebouncedColumnFilters] = useState(columnFilters);
   const [showColumnFilters, setShowColumnFilters] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewDeal, setPreviewDeal] = useState<Deal | null>(null);
-  const [addCompanyModalOpen, setAddCompanyModalOpen] = useState(false);
-  const [createCompanyModalOpen, setCreateCompanyModalOpen] = useState(false);
   
   // Etapas del pipeline
   const stages = [
@@ -354,8 +340,6 @@ const Deals: React.FC = () => {
       
       // Filtros por columna (usar los valores con debounce)
       if (debouncedColumnFilters.nombre) params.filterNombre = debouncedColumnFilters.nombre;
-      if (debouncedColumnFilters.contacto) params.filterContacto = debouncedColumnFilters.contacto;
-      if (debouncedColumnFilters.empresa) params.filterEmpresa = debouncedColumnFilters.empresa;
       if (debouncedColumnFilters.etapa) params.filterEtapa = debouncedColumnFilters.etapa;
       if (debouncedColumnFilters.propietario) params.filterPropietario = debouncedColumnFilters.propietario;
       
@@ -448,30 +432,6 @@ const Deals: React.FC = () => {
     }
   }, []);
 
-  // Función para buscar contactos de forma asíncrona
-  const searchContacts = useCallback(async (searchTerm: string) => {
-    if (!searchTerm.trim()) {
-      setContactOptions([]);
-      return;
-    }
-    
-    try {
-      setLoadingContacts(true);
-      const response = await api.get("/contacts", {
-        params: {
-          search: searchTerm,
-          limit: 20, // Solo 20 resultados
-        },
-      });
-      setContactOptions(response.data.contacts || response.data || []);
-    } catch (error) {
-      console.error("Error searching contacts:", error);
-      setContactOptions([]);
-    } finally {
-      setLoadingContacts(false);
-    }
-  }, []);
-
   // Debounce para búsqueda de empresas
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -484,19 +444,6 @@ const Deals: React.FC = () => {
 
     return () => clearTimeout(timer);
   }, [companySearch, searchCompanies]);
-
-  // Debounce para búsqueda de contactos
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (contactSearch) {
-        searchContacts(contactSearch);
-      } else {
-        setContactOptions([]);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [contactSearch, searchContacts]);
 
   const handleExportToExcel = () => {
     const exportData = deals.map((deal) => ({
@@ -533,61 +480,11 @@ const Deals: React.FC = () => {
     XLSX.writeFile(wb, fileName);
   };
 
-  const handleImportFromExcel = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setImporting(true);
-    try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-      for (const row of jsonData as any[]) {
-        const dealData: any = {
-          name: row['Nombre'] || '',
-          amount: parseFloat(String(row['Monto'] || '0').replace(/[^0-9.-]/g, '')) || 0,
-          stage: row['Etapa'] || 'lead',
-          probability: row['Probabilidad'] ? parseInt(String(row['Probabilidad']).replace('%', '')) : null,
-          closeDate: row['Fecha de Cierre'] ? new Date(row['Fecha de Cierre']).toISOString() : null,
-        };
-
-        if (dealData.name) {
-          await api.post('/deals', dealData);
-        }
-      }
-
-      fetchDeals();
-      alert('Negocios importados correctamente');
-    } catch (error) {
-      console.error('Error importing deals:', error);
-      alert('Error al importar negocios. Por favor, verifica el formato del archivo.');
-    } finally {
-      setImporting(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  };
-
   const handleOpen = (deal?: Deal) => {
     if (deal) {
       setEditingDeal(deal);
-      setFormData({
-        name: deal.name,
-        amount: deal.amount.toString(),
-        stage: deal.stage,
-        closeDate: deal.closeDate ? deal.closeDate.split('T')[0] : '',
-        priority: deal.priority || 'baja',
-        companyId: deal.companyId?.toString() || '',
-        contactId: deal.contactId?.toString() || '',
-      });
+      const initialData = getInitialDealFormData(deal);
+      dealFormDataRef.current.setFormData(initialData);
       if (deal.companyId && (deal as any).Company) {
         setCompanyOptions((prev) => {
           if (prev.some((c: any) => c.id === deal.companyId)) return prev;
@@ -596,15 +493,7 @@ const Deals: React.FC = () => {
       }
     } else {
       setEditingDeal(null);
-      setFormData({
-        name: '',
-        amount: '',
-        stage: 'lead',
-        closeDate: '',
-        priority: 'baja' as 'baja' | 'media' | 'alta',
-        companyId: '',
-        contactId: '',
-      });
+      dealFormDataRef.current.setFormData(getInitialDealFormData(null));
     }
     setOpen(true);
   };
@@ -614,52 +503,15 @@ const Deals: React.FC = () => {
     setEditingDeal(null);
   };
 
-  const handleCompanySelected = (company?: any) => {
-    if (company && company.id) {
-      setFormData((prev) => ({ ...prev, companyId: company.id.toString() }));
-      if (!companyOptions.find((c: any) => c.id === company.id)) {
-        setCompanyOptions((prev) => [company, ...prev]);
-      }
-    }
-    setAddCompanyModalOpen(false);
-  };
-
-  const handleCompanyCreated = (company: any) => {
-    if (company && company.id) {
-      setFormData((prev) => ({ ...prev, companyId: company.id.toString() }));
-      if (!companyOptions.find((c: any) => c.id === company.id)) {
-        setCompanyOptions((prev) => [company, ...prev]);
-      }
-    }
-    setCreateCompanyModalOpen(false);
-  };
-
-  // Handlers memoizados para evitar re-renders innecesarios
-  const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, name: e.target.value }));
-  }, []);
-
-  const handleAmountChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, amount: e.target.value }));
-  }, []);
-
-  const handleStageFormChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, stage: e.target.value }));
-  }, []);
-
-  const handleCloseDateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, closeDate: e.target.value }));
-  }, []);
-
-  const handlePriorityChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData((prev) => ({ ...prev, priority: e.target.value as 'baja' | 'media' | 'alta' }));
-  }, []);
 
   const handleSubmit = async () => {
     try {
+      const formData = dealFormDataRef.current.formData;
       const data = {
-        ...formData,
+        name: formData.name,
         amount: parseFloat(formData.amount) || 0,
+        stage: formData.stage,
+        closeDate: formData.closeDate || null,
         priority: formData.priority,
         companyId: formData.companyId ? parseInt(formData.companyId) : null,
         contactId: formData.contactId ? parseInt(formData.contactId) : null,
@@ -915,22 +767,6 @@ const Deals: React.FC = () => {
               sx={{ height: 24, fontSize: '0.7rem' }}
             />
           )}
-          {columnFilters.contacto && (
-            <Chip
-              size="small"
-              label={`Contacto: "${columnFilters.contacto}"`}
-              onDelete={() => setColumnFilters(prev => ({ ...prev, contacto: '' }))}
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
-          {columnFilters.empresa && (
-            <Chip
-              size="small"
-              label={`Empresa: "${columnFilters.empresa}"`}
-              onDelete={() => setColumnFilters(prev => ({ ...prev, empresa: '' }))}
-              sx={{ height: 24, fontSize: '0.7rem' }}
-            />
-          )}
           {columnFilters.propietario && (
             <Chip
               size="small"
@@ -941,7 +777,7 @@ const Deals: React.FC = () => {
           )}
           <Button
             size="small"
-            onClick={() => setColumnFilters({ nombre: '', monto: '', etapa: '', contacto: '', empresa: '', propietario: '' })}
+            onClick={() => setColumnFilters({ nombre: '', monto: '', etapa: '', propietario: '' })}
             sx={{ 
               fontSize: '0.7rem', 
               textTransform: 'none',
@@ -982,45 +818,6 @@ const Deals: React.FC = () => {
         </Typography>
         
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
-          <FormControl 
-            size="small" 
-            sx={{ 
-              minWidth: { xs: "100%", sm: 130 },
-              order: { xs: 1, sm: 0 },
-            }}
-          >
-            <Select
-              id="deals-sort-select"
-              name="deals-sort"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              displayEmpty
-              sx={{
-                borderRadius: 1.5,
-                bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                fontSize: { xs: "0.75rem", sm: "0.8125rem" },
-                border: `1.5px solid ${theme.palette.divider}`,
-                transition: 'all 0.2s ease',
-                "& .MuiOutlinedInput-notchedOutline": {
-                  border: 'none',
-                },
-                "&:hover": {
-                  borderColor: taxiMonterricoColors.green,
-                  boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
-                },
-                "&.Mui-focused": {
-                  borderColor: taxiMonterricoColors.green,
-                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                },
-              }}
-            >
-              <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
-              <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
-              <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
-              <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
-            </Select>
-          </FormControl>
-          
           <Box
             sx={{
               display: "flex",
@@ -1028,93 +825,61 @@ const Deals: React.FC = () => {
               order: { xs: 3, sm: 0 },
             }}
           >
-            <Tooltip title={importing ? 'Importando...' : 'Importar'} arrow>
-              <IconButton
-                size="small"
-                onClick={handleImportFromExcel}
-                disabled={importing}
-                sx={{
-                  border: `1.5px solid ${theme.palette.divider}`,
-                  borderRadius: 1.5,
-                  bgcolor: 'transparent',
-                  color: theme.palette.text.secondary,
-                  p: { xs: 0.75, sm: 0.875 },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    borderColor: taxiMonterricoColors.green,
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? `${taxiMonterricoColors.green}1A` 
-                      : `${taxiMonterricoColors.green}0D`,
-                    color: taxiMonterricoColors.green,
-                    transform: 'translateY(-2px)',
-                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
-                  },
-                  '&:disabled': {
-                    opacity: 0.5,
-                  },
-                }}
-              >
-                <UploadFile sx={{ fontSize: { xs: 16, sm: 18 } }} />
-              </IconButton>
-            </Tooltip>
-            
-            <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
-            
-            <Tooltip title="Exportar" arrow>
-              <IconButton
-                size="small"
-                onClick={handleExportToExcel}
-                sx={{
-                  border: `1.5px solid ${theme.palette.divider}`,
-                  borderRadius: 1.5,
-                  bgcolor: 'transparent',
-                  color: theme.palette.text.secondary,
-                  p: { xs: 0.75, sm: 0.875 },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  '&:hover': {
-                    borderColor: taxiMonterricoColors.green,
-                    bgcolor: theme.palette.mode === 'dark' 
-                      ? `${taxiMonterricoColors.green}1A` 
-                      : `${taxiMonterricoColors.green}0D`,
-                    color: taxiMonterricoColors.green,
-                    transform: 'translateY(-2px)',
-                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
-                  },
-                }}
-              >
-                <FileDownload sx={{ fontSize: { xs: 16, sm: 18 } }} />
-              </IconButton>
-            </Tooltip>
-          </Box>
-          
-          <Tooltip title={showColumnFilters ? "Ocultar filtros por columna" : "Mostrar filtros por columna"} arrow>
-            <IconButton
+            <Button
               size="small"
-              onClick={() => setShowColumnFilters(!showColumnFilters)}
+              startIcon={<FileDownload sx={{ fontSize: { xs: 16, sm: 18 } }} />}
+              onClick={handleExportToExcel}
               sx={{
-                border: `1.5px solid ${showColumnFilters ? taxiMonterricoColors.green : theme.palette.divider}`,
+                border: `1.5px solid ${theme.palette.divider}`,
                 borderRadius: 1.5,
-                bgcolor: showColumnFilters 
-                  ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}14`)
-                  : 'transparent',
-                color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.secondary,
-                p: { xs: 0.75, sm: 0.875 },
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                order: { xs: 5, sm: 0 },
+                bgcolor: 'transparent',
+                color: theme.palette.text.secondary,
+                px: { xs: 1.25, sm: 1.5 },
+                py: { xs: 0.75, sm: 0.875 },
+                textTransform: 'none',
+                fontWeight: 600,
                 '&:hover': {
                   borderColor: taxiMonterricoColors.green,
                   bgcolor: theme.palette.mode === 'dark' 
-                    ? `${taxiMonterricoColors.green}33` 
-                    : `${taxiMonterricoColors.green}1A`,
+                    ? `${taxiMonterricoColors.green}1A` 
+                    : `${taxiMonterricoColors.green}0D`,
                   color: taxiMonterricoColors.green,
-                  transform: 'translateY(-2px)',
                   boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
                 },
               }}
             >
-              <ViewColumn sx={{ fontSize: { xs: 18, sm: 20 } }} />
-            </IconButton>
-          </Tooltip>
+              Exportar
+            </Button>
+          </Box>
+          
+          <Button
+            size="small"
+            startIcon={<FilterList sx={{ fontSize: { xs: 18, sm: 20 } }} />}
+            onClick={() => setShowColumnFilters(!showColumnFilters)}
+            sx={{
+              border: `1.5px solid ${showColumnFilters ? taxiMonterricoColors.green : theme.palette.divider}`,
+              borderRadius: 1.5,
+              bgcolor: showColumnFilters 
+                ? (theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}14`)
+                : 'transparent',
+              color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.secondary,
+              px: { xs: 1.25, sm: 1.5 },
+              py: { xs: 0.75, sm: 0.875 },
+              order: { xs: 5, sm: 0 },
+              textTransform: 'none',
+              fontWeight: 600,
+              '&:hover': {
+                borderColor: taxiMonterricoColors.green,
+                bgcolor: theme.palette.mode === 'dark' 
+                  ? `${taxiMonterricoColors.green}33` 
+                  : `${taxiMonterricoColors.green}1A`,
+                color: taxiMonterricoColors.green,
+                boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
+              },
+            }}
+          >
+            Filtros
+          </Button>
           
           <Box sx={{ 
             display: 'flex', 
@@ -1126,110 +891,88 @@ const Deals: React.FC = () => {
               <IconButton
                 onClick={() => setViewMode('list')}
                 sx={{
-                  bgcolor: viewMode === 'list' 
-                    ? `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`
-                    : theme.palette.mode === 'dark'
-                      ? theme.palette.background.paper
-                      : theme.palette.grey[100],
-                  color: viewMode === 'list' 
-                    ? 'white' 
-                    : theme.palette.mode === 'dark' 
-                      ? theme.palette.text.secondary 
-                      : theme.palette.text.primary,
+                  ...(viewMode === 'list'
+                    ? { background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`, color: '#fff' }
+                    : {
+                        bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.paper : theme.palette.grey[100],
+                        color: theme.palette.mode === 'dark' ? theme.palette.text.secondary : theme.palette.text.primary,
+                      }),
                   borderRadius: 1.5,
                   p: { xs: 0.75, sm: 0.875 },
                   border: `1.5px solid ${viewMode === 'list' ? 'transparent' : theme.palette.divider}`,
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: viewMode === 'list' ? `0 4px 12px ${taxiMonterricoColors.green}30` : 'none',
+                  boxShadow: 'none',
+                  '& .MuiSvgIcon-root': {
+                    color: 'inherit',
+                  },
                   '&:hover': {
-                    bgcolor: viewMode === 'list' 
-                      ? `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`
-                      : theme.palette.action.hover,
-                    transform: 'translateY(-2px)',
-                    boxShadow: viewMode === 'list' 
-                      ? `0 6px 20px ${taxiMonterricoColors.green}40`
-                      : `0 4px 12px ${taxiMonterricoColors.green}20`,
+                    ...(viewMode === 'list'
+                      ? { background: `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`, color: '#fff' }
+                      : { bgcolor: theme.palette.action.hover }),
+                    boxShadow: 'none',
+                    '& .MuiSvgIcon-root': {
+                      color: 'inherit',
+                    },
                   },
                 }}
               >
-                <ViewList sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                <ViewList sx={{ fontSize: { xs: 16, sm: 18 }, color: 'inherit' }} />
               </IconButton>
             </Tooltip>
             <Tooltip title="Ver funnel" arrow>
               <IconButton
                 onClick={() => setViewMode('funnel')}
                 sx={{
-                  bgcolor: viewMode === 'funnel' 
-                    ? `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`
-                    : theme.palette.mode === 'dark'
-                      ? theme.palette.background.paper
-                      : theme.palette.grey[100],
-                  color: viewMode === 'funnel' 
-                    ? 'white' 
-                    : theme.palette.mode === 'dark' 
-                      ? theme.palette.text.secondary 
-                      : theme.palette.text.primary,
+                  ...(viewMode === 'funnel'
+                    ? { background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`, color: '#fff' }
+                    : {
+                        bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.paper : theme.palette.grey[100],
+                        color: theme.palette.mode === 'dark' ? theme.palette.text.secondary : theme.palette.text.primary,
+                      }),
                   borderRadius: 1.5,
                   p: { xs: 0.75, sm: 0.875 },
                   border: `1.5px solid ${viewMode === 'funnel' ? 'transparent' : theme.palette.divider}`,
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: viewMode === 'funnel' ? `0 4px 12px ${taxiMonterricoColors.green}30` : 'none',
+                  boxShadow: 'none',
+                  '& .MuiSvgIcon-root': {
+                    color: 'inherit',
+                  },
                   '&:hover': {
-                    bgcolor: viewMode === 'funnel' 
-                      ? `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`
-                      : theme.palette.action.hover,
-                    transform: 'translateY(-2px)',
-                    boxShadow: viewMode === 'funnel' 
-                      ? `0 6px 20px ${taxiMonterricoColors.green}40`
-                      : `0 4px 12px ${taxiMonterricoColors.green}20`,
+                    ...(viewMode === 'funnel'
+                      ? { background: `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`, color: '#fff' }
+                      : { bgcolor: theme.palette.action.hover }),
+                    boxShadow: 'none',
+                    '& .MuiSvgIcon-root': {
+                      color: 'inherit',
+                    },
                   },
                 }}
               >
-                <AccountTree sx={{ fontSize: { xs: 16, sm: 18 } }} />
+                <AccountTree sx={{ fontSize: { xs: 16, sm: 18 }, color: 'inherit' }} />
               </IconButton>
             </Tooltip>
           </Box>
           
-          <Tooltip title="Nuevo Negocio" arrow>
-            <IconButton
-              size="small"
-              onClick={() => handleOpen()}
-              sx={{
-                background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
-                color: "white",
-                borderRadius: 1.5,
-                p: { xs: 0.75, sm: 0.875 },
-                boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                order: { xs: 2, sm: 0 },
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                position: 'relative',
-                overflow: 'hidden',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: '-100%',
-                  width: '100%',
-                  height: '100%',
-                  background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
-                  transition: 'left 0.5s ease',
-                },
-                '&:hover': {
-                  transform: 'translateY(-2px) scale(1.05)',
-                  boxShadow: `0 8px 20px ${taxiMonterricoColors.green}50`,
-                  background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
-                  '&::before': {
-                    left: '100%',
-                  },
-                },
-                '&:active': {
-                  transform: 'translateY(0) scale(1)',
-                },
-              }}
-            >
-              <Add sx={{ fontSize: { xs: 16, sm: 18 } }} />
-            </IconButton>
-          </Tooltip>
+          <Button
+            size="small"
+            startIcon={<Add sx={{ fontSize: { xs: 16, sm: 18 } }} />}
+            onClick={() => handleOpen()}
+            sx={{
+              background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+              color: "white",
+              borderRadius: 1.5,
+              px: { xs: 1.25, sm: 1.5 },
+              py: { xs: 0.75, sm: 0.875 },
+              boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
+              order: { xs: 2, sm: 0 },
+              textTransform: 'none',
+              fontWeight: 600,
+              '&:hover': {
+                boxShadow: `0 8px 20px ${taxiMonterricoColors.green}50`,
+                background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
+              },
+            }}
+          >
+            Nuevo Negocio
+          </Button>
         </Box>
       </Box>
 
@@ -1249,9 +992,9 @@ const Deals: React.FC = () => {
                   : `${taxiMonterricoColors.green}03`,
                 overflow: 'hidden',
                 display: 'grid',
-                gridTemplateColumns: { xs: 'repeat(7, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 1fr 0.8fr 0.7fr' },
+                gridTemplateColumns: { xs: 'repeat(5, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 0.7fr' },
                 columnGap: { xs: 1, md: 1.5 },
-                minWidth: { xs: 800, md: 'auto' },
+                minWidth: { xs: 600, md: 'auto' },
                 maxWidth: '100%',
                 width: '100%',
                 px: { xs: 1, md: 1.5 },
@@ -1337,58 +1080,6 @@ const Deals: React.FC = () => {
                 />
               )}
             </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Contacto</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, contacto: '' }))} sx={{ p: 0.25, opacity: columnFilters.contacto ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.contacto}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, contacto: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
-            </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
-                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Empresa</Typography>
-                {showColumnFilters && (
-                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, empresa: '' }))} sx={{ p: 0.25, opacity: columnFilters.empresa ? 1 : 0.3 }}>
-                    <FilterList sx={{ fontSize: 14 }} />
-                  </IconButton>
-                )}
-              </Box>
-              {showColumnFilters && (
-                <TextField
-                  size="small"
-                  placeholder="Filtrar..."
-                  value={columnFilters.empresa}
-                  onChange={(e) => setColumnFilters(prev => ({ ...prev, empresa: e.target.value }))}
-                  sx={{ 
-                    width: '100%',
-                    '& .MuiOutlinedInput-root': { 
-                      height: 28, 
-                      fontSize: '0.75rem',
-                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    },
-                  }}
-                />
-              )}
-            </Box>
             <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center', gap: 0.5, px: { xs: 0.5, md: 0.75 } }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
                 <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Propietario</Typography>
@@ -1435,9 +1126,9 @@ const Deals: React.FC = () => {
                   bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
                   cursor: 'pointer',
                   display: 'grid',
-                  gridTemplateColumns: { xs: 'repeat(7, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 1fr 0.8fr 0.7fr' },
+                  gridTemplateColumns: { xs: 'repeat(5, minmax(0, 1fr))', md: '1.5fr 0.9fr 1fr 0.8fr 0.7fr' },
                   columnGap: { xs: 1, md: 1.5 },
-                  minWidth: { xs: 800, md: 'auto' },
+                  minWidth: { xs: 600, md: 'auto' },
                   maxWidth: '100%',
                   width: '100%',
                   borderRadius: 0,
@@ -1622,65 +1313,16 @@ const Deals: React.FC = () => {
                       ))}
                     </Menu>
                 </Box>
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
-                    {deal.Contact ? (
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: theme.palette.text.primary,
-                        fontSize: { xs: '0.75rem', md: '0.8125rem' },
-                        fontWeight: 400,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        maxWidth: '100%',
-                        }}
-                      >
-                        {deal.Contact.firstName} {deal.Contact.lastName}
-                      </Typography>
-                    ) : (
-                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.8125rem' }, fontWeight: 400 }}>
-                        --
-                      </Typography>
-                    )}
-                </Box>
-                <Box sx={{ px: { xs: 0.75, md: 1 }, py: { xs: 1, md: 1.25 }, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
-                    {deal.Company?.name ? (
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: theme.palette.text.primary,
-                        fontSize: { xs: '0.75rem', md: '0.8125rem' },
-                        fontWeight: 400,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        maxWidth: '100%',
-                        }}
-                      >
-                        {deal.Company.name}
-                      </Typography>
-                    ) : (
-                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.8125rem' }, fontWeight: 400 }}>
-                        --
-                      </Typography>
-                    )}
-                      </Box>
                 {/* Nueva columna: Propietario */}
                 <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                   {deal.Owner ? (
                     <Tooltip title={`${deal.Owner.firstName} ${deal.Owner.lastName}`} arrow>
-                      <Avatar
-                        sx={{
-                          width: 32,
-                          height: 32,
-                          bgcolor: taxiMonterricoColors.green,
-                          fontSize: '0.75rem',
-                          color: 'white',
-                        }}
-                      >
-                        {deal.Owner.firstName?.[0] || ''}{deal.Owner.lastName?.[0] || ''}
-                      </Avatar>
+                      <UserAvatar
+                        firstName={deal.Owner.firstName}
+                        lastName={deal.Owner.lastName}
+                        colorSeed={deal.Owner.id?.toString() || deal.Owner.email || `${deal.Owner.firstName}${deal.Owner.lastName}`}
+                        size={32}
+                      />
                     </Tooltip>
                   ) : (
                     <Typography 
@@ -2128,6 +1770,7 @@ const Deals: React.FC = () => {
                                 firstName={userItem.firstName}
                                 lastName={userItem.lastName}
                                 avatar={userItem.avatar}
+                                colorSeed={userItem.id?.toString() || userItem.email || `${userItem.firstName}${userItem.lastName}`}
                                 size={20}
                                 variant="minimal"
                               />
@@ -2476,6 +2119,7 @@ const Deals: React.FC = () => {
                                   <UserAvatar
                                     firstName={deal.Owner.firstName}
                                     lastName={deal.Owner.lastName}
+                                    colorSeed={deal.Owner.id?.toString() || deal.Owner.email || `${deal.Owner.firstName}${deal.Owner.lastName}`}
                                     size={18}
                                     variant="default"
                                   />
@@ -2527,222 +2171,24 @@ const Deals: React.FC = () => {
         title={editingDeal ? 'Editar Negocio' : 'Nuevo Negocio'}
         onSubmit={handleSubmit}
         submitLabel={editingDeal ? 'Actualizar' : 'Crear'}
+        submitDisabled={!dealFormDataRef.current.formData.name.trim() || !dealFormDataRef.current.formData.amount.trim()}
         variant="panel"
       >
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              columnGap: 4,
-              rowGap: 1,
-              alignItems: 'start',
-            }}
-          >
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
-              Nombre <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
-              Monto <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
-            </Typography>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField
-                size="small"
-                value={formData.name}
-                onChange={handleNameChange}
-                required
-                fullWidth
-                placeholder="Nombre"
-                inputProps={{ style: { fontSize: '1rem' } }}
-                InputProps={{ sx: { '& input': { py: 1.05 } } }}
-              />
-            </Box>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField
-                size="small"
-                type="number"
-                value={formData.amount}
-                onChange={handleAmountChange}
-                required
-                fullWidth
-                placeholder="Monto"
-                inputProps={{ style: { fontSize: '1rem' } }}
-                InputProps={{ sx: { '& input': { py: 1.05 } } }}
-              />
-            </Box>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Etapa</Typography>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Fecha de Cierre</Typography>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField
-                select
-                size="small"
-                value={formData.stage}
-                onChange={handleStageFormChange}
-                fullWidth
-                inputProps={{ style: { fontSize: '1rem' } }}
-                InputProps={{ sx: { '& input': { py: 1.05 } } }}
-                SelectProps={{
-                  MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } },
-                }}
-              >
-                {stageOptions.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </TextField>
-            </Box>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField
-                size="small"
-                type="date"
-                value={formData.closeDate}
-                onChange={handleCloseDateChange}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-                inputProps={{ style: { fontSize: '1rem' } }}
-                InputProps={{ sx: { '& input': { py: 1.05 } } }}
-              />
-            </Box>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Prioridad</Typography>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Empresa</Typography>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField
-                select
-                size="small"
-                value={formData.priority}
-                onChange={handlePriorityChange}
-                fullWidth
-                inputProps={{ style: { fontSize: '1rem' } }}
-                InputProps={{ sx: { '& input': { py: 1.05 } } }}
-                SelectProps={{
-                  MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } },
-                }}
-              >
-                <MenuItem value="baja">
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: taxiMonterricoColors.green }} />
-                    Baja
-                  </Box>
-                </MenuItem>
-                <MenuItem value="media">
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: taxiMonterricoColors.orange }} />
-                    Media
-                  </Box>
-                </MenuItem>
-                <MenuItem value="alta">
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: theme.palette.error.main }} />
-                    Alta
-                  </Box>
-                </MenuItem>
-              </TextField>
-            </Box>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField
-                select
-                size="small"
-                value={formData.companyId || ''}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (v === 'add_existing') setAddCompanyModalOpen(true);
-                  else if (v === 'create_new') setCreateCompanyModalOpen(true);
-                }}
-                fullWidth
-                inputProps={{ style: { fontSize: '1rem' } }}
-                InputProps={{ sx: { '& input': { py: 1.05 } } }}
-                SelectProps={{
-                  displayEmpty: true,
-                  renderValue: (v) => {
-                    if (!v) return '';
-                    const c = companyOptions.find((x: any) => x.id.toString() === v);
-                    return c?.name || '';
-                  },
-                  MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } },
-                }}
-              >
-                {formData.companyId && (() => {
-                  const c = companyOptions.find((x: any) => x.id.toString() === formData.companyId);
-                  return c ? <MenuItem value={formData.companyId} disabled>{c.name}</MenuItem> : null;
-                })()}
-                {formData.companyId && <Divider />}
-                <MenuItem value="add_existing">
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Business sx={{ fontSize: 18 }} />
-                    {companyLabels.addCompany}
-                  </Box>
-                </MenuItem>
-                <MenuItem value="create_new" sx={{ color: taxiMonterricoColors.green }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Add sx={{ fontSize: 18 }} />
-                    {companyLabels.createCompany}
-                  </Box>
-                </MenuItem>
-              </TextField>
-            </Box>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Contacto</Typography>
-            <Box />
-            <Box sx={{ minWidth: 0 }}>
-              <Autocomplete
-                options={contactOptions}
-                getOptionLabel={(option: any) => `${option.firstName || ""} ${option.lastName || ""}`.trim() || ""}
-                value={contactOptions.find((c: any) => c.id.toString() === formData.contactId) || null}
-                onChange={(event, newValue: any) => {
-                  setFormData({ ...formData, contactId: newValue ? newValue.id.toString() : "" });
-                  if (newValue && !contactOptions.find((c: any) => c.id === newValue.id)) {
-                    setContactOptions([newValue, ...contactOptions]);
-                  }
-                }}
-                onInputChange={(event, newInputValue) => setContactSearch(newInputValue)}
-                loading={loadingContacts}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    size="small"
-                    placeholder="Buscar contacto..."
-                    inputProps={{ ...params.inputProps, style: { fontSize: '1rem' } }}
-                    InputProps={{ ...params.InputProps, sx: { '& input': { py: 1.05 } } }}
-                  />
-                )}
-                renderOption={(props, option: any) => (
-                  <Box component="li" {...props} key={option.id}>
-                    <Box>
-                      <Typography variant="body2" sx={{ fontWeight: 500 }}>{option.firstName} {option.lastName}</Typography>
-                      {option.email && (
-                        <Typography variant="caption" color="text.secondary">{option.email}</Typography>
-                      )}
-                    </Box>
-                  </Box>
-                )}
-                fullWidth
-                noOptionsText={contactSearch ? "No se encontraron contactos" : "Escribe para buscar"}
-                loadingText="Buscando..."
-              />
-            </Box>
-            <Box />
-          </Box>
-        </Box>
+        <DealFormContent
+          initialData={getInitialDealFormData(editingDeal)}
+          formDataRef={dealFormDataRef}
+          theme={theme}
+          companies={companies}
+          companyOptions={companyOptions}
+          companySearch={companySearch}
+          setCompanySearch={setCompanySearch}
+          loadingCompanies={loadingCompanies}
+          contacts={contacts}
+          contactSearchInput={contactSearchInput}
+          setContactSearchInput={setContactSearchInput}
+        />
       </FormDrawer>
 
-      {/* Modal para agregar empresa existente */}
-      <ContactCompanyModal
-        open={addCompanyModalOpen}
-        onClose={() => setAddCompanyModalOpen(false)}
-        user={user}
-        onSelect={handleCompanySelected}
-        onCreate={handleCompanyCreated}
-        mode="select"
-      />
-      {/* Modal para crear nueva empresa */}
-      <ContactCompanyModal
-        open={createCompanyModalOpen}
-        onClose={() => setCreateCompanyModalOpen(false)}
-        user={user}
-        onSelect={handleCompanySelected}
-        onCreate={handleCompanyCreated}
-        mode="create"
-      />
 
       {/* Popover de Filtros Avanzados */}
       {/* Entity Preview Drawer */}

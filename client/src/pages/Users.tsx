@@ -568,6 +568,7 @@ const Users: React.FC = () => {
                         firstName={userItem.firstName}
                         lastName={userItem.lastName}
                         avatar={userItem.avatar}
+                        colorSeed={userItem.id?.toString() || userItem.email || userItem.usuario}
                         size="medium"
                         variant="default"
                       />

@@ -9,6 +9,7 @@ import {
   CircularProgress,
   useTheme,
   Paper,
+  Chip,
 } from '@mui/material';
 import {
   Close,
@@ -30,7 +31,7 @@ import {
   AttachMoney,
 } from '@mui/icons-material';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUserTie, faHandshake } from '@fortawesome/free-solid-svg-icons';
+import { faUserTie, faHandshake, faSackDollar } from '@fortawesome/free-solid-svg-icons';
 import { Building2 } from 'lucide-react';
 import api from '../config/api';
 import { taxiMonterricoColors } from '../theme/colors';
@@ -122,6 +123,25 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
     if (!entityId) return;
     setLoadingAssociations(true);
     try {
+      // Para deals, obtener el deal completo con relaciones si es necesario
+      let currentEntity = entity;
+      if (entityType === 'deal' && (!currentEntity?.Companies || !Array.isArray(currentEntity.Companies))) {
+        try {
+          const dealResponse = await api.get(`/deals/${entityId}`);
+          currentEntity = dealResponse.data;
+          // Actualizar el estado solo una vez usando función de actualización para evitar loops
+          setEntity((prevEntity: any) => {
+            // Solo actualizar si el estado previo no tenía Companies
+            if (!prevEntity?.Companies || !Array.isArray(prevEntity.Companies)) {
+              return dealResponse.data;
+            }
+            return prevEntity;
+          });
+        } catch (error) {
+          console.error('Error fetching deal with relations:', error);
+        }
+      }
+
       if (entityType === 'contact') {
         // Obtener empresas asociadas desde el contacto
         const contactResponse = await api.get(`/contacts/${entityId}`);
@@ -176,21 +196,29 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
           setAssociatedTickets([]);
         }
       } else if (entityType === 'deal') {
-        // Deal
-        // Obtener contacto asociado
-        if (entity?.contactId) {
+        // Deal - Usar currentEntity que ya tiene las relaciones si fueron obtenidas
+        const dealData = currentEntity || entity;
+
+        // Obtener contactos asociados (relación muchos a muchos)
+        if (dealData?.Contacts && Array.isArray(dealData.Contacts)) {
+          setAssociatedContacts(dealData.Contacts);
+        } else if (dealData?.contactId) {
+          // Fallback a contacto principal si no hay relación muchos a muchos
           try {
-            const contactResponse = await api.get(`/contacts/${entity.contactId}`);
+            const contactResponse = await api.get(`/contacts/${dealData.contactId}`);
             setAssociatedContacts([contactResponse.data]);
           } catch (error) {
             console.error('Error fetching contact:', error);
           }
         }
 
-        // Obtener empresa asociada
-        if (entity?.companyId) {
+        // Obtener empresas asociadas (relación muchos a muchos)
+        if (dealData?.Companies && Array.isArray(dealData.Companies)) {
+          setAssociatedCompanies(dealData.Companies);
+        } else if (dealData?.companyId) {
+          // Fallback a empresa principal si no hay relación muchos a muchos
           try {
-            const companyResponse = await api.get(`/companies/${entity.companyId}`);
+            const companyResponse = await api.get(`/companies/${dealData.companyId}`);
             setAssociatedCompanies([companyResponse.data]);
           } catch (error) {
             console.error('Error fetching company:', error);
@@ -244,7 +272,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
     } finally {
       setLoadingAssociations(false);
     }
-  }, [entityId, entityType, entity]);
+  }, [entityId, entityType]); // Removido 'entity' para evitar loops infinitos
 
   useEffect(() => {
     if (open && entityId) {
@@ -278,93 +306,58 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
     if (entityType === 'contact') {
       return (
         <>
-          {/* Avatar y Nombre */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
-            <Box sx={{ position: 'relative', mb: 2 }}>
-              <Avatar
-                sx={{
-                  width: 120,
-                  height: 120,
-                  bgcolor: entity.avatar ? 'transparent' : (theme.palette.mode === 'dark' ? theme.palette.grey[700] : theme.palette.grey[400]),
-                  fontSize: '3rem',
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    transform: 'scale(1.05)',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-                  },
-                }}
-                src={entity.avatar || undefined}
-              >
-                {!entity.avatar && (
-                  <FontAwesomeIcon icon={faUserTie} style={{ fontSize: 60, color: 'white' }} />
-                )}
-              </Avatar>
-              <CheckCircle
-                sx={{
-                  position: 'absolute',
-                  bottom: 0,
-                  right: 0,
-                  fontSize: 28,
-                  color: theme.palette.text.secondary,
-                  bgcolor: theme.palette.background.paper,
-                  borderRadius: '50%',
-                  border: `2px solid ${theme.palette.background.paper}`,
-                  boxShadow: theme.palette.mode === 'dark' 
-                    ? `0 2px 8px rgba(0,0,0,0.3)` 
-                    : `0 2px 8px rgba(0,0,0,0.15)`,
-                  filter: theme.palette.mode === 'light' ? 'drop-shadow(0 1px 2px rgba(0,0,0,0.1))' : 'none',
-                }}
-              />
-            </Box>
-            <Typography
-              variant="h6"
-              align="center"
+          {/* Icono y Nombre del Contacto - mismo estilo que company y deals */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, mt: -1 }}>
+            <Avatar
               sx={{
-                fontWeight: 700,
-                fontSize: '1.1rem',
-                color: theme.palette.text.primary,
-                mb: 0.25,
+                width: 48,
+                height: 48,
+                bgcolor: entity.avatar ? 'transparent' : (theme.palette.mode === 'dark' ? theme.palette.grey[700] : theme.palette.grey[400]),
+                fontSize: '1.25rem',
+                flexShrink: 0,
               }}
+              src={entity.avatar || undefined}
             >
-              {entity.firstName} {entity.lastName}
-            </Typography>
-            {entity.email && (
+              {!entity.avatar && (
+                <FontAwesomeIcon icon={faUserTie} style={{ fontSize: 24, color: 'white' }} />
+              )}
+            </Avatar>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography
-                variant="body2"
-                align="center"
+                variant="h6"
                 sx={{
-                  fontSize: '0.875rem',
-                  color: theme.palette.text.secondary,
-                  fontWeight: 400,
+                  fontWeight: 700,
+                  fontSize: '1.3rem',
+                  color: theme.palette.text.primary,
+                  mb: 0.25,
+                  lineHeight: 1.2,
                 }}
               >
-                {entity.email}
+                {entity.firstName} {entity.lastName}
               </Typography>
-            )}
+              {entity.email && (
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontSize: '0.875rem',
+                    color: theme.palette.text.secondary,
+                    fontWeight: 400,
+                  }}
+                >
+                  {entity.email}
+                </Typography>
+              )}
+            </Box>
           </Box>
 
-          {/* Información de contacto */}
-          <Box
-            sx={{
-              p: 1.5,
-              borderRadius: 2,
-              boxShadow:
-                theme.palette.mode === 'dark'
-                  ? '0 1px 3px rgba(0,0,0,0.3)'
-                  : '0 1px 3px rgba(0,0,0,0.1)',
-              bgcolor: 'transparent',
-              border: `1px solid ${theme.palette.divider}`,
-            }}
-          >
-            {/* Location */}
-            <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-                <LocationOn sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
-                  Location
-                </Typography>
-              </Box>
+          {/* Información de contacto - lista simple sin card */}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+            {/* Ubicación */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+              <LocationOn sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+              <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                Ubicación:
+              </Typography>
               <Typography
                 variant="body2"
                 sx={{
@@ -372,21 +365,18 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                   fontWeight: 400,
                   color: entity.city || entity.address ? theme.palette.text.primary : theme.palette.text.disabled,
                   fontStyle: !(entity.city || entity.address) ? 'italic' : 'normal',
-                  textAlign: 'right',
                 }}
               >
                 {entity.city || entity.address || '--'}
               </Typography>
             </Box>
 
-            {/* Phone */}
-            <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-                <Phone sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
-                  Phone
-                </Typography>
-              </Box>
+            {/* Teléfono */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+              <Phone sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+              <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                Teléfono:
+              </Typography>
               <Typography
                 variant="body2"
                 sx={{
@@ -394,28 +384,24 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                   fontWeight: 400,
                   color: entity.phone || entity.mobile ? theme.palette.text.primary : theme.palette.text.disabled,
                   fontStyle: !(entity.phone || entity.mobile) ? 'italic' : 'normal',
-                  textAlign: 'right',
                 }}
               >
                 {entity.phone || entity.mobile || '--'}
               </Typography>
             </Box>
 
-            {/* Email */}
-            <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-                <Email sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
-                  Email
-                </Typography>
-              </Box>
+            {/* Correo */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+              <Email sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+              <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                Correo:
+              </Typography>
               <Typography
                 variant="body2"
                 sx={{
                   fontSize: '0.875rem',
                   fontWeight: 400,
                   color: entity.email ? theme.palette.text.primary : theme.palette.text.disabled,
-                  textAlign: 'right',
                   fontStyle: !entity.email ? 'italic' : 'normal',
                 }}
               >
@@ -424,117 +410,80 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
             </Box>
 
             {/* Nombre de la empresa */}
-            <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-                <Business sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
-                  Nombre de la empresa
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontSize: '0.875rem',
-                    fontWeight: 400,
-                    color:
-                      (entity.Companies && entity.Companies.length > 0) || entity.Company
-                        ? theme.palette.text.primary
-                        : theme.palette.text.disabled,
-                      fontStyle: !((entity.Companies && entity.Companies.length > 0) || entity.Company) ? 'italic' : 'normal',
-                    textAlign: 'right',
-                  }}
-                >
-                  {entity.Companies && entity.Companies.length > 0
-                    ? entity.Companies[0].name
-                    : entity.Company?.name || '--'}
-                </Typography>
-                <KeyboardArrowDown
-                  sx={{
-                    fontSize: 14,
-                    color: theme.palette.text.secondary,
-                  }}
-                />
-              </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+              <Business sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+              <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                Empresa:
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontSize: '0.875rem',
+                  fontWeight: 400,
+                  color: (entity.Companies && entity.Companies.length > 0) || entity.Company ? theme.palette.text.primary : theme.palette.text.disabled,
+                  fontStyle: !((entity.Companies && entity.Companies.length > 0) || entity.Company) ? 'italic' : 'normal',
+                }}
+              >
+                {entity.Companies && entity.Companies.length > 0
+                  ? entity.Companies[0].name
+                  : entity.Company?.name || '--'}
+              </Typography>
             </Box>
 
             {/* Estado del lead */}
-            <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-                <Flag sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
-                  Estado del lead
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontSize: '0.875rem',
-                    fontWeight: 400,
-                    color: entity.leadStatus ? theme.palette.text.primary : theme.palette.text.disabled,
-                    fontStyle: !entity.leadStatus ? 'italic' : 'normal',
-                    textAlign: 'right',
-                  }}
-                >
-                  {entity.leadStatus || '--'}
-                </Typography>
-                <KeyboardArrowDown sx={{ fontSize: 14, color: theme.palette.text.secondary }} />
-              </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+              <Flag sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+              <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                Estado del lead:
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontSize: '0.875rem',
+                  fontWeight: 400,
+                  color: entity.leadStatus ? theme.palette.text.primary : theme.palette.text.disabled,
+                  fontStyle: !entity.leadStatus ? 'italic' : 'normal',
+                }}
+              >
+                {entity.leadStatus || '--'}
+              </Typography>
             </Box>
 
             {/* Etapa del ciclo de vida */}
-            <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-                <TrendingUp sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
-                  Etapa del ciclo de vida
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontSize: '0.875rem',
-                    fontWeight: 400,
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+              <TrendingUp sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+              <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                Etapa del ciclo de vida:
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontSize: '0.875rem',
+                  fontWeight: 400,
                   color: entity.lifecycleStage ? theme.palette.text.primary : theme.palette.text.disabled,
-                  textAlign: 'right',
                   fontStyle: !entity.lifecycleStage ? 'italic' : 'normal',
                 }}
               >
                 {entity.lifecycleStage || '--'}
-                </Typography>
-                <KeyboardArrowDown sx={{ fontSize: 14, color: theme.palette.text.secondary }} />
-              </Box>
+              </Typography>
             </Box>
 
             {/* Rol de compra */}
-            <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-                <Person sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
-                  Rol de compra
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Typography
-                  variant="body2"
-                  sx={{
-                    fontSize: '0.875rem',
-                    fontWeight: 400,
-                    color: theme.palette.text.disabled,
-                    textAlign: 'right',
-                  }}
-                >
-                  --
-                </Typography>
-                <KeyboardArrowDown
-                  sx={{
-                    fontSize: 14,
-                    color: theme.palette.text.secondary,
-                  }}
-                />
-              </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+              <Person sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+              <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                Rol de compra:
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{
+                  fontSize: '0.875rem',
+                  fontWeight: 400,
+                  color: theme.palette.text.disabled,
+                }}
+              >
+                --
+              </Typography>
             </Box>
           </Box>
         </>
@@ -543,82 +492,50 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
       // Company
       return (
         <>
-          {/* Avatar y Nombre */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
-            <Box sx={{ position: 'relative', mb: 2 }}>
-              <Avatar
-                sx={{
-                  width: 120,
-                  height: 120,
-                  bgcolor: entity.logo ? 'transparent' : (theme.palette.mode === 'dark' ? theme.palette.grey[700] : theme.palette.grey[400]),
-                  fontSize: '3rem',
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    transform: 'scale(1.05)',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-                  },
-                }}
-                src={entity.logo || undefined}
-              >
-                {!entity.logo && <Building2 size={60} color="white" />}
-              </Avatar>
-            </Box>
-            <Typography
-              variant="h6"
-              align="center"
+          {/* Icono y Nombre de la Empresa - Icono a la izquierda, nombre a la derecha */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, mt: -1 }}>
+            <Avatar
               sx={{
-                fontWeight: 700,
-                fontSize: '1.1rem',
-                color: theme.palette.text.primary,
-                mb: 0.25,
+                width: 48,
+                height: 48,
+                bgcolor: entity.logo ? 'transparent' : taxiMonterricoColors.green,
+                fontSize: '1.25rem',
+                flexShrink: 0,
               }}
+              src={entity.logo || undefined}
             >
-              {entity.name}
-            </Typography>
-            {entity.domain && (
+              {!entity.logo && <Building2 size={24} color="white" />}
+            </Avatar>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography
-                variant="body2"
-                align="center"
+                variant="h6"
                 sx={{
-                  fontSize: '0.875rem',
-                  color: theme.palette.text.secondary,
-                  fontWeight: 400,
+                  fontWeight: 700,
+                  fontSize: '1.3rem',
+                  color: theme.palette.text.primary,
+                  mb: 0.25,
+                  lineHeight: 1.2,
                 }}
               >
-                {entity.domain}
+                {entity.name}
               </Typography>
-            )}
+            </Box>
           </Box>
 
           {/* Información de empresa */}
-          <Box
-            sx={{
-              p: 1.5,
-              borderRadius: 2,
-              boxShadow:
-                theme.palette.mode === 'dark'
-                  ? '0 1px 3px rgba(0,0,0,0.3)'
-                  : '0 1px 3px rgba(0,0,0,0.1)',
-              bgcolor: 'transparent',
-              border: `1px solid ${theme.palette.divider}`,
-            }}
-          >
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
             {/* Phone */}
-            <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-                <Phone sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
-                  Teléfono
-                </Typography>
-              </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+              <Phone sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+              <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                Teléfono:
+              </Typography>
               <Typography
                 variant="body2"
                 sx={{
                   fontSize: '0.875rem',
                   fontWeight: 400,
                   color: entity.phone ? theme.palette.text.primary : theme.palette.text.disabled,
-                  textAlign: 'right',
                   fontStyle: !entity.phone ? 'italic' : 'normal',
                 }}
               >
@@ -627,20 +544,17 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
             </Box>
 
             {/* Email */}
-            <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-                <Email sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
-                  Correo
-                </Typography>
-              </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+              <Email sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+              <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                Correo:
+              </Typography>
               <Typography
                 variant="body2"
                 sx={{
                   fontSize: '0.875rem',
                   fontWeight: 400,
                   color: entity.email ? theme.palette.text.primary : theme.palette.text.disabled,
-                  textAlign: 'right',
                   fontStyle: !entity.email ? 'italic' : 'normal',
                 }}
               >
@@ -650,46 +564,40 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
 
             {/* Address */}
             {(entity.address || entity.city || entity.country) && (
-              <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-                  <LocationOn sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                  <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
-                    Dirección
-                  </Typography>
-                </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <LocationOn sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                  Dirección:
+                </Typography>
                 <Typography
                   variant="body2"
                   sx={{
                     fontSize: '0.875rem',
                     fontWeight: 400,
-                  color: [entity.address, entity.city, entity.country].filter(Boolean).length > 0 
-                    ? theme.palette.text.primary 
-                    : theme.palette.text.disabled,
-                  textAlign: 'right',
-                  fontStyle: [entity.address, entity.city, entity.country].filter(Boolean).length === 0 ? 'italic' : 'normal',
-                }}
-              >
-                {[entity.address, entity.city, entity.country].filter(Boolean).join(', ') || '--'}
+                    color: [entity.address, entity.city, entity.country].filter(Boolean).length > 0 
+                      ? theme.palette.text.primary 
+                      : theme.palette.text.disabled,
+                    fontStyle: [entity.address, entity.city, entity.country].filter(Boolean).length === 0 ? 'italic' : 'normal',
+                  }}
+                >
+                  {[entity.address, entity.city, entity.country].filter(Boolean).join(', ') || '--'}
                 </Typography>
               </Box>
             )}
 
             {/* Domain */}
             {entity.domain && (
-              <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-                  <LinkIcon sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                  <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
-                    Dominio
-                  </Typography>
-                </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <LinkIcon sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                  Dominio:
+                </Typography>
                 <Typography
                   variant="body2"
                   sx={{
                     fontSize: '0.875rem',
                     fontWeight: 400,
                     color: theme.palette.mode === 'dark' ? '#64B5F6' : '#1976d2',
-                    textAlign: 'right',
                     cursor: 'pointer',
                     '&:hover': {
                       textDecoration: 'underline',
@@ -707,20 +615,17 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
 
             {/* RUC */}
             {entity.ruc && (
-              <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-                  <Business sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                  <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
-                    RUC
-                  </Typography>
-                </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <Business sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                  RUC:
+                </Typography>
                 <Typography
                   variant="body2"
                   sx={{
                     fontSize: '0.875rem',
                     fontWeight: 400,
                     color: theme.palette.text.primary,
-                    textAlign: 'right',
                   }}
                 >
                   {entity.ruc}
@@ -730,20 +635,17 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
 
             {/* Lifecycle Stage */}
             {entity.lifecycleStage && (
-              <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-                  <Flag sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                  <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
-                    Etapa
-                  </Typography>
-                </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <Flag sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                  Etapa:
+                </Typography>
                 <Typography
                   variant="body2"
                   sx={{
                     fontSize: '0.875rem',
                     fontWeight: 400,
                     color: theme.palette.text.primary,
-                    textAlign: 'right',
                   }}
                 >
                   {entity.lifecycleStage}
@@ -757,82 +659,58 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
       // Deal
       return (
         <>
-          {/* Avatar y Nombre */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 3 }}>
-            <Box sx={{ position: 'relative', mb: 2 }}>
-              <Avatar
-                sx={{
-                  width: 120,
-                  height: 120,
-                  bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[700] : theme.palette.grey[400],
-                  fontSize: '3rem',
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    transform: 'scale(1.05)',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-                  },
-                }}
-              >
-                <FontAwesomeIcon icon={faHandshake} style={{ fontSize: 60, color: 'white' }} />
-              </Avatar>
-            </Box>
-            <Typography
-              variant="h6"
-              align="center"
+          {/* Icono y Nombre del Negocio - Icono a la izquierda, nombre a la derecha */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 3, mt:-1 }}>
+            <Avatar
               sx={{
-                fontWeight: 700,
-                fontSize: '1.1rem',
-                color: theme.palette.text.primary,
-                mb: 0.25,
+                width: 48,
+                height: 48,
+                bgcolor: taxiMonterricoColors.green,
+                fontSize: '1.25rem',
+                flexShrink: 0,
               }}
             >
-              {entity.name}
-            </Typography>
-            {entity.amount && (
+              <FontAwesomeIcon icon={faHandshake} style={{ fontSize: 24, color: 'white' }} />
+            </Avatar>
+            <Box sx={{ flex: 1, minWidth: 0 }}>
               <Typography
-                variant="body2"
-                align="center"
+                variant="h6"
                 sx={{
-                  fontSize: '0.875rem',
-                  color: theme.palette.text.secondary,
-                  fontWeight: 400,
+                  fontWeight: 700,
+                  fontSize: '1.3rem',
+                  color: theme.palette.text.primary,
+                  mb: 0.25,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                S/ {entity.amount.toLocaleString()}
+                {entity.name}
               </Typography>
-            )}
+            </Box>
           </Box>
 
           {/* Información del deal */}
           <Box
             sx={{
-              p: 1.5,
-              borderRadius: 2,
-              boxShadow:
-                theme.palette.mode === 'dark'
-                  ? '0 1px 3px rgba(0,0,0,0.3)'
-                  : '0 1px 3px rgba(0,0,0,0.1)',
-              bgcolor: 'transparent',
-              border: `1px solid ${theme.palette.divider}`,
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
             {/* Monto */}
             {entity.amount && (
-              <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-                  <AttachMoney sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                  <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
-                    Monto
-                  </Typography>
-                </Box>
+              <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <AttachMoney sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                  Monto:
+                </Typography>
                 <Typography
                   variant="body2"
                   sx={{
                     fontSize: '0.875rem',
                     fontWeight: 400,
                     color: theme.palette.text.primary,
-                    textAlign: 'right',
+                    textAlign: 'left',
                   }}
                 >
                   S/ {entity.amount.toLocaleString()}
@@ -842,20 +720,18 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
 
             {/* Etapa */}
             {entity.stage && (
-              <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-                  <TrendingUp sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                  <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
-                    Etapa
-                  </Typography>
-                </Box>
+              <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <TrendingUp sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                  Etapa:
+                </Typography>
                 <Typography
                   variant="body2"
                   sx={{
                     fontSize: '0.875rem',
                     fontWeight: 400,
                     color: theme.palette.text.primary,
-                    textAlign: 'right',
+                    textAlign: 'left',
                   }}
                 >
                   {entity.stage}
@@ -865,20 +741,18 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
 
             {/* Fecha de cierre */}
             {entity.closeDate && (
-              <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-                  <Event sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                  <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
-                    Fecha de cierre
-                  </Typography>
-                </Box>
+              <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <Event sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                  Fecha de cierre:
+                </Typography>
                 <Typography
                   variant="body2"
                   sx={{
                     fontSize: '0.875rem',
                     fontWeight: 400,
                     color: theme.palette.text.primary,
-                    textAlign: 'right',
+                    textAlign: 'left',
                   }}
                 >
                   {new Date(entity.closeDate).toLocaleDateString('es-ES')}
@@ -888,20 +762,18 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
 
             {/* Contacto */}
             {entity.Contact && (
-              <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-                  <Person sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                  <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
-                    Contacto
-                  </Typography>
-                </Box>
+              <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <Person sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                  Contacto:
+                </Typography>
                 <Typography
                   variant="body2"
                   sx={{
                     fontSize: '0.875rem',
                     fontWeight: 400,
                     color: theme.palette.text.primary,
-                    textAlign: 'right',
+                    textAlign: 'left',
                   }}
                 >
                   {entity.Contact.firstName} {entity.Contact.lastName}
@@ -911,20 +783,18 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
 
             {/* Empresa */}
             {entity.Company && (
-              <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-                  <Business sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                  <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
-                    Empresa
-                  </Typography>
-                </Box>
+              <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <Business sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                  Empresa:
+                </Typography>
                 <Typography
                   variant="body2"
                   sx={{
                     fontSize: '0.875rem',
                     fontWeight: 400,
                     color: theme.palette.text.primary,
-                    textAlign: 'right',
+                    textAlign: 'left',
                   }}
                 >
                   {entity.Company.name}
@@ -934,13 +804,11 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
 
             {/* Prioridad */}
             {entity.priority && (
-              <Box sx={{ mb: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '0 0 auto' }}>
-                  <Flag sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                  <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
-                    Prioridad
-                  </Typography>
-                </Box>
+              <Box sx={{ mb: 0, display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <Flag sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                <Typography variant="body2" sx={{ fontSize: '0.8rem', fontWeight: 400, color: theme.palette.text.secondary }}>
+                  Prioridad:
+                </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                   <Box
                     sx={{
@@ -956,7 +824,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                       fontSize: '0.875rem',
                       fontWeight: 400,
                       color: theme.palette.text.primary,
-                      textAlign: 'right',
+                      textAlign: 'left',
                       textTransform: 'capitalize',
                     }}
                   >
@@ -981,12 +849,6 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                   height: 120,
                   bgcolor: theme.palette.mode === 'dark' ? theme.palette.grey[700] : theme.palette.grey[400],
                   fontSize: '3rem',
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer',
-                  '&:hover': {
-                    transform: 'scale(1.05)',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-                  },
                 }}
               >
                 <Assignment sx={{ fontSize: 60, color: 'white' }} />
@@ -1232,18 +1094,18 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'note':
-        return <Note sx={{ fontSize: 18, color: 'white' }} />;
+        return <Note sx={{ fontSize: 12, color: 'white' }} />;
       case 'email':
-        return <Email sx={{ fontSize: 18, color: 'white' }} />;
+        return <Email sx={{ fontSize: 12, color: 'white' }} />;
       case 'call':
-        return <Phone sx={{ fontSize: 18, color: 'white' }} />;
+        return <Phone sx={{ fontSize: 12, color: 'white' }} />;
       case 'task':
       case 'todo':
-        return <Assignment sx={{ fontSize: 18, color: 'white' }} />;
+        return <Assignment sx={{ fontSize: 12, color: 'white' }} />;
       case 'meeting':
-        return <Event sx={{ fontSize: 18, color: 'white' }} />;
+        return <Event sx={{ fontSize: 12, color: 'white' }} />;
       default:
-        return <Note sx={{ fontSize: 18, color: 'white' }} />;
+        return <Note sx={{ fontSize: 12, color: 'white' }} />;
     }
   };
 
@@ -1309,7 +1171,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
             alignItems: 'center',
             justifyContent: 'space-between',
             px: 4,
-            py: 3,
+            py: 2,
             flexShrink: 0,
           }}
         >
@@ -1321,6 +1183,9 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
           </IconButton>
         </Box>
 
+        {/* Divider separador */}
+        <Divider />
+
         {/* Content */}
         <Box
           sx={{
@@ -1328,10 +1193,9 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
             minHeight: 0,
             overflow: 'auto',
             overflowX: 'hidden',
-            mx: -3,
+            px: 3,
             py: 3,
             pb: 4,
-            mb: -3,
             maxWidth: 710,
             alignSelf: 'center',
             width: '100%',
@@ -1362,443 +1226,24 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
             </Box>
 
             {/* Divider */}
-            <Divider sx={{ my: 2 }} />
-
-            {/* Entidades Vinculadas */}
-            {(associatedCompanies.length > 0 || associatedContacts.length > 0 || associatedDeals.length > 0 || associatedTickets.length > 0) && (
-              <Box
-                sx={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  mb: 3,
-                }}
-              >
-                <Typography
-                  variant="h6"
-                  sx={{
-                    mb: 2,
-                    fontWeight: 600,
-                    color: theme.palette.text.primary,
-                  }}
-                >
-                  Vinculados
-                </Typography>
-
-                {loadingAssociations ? (
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'center',
-                      alignItems: 'center',
-                      py: 2,
-                    }}
-                  >
-                    <CircularProgress size={20} />
-                  </Box>
-                ) : (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                    {/* Empresas vinculadas (para contactos) */}
-                    {entityType === 'contact' && associatedCompanies.length > 0 && (
-                      <Box>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            mb: 1,
-                            fontWeight: 500,
-                            color: theme.palette.text.secondary,
-                            fontSize: '0.75rem',
-                          }}
-                        >
-                          Empresas ({associatedCompanies.length})
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                          {associatedCompanies
-                            .slice((companiesPage - 1) * itemsPerPage, companiesPage * itemsPerPage)
-                            .map((company: any) => (
-                              <Box
-                                key={company.id}
-                                sx={{
-                                  p: 1.5,
-                                  borderRadius: 1.5,
-                                  bgcolor: theme.palette.action.hover,
-                                  border: `1px solid ${theme.palette.divider}`,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 1.5,
-                                  cursor: 'pointer',
-                                  '&:hover': {
-                                    bgcolor: theme.palette.mode === 'dark'
-                                      ? 'rgba(255,255,255,0.05)'
-                                      : 'rgba(0,0,0,0.03)',
-                                  },
-                                }}
-                                onClick={() => {
-                                  window.open(`/companies/${company.id}`, '_blank');
-                                }}
-                              >
-                                <Business sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                                <Typography
-                                  variant="body2"
-                                  sx={{
-                                    fontWeight: 500,
-                                    color: theme.palette.text.primary,
-                                    fontSize: '0.875rem',
-                                  }}
-                                >
-                                  {company.name}
-                                </Typography>
-                              </Box>
-                            ))}
-                          {associatedCompanies.length > itemsPerPage && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
-                              <IconButton
-                                size="small"
-                                onClick={() => setCompaniesPage((prev) => Math.max(1, prev - 1))}
-                                disabled={companiesPage === 1}
-                                sx={{
-                                  color: companiesPage === 1 ? theme.palette.action.disabled : theme.palette.text.secondary,
-                                  '&:hover': {
-                                    bgcolor: companiesPage === 1 ? 'transparent' : theme.palette.action.hover,
-                                  },
-                                }}
-                              >
-                                <ChevronLeft sx={{ fontSize: 18 }} />
-                              </IconButton>
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  color: theme.palette.text.secondary,
-                                  fontSize: '0.75rem',
-                                }}
-                              >
-                                {companiesPage} de {Math.ceil(associatedCompanies.length / itemsPerPage)}
-                              </Typography>
-                              <IconButton
-                                size="small"
-                                onClick={() => setCompaniesPage((prev) => Math.min(Math.ceil(associatedCompanies.length / itemsPerPage), prev + 1))}
-                                disabled={companiesPage >= Math.ceil(associatedCompanies.length / itemsPerPage)}
-                                sx={{
-                                  color: companiesPage >= Math.ceil(associatedCompanies.length / itemsPerPage) ? theme.palette.action.disabled : theme.palette.text.secondary,
-                                  '&:hover': {
-                                    bgcolor: companiesPage >= Math.ceil(associatedCompanies.length / itemsPerPage) ? 'transparent' : theme.palette.action.hover,
-                                  },
-                                }}
-                              >
-                                <ChevronRight sx={{ fontSize: 18 }} />
-                              </IconButton>
-                            </Box>
-                          )}
-                        </Box>
-                      </Box>
-                    )}
-
-                    {/* Contactos vinculados (para empresas) */}
-                    {entityType === 'company' && associatedContacts.length > 0 && (
-                      <Box>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            mb: 1,
-                            fontWeight: 500,
-                            color: theme.palette.text.secondary,
-                            fontSize: '0.75rem',
-                          }}
-                        >
-                          Contactos ({associatedContacts.length})
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                          {associatedContacts
-                            .slice((contactsPage - 1) * itemsPerPage, contactsPage * itemsPerPage)
-                            .map((contact: any) => (
-                              <Box
-                                key={contact.id}
-                                sx={{
-                                  p: 1.5,
-                                  borderRadius: 1.5,
-                                  bgcolor: theme.palette.action.hover,
-                                  border: `1px solid ${theme.palette.divider}`,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 1.5,
-                                  cursor: 'pointer',
-                                  '&:hover': {
-                                    bgcolor: theme.palette.mode === 'dark'
-                                      ? 'rgba(255,255,255,0.05)'
-                                      : 'rgba(0,0,0,0.03)',
-                                  },
-                                }}
-                                onClick={() => {
-                                  window.open(`/contacts/${contact.id}`, '_blank');
-                                }}
-                              >
-                                <Person sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                                <Typography
-                                  variant="body2"
-                                  sx={{
-                                    fontWeight: 500,
-                                    color: theme.palette.text.primary,
-                                    fontSize: '0.875rem',
-                                  }}
-                                >
-                                  {contact.firstName} {contact.lastName}
-                                </Typography>
-                              </Box>
-                            ))}
-                          {associatedContacts.length > itemsPerPage && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
-                              <IconButton
-                                size="small"
-                                onClick={() => setContactsPage((prev) => Math.max(1, prev - 1))}
-                                disabled={contactsPage === 1}
-                                sx={{
-                                  color: contactsPage === 1 ? theme.palette.action.disabled : theme.palette.text.secondary,
-                                  '&:hover': {
-                                    bgcolor: contactsPage === 1 ? 'transparent' : theme.palette.action.hover,
-                                  },
-                                }}
-                              >
-                                <ChevronLeft sx={{ fontSize: 18 }} />
-                              </IconButton>
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  color: theme.palette.text.secondary,
-                                  fontSize: '0.75rem',
-                                }}
-                              >
-                                {contactsPage} de {Math.ceil(associatedContacts.length / itemsPerPage)}
-                              </Typography>
-                              <IconButton
-                                size="small"
-                                onClick={() => setContactsPage((prev) => Math.min(Math.ceil(associatedContacts.length / itemsPerPage), prev + 1))}
-                                disabled={contactsPage >= Math.ceil(associatedContacts.length / itemsPerPage)}
-                                sx={{
-                                  color: contactsPage >= Math.ceil(associatedContacts.length / itemsPerPage) ? theme.palette.action.disabled : theme.palette.text.secondary,
-                                  '&:hover': {
-                                    bgcolor: contactsPage >= Math.ceil(associatedContacts.length / itemsPerPage) ? 'transparent' : theme.palette.action.hover,
-                                  },
-                                }}
-                              >
-                                <ChevronRight sx={{ fontSize: 18 }} />
-                              </IconButton>
-                            </Box>
-                          )}
-                        </Box>
-                      </Box>
-                    )}
-
-                    {/* Negocios vinculados */}
-                    {associatedDeals.length > 0 && (
-                      <Box>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            mb: 1,
-                            fontWeight: 500,
-                            color: theme.palette.text.secondary,
-                            fontSize: '0.75rem',
-                          }}
-                        >
-                          Negocios ({associatedDeals.length})
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                          {associatedDeals
-                            .slice((dealsPage - 1) * itemsPerPage, dealsPage * itemsPerPage)
-                            .map((deal: any) => (
-                              <Box
-                                key={deal.id}
-                                sx={{
-                                  p: 1.5,
-                                  borderRadius: 1.5,
-                                  bgcolor: theme.palette.action.hover,
-                                  border: `1px solid ${theme.palette.divider}`,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 1.5,
-                                  cursor: 'pointer',
-                                  '&:hover': {
-                                    bgcolor: theme.palette.mode === 'dark'
-                                      ? 'rgba(255,255,255,0.05)'
-                                      : 'rgba(0,0,0,0.03)',
-                                  },
-                                }}
-                                onClick={() => {
-                                  window.open(`/deals/${deal.id}`, '_blank');
-                                }}
-                              >
-                                <TrendingUp sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                                <Typography
-                                  variant="body2"
-                                  sx={{
-                                    fontWeight: 500,
-                                    color: theme.palette.text.primary,
-                                    fontSize: '0.875rem',
-                                  }}
-                                >
-                                  {deal.name}
-                                </Typography>
-                              </Box>
-                            ))}
-                          {associatedDeals.length > itemsPerPage && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
-                              <IconButton
-                                size="small"
-                                onClick={() => setDealsPage((prev) => Math.max(1, prev - 1))}
-                                disabled={dealsPage === 1}
-                                sx={{
-                                  color: dealsPage === 1 ? theme.palette.action.disabled : theme.palette.text.secondary,
-                                  '&:hover': {
-                                    bgcolor: dealsPage === 1 ? 'transparent' : theme.palette.action.hover,
-                                  },
-                                }}
-                              >
-                                <ChevronLeft sx={{ fontSize: 18 }} />
-                              </IconButton>
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  color: theme.palette.text.secondary,
-                                  fontSize: '0.75rem',
-                                }}
-                              >
-                                {dealsPage} de {Math.ceil(associatedDeals.length / itemsPerPage)}
-                              </Typography>
-                              <IconButton
-                                size="small"
-                                onClick={() => setDealsPage((prev) => Math.min(Math.ceil(associatedDeals.length / itemsPerPage), prev + 1))}
-                                disabled={dealsPage >= Math.ceil(associatedDeals.length / itemsPerPage)}
-                                sx={{
-                                  color: dealsPage >= Math.ceil(associatedDeals.length / itemsPerPage) ? theme.palette.action.disabled : theme.palette.text.secondary,
-                                  '&:hover': {
-                                    bgcolor: dealsPage >= Math.ceil(associatedDeals.length / itemsPerPage) ? 'transparent' : theme.palette.action.hover,
-                                  },
-                                }}
-                              >
-                                <ChevronRight sx={{ fontSize: 18 }} />
-                              </IconButton>
-                            </Box>
-                          )}
-                        </Box>
-                      </Box>
-                    )}
-
-                    {/* Tickets vinculados */}
-                    {associatedTickets.length > 0 && (
-                      <Box>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            mb: 1,
-                            fontWeight: 500,
-                            color: theme.palette.text.secondary,
-                            fontSize: '0.75rem',
-                          }}
-                        >
-                          Tickets ({associatedTickets.length})
-                        </Typography>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                          {associatedTickets
-                            .slice((ticketsPage - 1) * itemsPerPage, ticketsPage * itemsPerPage)
-                            .map((ticket: any) => (
-                              <Box
-                                key={ticket.id}
-                                sx={{
-                                  p: 1.5,
-                                  borderRadius: 1.5,
-                                  bgcolor: theme.palette.action.hover,
-                                  border: `1px solid ${theme.palette.divider}`,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: 1.5,
-                                  cursor: 'pointer',
-                                  '&:hover': {
-                                    bgcolor: theme.palette.mode === 'dark'
-                                      ? 'rgba(255,255,255,0.05)'
-                                      : 'rgba(0,0,0,0.03)',
-                                  },
-                                }}
-                                onClick={() => {
-                                  window.open(`/tickets/${ticket.id}`, '_blank');
-                                }}
-                              >
-                                <Assignment sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
-                                <Typography
-                                  variant="body2"
-                                  sx={{
-                                    fontWeight: 500,
-                                    color: theme.palette.text.primary,
-                                    fontSize: '0.875rem',
-                                  }}
-                                >
-                                  {ticket.subject || ticket.title || `Ticket #${ticket.id}`}
-                                </Typography>
-                              </Box>
-                            ))}
-                          {associatedTickets.length > itemsPerPage && (
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
-                              <IconButton
-                                size="small"
-                                onClick={() => setTicketsPage((prev) => Math.max(1, prev - 1))}
-                                disabled={ticketsPage === 1}
-                                sx={{
-                                  color: ticketsPage === 1 ? theme.palette.action.disabled : theme.palette.text.secondary,
-                                  '&:hover': {
-                                    bgcolor: ticketsPage === 1 ? 'transparent' : theme.palette.action.hover,
-                                  },
-                                }}
-                              >
-                                <ChevronLeft sx={{ fontSize: 18 }} />
-                              </IconButton>
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  color: theme.palette.text.secondary,
-                                  fontSize: '0.75rem',
-                                }}
-                              >
-                                {ticketsPage} de {Math.ceil(associatedTickets.length / itemsPerPage)}
-                              </Typography>
-                              <IconButton
-                                size="small"
-                                onClick={() => setTicketsPage((prev) => Math.min(Math.ceil(associatedTickets.length / itemsPerPage), prev + 1))}
-                                disabled={ticketsPage >= Math.ceil(associatedTickets.length / itemsPerPage)}
-                                sx={{
-                                  color: ticketsPage >= Math.ceil(associatedTickets.length / itemsPerPage) ? theme.palette.action.disabled : theme.palette.text.secondary,
-                                  '&:hover': {
-                                    bgcolor: ticketsPage >= Math.ceil(associatedTickets.length / itemsPerPage) ? 'transparent' : theme.palette.action.hover,
-                                  },
-                                }}
-                              >
-                                <ChevronRight sx={{ fontSize: 18 }} />
-                              </IconButton>
-                            </Box>
-                          )}
-                        </Box>
-                      </Box>
-                    )}
-                  </Box>
-                )}
-              </Box>
-            )}
-
-            {/* Divider antes de actividades si hay vinculados */}
-            {((associatedCompanies.length > 0 || associatedContacts.length > 0 || associatedDeals.length > 0 || associatedTickets.length > 0)) && (
-              <Divider sx={{ my: 2 }} />
-            )}
+            <Divider sx={{ my: 2, mx: -3 }} />
 
             {/* Actividades */}
             <Box
               sx={{
                 display: 'flex',
                 flexDirection: 'column',
+                mb: 3,
               }}
             >
               <Typography
                 variant="h6"
                 sx={{
-                  mb: 2,
+                  mb: 1.5,
+                  mt: 0,
                   fontWeight: 600,
                   color: theme.palette.text.primary,
+                  fontSize: '1rem',
                 }}
               >
                 Actividades
@@ -1863,19 +1308,17 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                   {activities
                     .slice((activitiesPage - 1) * itemsPerPage, activitiesPage * itemsPerPage)
                     .map((activity) => (
-                      <Paper
+                      <Box
                         key={activity.id}
                         sx={{
                           p: 1.5,
                           borderRadius: 2,
-                          bgcolor: theme.palette.action.hover,
+                          bgcolor: 'transparent',
+                          background: 'transparent',
                           border: `1px solid ${theme.palette.divider}`,
                           transition: 'all 0.2s ease',
                           '&:hover': {
-                            boxShadow:
-                              theme.palette.mode === 'dark'
-                                ? '0 2px 8px rgba(0,0,0,0.3)'
-                                : '0 2px 8px rgba(0,0,0,0.1)',
+                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)',
                           },
                         }}
                       >
@@ -1883,13 +1326,13 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                           sx={{
                             display: 'flex',
                             alignItems: 'flex-start',
-                            gap: 1.5,
+                            gap: 1.25,
                           }}
                         >
                           <Box
                             sx={{
-                              width: 32,
-                              height: 32,
+                              width: 28,
+                              height: 28,
                               borderRadius: '50%',
                               bgcolor: getActivityColor(activity.type),
                               display: 'flex',
@@ -1904,7 +1347,8 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                             <Typography
                               variant="body2"
                               sx={{
-                                fontWeight: 600,
+                                fontWeight: 500,
+                                fontSize: '0.875rem',
                                 color: theme.palette.text.primary,
                                 mb: 0.5,
                                 overflow: 'hidden',
@@ -1925,6 +1369,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                                 <Typography
                                   variant="caption"
                                   sx={{
+                                    fontSize: '0.75rem',
                                     color: theme.palette.text.secondary,
                                     display: '-webkit-box',
                                     WebkitLineClamp: 1,
@@ -1940,6 +1385,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                               <Typography
                                 variant="caption"
                                 sx={{
+                                  fontSize: '0.75rem',
                                   color: theme.palette.text.secondary,
                                   display: 'block',
                                   mt: 0.5,
@@ -1954,7 +1400,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                             )}
                           </Box>
                         </Box>
-                      </Paper>
+                      </Box>
                     ))}
                   {activities.length > itemsPerPage && (
                     <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
@@ -1996,6 +1442,700 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
                     </Box>
                   )}
                 </Box>
+              )}
+            </Box>
+
+            {/* Divider antes de vinculados */}
+            <Divider sx={{ my: 2, mx: -3 }} />
+
+            {/* Entidades Vinculadas - Separadas por categoría */}
+            <Box
+              sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                mb: 3,
+                gap: 2.5,
+              }}
+            >
+              {loadingAssociations ? (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    py: 2,
+                  }}
+                >
+                  <CircularProgress size={20} />
+                </Box>
+              ) : (
+                <>
+                  {/* Empresas */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        mb: 1.5,
+                        fontWeight: 600,
+                        color: theme.palette.text.primary,
+                        fontSize: '1rem',
+                      }}
+                    >
+                      Empresas
+                    </Typography>
+                    {entityType === 'deal' && associatedCompanies.length > 0 ? (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {associatedCompanies
+                          .slice((companiesPage - 1) * itemsPerPage, companiesPage * itemsPerPage)
+                          .map((company: any) => {
+                            const isPrincipal = entity?.companyId === company.id;
+                            return (
+                              <Box
+                                key={company.id}
+                                sx={{
+                                  p: 1.5,
+                                  borderRadius: 1.5,
+                                  bgcolor: 'transparent',
+                                  border: `1px solid ${theme.palette.divider}`,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 1.5,
+                                  cursor: 'pointer',
+                                  '&:hover': {
+                                    bgcolor: theme.palette.mode === 'dark'
+                                      ? 'rgba(255,255,255,0.04)'
+                                      : 'rgba(0,0,0,0.02)',
+                                  },
+                                }}
+                                onClick={() => {
+                                  window.open(`/companies/${company.id}`, '_blank');
+                                }}
+                              >
+                                <Business sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontWeight: 500,
+                                    color: theme.palette.text.primary,
+                                    fontSize: '0.875rem',
+                                    flex: 1,
+                                  }}
+                                >
+                                  {company.name}
+                                </Typography>
+                                {isPrincipal && (
+                                  <Chip
+                                    label="Principal"
+                                    size="small"
+                                    sx={{
+                                      height: 22,
+                                      fontSize: '0.7rem',
+                                      fontWeight: 500,
+                                      bgcolor: theme.palette.mode === 'dark'
+                                        ? 'rgba(144, 202, 249, 0.2)'
+                                        : 'rgba(173, 216, 230, 0.4)',
+                                      color: theme.palette.mode === 'dark'
+                                        ? 'rgba(255, 255, 255, 0.85)'
+                                        : 'rgba(0, 0, 0, 0.75)',
+                                      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(79, 172, 254, 0.6)' : 'rgba(33, 150, 243, 0.6)'}`,
+                                      borderRadius: 1,
+                                      '& .MuiChip-label': {
+                                        px: 1.2,
+                                      },
+                                    }}
+                                  />
+                                )}
+                              </Box>
+                            );
+                          })}
+                        {associatedCompanies.length > itemsPerPage && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
+                            <IconButton
+                              size="small"
+                              onClick={() => setCompaniesPage((prev) => Math.max(1, prev - 1))}
+                              disabled={companiesPage === 1}
+                              sx={{
+                                color: companiesPage === 1 ? theme.palette.action.disabled : theme.palette.text.secondary,
+                                '&:hover': {
+                                  bgcolor: companiesPage === 1 ? 'transparent' : theme.palette.action.hover,
+                                },
+                              }}
+                            >
+                              <ChevronLeft sx={{ fontSize: 18 }} />
+                            </IconButton>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: theme.palette.text.secondary,
+                                fontSize: '0.75rem',
+                              }}
+                            >
+                              {companiesPage} de {Math.ceil(associatedCompanies.length / itemsPerPage)}
+                            </Typography>
+                            <IconButton
+                              size="small"
+                              onClick={() => setCompaniesPage((prev) => Math.min(Math.ceil(associatedCompanies.length / itemsPerPage), prev + 1))}
+                              disabled={companiesPage >= Math.ceil(associatedCompanies.length / itemsPerPage)}
+                              sx={{
+                                color: companiesPage >= Math.ceil(associatedCompanies.length / itemsPerPage) ? theme.palette.action.disabled : theme.palette.text.secondary,
+                                '&:hover': {
+                                  bgcolor: companiesPage >= Math.ceil(associatedCompanies.length / itemsPerPage) ? 'transparent' : theme.palette.action.hover,
+                                },
+                              }}
+                            >
+                              <ChevronRight sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Box>
+                        )}
+                      </Box>
+                    ) : entityType === 'contact' && associatedCompanies.length > 0 ? (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {associatedCompanies
+                          .slice((companiesPage - 1) * itemsPerPage, companiesPage * itemsPerPage)
+                          .map((company: any) => {
+                            const isPrincipal = entity?.companyId === company.id;
+                            return (
+                              <Box
+                                key={company.id}
+                                sx={{
+                                  p: 1.5,
+                                  borderRadius: 1.5,
+                                  bgcolor: 'transparent',
+                                  border: `1px solid ${theme.palette.divider}`,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: 1.5,
+                                  cursor: 'pointer',
+                                  '&:hover': {
+                                    bgcolor: theme.palette.mode === 'dark'
+                                      ? 'rgba(255,255,255,0.04)'
+                                      : 'rgba(0,0,0,0.02)',
+                                  },
+                                }}
+                                onClick={() => {
+                                  window.open(`/companies/${company.id}`, '_blank');
+                                }}
+                              >
+                                <Business sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontWeight: 500,
+                                    color: theme.palette.text.primary,
+                                    fontSize: '0.875rem',
+                                    flex: 1,
+                                  }}
+                                >
+                                  {company.name}
+                                </Typography>
+                                {isPrincipal && (
+                                  <Chip
+                                    label="Principal"
+                                    size="small"
+                                    sx={{
+                                      height: 22,
+                                      fontSize: '0.7rem',
+                                      fontWeight: 500,
+                                      bgcolor: theme.palette.mode === 'dark'
+                                        ? 'rgba(144, 202, 249, 0.2)'
+                                        : 'rgba(173, 216, 230, 0.4)',
+                                      color: theme.palette.mode === 'dark'
+                                        ? 'rgba(255, 255, 255, 0.85)'
+                                        : 'rgba(0, 0, 0, 0.75)',
+                                      border: `1px solid ${theme.palette.mode === 'dark' ? 'rgba(79, 172, 254, 0.6)' : 'rgba(33, 150, 243, 0.6)'}`,
+                                      borderRadius: 1,
+                                      '& .MuiChip-label': {
+                                        px: 1.2,
+                                      },
+                                    }}
+                                  />
+                                )}
+                              </Box>
+                            );
+                          })}
+                        {associatedCompanies.length > itemsPerPage && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
+                            <IconButton
+                              size="small"
+                              onClick={() => setCompaniesPage((prev) => Math.max(1, prev - 1))}
+                              disabled={companiesPage === 1}
+                              sx={{
+                                color: companiesPage === 1 ? theme.palette.action.disabled : theme.palette.text.secondary,
+                                '&:hover': {
+                                  bgcolor: companiesPage === 1 ? 'transparent' : theme.palette.action.hover,
+                                },
+                              }}
+                            >
+                              <ChevronLeft sx={{ fontSize: 18 }} />
+                            </IconButton>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: theme.palette.text.secondary,
+                                fontSize: '0.75rem',
+                              }}
+                            >
+                              {companiesPage} de {Math.ceil(associatedCompanies.length / itemsPerPage)}
+                            </Typography>
+                            <IconButton
+                              size="small"
+                              onClick={() => setCompaniesPage((prev) => Math.min(Math.ceil(associatedCompanies.length / itemsPerPage), prev + 1))}
+                              disabled={companiesPage >= Math.ceil(associatedCompanies.length / itemsPerPage)}
+                              sx={{
+                                color: companiesPage >= Math.ceil(associatedCompanies.length / itemsPerPage) ? theme.palette.action.disabled : theme.palette.text.secondary,
+                                '&:hover': {
+                                  bgcolor: companiesPage >= Math.ceil(associatedCompanies.length / itemsPerPage) ? 'transparent' : theme.palette.action.hover,
+                                },
+                              }}
+                            >
+                              <ChevronRight sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Box>
+                        )}
+                      </Box>
+                    ) : (
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          py: 4,
+                          textAlign: 'center',
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 60,
+                            height: 60,
+                            borderRadius: '50%',
+                            bgcolor: theme.palette.action.hover,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mb: 2,
+                          }}
+                        >
+                          <Business
+                            sx={{
+                              fontSize: 30,
+                              color:
+                                theme.palette.mode === 'dark'
+                                  ? 'rgba(255, 255, 255, 0.4)'
+                                  : '#9CA3AF',
+                            }}
+                          />
+                        </Box>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: theme.palette.text.secondary,
+                            maxWidth: 200,
+                          }}
+                        >
+                          No tiene empresas vinculadas
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+
+                  <Divider sx={{ my: 2, mx: -3 }} />
+
+                  {/* Negocios */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        mb: 1.5,
+                        mt: -2,
+                        fontWeight: 600,
+                        color: theme.palette.text.primary,
+                        fontSize: '1rem',
+                      }}
+                    >
+                      Negocios
+                    </Typography>
+                    {associatedDeals.length > 0 ? (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {associatedDeals
+                          .slice((dealsPage - 1) * itemsPerPage, dealsPage * itemsPerPage)
+                          .map((deal: any) => (
+                            <Box
+                              key={deal.id}
+                              sx={{
+                                p: 1.5,
+                                borderRadius: 1.5,
+                                bgcolor: 'transparent',
+                                border: `1px solid ${theme.palette.divider}`,
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 1,
+                                cursor: 'pointer',
+                                '&:hover': {
+                                  bgcolor: theme.palette.mode === 'dark'
+                                    ? 'rgba(255,255,255,0.04)'
+                                    : 'rgba(0,0,0,0.02)',
+                                },
+                              }}
+                              onClick={() => {
+                                window.open(`/deals/${deal.id}`, '_blank');
+                              }}
+                            >
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+                                <Avatar
+                                  sx={{
+                                    width: 28,
+                                    height: 28,
+                                    bgcolor: taxiMonterricoColors.green,
+                                    fontSize: '0.875rem',
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  <FontAwesomeIcon icon={faHandshake} style={{ fontSize: 12, color: 'white' }} />
+                                </Avatar>
+                                <Typography
+                                  variant="body2"
+                                  sx={{
+                                    fontWeight: 500,
+                                    color: theme.palette.text.primary,
+                                    fontSize: '0.875rem',
+                                  }}
+                                >
+                                  {deal.name}
+                                </Typography>
+                              </Box>
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'flex-start',
+                                  gap: 0.5,
+                                  pl: 0,
+                                }}
+                              >
+                                {deal.amount != null && (
+                                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem', textAlign: 'left' }}>
+                                    Monto: S/ {Number(deal.amount).toLocaleString()}
+                                  </Typography>
+                                )}
+                                {deal.closeDate && (
+                                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem', textAlign: 'left' }}>
+                                    Cierre: {new Date(deal.closeDate).toLocaleDateString('es-ES')}
+                                  </Typography>
+                                )}
+                                {(deal.stage || deal.lifecycleStage) && (
+                                  <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem', textAlign: 'left' }}>
+                                    Etapa: {deal.stage || deal.lifecycleStage}
+                                  </Typography>
+                                )}
+                              </Box>
+                            </Box>
+                          ))}
+                        {associatedDeals.length > itemsPerPage && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
+                            <IconButton
+                              size="small"
+                              onClick={() => setDealsPage((prev) => Math.max(1, prev - 1))}
+                              disabled={dealsPage === 1}
+                              sx={{
+                                color: dealsPage === 1 ? theme.palette.action.disabled : theme.palette.text.secondary,
+                                '&:hover': {
+                                  bgcolor: dealsPage === 1 ? 'transparent' : theme.palette.action.hover,
+                                },
+                              }}
+                            >
+                              <ChevronLeft sx={{ fontSize: 18 }} />
+                            </IconButton>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: theme.palette.text.secondary,
+                                fontSize: '0.75rem',
+                              }}
+                            >
+                              {dealsPage} de {Math.ceil(associatedDeals.length / itemsPerPage)}
+                            </Typography>
+                            <IconButton
+                              size="small"
+                              onClick={() => setDealsPage((prev) => Math.min(Math.ceil(associatedDeals.length / itemsPerPage), prev + 1))}
+                              disabled={dealsPage >= Math.ceil(associatedDeals.length / itemsPerPage)}
+                              sx={{
+                                color: dealsPage >= Math.ceil(associatedDeals.length / itemsPerPage) ? theme.palette.action.disabled : theme.palette.text.secondary,
+                                '&:hover': {
+                                  bgcolor: dealsPage >= Math.ceil(associatedDeals.length / itemsPerPage) ? 'transparent' : theme.palette.action.hover,
+                                },
+                              }}
+                            >
+                              <ChevronRight sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Box>
+                        )}
+                      </Box>
+                    ) : (
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          py: 4,
+                          textAlign: 'center',
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 60,
+                            height: 60,
+                            borderRadius: '50%',
+                            bgcolor: theme.palette.action.hover,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mb: 2,
+                          }}
+                        >
+                          <FontAwesomeIcon
+                            icon={faSackDollar}
+                            style={{
+                              fontSize: 30,
+                              color: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.4)' : '#9CA3AF',
+                            }}
+                          />
+                        </Box>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: theme.palette.text.secondary,
+                            maxWidth: 200,
+                          }}
+                        >
+                          No tiene negocios vinculados
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+
+                  <Divider sx={{ my: 2, mx: -3 }} />
+
+                  {/* Contactos */}
+                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        mb: 1.5,
+                        mt: -2,
+                        fontWeight: 600,
+                        color: theme.palette.text.primary,
+                        fontSize: '1rem',
+                      }}
+                    >
+                      Contactos
+                    </Typography>
+                    {entityType === 'deal' && associatedContacts.length > 0 ? (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {associatedContacts
+                          .slice((contactsPage - 1) * itemsPerPage, contactsPage * itemsPerPage)
+                          .map((contact: any) => (
+                            <Box
+                              key={contact.id}
+                              sx={{
+                                p: 1.5,
+                                borderRadius: 1.5,
+                                bgcolor: 'transparent',
+                                border: `1px solid ${theme.palette.divider}`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1.5,
+                                cursor: 'pointer',
+                                '&:hover': {
+                                  bgcolor: theme.palette.mode === 'dark'
+                                    ? 'rgba(255,255,255,0.04)'
+                                    : 'rgba(0,0,0,0.02)',
+                                },
+                              }}
+                              onClick={() => {
+                                window.open(`/contacts/${contact.id}`, '_blank');
+                              }}
+                            >
+                              <Person sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  fontWeight: 500,
+                                  color: theme.palette.text.primary,
+                                  fontSize: '0.875rem',
+                                }}
+                              >
+                                {contact.firstName} {contact.lastName}
+                              </Typography>
+                            </Box>
+                          ))}
+                        {associatedContacts.length > itemsPerPage && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
+                            <IconButton
+                              size="small"
+                              onClick={() => setContactsPage((prev) => Math.max(1, prev - 1))}
+                              disabled={contactsPage === 1}
+                              sx={{
+                                color: contactsPage === 1 ? theme.palette.action.disabled : theme.palette.text.secondary,
+                                '&:hover': {
+                                  bgcolor: contactsPage === 1 ? 'transparent' : theme.palette.action.hover,
+                                },
+                              }}
+                            >
+                              <ChevronLeft sx={{ fontSize: 18 }} />
+                            </IconButton>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: theme.palette.text.secondary,
+                                fontSize: '0.75rem',
+                              }}
+                            >
+                              {contactsPage} de {Math.ceil(associatedContacts.length / itemsPerPage)}
+                            </Typography>
+                            <IconButton
+                              size="small"
+                              onClick={() => setContactsPage((prev) => Math.min(Math.ceil(associatedContacts.length / itemsPerPage), prev + 1))}
+                              disabled={contactsPage >= Math.ceil(associatedContacts.length / itemsPerPage)}
+                              sx={{
+                                color: contactsPage >= Math.ceil(associatedContacts.length / itemsPerPage) ? theme.palette.action.disabled : theme.palette.text.secondary,
+                                '&:hover': {
+                                  bgcolor: contactsPage >= Math.ceil(associatedContacts.length / itemsPerPage) ? 'transparent' : theme.palette.action.hover,
+                                },
+                              }}
+                            >
+                              <ChevronRight sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Box>
+                        )}
+                      </Box>
+                    ) : entityType === 'company' && associatedContacts.length > 0 ? (
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {associatedContacts
+                          .slice((contactsPage - 1) * itemsPerPage, contactsPage * itemsPerPage)
+                          .map((contact: any) => (
+                            <Box
+                              key={contact.id}
+                              sx={{
+                                p: 1.5,
+                                borderRadius: 1.5,
+                                bgcolor: 'transparent',
+                                border: `1px solid ${theme.palette.divider}`,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1.5,
+                                cursor: 'pointer',
+                                '&:hover': {
+                                  bgcolor: theme.palette.mode === 'dark'
+                                    ? 'rgba(255,255,255,0.04)'
+                                    : 'rgba(0,0,0,0.02)',
+                                },
+                              }}
+                              onClick={() => {
+                                window.open(`/contacts/${contact.id}`, '_blank');
+                              }}
+                            >
+                              <Person sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
+                              <Typography
+                                variant="body2"
+                                sx={{
+                                  fontWeight: 500,
+                                  color: theme.palette.text.primary,
+                                  fontSize: '0.875rem',
+                                }}
+                              >
+                                {contact.firstName} {contact.lastName}
+                              </Typography>
+                            </Box>
+                          ))}
+                        {associatedContacts.length > itemsPerPage && (
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
+                            <IconButton
+                              size="small"
+                              onClick={() => setContactsPage((prev) => Math.max(1, prev - 1))}
+                              disabled={contactsPage === 1}
+                              sx={{
+                                color: contactsPage === 1 ? theme.palette.action.disabled : theme.palette.text.secondary,
+                                '&:hover': {
+                                  bgcolor: contactsPage === 1 ? 'transparent' : theme.palette.action.hover,
+                                },
+                              }}
+                            >
+                              <ChevronLeft sx={{ fontSize: 18 }} />
+                            </IconButton>
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: theme.palette.text.secondary,
+                                fontSize: '0.75rem',
+                              }}
+                            >
+                              {contactsPage} de {Math.ceil(associatedContacts.length / itemsPerPage)}
+                            </Typography>
+                            <IconButton
+                              size="small"
+                              onClick={() => setContactsPage((prev) => Math.min(Math.ceil(associatedContacts.length / itemsPerPage), prev + 1))}
+                              disabled={contactsPage >= Math.ceil(associatedContacts.length / itemsPerPage)}
+                              sx={{
+                                color: contactsPage >= Math.ceil(associatedContacts.length / itemsPerPage) ? theme.palette.action.disabled : theme.palette.text.secondary,
+                                '&:hover': {
+                                  bgcolor: contactsPage >= Math.ceil(associatedContacts.length / itemsPerPage) ? 'transparent' : theme.palette.action.hover,
+                                },
+                              }}
+                            >
+                              <ChevronRight sx={{ fontSize: 18 }} />
+                            </IconButton>
+                          </Box>
+                        )}
+                      </Box>
+                    ) : (
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          py: 4,
+                          textAlign: 'center',
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            width: 60,
+                            height: 60,
+                            borderRadius: '50%',
+                            bgcolor: theme.palette.action.hover,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            mb: 2,
+                          }}
+                        >
+                          <Person
+                            sx={{
+                              fontSize: 30,
+                              color:
+                                theme.palette.mode === 'dark'
+                                  ? 'rgba(255, 255, 255, 0.4)'
+                                  : '#9CA3AF',
+                            }}
+                          />
+                        </Box>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: theme.palette.text.secondary,
+                            maxWidth: 200,
+                            mb:0,
+                          }}
+                        >
+                          No tiene contactos vinculados
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </>
               )}
             </Box>
           </>

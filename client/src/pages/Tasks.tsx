@@ -31,7 +31,7 @@ import {
   LinearProgress,
   Autocomplete,
 } from '@mui/material';
-import { Add, Delete, Search, Schedule, PendingActions, Edit, Visibility, ChevronLeft, ChevronRight, ArrowDropDown, CalendarToday } from '@mui/icons-material';
+import { Add, Delete, Search, Schedule, PendingActions, Edit, Visibility, ChevronLeft, ChevronRight, ArrowDropDown, CalendarToday, FilterList } from '@mui/icons-material';
 import { RiFileWarningLine } from 'react-icons/ri';
 import { IoMdCheckboxOutline } from 'react-icons/io';
 import { library } from '@fortawesome/fontawesome-svg-core';
@@ -42,6 +42,7 @@ import { pageStyles } from '../theme/styles';
 import { useAuth } from '../context/AuthContext';
 import UserAvatar from '../components/UserAvatar';
 import { FormDrawer } from '../components/FormDrawer';
+import { getAvatarColors } from '../utils/avatarColors';
 
 library.add(far);
 
@@ -76,15 +77,6 @@ const getContactInitials = (firstName: string, lastName: string): string => {
   return `${f}${l}`.toUpperCase() || '—';
 };
 
-const getAvatarColors = (str: string): { bg: string; color: string } => {
-  let hash = 0;
-  for (let i = 0; i < (str || '').length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  const hue = (hash & 0x7fffffff) % 360;
-  return {
-    bg: `hsl(${hue}, 38%, 92%)`,
-    color: `hsl(${hue}, 62%, 42%)`,
-  };
-};
 
 const initialsAvatarSx = {
   width: { xs: 28, md: 32 },
@@ -143,27 +135,21 @@ const Tasks: React.FC = () => {
   const [linkPromptRemainingMs, setLinkPromptRemainingMs] = useState(LINK_PROMPT_TOTAL_MS);
   const [companySearchInput, setCompanySearchInput] = useState('');
   const [contactSearchInput, setContactSearchInput] = useState('');
+  const [linkedTaskLockCompanyContact, setLinkedTaskLockCompanyContact] = useState(false);
+  const [showColumnFilters, setShowColumnFilters] = useState(false);
+  const [columnFilters, setColumnFilters] = useState<{ titulo: string; estado: string; prioridad: string }>({
+    titulo: '',
+    estado: '',
+    prioridad: '',
+  });
+  const [debouncedColumnFilters, setDebouncedColumnFilters] = useState(columnFilters);
+  const [taskStats, setTaskStats] = useState({ overdue: 0, dueToday: 0, pending: 0, completed: 0 });
 
-  // Calcular estadísticas
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
-  const overdueTasks = tasks.filter(t => {
-    if (!t.dueDate) return false;
-    const dueDate = new Date(t.dueDate);
-    dueDate.setHours(0, 0, 0, 0);
-    return dueDate < today && t.status !== 'completed';
-  }).length;
-
-  const dueTodayTasks = tasks.filter(t => {
-    if (!t.dueDate) return false;
-    const dueDate = new Date(t.dueDate);
-    dueDate.setHours(0, 0, 0, 0);
-    return dueDate.getTime() === today.getTime();
-  }).length;
-
-  const pendingTasks = tasks.filter(t => t.status === 'pending').length;
-  const completedTasks = tasks.filter(t => t.status === 'completed').length;
+  // Estadísticas totales para los cards (no dependen de la página actual)
+  const overdueTasks = taskStats.overdue;
+  const dueTodayTasks = taskStats.dueToday;
+  const pendingTasks = taskStats.pending;
+  const completedTasks = taskStats.completed;
 
   // Calcular paginación desde el servidor
   const totalPages = Math.ceil(totalTasks / itemsPerPage);
@@ -203,6 +189,30 @@ const Tasks: React.FC = () => {
       'cancelled': 'Cancelada',
     };
     return statusMap[status?.toLowerCase()] || status;
+  };
+
+  // Función para convertir texto de estado en español a valor en inglés para el backend
+  const mapStatusToEnglish = (statusText: string): string | null => {
+    const statusMap: { [key: string]: string } = {
+      'pendiente': 'pending',
+      'en progreso': 'in progress',
+      'completada': 'completed',
+      'cancelada': 'cancelled',
+    };
+    const normalized = statusText.toLowerCase().trim();
+    return statusMap[normalized] || null;
+  };
+
+  // Función para convertir texto de prioridad en español a valor en inglés para el backend
+  const mapPriorityToEnglish = (priorityText: string): string | null => {
+    const priorityMap: { [key: string]: string } = {
+      'baja': 'low',
+      'media': 'medium',
+      'alta': 'high',
+      'urgente': 'urgent',
+    };
+    const normalized = priorityText.toLowerCase().trim();
+    return priorityMap[normalized] || null;
   };
 
   const fetchUsers = useCallback(async () => {
@@ -264,8 +274,21 @@ const Tasks: React.FC = () => {
         params.search = search;
       }
       
-      // Filtro por categoría (activeFilter)
-      if (activeFilter) {
+      // Filtros por columna (tienen prioridad sobre activeFilter)
+      if (debouncedColumnFilters.titulo) params.filterTitulo = debouncedColumnFilters.titulo;
+      if (debouncedColumnFilters.estado) {
+        // Intentar mapear de español a inglés, si no coincide usar el valor original
+        const mappedStatus = mapStatusToEnglish(debouncedColumnFilters.estado);
+        params.filterEstado = mappedStatus || debouncedColumnFilters.estado;
+      }
+      if (debouncedColumnFilters.prioridad) {
+        // Intentar mapear de español a inglés, si no coincide usar el valor original
+        const mappedPriority = mapPriorityToEnglish(debouncedColumnFilters.prioridad);
+        params.filterPrioridad = mappedPriority || debouncedColumnFilters.prioridad;
+      }
+      
+      // Filtro por categoría (activeFilter) - solo si no hay filtro de columna para estado
+      if (activeFilter && !debouncedColumnFilters.estado) {
         switch (activeFilter) {
           case 'overdue':
             // Filtrar por tareas vencidas (se manejará en el servidor con dueDate)
@@ -329,11 +352,51 @@ const Tasks: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [search, currentPage, itemsPerPage, activeFilter, sortBy]);
+  }, [search, currentPage, itemsPerPage, activeFilter, sortBy, debouncedColumnFilters]);
+
+  const fetchTaskStats = useCallback(async () => {
+    try {
+      const res = await api.get('/tasks', { params: { page: 1, limit: 10000 } });
+      const allTasks = res.data.tasks || res.data || [];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      setTaskStats({
+        overdue: allTasks.filter((t: Task) => {
+          if (!t.dueDate) return false;
+          const dueDate = new Date(t.dueDate);
+          dueDate.setHours(0, 0, 0, 0);
+          return dueDate < today && t.status !== 'completed';
+        }).length,
+        dueToday: allTasks.filter((t: Task) => {
+          if (!t.dueDate) return false;
+          const dueDate = new Date(t.dueDate);
+          dueDate.setHours(0, 0, 0, 0);
+          return dueDate.getTime() === today.getTime();
+        }).length,
+        pending: allTasks.filter((t: Task) => t.status === 'pending').length,
+        completed: allTasks.filter((t: Task) => t.status === 'completed').length,
+      });
+    } catch (e) {
+      console.error('Error fetching task stats:', e);
+    }
+  }, []);
 
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
+
+  useEffect(() => {
+    fetchTaskStats();
+  }, [fetchTaskStats]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedColumnFilters(columnFilters), 500);
+    return () => clearTimeout(timer);
+  }, [columnFilters]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [columnFilters]);
 
   useEffect(() => {
     fetchUsers();
@@ -367,6 +430,32 @@ const Tasks: React.FC = () => {
   const getCompletadaSection = (desc: string) => {
     const idx = (desc || '').indexOf('\n\n--- Completada ---');
     return idx >= 0 ? (desc || '').slice(idx) : '';
+  };
+
+  const getCompletedDateAndTime = (desc: string) => {
+    const completadaSection = getCompletadaSection(desc);
+    if (!completadaSection) return { date: null, time: null, observations: '' };
+    
+    // Buscar el patrón "Completada el DD/MM/YYYY a las HH:MM"
+    const dateMatch = completadaSection.match(/Completada el (\d{2}\/\d{2}\/\d{4}) a las (\d{2}:\d{2})/);
+    if (dateMatch) {
+      const [, dateStr, timeStr] = dateMatch;
+      // Convertir DD/MM/YYYY a Date object
+      const [day, month, year] = dateStr.split('/').map(Number);
+      const date = new Date(year, month - 1, day);
+      
+      // Extraer observaciones (todo después de la línea de fecha/hora)
+      const observationsStart = completadaSection.indexOf(dateMatch[0]) + dateMatch[0].length;
+      const observations = completadaSection.slice(observationsStart).trim().replace(/^\n+/, '');
+      
+      return { date, time: timeStr, observations };
+    }
+    
+    // Si no hay fecha/hora específica, extraer solo observaciones
+    const observationsStart = completadaSection.indexOf('--- Completada ---') + '--- Completada ---'.length;
+    const observations = completadaSection.slice(observationsStart).trim().replace(/^\n+/, '');
+    
+    return { date: null, time: null, observations };
   };
 
   const handleOpen = (task?: Task) => {
@@ -413,8 +502,27 @@ const Tasks: React.FC = () => {
     setCompanySearchInput('');
     setContactSearchInput('');
     setEditingTask(null);
-    const companyId = (task as any).companyId;
-    const contactId = (task as any).contactId;
+    // Obtener empresa/contacto desde IDs o desde las relaciones (por si el listado no devuelve los IDs)
+    const companyId = (task as any).companyId ?? (task as any).Company?.id;
+    const contactId = (task as any).contactId ?? (task as any).Contact?.id;
+    const companyIdStr = companyId != null ? String(companyId) : '';
+    const contactIdStr = contactId != null ? String(contactId) : '';
+    // Asegurar que la empresa/contacto estén en las listas para que el Autocomplete los muestre
+    if ((task as any).Company && companyIdStr) {
+      setCompanies(prev => {
+        const exists = prev.some(c => c.id === (task as any).Company?.id);
+        if (exists) return prev;
+        return [...prev, { id: (task as any).Company.id, name: (task as any).Company.name }];
+      });
+    }
+    if ((task as any).Contact && contactIdStr) {
+      setContacts(prev => {
+        const c = (task as any).Contact;
+        const exists = prev.some(x => x.id === c?.id);
+        if (exists) return prev;
+        return [...prev, { id: c.id, firstName: c.firstName || '', lastName: c.lastName || '' }];
+      });
+    }
     setFormData({
       title: '',
       description: '',
@@ -424,15 +532,17 @@ const Tasks: React.FC = () => {
       dueDate: '',
       estimatedTime: '',
       assignedToId: user?.id ? user.id.toString() : '',
-      companyId: companyId != null ? companyId.toString() : '',
-      contactId: contactId != null ? contactId.toString() : '',
+      companyId: companyIdStr,
+      contactId: contactIdStr,
     });
+    setLinkedTaskLockCompanyContact(true);
     setOpen(true);
   };
 
   const handleClose = () => {
     setOpen(false);
     setEditingTask(null);
+    setLinkedTaskLockCompanyContact(false);
     setCompanySearchInput('');
     setContactSearchInput('');
   };
@@ -558,7 +668,25 @@ const Tasks: React.FC = () => {
 
   const handleOpenCompleteModalView = (task: Task) => {
     setCompleteModalTask(task);
-    setCompleteObservations((task as any).description || '');
+    const taskDescription = (task as any).description || '';
+    const { date, time, observations } = getCompletedDateAndTime(taskDescription);
+    
+    // Establecer fecha y hora si existen
+    if (date) {
+      const dateStr = date.toISOString().slice(0, 10);
+      setCompleteDate(dateStr);
+    } else {
+      setCompleteDate('');
+    }
+    
+    if (time) {
+      // Convertir HH:MM a formato de input time (HH:MM)
+      setCompleteTime(time);
+    } else {
+      setCompleteTime('');
+    }
+    
+    setCompleteObservations(observations);
     setCompleteModalViewOnly(true);
     setCompleteModalOpen(true);
   };
@@ -596,6 +724,7 @@ const Tasks: React.FC = () => {
       const hadCompany = (task as any).companyId != null;
       handleCloseCompleteModal();
       fetchTasks();
+      fetchTaskStats();
       if (hadCompany) {
         setTaskJustCompletedForLink(task);
         setLinkPromptRemainingMs(LINK_PROMPT_TOTAL_MS);
@@ -696,7 +825,6 @@ const Tasks: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'stretch', flexWrap: { xs: 'wrap', sm: 'nowrap' }, gap: { xs: 1.5, sm: 2 } }}>
             {/* Vencidas */}
             <Box 
-              onClick={() => setActiveFilter(activeFilter === 'overdue' ? null : 'overdue')}
               sx={{ 
                 flex: { xs: '1 1 calc(50% - 0.75px)', sm: 1 },
                 display: 'flex',
@@ -706,33 +834,6 @@ const Tasks: React.FC = () => {
                 px: { xs: 0.75, sm: 1 },
                 py: { xs: 0.5, sm: 0.5 },
                 borderRadius: 2,
-                bgcolor: activeFilter === 'overdue' ? `${theme.palette.error.main}10` : 'transparent',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                border: activeFilter === 'overdue' 
-                  ? `2px solid ${theme.palette.error.main}` 
-                  : '1px solid transparent',
-                position: 'relative',
-                overflow: 'hidden',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: '-100%',
-                  width: '100%',
-                  height: '100%',
-                  background: `linear-gradient(90deg, transparent, ${theme.palette.error.main}15, transparent)`,
-                  transition: 'left 0.5s ease',
-                },
-                '&:hover': {
-                  bgcolor: `${theme.palette.error.main}15`,
-                  borderColor: theme.palette.error.main,
-                  transform: 'translateY(-2px)',
-                  boxShadow: `0 4px 12px ${theme.palette.error.main}30`,
-                  '&::before': {
-                    left: '100%',
-                  },
-                },
               }}
             >
               <Box sx={{ 
@@ -765,7 +866,6 @@ const Tasks: React.FC = () => {
 
             {/* Vencen hoy */}
             <Box 
-              onClick={() => setActiveFilter(activeFilter === 'dueToday' ? null : 'dueToday')}
               sx={{ 
                 flex: { xs: '1 1 calc(50% - 0.75px)', sm: 1 },
                 display: 'flex',
@@ -775,33 +875,6 @@ const Tasks: React.FC = () => {
                 px: { xs: 0.75, sm: 1 },
                 py: { xs: 0.5, sm: 0.5 },
                 borderRadius: 2,
-                bgcolor: activeFilter === 'dueToday' ? `${taxiMonterricoColors.orange}10` : 'transparent',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                border: activeFilter === 'dueToday' 
-                  ? `2px solid ${taxiMonterricoColors.orange}` 
-                  : '1px solid transparent',
-                position: 'relative',
-                overflow: 'hidden',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: '-100%',
-                  width: '100%',
-                  height: '100%',
-                  background: `linear-gradient(90deg, transparent, ${taxiMonterricoColors.orange}15, transparent)`,
-                  transition: 'left 0.5s ease',
-                },
-                '&:hover': {
-                  bgcolor: `${taxiMonterricoColors.orange}15`,
-                  borderColor: taxiMonterricoColors.orange,
-                  transform: 'translateY(-2px)',
-                  boxShadow: `0 4px 12px ${taxiMonterricoColors.orange}30`,
-                  '&::before': {
-                    left: '100%',
-                  },
-                },
               }}
             >
               <Box sx={{ 
@@ -834,7 +907,6 @@ const Tasks: React.FC = () => {
 
             {/* Pendientes */}
             <Box 
-              onClick={() => setActiveFilter(activeFilter === 'pending' ? null : 'pending')}
               sx={{ 
                 flex: { xs: '1 1 calc(50% - 0.75px)', sm: 1 },
                 display: 'flex',
@@ -844,33 +916,6 @@ const Tasks: React.FC = () => {
                 px: { xs: 0.75, sm: 1 },
                 py: { xs: 0.5, sm: 0.5 },
                 borderRadius: 2,
-                bgcolor: activeFilter === 'pending' ? `${theme.palette.warning.main}10` : 'transparent',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                border: activeFilter === 'pending' 
-                  ? `2px solid ${theme.palette.warning.main}` 
-                  : '1px solid transparent',
-                position: 'relative',
-                overflow: 'hidden',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: '-100%',
-                  width: '100%',
-                  height: '100%',
-                  background: `linear-gradient(90deg, transparent, ${theme.palette.warning.main}15, transparent)`,
-                  transition: 'left 0.5s ease',
-                },
-                '&:hover': {
-                  bgcolor: `${theme.palette.warning.main}15`,
-                  borderColor: theme.palette.warning.main,
-                  transform: 'translateY(-2px)',
-                  boxShadow: `0 4px 12px ${theme.palette.warning.main}30`,
-                  '&::before': {
-                    left: '100%',
-                  },
-                },
               }}
             >
               <Box sx={{ 
@@ -903,7 +948,6 @@ const Tasks: React.FC = () => {
 
             {/* Completadas */}
             <Box 
-              onClick={() => setActiveFilter(activeFilter === 'completed' ? null : 'completed')}
               sx={{ 
                 flex: { xs: '1 1 calc(50% - 0.75px)', sm: 1 },
                 display: 'flex',
@@ -913,33 +957,6 @@ const Tasks: React.FC = () => {
                 px: { xs: 0.75, sm: 1 },
                 py: { xs: 0.5, sm: 0.5 },
                 borderRadius: 2,
-                bgcolor: activeFilter === 'completed' ? `${taxiMonterricoColors.green}10` : 'transparent',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                border: activeFilter === 'completed' 
-                  ? `2px solid ${taxiMonterricoColors.green}` 
-                  : '1px solid transparent',
-                position: 'relative',
-                overflow: 'hidden',
-                '&::before': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: '-100%',
-                  width: '100%',
-                  height: '100%',
-                  background: `linear-gradient(90deg, transparent, ${taxiMonterricoColors.green}15, transparent)`,
-                  transition: 'left 0.5s ease',
-                },
-                '&:hover': {
-                  bgcolor: `${taxiMonterricoColors.green}15`,
-                  borderColor: taxiMonterricoColors.green,
-                  transform: 'translateY(-2px)',
-                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                  '&::before': {
-                    left: '100%',
-                  },
-                },
               }}
             >
               <Box sx={{ 
@@ -1053,84 +1070,52 @@ const Tasks: React.FC = () => {
                   },
                 }}
               />
-              <FormControl 
-                size="small" 
-                sx={{ 
-                  minWidth: { xs: '100%', sm: 130 },
+              <Button
+                size="small"
+                onClick={() => setShowColumnFilters(!showColumnFilters)}
+                startIcon={<FilterList sx={{ fontSize: { xs: 16, sm: 18 } }} />}
+                sx={{
+                  border: `1.5px solid ${showColumnFilters ? taxiMonterricoColors.green : theme.palette.divider}`,
+                  borderRadius: 1.5,
+                  bgcolor: showColumnFilters
+                    ? (theme.palette.mode === 'dark' ? 'rgba(76, 175, 80, 0.12)' : 'rgba(76, 175, 80, 0.08)')
+                    : (theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper),
+                  color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.primary,
+                  px: { xs: 1.25, sm: 1.5 },
+                  py: { xs: 0.75, sm: 0.875 },
                   order: { xs: 2, sm: 0 },
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  '&:hover': {
+                    borderColor: theme.palette.divider,
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
+                  },
                 }}
               >
-                <Select
-                  id="tasks-sort-select"
-                  name="tasks-sort"
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  displayEmpty
-                  sx={{
-                    borderRadius: 1.5,
-                    bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
-                    fontSize: { xs: '0.75rem', sm: '0.8125rem' },
-                    border: `1.5px solid ${theme.palette.divider}`,
-                    transition: 'all 0.2s ease',
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      border: 'none',
-                    },
-                    '&:hover': {
-                      borderColor: taxiMonterricoColors.green,
-                      boxShadow: `0 2px 8px ${taxiMonterricoColors.green}20`,
-                    },
-                    '&.Mui-focused': {
-                      borderColor: taxiMonterricoColors.green,
-                      boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                    },
-                  }}
-                >
-                  <MenuItem value="newest">Ordenar por: Más recientes</MenuItem>
-                  <MenuItem value="oldest">Ordenar por: Más antiguos</MenuItem>
-                  <MenuItem value="name">Ordenar por: Nombre A-Z</MenuItem>
-                  <MenuItem value="nameDesc">Ordenar por: Nombre Z-A</MenuItem>
-                </Select>
-              </FormControl>
-              <Tooltip title="Nueva Tarea" arrow>
-                <IconButton
-                  size="small"
-                  onClick={() => handleOpen()}
-                  sx={{
-                    background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
-                    color: "white",
-                    borderRadius: 1.5,
-                    p: { xs: 0.75, sm: 0.875 },
-                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
-                    order: { xs: 3, sm: 0 },
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: '-100%',
-                      width: '100%',
-                      height: '100%',
-                      background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
-                      transition: 'left 0.5s ease',
-                    },
-                    '&:hover': {
-                      transform: 'translateY(-2px) scale(1.05)',
-                      boxShadow: `0 8px 20px ${taxiMonterricoColors.green}50`,
-                      background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
-                      '&::before': {
-                        left: '100%',
-                      },
-                    },
-                    '&:active': {
-                      transform: 'translateY(0) scale(1)',
-                    },
-                  }}
-                >
-                  <Add sx={{ fontSize: { xs: 16, sm: 18 } }} />
-                </IconButton>
-              </Tooltip>
+                Filtro
+              </Button>
+              <Button
+                size="small"
+                onClick={() => handleOpen()}
+                startIcon={<Add sx={{ fontSize: { xs: 16, sm: 18 } }} />}
+                sx={{
+                  background: `linear-gradient(135deg, ${taxiMonterricoColors.green} 0%, ${taxiMonterricoColors.greenDark} 100%)`,
+                  color: "white",
+                  borderRadius: 1.5,
+                  px: { xs: 1.25, sm: 1.5 },
+                  py: { xs: 0.75, sm: 0.875 },
+                  boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
+                  order: { xs: 3, sm: 0 },
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  '&:hover': {
+                    background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
+                    boxShadow: `0 4px 12px ${taxiMonterricoColors.green}40`,
+                  },
+                }}
+              >
+                Nueva tarea
+              </Button>
             </Box>
           </Box>
         </Box>
@@ -1190,9 +1175,31 @@ const Tasks: React.FC = () => {
                   pr: { xs: 0.5, md: 1 }, 
                   minWidth: { xs: 180, md: 200 }, 
                   width: { xs: 'auto', md: '22%' },
-                  bgcolor: 'transparent'
+                  bgcolor: 'transparent',
+                  verticalAlign: showColumnFilters ? 'top' : 'middle',
                 }}>
-                  Nombre
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      Nombre
+                      {showColumnFilters && (
+                        <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, titulo: '' }))} sx={{ p: 0.25, opacity: columnFilters.titulo ? 1 : 0.3 }}>
+                          <FilterList sx={{ fontSize: 14 }} />
+                        </IconButton>
+                      )}
+                    </Box>
+                    {showColumnFilters && (
+                      <TextField
+                        size="small"
+                        placeholder="Filtrar..."
+                        value={columnFilters.titulo}
+                        onChange={(e) => setColumnFilters(prev => ({ ...prev, titulo: e.target.value }))}
+                        sx={{
+                          width: '100%',
+                          '& .MuiOutlinedInput-root': { height: 28, fontSize: '0.75rem', bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper },
+                        }}
+                      />
+                    )}
+                  </Box>
                 </TableCell>
                 <TableCell sx={{ 
                   fontWeight: 600, 
@@ -1203,9 +1210,48 @@ const Tasks: React.FC = () => {
                   pr: { xs: 1.5, md: 2 }, 
                   minWidth: { xs: 100, md: 120 }, 
                   width: { xs: 'auto', md: '14%' },
-                  bgcolor: 'transparent'
+                  bgcolor: 'transparent',
+                  verticalAlign: showColumnFilters ? 'top' : 'middle',
                 }}>
-                  Estado
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      Estado
+                      {showColumnFilters && (
+                        <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, estado: '' }))} sx={{ p: 0.25, opacity: columnFilters.estado ? 1 : 0.3 }}>
+                          <FilterList sx={{ fontSize: 14 }} />
+                        </IconButton>
+                      )}
+                    </Box>
+                    {showColumnFilters && (
+                      <FormControl size="small" fullWidth>
+                        <Select
+                          value={columnFilters.estado || 'todos'}
+                          onChange={(e) => {
+                            const value = e.target.value === 'todos' ? '' : e.target.value;
+                            setColumnFilters(prev => ({ ...prev, estado: value }));
+                            if (value) {
+                              setActiveFilter(null);
+                            }
+                          }}
+                          displayEmpty
+                          sx={{
+                            height: 28,
+                            fontSize: '0.75rem',
+                            bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                            '& .MuiSelect-select': {
+                              py: 0.5,
+                            },
+                          }}
+                        >
+                          <MenuItem value="todos">Todos</MenuItem>
+                          <MenuItem value="Pendiente">Pendiente</MenuItem>
+                          <MenuItem value="En Progreso">En Progreso</MenuItem>
+                          <MenuItem value="Completada">Completada</MenuItem>
+                          <MenuItem value="Cancelada">Cancelada</MenuItem>
+                        </Select>
+                      </FormControl>
+                    )}
+                  </Box>
                 </TableCell>
                 <TableCell sx={{ 
                   fontWeight: 600, 
@@ -1280,9 +1326,31 @@ const Tasks: React.FC = () => {
                   pr: { xs: 0.5, md: 1 }, 
                   minWidth: { xs: 100, md: 120 }, 
                   width: { xs: 'auto', md: '13%' },
-                  bgcolor: 'transparent'
+                  bgcolor: 'transparent',
+                  verticalAlign: showColumnFilters ? 'top' : 'middle',
                 }}>
-                  Prioridad
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      Prioridad
+                      {showColumnFilters && (
+                        <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, prioridad: '' }))} sx={{ p: 0.25, opacity: columnFilters.prioridad ? 1 : 0.3 }}>
+                          <FilterList sx={{ fontSize: 14 }} />
+                        </IconButton>
+                      )}
+                    </Box>
+                    {showColumnFilters && (
+                      <TextField
+                        size="small"
+                        placeholder="Filtrar..."
+                        value={columnFilters.prioridad}
+                        onChange={(e) => setColumnFilters(prev => ({ ...prev, prioridad: e.target.value }))}
+                        sx={{
+                          width: '100%',
+                          '& .MuiOutlinedInput-root': { height: 28, fontSize: '0.75rem', bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper },
+                        }}
+                      />
+                    )}
+                  </Box>
                 </TableCell>
                 <TableCell sx={{ 
                   fontWeight: 600, 
@@ -1404,6 +1472,20 @@ const Tasks: React.FC = () => {
                         gap: 0.25,
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
+                        px: 1,
+                        py: 0.5,
+                        borderRadius: 2.5,
+                        bgcolor: task.status === 'completed'
+                          ? 'rgba(16, 185, 129, 0.15)'
+                          : task.status === 'in progress'
+                          ? 'rgba(139, 92, 246, 0.15)'
+                          : task.status === 'pending'
+                          ? 'rgba(239, 68, 68, 0.15)'
+                          : task.status === 'cancelled'
+                          ? theme.palette.mode === 'dark' 
+                            ? 'rgba(255, 255, 255, 0.08)'
+                            : 'rgba(0, 0, 0, 0.05)'
+                          : 'rgba(245, 158, 11, 0.15)',
                         '&:hover': {
                           opacity: 0.8,
                         },
@@ -1443,7 +1525,33 @@ const Tasks: React.FC = () => {
                     </Box>
                   </TableCell>
                   <TableCell sx={{ px: { xs: 1.5, md: 2 }, minWidth: { xs: 120, md: 150 }, width: { xs: 'auto', md: '14%' } }}>
-                    {task.startDate ? (
+                    {task.status === 'completed' ? (() => {
+                      const taskDescription = (task as any).description || '';
+                      const { date: completedDate } = getCompletedDateAndTime(taskDescription);
+                      if (completedDate) {
+                        return (
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              color: theme.palette.text.primary, 
+                              fontSize: { xs: '0.75rem', md: '0.875rem' },
+                              fontWeight: 500,
+                            }}
+                          >
+                            {completedDate.toLocaleDateString('es-ES', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric'
+                            })}
+                          </Typography>
+                        );
+                      }
+                      return (
+                        <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
+                          Sin fecha
+                        </Typography>
+                      );
+                    })() : task.startDate ? (
                       <Typography 
                         variant="body2" 
                         sx={{ 
@@ -1480,7 +1588,33 @@ const Tasks: React.FC = () => {
                     )}
                   </TableCell>
                   <TableCell sx={{ pl: { xs: 1.5, md: 2 }, pr: { xs: 1.5, md: 2 }, minWidth: { xs: 140, md: 170 }, width: { xs: 'auto', md: '15%' } }}>
-                    {task.dueDate ? (
+                    {task.status === 'completed' ? (() => {
+                      const taskDescription = (task as any).description || '';
+                      const { date: completedDate } = getCompletedDateAndTime(taskDescription);
+                      if (completedDate) {
+                        return (
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              color: theme.palette.text.primary, 
+                              fontSize: { xs: '0.75rem', md: '0.875rem' },
+                              fontWeight: 500,
+                            }}
+                          >
+                            {completedDate.toLocaleDateString('es-ES', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric'
+                            })}
+                          </Typography>
+                        );
+                      }
+                      return (
+                        <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.875rem' } }}>
+                          Sin fecha
+                        </Typography>
+                      );
+                    })() : task.dueDate ? (
                       <Box>
                         <Typography 
                           variant="body2" 
@@ -1630,10 +1764,10 @@ const Tasks: React.FC = () => {
                           fontWeight: 500,
                           fontSize: { xs: '0.75rem', md: '0.8125rem' },
                           color: task.priority === 'high'
-                            ? theme.palette.error.main
+                            ? '#ff5252' // Rojo claro vibrante
                             : task.priority === 'medium'
-                            ? taxiMonterricoColors.orangeDark
-                            : taxiMonterricoColors.green,
+                            ? '#ff9800' // Naranja claro vibrante
+                            : '#4caf50', // Verde claro vibrante
                         }}
                       >
                         {getPriorityLabel(task.priority)}
@@ -1642,10 +1776,10 @@ const Tasks: React.FC = () => {
                         sx={{ 
                           fontSize: { xs: '0.875rem', md: '1rem' },
                           color: task.priority === 'high'
-                            ? theme.palette.error.main
+                            ? '#ff5252' // Rojo claro vibrante
                             : task.priority === 'medium'
-                            ? taxiMonterricoColors.orangeDark
-                            : taxiMonterricoColors.green,
+                            ? '#ff9800' // Naranja claro vibrante
+                            : '#4caf50', // Verde claro vibrante
                         }} 
                       />
                     </Box>
@@ -2046,7 +2180,7 @@ const Tasks: React.FC = () => {
                 <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Empresa</Typography>
                 <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Contacto</Typography>
                 <Box sx={{ minWidth: 0 }}>
-                  {editingTask && formData.companyId ? (
+                  {(editingTask || linkedTaskLockCompanyContact) && formData.companyId ? (
                     <TextField
                       size="small"
                       value={companies.find((c) => c.id === parseInt(formData.companyId || '0', 10))?.name || ''}
@@ -2136,6 +2270,27 @@ const Tasks: React.FC = () => {
                   )}
                 </Box>
                 <Box sx={{ minWidth: 0 }}>
+                  {(editingTask || linkedTaskLockCompanyContact) && formData.contactId ? (
+                    <TextField
+                      size="small"
+                      value={(() => {
+                        const contact = contacts.find((c) => c.id === parseInt(formData.contactId || '0', 10));
+                        return contact ? `${contact.firstName} ${contact.lastName}`.trim() : '';
+                      })()}
+                      fullWidth
+                      disabled
+                      inputProps={{ style: { fontSize: '1rem' } }}
+                      InputProps={{ 
+                        sx: { 
+                          '& input': { py: 1.05 },
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: theme.palette.mode === 'dark' ? '#3B3E48' : undefined,
+                            borderWidth: '1px',
+                          },
+                        }
+                      }}
+                    />
+                  ) : (
                   <Autocomplete
                     size="small"
                     options={contacts}
@@ -2202,6 +2357,7 @@ const Tasks: React.FC = () => {
                     }}
                     noOptionsText={contactSearchInput.trim().length > 0 ? "No se encontraron contactos" : null}
                   />
+                  )}
                 </Box>
                 {users.length > 0 && (
                   <>
@@ -2339,95 +2495,97 @@ const Tasks: React.FC = () => {
           {completeModalTask?.title ?? 'Completar tarea'}
         </DialogTitle>
         <DialogContent sx={{ ...pageStyles.dialogContent, pt: 5, pb: 3, overflow: 'visible' }}>
-          {!completeModalViewOnly && (
-            <Box sx={{ mb: 2, mt: 1 }}>
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 1, fontWeight: 500 }}>
-                Fecha completa
-              </Typography>
-              <TextField
-                type="date"
-                value={completeDate}
-                onChange={(e) => setCompleteDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end" sx={{ pointerEvents: 'none', mr: 0.5 }}>
-                      <CalendarToday sx={{ color: theme.palette.text.secondary, fontSize: 20 }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  mb: 2,
-                  '& .MuiOutlinedInput-root': {
+          <Box sx={{ mb: 2, mt: 1 }}>
+            <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 1, fontWeight: 500 }}>
+              Fecha completa
+            </Typography>
+            <TextField
+              type="date"
+              value={completeDate}
+              onChange={(e) => setCompleteDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+              disabled={completeModalViewOnly}
+              InputProps={{
+                readOnly: completeModalViewOnly,
+                endAdornment: (
+                  <InputAdornment position="end" sx={{ pointerEvents: 'none', mr: 0.5 }}>
+                    <CalendarToday sx={{ color: theme.palette.text.secondary, fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                mb: 2,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  '& fieldset': {
+                    border: '2px solid',
+                    borderColor: theme.palette.divider,
                     borderRadius: 2,
-                    '& fieldset': {
-                      border: '2px solid',
-                      borderColor: theme.palette.divider,
-                      borderRadius: 2,
-                    },
-                    '&:hover fieldset': {
-                      borderColor: theme.palette.divider,
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: theme.palette.primary.main,
-                      borderWidth: '2px',
-                    },
                   },
-                  '& input::-webkit-calendar-picker-indicator': {
-                    opacity: 0,
-                    position: 'absolute',
-                    right: 0,
-                    width: '100%',
-                    height: '100%',
-                    cursor: 'pointer',
+                  '&:hover fieldset': {
+                    borderColor: theme.palette.divider,
                   },
-                }}
-              />
-              <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 1, fontWeight: 500 }}>
-                Hora
-              </Typography>
-              <TextField
-                type="time"
-                value={completeTime}
-                onChange={(e) => setCompleteTime(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                fullWidth
-                InputProps={{
-                  endAdornment: (
-                    <InputAdornment position="end" sx={{ pointerEvents: 'none', mr: 0.5 }}>
-                      <Schedule sx={{ color: theme.palette.text.secondary, fontSize: 20 }} />
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
+                  '&.Mui-focused fieldset': {
+                    borderColor: theme.palette.primary.main,
+                    borderWidth: '2px',
+                  },
+                },
+                '& input::-webkit-calendar-picker-indicator': {
+                  opacity: completeModalViewOnly ? 0 : 0,
+                  position: 'absolute',
+                  right: 0,
+                  width: '100%',
+                  height: '100%',
+                  cursor: completeModalViewOnly ? 'default' : 'pointer',
+                },
+              }}
+            />
+            <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 1, fontWeight: 500 }}>
+              Hora
+            </Typography>
+            <TextField
+              type="time"
+              value={completeTime}
+              onChange={(e) => setCompleteTime(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              fullWidth
+              disabled={completeModalViewOnly}
+              InputProps={{
+                readOnly: completeModalViewOnly,
+                endAdornment: (
+                  <InputAdornment position="end" sx={{ pointerEvents: 'none', mr: 0.5 }}>
+                    <Schedule sx={{ color: theme.palette.text.secondary, fontSize: 20 }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 2,
+                  '& fieldset': {
+                    border: '2px solid',
+                    borderColor: theme.palette.divider,
                     borderRadius: 2,
-                    '& fieldset': {
-                      border: '2px solid',
-                      borderColor: theme.palette.divider,
-                      borderRadius: 2,
-                    },
-                    '&:hover fieldset': {
-                      borderColor: theme.palette.divider,
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: theme.palette.primary.main,
-                      borderWidth: '2px',
-                    },
                   },
-                  '& input::-webkit-calendar-picker-indicator': {
-                    opacity: 0,
-                    position: 'absolute',
-                    right: 0,
-                    width: '100%',
-                    height: '100%',
-                    cursor: 'pointer',
+                  '&:hover fieldset': {
+                    borderColor: theme.palette.divider,
                   },
-                }}
-              />
-            </Box>
-          )}
+                  '&.Mui-focused fieldset': {
+                    borderColor: theme.palette.primary.main,
+                    borderWidth: '2px',
+                  },
+                },
+                '& input::-webkit-calendar-picker-indicator': {
+                  opacity: 0,
+                  position: 'absolute',
+                  right: 0,
+                  width: '100%',
+                  height: '100%',
+                  cursor: completeModalViewOnly ? 'default' : 'pointer',
+                },
+              }}
+            />
+          </Box>
           <Typography variant="body2" sx={{ color: theme.palette.text.secondary, mb: 1, fontWeight: 500 }}>
             Observaciones
           </Typography>

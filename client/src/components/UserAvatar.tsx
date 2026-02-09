@@ -1,10 +1,13 @@
 import React from 'react';
 import { Avatar, AvatarProps, useTheme } from '@mui/material';
+import { getAvatarColor } from '../utils/avatarColors';
 
 interface UserAvatarProps extends Omit<AvatarProps, 'src' | 'variant'> {
   firstName?: string;
   lastName?: string;
   avatar?: string | null;
+  /** Si se pasa, se usa para elegir el color (p. ej. username o id) y que cada usuario tenga color distinto */
+  colorSeed?: string;
   size?: 'small' | 'medium' | 'large' | 'xlarge' | number;
   variant?: 'default' | 'header' | 'minimal';
 }
@@ -13,6 +16,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
   firstName = '',
   lastName = '',
   avatar,
+  colorSeed,
   size = 'medium',
   variant = 'default',
   sx,
@@ -25,39 +29,6 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
     return `${first?.[0] || ''}${last?.[0] || ''}`.toUpperCase();
   };
 
-  // Función para generar color desde string
-  const stringToColor = (string: string) => {
-    let hash = 0;
-    let i;
-    for (i = 0; i < string.length; i += 1) {
-      hash = string.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    let color = '#';
-    for (i = 0; i < 3; i += 1) {
-      const value = (hash >> (i * 8)) & 0xff;
-      color += `00${value.toString(16)}`.substr(-2);
-    }
-    return color;
-  };
-
-  // Función para generar gradiente desde string
-  const stringToGradient = (string: string, isDarkMode: boolean) => {
-    const baseColor = stringToColor(string);
-    // Convertir hex a RGB
-    const r = parseInt(baseColor.slice(1, 3), 16);
-    const g = parseInt(baseColor.slice(3, 5), 16);
-    const b = parseInt(baseColor.slice(5, 7), 16);
-    
-    // Ajustar la intensidad del degradado según el modo
-    const darkenAmount = isDarkMode ? 40 : 20;
-    
-    // Crear un color más oscuro para el degradado
-    const darkerR = Math.max(0, r - darkenAmount);
-    const darkerG = Math.max(0, g - darkenAmount);
-    const darkerB = Math.max(0, b - darkenAmount);
-    
-    return `linear-gradient(135deg, ${baseColor} 0%, rgb(${darkerR}, ${darkerG}, ${darkerB}) 100%)`;
-  };
 
   // Determinar dimensiones según el tamaño
   const getSizeStyles = () => {
@@ -103,18 +74,19 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
     }
   };
 
-  // Determinar estilos según la variante
+  // Determinar estilos según la variante (color sólido por persona, iniciales en blanco)
   const getVariantStyles = () => {
     const sizeStyles = getSizeStyles();
     const isDarkMode = theme.palette.mode === 'dark';
     const nameString = `${firstName || ''}${lastName || ''}` || 'user';
+    const colorKey = (colorSeed != null && colorSeed !== '') ? colorSeed : nameString;
+    const solidColor = getAvatarColor(colorKey);
 
     switch (variant) {
       case 'header':
         return {
           ...sizeStyles,
-          bgcolor: avatar ? 'transparent' : undefined,
-          background: !avatar ? stringToGradient(nameString, isDarkMode) : undefined,
+          bgcolor: avatar ? 'transparent' : solidColor,
           color: theme.palette.common.white,
           fontWeight: 600,
           border: `1px solid ${theme.palette.divider}`,
@@ -122,8 +94,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
       case 'minimal':
         return {
           ...sizeStyles,
-          bgcolor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.08)',
-          background: !avatar ? stringToGradient(nameString, isDarkMode) : undefined,
+          bgcolor: avatar ? 'transparent' : solidColor,
           color: theme.palette.common.white,
           fontWeight: 600,
           border: `1px solid ${theme.palette.divider}`,
@@ -132,13 +103,10 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
       default:
         return {
           ...sizeStyles,
-          background: !avatar ? stringToGradient(nameString, isDarkMode) : undefined,
+          bgcolor: avatar ? 'transparent' : solidColor,
           color: theme.palette.common.white,
           fontWeight: 600,
-          border: `2px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)'}`,
-          boxShadow: isDarkMode
-            ? '0 2px 8px rgba(0, 0, 0, 0.3)'
-            : '0 2px 8px rgba(0, 0, 0, 0.1)',
+          border: `1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.06)'}`,
         };
     }
   };

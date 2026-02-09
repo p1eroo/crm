@@ -284,12 +284,13 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                 pt: 6,
                 pb: 2.5,
                 mb: 2,
-                bgcolor: theme.palette.background.paper,
-                border: "none",
+                bgcolor: theme.palette.mode === "dark" ? "#1c252e !important" : theme.palette.background.paper,
+                backgroundColor: theme.palette.mode === "dark" ? "#1c252e !important" : theme.palette.background.paper,
+                border: "none !important",
                 boxShadow:
                   theme.palette.mode === "dark"
-                    ? "0 2px 8px rgba(0,0,0,0.3)"
-                    : "0 2px 8px rgba(0,0,0,0.1)",
+                    ? "0 2px 8px rgba(0,0,0,0.3) !important"
+                    : "0 2px 8px rgba(0,0,0,0.1) !important",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",

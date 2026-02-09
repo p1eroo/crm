@@ -22,6 +22,8 @@ import api from "../../config/api";
 import { taxiMonterricoColors } from "../../theme/colors";
 import { companyLabels } from "../../constants/companyLabels";
 import { pageStyles } from "../../theme/styles";
+import { FormDrawer } from "../FormDrawer";
+import { DealFormContent, getInitialDealFormData, type DealFormData } from "../DealFormContent";
 
 interface User {
   id: number;
@@ -43,6 +45,8 @@ interface DealModalProps {
   excludedDealIds?: number[]; // IDs de negocios ya asociados (para filtrarlos)
   getStageLabel?: (stage: string) => string;
   initialTab?: "create" | "existing"; // Tab inicial
+  /** Si es true, crear/agregar negocio se muestra en FormDrawer (panel lateral) en lugar del diálogo */
+  useDrawerForCreate?: boolean;
 }
 
 const DealModal: React.FC<DealModalProps> = ({
@@ -58,6 +62,7 @@ const DealModal: React.FC<DealModalProps> = ({
   excludedDealIds = [],
   getStageLabel,
   initialTab = "create",
+  useDrawerForCreate = false,
 }) => {
   const theme = useTheme();
   const [dealDialogTab, setDealDialogTab] = useState<"create" | "existing">(
@@ -72,7 +77,7 @@ const DealModal: React.FC<DealModalProps> = ({
   const [saving, setSaving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 10;
   
   // Estados para búsqueda asíncrona de empresas y contactos
   const [companySearch, setCompanySearch] = useState("");
@@ -81,6 +86,10 @@ const DealModal: React.FC<DealModalProps> = ({
   const [contactOptions, setContactOptions] = useState<any[]>([]);
   const [loadingCompanies, setLoadingCompanies] = useState(false);
   const [loadingContacts, setLoadingContacts] = useState(false);
+  const drawerDealFormDataRef = React.useRef<{ formData: DealFormData; setFormData: React.Dispatch<React.SetStateAction<DealFormData>> }>({
+    formData: getInitialDealFormData(null),
+    setFormData: () => {},
+  });
   const [dealFormData, setDealFormData] = useState({
     name: "",
     amount: "",
@@ -269,9 +278,9 @@ const DealModal: React.FC<DealModalProps> = ({
     return () => clearTimeout(timer);
   }, [contactSearch, searchContacts]);
 
-  // Cargar empresa por defecto si existe
+  // Cargar empresa por defecto si existe (para que aparezca en el drawer/diálogo al crear negocio desde detalle de empresa)
   useEffect(() => {
-    if (open && defaultCompanyId && dealFormData.companyId === defaultCompanyId.toString()) {
+    if (open && defaultCompanyId) {
       api.get(`/companies/${defaultCompanyId}`)
         .then((response) => {
           if (response.data) {
@@ -280,7 +289,7 @@ const DealModal: React.FC<DealModalProps> = ({
         })
         .catch(console.error);
     }
-  }, [open, defaultCompanyId, dealFormData.companyId]);
+  }, [open, defaultCompanyId]);
 
   // Cargar contacto por defecto si existe
   useEffect(() => {
@@ -295,15 +304,16 @@ const DealModal: React.FC<DealModalProps> = ({
     }
   }, [open, defaultContactId, dealFormData.contactId]);
 
-  const handleCreateDeal = async () => {
+  const handleCreateDeal = async (dataOverride?: DealFormData) => {
+    const source = dataOverride ?? dealFormData;
     try {
       setSaving(true);
       const dealData = {
-        ...dealFormData,
-        amount: dealFormData.amount ? parseFloat(dealFormData.amount) : 0,
-        companyId: dealFormData.companyId ? parseInt(dealFormData.companyId) : null,
-        contactId: dealFormData.contactId ? parseInt(dealFormData.contactId) : null,
-        ownerId: dealFormData.ownerId || user?.id,
+        ...source,
+        amount: source.amount ? parseFloat(String(source.amount)) : 0,
+        companyId: source.companyId ? parseInt(String(source.companyId)) : null,
+        contactId: source.contactId ? parseInt(String(source.contactId)) : null,
+        ownerId: user?.id,
       };
       const response = await api.post("/deals", dealData);
       
@@ -418,37 +428,13 @@ const DealModal: React.FC<DealModalProps> = ({
     }
   };
 
-  return (
-    <Dialog
-      open={open}
-      onClose={handleClose}
-      maxWidth="sm"
-      fullWidth
-    >
-      <DialogContent sx={{ pt: 2 }}>
-        <Box sx={{ 
-          borderBottom: 1, 
-          borderColor: "divider", 
-          mb: 2,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}>
-          <Tabs
-            value={dealDialogTab === "create" ? 0 : 1}
-            onChange={(e, newValue) =>
-              setDealDialogTab(newValue === 0 ? "create" : "existing")
-            }
-          >
-            <Tab label={companyLabels.createNew} />
-            <Tab label={companyLabels.addExisting} />
-          </Tabs>
-          <IconButton onClick={handleClose} size="small">
-            <Close />
-          </IconButton>
-        </Box>
+  const handleCreateDealFromRef = useCallback(async () => {
+    const formData = drawerDealFormDataRef.current?.formData;
+    if (!formData || !formData.name?.trim() || !formData.amount?.trim()) return;
+    await handleCreateDeal(formData);
+  }, [handleCreateDeal]);
 
-        {dealDialogTab === "create" ? (
+  const createFormContent = (
           <Box
             sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}
           >
@@ -690,7 +676,9 @@ const DealModal: React.FC<DealModalProps> = ({
               />
             </Box>
           </Box>
-        ) : (
+  );
+
+  const existingFormContent = (
           <Box sx={{ mt: 1 }}>
             <TextField
               size="small"
@@ -707,7 +695,7 @@ const DealModal: React.FC<DealModalProps> = ({
                 ),
               }}
             />
-            <Box>
+            <Box sx={{ maxHeight: 680, overflowY: "auto" }}>
               {loadingAllDeals ? (
                 <Box
                   sx={{ display: "flex", justifyContent: "center", py: 4 }}
@@ -881,15 +869,97 @@ const DealModal: React.FC<DealModalProps> = ({
               )}
             </Box>
           </Box>
-        )}
+  );
+
+  if (useDrawerForCreate && open && dealDialogTab === "create") {
+    const drawerInitialData: DealFormData = {
+      ...getInitialDealFormData(null),
+      companyId: defaultCompanyId?.toString() || "",
+      contactId: defaultContactId?.toString() || "",
+    };
+    return (
+      <FormDrawer
+        open={open}
+        onClose={handleClose}
+        title="Nuevo Negocio"
+        onSubmit={handleCreateDealFromRef}
+        submitLabel={saving ? "Guardando..." : "Crear"}
+        submitDisabled={saving}
+        variant="panel"
+      >
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          <DealFormContent
+            key="drawer-create-deal"
+            initialData={drawerInitialData}
+            formDataRef={drawerDealFormDataRef}
+            theme={theme}
+            companies={companyOptions}
+            companyOptions={companyOptions}
+            companySearch={companySearch}
+            setCompanySearch={setCompanySearch}
+            loadingCompanies={loadingCompanies}
+            contacts={contactOptions}
+            contactSearchInput={contactSearch}
+            setContactSearchInput={setContactSearch}
+            companyLocked={!!defaultCompanyId}
+          />
+        </Box>
+      </FormDrawer>
+    );
+  }
+
+  if (useDrawerForCreate && open && dealDialogTab === "existing") {
+    return (
+      <FormDrawer
+        open={open}
+        onClose={handleClose}
+        title="Agregar negocio existente"
+        onSubmit={handleAddExistingDeals}
+        submitLabel={saving ? "Guardando..." : "Agregar"}
+        submitDisabled={saving || selectedExistingDeals.filter((id) => !excludedDealIds.includes(id)).length === 0}
+        variant="panel"
+      >
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 0 }}>
+          {existingFormContent}
+        </Box>
+      </FormDrawer>
+    );
+  }
+
+  return (
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      maxWidth="sm"
+      fullWidth
+    >
+      <DialogContent sx={{ pt: 2 }}>
+        <Box sx={{ 
+          borderBottom: 1, 
+          borderColor: "divider", 
+          mb: 2,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}>
+          <Tabs
+            value={dealDialogTab === "create" ? 0 : 1}
+            onChange={(e, newValue) =>
+              setDealDialogTab(newValue === 0 ? "create" : "existing")
+            }
+          >
+            <Tab label={companyLabels.createNew} />
+            <Tab label={companyLabels.addExisting} />
+          </Tabs>
+          <IconButton onClick={handleClose} size="small">
+            <Close />
+          </IconButton>
+        </Box>
+        {dealDialogTab === "create" ? createFormContent : existingFormContent}
       </DialogContent>
       <DialogActions sx={pageStyles.dialogActions}>
         <Button
-          onClick={
-            dealDialogTab === "create"
-              ? handleCreateDeal
-              : handleAddExistingDeals
-          }
+          onClick={dealDialogTab === "create" ? () => handleCreateDeal() : handleAddExistingDeals}
           variant="contained"
           disabled={
             saving ||

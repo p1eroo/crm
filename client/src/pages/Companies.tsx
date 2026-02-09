@@ -43,6 +43,8 @@ import { Building2 } from "lucide-react";
 import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from '../components/UnifiedTable';
 import EntityPreviewDrawer from '../components/EntityPreviewDrawer';
 import { useAuth } from '../context/AuthContext';
+import UserAvatar from '../components/UserAvatar';
+import { CompanyFormContent, getInitialFormData, type CompanyFormData } from '../components/CompanyFormContent';
 
 interface Company {
   id: number;
@@ -66,288 +68,6 @@ interface Company {
   Owner?: { firstName: string; lastName: string };
 }
 
-const getInitialFormData = (editingCompany: Company | null) => {
-  if (editingCompany) {
-    return {
-      name: editingCompany.name,
-      domain: editingCompany.domain || '',
-      linkedin: (editingCompany as any).linkedin || '',
-      companyname: editingCompany.companyname || '',
-      phone: editingCompany.phone || '',
-      email: (editingCompany as any).email || '',
-      leadSource: (editingCompany as any).leadSource || '',
-      lifecycleStage: editingCompany.lifecycleStage,
-      estimatedRevenue: (editingCompany as any).estimatedRevenue || '',
-      ruc: editingCompany.ruc || '',
-      address: editingCompany.address || '',
-      city: editingCompany.city || '',
-      state: editingCompany.state || '',
-      country: editingCompany.country || '',
-      isRecoveredClient: (editingCompany as any).isRecoveredClient || false,
-      ownerId: editingCompany.ownerId?.toString() || '',
-    };
-  }
-  return {
-    name: '', domain: '', linkedin: '', companyname: '', phone: '', email: '',
-    leadSource: '', lifecycleStage: 'lead', estimatedRevenue: '', ruc: '',
-    address: '', city: '', state: '', country: '', isRecoveredClient: false, ownerId: '',
-  };
-};
-
-type CompanyFormContentProps = {
-  initialData: ReturnType<typeof getInitialFormData>;
-  formDataRef: React.MutableRefObject<{ formData: ReturnType<typeof getInitialFormData>; setFormData: React.Dispatch<React.SetStateAction<ReturnType<typeof getInitialFormData>>> }>;
-  user: any;
-  users: any[];
-  editingCompany: Company | null;
-  theme: Theme;
-  rucError: string;
-  nameError: string;
-  rucValidationError: string;
-  loadingRuc: boolean;
-  setRucError: (v: string) => void;
-  setNameError: (v: string) => void;
-  setRucValidationError: (v: string) => void;
-  setLoadingRuc: (v: boolean) => void;
-  onRucChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, formData: ReturnType<typeof getInitialFormData>) => void;
-  onCompanyNameChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  onNameChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, formData: ReturnType<typeof getInitialFormData>) => void;
-  onPhoneChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  onAddressChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  onCityChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  onStateChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  onCountryChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  onDomainChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-  onSearchRuc: () => void;
-  onFormDataChange: (updates: Partial<ReturnType<typeof getInitialFormData>>) => void;
-};
-
-const CompanyFormContent: React.FC<CompanyFormContentProps> = (props) => {
-  const {
-    initialData,
-    formDataRef,
-    user,
-    users,
-    editingCompany,
-    theme,
-    rucError,
-    nameError,
-    rucValidationError,
-    loadingRuc,
-    setRucError,
-    setNameError,
-    setRucValidationError,
-    setLoadingRuc,
-    onRucChange,
-    onCompanyNameChange,
-    onNameChange,
-    onPhoneChange,
-    onAddressChange,
-    onCityChange,
-    onStateChange,
-    onCountryChange,
-    onDomainChange,
-    onSearchRuc,
-    onFormDataChange,
-  } = props;
-  const [formData, setFormData] = useState(initialData);
-  useEffect(() => {
-    formDataRef.current = { formData, setFormData };
-  });
-  return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 4, rowGap: 0.5, alignItems: 'start' }}>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
-          RUC <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
-        </Typography>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>Razón social</Typography>
-        <Box sx={{ minWidth: 0 }}>
-          <TextField
-            size="small"
-            value={formData.ruc}
-            onChange={(e) => onRucChange(e, formData)}
-            error={!!rucError || !!rucValidationError}
-            helperText={rucError || rucValidationError}
-            inputProps={{ maxLength: 11, style: { fontSize: '1rem' } }}
-            InputProps={{
-              sx: { '& input': { py: 1.05 } },
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    onClick={onSearchRuc}
-                    disabled={loadingRuc || !formData.ruc || formData.ruc.length < 11}
-                    sx={{ color: taxiMonterricoColors.green, '&:hover': { bgcolor: `${taxiMonterricoColors.green}15` }, '&.Mui-disabled': { color: theme.palette.text.disabled } }}
-                  >
-                    {loadingRuc ? <CircularProgress size={20} /> : <Search />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-            fullWidth
-          />
-        </Box>
-        <Box sx={{ minWidth: 0 }}>
-          <TextField size="small" value={formData.companyname} onChange={onCompanyNameChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
-        </Box>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>
-          Nombre comercial <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
-        </Typography>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Teléfono</Typography>
-        <Box sx={{ minWidth: 0 }}>
-          <TextField size="small" value={formData.name} onChange={(e) => onNameChange(e, formData)} error={!!nameError} helperText={nameError} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
-        </Box>
-        <Box sx={{ minWidth: 0 }}>
-          <TextField size="small" value={formData.phone} onChange={onPhoneChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
-        </Box>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Distrito</Typography>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Provincia</Typography>
-        <Box sx={{ minWidth: 0 }}>
-          <TextField size="small" value={formData.city} onChange={onCityChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
-        </Box>
-        <Box sx={{ minWidth: 0 }}>
-          <TextField size="small" value={formData.state} onChange={onStateChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
-        </Box>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Departamento</Typography>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Dirección</Typography>
-        <Box sx={{ minWidth: 0 }}>
-          <TextField size="small" value={formData.country} onChange={onCountryChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
-        </Box>
-        <Box sx={{ minWidth: 0 }}>
-          <TextField size="small" value={formData.address} onChange={onAddressChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
-        </Box>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Dominio</Typography>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>LinkedIn</Typography>
-        <Box sx={{ minWidth: 0 }}>
-          <TextField size="small" value={formData.domain} onChange={onDomainChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
-        </Box>
-        <Box sx={{ minWidth: 0 }}>
-          <TextField size="small" value={formData.linkedin} onChange={(e) => onFormDataChange({ linkedin: e.target.value })} placeholder="https://www.linkedin.com/company/..." fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
-        </Box>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Correo</Typography>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Origen de lead</Typography>
-        <Box sx={{ minWidth: 0 }}>
-          <TextField size="small" type="email" value={formData.email} onChange={(e) => onFormDataChange({ email: e.target.value })} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
-        </Box>
-        <Box sx={{ minWidth: 0 }}>
-          <TextField
-            select
-            size="small"
-            value={formData.leadSource || ''}
-            onChange={(e) => onFormDataChange({ leadSource: e.target.value })}
-            fullWidth
-            inputProps={{ style: { fontSize: '1rem' } }}
-            InputProps={{ sx: { '& input': { py: 1.05 } } }}
-            SelectProps={{ MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
-          >
-            <MenuItem value="">-- Seleccionar --</MenuItem>
-            <MenuItem value="referido">Referido</MenuItem>
-            <MenuItem value="base">Base</MenuItem>
-            <MenuItem value="entorno">Entorno</MenuItem>
-            <MenuItem value="feria">Feria</MenuItem>
-            <MenuItem value="masivo">Masivo</MenuItem>
-          </TextField>
-        </Box>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Etapa del Ciclo de Vida</Typography>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Facturación</Typography>
-        <Box sx={{ minWidth: 0 }}>
-          <TextField
-            select
-            size="small"
-            value={formData.lifecycleStage}
-            onChange={(e) => onFormDataChange({ lifecycleStage: e.target.value })}
-            fullWidth
-            inputProps={{ style: { fontSize: '1rem' } }}
-            InputProps={{ sx: { '& input': { py: 1.05 } } }}
-            SelectProps={{ MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
-          >
-            <MenuItem value="lead_inactivo">Lead Inactivo</MenuItem>
-            <MenuItem value="cliente_perdido">Cliente perdido</MenuItem>
-            <MenuItem value="cierre_perdido">Cierre Perdido</MenuItem>
-            <MenuItem value="lead">Lead</MenuItem>
-            <MenuItem value="contacto">Contacto</MenuItem>
-            <MenuItem value="reunion_agendada">Reunión Agendada</MenuItem>
-            <MenuItem value="reunion_efectiva">Reunión Efectiva</MenuItem>
-            <MenuItem value="propuesta_economica">Propuesta Económica</MenuItem>
-            <MenuItem value="negociacion">Negociación</MenuItem>
-            <MenuItem value="licitacion">Licitación</MenuItem>
-            <MenuItem value="licitacion_etapa_final">Licitación Etapa Final</MenuItem>
-            <MenuItem value="cierre_ganado">Cierre Ganado</MenuItem>
-            <MenuItem value="firma_contrato">Firma de Contrato</MenuItem>
-            <MenuItem value="activo">Activo</MenuItem>
-          </TextField>
-        </Box>
-        <Box sx={{ minWidth: 0 }}>
-          <TextField
-            size="small"
-            type="number"
-            value={formData.estimatedRevenue}
-            onChange={(e) => onFormDataChange({ estimatedRevenue: e.target.value })}
-            fullWidth
-            inputProps={{ style: { fontSize: '1rem' } }}
-            InputProps={{ startAdornment: <InputAdornment position="start">S/</InputAdornment>, sx: { '& input': { py: 1.05 } } }}
-          />
-        </Box>
-        {(user?.role === 'admin' || user?.role === 'jefe_comercial') ? (
-          <>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Propietario</Typography>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Cliente Recuperado</Typography>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField
-                select
-                size="small"
-                value={formData.ownerId || ''}
-                onChange={(e) => onFormDataChange({ ownerId: e.target.value })}
-                fullWidth
-                inputProps={{ style: { fontSize: '1rem' } }}
-                InputProps={{ sx: { '& input': { py: 1.05 } } }}
-                SelectProps={{ MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
-              >
-                <MenuItem value="">Sin asignar</MenuItem>
-                {users.filter((u) => u.role === 'user').map((userOption) => (
-                  <MenuItem key={userOption.id} value={userOption.id.toString()}>{userOption.firstName} {userOption.lastName}</MenuItem>
-                ))}
-              </TextField>
-            </Box>
-            <Box sx={{ minWidth: 0 }}>
-              <TextField
-                select
-                size="small"
-                value={formData.isRecoveredClient ? 'si' : 'no'}
-                onChange={(e) => onFormDataChange({ isRecoveredClient: e.target.value === 'si' })}
-                fullWidth
-                inputProps={{ style: { fontSize: '1rem' } }}
-                InputProps={{ sx: { '& input': { py: 1.05 } } }}
-                SelectProps={{ MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
-              >
-                <MenuItem value="no">No</MenuItem>
-                <MenuItem value="si">Sí</MenuItem>
-              </TextField>
-            </Box>
-          </>
-        ) : (
-          <>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5, gridColumn: '1 / -1' }}>Cliente Recuperado</Typography>
-            <Box sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
-              <TextField
-                select
-                size="small"
-                value={formData.isRecoveredClient ? 'si' : 'no'}
-                onChange={(e) => onFormDataChange({ isRecoveredClient: e.target.value === 'si' })}
-                fullWidth
-                inputProps={{ style: { fontSize: '1rem' } }}
-                InputProps={{ sx: { '& input': { py: 1.05 } } }}
-                SelectProps={{ MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } } }}
-              >
-                <MenuItem value="no">No</MenuItem>
-                <MenuItem value="si">Sí</MenuItem>
-              </TextField>
-            </Box>
-          </>
-        )}
-      </Box>
-    </Box>
-  );
-};
 
 const Companies: React.FC = () => {
   const navigate = useNavigate();
@@ -361,7 +81,7 @@ const Companies: React.FC = () => {
   const [search] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [totalCompanies, setTotalCompanies] = useState(0);
-  const companyFormDataRef = useRef<{ formData: ReturnType<typeof getInitialFormData>; setFormData: React.Dispatch<React.SetStateAction<ReturnType<typeof getInitialFormData>>> }>({
+  const companyFormDataRef = useRef<{ formData: CompanyFormData; setFormData: React.Dispatch<React.SetStateAction<CompanyFormData>> }>({
     formData: getInitialFormData(null),
     setFormData: () => {},
   });
@@ -603,7 +323,7 @@ const Companies: React.FC = () => {
   }, [validateCompanyName, validateCompanyRuc]);
 
   // Handlers que actualizan el estado del formulario en el hijo (vía ref) para no re-renderizar toda la página al escribir
-  const handleRucChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, formData: ReturnType<typeof getInitialFormData>) => {
+  const handleRucChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, formData: CompanyFormData) => {
     const value = e.target.value.replace(/\D/g, '');
     const limitedValue = value.slice(0, 11);
     companyFormDataRef.current?.setFormData((prev) => ({ ...prev, ruc: limitedValue }));
@@ -621,7 +341,7 @@ const Companies: React.FC = () => {
     companyFormDataRef.current?.setFormData((prev) => ({ ...prev, companyname: e.target.value }));
   }, []);
 
-  const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, formData: ReturnType<typeof getInitialFormData>) => {
+  const handleNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, formData: CompanyFormData) => {
     const newName = e.target.value;
     companyFormDataRef.current?.setFormData((prev) => ({ ...prev, name: newName }));
     if (!newName.trim()) setNameError('');
@@ -652,7 +372,7 @@ const Companies: React.FC = () => {
     companyFormDataRef.current?.setFormData((prev) => ({ ...prev, domain: e.target.value }));
   }, []);
 
-  const handleFormDataChange = useCallback((updates: Partial<ReturnType<typeof getInitialFormData>>) => {
+  const handleFormDataChange = useCallback((updates: Partial<CompanyFormData>) => {
     companyFormDataRef.current?.setFormData((prev) => ({ ...prev, ...updates }));
   }, []);
 
@@ -2108,14 +1828,12 @@ const Companies: React.FC = () => {
                         bgcolor: 'transparent',
                         color: theme.palette.text.secondary,
                         p: { xs: 0.75, sm: 0.875 },
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         '&:hover': {
                           borderColor: taxiMonterricoColors.green,
                           bgcolor: theme.palette.mode === 'dark' 
                             ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.1)
                             : hexToRgba(taxiMonterricoColors.greenEmerald, 0.05),
                           color: taxiMonterricoColors.green,
-                          transform: 'translateY(-2px)',
                           boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
                         },
                         '&:disabled': {
@@ -2137,14 +1855,12 @@ const Companies: React.FC = () => {
                         bgcolor: 'transparent',
                         color: theme.palette.text.secondary,
                         p: { xs: 0.75, sm: 0.875 },
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         '&:hover': {
                           borderColor: taxiMonterricoColors.green,
                           bgcolor: theme.palette.mode === 'dark' 
                             ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.1)
                             : hexToRgba(taxiMonterricoColors.greenEmerald, 0.05),
                           color: taxiMonterricoColors.green,
-                          transform: 'translateY(-2px)',
                           boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
                         },
                       }}
@@ -2165,7 +1881,6 @@ const Companies: React.FC = () => {
                         : 'transparent',
                       color: showColumnFilters ? taxiMonterricoColors.green : theme.palette.text.secondary,
                       p: { xs: 0.75, sm: 0.875 },
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                       order: { xs: 5, sm: 0 },
                       '&:hover': {
                         borderColor: taxiMonterricoColors.green,
@@ -2173,7 +1888,6 @@ const Companies: React.FC = () => {
                           ? hexToRgba(taxiMonterricoColors.greenEmerald, 0.2)
                           : hexToRgba(taxiMonterricoColors.greenEmerald, 0.1),
                         color: taxiMonterricoColors.green,
-                        transform: 'translateY(-2px)',
                         boxShadow: `0 4px 12px ${taxiMonterricoColors.green}20`,
                       },
                     }}
@@ -2192,29 +1906,9 @@ const Companies: React.FC = () => {
                       p: { xs: 0.75, sm: 0.875 },
                       boxShadow: `0 4px 12px ${taxiMonterricoColors.green}30`,
                       order: { xs: 2, sm: 0 },
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      '&::before': {
-                        content: '""',
-                        position: 'absolute',
-                        top: 0,
-                        left: '-100%',
-                        width: '100%',
-                        height: '100%',
-                        background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)',
-                        transition: 'left 0.5s ease',
-                      },
                       '&:hover': {
-                        transform: 'translateY(-2px) scale(1.05)',
                         boxShadow: `0 8px 20px ${taxiMonterricoColors.green}50`,
                         background: `linear-gradient(135deg, ${taxiMonterricoColors.greenLight} 0%, ${taxiMonterricoColors.green} 100%)`,
-                        '&::before': {
-                          left: '100%',
-                        },
-                      },
-                      '&:active': {
-                        transform: 'translateY(0) scale(1)',
                       },
                     }}
                   >
@@ -2604,17 +2298,12 @@ const Companies: React.FC = () => {
                 <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
                   {company.Owner ? (
                     <Tooltip title={`${company.Owner.firstName} ${company.Owner.lastName}`} arrow>
-                      <Avatar
-                        sx={{
-                          width: 32,
-                          height: 32,
-                          bgcolor: taxiMonterricoColors.green,
-                          fontSize: '0.75rem',
-                          color: 'white',
-                        }}
-                      >
-                        {company.Owner.firstName?.[0] || ''}{company.Owner.lastName?.[0] || ''}
-                      </Avatar>
+                      <UserAvatar
+                        firstName={company.Owner.firstName}
+                        lastName={company.Owner.lastName}
+                        colorSeed={company.ownerId?.toString() || `${company.Owner.firstName}${company.Owner.lastName}`}
+                        size={32}
+                      />
                     </Tooltip>
                   ) : (
                     <Typography 
@@ -3348,16 +3037,14 @@ const Companies: React.FC = () => {
                         <Chip
                           key={userItem.id}
                           avatar={
-                            <Avatar
-                              sx={{
-                                width: 20,
-                                height: 20,
-                                fontSize: '0.625rem',
-                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)',
-                              }}
-                            >
-                              {userItem.firstName?.[0]?.toUpperCase() || userItem.email?.[0]?.toUpperCase() || 'U'}
-                            </Avatar>
+                            <UserAvatar
+                              firstName={userItem.firstName}
+                              lastName={userItem.lastName}
+                              avatar={userItem.avatar}
+                              colorSeed={userItem.id?.toString() || userItem.email || `${userItem.firstName}${userItem.lastName}`}
+                              size={20}
+                              variant="minimal"
+                            />
                           }
                           label={`${userItem.firstName} ${userItem.lastName}`}
                           size="small"
