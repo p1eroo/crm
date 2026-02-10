@@ -18,7 +18,6 @@ import {
   FormControl,
   Select,
   Tooltip,
-  InputAdornment,
   Menu,
   useTheme,
   useMediaQuery,
@@ -29,10 +28,11 @@ import {
   Checkbox,
   Popover,
 } from '@mui/material';
-import type { Theme } from '@mui/material/styles';
-import { Add, Delete, Search, Visibility, UploadFile, FileDownload, FilterList, Close, ExpandMore, Remove, Bolt, Edit, ChevronLeft, ChevronRight, MoreVert, ViewColumn, Phone, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered } from '@mui/icons-material';
+import { Add, Delete, Visibility, UploadFile, FileDownload, FilterList, Close, ExpandMore, Remove, Bolt, Edit, ChevronLeft, ChevronRight, MoreVert, ViewColumn, Phone, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
+import { getStageColor as getStageColorUtil } from '../utils/stageColors';
+import { StageChipWithProgress } from '../components/StageChipWithProgress';
 import { pageStyles } from '../theme/styles';
 import { companyLabels } from '../constants/companyLabels';
 import axios from 'axios';
@@ -1517,64 +1517,7 @@ const Companies: React.FC = () => {
     }
   };
 
-  const getStageColor = (stage: string) => {
-    // Cierre ganado y etapas finales exitosas
-    if (['cierre_ganado', 'firma_contrato', 'activo'].includes(stage)) {
-      return { 
-        bg: theme.palette.mode === 'dark' 
-          ? `${taxiMonterricoColors.green}26` 
-          : `${taxiMonterricoColors.green}15`, 
-        color: taxiMonterricoColors.green 
-      };
-    }
-    // Cierre perdido y clientes perdidos
-    else if (stage === 'cierre_perdido' || stage === 'cliente_perdido') {
-      return { 
-        bg: theme.palette.mode === 'dark' 
-          ? `${theme.palette.error.main}26` 
-          : `${theme.palette.error.main}15`, 
-        color: theme.palette.error.main 
-      };
-    }
-    // Negociación y reuniones
-    else if (['reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion'].includes(stage)) {
-      return { 
-        bg: theme.palette.mode === 'dark' 
-          ? `${taxiMonterricoColors.orange}26` 
-          : `${taxiMonterricoColors.orange}15`, 
-        color: taxiMonterricoColors.orangeDark 
-      };
-    }
-    // Licitación - Color de texto púrpura oscuro
-    else if (stage === 'licitacion_etapa_final' || stage === 'licitacion') {
-      return { 
-        bg: theme.palette.mode === 'dark' 
-          ? `${theme.palette.secondary.main}26` 
-          : `${theme.palette.secondary.main}15`, 
-        color: theme.palette.secondary.main 
-      };
-    }
-    // Lead y Contacto - Azul oscuro
-    else if (['lead', 'contacto'].includes(stage)) {
-      return { 
-        bg: theme.palette.mode === 'dark' 
-          ? `${theme.palette.primary.main}26` 
-          : `${theme.palette.primary.main}15`, 
-        color: theme.palette.primary.main 
-      };
-    }
-    // Lead inactivo - Gris oscuro
-    else if (stage === 'lead_inactivo') {
-      return { bg: theme.palette.action.hover, color: theme.palette.text.secondary };
-    }
-    // Por defecto
-    return { 
-      bg: theme.palette.mode === 'dark' 
-        ? `${theme.palette.primary.main}26` 
-        : `${theme.palette.primary.main}15`, 
-      color: theme.palette.primary.main 
-    };
-  };
+  const getStageColor = (stage: string) => getStageColorUtil(theme, stage);
 
   const getStageLabel = (stage: string) => {
     const labels: { [key: string]: string } = {
@@ -2366,26 +2309,18 @@ const Companies: React.FC = () => {
                   </Typography>
                 </Box>
                 <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }} onClick={(e) => e.stopPropagation()}>
-                    <Chip
-                    label={getStageLabel(company.lifecycleStage || 'lead')}
-                      size="small"
+                    <StageChipWithProgress
+                      stage={company.lifecycleStage || 'lead'}
+                      label={getStageLabel(company.lifecycleStage || 'lead')}
+                      chipBg={getStageColor(company.lifecycleStage || 'lead').bg}
+                      chipColor={getStageColor(company.lifecycleStage || 'lead').color}
                       onClick={(e) => {
                         e.stopPropagation();
                         e.preventDefault();
                         handleStatusMenuOpen(e, company.id);
                       }}
                       disabled={updatingStatus[company.id]}
-                      sx={{ 
-                        fontWeight: 500,
-                        fontSize: { xs: '0.75rem', md: '0.8125rem' },
-                        height: { xs: 22, md: 24 },
-                        cursor: 'pointer',
-                        bgcolor: getStageColor(company.lifecycleStage || 'lead').bg,
-                        color: getStageColor(company.lifecycleStage || 'lead').color,
-                        '&:hover': {
-                          opacity: 0.8,
-                        },
-                      }}
+                      barWidth={90}
                     />
                     <Menu
                       anchorEl={statusMenuAnchor[company.id]}
@@ -2463,14 +2398,7 @@ const Companies: React.FC = () => {
                             e.stopPropagation();
                             handleOpen(company);
                           }}
-                          sx={{
-                            color: theme.palette.text.secondary,
-                            padding: 0.5,
-                            '&:hover': {
-                              color: theme.palette.text.primary,
-                              bgcolor: theme.palette.action.hover,
-                            },
-                          }}
+                          sx={pageStyles.actionButtonEdit(theme)}
                         >
                           <Edit sx={{ fontSize: '1.125rem' }} />
                         </IconButton>
@@ -2482,14 +2410,7 @@ const Companies: React.FC = () => {
                             e.stopPropagation();
                             handlePreview(company, e);
                           }}
-                          sx={{
-                            color: theme.palette.text.secondary,
-                            padding: 0.5,
-                            '&:hover': {
-                              color: theme.palette.text.primary,
-                              bgcolor: theme.palette.action.hover,
-                            },
-                          }}
+                          sx={pageStyles.actionButtonView(theme)}
                         >
                           <Visibility sx={{ fontSize: '1.125rem' }} />
                         </IconButton>
@@ -2501,16 +2422,7 @@ const Companies: React.FC = () => {
                             e.stopPropagation();
                             handleDelete(company.id);
                           }}
-                          sx={{
-                            color: theme.palette.error.main,
-                            padding: 0.5,
-                            '&:hover': {
-                              color: theme.palette.error.main,
-                              bgcolor: theme.palette.mode === 'dark' 
-                                ? `${theme.palette.error.main}26` 
-                                : `${theme.palette.error.main}15`,
-                            },
-                          }}
+                          sx={pageStyles.actionButtonDelete(theme)}
                         >
                           <Delete sx={{ fontSize: '1.125rem' }} />
                         </IconButton>
@@ -2870,7 +2782,7 @@ const Companies: React.FC = () => {
                             );
                           }}
                           sx={{
-                            fontWeight: 500,
+                            fontWeight: 600,
                             fontSize: '0.75rem',
                             height: '24px',
                             cursor: 'pointer',
@@ -3181,7 +3093,7 @@ const Companies: React.FC = () => {
         onClose={handleClose}
         title={editingCompany ? 'Editar Empresa' : 'Nueva Empresa'}
         onSubmit={handleSubmit}
-        submitLabel={editingCompany ? 'Actualizar' : 'Crear'}
+        submitLabel={editingCompany ? 'Actualizar' : companyLabels.create}
         variant="panel"
       >
         {open && (

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Box,
@@ -26,11 +26,11 @@ import {
 import { Person, Search, ChevronLeft, ChevronRight, Close, Business } from '@mui/icons-material';
 import { Building2 } from 'lucide-react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
-import { Pie } from 'react-chartjs-2';
 import ReactApexChart from 'react-apexcharts';
 import type { ApexOptions } from 'apexcharts';
 import api from '../config/api';
-import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
+import { taxiMonterricoColors } from '../theme/colors';
+import { getStageColor as getStageColorUtil } from '../utils/stageColors';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -120,48 +120,16 @@ const ACTIVITY_BAR_COLORS = [
   '#9966FF',
 ];
 
+const COMPANY_STAGE_ORDER = [
+  'lead', 'contacto', 'reunion_agendada', 'reunion_efectiva',
+  'propuesta_economica', 'negociacion', 'licitacion', 'licitacion_etapa_final',
+  'cierre_ganado', 'firma_contrato', 'activo', 'cierre_perdido', 'cliente_perdido', 'lead_inactivo',
+];
+
 const Reports: React.FC = () => {
   const theme = useTheme();
 
-  const getStageColor = (stage: string): { bg: string; color: string } => {
-    if (['cierre_ganado', 'firma_contrato', 'activo', 'won', 'closed won'].includes(stage)) {
-      return {
-        bg: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}26` : `${taxiMonterricoColors.green}15`,
-        color: taxiMonterricoColors.green,
-      };
-    }
-    if (['cierre_perdido', 'cliente_perdido', 'lost', 'closed lost'].includes(stage)) {
-      return {
-        bg: theme.palette.mode === 'dark' ? `${theme.palette.error.main}26` : `${theme.palette.error.main}15`,
-        color: theme.palette.error.main,
-      };
-    }
-    if (['reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion'].includes(stage)) {
-      return {
-        bg: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.orange}26` : `${taxiMonterricoColors.orange}15`,
-        color: taxiMonterricoColors.orangeDark,
-      };
-    }
-    if (stage === 'licitacion_etapa_final' || stage === 'licitacion') {
-      return {
-        bg: theme.palette.mode === 'dark' ? `${theme.palette.secondary.main}26` : `${theme.palette.secondary.main}15`,
-        color: theme.palette.secondary.main,
-      };
-    }
-    if (['lead', 'contacto'].includes(stage)) {
-      return {
-        bg: theme.palette.mode === 'dark' ? `${theme.palette.primary.main}26` : `${theme.palette.primary.main}15`,
-        color: theme.palette.primary.main,
-      };
-    }
-    if (stage === 'lead_inactivo') {
-      return { bg: theme.palette.action.hover, color: theme.palette.text.secondary };
-    }
-    return {
-      bg: theme.palette.mode === 'dark' ? `${theme.palette.primary.main}26` : `${theme.palette.primary.main}15`,
-      color: theme.palette.primary.main,
-    };
-  };
+  const getStageColor = (stage: string) => getStageColorUtil(theme, stage);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -183,7 +151,7 @@ const Reports: React.FC = () => {
   const [companiesModalStageLabel, setCompaniesModalStageLabel] = useState<string>('');
   const [companiesModalCompanies, setCompaniesModalCompanies] = useState<Array<{ id: number; name: string; companyname?: string | null; lifecycleStage: string; ownerId?: number | null; estimatedRevenue?: number | null }>>([]);
   const [companiesModalLoading, setCompaniesModalLoading] = useState(false);
-  const [companiesModalTotal, setCompaniesModalTotal] = useState(0);
+  const [, setCompaniesModalTotal] = useState(0);
   const [companiesModalPage, setCompaniesModalPage] = useState(1);
   const [companiesModalTotalPages, setCompaniesModalTotalPages] = useState(0);
   const companiesModalLimit = 20;
@@ -204,7 +172,7 @@ const Reports: React.FC = () => {
   const [activitiesModalLoading, setActivitiesModalLoading] = useState(false);
   const [activitiesModalPage, setActivitiesModalPage] = useState(1);
   const [activitiesModalTotalPages, setActivitiesModalTotalPages] = useState(0);
-  const [activitiesModalTotal, setActivitiesModalTotal] = useState(0);
+  const [, setActivitiesModalTotal] = useState(0);
   const activitiesModalLimit = 20;
   const activitiesChartContainerRef = React.useRef<HTMLDivElement>(null);
   const activitiesClickAnchorRef = React.useRef<HTMLDivElement>(null);
@@ -238,7 +206,7 @@ const Reports: React.FC = () => {
     }
   };
 
-  const fetchChartCompaniesByUser = async () => {
+  const fetchChartCompaniesByUser = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (chartAdvisorFilter != null) params.set('userId', String(chartAdvisorFilter));
@@ -255,11 +223,11 @@ const Reports: React.FC = () => {
       console.error('Error al cargar empresas para gráfico:', err);
       setChartCompaniesByUser({});
     }
-  };
+  }, [chartAdvisorFilter, chartOriginFilter, chartPeriodFilter]);
 
   useEffect(() => {
     fetchChartCompaniesByUser();
-  }, [chartAdvisorFilter, chartOriginFilter, chartPeriodFilter]);
+  }, [fetchChartCompaniesByUser]);
 
   const fetchCompaniesList = async (stage: string, page: number) => {
     if (!stage) return;
@@ -306,7 +274,7 @@ const Reports: React.FC = () => {
     }
   }, [companiesAnchorPosition, companiesModalStage]);
 
-  const fetchActivitiesByType = async () => {
+  const fetchActivitiesByType = useCallback(async () => {
     try {
       const params = new URLSearchParams();
       if (activitiesAdvisorFilter != null) params.set('userId', String(activitiesAdvisorFilter));
@@ -320,7 +288,7 @@ const Reports: React.FC = () => {
       console.error('Error al cargar actividades por tipo:', err);
       setActivitiesByType({});
     }
-  };
+  }, [activitiesAdvisorFilter, activitiesPeriodFilter]);
 
   const fetchActivitiesEntitiesList = async (activityType: string, page: number) => {
     if (!activityType) return;
@@ -346,7 +314,7 @@ const Reports: React.FC = () => {
     }
   };
 
-  const fetchCompaniesWeeklyMovementRange = async () => {
+  const fetchCompaniesWeeklyMovementRange = useCallback(async () => {
     setWeeklyMovementRangeLoading(true);
     try {
       const params = new URLSearchParams();
@@ -369,11 +337,11 @@ const Reports: React.FC = () => {
     } finally {
       setWeeklyMovementRangeLoading(false);
     }
-  };
+  }, [weeklyMovementAdvisorFilter]);
 
   useEffect(() => {
     fetchCompaniesWeeklyMovementRange();
-  }, [weeklyMovementAdvisorFilter]);
+  }, [fetchCompaniesWeeklyMovementRange]);
 
   const handleOpenActivitiesList = (activityType: string, label: string, clientX: number, clientY: number) => {
     setActivitiesAnchorPosition({ left: clientX, top: clientY });
@@ -392,7 +360,7 @@ const Reports: React.FC = () => {
 
   useEffect(() => {
     fetchActivitiesByType();
-  }, [activitiesAdvisorFilter, activitiesPeriodFilter]);
+  }, [fetchActivitiesByType]);
 
   const fetchDealsByUser = async () => {
     try {
@@ -461,11 +429,6 @@ const Reports: React.FC = () => {
   const pageUsers = filteredAndSortedUsers.slice(startIndex, endIndex);
 
   // Conteo por etapa de empresas (agregado de todos los asesores) para el gráfico polar
-  const COMPANY_STAGE_ORDER = [
-    'lead', 'contacto', 'reunion_agendada', 'reunion_efectiva',
-    'propuesta_economica', 'negociacion', 'licitacion', 'licitacion_etapa_final',
-    'cierre_ganado', 'firma_contrato', 'activo', 'cierre_perdido', 'cliente_perdido', 'lead_inactivo',
-  ];
   const companyStagesChartData = useMemo(() => {
     const byStage: Record<string, number> = {};
     const lists = Object.values(chartCompaniesByUser);
@@ -599,7 +562,7 @@ const Reports: React.FC = () => {
         colors: movementChartColors,
       } as ApexOptions,
     };
-  }, [weeklyMovementRangeData, movementChartColors, theme.palette.mode, theme.palette.divider, theme.palette.text.secondary]);
+  }, [weeklyMovementRangeData, movementChartColors, theme.palette.mode, theme.palette.divider, theme.palette.text.secondary, theme.palette.background.paper]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -927,7 +890,7 @@ const Reports: React.FC = () => {
                           variant="body2"
                           sx={{
                             color: theme.palette.text.primary,
-                            fontWeight: 500,
+                            fontWeight: 600,
                             textDecoration: isHidden ? 'line-through' : 'none',
                           }}
                         >
@@ -1599,7 +1562,7 @@ const Reports: React.FC = () => {
                         variant="body2"
                         sx={{
                           color: theme.palette.text.primary,
-                          fontWeight: 500,
+                          fontWeight: 600,
                         }}
                       >
                         {label}
@@ -2159,7 +2122,7 @@ const Reports: React.FC = () => {
                                         border: `1px solid ${theme.palette.divider}`,
                                       }}
                                     >
-                                      <Typography component="span" sx={{ fontWeight: 500, fontSize: 'inherit', color: 'inherit' }}>
+                                      <Typography component="span" sx={{ fontWeight: 600, fontSize: 'inherit', color: 'inherit' }}>
                                         {getStageLabel(stage)}:
                                       </Typography>
                                       <Typography component="span" sx={{ fontWeight: 600, fontSize: 'inherit', color: 'inherit' }}>
@@ -2230,7 +2193,7 @@ const Reports: React.FC = () => {
                                   const { color } = getStageColor(stage);
                                   return (
                                     <Box sx={{ ...tagBaseSx, color, border: `1px solid ${theme.palette.divider}` }}>
-                                      <Typography component="span" sx={{ fontWeight: 500, fontSize: 'inherit', color: 'inherit' }}>
+                                      <Typography component="span" sx={{ fontWeight: 600, fontSize: 'inherit', color: 'inherit' }}>
                                         {getStageLabel(stage)}:
                                       </Typography>
                                       <Typography component="span" sx={{ fontWeight: 600, fontSize: 'inherit', color: 'inherit' }}>
@@ -2392,7 +2355,7 @@ const Reports: React.FC = () => {
                     fontSize: '0.75rem',
                   }}
                 >
-                  <Typography component="span" sx={{ fontWeight: 500, fontSize: 'inherit', color: 'inherit' }}>
+                  <Typography component="span" sx={{ fontWeight: 600, fontSize: 'inherit', color: 'inherit' }}>
                     {getStageLabel(stage)}:
                   </Typography>
                   <Typography component="span" sx={{ fontWeight: 600, fontSize: 'inherit', color: 'inherit' }}>
@@ -2437,7 +2400,7 @@ const Reports: React.FC = () => {
                       fontSize: '0.75rem',
                     }}
                   >
-                    <Typography component="span" sx={{ fontWeight: 500, fontSize: 'inherit', color: 'inherit' }}>
+                    <Typography component="span" sx={{ fontWeight: 600, fontSize: 'inherit', color: 'inherit' }}>
                       {getStageLabel(stage)}:
                     </Typography>
                     <Typography component="span" sx={{ fontWeight: 600, fontSize: 'inherit', color: 'inherit' }}>

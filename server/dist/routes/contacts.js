@@ -8,12 +8,85 @@ const sequelize_1 = require("sequelize");
 const Contact_1 = require("../models/Contact");
 const User_1 = require("../models/User");
 const Company_1 = require("../models/Company");
+const Role_1 = require("../models/Role");
 const auth_1 = require("../middleware/auth");
 const rolePermissions_1 = require("../utils/rolePermissions");
 const systemLogger_1 = require("../utils/systemLogger");
 const database_1 = require("../config/database");
 const router = express_1.default.Router();
+/** Solo usuarios con rol "user" (asesores) pueden ser propietarios. Resuelve ownerId válido. */
+async function resolveContactOwnerId(preferredId, companyOwnerId, fallbackUserId) {
+    const tryUser = async (userId) => {
+        if (userId == null)
+            return null;
+        const u = await User_1.User.findByPk(userId, { include: [{ model: Role_1.Role, as: 'Role' }] });
+        return u && u.role === 'user' ? u.id : null;
+    };
+    const fromPreferred = await tryUser(preferredId);
+    if (fromPreferred != null)
+        return fromPreferred;
+    const fromCompany = await tryUser(companyOwnerId);
+    if (fromCompany != null)
+        return fromCompany;
+    const fromFallback = await tryUser(fallbackUserId);
+    return fromFallback ?? null;
+}
 router.use(auth_1.authenticateToken);
+// Sincronizar propietario de contactos existentes con el propietario de su empresa (solo admin/jefe_comercial)
+router.post('/sync-owners', (0, auth_1.requireRole)('admin', 'jefe_comercial'), async (req, res) => {
+    try {
+        const contacts = await Contact_1.Contact.findAll({
+            where: { companyId: { [sequelize_1.Op.ne]: null } },
+            attributes: ['id', 'companyId', 'ownerId', 'firstName', 'lastName'],
+        });
+        let updated = 0;
+        let skipped = 0;
+        const errors = [];
+        for (const contact of contacts) {
+            const companyId = contact.companyId;
+            if (!companyId) {
+                skipped++;
+                continue;
+            }
+            const company = await Company_1.Company.findByPk(companyId, { attributes: ['id', 'ownerId'] });
+            if (!company) {
+                skipped++;
+                continue;
+            }
+            const companyOwnerId = company.ownerId ?? null;
+            const resolvedOwnerId = await resolveContactOwnerId(null, companyOwnerId, null);
+            const currentOwnerId = contact.ownerId ?? null;
+            if (resolvedOwnerId === currentOwnerId) {
+                skipped++;
+                continue;
+            }
+            try {
+                await contact.update({ ownerId: resolvedOwnerId });
+                updated++;
+            }
+            catch (err) {
+                errors.push({
+                    contactId: contact.id,
+                    name: `${contact.firstName} ${contact.lastName}`.trim(),
+                    error: err?.message || 'Error al actualizar',
+                });
+            }
+        }
+        return res.json({
+            message: 'Sincronización de propietarios completada',
+            total: contacts.length,
+            updated,
+            skipped,
+            errors: errors.length > 0 ? errors : undefined,
+        });
+    }
+    catch (error) {
+        console.error('Error en sync-owners:', error);
+        return res.status(500).json({
+            error: error.message || 'Error al sincronizar propietarios',
+        });
+    }
+});
 // Función para limpiar contactos eliminando campos null y objetos relacionados null
 const cleanContact = (contact) => {
     const contactData = contact.toJSON ? contact.toJSON() : contact;
@@ -94,7 +167,7 @@ router.get('/', async (req, res) => {
         owners, // Array: ["me", "unassigned", "1", "2"]
         sortBy = 'newest', // newest, oldest, name, nameDesc
         // Filtros por columna
-        filterNombre, filterEmpresa, filterTelefono, filterPais, filterEtapa, 
+        filterNombre, filterEmpresa, filterTelefono, filterCorreo, filterPais, filterEtapa, 
         // Filtros avanzados (JSON string)
         filterRules, } = req.query;
         console.log('📥 Parámetros procesados:', { page, limitParam, search, sortBy });
@@ -213,6 +286,9 @@ router.get('/', async (req, res) => {
             else {
                 where[sequelize_1.Op.or] = telefonoConditions;
             }
+        }
+        if (filterCorreo) {
+            where.email = { [sequelize_1.Op.iLike]: `%${filterCorreo}%` };
         }
         if (filterPais) {
             where.country = { [sequelize_1.Op.iLike]: `%${filterPais}%` };
@@ -520,11 +596,14 @@ router.post('/', async (req, res) => {
         if (!company) {
             return res.status(400).json({ error: `La empresa con ID ${companyId} no existe en la base de datos` });
         }
+        // Por defecto el contacto tiene el mismo propietario que la empresa (asesor ve sus contactos)
+        const companyOwnerId = company.ownerId ?? null;
+        const preferredOwnerId = req.body.ownerId != null ? Number(req.body.ownerId) : null;
+        const resolvedOwnerId = await resolveContactOwnerId(preferredOwnerId, companyOwnerId, req.userId);
         const contactData = {
             ...req.body,
             companyId: companyId, // Asegurar que sea un número
-            // Asignar automáticamente el usuario actual como propietario del contacto
-            ownerId: req.body.ownerId || req.userId || null,
+            ownerId: resolvedOwnerId,
         };
         // Validar campos requeridos
         if (!contactData.firstName || !contactData.firstName.trim()) {
@@ -654,9 +733,18 @@ router.put('/:id', async (req, res) => {
         if (!contact) {
             return res.status(404).json({ error: 'Contacto no encontrado' });
         }
+        const companyIdForOwner = req.body.companyId != null ? Number(req.body.companyId) : contact.companyId;
+        let companyOwnerId = null;
+        if (companyIdForOwner && !isNaN(companyIdForOwner)) {
+            const company = await Company_1.Company.findByPk(companyIdForOwner);
+            if (company)
+                companyOwnerId = company.ownerId ?? null;
+        }
+        const preferredOwnerId = req.body.ownerId != null ? Number(req.body.ownerId) : null;
+        const resolvedOwnerId = await resolveContactOwnerId(preferredOwnerId, companyOwnerId, req.userId);
         const contactData = {
             ...req.body,
-            ownerId: req.body.ownerId || req.userId || null,
+            ownerId: resolvedOwnerId,
         };
         // Validar que no exista otro contacto con el mismo email (excluyendo el actual)
         if (contactData.email && contactData.email.trim() !== contact.email) {

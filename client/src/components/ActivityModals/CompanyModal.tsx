@@ -387,7 +387,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
     }
   };
 
-  const getAssociationEndpoint = () => {
+  const getAssociationEndpoint = useCallback(() => {
     switch (entityType) {
       case "deal":
         return `/deals/${entityId}/companies`;
@@ -402,9 +402,42 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
       default:
         return null;
     }
-  };
+  }, [entityType, entityId]);
 
-  const handleCreateCompany = async (dataOverride?: CompanyFormData | typeof companyFormData) => {
+  const handleClose = useCallback(() => {
+    setCompanyDialogTab(initialTab);
+    setExistingCompaniesSearch("");
+    setSelectedExistingCompanies([]);
+    setCurrentPage(1);
+    setTotalPages(1);
+    setCompanyFormData({
+      name: "",
+      domain: "",
+      linkedin: "",
+      companyname: "",
+      phone: "",
+      email: "",
+      address: "",
+      city: "",
+      state: "",
+      country: "",
+      ruc: "",
+      lifecycleStage: "lead",
+      leadSource: "",
+      estimatedRevenue: "",
+      isRecoveredClient: false,
+      ownerId: user?.id || null,
+    });
+    setRucError("");
+    setNameError("");
+    setRucValidationError("");
+    setDomainError("");
+    if (nameValidationTimeoutRef.current) clearTimeout(nameValidationTimeoutRef.current);
+    if (rucValidationTimeoutRef.current) clearTimeout(rucValidationTimeoutRef.current);
+    onClose();
+  }, [initialTab, onClose, user?.id]);
+
+  const handleCreateCompany = useCallback(async (dataOverride?: CompanyFormData | typeof companyFormData) => {
     const source = dataOverride ?? companyFormData;
     // Validar nombre requerido
     if (!source.name || !(typeof source.name === 'string' ? source.name : '').trim()) {
@@ -493,7 +526,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
     } finally {
       setSaving(false);
     }
-  };
+  }, [companyFormData, nameError, rucValidationError, user, entityId, onSave, handleClose, getAssociationEndpoint]);
 
   const handleAddExistingCompanies = async () => {
     try {
@@ -547,46 +580,6 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleClose = () => {
-    setCompanyDialogTab(initialTab);
-    setExistingCompaniesSearch("");
-    setSelectedExistingCompanies([]);
-    setCurrentPage(1);
-    setTotalPages(1);
-    setCompanyFormData({
-      name: "",
-      domain: "",
-      linkedin: "",
-      companyname: "",
-      phone: "",
-      email: "",
-      address: "",
-      city: "",
-      state: "",
-      country: "",
-      ruc: "",
-      lifecycleStage: "lead",
-      leadSource: "",
-      estimatedRevenue: "",
-      isRecoveredClient: false,
-      ownerId: user?.id || null,
-    });
-    setRucError("");
-    setNameError("");
-    setRucValidationError("");
-    setDomainError("");
-    
-    // Limpiar timeouts pendientes
-    if (nameValidationTimeoutRef.current) {
-      clearTimeout(nameValidationTimeoutRef.current);
-    }
-    if (rucValidationTimeoutRef.current) {
-      clearTimeout(rucValidationTimeoutRef.current);
-    }
-    
-    onClose();
   };
 
   const handlePreviousPage = () => {

@@ -304,7 +304,48 @@ const DealModal: React.FC<DealModalProps> = ({
     }
   }, [open, defaultContactId, dealFormData.contactId]);
 
-  const handleCreateDeal = async (dataOverride?: DealFormData) => {
+  const getAssociationEndpoint = useCallback(() => {
+    switch (entityType) {
+      case "deal":
+        return `/deals/${entityId}/deals`;
+      case "company":
+        return `/companies/${entityId}/deals`;
+      case "contact":
+        return `/contacts/${entityId}/deals`;
+      case "task":
+        return `/tasks/${entityId}/deals`;
+      case "ticket":
+        return `/tickets/${entityId}/deals`;
+      default:
+        return null;
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- entityType required for switch
+  }, [entityType, entityId]);
+
+  const handleClose = useCallback(() => {
+    setDealDialogTab(initialTab);
+    setExistingDealsSearch("");
+    setSelectedExistingDeals([]);
+    setCurrentPage(1);
+    setTotalPages(1);
+    setCompanySearch("");
+    setContactSearch("");
+    setCompanyOptions([]);
+    setContactOptions([]);
+    setDealFormData({
+      name: "",
+      amount: "",
+      stage: "lead",
+      closeDate: "",
+      priority: "baja" as "baja" | "media" | "alta",
+      companyId: defaultCompanyId?.toString() || "",
+      contactId: defaultContactId?.toString() || "",
+      ownerId: user?.id || null,
+    });
+    onClose();
+  }, [initialTab, onClose, user?.id, defaultCompanyId, defaultContactId]);
+
+  const handleCreateDeal = useCallback(async (dataOverride?: DealFormData) => {
     const source = dataOverride ?? dealFormData;
     try {
       setSaving(true);
@@ -339,7 +380,7 @@ const DealModal: React.FC<DealModalProps> = ({
     } finally {
       setSaving(false);
     }
-  };
+  }, [dealFormData, user?.id, entityId, onSave, handleClose, getAssociationEndpoint]);
 
   const handleAddExistingDeals = async () => {
     try {
@@ -372,46 +413,6 @@ const DealModal: React.FC<DealModalProps> = ({
     } finally {
       setSaving(false);
     }
-  };
-
-  const getAssociationEndpoint = () => {
-    switch (entityType) {
-      case "deal":
-        return `/deals/${entityId}/deals`;
-      case "company":
-        return `/companies/${entityId}/deals`;
-      case "contact":
-        return `/contacts/${entityId}/deals`;
-      case "task":
-        return `/tasks/${entityId}/deals`;
-      case "ticket":
-        return `/tickets/${entityId}/deals`;
-      default:
-        return null;
-    }
-  };
-
-  const handleClose = () => {
-    setDealDialogTab(initialTab);
-    setExistingDealsSearch("");
-    setSelectedExistingDeals([]);
-    setCurrentPage(1);
-    setTotalPages(1);
-    setCompanySearch("");
-    setContactSearch("");
-    setCompanyOptions([]);
-    setContactOptions([]);
-    setDealFormData({
-      name: "",
-      amount: "",
-      stage: "lead",
-      closeDate: "",
-      priority: "baja" as "baja" | "media" | "alta",
-      companyId: defaultCompanyId?.toString() || "",
-      contactId: defaultContactId?.toString() || "",
-      ownerId: user?.id || null,
-    });
-    onClose();
   };
 
   // Ya no filtramos los excludedDealIds, solo los mostramos marcados

@@ -8,7 +8,6 @@ import {
   Divider,
   CircularProgress,
   useTheme,
-  Paper,
   Chip,
 } from '@mui/material';
 import {
@@ -21,7 +20,6 @@ import {
   Link as LinkIcon,
   TrendingUp,
   Person,
-  KeyboardArrowDown,
   Assignment,
   Note,
   Event,
@@ -59,12 +57,12 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
   const [associatedCompanies, setAssociatedCompanies] = useState<any[]>([]);
   const [associatedContacts, setAssociatedContacts] = useState<any[]>([]);
   const [associatedDeals, setAssociatedDeals] = useState<any[]>([]);
-  const [associatedTickets, setAssociatedTickets] = useState<any[]>([]);
+  const [, setAssociatedTickets] = useState<any[]>([]);
   const [loadingAssociations, setLoadingAssociations] = useState(false);
   const [companiesPage, setCompaniesPage] = useState(1);
   const [contactsPage, setContactsPage] = useState(1);
   const [dealsPage, setDealsPage] = useState(1);
-  const [ticketsPage, setTicketsPage] = useState(1);
+  const [, setTicketsPage] = useState(1);
   const [activitiesPage, setActivitiesPage] = useState(1);
   const itemsPerPage = 5;
 
@@ -272,7 +270,7 @@ const EntityPreviewDrawer: React.FC<EntityPreviewDrawerProps> = ({
     } finally {
       setLoadingAssociations(false);
     }
-  }, [entityId, entityType]); // Removido 'entity' para evitar loops infinitos
+  }, [entityId, entityType, entity]);
 
   useEffect(() => {
     if (open && entityId) {

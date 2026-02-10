@@ -11,11 +11,7 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
-  MenuItem,
-  IconButton,
 } from "@mui/material";
-import { Close } from "@mui/icons-material";
 import { taxiMonterricoColors } from "../theme/colors";
 import { pageStyles } from "../theme/styles";
 import api from "../config/api";
@@ -37,7 +33,7 @@ import type { GeneralInfoCard } from "../components/DetailCards";
 import { useAuth } from "../context/AuthContext";
 import DetailPageLayout from "../components/Layout/DetailPageLayout";
 import { FormDrawer } from "../components/FormDrawer";
-import { DealFormContent, getInitialDealFormData, type DealFormData } from "../components/DealFormContent";
+import { DealFormContent, getInitialDealFormData, stageOptions, type DealFormData } from "../components/DealFormContent";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendar, faClock } from "@fortawesome/free-regular-svg-icons";
 import { library } from "@fortawesome/fontawesome-svg-core";
@@ -136,7 +132,7 @@ const DealDetail: React.FC = () => {
   const [contactDialogTab, setContactDialogTab] = useState<
     "create" | "existing"
   >("create");
-  const [allCompanies, setAllCompanies] = useState<any[]>([]);
+  const [, setAllCompanies] = useState<any[]>([]);
   const [companies, setCompanies] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
   
@@ -692,41 +688,9 @@ const DealDetail: React.FC = () => {
   // };
 
   const getStageLabel = (stage: string) => {
-    const labels: { [key: string]: string } = {
-      lead: "Lead",
-      contacto: "Contacto",
-      reunion_agendada: "Reunión Agendada",
-      reunion_efectiva: "Reunión Efectiva",
-      propuesta_economica: "Propuesta Económica",
-      negociacion: "Negociación",
-      licitacion: "Licitación",
-      licitacion_etapa_final: "Licitación Etapa Final",
-      cierre_ganado: "Cierre Ganado",
-      cierre_perdido: "Cierre Perdido",
-      firma_contrato: "Firma de Contrato",
-      activo: "Activo",
-      cliente_perdido: "Cliente Perdido",
-      lead_inactivo: "Lead Inactivo",
-    };
-    return labels[stage] || stage;
+    const option = stageOptions.find((opt) => opt.value === stage);
+    return option ? option.label : stage;
   };
-
-  const stageOptions = [
-    { value: "lead", label: "Lead" },
-    { value: "contacto", label: "Contacto" },
-    { value: "reunion_agendada", label: "Reunión Agendada" },
-    { value: "reunion_efectiva", label: "Reunión Efectiva" },
-    { value: "propuesta_economica", label: "Propuesta Económica" },
-    { value: "negociacion", label: "Negociación" },
-    { value: "licitacion", label: "Licitación" },
-    { value: "licitacion_etapa_final", label: "Licitación Etapa Final" },
-    { value: "cierre_ganado", label: "Cierre Ganado" },
-    { value: "cierre_perdido", label: "Cierre Perdido" },
-    { value: "firma_contrato", label: "Firma de Contrato" },
-    { value: "activo", label: "Activo" },
-    { value: "cliente_perdido", label: "Cliente Perdido" },
-    { value: "lead_inactivo", label: "Lead Inactivo" },
-  ];
 
   const formatCurrency = (value: number) => {
     if (value >= 1000) {

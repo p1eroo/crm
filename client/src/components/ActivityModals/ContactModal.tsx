@@ -94,6 +94,21 @@ const ContactModal: React.FC<ContactModalProps> = ({
   const [loadingDni, setLoadingDni] = useState(false);
   const [dniError, setDniError] = useState("");
 
+  // Al abrir con empresa por defecto, usar el propietario de esa empresa (asesor ve sus contactos)
+  useEffect(() => {
+    if (open && defaultCompanyId) {
+      api.get(`/companies/${defaultCompanyId}`)
+        .then((res) => {
+          const company = res.data;
+          const ownerId = company?.ownerId ?? null;
+          if (ownerId != null) {
+            setContactFormData((prev) => ({ ...prev, ownerId }));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [open, defaultCompanyId]);
+
   const capitalizeInitials = (text: string): string => {
     if (!text) return "";
     return text

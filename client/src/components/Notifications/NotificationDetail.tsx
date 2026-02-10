@@ -20,6 +20,7 @@ import { Notification } from '../../types/notification';
 import { formatNotificationDateTime } from '../../utils/formatNotificationTime';
 import { getNotificationIcon, getNotificationColor, getNotificationTypeLabel } from './notificationUtils';
 import { taxiMonterricoColors } from '../../theme/colors';
+import { getStageColor as getStageColorUtil } from '../../utils/stageColors';
 import { useNavigate } from 'react-router-dom';
 import api from '../../config/api';
 
@@ -127,52 +128,7 @@ export const NotificationDetail: React.FC<NotificationDetailProps> = ({
     return labels[stage] || stage;
   };
 
-  // Función helper para obtener el color de la etapa
-  const getStageColor = (stage: string) => {
-    // Cierre ganado y etapas finales exitosas
-    if (['cierre_ganado', 'firma_contrato', 'activo'].includes(stage)) {
-      return { 
-        bg: theme.palette.mode === 'dark' 
-          ? `${taxiMonterricoColors.green}26` 
-          : `${taxiMonterricoColors.green}15`, 
-        color: taxiMonterricoColors.green 
-      };
-    }
-    // Cierre perdido y clientes perdidos
-    if (['cierre_perdido', 'cliente_perdido', 'lead_inactivo'].includes(stage)) {
-      return { 
-        bg: theme.palette.mode === 'dark' 
-          ? 'rgba(239, 68, 68, 0.2)' 
-          : 'rgba(239, 68, 68, 0.1)', 
-        color: '#ef4444' 
-      };
-    }
-    // Etapas intermedias (amarillo/naranja)
-    if (['reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion'].includes(stage)) {
-      return { 
-        bg: theme.palette.mode === 'dark' 
-          ? 'rgba(251, 191, 36, 0.2)' 
-          : 'rgba(251, 191, 36, 0.1)', 
-        color: '#fbbf24' 
-      };
-    }
-    // Licitaciones
-    if (['licitacion', 'licitacion_etapa_final'].includes(stage)) {
-      return { 
-        bg: theme.palette.mode === 'dark' 
-          ? 'rgba(59, 130, 246, 0.2)' 
-          : 'rgba(59, 130, 246, 0.1)', 
-        color: '#3b82f6' 
-      };
-    }
-    // Por defecto (lead, contacto)
-    return { 
-      bg: theme.palette.mode === 'dark' 
-        ? 'rgba(148, 163, 184, 0.2)' 
-        : 'rgba(148, 163, 184, 0.1)', 
-      color: theme.palette.text.secondary 
-    };
-  };
+  const getStageColor = (stage: string) => getStageColorUtil(theme, stage);
 
   if (!notification) return null;
 
@@ -381,7 +337,7 @@ export const NotificationDetail: React.FC<NotificationDetailProps> = ({
                                     width: 'fit-content',
                                     height: 20,
                                     fontSize: '0.7rem',
-                                    fontWeight: 500,
+                                    fontWeight: 600,
                                     bgcolor: getStageColor(company.lifecycleStage).bg,
                                     color: getStageColor(company.lifecycleStage).color,
                                     border: 'none',

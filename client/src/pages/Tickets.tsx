@@ -751,14 +751,7 @@ const Tickets: React.FC = () => {
                               e.stopPropagation();
                               handleOpen(ticket);
                             }}
-                            sx={{
-                              color: theme.palette.text.secondary,
-                              padding: { xs: 0.5, md: 1 },
-                              '&:hover': {
-                                color: taxiMonterricoColors.green,
-                                bgcolor: `${taxiMonterricoColors.green}15`,
-                              },
-                            }}
+                            sx={pageStyles.actionButtonEdit(theme)}
                           >
                             <Edit sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
                           </IconButton>
@@ -770,14 +763,7 @@ const Tickets: React.FC = () => {
                               e.stopPropagation();
                               handlePreview(ticket);
                             }}
-                            sx={{
-                              color: theme.palette.text.secondary,
-                              padding: { xs: 0.5, md: 1 },
-                              '&:hover': {
-                                color: taxiMonterricoColors.green,
-                                bgcolor: `${taxiMonterricoColors.green}15`,
-                              },
-                            }}
+                            sx={pageStyles.actionButtonView(theme)}
                           >
                             <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
                           </IconButton>
@@ -789,16 +775,7 @@ const Tickets: React.FC = () => {
                               e.stopPropagation();
                               handleDelete(ticket.id);
                             }}
-                            sx={{
-                              color: theme.palette.text.secondary,
-                              padding: { xs: 0.5, md: 1 },
-                              '&:hover': {
-                                color: theme.palette.error.main,
-                                bgcolor: theme.palette.mode === 'dark' 
-                                  ? `${theme.palette.error.main}33` 
-                                  : `${theme.palette.error.main}15`,
-                              },
-                            }}
+                            sx={pageStyles.actionButtonDelete(theme)}
                           >
                             <Delete sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
                           </IconButton>

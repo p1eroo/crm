@@ -34,6 +34,7 @@ import {
   Delete,
   Add,
   Search,
+  Sync,
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import api from '../config/api';
@@ -66,6 +67,7 @@ const Users: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [syncingOwners, setSyncingOwners] = useState(false);
   
   // Estados para el modal de creación
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -268,6 +270,25 @@ const Users: React.FC = () => {
     }
   };
 
+  const handleSyncContactOwners = async () => {
+    try {
+      setSyncingOwners(true);
+      const res = await api.post('/contacts/sync-owners');
+      const data = res.data || {};
+      const msg = `Sincronización completada: ${data.updated ?? 0} contactos actualizados, ${data.skipped ?? 0} omitidos.${data.errors?.length ? ` ${data.errors.length} error(es).` : ''}`;
+      setMessage({ type: data.errors?.length ? 'error' : 'success', text: msg });
+      setTimeout(() => setMessage(null), 6000);
+    } catch (error: any) {
+      setMessage({
+        type: 'error',
+        text: error.response?.data?.error || 'Error al sincronizar propietarios de contactos',
+      });
+      setTimeout(() => setMessage(null), 5000);
+    } finally {
+      setSyncingOwners(false);
+    }
+  };
+
   const handleCreateUser = () => {
     setFormData({
       usuario: '',
@@ -391,34 +412,65 @@ const Users: React.FC = () => {
       <UnifiedTable
         title="Usuarios"
         actions={
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={handleCreateUser}
-            size="small"
-            sx={{
-              bgcolor: taxiMonterricoColors.green,
-              borderRadius: 1.5,
-              px: 2,
-              py: 0.75,
-              fontWeight: 600,
-              textTransform: 'none',
-              fontSize: { xs: '0.75rem', md: '0.8125rem' },
-              boxShadow: theme.palette.mode === 'dark' 
-                ? '0 2px 8px rgba(46, 125, 50, 0.3)' 
-                : '0 2px 8px rgba(46, 125, 50, 0.2)',
-              '&:hover': {
-                bgcolor: '#158a5f',
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+            {(user?.role === 'admin' || user?.role === 'jefe_comercial') && (
+              <Tooltip title="Igualar propietario de cada contacto al propietario de su empresa">
+                <span>
+                  <Button
+                    variant="outlined"
+                    startIcon={syncingOwners ? <CircularProgress size={16} color="inherit" /> : <Sync />}
+                    onClick={handleSyncContactOwners}
+                    disabled={syncingOwners}
+                    size="small"
+                    sx={{
+                      borderColor: taxiMonterricoColors.green,
+                      color: taxiMonterricoColors.green,
+                      borderRadius: 1.5,
+                      px: 2,
+                      py: 0.75,
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      fontSize: { xs: '0.75rem', md: '0.8125rem' },
+                      '&:hover': {
+                        borderColor: '#158a5f',
+                        bgcolor: theme.palette.mode === 'dark' ? `${taxiMonterricoColors.green}15` : `${taxiMonterricoColors.green}08`,
+                      },
+                    }}
+                  >
+                    {syncingOwners ? 'Sincronizando…' : 'Sincronizar propietarios'}
+                  </Button>
+                </span>
+              </Tooltip>
+            )}
+            <Button
+              variant="contained"
+              startIcon={<Add />}
+              onClick={handleCreateUser}
+              size="small"
+              sx={{
+                bgcolor: taxiMonterricoColors.green,
+                borderRadius: 1.5,
+                px: 2,
+                py: 0.75,
+                fontWeight: 600,
+                textTransform: 'none',
+                fontSize: { xs: '0.75rem', md: '0.8125rem' },
                 boxShadow: theme.palette.mode === 'dark' 
-                  ? '0 4px 12px rgba(46, 125, 50, 0.4)' 
-                  : '0 4px 12px rgba(46, 125, 50, 0.3)',
-                transform: 'translateY(-1px)',
-              },
-              transition: 'all 0.3s ease',
-            }}
-          >
-            Crear Usuario
-          </Button>
+                  ? '0 2px 8px rgba(46, 125, 50, 0.3)' 
+                  : '0 2px 8px rgba(46, 125, 50, 0.2)',
+                '&:hover': {
+                  bgcolor: '#158a5f',
+                  boxShadow: theme.palette.mode === 'dark' 
+                    ? '0 4px 12px rgba(46, 125, 50, 0.4)' 
+                    : '0 4px 12px rgba(46, 125, 50, 0.3)',
+                  transform: 'translateY(-1px)',
+                },
+                transition: 'all 0.3s ease',
+              }}
+            >
+              Crear Usuario
+            </Button>
+          </Box>
         }
         header={
           <Box sx={{ width: '100%', overflow: 'hidden', position: 'relative' }}>

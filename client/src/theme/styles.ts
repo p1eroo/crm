@@ -1,6 +1,16 @@
 // client/src/theme/styles.ts
 import { SxProps, Theme } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { taxiMonterricoColors } from './colors';
+
+const actionButtonBase = {
+  padding: 0.5,
+  borderRadius: 1,
+  border: '1px solid',
+  '&:hover': {
+    border: '1px solid',
+  },
+} as const;
 
 /**
  * Estilos reutilizables para componentes de página
@@ -158,6 +168,45 @@ export const pageStyles = {
         : '#ffebee',
     },
   } as SxProps<Theme>,
+
+  /** Botón Ver: borde e icono azul, fondo azul suave */
+  actionButtonView: (theme: Theme): SxProps<Theme> => ({
+    ...actionButtonBase,
+    color: theme.palette.info.main,
+    borderColor: theme.palette.info.main,
+    bgcolor: alpha(theme.palette.info.main, theme.palette.mode === 'dark' ? 0.18 : 0.12),
+    '&:hover': {
+      borderColor: theme.palette.info.main,
+      color: theme.palette.info.main,
+      bgcolor: alpha(theme.palette.info.main, theme.palette.mode === 'dark' ? 0.25 : 0.18),
+    },
+  }),
+
+  /** Botón Editar: borde e icono verde, fondo verde suave */
+  actionButtonEdit: (theme: Theme): SxProps<Theme> => ({
+    ...actionButtonBase,
+    color: taxiMonterricoColors.green,
+    borderColor: taxiMonterricoColors.green,
+    bgcolor: alpha(taxiMonterricoColors.green, theme.palette.mode === 'dark' ? 0.18 : 0.12),
+    '&:hover': {
+      borderColor: taxiMonterricoColors.green,
+      color: taxiMonterricoColors.green,
+      bgcolor: alpha(taxiMonterricoColors.green, theme.palette.mode === 'dark' ? 0.25 : 0.18),
+    },
+  }),
+
+  /** Botón Eliminar: borde e icono rojo, fondo rojo suave */
+  actionButtonDelete: (theme: Theme): SxProps<Theme> => ({
+    ...actionButtonBase,
+    color: theme.palette.error.main,
+    borderColor: theme.palette.error.main,
+    bgcolor: alpha(theme.palette.error.main, theme.palette.mode === 'dark' ? 0.18 : 0.12),
+    '&:hover': {
+      borderColor: theme.palette.error.main,
+      color: theme.palette.error.main,
+      bgcolor: alpha(theme.palette.error.main, theme.palette.mode === 'dark' ? 0.25 : 0.18),
+    },
+  }),
 
   /**
    * Estilo para contenedores de página

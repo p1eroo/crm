@@ -6,7 +6,6 @@ import {
   IconButton,
   TextField,
   Dialog,
-  DialogTitle,
   DialogContent,
   DialogActions,
   MenuItem,
@@ -16,17 +15,17 @@ import {
   CardContent,
   Divider,
   Avatar,
-  FormControl,
   Select,
   Tooltip,
   Menu,
   useTheme,
   Collapse,
-  Autocomplete,
+  LinearProgress,
 } from '@mui/material';
-import { Add, Delete, AttachMoney, Visibility, ViewList, AccountTree, CalendarToday, Close, FileDownload, FilterList, ExpandMore, Remove, Bolt, Business, Edit, ChevronLeft, ChevronRight } from '@mui/icons-material';
+import { Add, Delete, AttachMoney, Visibility, ViewList, AccountTree, CalendarToday, Close, FileDownload, FilterList, ExpandMore, Remove, Bolt, Edit, ChevronLeft, ChevronRight } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
+import { getStageColor as getStageColorUtil, getStageProgress } from '../utils/stageColors';
 import { pageStyles } from '../theme/styles';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -57,13 +56,13 @@ interface Deal {
 const Deals: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
-  const { user } = useAuth();
+  useAuth();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<Deal | null>(null);
   const [search] = useState('');
-  const [sortBy, setSortBy] = useState('newest');
+  const [sortBy] = useState('newest');
   const dealFormDataRef = useRef<{ formData: DealFormData; setFormData: React.Dispatch<React.SetStateAction<DealFormData>> }>({
     formData: getInitialDealFormData(null),
     setFormData: () => {},
@@ -201,65 +200,7 @@ const Deals: React.FC = () => {
     setPreviewDeal(null);
   };
 
-  // Función para obtener el color de la etapa (para el texto del chip)
-  const getStageColor = (stage: string) => {
-    // Cierre ganado y etapas finales exitosas
-    if (['cierre_ganado', 'firma_contrato', 'activo'].includes(stage)) {
-      return { 
-        bg: theme.palette.mode === 'dark' 
-          ? `${taxiMonterricoColors.green}26` 
-          : `${taxiMonterricoColors.green}15`, 
-        color: taxiMonterricoColors.green 
-      };
-    }
-    // Cierre perdido y clientes perdidos
-    else if (stage === 'cierre_perdido' || stage === 'cliente_perdido') {
-      return { 
-        bg: theme.palette.mode === 'dark' 
-          ? `${theme.palette.error.main}26` 
-          : `${theme.palette.error.main}15`, 
-        color: theme.palette.error.main 
-      };
-    }
-    // Negociación y reuniones
-    else if (['reunion_agendada', 'reunion_efectiva', 'propuesta_economica', 'negociacion'].includes(stage)) {
-      return { 
-        bg: theme.palette.mode === 'dark' 
-          ? `${taxiMonterricoColors.orange}26` 
-          : `${taxiMonterricoColors.orange}15`, 
-        color: taxiMonterricoColors.orangeDark 
-      };
-    }
-    // Licitación - Color de texto púrpura oscuro
-    else if (stage === 'licitacion_etapa_final' || stage === 'licitacion') {
-      return { 
-        bg: theme.palette.mode === 'dark' 
-          ? `${theme.palette.secondary.main}26` 
-          : `${theme.palette.secondary.main}15`, 
-        color: theme.palette.secondary.main 
-      };
-    }
-    // Lead y Contacto - Azul oscuro
-    else if (['lead', 'contacto'].includes(stage)) {
-      return { 
-        bg: theme.palette.mode === 'dark' 
-          ? `${theme.palette.primary.main}26` 
-          : `${theme.palette.primary.main}15`, 
-        color: theme.palette.primary.main 
-      };
-    }
-    // Lead inactivo - Gris oscuro
-    else if (stage === 'lead_inactivo') {
-      return { bg: theme.palette.action.hover, color: theme.palette.text.secondary };
-    }
-    // Por defecto
-    return { 
-      bg: theme.palette.mode === 'dark' 
-        ? `${theme.palette.primary.main}26` 
-        : `${theme.palette.primary.main}15`, 
-      color: theme.palette.primary.main 
-    };
-  };
+  const getStageColor = (stage: string) => getStageColorUtil(theme, stage);
 
   // Función para obtener el color de fondo de la card según la etapa
   const getStageCardColor = (stage: string) => {
@@ -1235,8 +1176,11 @@ const Deals: React.FC = () => {
                     px: { xs: 0.75, md: 1 },
                     py: { xs: 0.5, md: 0.75 },
                     display: 'flex',
-                    alignItems: 'center',
+                    flexDirection: 'column',
+                    alignItems: 'flex-start',
                     justifyContent: 'flex-start',
+                    gap: 0.5,
+                    minWidth: 0,
                   }}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -1254,7 +1198,7 @@ const Deals: React.FC = () => {
                   >
                     <Typography
                       sx={{
-                        fontWeight: 500,
+                        fontWeight: 600,
                         fontSize: { xs: '0.75rem', md: '0.8125rem' },
                         color: getStageColor(deal.stage).color,
                       }}
@@ -1268,6 +1212,42 @@ const Deals: React.FC = () => {
                       }}
                     />
                   </Box>
+                  {(() => {
+                    const prog = getStageProgress(deal.stage);
+                    const showVal = Math.max(0, Math.min(100, prog));
+                    return (
+                  <Box sx={{ position: 'relative', width: 90, height: 8, borderRadius: 4, overflow: 'hidden', bgcolor: theme.palette.action.hover }}>
+                    <LinearProgress
+                      variant="determinate"
+                      value={showVal}
+                      sx={{
+                        height: '100%',
+                        borderRadius: 4,
+                        bgcolor: theme.palette.action.hover,
+                        '& .MuiLinearProgress-bar': {
+                          bgcolor: getStageProgress(deal.stage) < 0 ? theme.palette.text.disabled : theme.palette.primary.main,
+                        },
+                      }}
+                    />
+                    <Typography
+                      component="span"
+                      sx={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        fontSize: '0.625rem',
+                        fontWeight: 600,
+                        color: showVal > 40 ? 'common.white' : theme.palette.text.primary,
+                        textShadow: showVal > 40 ? '0 0 1px rgba(0,0,0,0.5)' : 'none',
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      {prog < 0 ? `${prog}%` : `${showVal}%`}
+                    </Typography>
+                  </Box>
+                    );
+                  })()}
                     <Menu
                       anchorEl={stageMenuAnchor[deal.id]}
                       open={Boolean(stageMenuAnchor[deal.id])}
@@ -1346,7 +1326,7 @@ const Deals: React.FC = () => {
                             e.stopPropagation();
                             handleOpen(deal);
                           }}
-                          sx={pageStyles.previewIconButton}
+                          sx={pageStyles.actionButtonEdit(theme)}
                         >
                           <Edit sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
                         </IconButton>
@@ -1358,7 +1338,7 @@ const Deals: React.FC = () => {
                             e.stopPropagation();
                             handlePreview(deal);
                           }}
-                          sx={pageStyles.previewIconButton}
+                          sx={pageStyles.actionButtonView(theme)}
                         >
                           <Visibility sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
                         </IconButton>
@@ -1370,7 +1350,7 @@ const Deals: React.FC = () => {
                             e.stopPropagation();
                             handleDelete(deal.id);
                           }}
-                          sx={pageStyles.deleteIcon}
+                          sx={pageStyles.actionButtonDelete(theme)}
                         >
                           <Delete sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }} />
                         </IconButton>
@@ -1634,7 +1614,6 @@ const Deals: React.FC = () => {
                             key={option.value}
                             label={option.label}
                             size="small"
-                            color={isSelected ? (stageColor.bg === taxiMonterricoColors.successLight ? 'success' : stageColor.bg === taxiMonterricoColors.errorLight ? 'error' : 'warning') : undefined}
                             variant={isSelected ? 'filled' : 'outlined'}
                             onClick={() => {
                               setSelectedStages((prev) =>
@@ -1642,7 +1621,7 @@ const Deals: React.FC = () => {
                               );
                             }}
                             sx={{
-                              fontWeight: 500,
+                              fontWeight: 600,
                               fontSize: '0.75rem',
                               height: '24px',
                               cursor: 'pointer',
@@ -1651,6 +1630,15 @@ const Deals: React.FC = () => {
                               py: 0.25,
                               px: 1,
                               opacity: isSelected ? 1 : 0.8,
+                              ...(isSelected && {
+                                bgcolor: stageColor.bg,
+                                color: stageColor.color,
+                                borderColor: stageColor.bg,
+                              }),
+                              ...(!isSelected && {
+                                borderColor: stageColor.color,
+                                color: theme.palette.text.primary,
+                              }),
                               '&:hover': {
                                 opacity: 1,
                                 transform: 'scale(1.02)',

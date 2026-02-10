@@ -8,21 +8,65 @@ const sequelize_1 = require("sequelize");
 const Contact_1 = require("../models/Contact");
 const Deal_1 = require("../models/Deal");
 const Company_1 = require("../models/Company");
+const Activity_1 = require("../models/Activity");
+const Task_1 = require("../models/Task");
 const auth_1 = require("../middleware/auth");
 const router = express_1.default.Router();
 router.use(auth_1.authenticateToken);
 // Empresas por etapa, agrupadas por asesor (ownerId). Solo usuarios con rol "user".
+// Query params opcionales: userId, leadSource, period (day|week|month|year = últimas 24h, 7d, 30d, 365d).
 router.get('/companies-by-user', async (req, res) => {
     try {
+        const userId = req.query.userId != null ? Number(req.query.userId) : null;
+        const leadSourceParam = req.query.leadSource;
+        const periodParam = req.query.period;
+        let leadSourceCondition = '';
+        const replacements = {};
+        if (leadSourceParam !== undefined && leadSourceParam !== null) {
+            if (leadSourceParam === '' || leadSourceParam === '__null__') {
+                leadSourceCondition = ' AND c."leadSource" IS NULL';
+            }
+            else {
+                leadSourceCondition = ' AND c."leadSource" IS NOT NULL AND c."leadSource" ILIKE :leadSource';
+                replacements.leadSource = leadSourceParam;
+            }
+        }
+        let userIdCondition = '';
+        if (userId != null && !Number.isNaN(userId)) {
+            userIdCondition = ' AND c."ownerId" = :userId';
+            replacements.userId = userId;
+        }
+        let periodCondition = '';
+        if (periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year') {
+            const now = new Date();
+            let fromDate;
+            if (periodParam === 'day') {
+                fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            }
+            else if (periodParam === 'week') {
+                fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            }
+            else if (periodParam === 'month') {
+                fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            }
+            else {
+                fromDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+            }
+            periodCondition = ' AND c."createdAt" >= :fromDate';
+            replacements.fromDate = fromDate.toISOString();
+        }
         const results = await Company_1.Company.sequelize.query(`
       SELECT c."ownerId" as "userId", c."lifecycleStage" as stage, COUNT(c.id)::integer as count
       FROM companies c
       INNER JOIN users u ON u.id = c."ownerId"
       INNER JOIN roles r ON r.id = u."roleId"
       WHERE r.name = 'user' AND c."ownerId" IS NOT NULL
+      ${userIdCondition}
+      ${leadSourceCondition}
+      ${periodCondition}
       GROUP BY c."ownerId", c."lifecycleStage"
       ORDER BY c."ownerId", c."lifecycleStage"
-    `, { type: sequelize_1.QueryTypes.SELECT });
+    `, { replacements: Object.keys(replacements).length ? replacements : undefined, type: sequelize_1.QueryTypes.SELECT });
         const byUser = {};
         (results || []).forEach((row) => {
             const uid = row.userId;
@@ -34,6 +78,294 @@ router.get('/companies-by-user', async (req, res) => {
     }
     catch (error) {
         console.error('Error en /reports/companies-by-user:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+// Listar empresas por etapa (mismos filtros que companies-by-user). Query: stage, userId, leadSource, period, page, limit.
+router.get('/companies-list', async (req, res) => {
+    try {
+        const stageParam = req.query.stage;
+        if (!stageParam || typeof stageParam !== 'string') {
+            return res.status(400).json({ error: 'Falta el parámetro stage' });
+        }
+        const userId = req.query.userId != null ? Number(req.query.userId) : null;
+        const leadSourceParam = req.query.leadSource;
+        const periodParam = req.query.period;
+        const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit), 10) || 20));
+        const offset = (page - 1) * limit;
+        let leadSourceCondition = '';
+        const replacements = {
+            stage: stageParam.trim().toLowerCase(),
+            limit,
+            offset,
+        };
+        if (leadSourceParam !== undefined && leadSourceParam !== null) {
+            if (leadSourceParam === '' || leadSourceParam === '__null__') {
+                leadSourceCondition = ' AND c."leadSource" IS NULL';
+            }
+            else {
+                leadSourceCondition = ' AND c."leadSource" IS NOT NULL AND c."leadSource" ILIKE :leadSource';
+                replacements.leadSource = leadSourceParam;
+            }
+        }
+        let userIdCondition = '';
+        if (userId != null && !Number.isNaN(userId)) {
+            userIdCondition = ' AND c."ownerId" = :userId';
+            replacements.userId = userId;
+        }
+        let periodCondition = '';
+        if (periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year') {
+            const now = new Date();
+            let fromDate;
+            if (periodParam === 'day')
+                fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            else if (periodParam === 'week')
+                fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            else if (periodParam === 'month')
+                fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            else
+                fromDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+            periodCondition = ' AND c."createdAt" >= :fromDate';
+            replacements.fromDate = fromDate.toISOString();
+        }
+        const countResult = await Company_1.Company.sequelize.query(`
+      SELECT COUNT(c.id)::integer as total
+      FROM companies c
+      INNER JOIN users u ON u.id = c."ownerId"
+      INNER JOIN roles r ON r.id = u."roleId"
+      WHERE r.name = 'user' AND c."ownerId" IS NOT NULL AND c."lifecycleStage" = :stage
+      ${userIdCondition}
+      ${leadSourceCondition}
+      ${periodCondition}
+    `, { replacements, type: sequelize_1.QueryTypes.SELECT });
+        const total = (countResult && countResult[0] && countResult[0].total != null) ? countResult[0].total : 0;
+        const rows = await Company_1.Company.sequelize.query(`
+      SELECT c.id, c.name, c."companyname", c."lifecycleStage", c."ownerId", c."estimatedRevenue"
+      FROM companies c
+      INNER JOIN users u ON u.id = c."ownerId"
+      INNER JOIN roles r ON r.id = u."roleId"
+      WHERE r.name = 'user' AND c."ownerId" IS NOT NULL AND c."lifecycleStage" = :stage
+      ${userIdCondition}
+      ${leadSourceCondition}
+      ${periodCondition}
+      ORDER BY c.name ASC
+      LIMIT :limit OFFSET :offset
+    `, { replacements, type: sequelize_1.QueryTypes.SELECT });
+        res.json({
+            companies: rows,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        });
+    }
+    catch (error) {
+        console.error('Error en /reports/companies-list:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+// Conteo de actividades por tipo. Query params opcionales: userId (asesor), period (day|week|month|year).
+router.get('/activities-by-type', async (req, res) => {
+    try {
+        const userId = req.query.userId != null ? Number(req.query.userId) : null;
+        const periodParam = req.query.period;
+        const replacements = {};
+        let userIdCondition = '';
+        if (userId != null && !Number.isNaN(userId)) {
+            userIdCondition = ' AND a."userId" = :userId';
+            replacements.userId = userId;
+        }
+        let periodCondition = '';
+        if (periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year') {
+            const now = new Date();
+            let fromDate;
+            if (periodParam === 'day') {
+                fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            }
+            else if (periodParam === 'week') {
+                fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            }
+            else if (periodParam === 'month') {
+                fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            }
+            else {
+                fromDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+            }
+            periodCondition = ' AND a."createdAt" >= :fromDate';
+            replacements.fromDate = fromDate.toISOString();
+        }
+        const results = await Activity_1.Activity.sequelize.query(`
+      SELECT a.type as type, COUNT(a.id)::integer as count
+      FROM activities a
+      WHERE 1=1
+      ${userIdCondition}
+      ${periodCondition}
+      GROUP BY a.type
+      ORDER BY a.type
+    `, { replacements: Object.keys(replacements).length ? replacements : undefined, type: sequelize_1.QueryTypes.SELECT });
+        const byType = {};
+        (results || []).forEach((row) => {
+            byType[row.type] = row.count || 0;
+        });
+        // Incluir tareas de la tabla tasks (mismo asesor = assignedToId, mismo período = createdAt)
+        const taskUserIdCondition = userId != null && !Number.isNaN(userId)
+            ? ' AND t."assignedToId" = :taskUserId'
+            : '';
+        const taskPeriodCondition = periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year'
+            ? ' AND t."createdAt" >= :taskFromDate'
+            : '';
+        const taskReplacements = {};
+        if (userId != null && !Number.isNaN(userId))
+            taskReplacements.taskUserId = userId;
+        if (periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year') {
+            const now = new Date();
+            let fromDate;
+            if (periodParam === 'day')
+                fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            else if (periodParam === 'week')
+                fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            else if (periodParam === 'month')
+                fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            else
+                fromDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+            taskReplacements.taskFromDate = fromDate.toISOString();
+        }
+        const taskCountResult = await Task_1.Task.sequelize.query(`
+      SELECT COUNT(t.id)::integer as count
+      FROM tasks t
+      WHERE 1=1
+      ${taskUserIdCondition}
+      ${taskPeriodCondition}
+    `, { replacements: Object.keys(taskReplacements).length ? taskReplacements : undefined, type: sequelize_1.QueryTypes.SELECT });
+        const taskCount = (taskCountResult && taskCountResult[0] && taskCountResult[0].count) ? taskCountResult[0].count : 0;
+        byType['task'] = (byType['task'] || 0) + taskCount;
+        res.json({ byType });
+    }
+    catch (error) {
+        console.error('Error en /reports/activities-by-type:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+// Listar empresas, contactos y negocios vinculados a un tipo de actividad. Query: activityType (call|email|meeting|note|task), userId, period, page, limit.
+router.get('/activities-entities-list', async (req, res) => {
+    try {
+        const activityTypeParam = req.query.activityType?.trim()?.toLowerCase();
+        const validTypes = ['call', 'email', 'meeting', 'note', 'task'];
+        if (!activityTypeParam || !validTypes.includes(activityTypeParam)) {
+            return res.status(400).json({ error: 'Falta o es inválido el parámetro activityType (call|email|meeting|note|task)' });
+        }
+        const userId = req.query.userId != null ? Number(req.query.userId) : null;
+        const periodParam = req.query.period;
+        const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
+        const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit), 10) || 20));
+        const offset = (page - 1) * limit;
+        const replacements = { limit, offset };
+        let userIdCondition = '';
+        if (userId != null && !Number.isNaN(userId)) {
+            userIdCondition = ' AND a."userId" = :userId';
+            replacements.userId = userId;
+        }
+        let periodCondition = '';
+        if (periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year') {
+            const now = new Date();
+            let fromDate;
+            if (periodParam === 'day')
+                fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            else if (periodParam === 'week')
+                fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            else if (periodParam === 'month')
+                fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            else
+                fromDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+            periodCondition = ' AND a."createdAt" >= :fromDate';
+            replacements.fromDate = fromDate.toISOString();
+        }
+        const rows = [];
+        if (activityTypeParam === 'task') {
+            const taskUserIdCondition = userId != null && !Number.isNaN(userId) ? ' AND t."assignedToId" = :taskUserId' : '';
+            const taskPeriodCondition = periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year' ? ' AND t."createdAt" >= :taskFromDate' : '';
+            const taskRepl = {};
+            if (userId != null && !Number.isNaN(userId))
+                taskRepl.taskUserId = userId;
+            if (periodParam === 'day' || periodParam === 'week' || periodParam === 'month' || periodParam === 'year') {
+                const now = new Date();
+                let fromDate;
+                if (periodParam === 'day')
+                    fromDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+                else if (periodParam === 'week')
+                    fromDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                else if (periodParam === 'month')
+                    fromDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                else
+                    fromDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                taskRepl.taskFromDate = fromDate.toISOString();
+            }
+            const companyRows = await Task_1.Task.sequelize.query(`
+        SELECT 'company' as "entityType", t."companyId" as id FROM tasks t WHERE t."companyId" IS NOT NULL ${taskUserIdCondition} ${taskPeriodCondition}
+        UNION
+        SELECT 'contact', t."contactId" FROM tasks t WHERE t."contactId" IS NOT NULL ${taskUserIdCondition} ${taskPeriodCondition}
+        UNION
+        SELECT 'deal', t."dealId" FROM tasks t WHERE t."dealId" IS NOT NULL ${taskUserIdCondition} ${taskPeriodCondition}
+      `, { replacements: Object.keys(taskRepl).length ? taskRepl : undefined, type: sequelize_1.QueryTypes.SELECT });
+            const seen = new Set();
+            companyRows.forEach((r) => {
+                const key = `${r.entityType}-${r.id}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    rows.push(r);
+                }
+            });
+        }
+        else {
+            replacements.activityType = activityTypeParam;
+            const activityRows = await Activity_1.Activity.sequelize.query(`
+        SELECT 'company' as "entityType", a."companyId" as id FROM activities a WHERE a.type = :activityType AND a."companyId" IS NOT NULL ${userIdCondition} ${periodCondition}
+        UNION
+        SELECT 'contact', a."contactId" FROM activities a WHERE a.type = :activityType AND a."contactId" IS NOT NULL ${userIdCondition} ${periodCondition}
+        UNION
+        SELECT 'deal', a."dealId" FROM activities a WHERE a.type = :activityType AND a."dealId" IS NOT NULL ${userIdCondition} ${periodCondition}
+      `, { replacements: Object.keys(replacements).length ? replacements : undefined, type: sequelize_1.QueryTypes.SELECT });
+            const seen = new Set();
+            activityRows.forEach((r) => {
+                const key = `${r.entityType}-${r.id}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    rows.push(r);
+                }
+            });
+        }
+        const total = rows.length;
+        const byType = { company: [], contact: [], deal: [] };
+        rows.forEach((r) => {
+            if (r.entityType === 'company')
+                byType.company.push(r.id);
+            else if (r.entityType === 'contact')
+                byType.contact.push(r.id);
+            else if (r.entityType === 'deal')
+                byType.deal.push(r.id);
+        });
+        const companies = byType.company.length ? await Company_1.Company.findAll({ where: { id: byType.company }, attributes: ['id', 'name', 'companyname'] }) : [];
+        const contacts = byType.contact.length ? await Contact_1.Contact.findAll({ where: { id: byType.contact }, attributes: ['id', 'firstName', 'lastName'] }) : [];
+        const deals = byType.deal.length ? await Deal_1.Deal.findAll({ where: { id: byType.deal }, attributes: ['id', 'name'] }) : [];
+        const nameById = {};
+        companies.forEach((c) => { nameById[`company-${c.id}`] = (c.name || c.companyname || '—'); });
+        contacts.forEach((c) => { nameById[`contact-${c.id}`] = `${(c.firstName || '').trim()} ${(c.lastName || '').trim()}`.trim() || '—'; });
+        deals.forEach((d) => { nameById[`deal-${d.id}`] = d.name || '—'; });
+        const items = rows
+            .map((r) => ({ entityType: r.entityType, id: r.id, name: nameById[`${r.entityType}-${r.id}`] || '—' }))
+            .sort((a, b) => a.name.localeCompare(b.name, 'es'));
+        const paginated = items.slice(offset, offset + limit);
+        res.json({
+            items: paginated,
+            total,
+            page,
+            limit,
+            totalPages: Math.ceil(total / limit),
+        });
+    }
+    catch (error) {
+        console.error('Error en /reports/activities-entities-list:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -71,6 +403,160 @@ function getWeekNumber(date) {
     const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
     return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
 }
+// Devuelve lunes 00:00:00 y lunes siguiente 00:00:00 (exclusivo) para la semana ISO dada
+function getWeekRange(year, week) {
+    const jan4 = new Date(Date.UTC(year, 0, 4));
+    const dayJan4 = jan4.getUTCDay() || 7; // 1 = lunes, 7 = domingo
+    const mondayWeek1 = new Date(Date.UTC(year, 0, 4 - (dayJan4 - 1)));
+    const start = new Date(mondayWeek1.getTime() + (week - 1) * 7 * 24 * 60 * 60 * 1000);
+    const end = new Date(start.getTime() + 7 * 24 * 60 * 60 * 1000);
+    return { start, end };
+}
+// Movimiento semanal de empresas: nuevo ingreso, avance, retroceso, sin cambios (por semana ISO)
+// Query: year, week (opcionales; por defecto semana actual), userId (opcional)
+router.get('/companies-weekly-movement', async (req, res) => {
+    try {
+        const now = new Date();
+        const year = req.query.year != null ? Number(req.query.year) : now.getFullYear();
+        const weekParam = req.query.week;
+        const week = weekParam != null ? Number(weekParam) : getWeekNumber(now);
+        const userId = req.query.userId != null ? Number(req.query.userId) : null;
+        const { start: weekStart, end: weekEnd } = getWeekRange(year, week);
+        const advanceStages = [
+            'reunion_efectiva', 'propuesta_economica', 'negociacion', 'licitacion',
+            'licitacion_etapa_final', 'firma_contrato', 'activo', 'cierre_ganado',
+        ];
+        const retroStages = ['cierre_perdido', 'cliente_perdido', 'lead_inactivo'];
+        const baseWhere = {};
+        if (userId != null && !Number.isNaN(userId)) {
+            baseWhere.ownerId = userId;
+        }
+        const [nuevoIngreso, avance, retroceso, sinCambios] = await Promise.all([
+            Company_1.Company.count({
+                where: {
+                    ...baseWhere,
+                    createdAt: { [sequelize_1.Op.gte]: weekStart, [sequelize_1.Op.lt]: weekEnd },
+                },
+            }),
+            Company_1.Company.count({
+                where: {
+                    ...baseWhere,
+                    createdAt: { [sequelize_1.Op.lt]: weekStart },
+                    updatedAt: { [sequelize_1.Op.gte]: weekStart, [sequelize_1.Op.lt]: weekEnd },
+                    lifecycleStage: { [sequelize_1.Op.in]: advanceStages },
+                },
+            }),
+            Company_1.Company.count({
+                where: {
+                    ...baseWhere,
+                    createdAt: { [sequelize_1.Op.lt]: weekStart },
+                    updatedAt: { [sequelize_1.Op.gte]: weekStart, [sequelize_1.Op.lt]: weekEnd },
+                    lifecycleStage: { [sequelize_1.Op.in]: retroStages },
+                },
+            }),
+            Company_1.Company.count({
+                where: {
+                    ...baseWhere,
+                    [sequelize_1.Op.or]: [
+                        { createdAt: { [sequelize_1.Op.lt]: weekStart }, updatedAt: { [sequelize_1.Op.lt]: weekStart } },
+                        {
+                            createdAt: { [sequelize_1.Op.lt]: weekStart },
+                            updatedAt: { [sequelize_1.Op.gte]: weekStart, [sequelize_1.Op.lt]: weekEnd },
+                            lifecycleStage: { [sequelize_1.Op.notIn]: [...advanceStages, ...retroStages] },
+                        },
+                    ],
+                },
+            }),
+        ]);
+        const total = nuevoIngreso + avance + retroceso + sinCambios;
+        res.json({
+            year,
+            week,
+            nuevoIngreso,
+            avance,
+            retroceso,
+            sinCambios,
+            total,
+        });
+    }
+    catch (error) {
+        console.error('Error en /reports/companies-weekly-movement:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+// Movimiento semanal por varias semanas (para gráfico stacked bar por semana, números absolutos)
+// Query: weeks (número de semanas hacia atrás, default 5), userId (opcional)
+router.get('/companies-weekly-movement-range', async (req, res) => {
+    try {
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentWeek = getWeekNumber(now);
+        const numWeeks = Math.min(12, Math.max(1, parseInt(String(req.query.weeks), 10) || 5));
+        const userId = req.query.userId != null ? Number(req.query.userId) : null;
+        const advanceStages = [
+            'reunion_efectiva', 'propuesta_economica', 'negociacion', 'licitacion',
+            'licitacion_etapa_final', 'firma_contrato', 'activo', 'cierre_ganado',
+        ];
+        const retroStages = ['cierre_perdido', 'cliente_perdido', 'lead_inactivo'];
+        const baseWhere = {};
+        if (userId != null && !Number.isNaN(userId)) {
+            baseWhere.ownerId = userId;
+        }
+        const rows = [];
+        for (let i = numWeeks - 1; i >= 0; i--) {
+            let w = currentWeek - i;
+            let y = currentYear;
+            if (w < 1) {
+                w += 52;
+                y -= 1;
+            }
+            const { start: weekStart, end: weekEnd } = getWeekRange(y, w);
+            const [nuevoIngreso, avance, retroceso, sinCambios] = await Promise.all([
+                Company_1.Company.count({
+                    where: {
+                        ...baseWhere,
+                        createdAt: { [sequelize_1.Op.gte]: weekStart, [sequelize_1.Op.lt]: weekEnd },
+                    },
+                }),
+                Company_1.Company.count({
+                    where: {
+                        ...baseWhere,
+                        createdAt: { [sequelize_1.Op.lt]: weekStart },
+                        updatedAt: { [sequelize_1.Op.gte]: weekStart, [sequelize_1.Op.lt]: weekEnd },
+                        lifecycleStage: { [sequelize_1.Op.in]: advanceStages },
+                    },
+                }),
+                Company_1.Company.count({
+                    where: {
+                        ...baseWhere,
+                        createdAt: { [sequelize_1.Op.lt]: weekStart },
+                        updatedAt: { [sequelize_1.Op.gte]: weekStart, [sequelize_1.Op.lt]: weekEnd },
+                        lifecycleStage: { [sequelize_1.Op.in]: retroStages },
+                    },
+                }),
+                Company_1.Company.count({
+                    where: {
+                        ...baseWhere,
+                        [sequelize_1.Op.or]: [
+                            { createdAt: { [sequelize_1.Op.lt]: weekStart }, updatedAt: { [sequelize_1.Op.lt]: weekStart } },
+                            {
+                                createdAt: { [sequelize_1.Op.lt]: weekStart },
+                                updatedAt: { [sequelize_1.Op.gte]: weekStart, [sequelize_1.Op.lt]: weekEnd },
+                                lifecycleStage: { [sequelize_1.Op.notIn]: [...advanceStages, ...retroStages] },
+                            },
+                        ],
+                    },
+                }),
+            ]);
+            rows.push({ year: y, week: w, nuevoIngreso, avance, retroceso, sinCambios });
+        }
+        res.json({ weeks: rows });
+    }
+    catch (error) {
+        console.error('Error en /reports/companies-weekly-movement-range:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
 // Obtener estadísticas por etapa y semana del año para un usuario
 router.get('/user/:userId/stage-stats', async (req, res) => {
     try {

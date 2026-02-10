@@ -44,17 +44,20 @@ import {
 import { useNavigate } from "react-router-dom";
 import api from "../config/api";
 import { taxiMonterricoColors } from "../theme/colors";
+import { getStageColor as getStageColorUtil } from "../utils/stageColors";
 import { pageStyles } from "../theme/styles";
 import { companyLabels } from "../constants/companyLabels";
 import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 import * as XLSX from "xlsx";
 import { FormDrawer } from "../components/FormDrawer";
+import { StageChipWithProgress } from "../components/StageChipWithProgress";
 import { UnifiedTable, DEFAULT_ITEMS_PER_PAGE } from "../components/UnifiedTable";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUserTie } from "@fortawesome/free-solid-svg-icons";
 import EntityPreviewDrawer from "../components/EntityPreviewDrawer";
 import ContactCompanyModal from "../components/ContactCompanyModal";
+import UserAvatar from "../components/UserAvatar";
 
 interface Contact {
   id: number;
@@ -189,14 +192,18 @@ const Contacts: React.FC = () => {
     nombre: string;
     empresa: string;
     telefono: string;
+    correo: string;
     pais: string;
     etapa: string;
+    propietario: string;
   }>({
     nombre: '',
     empresa: '',
     telefono: '',
+    correo: '',
     pais: '',
     etapa: '',
+    propietario: '',
   });
   const [debouncedColumnFilters, setDebouncedColumnFilters] = useState(columnFilters);
   const [showColumnFilters, setShowColumnFilters] = useState(false);
@@ -448,9 +455,13 @@ const Contacts: React.FC = () => {
       if (debouncedColumnFilters.nombre) params.filterNombre = debouncedColumnFilters.nombre;
       if (debouncedColumnFilters.empresa) params.filterEmpresa = debouncedColumnFilters.empresa;
       if (debouncedColumnFilters.telefono) params.filterTelefono = debouncedColumnFilters.telefono;
+      if (debouncedColumnFilters.correo) params.filterCorreo = debouncedColumnFilters.correo;
       if (debouncedColumnFilters.pais) params.filterPais = debouncedColumnFilters.pais;
       if (debouncedColumnFilters.etapa) params.filterEtapa = debouncedColumnFilters.etapa;
-      
+      if (debouncedColumnFilters.propietario) {
+        params.owners = [debouncedColumnFilters.propietario];
+      }
+
       const response = await api.get('/contacts', { params });
       const contactsData = response.data.contacts || response.data || [];
       
@@ -494,7 +505,7 @@ const Contacts: React.FC = () => {
   // }, [fetchCompanies]);
 
   useEffect(() => {
-    if (user?.role === "admin") {
+    if (user?.role === "admin" || user?.role === "jefe_comercial") {
       fetchUsers();
     }
   }, [fetchUsers, user?.role]);
@@ -1139,34 +1150,7 @@ const Contacts: React.FC = () => {
     setPreviewContact(null);
   };
 
-  const getStageColor = (stage: string) => {
-    const colors: {
-      [key: string]:
-        | "default"
-        | "primary"
-        | "secondary"
-        | "error"
-        | "info"
-        | "success"
-        | "warning";
-    } = {
-      lead: "error", // Rojo para 0%
-      contacto: "warning", // Naranja para 10%
-      reunion_agendada: "warning", // Naranja para 30%
-      reunion_efectiva: "warning", // Amarillo para 40%
-      propuesta_economica: "info", // Verde claro para 50%
-      negociacion: "success", // Verde para 70%
-      licitacion: "success", // Verde para 75%
-      licitacion_etapa_final: "success", // Verde oscuro para 85%
-      cierre_ganado: "success", // Verde oscuro para 90%
-      cierre_perdido: "error", // Rojo para -1%
-      firma_contrato: "success", // Verde oscuro para 95%
-      activo: "success", // Verde más oscuro para 100%
-      cliente_perdido: "error", // Rojo para -1%
-      lead_inactivo: "error", // Rojo para -5%
-    };
-    return colors[stage] || "default";
-  };
+  const getStageColor = (stage: string) => getStageColorUtil(theme, stage);
 
   const getStageLabel = (stage: string) => {
     const labels: { [key: string]: string } = {
@@ -1458,8 +1442,8 @@ const Contacts: React.FC = () => {
               overflow: 'hidden',
               display: 'grid',
               gridTemplateColumns: {
-                sm: "repeat(6, minmax(0, 1fr))",
-                md: "1.5fr 1fr 0.9fr 0.7fr 1.2fr 0.7fr",
+                sm: "repeat(8, minmax(0, 1fr))",
+                md: "1.5fr 1fr 0.9fr 1fr 0.7fr 1.2fr 0.6fr 0.7fr",
               },
               columnGap: { sm: 1, md: 1.5 },
               minWidth: { xs: 800, md: 'auto' },
@@ -1470,7 +1454,7 @@ const Contacts: React.FC = () => {
               borderBottom: `2px solid ${theme.palette.divider}`,
             }}
           >
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
                 <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Nombre del Cliente</Typography>
                 {showColumnFilters && (
@@ -1496,7 +1480,7 @@ const Contacts: React.FC = () => {
                 />
               )}
             </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
                 <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Empresa</Typography>
                 {showColumnFilters && (
@@ -1522,8 +1506,8 @@ const Contacts: React.FC = () => {
                 />
               )}
             </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 0.5, width: '100%' }}>
                 <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Teléfono</Typography>
                 {showColumnFilters && (
                   <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, telefono: '' }))} sx={{ p: 0.25, opacity: columnFilters.telefono ? 1 : 0.3 }}>
@@ -1548,8 +1532,34 @@ const Contacts: React.FC = () => {
                 />
               )}
             </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 0.5, width: '100%' }}>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Correo</Typography>
+                {showColumnFilters && (
+                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, correo: '' }))} sx={{ p: 0.25, opacity: columnFilters.correo ? 1 : 0.3 }}>
+                    <FilterList sx={{ fontSize: 14 }} />
+                  </IconButton>
+                )}
+              </Box>
+              {showColumnFilters && (
+                <TextField
+                  size="small"
+                  placeholder="Filtrar..."
+                  value={columnFilters.correo}
+                  onChange={(e) => setColumnFilters(prev => ({ ...prev, correo: e.target.value }))}
+                  sx={{
+                    width: '100%',
+                    '& .MuiOutlinedInput-root': {
+                      height: 28,
+                      fontSize: '0.75rem',
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                    },
+                  }}
+                />
+              )}
+            </Box>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 0.5, width: '100%' }}>
                 <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>País</Typography>
                 {showColumnFilters && (
                   <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, pais: '' }))} sx={{ p: 0.25, opacity: columnFilters.pais ? 1 : 0.3 }}>
@@ -1574,8 +1584,8 @@ const Contacts: React.FC = () => {
                 />
               )}
             </Box>
-            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', gap: 0.5 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+            <Box sx={{ ...pageStyles.tableHeaderCell, flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'flex-start', gap: 0.5 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: 0.5, width: '100%' }}>
                 <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Etapa</Typography>
                 {showColumnFilters && (
                   <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, etapa: '' }))} sx={{ p: 0.25, opacity: columnFilters.etapa ? 1 : 0.3 }}>
@@ -1605,9 +1615,64 @@ const Contacts: React.FC = () => {
                 ...pageStyles.tableHeaderCell,
                 px: { xs: 0.75, md: 1 },
                 justifyContent: "flex-start",
+                alignItems: "center",
+                flexDirection: 'column',
+                gap: 0.5,
               }}
             >
-              Acciones
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
+                <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Propietario</Typography>
+                {showColumnFilters && (
+                  <IconButton size="small" onClick={() => setColumnFilters(prev => ({ ...prev, propietario: '' }))} sx={{ p: 0.25, opacity: columnFilters.propietario ? 1 : 0.3 }}>
+                    <FilterList sx={{ fontSize: 14 }} />
+                  </IconButton>
+                )}
+              </Box>
+              {showColumnFilters && (
+                <TextField
+                  select
+                  size="small"
+                  placeholder="Todos"
+                  value={columnFilters.propietario}
+                  onChange={(e) => setColumnFilters(prev => ({ ...prev, propietario: e.target.value }))}
+                  sx={{
+                    width: '100%',
+                    '& .MuiOutlinedInput-root': {
+                      height: 28,
+                      fontSize: '0.75rem',
+                      bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : theme.palette.background.paper,
+                    },
+                  }}
+                  SelectProps={{
+                    displayEmpty: true,
+                    renderValue: (v: unknown): React.ReactNode => {
+                      if (!v) return 'Todos';
+                      if (v === 'unassigned') return 'Sin asignar';
+                      if (v === 'me') return 'Yo';
+                      const u = _users.find((x: any) => String(x.id) === v);
+                      return u ? `${u.firstName} ${u.lastName}` : String(v);
+                    },
+                    MenuProps: { sx: { zIndex: 1700 }, slotProps: { root: { sx: { zIndex: 1700 } } }, PaperProps: { sx: { zIndex: 1700 } } },
+                  }}
+                >
+                  <MenuItem value="">Todos</MenuItem>
+                  <MenuItem value="unassigned">Sin asignar</MenuItem>
+                  <MenuItem value="me">Yo</MenuItem>
+                  {_users.filter((u: any) => u.role === 'user').map((u: any) => (
+                    <MenuItem key={u.id} value={String(u.id)}>{u.firstName} {u.lastName}</MenuItem>
+                  ))}
+                </TextField>
+              )}
+            </Box>
+            <Box
+              sx={{
+                ...pageStyles.tableHeaderCell,
+                px: { xs: 0.75, md: 1 },
+                justifyContent: "flex-start",
+                alignItems: "center",
+              }}
+            >
+              <Typography sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>Acciones</Typography>
             </Box>
           </Box>
         }
@@ -1624,8 +1689,8 @@ const Contacts: React.FC = () => {
                   transition: "all 0.2s ease",
                   display: "grid",
                   gridTemplateColumns: {
-                    sm: "repeat(6, minmax(0, 1fr))",
-                    md: "1.5fr 1fr 0.9fr 0.7fr 1.2fr 0.7fr",
+                    sm: "repeat(8, minmax(0, 1fr))",
+                    md: "1.5fr 1fr 0.9fr 1fr 0.7fr 1.2fr 0.6fr 0.7fr",
                   },
                   columnGap: { sm: 1, md: 1.5 },
                   minWidth: { xs: 800, md: 'auto' },
@@ -1642,6 +1707,8 @@ const Contacts: React.FC = () => {
                   },
                 }}
               >
+                {/* Celda 1: Nombre (móvil = card, desktop = columna) */}
+                <Box sx={{ minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', gridColumn: { xs: '1 / -1', sm: 'auto' } }}>
                 {/* Vista móvil: Card con información principal */}
                 <Box
                   sx={{
@@ -1803,25 +1870,18 @@ const Contacts: React.FC = () => {
                       </Box>
                     )}
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }} onClick={(e) => e.stopPropagation()}>
-                      <Chip
+                      <StageChipWithProgress
+                        stage={contact.lifecycleStage || "lead"}
                         label={getStageLabel(contact.lifecycleStage || "lead")}
-                        size="small"
+                        chipBg={getStageColor(contact.lifecycleStage || "lead").bg}
+                        chipColor={getStageColor(contact.lifecycleStage || "lead").color}
                         onClick={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
                           handleStatusMenuOpen(e, contact.id);
                         }}
                         disabled={updatingStatus[contact.id]}
-                        color={getStageColor(contact.lifecycleStage || "lead")}
-                        sx={{
-                          fontWeight: 500,
-                          fontSize: "0.6875rem",
-                          height: 20,
-                          cursor: "pointer",
-                          "&:hover": {
-                            opacity: 0.8,
-                          },
-                        }}
+                        barWidth={80}
                       />
                       <Menu
                         anchorEl={statusMenuAnchor[contact.id]}
@@ -1876,7 +1936,7 @@ const Contacts: React.FC = () => {
                   </Box>
                 </Box>
 
-                {/* Vista desktop: Grid layout */}
+                {/* Vista desktop: columna Nombre */}
                 <Box
                   sx={{
                     display: { xs: "none", sm: "flex" },
@@ -1943,6 +2003,8 @@ const Contacts: React.FC = () => {
                     </Box>
                   </Box>
                 </Box>
+                </Box>
+
                 <Box
                   sx={{
                     display: { xs: "none", sm: "flex" },
@@ -2009,6 +2071,31 @@ const Contacts: React.FC = () => {
                     py: { xs: 0.5, md: 0.75 },
                     alignItems: "center",
                     justifyContent: "flex-start",
+                    minWidth: 0,
+                    overflow: "hidden",
+                  }}
+                >
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: theme.palette.text.primary,
+                      fontSize: { sm: "0.625rem", md: "0.8125rem" },
+                      fontWeight: 400,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {contact.email || "--"}
+                  </Typography>
+                </Box>
+                <Box
+                  sx={{
+                    display: { xs: "none", sm: "flex" },
+                    px: { sm: 0.75, md: 1 },
+                    py: { xs: 0.5, md: 0.75 },
+                    alignItems: "center",
+                    justifyContent: "flex-start",
                   }}
                 >
                   <Typography
@@ -2032,25 +2119,18 @@ const Contacts: React.FC = () => {
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Chip
+                  <StageChipWithProgress
+                    stage={contact.lifecycleStage || "lead"}
                     label={getStageLabel(contact.lifecycleStage || "lead")}
-                    size="small"
+                    chipBg={getStageColor(contact.lifecycleStage || "lead").bg}
+                    chipColor={getStageColor(contact.lifecycleStage || "lead").color}
                     onClick={(e) => {
                       e.stopPropagation();
                       e.preventDefault();
                       handleStatusMenuOpen(e, contact.id);
                     }}
                     disabled={updatingStatus[contact.id]}
-                    color={getStageColor(contact.lifecycleStage || "lead")}
-                    sx={{
-                      fontWeight: 500,
-                      fontSize: { xs: "0.75rem", md: "0.8125rem" },
-                      height: { xs: 22, md: 24 },
-                      cursor: "pointer",
-                      "&:hover": {
-                        opacity: 0.8,
-                      },
-                    }}
+                    barWidth={90}
                   />
                   <Menu
                     anchorEl={statusMenuAnchor[contact.id]}
@@ -2100,6 +2180,22 @@ const Contacts: React.FC = () => {
                     ))}
                   </Menu>
                 </Box>
+                <Box sx={{ px: { xs: 0.5, md: 0.75 }, py: 0, display: { xs: 'none', sm: 'flex' }, alignItems: 'center', justifyContent: 'flex-start', minWidth: 0, overflow: 'hidden' }}>
+                  {contact.Owner ? (
+                    <Tooltip title={`${contact.Owner.firstName} ${contact.Owner.lastName}`} arrow>
+                      <UserAvatar
+                        firstName={contact.Owner.firstName}
+                        lastName={contact.Owner.lastName}
+                        colorSeed={contact.ownerId?.toString() || `${contact.Owner.firstName}${contact.Owner.lastName}`}
+                        size={32}
+                      />
+                    </Tooltip>
+                  ) : (
+                    <Typography variant="body2" sx={{ color: theme.palette.text.disabled, fontSize: { xs: '0.75rem', md: '0.8125rem' } }}>
+                      --
+                    </Typography>
+                  )}
+                </Box>
                 <Box
                   sx={{
                     display: { xs: "none", sm: "flex" },
@@ -2117,7 +2213,7 @@ const Contacts: React.FC = () => {
                           e.stopPropagation();
                           handleOpen(contact);
                         }}
-                        sx={pageStyles.previewIconButton}
+                        sx={pageStyles.actionButtonEdit(theme)}
                       >
                         <Edit
                           sx={{ fontSize: { sm: "1rem", md: "1.25rem" } }}
@@ -2131,7 +2227,7 @@ const Contacts: React.FC = () => {
                           e.stopPropagation();
                           handlePreview(contact);
                         }}
-                        sx={pageStyles.previewIconButton}
+                        sx={pageStyles.actionButtonView(theme)}
                       >
                         <Visibility
                           sx={{ fontSize: { sm: "1rem", md: "1.25rem" } }}
@@ -2145,7 +2241,7 @@ const Contacts: React.FC = () => {
                           e.stopPropagation();
                           handleDelete(contact.id);
                         }}
-                        sx={pageStyles.deleteIcon}
+                        sx={pageStyles.actionButtonDelete(theme)}
                       >
                         <Delete
                           sx={{ fontSize: { sm: "1rem", md: "1.25rem" } }}
@@ -2334,15 +2430,30 @@ const Contacts: React.FC = () => {
           <Typography variant="caption" sx={{ color: theme.palette.text.secondary, fontSize: '0.75rem' }}>
             Filtros activos:
           </Typography>
-          {Object.entries(columnFilters).map(([key, value]) => value && (
-            <Chip
-              key={key}
-              label={`${key}: ${value}`}
-              size="small"
-              onDelete={() => setColumnFilters(prev => ({ ...prev, [key]: '' }))}
-              sx={{ fontSize: '0.6875rem', height: 20 }}
-            />
-          ))}
+          {Object.entries(columnFilters).map(([key, value]) => {
+            if (!value) return null;
+            let label: string;
+            if (key === 'propietario') {
+              if (value === 'me') label = 'Propietario: Yo';
+              else if (value === 'unassigned') label = 'Propietario: Sin asignar';
+              else {
+                const u = _users.find((x: any) => String(x.id) === value) as any;
+                label = u ? `Propietario: ${u.firstName} ${u.lastName}` : `Propietario: ${value}`;
+              }
+            } else {
+              const keyLabel = { nombre: 'Nombre', empresa: 'Empresa', telefono: 'Teléfono', correo: 'Correo', pais: 'País', etapa: 'Etapa' }[key] || key;
+              label = `${keyLabel}: ${value}`;
+            }
+            return (
+              <Chip
+                key={key}
+                label={label}
+                size="small"
+                onDelete={() => setColumnFilters(prev => ({ ...prev, [key]: '' }))}
+                sx={{ fontSize: '0.6875rem', height: 20 }}
+              />
+            );
+          })}
         </Box>
       )}
 

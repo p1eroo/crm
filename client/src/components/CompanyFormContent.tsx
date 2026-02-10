@@ -85,16 +85,11 @@ export const CompanyFormContent: React.FC<CompanyFormContentProps> = (props) => 
     formDataRef,
     user,
     users,
-    editingCompany,
     theme,
     rucError,
     nameError,
     rucValidationError,
     loadingRuc,
-    setRucError,
-    setNameError,
-    setRucValidationError,
-    setLoadingRuc,
     onRucChange,
     onCompanyNameChange,
     onNameChange,
@@ -110,7 +105,7 @@ export const CompanyFormContent: React.FC<CompanyFormContentProps> = (props) => 
   const [formData, setFormData] = useState(initialData);
   useEffect(() => {
     formDataRef.current = { formData, setFormData };
-  });
+  }, [formDataRef, formData]);
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 4, rowGap: 0.5, alignItems: 'start' }}>

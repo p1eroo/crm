@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Typography, TextField, MenuItem, Autocomplete, useTheme } from '@mui/material';
+import { Box, Typography, TextField, MenuItem, Autocomplete } from '@mui/material';
 import type { Theme } from '@mui/material/styles';
 import { taxiMonterricoColors } from '../theme/colors';
 
@@ -98,7 +98,7 @@ export const DealFormContent: React.FC<DealFormContentProps> = (props) => {
   
   useEffect(() => {
     formDataRef.current = { formData, setFormData };
-  });
+  }, [formDataRef, formData]);
 
   // Actualizar formData cuando initialData cambia (cuando se abre un negocio diferente)
   useEffect(() => {

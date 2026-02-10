@@ -17,6 +17,7 @@ import {
   DialogTitle,
   DialogContent,
 } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { 
   Search, 
   Contacts as PersonIcon,
@@ -194,13 +195,11 @@ const Header: React.FC = () => {
           xs: '100vw',
           sm: '100%' // El contenedor en MainLayout ya maneja el ancho
         },
-        bgcolor: isScrolled 
-          ? (theme.palette.mode === 'dark' 
-              ? 'rgba(18, 22, 35, 0.8)' 
-              : 'rgba(255, 255, 255, 0.8)')
+        bgcolor: isScrolled
+          ? alpha(theme.palette.background.default, 0.88)
           : theme.palette.background.default,
-        backdropFilter: isScrolled ? 'blur(10px)' : 'none',
-        WebkitBackdropFilter: isScrolled ? 'blur(10px)' : 'none', // Para Safari
+        backdropFilter: isScrolled ? 'blur(12px)' : 'none',
+        WebkitBackdropFilter: isScrolled ? 'blur(12px)' : 'none',
         pl: { xs: 1, sm: 1.5 },
         pr: { xs: 1, sm: 6.5 },
         pt: isHorizontal ? 0 : { xs: 1, sm: 1.25 },

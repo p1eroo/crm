@@ -97,7 +97,7 @@ const Tasks: React.FC = () => {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState(''); // Estado local para el input
-  const [sortBy, setSortBy] = useState('newest');
+  const [sortBy] = useState('newest');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -1796,19 +1796,7 @@ const Tasks: React.FC = () => {
                               handleOpenCompleteModalView(task);
                             }}
                             sx={{
-                              width: 36,
-                              height: 36,
-                              padding: 0,
-                              borderRadius: 1.5,
-                              border: '1.5px solid',
-                              borderColor: '#3682f8',
-                              color: '#3682f8',
-                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(54, 130, 248, 0.08)' : '#e3f2fd',
-                              '&:hover': {
-                                borderColor: '#2563eb',
-                                color: '#2563eb',
-                                bgcolor: theme.palette.mode === 'dark' ? 'rgba(54, 130, 248, 0.18)' : '#bbdefb',
-                              },
+                              ...(pageStyles.actionButtonView(theme) as object),
                               '&.Mui-disabled': {
                                 borderColor: theme.palette.mode === 'dark' ? 'rgba(54, 130, 248, 0.35)' : 'rgba(54, 130, 248, 0.4)',
                                 color: theme.palette.mode === 'dark' ? 'rgba(54, 130, 248, 0.45)' : 'rgba(54, 130, 248, 0.5)',
@@ -1827,21 +1815,7 @@ const Tasks: React.FC = () => {
                             e.stopPropagation();
                             handleOpen(task);
                           }}
-                          sx={{
-                            width: 36,
-                            height: 36,
-                            padding: 0,
-                            borderRadius: 1.5,
-                            border: '1.5px solid',
-                            borderColor: taxiMonterricoColors.green,
-                            color: taxiMonterricoColors.green,
-                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(34, 197, 94, 0.08)' : '#dcfce7',
-                            '&:hover': {
-                              borderColor: taxiMonterricoColors.greenDark,
-                              color: taxiMonterricoColors.greenDark,
-                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(34, 197, 94, 0.18)' : '#bbf7d0',
-                            },
-                          }}
+                          sx={pageStyles.actionButtonEdit(theme)}
                         >
                           <Edit sx={{ fontSize: '1.1rem' }} />
                         </IconButton>
@@ -1853,21 +1827,7 @@ const Tasks: React.FC = () => {
                             e.stopPropagation();
                             handleDelete(task.id, task.isActivity);
                           }}
-                          sx={{
-                            width: 36,
-                            height: 36,
-                            padding: 0,
-                            borderRadius: 1.5,
-                            border: '1.5px solid',
-                            borderColor: '#f83636',
-                            color: '#f83636',
-                            bgcolor: theme.palette.mode === 'dark' ? 'rgba(248, 54, 54, 0.08)' : '#fee2e2',
-                            '&:hover': {
-                              borderColor: '#dc2626',
-                              color: '#dc2626',
-                              bgcolor: theme.palette.mode === 'dark' ? 'rgba(248, 54, 54, 0.18)' : '#fecaca',
-                            },
-                          }}
+                          sx={pageStyles.actionButtonDelete(theme)}
                         >
                           <Delete sx={{ fontSize: '1.1rem' }} />
                         </IconButton>
