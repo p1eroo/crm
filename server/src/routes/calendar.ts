@@ -5,25 +5,37 @@ import { UserGoogleToken } from '../models/UserGoogleToken';
 
 const router = express.Router();
 
+// Orígenes permitidos para redirección post-OAuth (evitar open redirect)
+const getAllowedOrigins = () => {
+  const frontend = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const origins = [frontend, 'http://localhost:3000', 'http://127.0.0.1:3000'];
+  if (frontend.includes('crm.taximonterrico.com')) {
+    origins.push('https://crm.taximonterrico.com', 'http://localhost:3000');
+  }
+  return [...new Set(origins)];
+};
+
 // Endpoint para iniciar el flujo de OAuth (requiere autenticación para obtener userId)
 router.get('/auth', authenticateToken, (req: AuthRequest, res) => {
   try {
     const userId = req.user?.id;
-    
+    const returnOrigin = (req.query.returnOrigin as string) || '';
+    const returnPath = (req.query.returnPath as string) || '/dashboard';
+
     if (!userId) {
       return res.status(401).json({ message: 'Usuario no autenticado' });
     }
 
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    
+
     // El redirect_uri DEBE estar configurado explícitamente en .env y coincidir EXACTAMENTE con Google Cloud Console
     if (!process.env.GOOGLE_REDIRECT_URI) {
-      return res.status(500).json({ 
-        message: 'GOOGLE_REDIRECT_URI no está configurado. Por favor, agrega GOOGLE_REDIRECT_URI=http://localhost:5000/api/google/callback en tu archivo .env' 
+      return res.status(500).json({
+        message: 'GOOGLE_REDIRECT_URI no está configurado. Por favor, agrega GOOGLE_REDIRECT_URI=http://localhost:5000/api/google/callback en tu archivo .env'
       });
     }
-    
+
     const redirectUri = process.env.GOOGLE_REDIRECT_URI;
 
     if (!clientId || !clientSecret) {
@@ -39,6 +51,12 @@ router.get('/auth', authenticateToken, (req: AuthRequest, res) => {
       redirectUri
     );
 
+    // Sanitizar returnPath (evitar path traversal)
+    const safePath = returnPath.startsWith('/') && !returnPath.includes('//') ? returnPath : '/dashboard';
+
+    // State: userId|returnOrigin|returnPath para redirigir al origen correcto
+    const state = [userId, returnOrigin || '', safePath].join('|');
+
     // Generar URL de autorización con access_type=offline y prompt=consent para obtener refresh_token
     // Incluye scopes para Gmail, Calendar y Tasks
     const authUrl = oauth2Client.generateAuthUrl({
@@ -53,7 +71,7 @@ router.get('/auth', authenticateToken, (req: AuthRequest, res) => {
         'https://www.googleapis.com/auth/gmail.readonly',
         'https://www.googleapis.com/auth/gmail.modify',
       ],
-      state: userId.toString(), // Pasar userId en el state para identificarlo después
+      state,
     });
 
     console.log('🔗 URL de autorización generada (primeros 200 caracteres):', authUrl.substring(0, 200));
@@ -70,28 +88,39 @@ router.get('/auth', authenticateToken, (req: AuthRequest, res) => {
 router.get('/callback', async (req, res) => {
   try {
     const { code, state } = req.query;
-    const userId = state ? parseInt(state as string) : null;
+    const defaultFrontend = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+    // Parsear state: userId|returnOrigin|returnPath (compatibilidad con formato antiguo: solo userId)
+    let userId: number | null = null;
+    let returnOrigin = '';
+    let returnPath = '/dashboard';
+    if (state && typeof state === 'string') {
+      const parts = state.split('|');
+      userId = parseInt(parts[0]) || null;
+      returnOrigin = parts[1] || '';
+      returnPath = parts[2] || '/dashboard';
+    }
 
     if (!code) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard?google_error=no_code`);
+      return res.redirect(`${defaultFrontend}/dashboard?google_error=no_code`);
     }
 
     if (!userId) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard?google_error=no_user`);
+      return res.redirect(`${defaultFrontend}/dashboard?google_error=no_user`);
     }
 
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    
+
     // El redirect_uri DEBE estar configurado explícitamente en .env y coincidir EXACTAMENTE con Google Cloud Console
     if (!process.env.GOOGLE_REDIRECT_URI) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard?google_error=redirect_uri_not_configured`);
+      return res.redirect(`${defaultFrontend}/dashboard?google_error=redirect_uri_not_configured`);
     }
-    
+
     const redirectUri = process.env.GOOGLE_REDIRECT_URI;
 
     if (!clientId || !clientSecret) {
-      return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard?google_error=config`);
+      return res.redirect(`${defaultFrontend}/dashboard?google_error=config`);
     }
 
     console.log('🔗 Redirect URI usado en callback:', redirectUri);
@@ -104,7 +133,7 @@ router.get('/callback', async (req, res) => {
 
     // Intercambiar código por tokens (incluyendo refresh_token)
     const { tokens } = await oauth2Client.getToken(code as string);
-    
+
     // Guardar tokens en la base de datos
     await UserGoogleToken.upsert({
       userId,
@@ -114,8 +143,12 @@ router.get('/callback', async (req, res) => {
       scope: tokens.scope || 'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/tasks',
     });
 
-    // Redirigir al frontend con éxito
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard?google_connected=true`);
+    // Redirigir al frontend correcto (mismo origen donde el usuario inició para mantener sesión)
+    const allowedOrigins = getAllowedOrigins();
+    const baseUrl = returnOrigin && allowedOrigins.some(o => returnOrigin.startsWith(o.replace(/\/$/, ''))) ? returnOrigin : defaultFrontend;
+    const safePath = returnPath.startsWith('/') && !returnPath.includes('//') ? returnPath : '/dashboard';
+    const redirectUrl = `${baseUrl.replace(/\/$/, '')}${safePath}?google_connected=true`;
+    res.redirect(redirectUrl);
   } catch (error: any) {
     console.error('Error en callback de OAuth:', error);
     res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/dashboard?google_error=callback_error`);

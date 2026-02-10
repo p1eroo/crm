@@ -29,6 +29,7 @@ import {
   ExpandLess,
   MarkEmailRead,
   MarkEmailUnread,
+  LinkOff,
 } from '@mui/icons-material';
 import { Tooltip } from '@mui/material';
 import { taxiMonterricoColors } from '../theme/colors';
@@ -77,6 +78,7 @@ const Emails: React.FC = () => {
   const [loadingThread, setLoadingThread] = useState(false);
   const [collapsedMessages, setCollapsedMessages] = useState<Set<string>>(new Set());
   const [connectingEmail, setConnectingEmail] = useState(false);
+  const [disconnectingEmail, setDisconnectingEmail] = useState(false);
   const emailsPerPage = 20;
 
   const fetchFolderCounts = useCallback(async () => {
@@ -403,7 +405,12 @@ const Emails: React.FC = () => {
   const handleEmailConnect = async () => {
     setConnectingEmail(true);
     try {
-      const response = await api.get("/google/auth");
+      const response = await api.get("/google/auth", {
+        params: {
+          returnOrigin: window.location.origin,
+          returnPath: window.location.pathname || "/emails",
+        },
+      });
       if (response.data.authUrl) {
         window.location.href = response.data.authUrl;
       } else {
@@ -413,6 +420,24 @@ const Emails: React.FC = () => {
       console.error("Error iniciando conexión con Google:", err);
       setError(err.response?.data?.message || "Error al conectar con Google. Por favor, intenta nuevamente.");
       setConnectingEmail(false);
+    }
+  };
+
+  const handleEmailDisconnect = async () => {
+    if (!window.confirm("¿Desconectar tu cuenta de Google? Ya no podrás enviar ni recibir correos desde el CRM.")) return;
+    setDisconnectingEmail(true);
+    setError("");
+    try {
+      await api.delete("/google/disconnect");
+      setEmails([]);
+      setError("No hay cuenta de Google conectada");
+      setCrmEmailCount(0);
+      setStarredCount(0);
+    } catch (err: any) {
+      console.error("Error desconectando Google:", err);
+      setError(err.response?.data?.message || "Error al desconectar. Intenta nuevamente.");
+    } finally {
+      setDisconnectingEmail(false);
     }
   };
 
@@ -834,6 +859,31 @@ const Emails: React.FC = () => {
             )}
           </Box>
 
+          {/* Desconectar cuenta */}
+          <Box sx={{ mt: 'auto', pt: 2 }}>
+            <Tooltip title="Desconectar cuenta de Google" arrow>
+              <Button
+                variant="text"
+                size="small"
+                onClick={handleEmailDisconnect}
+                disabled={disconnectingEmail}
+                startIcon={<LinkOff sx={{ fontSize: 18 }} />}
+                sx={{
+                  color: theme.palette.text.secondary,
+                  textTransform: 'none',
+                  fontSize: '0.8125rem',
+                  width: '100%',
+                  justifyContent: 'flex-start',
+                  '&:hover': {
+                    color: theme.palette.error.main,
+                    bgcolor: theme.palette.mode === 'dark' ? 'rgba(244, 67, 54, 0.08)' : 'rgba(244, 67, 54, 0.04)',
+                  },
+                }}
+              >
+                {disconnectingEmail ? 'Desconectando...' : 'Desconectar correo'}
+              </Button>
+            </Tooltip>
+          </Box>
         </Box>
       </Box>
 

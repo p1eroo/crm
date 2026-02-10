@@ -56,6 +56,7 @@ const Profile: React.FC = () => {
   // Correo
   const [emailConnected, setEmailConnected] = useState(false);
   const [connectingEmail, setConnectingEmail] = useState(false);
+  const [disconnectingEmail, setDisconnectingEmail] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -159,7 +160,12 @@ const Profile: React.FC = () => {
     setConnectingEmail(true);
     try {
       // Obtener URL de autorización del backend (conectará Gmail + Calendar + Tasks)
-      const response = await api.get("/google/auth");
+      const response = await api.get("/google/auth", {
+        params: {
+          returnOrigin: window.location.origin,
+          returnPath: window.location.pathname || "/profile",
+        },
+      });
 
       if (response.data.authUrl) {
         // Redirigir al usuario a la URL de autorización de Google
@@ -174,6 +180,25 @@ const Profile: React.FC = () => {
         "Error al conectar con Google. Por favor, intenta nuevamente.";
       setMessage({ type: "error", text: errorMessage });
       setConnectingEmail(false);
+    }
+  };
+
+  const handleEmailDisconnect = async () => {
+    if (!window.confirm("¿Desconectar tu cuenta de Google? Ya no podrás enviar ni recibir correos desde el CRM.")) return;
+    setDisconnectingEmail(true);
+    setMessage(null);
+    try {
+      await api.delete("/google/disconnect");
+      setEmailConnected(false);
+      setMessage({ type: "success", text: "Cuenta de Google desconectada correctamente" });
+    } catch (error: any) {
+      console.error("Error desconectando Google:", error);
+      setMessage({
+        type: "error",
+        text: error.response?.data?.message || "Error al desconectar. Intenta nuevamente.",
+      });
+    } finally {
+      setDisconnectingEmail(false);
     }
   };
 
@@ -451,7 +476,7 @@ const Profile: React.FC = () => {
             >
               Eliminar
             </Button>
-            {!emailConnected && (
+            {!emailConnected ? (
               <Button
                 variant="contained"
                 size="small"
@@ -494,6 +519,33 @@ const Profile: React.FC = () => {
                 }}
               >
                 {connectingEmail ? "Conectando..." : "Conectar con Google"}
+              </Button>
+            ) : (
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={handleEmailDisconnect}
+                disabled={disconnectingEmail}
+                sx={{
+                  color: theme.palette.error.main,
+                  borderColor: theme.palette.error.main,
+                  fontWeight: 600,
+                  textTransform: "none",
+                  fontSize: "0.8125rem",
+                  px: 2,
+                  py: 0.75,
+                  mx: "auto",
+                  mt: 2,
+                  mb: -3,
+                  borderRadius: 2,
+                  width: "240px",
+                  "&:hover": {
+                    borderColor: theme.palette.error.main,
+                    bgcolor: theme.palette.mode === "dark" ? `${theme.palette.error.main}15` : `${theme.palette.error.main}08`,
+                  },
+                }}
+              >
+                {disconnectingEmail ? "Desconectando..." : "Desconectar correo"}
               </Button>
             )}
           </Box>

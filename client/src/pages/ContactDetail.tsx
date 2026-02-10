@@ -660,7 +660,12 @@ const ContactDetail: React.FC = () => {
 
     setConnectingEmail(true);
     try {
-      const response = await api.get("/google/auth");
+      const response = await api.get("/google/auth", {
+        params: {
+          returnOrigin: window.location.origin,
+          returnPath: window.location.pathname || "/dashboard",
+        },
+      });
       if (response.data.authUrl) {
         window.location.href = response.data.authUrl;
       } else {
