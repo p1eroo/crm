@@ -15,7 +15,7 @@ import {
 import { Close } from '@mui/icons-material';
 import { Notification } from '../../types/notification';
 import { NotificationItem } from './NotificationItem';
-import { useNotifications } from '../../hooks/useNotifications';
+import { useNotificationPanel } from '../../context/NotificationContext';
 import { pageStyles } from '../../theme/styles';
 
 interface LoginWelcomeModalProps {
@@ -30,7 +30,7 @@ export const LoginWelcomeModal: React.FC<LoginWelcomeModalProps> = ({
   onNotificationClick,
 }) => {
   const theme = useTheme();
-  const { notifications, loading } = useNotifications();
+  const { notifications, loading } = useNotificationPanel();
   const [filteredNotifications, setFilteredNotifications] = useState<Notification[]>([]);
 
   // Función helper para verificar si una notificación es de hoy

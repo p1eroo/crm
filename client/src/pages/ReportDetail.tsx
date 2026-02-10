@@ -939,7 +939,7 @@ const ReportDetail: React.FC = () => {
                 <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                   Número de Contactos por Etapa
                 </Typography>
-                <TableContainer component={Paper} elevation={0} sx={{ border: `1px solid ${theme.palette.divider}` }}>
+                <TableContainer component={Paper} elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 1.5, overflow: 'hidden' }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f5f5f5' }}>
@@ -966,7 +966,7 @@ const ReportDetail: React.FC = () => {
                 <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
                   Valor Monetario por Etapa
                 </Typography>
-                <TableContainer component={Paper} elevation={0} sx={{ border: `1px solid ${theme.palette.divider}` }}>
+                <TableContainer component={Paper} elevation={0} sx={{ border: `1px solid ${theme.palette.divider}`, borderRadius: 1.5, overflow: 'hidden' }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow sx={{ bgcolor: theme.palette.mode === 'dark' ? theme.palette.background.default : '#f5f5f5' }}>

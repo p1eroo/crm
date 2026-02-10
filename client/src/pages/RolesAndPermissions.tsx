@@ -233,7 +233,7 @@ const RolesAndPermissions: React.FC = () => {
                   Permisos:
                 </Typography>
 
-                <TableContainer>
+                <TableContainer sx={{ borderRadius: 1.5, overflow: 'hidden' }}>
                   <Table size="small">
                     <TableHead>
                       <TableRow sx={{

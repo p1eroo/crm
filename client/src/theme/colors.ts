@@ -40,6 +40,34 @@ export const taxiMonterricoColors = {
   redDark: '#991B1B',      // Rojo oscuro alternativo
 };
 
+// Paleta para la pantalla de login (layout split branding + formulario)
+export const crmColors = {
+  primary: taxiMonterricoColors.green,
+  primaryLight: taxiMonterricoColors.greenLight,
+  primaryDark: taxiMonterricoColors.greenDark,
+  primaryGlow: 'rgba(46, 125, 50, 0.3)',
+  accent: taxiMonterricoColors.greenEmerald,
+  accentMuted: '#059669',
+  slate: '#64748B',
+  slateDark: '#334155',
+  slateLight: '#94A3B8',
+  darkBg: '#141A16',
+  panelDark: '#1A2218',
+  panelGradient: '#0F3320',
+  formBgLight: '#F8FAFC',
+  formCardLight: '#FFFFFF',
+  formBgDark: '#1A2027',
+  formCardDark: '#1E293B',
+  borderLight: '#E2E8F0',
+  borderDark: '#334155',
+  borderHoverLight: '#CBD5E1',
+  borderHoverDark: '#475569',
+  textLight: '#1E293B',
+  textDark: '#E2E8F0',
+  textSecondaryLight: '#64748B',
+  textSecondaryDark: '#94A3B8',
+};
+
 // Función helper para convertir color hex a rgba con opacidad
 export const hexToRgba = (hex: string, opacity: number): string => {
   const r = parseInt(hex.slice(1, 3), 16);

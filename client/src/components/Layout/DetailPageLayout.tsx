@@ -383,7 +383,6 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                           transition: "all 0.3s ease",
                           "&:hover": {
                             background: `linear-gradient(135deg, ${taxiMonterricoColors.greenDark} 0%, ${taxiMonterricoColors.green} 100%)`,
-                            transform: "translateY(-2px) scale(1.05)",
                             boxShadow: `0 8px 20px ${taxiMonterricoColors.greenLight}60`,
                           },
                         }}

@@ -49,9 +49,30 @@ const transformUser = (user: any) => {
 router.use(authenticateToken);
 router.use(requireRole('admin', 'jefe_comercial'));
 
-// Listar todos los usuarios
+// Listar todos los usuarios (minimal=true devuelve solo id, firstName, lastName, role para listas/desplegables)
 router.get('/', async (req: AuthRequest, res: Response) => {
   try {
+    const minimal = req.query.minimal === 'true' || req.query.minimal === '1';
+
+    if (minimal) {
+      const users = await User.findAll({
+        attributes: ['id', 'firstName', 'lastName', 'roleId', 'isActive'],
+        include: [{ model: Role, as: 'Role', attributes: ['id', 'name'] }],
+        order: [['firstName', 'ASC'], ['lastName', 'ASC']],
+      });
+      const list = users.map((u: any) => {
+        const j = u.toJSON ? u.toJSON() : u;
+        return {
+          id: j.id,
+          firstName: j.firstName,
+          lastName: j.lastName,
+          role: j.Role?.name || j.role || 'user',
+          isActive: j.isActive,
+        };
+      });
+      return res.json(list);
+    }
+
     const users = await User.findAll({
       attributes: { exclude: ['password'] },
       include: [{ model: Role, as: 'Role' }],

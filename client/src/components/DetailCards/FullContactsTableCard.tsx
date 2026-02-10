@@ -318,8 +318,37 @@ const FullContactsTableCard: React.FC<FullContactsTableCardProps> = ({
         </Box>
       ) : (
         <>
-          <TableContainer sx={{ width: '100%' }}>
-            <Table size="small">
+          <TableContainer
+            sx={{
+              width: '100%',
+              border: '1px solid',
+              borderColor: theme.palette.divider,
+              borderRadius: 1.5,
+              overflow: 'hidden',
+            }}
+          >
+            <Table
+              size="small"
+              sx={{
+                '& .MuiTableCell-root': {
+                  borderBottom: '1px solid',
+                  borderColor:
+                    theme.palette.mode === 'dark'
+                      ? 'rgba(255,255,255,0.08)'
+                      : 'rgba(0,0,0,0.06)',
+                },
+                '& .MuiTableBody .MuiTableRow:last-child .MuiTableCell-root': {
+                  borderBottom: 'none',
+                },
+                '& .MuiTableHead .MuiTableCell-root': {
+                  fontWeight: 600,
+                  bgcolor:
+                    theme.palette.mode === 'dark'
+                      ? 'rgba(46, 125, 50, 0.18)'
+                      : 'rgba(46, 125, 50, 0.08)',
+                },
+              }}
+            >
               <TableHead>
                 <TableRow>
                   <TableCell>

@@ -141,7 +141,7 @@ const Automations: React.FC = () => {
         </Button>
       </Box>
 
-      <TableContainer component={Paper}>
+      <TableContainer component={Paper} sx={{ borderRadius: 1.5, overflow: 'hidden' }}>
         <Table>
           <TableHead>
             <TableRow>

@@ -10,113 +10,122 @@ import {
   FormControlLabel,
   IconButton,
   InputAdornment,
-  useTheme,
+  useTheme as useMuiTheme,
 } from '@mui/material';
-import { Person, Lock, Visibility, VisibilityOff } from '@mui/icons-material';
+import {
+  Person,
+  Lock,
+  Visibility,
+  VisibilityOff,
+  LightMode,
+  DarkMode,
+  Monitor,
+  Contacts,
+  TrendingUp,
+  BarChart,
+  Login as LoginIcon,
+} from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import logoImage from '../assets/tm_login.png';
 import logoIcon from '../assets/logo.png';
-import { taxiMonterricoColors } from '../theme/colors';
+import logoTw from '../assets/logo_tm.png';
+import { crmColors } from '../theme/colors';
+
+const REMEMBER_KEY = 'rememberedUsername';
+
+const getRememberedUsername = () => {
+  try {
+    return localStorage.getItem(REMEMBER_KEY) || '';
+  } catch (e) {
+    console.error('Error leyendo localStorage:', e);
+    return '';
+  }
+};
+
+const getInputStyles = (isDark: boolean) => ({
+  '& .MuiOutlinedInput-root': {
+    backgroundColor: isDark ? crmColors.formBgDark : crmColors.formBgLight,
+    borderRadius: '12px',
+    color: isDark ? crmColors.textSecondaryDark : crmColors.slate,
+    '& input': {
+      color: isDark ? crmColors.textSecondaryDark : crmColors.slate,
+      WebkitTextFillColor: isDark ? crmColors.textSecondaryDark : crmColors.slate,
+      '&::placeholder': {
+        color: isDark ? crmColors.textSecondaryDark : crmColors.slateLight,
+        opacity: 1,
+      },
+    },
+    '& fieldset': {
+      borderColor: isDark ? crmColors.borderDark : crmColors.borderLight,
+      borderRadius: '12px',
+    },
+    '&:hover fieldset': {
+      borderColor: isDark ? crmColors.borderHoverDark : crmColors.borderHoverLight,
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: crmColors.primary,
+      borderWidth: '2px',
+    },
+  },
+});
 
 const Login: React.FC = () => {
-  const theme = useTheme();
-  // Cargar usuario recordado al inicializar el estado
-  const getRememberedUsername = () => {
-    try {
-      return localStorage.getItem('rememberedUsername') || '';
-    } catch (e) {
-      console.error('Error leyendo localStorage:', e);
-      return '';
-    }
-  };
+  const muiTheme = useMuiTheme();
+  const { mode, setMode } = useTheme();
+  const isDark = muiTheme.palette.mode === 'dark';
 
   const [username, setUsername] = useState(() => getRememberedUsername());
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(() => {
-    const saved = getRememberedUsername();
-    return !!saved;
-  });
+  const [rememberMe, setRememberMe] = useState(() => !!getRememberedUsername());
+
   const { login, error: authError, user } = useAuth();
   const mountedRef = useRef(true);
-  const usernameInputRef = useRef<HTMLInputElement>(null);
-  
-  // Usar el error del contexto o el error local
+
   const error = authError || localError;
-  
-  const handleClickShowPassword = () => {
-    setShowPassword(!showPassword);
-  };
-  
-  const handleMouseDownPassword = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-  };
 
   useEffect(() => {
     mountedRef.current = true;
-    // Cargar credenciales guardadas si existen (por si acaso no se cargaron en el estado inicial)
-    const savedUsername = getRememberedUsername();
-    console.log('🔍 [useEffect] Verificando usuario recordado:', savedUsername);
-    if (savedUsername && savedUsername !== username) {
-      setUsername(savedUsername);
+    const saved = getRememberedUsername();
+    if (saved && saved !== username) {
+      setUsername(saved);
       setRememberMe(true);
-      console.log('✅ [useEffect] Usuario recordado cargado:', savedUsername);
     }
     return () => {
       mountedRef.current = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Cargar usuario recordado cuando el usuario se desautentica (después del logout)
   useEffect(() => {
     if (!user) {
-      const savedUsername = getRememberedUsername();
-      console.log('🔍 [useEffect user] Usuario desautenticado, verificando usuario recordado:', savedUsername);
-      if (savedUsername && savedUsername !== username) {
-        setUsername(savedUsername);
+      const saved = getRememberedUsername();
+      if (saved && saved !== username) {
+        setUsername(saved);
         setRememberMe(true);
-        console.log('✅ [useEffect user] Usuario recordado cargado después del logout:', savedUsername);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-
-  // Si el usuario ya está autenticado, no renderizar nada
-  // Esto evita que el componente intente actualizar el estado después del desmontaje
-  if (user) {
-    return null;
-  }
+  if (user) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mountedRef.current) return;
-    
     setLocalError('');
     setLoading(true);
 
-    // Guardar el estado de "Recordarme" ANTES de hacer login
-    // para asegurarnos de que se guarde incluso si el componente se desmonta
     if (rememberMe && username) {
-      localStorage.setItem('rememberedUsername', username);
-      console.log('✅ Usuario guardado para recordar (antes del login):', username);
-      console.log('🔍 Verificando guardado:', localStorage.getItem('rememberedUsername'));
+      localStorage.setItem(REMEMBER_KEY, username);
     } else {
-      localStorage.removeItem('rememberedUsername');
-      console.log('🗑️ Usuario eliminado de recordar');
+      localStorage.removeItem(REMEMBER_KEY);
     }
 
     const success = await login(username, password);
-    
-    // Solo actualizar el estado si el componente todavía está montado
     if (mountedRef.current) {
-      if (!success) {
-        // El error ya está manejado en AuthContext
-        setLocalError('Credenciales incorrectas o error de conexión');
-      }
+      if (!success) setLocalError('Credenciales incorrectas o error de conexión');
       setLoading(false);
     }
   };
@@ -126,476 +135,446 @@ const Login: React.FC = () => {
       sx={{
         minHeight: '100vh',
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        overflow: 'hidden',
         position: 'relative',
-        padding: { xs: 2, sm: 3 },
       }}
     >
-      {/* Fondo corporativo con gradientes y blobs sutiles */}
+      {/* Fondo completo - panel izquierdo */}
       <Box
         sx={{
           position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: theme.palette.mode === 'dark' 
-            ? theme.palette.background.default
-            : theme.palette.grey[900],
-          backgroundAttachment: 'fixed',
-          backgroundImage: `
-            radial-gradient(ellipse 1200px 900px at 10% 20%, rgba(255, 193, 7, 0.15) 0%, transparent 60%),
-            radial-gradient(ellipse 1400px 1000px at 90% 80%, rgba(46, 125, 50, 0.18) 0%, transparent 65%),
-            radial-gradient(ellipse 1600px 1200px at 50% 50%, rgba(46, 125, 50, 0.12) 0%, transparent 70%),
-            radial-gradient(ellipse 1000px 800px at 0% 90%, rgba(255, 152, 0, 0.16) 0%, transparent 55%),
-            radial-gradient(ellipse 1100px 850px at 100% 10%, rgba(46, 125, 50, 0.14) 0%, transparent 60%),
-            radial-gradient(ellipse 900px 700px at 75% 35%, rgba(255, 193, 7, 0.13) 0%, transparent 50%)
-          `,
-          backgroundSize: '100% 100%',
-          backgroundPosition: '0% 0%',
-          backgroundRepeat: 'no-repeat',
+          inset: 0,
+          background: `linear-gradient(165deg, ${crmColors.darkBg} 0%, ${crmColors.panelDark} 40%, ${crmColors.panelGradient} 100%)`,
           zIndex: 0,
-          overflow: 'hidden',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: `
-              radial-gradient(ellipse 800px 600px at 25% 55%, rgba(46, 125, 50, 0.10) 0%, transparent 45%),
-              radial-gradient(ellipse 600px 500px at 65% 25%, rgba(255, 183, 77, 0.12) 0%, transparent 45%)
-            `,
-            backgroundAttachment: 'fixed',
-            zIndex: 1,
-          },
         }}
       />
-      
-      {/* Card Glass Premium */}
+
+      {/* Contenido izquierdo - Branding */}
       <Box
-        component="main"
         sx={{
+          display: { xs: 'none', md: 'flex' },
+          flex: 1,
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 4,
           position: 'relative',
-          zIndex: 2,
-          width: { xs: '92%', sm: '480px' },
-          padding: '32px',
-          border: '1px solid rgba(255, 255, 255, 0.14)',
-          borderRadius: '16px',
-          background: 'rgba(17, 24, 39, 0.60)',
-          backdropFilter: 'blur(14px)',
-          WebkitBackdropFilter: 'blur(14px)',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.25)',
-          color: theme.palette.common.white,
+          zIndex: 1,
+          overflow: 'hidden',
         }}
       >
-        {/* Header de marca */}
         <Box
           sx={{
+            position: 'relative',
+            zIndex: 2,
+            maxWidth: 560,
+            width: '100%',
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'center',
-            mb: 4,
+            alignItems: 'stretch',
+            gap: 6,
           }}
         >
-          {/* Contenedor de logos */}
-          <Box
-            sx={{
-              display: 'flex',
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 2,
-              mb: 2,
-            }}
-          >
+          <Box sx={{ display: 'flex', justifyContent: 'flex-start', width: '100%' }}>
             <Box
               component="img"
-              src={logoIcon}
-              alt="TM Logo"
+              src={logoTw}
+              alt="Taxi Monterrico"
               sx={{
-                maxWidth: { xs: '60px', sm: '70px' },
+                height: 100,
                 width: 'auto',
-                height: 'auto',
+                maxWidth: 320,
                 objectFit: 'contain',
-              }}
-            />
-            <Box
-              component="img"
-              src={logoImage}
-              alt="CRM Monterrico"
-              sx={{
-                maxWidth: { xs: '140px', sm: '160px' },
-                width: '100%',
-                height: 'auto',
-                objectFit: 'contain',
+                mb: -1,
               }}
             />
           </Box>
-          {/* Texto debajo de los logos */}
-          <Typography
-            variant="h6"
-            sx={{
-              color: 'white',
-              fontSize: { xs: '1.25rem', sm: '1.5rem' },
-              textAlign: 'center',
-              fontWeight: 400,
-            }}
-          >
-            Iniciar sesión
-          </Typography>
-        </Box>
 
-        {error && (
-          <Alert
-            severity="error"
-            onClose={() => {
-              setLocalError('');
-            }}
-            sx={{
-              mb: 3,
-              borderRadius: '8px',
-              backgroundColor: 'rgba(211, 47, 47, 0.9)',
-              color: theme.palette.common.white,
-              '& .MuiAlert-icon': {
-                color: theme.palette.common.white,
-              },
-            }}
-          >
-            {error}
-          </Alert>
-        )}
+          <Box sx={{ width: '100%', textAlign: 'left' }}>
+            <Typography
+              variant="h4"
+              sx={{
+                color: 'white',
+                fontWeight: 700,
+                letterSpacing: '-0.02em',
+                lineHeight: 1.25,
+                mb: 2,
+                fontSize: { md: '2rem', lg: '2.25rem' },
+              }}
+            >
+              Todo tu equipo,
+              <br />
+              <Box component="span" sx={{ color: crmColors.primaryLight }}>
+                una sola plataforma
+              </Box>
+            </Typography>
+            <Typography
+              sx={{
+                color: 'rgba(255,255,255,0.78)',
+                fontSize: '1.0625rem',
+                lineHeight: 1.7,
+              }}
+            >
+              Centraliza contactos, oportunidades y seguimientos. Accede desde cualquier lugar y mantén tu equipo alineado.
+            </Typography>
+          </Box>
 
-        <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, marginTop: -2 }}>
-          {/* Campo Usuario */}
-          <TextField
-            required
-            fullWidth
-            inputRef={usernameInputRef}
-            id="username"
-            placeholder="Usuario"
-            name="username"
-            autoComplete="username"
-            autoFocus
-            value={username}
-            onChange={(e) => {
-              setUsername(e.target.value);
-              setLocalError('');
-              // Deseleccionar el texto después de un pequeño delay para evitar la selección del autocompletado
-              setTimeout(() => {
-                if (usernameInputRef.current) {
-                  const length = e.target.value.length;
-                  usernameInputRef.current.setSelectionRange(length, length);
-                }
-              }, 0);
-            }}
-            onSelect={(e) => {
-              // Deseleccionar el texto cuando se selecciona desde el autocompletado
-              setTimeout(() => {
-                if (usernameInputRef.current) {
-                  const length = usernameInputRef.current.value.length;
-                  usernameInputRef.current.setSelectionRange(length, length);
-                }
-              }, 0);
-            }}
-            onBlur={(e) => {
-              // Deseleccionar el texto cuando el campo pierde el foco
-              setTimeout(() => {
-                if (usernameInputRef.current) {
-                  const length = usernameInputRef.current.value.length;
-                  usernameInputRef.current.setSelectionRange(length, length);
-                }
-              }, 0);
-            }}
-            onInput={(e) => {
-              // Deseleccionar el texto inmediatamente cuando hay un cambio de input
-              setTimeout(() => {
-                if (usernameInputRef.current) {
-                  const length = (e.target as HTMLInputElement).value.length;
-                  usernameInputRef.current.setSelectionRange(length, length);
-                }
-              }, 0);
-            }}
-            error={!!error}
-            helperText={error ? '' : undefined}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Person sx={{ color: error ? 'error.main' : 'rgba(255, 255, 255, 0.7)' }} />
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                color: theme.palette.common.white,
-                borderRadius: '25px',
-                '& fieldset': {
-                  borderColor: 'rgba(255, 255, 255, 0.2)',
-                  borderRadius: '25px',
-                },
-                '&:hover fieldset': {
-                  borderColor: 'rgba(255, 255, 255, 0.3)',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: taxiMonterricoColors.green,
-                },
-                '&.Mui-error fieldset': {
-                  borderColor: 'error.main',
-                },
-              },
-              '& input': {
-                '&:-webkit-autofill': {
-                  WebkitBoxShadow: '0 0 0 1000px rgba(255, 255, 255, 0.05) inset',
-                  WebkitTextFillColor: theme.palette.common.white,
-                  transition: 'background-color 5000s ease-in-out 0s',
-                },
-                '&:-webkit-autofill:hover': {
-                  WebkitBoxShadow: '0 0 0 1000px rgba(255, 255, 255, 0.05) inset',
-                  WebkitTextFillColor: theme.palette.common.white,
-                },
-                '&:-webkit-autofill:focus': {
-                  WebkitBoxShadow: '0 0 0 1000px rgba(255, 255, 255, 0.05) inset',
-                  WebkitTextFillColor: theme.palette.common.white,
-                },
-                '&:-webkit-autofill:active': {
-                  WebkitBoxShadow: '0 0 0 1000px rgba(255, 255, 255, 0.05) inset',
-                  WebkitTextFillColor: theme.palette.common.white,
-                },
-              },
-              '& .MuiInputLabel-root': {
-                display: 'none', // Ocultar el label
-              },
-              '& input::placeholder': {
-                color: 'rgba(255, 255, 255, 0.7)',
-                opacity: 1,
-              },
-              '& .MuiFormHelperText-root': {
-                color: 'rgba(255, 255, 255, 0.6)',
-                '&.Mui-error': {
-                  color: 'error.main',
-                },
-              },
-            }}
-          />
-
-          {/* Campo Contraseña */}
-          <TextField
-            required
-            fullWidth
-            name="password"
-            placeholder="Contraseña"
-            type={showPassword ? 'text' : 'password'}
-            id="password"
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => {
-              setPassword(e.target.value);
-              setLocalError('');
-            }}
-            error={!!error}
-            helperText={error ? '' : undefined}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Lock sx={{ color: error ? 'error.main' : 'rgba(255, 255, 255, 0.7)' }} />
-                </InputAdornment>
-              ),
-              endAdornment: (
-                <InputAdornment position="end">
-                  <IconButton
-                    aria-label="toggle password visibility"
-                    onClick={handleClickShowPassword}
-                    onMouseDown={handleMouseDownPassword}
-                    edge="end"
-                    sx={{
-                      color: 'rgba(255, 255, 255, 0.7)',
-                      '&:hover': {
-                        color: theme.palette.common.white,
-                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      },
-                    }}
-                  >
-                    {showPassword ? <VisibilityOff /> : <Visibility />}
-                  </IconButton>
-                </InputAdornment>
-              ),
-            }}
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                color: theme.palette.common.white,
-                borderRadius: '25px',
-                '& fieldset': {
-                  borderColor: 'rgba(255, 255, 255, 0.2)',
-                  borderRadius:'25px',
-                },
-                '&:hover fieldset': {
-                  borderColor: 'rgba(255, 255, 255, 0.3)',
-                },
-                '&.Mui-focused fieldset': {
-                  borderColor: taxiMonterricoColors.green,
-                },
-                '&.Mui-error fieldset': {
-                  borderColor: 'error.main',
-                },
-              },
-              '& .MuiInputLabel-root': {
-                display: 'none', // Ocultar el label
-              },
-              '& input::placeholder': {
-                color: 'rgba(255, 255, 255, 0.7)',
-                opacity: 1,
-              },
-              '& .MuiFormHelperText-root': {
-                color: 'rgba(255, 255, 255, 0.6)',
-                '&.Mui-error': {
-                  color: 'error.main',
-                },
-              },
-            }}
-          />
-
-          {/* Recordarme y Olvidé contraseña */}
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: { xs: 1, sm: 2 },
-              alignItems: 'center',
-            }}
-          >
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
+            {[
+              { label: 'Contactos', desc: 'Base de datos unificada', icon: Contacts },
+              { label: 'Oportunidades', desc: 'Pipeline de ventas', icon: TrendingUp },
+              { label: 'Reportes', desc: 'Métricas en tiempo real', icon: BarChart },
+            ].map((item) => (
+              <Box
+                key={item.label}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 2.5,
+                  py: 2.5,
+                  px: 3,
+                  borderRadius: '16px',
+                  backgroundColor: 'rgba(0,0,0,0.2)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+                  transition: 'all 0.2s ease',
+                  '&:hover': {
+                    backgroundColor: 'rgba(0,0,0,0.28)',
+                    borderColor: 'rgba(255,255,255,0.12)',
+                  },
+                }}
+              >
+                <Box
                   sx={{
-                    color: 'rgba(255, 255, 255, 0.7)',
-                    '&.Mui-checked': {
-                      color: taxiMonterricoColors.green,
-                    },
-                    '&:hover': {
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    },
-                  }}
-                />
-              }
-              label={
-                <Typography
-                  component="span"
-                  sx={{
-                    fontSize: { xs: '0.875rem', sm: '0.9375rem' },
-                    color: 'rgba(255, 255, 255, 0.9)',
+                    width: 52,
+                    height: 52,
+                    borderRadius: '14px',
+                    backgroundColor: 'rgba(76, 175, 80, 0.22)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
                   }}
                 >
-                  Recordarme
-                </Typography>
-              }
-            />
-            <Typography
-              component="a"
-              href="https://wa.me/51958921766?text=Hola%20Jack,%20olvidé%20mi%20contraseña"
-              target="_blank"
-              rel="noopener noreferrer"
-              sx={{
-                fontSize: { xs: '0.875rem', sm: '0.9375rem' },
-                color: 'rgba(255, 255, 255, 0.9)',
-                textDecoration: 'none',
-                cursor: 'pointer',
-                '&:hover': {
-                  textDecoration: 'underline',
-                  color: theme.palette.common.white,
-                },
-                '&:focus': {
-                  outline: '2px solid',
-                  outlineColor: taxiMonterricoColors.green,
-                  outlineOffset: '2px',
-                  borderRadius: '4px',
-                },
-              }}
-            >
-              ¿Olvidaste tu contraseña?
-            </Typography>
+                  <item.icon sx={{ fontSize: 28, color: crmColors.primaryLight }} />
+                </Box>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography sx={{ color: 'white', fontSize: '1.0625rem', fontWeight: 600, mb: 0.4 }}>
+                    {item.label}
+                  </Typography>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.9375rem', lineHeight: 1.45 }}>
+                    {item.desc}
+                  </Typography>
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        </Box>
+
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '15%',
+            right: '-15%',
+            width: 480,
+            height: 480,
+            borderRadius: '50%',
+            background: `radial-gradient(circle, ${crmColors.primary}25 0%, transparent 65%)`,
+            zIndex: 1,
+          }}
+        />
+        <Box
+          sx={{
+            position: 'absolute',
+            bottom: '5%',
+            left: '-8%',
+            width: 320,
+            height: 320,
+            borderRadius: '50%',
+            background: `radial-gradient(circle, ${crmColors.accent}15 0%, transparent 65%)`,
+            zIndex: 1,
+          }}
+        />
+      </Box>
+
+      {/* Panel derecho - Formulario */}
+      <Box
+        sx={{
+          flex: { xs: 1, md: '0 0 900px' },
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          padding: { xs: 3, sm: 6 },
+          backgroundColor: isDark ? crmColors.formBgDark : crmColors.formBgLight,
+          position: 'relative',
+          zIndex: 2,
+          borderTopLeftRadius: { xs: 0, md: '48px' },
+          borderBottomLeftRadius: { xs: 0, md: '48px' },
+          boxShadow: { xs: 'none', md: '-4px 0 24px rgba(0,0,0,0.15)' },
+        }}
+      >
+        {/* Selector de tema - pill */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 16,
+            right: 16,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5,
+            p: 0.5,
+            borderRadius: '9999px',
+            backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+            border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'}`,
+          }}
+        >
+          <IconButton
+            onClick={() => setMode('light')}
+            size="small"
+            sx={{
+              p: 1,
+              color: mode === 'light' ? '#F59E0B' : (isDark ? crmColors.textSecondaryDark : crmColors.slate),
+              backgroundColor: mode === 'light' ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.9)') : 'transparent',
+              borderRadius: '50%',
+              '&:hover': {
+                backgroundColor: mode === 'light' ? undefined : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+              },
+            }}
+            aria-label="Modo claro"
+          >
+            <LightMode sx={{ fontSize: 20 }} />
+          </IconButton>
+          <IconButton
+            onClick={() => setMode('dark')}
+            size="small"
+            sx={{
+              p: 1,
+              color: mode === 'dark' ? crmColors.primaryLight : (isDark ? crmColors.textSecondaryDark : crmColors.slate),
+              backgroundColor: mode === 'dark' ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.9)') : 'transparent',
+              borderRadius: '50%',
+              '&:hover': {
+                backgroundColor: mode === 'dark' ? undefined : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+              },
+            }}
+            aria-label="Modo oscuro"
+          >
+            <DarkMode sx={{ fontSize: 20 }} />
+          </IconButton>
+          <IconButton
+            onClick={() => setMode('system')}
+            size="small"
+            sx={{
+              p: 1,
+              color: mode === 'system' ? crmColors.primary : (isDark ? crmColors.textSecondaryDark : crmColors.slate),
+              backgroundColor: mode === 'system' ? (isDark ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.9)') : 'transparent',
+              borderRadius: '50%',
+              '&:hover': {
+                backgroundColor: mode === 'system' ? undefined : (isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+              },
+            }}
+            aria-label="Modo sistema"
+          >
+            <Monitor sx={{ fontSize: 20 }} />
+          </IconButton>
+        </Box>
+
+        <Box
+          sx={{
+            maxWidth: 480,
+            mx: 'auto',
+            width: '100%',
+            p: { xs: 3, sm: 4.5 },
+            borderRadius: { xs: 0, sm: '24px' },
+            backgroundColor: isDark ? '#11182799' : crmColors.formCardLight,
+            boxShadow: isDark
+              ? '0 4px 6px rgba(0,0,0,0.2), 0 12px 32px rgba(0,0,0,0.15)'
+              : '0 4px 6px rgba(0,0,0,0.04), 0 12px 32px rgba(0,0,0,0.08)',
+            border: `1px solid ${isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'}`,
+          }}
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2, mb: 3 }}>
+            <Box component="img" src={logoIcon} alt="TM" sx={{ width: 64, height: 64, objectFit: 'contain' }} />
+            <Box component="img" src={logoImage} alt="CRM Monterrico" sx={{ height: 44, width: 'auto', objectFit: 'contain' }} />
           </Box>
 
-          {/* Botón Ingresar */}
-          <Button
-            type="submit"
-            variant="contained"
-            disabled={loading}
-            fullWidth
-            sx={{
-              height: '48px',
-              borderRadius: '15px',
-              fontSize: '1.1rem',
-              fontWeight: 400,
-              textTransform: 'none',
-              backgroundColor: taxiMonterricoColors.green,
-              color: theme.palette.common.white,
-              '&:hover': {
-                backgroundColor: taxiMonterricoColors.greenDark,
-              },
-              '&:disabled': {
-                backgroundColor: 'rgba(46, 125, 50, 0.5)',
-                color: 'rgba(255, 255, 255, 0.7)',
-              },
-              '&:focus': {
-                outline: '2px solid',
-                outlineColor: taxiMonterricoColors.greenLight,
-                outlineOffset: '2px',
-              },
-            }}
-          >
-            {loading ? (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <CircularProgress size={20} sx={{ color: theme.palette.common.white }} />
-                <span>Cargando...</span>
-              </Box>
-            ) : (
-              'Ingresar'
-            )}
-          </Button>
+          {error && (
+            <Alert
+              severity="error"
+              onClose={() => setLocalError('')}
+              sx={{ mb: 3, borderRadius: '12px', '& .MuiAlert-message': { width: '100%' } }}
+            >
+              {error}
+            </Alert>
+          )}
 
-          {/* Link de registro */}
-          <Typography
-            sx={{
-              textAlign: 'center',
-              fontSize: { xs: '0.875rem', sm: '0.9375rem' },
-              color: 'rgba(255, 255, 255, 0.8)',
-              mt: 1,
-            }}
-          >
-            ¿Todavía no tienes una cuenta?{' '}
-            <Typography
-              component="a"
-              href="https://wa.me/51958921766?text=Hola%20Jack,%20quiero%20registrar%20una%20nueva%20cuenta"
-              target="_blank"
-              rel="noopener noreferrer"
+          <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2.75 }}>
+            <Box>
+              <Typography
+                component="label"
+                htmlFor="username"
+                sx={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: muiTheme.palette.text.primary,
+                  mb: 1,
+                }}
+              >
+                Usuario
+              </Typography>
+              <TextField
+                required
+                fullWidth
+                id="username"
+                name="username"
+                placeholder="Ingresa tu usuario"
+                autoComplete="username"
+                autoFocus
+                value={username}
+                onChange={(e) => { setUsername(e.target.value); setLocalError(''); }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Person sx={{ color: crmColors.slateLight, fontSize: 20 }} />
+                    </InputAdornment>
+                  ),
+                }}
+                sx={getInputStyles(isDark)}
+              />
+            </Box>
+
+            <Box>
+              <Typography
+                component="label"
+                htmlFor="password"
+                sx={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  color: muiTheme.palette.text.primary,
+                  mb: 1,
+                }}
+              >
+                Contraseña
+              </Typography>
+              <TextField
+                required
+                fullWidth
+                id="password"
+                name="password"
+                placeholder="••••••••"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => { setPassword(e.target.value); setLocalError(''); }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Lock sx={{ color: crmColors.slateLight, fontSize: 20 }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password"
+                        onClick={() => setShowPassword(!showPassword)}
+                        onMouseDown={(e) => e.preventDefault()}
+                        edge="end"
+                        size="small"
+                        sx={{ color: crmColors.slateLight }}
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+                sx={getInputStyles(isDark)}
+              />
+            </Box>
+
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    sx={{ color: crmColors.slate, '&.Mui-checked': { color: crmColors.primary } }}
+                  />
+                }
+                label={
+                  <Typography sx={{ color: muiTheme.palette.text.secondary, fontSize: '0.875rem' }}>
+                    Recordarme
+                  </Typography>
+                }
+              />
+              <Typography
+                component="a"
+                href="https://wa.me/51958921766?text=Hola%20Jack,%20olvidé%20mi%20contraseña"
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{
+                  fontSize: '0.875rem',
+                  color: crmColors.primary,
+                  textDecoration: 'none',
+                  fontWeight: 500,
+                  '&:hover': { textDecoration: 'underline' },
+                }}
+              >
+                ¿Olvidaste tu contraseña?
+              </Typography>
+            </Box>
+
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={loading}
+              fullWidth
+              size="large"
+              startIcon={
+                loading ? (
+                  <CircularProgress size={22} sx={{ color: 'white' }} />
+                ) : (
+                  <LoginIcon sx={{ fontSize: 22 }} />
+                )
+              }
               sx={{
-                fontSize: 'inherit',
-                color: taxiMonterricoColors.greenLight,
-                textDecoration: 'none',
-                cursor: 'pointer',
-                fontWeight: 500,
+                height: 52,
+                borderRadius: '14px',
+                fontSize: '1rem',
+                fontWeight: 600,
+                textTransform: 'none',
+                background: `linear-gradient(135deg, ${crmColors.primary} 0%, ${crmColors.primaryDark} 100%)`,
+                boxShadow: `0 4px 16px ${crmColors.primaryGlow}`,
                 '&:hover': {
-                  textDecoration: 'underline',
-                  color: taxiMonterricoColors.green,
+                  background: `linear-gradient(135deg, ${crmColors.primaryLight} 0%, ${crmColors.primary} 100%)`,
+                  boxShadow: `0 6px 24px ${crmColors.primaryGlow}`,
                 },
-                '&:focus': {
-                  outline: '2px solid',
-                  outlineColor: taxiMonterricoColors.green,
-                  outlineOffset: '2px',
-                  borderRadius: '4px',
-                },
+                transition: 'all 0.25s ease',
               }}
             >
-              Regístrate
+              {loading ? 'Ingresando...' : 'Ingresar'}
+            </Button>
+
+            <Typography sx={{ textAlign: 'center', fontSize: '0.875rem', color: muiTheme.palette.text.secondary, mt: 1 }}>
+              ¿Todavía no tienes una cuenta?{' '}
+              <Typography
+                component="a"
+                href="https://wa.me/51958921766?text=Hola%20Jack,%20quiero%20registrar%20una%20nueva%20cuenta"
+                target="_blank"
+                rel="noopener noreferrer"
+                sx={{
+                  fontSize: 'inherit',
+                  color: crmColors.primary,
+                  textDecoration: 'none',
+                  fontWeight: 500,
+                  '&:hover': { textDecoration: 'underline' },
+                }}
+              >
+                Regístrate
+              </Typography>
             </Typography>
-          </Typography>
+          </Box>
         </Box>
       </Box>
     </Box>

@@ -184,7 +184,11 @@ const FullTicketsTableCard: React.FC<FullTicketsTableCardProps> = ({
             sx={{
               maxHeight: 'none',
               height: 'auto',
-              overflow: 'visible',
+              width: '100%',
+              border: '1px solid',
+              borderColor: theme.palette.divider,
+              borderRadius: 1.5,
+              overflow: 'hidden',
             }}
           >
             <Table size="small">

@@ -480,7 +480,7 @@ const Contacts: React.FC = () => {
 
   const fetchUsers = useCallback(async () => {
     try {
-      const response = await api.get('/users');
+      const response = await api.get('/users', { params: { minimal: true } });
       setUsers(response.data || []);
     } catch (error: any) {
       // Si es un error 403, el usuario no tiene permisos para ver usuarios (no es admin)

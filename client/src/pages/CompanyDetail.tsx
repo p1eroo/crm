@@ -567,7 +567,7 @@ const CompanyDetail: React.FC = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await api.get('/users');
+        const response = await api.get('/users', { params: { minimal: true } });
         setUsers(response.data);
       } catch (error) {
         console.error('Error fetching users:', error);

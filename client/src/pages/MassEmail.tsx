@@ -346,7 +346,7 @@ const MassEmail: React.FC = () => {
               </Alert>
             )}
             {contacts.length > 0 && (
-              <TableContainer component={Paper} sx={{ maxHeight: 320, bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined }}>
+              <TableContainer component={Paper} sx={{ maxHeight: 320, borderRadius: 1.5, overflow: 'hidden', bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined }}>
                 <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow>
@@ -462,7 +462,7 @@ const MassEmail: React.FC = () => {
               Total: {result.total} · Exitosos: {result.successful} · Fallidos: {result.failed}
             </Typography>
             {result.results && result.results.filter((r) => !r.success).length > 0 && (
-              <TableContainer component={Paper} sx={{ mt: 2, maxHeight: 200, bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined }}>
+              <TableContainer component={Paper} sx={{ mt: 2, maxHeight: 200, borderRadius: 1.5, overflow: 'hidden', bgcolor: theme.palette.mode === 'dark' ? '#1c252e' : undefined }}>
                 <Table size="small">
                   <TableHead>
                     <TableRow>

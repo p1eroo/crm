@@ -465,6 +465,8 @@ const Campaigns: React.FC = () => {
             overflowX: 'auto',
             overflowY: 'hidden',
             maxWidth: '100%',
+            borderRadius: 1.5,
+            overflow: 'hidden',
             '&::-webkit-scrollbar': {
               height: 8,
             },

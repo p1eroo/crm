@@ -319,6 +319,7 @@ const Deals: React.FC = () => {
             signal: abortController.signal 
           }),
           api.get('/users', { 
+            params: { minimal: true },
             signal: abortController.signal 
           })
         ]);

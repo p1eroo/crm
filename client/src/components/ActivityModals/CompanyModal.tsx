@@ -196,7 +196,7 @@ const CompanyModal: React.FC<CompanyModalProps> = ({
     if (open && (user?.role === 'admin' || user?.role === 'jefe_comercial')) {
       const fetchUsers = async () => {
         try {
-          const response = await api.get('/users');
+          const response = await api.get('/users', { params: { minimal: true } });
           setUsers(response.data || []);
         } catch (error: any) {
           if (error.response?.status !== 403) {

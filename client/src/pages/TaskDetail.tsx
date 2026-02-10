@@ -502,7 +502,7 @@ const TaskDetail: React.FC = () => {
     try {
       // Solo usuarios admin pueden ver la lista completa de usuarios
       if (user?.role === "admin") {
-        const response = await api.get("/users");
+        const response = await api.get("/users", { params: { minimal: true } });
         setUsers(response.data || []);
       } else {
         // Usuarios no admin solo pueden asignarse a sí mismos

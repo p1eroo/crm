@@ -154,7 +154,7 @@ const FullActivitiesTableCard: React.FC<FullActivitiesTableCardProps> = ({
       Nota: ['note'],
       Correo: ['email'],
       Llamada: ['call'],
-      Tarea: ['task'],
+      Tarea: ['task', 'todo', 'other'],
       Reunión: ['meeting'],
     };
     filteredActivities = filteredActivities.filter((activity) => {

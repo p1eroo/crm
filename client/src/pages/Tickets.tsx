@@ -500,7 +500,8 @@ const Tickets: React.FC = () => {
             overflowX: 'auto',
             overflowY: 'hidden',
             maxWidth: '100%',
-            borderRadius: 0,
+            borderRadius: 1.5,
+            overflow: 'hidden',
             border: 'none',
             boxShadow: 'none',
             '& .MuiPaper-root': {

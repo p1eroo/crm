@@ -1,23 +1,31 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Box,
   Card,
-  TextField,
-  Button,
-  Menu,
-  MenuItem,
   Checkbox,
   Typography,
   Paper,
-  InputAdornment,
 } from "@mui/material";
-import {
-  Search,
-  ExpandMore,
-  Assignment,
-} from "@mui/icons-material";
+import { Assignment } from "@mui/icons-material";
 import { useTheme } from "@mui/material/styles";
 import { taxiMonterricoColors } from "../../theme/colors";
+
+const TAB_OPTIONS = [
+  { value: "all", label: "Actividades" },
+  { value: "note", label: "Nota" },
+  { value: "email", label: "Correo" },
+  { value: "call", label: "Llamada" },
+  { value: "task", label: "Tarea" },
+  { value: "meeting", label: "Reunión" },
+] as const;
+
+const TAB_TO_TYPES: Record<string, string[]> = {
+  note: ["note"],
+  email: ["email"],
+  call: ["call"],
+  task: ["task", "todo", "other"],
+  meeting: ["meeting"],
+};
 
 interface ActivitiesTabContentProps {
   activities: any[];
@@ -45,54 +53,42 @@ const ActivitiesTabContent: React.FC<ActivitiesTabContentProps> = ({
   emptyMessage = "No hay actividades registradas. Crea una nueva actividad para comenzar.",
 }) => {
   const theme = useTheme();
+  const [selectedFilter, setSelectedFilter] = useState<string>("all");
 
-  // Estados internos para filtros
-  const [activityFilterMenuAnchor, setActivityFilterMenuAnchor] =
-    useState<null | HTMLElement>(null);
-  const [activityFilterSearch, setActivityFilterSearch] = useState("");
-  const [timeRangeMenuAnchor, setTimeRangeMenuAnchor] =
-    useState<null | HTMLElement>(null);
-  const [selectedTimeRange, setSelectedTimeRange] =
-    useState<string>("Todo hasta ahora");
-  const [selectedActivityTypes, setSelectedActivityTypes] = useState<string[]>(
-    []
-  );
-  const [selectedActivityType, setSelectedActivityType] = useState("all");
+  const counts = useMemo(() => {
+    const getActivityType = (activity: any) => {
+      let t = activity.type?.toLowerCase() || "";
+      if (activity.isTask && !t) t = "task";
+      return t;
+    };
+    const all = activities.length;
+    const note = activities.filter((a) => getActivityType(a) === "note").length;
+    const email = activities.filter((a) => getActivityType(a) === "email").length;
+    const call = activities.filter((a) => getActivityType(a) === "call").length;
+    const task = activities.filter((a) =>
+      ["task", "todo", "other"].includes(getActivityType(a))
+    ).length;
+    const meeting = activities.filter((a) => getActivityType(a) === "meeting").length;
+    return { all, note, email, call, task, meeting };
+  }, [activities]);
 
-  // Calcular el número de actividades filtradas para el botón
-  const getFilteredCount = () => {
-    let filtered = activities;
-    if (selectedActivityTypes.length > 0) {
-      const typeMap: { [key: string]: string[] } = {
-        Nota: ["note"],
-        Correo: ["email"],
-        Llamada: ["call"],
-        Tarea: ["task"],
-        Reunión: ["meeting"],
-      };
-      filtered = filtered.filter((activity) => {
-        let activityType = activity.type?.toLowerCase() || "";
-        if (activity.isTask && !activityType) {
-          activityType = "task";
-        }
-        return selectedActivityTypes.some((selectedType) => {
-          const mappedTypes = typeMap[selectedType] || [];
-          return mappedTypes.includes(activityType);
-        });
-      });
-    }
-    return filtered.length;
-  };
+  const filteredActivities = useMemo(() => {
+    if (selectedFilter === "all") return activities;
+    const allowed = TAB_TO_TYPES[selectedFilter];
+    if (!allowed) return activities;
+    return activities.filter((activity) => {
+      let t = activity.type?.toLowerCase() || "";
+      if (activity.isTask && !t) t = "task";
+      return allowed.includes(t);
+    });
+  }, [activities, selectedFilter]);
 
   return (
     <Card
       elevation={0}
       sx={{
         borderRadius: 2,
-        boxShadow:
-          theme.palette.mode === "dark"
-            ? "0 2px 8px rgba(0,0,0,0.3) !important"
-            : "0 2px 8px rgba(0,0,0,0.1) !important",
+        boxShadow: "none",
         bgcolor: theme.palette.mode === "dark" ? "#1c252e !important" : theme.palette.background.paper,
         backgroundColor: theme.palette.mode === "dark" ? "#1c252e !important" : theme.palette.background.paper,
         background: theme.palette.mode === "dark" ? "#1c252e !important" : theme.palette.background.paper,
@@ -100,362 +96,120 @@ const ActivitiesTabContent: React.FC<ActivitiesTabContentProps> = ({
         py: 2,
         display: "flex",
         flexDirection: "column",
-        border: "none !important",
+        border: "1px solid",
+        borderColor: theme.palette.divider,
       }}
     >
-      {/* Barra de búsqueda y filtros */}
-      <Box
-        sx={{
-          display: "flex",
-          gap: 2,
-          alignItems: "center",
-          mb: 3,
-          flexWrap: "wrap",
-        }}
-      >
-        <TextField
-          size="small"
-          placeholder="Buscar actividad"
-          value={activitySearch}
-          onChange={(e) => onSearchChange(e.target.value)}
-          sx={{
-            flex: 1,
-            minWidth: "250px",
-            "& .MuiOutlinedInput-root": {
-              height: "36px",
-              fontSize: "0.875rem",
-              "&:hover": {
-                "& fieldset": {
-                  borderColor: taxiMonterricoColors.green,
-                },
-              },
-              "&.Mui-focused": {
-                "& fieldset": {
-                  borderColor: taxiMonterricoColors.green,
-                  borderWidth: 2,
-                },
-              },
-            },
-          }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <Search fontSize="small" />
-              </InputAdornment>
-            ),
-          }}
-        />
-        <Button
-          size="small"
-          variant="outlined"
-          endIcon={<ExpandMore />}
-          onClick={(e) => setActivityFilterMenuAnchor(e.currentTarget)}
-          sx={{
-            borderColor: taxiMonterricoColors.green,
-            color: taxiMonterricoColors.green,
-            textTransform: "none",
-            "&:hover": {
-              borderColor: taxiMonterricoColors.green,
-              backgroundColor: "rgba(46, 125, 50, 0.08)",
-            },
-          }}
-        >
-          Filtrar actividad ({getFilteredCount()}/{activities.length})
-        </Button>
-        <Button
-          size="small"
-          variant="outlined"
-          endIcon={<ExpandMore />}
-          onClick={(e) => setTimeRangeMenuAnchor(e.currentTarget)}
-          sx={{
-            borderColor: taxiMonterricoColors.green,
-            color: taxiMonterricoColors.green,
-            textTransform: "none",
-            "&:hover": {
-              borderColor: taxiMonterricoColors.green,
-              backgroundColor: "rgba(46, 125, 50, 0.08)",
-            },
-          }}
-        >
-          {selectedTimeRange}
-        </Button>
-      </Box>
-
-      {/* Menú de filtro de actividad */}
-      <Menu
-        anchorEl={activityFilterMenuAnchor}
-        open={Boolean(activityFilterMenuAnchor)}
-        onClose={() => setActivityFilterMenuAnchor(null)}
-        PaperProps={{
-          sx: {
-            mt: 1,
-            minWidth: 280,
-            borderRadius: 2,
-            boxShadow:
-              theme.palette.mode === "dark"
-                ? "0 4px 20px rgba(0,0,0,0.5)"
-                : "0 4px 20px rgba(0,0,0,0.15)",
-          },
-        }}
-      >
+      {/* Filtros por tipo (estilo pestañas con contador) */}
+      <Box sx={{ mb: 3, px: 1, py: 1 }}>
         <Box
           sx={{
-            p: 1.5,
-            borderBottom: `1px solid ${theme.palette.divider}`,
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 0.5,
+            width: "fit-content",
+            maxWidth: "100%",
+            px: 0.4,
+            py: 0.4,
+            borderRadius: 2,
+            bgcolor: theme.palette.background.default,
           }}
         >
-          <TextField
-            size="small"
-            placeholder="Buscar"
-            fullWidth
-            value={activityFilterSearch}
-            onChange={(e) => setActivityFilterSearch(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-          />
-        </Box>
-        {["Nota", "Correo", "Llamada", "Tarea", "Reunión"]
-          .filter((type) =>
-            activityFilterSearch
-              ? type.toLowerCase().includes(activityFilterSearch.toLowerCase())
-              : true
-          )
-          .map((type) => {
-            const isSelected = selectedActivityTypes.includes(type);
-            return (
-              <MenuItem
-                key={type}
-                onClick={() => {
-                  if (isSelected) {
-                    setSelectedActivityTypes(
-                      selectedActivityTypes.filter((t) => t !== type)
-                    );
-                  } else {
-                    setSelectedActivityTypes([...selectedActivityTypes, type]);
-                  }
-                }}
+          {TAB_OPTIONS.map((tab) => {
+          const count =
+            tab.value === "all"
+              ? counts.all
+              : counts[tab.value as keyof typeof counts] ?? 0;
+          const isActive = selectedFilter === tab.value;
+          return (
+            <Box
+              key={tab.value}
+              onClick={() => setSelectedFilter(tab.value)}
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                px: 2,
+                py: 1,
+                borderRadius: 2,
+                cursor: "pointer",
+                bgcolor: isActive
+                  ? theme.palette.mode === "dark"
+                    ? "rgba(46, 125, 50, 0.12)"
+                    : "rgba(46, 125, 50, 0.06)"
+                  : "transparent",
+                boxShadow: isActive
+                  ? theme.palette.mode === "dark"
+                    ? "0 1px 3px rgba(0,0,0,0.2)"
+                    : "0 1px 3px rgba(0,0,0,0.08)"
+                  : "none",
+                transition: "all 0.2s ease",
+                "&:hover": {
+                  bgcolor: isActive
+                    ? undefined
+                    : theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.06)"
+                      : "rgba(0,0,0,0.03)",
+                },
+              }}
+            >
+              <Typography
+                variant="body2"
                 sx={{
-                  py: 1.5,
-                  backgroundColor: isSelected
-                    ? "rgba(46, 125, 50, 0.08)"
-                    : "transparent",
+                  fontWeight: isActive ? 600 : 500,
+                  color: isActive
+                    ? theme.palette.text.primary
+                    : theme.palette.text.secondary,
                 }}
               >
-                <Checkbox
-                  checked={isSelected}
-                  size="small"
+                {tab.label}
+              </Typography>
+              <Box
+                sx={{
+                  minWidth: 24,
+                  height: 22,
+                  px: 1,
+                  borderRadius: "12px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  bgcolor:
+                    theme.palette.mode === "dark"
+                      ? "rgba(255,255,255,0.1)"
+                      : "rgba(0,0,0,0.06)",
+                }}
+              >
+                <Typography
+                  variant="caption"
                   sx={{
-                    color: taxiMonterricoColors.green,
-                    "&.Mui-checked": {
-                      color: taxiMonterricoColors.green,
-                    },
+                    fontWeight: 600,
+                    color: isActive
+                      ? taxiMonterricoColors.green
+                      : theme.palette.text.secondary,
                   }}
-                />
-                <Typography variant="body2">{type}</Typography>
-              </MenuItem>
-            );
-          })}
-      </Menu>
-
-      {/* Menú de rango de tiempo */}
-      <Menu
-        anchorEl={timeRangeMenuAnchor}
-        open={Boolean(timeRangeMenuAnchor)}
-        onClose={() => setTimeRangeMenuAnchor(null)}
-        PaperProps={{
-          sx: {
-            mt: 1,
-            minWidth: 200,
-            borderRadius: 2,
-          },
-        }}
-      >
-        {[
-          "Todo",
-          "Hoy",
-          "Ayer",
-          "Esta semana",
-          "Semana pasada",
-          "Últimos 7 días",
-        ].map((option) => (
-          <MenuItem
-            key={option}
-            onClick={() => {
-              setSelectedTimeRange(
-                option === "Todo" ? "Todo hasta ahora" : option
-              );
-              setTimeRangeMenuAnchor(null);
-            }}
-            sx={{
-              backgroundColor:
-                selectedTimeRange === option ||
-                (option === "Todo" && selectedTimeRange === "Todo hasta ahora")
-                  ? theme.palette.mode === "dark"
-                    ? "rgba(255,255,255,0.08)"
-                    : "rgba(0,0,0,0.04)"
-                  : "transparent",
-            }}
-          >
-            {option}
-          </MenuItem>
-        ))}
-      </Menu>
-
-      {/* Tabs secundarios de tipo de actividad */}
-      <Box
-        sx={{
-          display: "flex",
-          gap: 0.5,
-          mb: 3,
-          borderBottom: `2px solid ${theme.palette.divider}`,
-          overflowX: "auto",
-        }}
-      >
-        {[
-          { value: "all", label: "Actividad" },
-          { value: "note", label: "Notas" },
-          { value: "email", label: "Correos" },
-          { value: "call", label: "Llamadas" },
-          { value: "task", label: "Tareas" },
-          { value: "meeting", label: "Reuniones" },
-        ].map((tab) => (
-          <Button
-            key={tab.value}
-            size="small"
-            onClick={() => setSelectedActivityType(tab.value)}
-            sx={{
-              color:
-                selectedActivityType === tab.value
-                  ? taxiMonterricoColors.green
-                  : theme.palette.text.secondary,
-              textTransform: "none",
-              fontWeight: selectedActivityType === tab.value ? 600 : 500,
-              borderBottom:
-                selectedActivityType === tab.value
-                  ? `3px solid ${taxiMonterricoColors.green}`
-                  : "3px solid transparent",
-              borderRadius: 0,
-              minWidth: "auto",
-              px: 2.5,
-              py: 1.5,
-              "&:hover": {
-                color: taxiMonterricoColors.green,
-                bgcolor: "transparent",
-              },
-            }}
-          >
-            {tab.label}
-          </Button>
-        ))}
+                >
+                  {count}
+                </Typography>
+              </Box>
+            </Box>
+          );
+        })}
+        </Box>
+        {/* Línea divisoria: delgada, de borde a borde */}
+        <Box
+          sx={{
+            mt: 3,
+            mx: -2,
+            width: "calc(100% + 32px)",
+            height: 1,
+            borderBottom: "1px solid",
+            borderColor: theme.palette.divider,
+          }}
+        />
       </Box>
 
       {/* Contenido de actividades */}
       {(() => {
-        // Filtrar por búsqueda
-        let filteredActivities = activitySearch
-          ? activities.filter((activity) => {
-              const searchTerm = activitySearch.toLowerCase();
-              const subject = (
-                activity.subject || activity.title || ""
-              ).toLowerCase();
-              const description = (activity.description || "").toLowerCase();
-              return (
-                subject.includes(searchTerm) || description.includes(searchTerm)
-              );
-            })
-          : activities;
-
-        // Filtrar por tipo de actividad (tab seleccionado)
-        if (selectedActivityType !== "all") {
-          const typeMap: { [key: string]: string } = {
-            note: "note",
-            email: "email",
-            call: "call",
-            task: "task",
-            meeting: "meeting",
-          };
-          filteredActivities = filteredActivities.filter((activity) => {
-            let activityType = activity.type?.toLowerCase() || "";
-            if (activity.isTask && !activityType) {
-              activityType = "task";
-            }
-            return activityType === typeMap[selectedActivityType];
-          });
-        }
-
-        // Filtrar por tipos seleccionados en el menú de filtro
-        if (selectedActivityTypes.length > 0) {
-          const typeMap: { [key: string]: string[] } = {
-            Nota: ["note"],
-            Correo: ["email"],
-            Llamada: ["call"],
-            Tarea: ["task"],
-            Reunión: ["meeting"],
-          };
-          filteredActivities = filteredActivities.filter((activity) => {
-            let activityType = activity.type?.toLowerCase() || "";
-            if (activity.isTask && !activityType) {
-              activityType = "task";
-            }
-            return selectedActivityTypes.some((selectedType) => {
-              const mappedTypes = typeMap[selectedType] || [];
-              return mappedTypes.includes(activityType);
-            });
-          });
-        }
-
-        // Filtrar por rango de tiempo
-        if (selectedTimeRange !== "Todo hasta ahora") {
-          const now = new Date();
-          const today = new Date(
-            now.getFullYear(),
-            now.getMonth(),
-            now.getDate()
-          );
-          const yesterday = new Date(today);
-          yesterday.setDate(yesterday.getDate() - 1);
-          const startOfWeek = new Date(today);
-          startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay());
-          const startOfLastWeek = new Date(startOfWeek);
-          startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
-          const endOfLastWeek = new Date(startOfWeek);
-          endOfLastWeek.setDate(endOfLastWeek.getDate() - 1);
-          const sevenDaysAgo = new Date(today);
-          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-          filteredActivities = filteredActivities.filter((activity) => {
-            const activityDate = new Date(activity.createdAt);
-            const activityDay = new Date(
-              activityDate.getFullYear(),
-              activityDate.getMonth(),
-              activityDate.getDate()
-            );
-
-            switch (selectedTimeRange) {
-              case "Hoy":
-                return activityDay.getTime() === today.getTime();
-              case "Ayer":
-                return activityDay.getTime() === yesterday.getTime();
-              case "Esta semana":
-                return activityDay >= startOfWeek && activityDay <= today;
-              case "Semana pasada":
-                return (
-                  activityDay >= startOfLastWeek &&
-                  activityDay <= endOfLastWeek
-                );
-              case "Últimos 7 días":
-                return activityDay >= sevenDaysAgo && activityDay <= today;
-              default:
-                return true;
-            }
-          });
-        }
-
         if (filteredActivities.length === 0) {
           return (
             <Box sx={{ textAlign: "center", py: 8 }}>
@@ -500,29 +254,26 @@ const ActivitiesTabContent: React.FC<ActivitiesTabContentProps> = ({
         }
 
         return (
-          <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 2, px: 1, py: 0 }}>
             {filteredActivities.map((activity) => (
               <Paper
                 key={activity.id}
                 onClick={() => onActivityClick(activity)}
                 sx={{
                   p: 2,
-                  ...getActivityStatusColor(activity),
+                  bgcolor:
+                    theme.palette.mode === "dark"
+                      ? "#1c252e"
+                      : theme.palette.background.paper,
                   borderRadius: 1.5,
                   position: "relative",
                   cursor: "pointer",
                   transition: "all 0.2s ease",
                   border: "none",
-                  boxShadow:
-                    theme.palette.mode === "dark"
-                      ? "0 2px 8px rgba(0,0,0,0.3)"
-                      : "0 2px 8px rgba(0,0,0,0.1)",
+                  boxShadow: "none",
                   "&:hover": {
                     opacity: 0.9,
-                    boxShadow:
-                      theme.palette.mode === "dark"
-                        ? "0 2px 8px rgba(0,0,0,0.3)"
-                        : "0 2px 8px rgba(0,0,0,0.1)",
+                    boxShadow: "none",
                   },
                 }}
               >

@@ -10,26 +10,25 @@ import {
 import { Notifications } from '@mui/icons-material';
 import { NotificationPanel } from './NotificationPanel';
 import { NotificationDetail } from './NotificationDetail';
-import { useNotifications } from '../../hooks/useNotifications';
 import { Notification } from '../../types/notification';
 import { taxiMonterricoColors } from '../../theme/colors';
 import { useNotificationPanel } from '../../context/NotificationContext';
 
 export const NotificationBell: React.FC = () => {
   const theme = useTheme();
-  const { panelOpen, setPanelOpen } = useNotificationPanel();
-  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
-  const [detailOpen, setDetailOpen] = useState(false);
-  const anchorRef = useRef<HTMLButtonElement>(null);
-
   const {
+    panelOpen,
+    setPanelOpen,
     notifications,
     unreadCount,
     markAsRead,
     markAllAsRead,
     archiveNotification,
     removeNotification,
-  } = useNotifications();
+  } = useNotificationPanel();
+  const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const anchorRef = useRef<HTMLButtonElement>(null);
 
   const handleTogglePanel = () => {
     setPanelOpen(!panelOpen);

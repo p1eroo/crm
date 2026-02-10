@@ -9,7 +9,7 @@ import { NotificationDetail } from "../Notifications/NotificationDetail";
 import { Notification } from "../../types/notification";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { useNotifications } from "../../hooks/useNotifications";
+import { useNotificationPanel } from "../../context/NotificationContext";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -27,7 +27,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
   const [detailDrawerOpen, setDetailDrawerOpen] = useState(false);
-  const { markAsRead } = useNotifications();
+  const { markAsRead } = useNotificationPanel();
 
   // Detectar si el usuario acaba de hacer login
   useEffect(() => {

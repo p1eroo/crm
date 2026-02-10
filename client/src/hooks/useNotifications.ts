@@ -1,6 +1,6 @@
 // Hook personalizado para manejar el estado de las notificaciones
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../config/api';
 import { Notification } from '../types/notification';
@@ -9,6 +9,7 @@ export const useNotifications = () => {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const lastFetchedUserIdRef = useRef<number | null>(null);
 
   // Función helper para determinar el mensaje según la urgencia
   const getUrgencyMessage = (dueDate: Date, now: Date, isMeeting: boolean = false): string => {
@@ -514,10 +515,18 @@ export const useNotifications = () => {
     }
   }, [user]);
 
-  // Cargar notificaciones al montar y cuando cambie el usuario
+  // Cargar notificaciones al montar y cuando cambie el usuario (evitar doble fetch en Strict Mode o re-ejecución del efecto)
   useEffect(() => {
-    fetchNotifications();
-    
+    if (!user?.id) {
+      lastFetchedUserIdRef.current = null;
+      return;
+    }
+    const alreadyFetchedForUser = lastFetchedUserIdRef.current === user.id;
+    if (!alreadyFetchedForUser) {
+      lastFetchedUserIdRef.current = user.id;
+      fetchNotifications();
+    }
+
     // Actualizar cada minuto para alertas de 1 hora antes de reuniones
     const interval = setInterval(() => {
       fetchNotifications();
@@ -551,7 +560,7 @@ export const useNotifications = () => {
       clearInterval(interval);
       window.removeEventListener('activityCompleted', handleActivityCompleted);
     };
-  }, [fetchNotifications]);
+  }, [fetchNotifications, user?.id]);
 
   // Guardar estado en localStorage cuando cambien las notificaciones
   useEffect(() => {

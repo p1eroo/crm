@@ -383,7 +383,7 @@ const Reports: React.FC = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/users');
+      const response = await api.get('/users', { params: { minimal: true } });
       const userRoleUsers = response.data
         .map((user: any) => ({
           ...user,
@@ -2012,7 +2012,8 @@ const Reports: React.FC = () => {
               sx={{
                 overflowX: 'auto',
                 overflowY: 'hidden',
-                borderRadius: 0,
+                borderRadius: 1.5,
+                overflow: 'hidden',
                 border: 'none',
                 boxShadow: 'none',
                 bgcolor: reportsCardBg,
