@@ -84,13 +84,15 @@ const Login: React.FC = () => {
 
   const { login, error: authError, user } = useAuth();
   const mountedRef = useRef(true);
+  const usernameRef = useRef(username);
+  usernameRef.current = username;
 
   const error = authError || localError;
 
   useEffect(() => {
     mountedRef.current = true;
     const saved = getRememberedUsername();
-    if (saved && saved !== username) {
+    if (saved) {
       setUsername(saved);
       setRememberMe(true);
     }
@@ -102,7 +104,7 @@ const Login: React.FC = () => {
   useEffect(() => {
     if (!user) {
       const saved = getRememberedUsername();
-      if (saved && saved !== username) {
+      if (saved && saved !== usernameRef.current) {
         setUsername(saved);
         setRememberMe(true);
       }
