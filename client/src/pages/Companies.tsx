@@ -31,7 +31,7 @@ import {
 import { Add, Delete, Visibility, UploadFile, FileDownload, FilterList, Close, ExpandMore, Remove, Bolt, Edit, ChevronLeft, ChevronRight, MoreVert, ViewColumn, Phone, CalendarToday, FormatBold, FormatItalic, FormatUnderlined, StrikethroughS, FormatListBulleted, FormatListNumbered } from '@mui/icons-material';
 import api from '../config/api';
 import { taxiMonterricoColors, hexToRgba } from '../theme/colors';
-import { getStageColor as getStageColorUtil } from '../utils/stageColors';
+import { getStageColor as getStageColorUtil, normalizeStageFromExcel } from '../utils/stageColors';
 import { StageChipWithProgress } from '../components/StageChipWithProgress';
 import { pageStyles } from '../theme/styles';
 import { companyLabels } from '../constants/companyLabels';
@@ -970,10 +970,22 @@ const Companies: React.FC = () => {
         const contactName = (row['Contacto'] || row['Nombre Contacto'] || '').toString().trim();
         const contactJobTitleRaw = (row['Cargo'] || row['Cargo Contacto'] || '').toString().trim();
         const contactJobTitle = (contactJobTitleRaw === '0' || contactJobTitleRaw === '') ? undefined : contactJobTitleRaw;
+        const contactEmail = (row['Correo contacto'] || row['Email contacto'] || '').toString().trim() || undefined;
+
+        // Dominio: columna "Dominio" o, si está vacía, extraer del correo del contacto (parte después de @)
+        const domainFromColumn = (row['Dominio'] || '').toString().trim() || undefined;
+        const domainFromContactEmail = contactEmail && contactEmail.includes('@')
+          ? (contactEmail.split('@')[1] || '').trim().toLowerCase() || undefined
+          : undefined;
+        const domain = domainFromColumn || domainFromContactEmail || undefined;
+
+        const etapaRaw = row['Etapa'];
+        const etapaStr = etapaRaw !== undefined && etapaRaw !== null ? String(etapaRaw).trim() : '';
+        const lifecycleStage = normalizeStageFromExcel(etapaStr);
 
         return {
           name: (row['Nombre'] || '').toString().trim() || 'Sin nombre',
-          domain: (row['Dominio'] || '').toString().trim() || undefined,
+          domain,
           companyname: (row['Razón social'] || '').toString().trim() || undefined,
           phone: (row['Teléfono'] || '').toString().trim() || undefined,
           email: (row['Correo'] || '').toString().trim() || undefined,
@@ -983,7 +995,7 @@ const Companies: React.FC = () => {
           city: (row['Ciudad'] || '').toString().trim() || undefined,
           state: (row['Estado/Provincia'] || '').toString().trim() || undefined,
           country: (row['País'] || '').toString().trim() || undefined,
-          lifecycleStage: (row['Etapa'] || 'lead').toString().trim() || 'lead',
+          lifecycleStage,
           estimatedRevenue: (() => {
             const facturacionValue = row['Facturación'] || row['Potencial de Facturación Estimado'];
             return facturacionValue
@@ -995,6 +1007,7 @@ const Companies: React.FC = () => {
           // Agregar datos del contacto para crear después
           _contactName: contactName || undefined,
           _contactJobTitle: contactJobTitle || undefined,
+          _contactEmail: contactEmail,
         };
       }).filter(company => company.name !== 'Sin nombre'); // Filtrar filas vacías
 
@@ -1014,8 +1027,10 @@ const Companies: React.FC = () => {
             // Extraer datos del contacto antes de crear la empresa
             const contactName = (company as any)._contactName;
             const contactJobTitle = (company as any)._contactJobTitle;
+            const contactEmail = (company as any)._contactEmail;
             delete (company as any)._contactName;
             delete (company as any)._contactJobTitle;
+            delete (company as any)._contactEmail;
 
             // Crear la empresa
             const companyResponse = await api.post('/companies', company);
@@ -1033,16 +1048,17 @@ const Companies: React.FC = () => {
                   firstName,
                   lastName,
                   jobTitle: contactJobTitle,
+                  email: contactEmail,
                   companyId: createdCompany.id,
                 });
 
                 await api.post('/contacts', {
                   firstName,
                   lastName,
+                  email: contactEmail || undefined,
                   jobTitle: contactJobTitle || undefined,
                   companyId: createdCompany.id,
                   lifecycleStage: 'lead',
-                  // email es opcional, no se envía si no está en el Excel
                 });
 
                 console.log(`✅ Contacto creado exitosamente para ${createdCompany.name}`);

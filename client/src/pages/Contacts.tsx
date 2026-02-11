@@ -44,7 +44,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import api from "../config/api";
 import { taxiMonterricoColors } from "../theme/colors";
-import { getStageColor as getStageColorUtil } from "../utils/stageColors";
+import { getStageColor as getStageColorUtil, normalizeStageFromExcel } from "../utils/stageColors";
 import { pageStyles } from "../theme/styles";
 import { companyLabels } from "../constants/companyLabels";
 import { useAuth } from "../context/AuthContext";
@@ -330,8 +330,9 @@ const Contacts: React.FC = () => {
                 .toString()
                 .trim() || undefined,
             country: (row["País"] || "").toString().trim() || undefined,
-            lifecycleStage:
-              (row["Etapa"] || "lead").toString().trim() || "lead",
+            lifecycleStage: normalizeStageFromExcel(
+              row["Etapa"] !== undefined && row["Etapa"] !== null ? String(row["Etapa"]).trim() : ""
+            ),
             companyId: companyName || undefined, // Pasar el nombre de la empresa, el backend lo manejará
           });
         }
