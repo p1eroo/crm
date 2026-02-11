@@ -85,23 +85,16 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         bgcolor: theme.palette.background.default,
       }}
     >
-      {/* Header sticky - debe estar fuera del contenedor con overflow */}
+      {/* Header sticky */}
       <Box
         sx={{
           width: {
             xs: "100vw",
-            sm: isHorizontal
-              ? "100vw"
-              : open
-                ? `calc(100vw - ${drawerWidth}px)`
-                : "100vw",
+            sm: isHorizontal ? "100vw" : open ? `calc(100vw - ${drawerWidth}px)` : "100vw",
           },
           position: "sticky",
           top: 0,
-          left: {
-            xs: 0,
-            sm: isHorizontal ? 0 : open ? `${drawerWidth}px` : 0,
-          },
+          left: { xs: 0, sm: isHorizontal ? 0 : open ? `${drawerWidth}px` : 0 },
           zIndex: 1300,
         }}
       >
@@ -132,11 +125,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             }}
             sx={{
               position: "fixed",
-              left: open ? (collapsed ? 89 - 14 : 299 - 14) : -14, // Centrado en el borde: drawerWidth - mitad del ancho del botón (28px)
+              left: open ? (collapsed ? 75 : 285) : -14,
               top: { xs: 0, sm: 22 },
-              zIndex: 1300, // Por encima del sidebar
+              zIndex: 1300,
               width: 28,
               height: 28,
+              transition: "left 0.15s cubic-bezier(0.4, 0, 0.2, 1)",
               bgcolor: theme.palette.background.default,
               border:
                 theme.palette.mode === "light"
@@ -146,14 +140,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               "&:hover": {
                 bgcolor:
                   theme.palette.mode === "light"
-                    ? "rgba(0, 0, 0, 0.08)" // Gris más sólido
+                    ? "rgba(0, 0, 0, 0.08)"
                     : "rgba(255, 255, 255, 0.12)",
                 border:
                   theme.palette.mode === "light"
-                    ? "1px solid rgba(0, 0, 0, 0.08)" // Borde más visible en hover para que se integre mejor
+                    ? "1px solid rgba(0, 0, 0, 0.08)"
                     : "1px solid rgba(255, 255, 255, 0.12)",
               },
-              transition: "left 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
             }}
           >
             {open && !collapsed ? (
@@ -169,18 +162,15 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           sx={{
             flexGrow: 1,
             width: "100%",
-            marginLeft: {
-              xs: 0,
-              sm: isHorizontal ? 0 : open ? `${drawerWidth}px` : 0,
-            },
+            marginLeft: { xs: 0, sm: isHorizontal ? 0 : open ? `${drawerWidth}px` : 0 },
             display: "flex",
             flexDirection: "column",
             bgcolor: theme.palette.background.default,
             minWidth: 0,
             boxSizing: "border-box",
             overflowY: "auto",
-            paddingTop: { xs: "60px", sm: 0 },
-            transition: "margin-left 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+            paddingTop: { xs: "64px", sm: 0 },
+            transition: "margin-left 0.15s cubic-bezier(0.4, 0, 0.2, 1)",
           }}
         >
           <Box

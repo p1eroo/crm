@@ -209,8 +209,8 @@ const Header: React.FC = () => {
         alignItems: isHorizontal ? 'stretch' : 'center',
         justifyContent: 'flex-start',
         gap: isHorizontal ? 1 : 0,
-        height: isHorizontal ? 'auto' : { xs: 60, sm: 72 },
-        minHeight: isHorizontal ? 'auto' : { xs: 60, sm: 72 },
+        height: isHorizontal ? 'auto' : { xs: 64, sm: 77 },
+        minHeight: isHorizontal ? 'auto' : { xs: 64, sm: 77 },
         position: { xs: 'fixed', sm: 'sticky' },
         top: 0,
         left: { 
@@ -220,9 +220,7 @@ const Header: React.FC = () => {
         zIndex: { xs: 1400, sm: 1300 },
         marginLeft: 0,
         marginRight: 0,
-        borderBottom: isHorizontal 
-          ? `1px solid ${theme.palette.divider}` 
-          : { xs: `1px solid ${theme.palette.divider}`, sm: 'none' },
+        borderBottom: `1px solid ${theme.palette.divider}`,
         transition: 'all 0.3s ease', // Transición suave para todos los cambios
       }}
     >
@@ -267,12 +265,11 @@ const Header: React.FC = () => {
             <Button
               onClick={() => setSearchModalOpen(true)}
               sx={{
-                bgcolor: theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 255, 255, 0.05)' 
-                  : 'rgba(0, 0, 0, 0.02)',
-                borderRadius: '50px',
+                bgcolor: 'transparent',
+                borderRadius: 2.5,
                 px: 1.5,
-                py: 0.5,
+                py: 0.875,
+                minHeight: 44,
                 display: 'flex',
                 alignItems: 'center',
                 transition: 'all 0.2s ease',
@@ -283,15 +280,15 @@ const Header: React.FC = () => {
                 justifyContent: 'flex-start',
                 '&:hover': {
                   bgcolor: theme.palette.mode === 'dark' 
-                    ? 'rgba(255, 255, 255, 0.08)' 
-                    : 'rgba(0, 0, 0, 0.04)',
+                    ? 'rgba(255, 255, 255, 0.04)' 
+                    : 'rgba(0, 0, 0, 0.02)',
                   borderColor: taxiMonterricoColors.green,
                 },
               }}
             >
               <Search 
                 sx={{ 
-                  fontSize: 18,
+                  fontSize: 22,
                   color: '#7081b9',
                   mr: 1,
                 }} 
@@ -312,6 +309,7 @@ const Header: React.FC = () => {
                 sx={{
                   height: 20,
                   fontSize: '0.6875rem',
+                  borderRadius: 1,
                   bgcolor: theme.palette.mode === 'dark' 
                     ? 'rgba(255, 255, 255, 0.1)' 
                     : 'rgba(0, 0, 0, 0.05)',
@@ -536,12 +534,11 @@ const Header: React.FC = () => {
         <Button
           onClick={() => setSearchModalOpen(true)}
           sx={{
-            bgcolor: theme.palette.mode === 'dark' 
-              ? 'rgba(255, 255, 255, 0.05)' 
-              : 'rgba(0, 0, 0, 0.02)',
-            borderRadius: '50px',
+            bgcolor: 'transparent',
+            borderRadius: 2.5,
             px: 1.5,
-            py: 0.5,
+            py: 0.875,
+            minHeight: 44,
             display: 'flex',
             alignItems: 'center',
             transition: 'all 0.2s ease',
@@ -552,15 +549,15 @@ const Header: React.FC = () => {
             justifyContent: 'flex-start',
             '&:hover': {
               bgcolor: theme.palette.mode === 'dark' 
-                ? 'rgba(255, 255, 255, 0.08)' 
-                : 'rgba(0, 0, 0, 0.04)',
+                ? 'rgba(255, 255, 255, 0.04)' 
+                : 'rgba(0, 0, 0, 0.02)',
               borderColor: taxiMonterricoColors.green,
             },
           }}
         >
           <Search 
             sx={{ 
-              fontSize: 18,
+              fontSize: 22,
               color: '#7081b9',
               mr: 1,
             }} 
@@ -581,6 +578,7 @@ const Header: React.FC = () => {
             sx={{
               height: 20,
               fontSize: '0.6875rem',
+              borderRadius: 1,
               bgcolor: theme.palette.mode === 'dark' 
                 ? 'rgba(255, 255, 255, 0.1)' 
                 : 'rgba(0, 0, 0, 0.05)',

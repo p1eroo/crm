@@ -98,7 +98,7 @@ const adminMenuItems = [
           position: 'fixed',
           height: '100vh',
           top: 0,
-          transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          // Sin transición en width para evitar reflow cada frame (lag); solo se anima margin-left del contenido
         },
       }}
     >
@@ -174,7 +174,7 @@ const adminMenuItems = [
               onClick={() => navigate(item.path)}
               sx={{
               minHeight: collapsed ? 64 : 44,
-              borderRadius: 1,
+              borderRadius: 3,
               flexDirection: collapsed ? 'column' : 'row',
               justifyContent: collapsed ? 'center' : 'flex-start',
               alignItems: 'center',
@@ -188,6 +188,7 @@ const adminMenuItems = [
                     : `${taxiMonterricoColors.green}15`,
                   color: taxiMonterricoColors.greenLight,
                   boxShadow: 'none',
+                  ...(collapsed ? {} : { mx: 1, width: 'calc(100% - 16px)' }),
                   '&:hover': {
                     background: theme.palette.mode === 'dark' 
                       ? `${taxiMonterricoColors.greenDark}33` 
@@ -271,7 +272,7 @@ const adminMenuItems = [
             onClick={() => navigate('/users')}
             sx={{
               minHeight: collapsed ? 64 : 44,
-              borderRadius: 1,
+              borderRadius: 3,
               flexDirection: collapsed ? 'column' : 'row',
               justifyContent: collapsed ? 'center' : 'flex-start',
               alignItems: 'center',
@@ -286,6 +287,7 @@ const adminMenuItems = [
                   : '#5cdf9924',
                 color: taxiMonterricoColors.greenLight,
                 boxShadow: 'none',
+                ...(collapsed ? {} : { mx: 1, width: 'calc(100% - 16px)' }),
                 '&:hover': {
                   background: theme.palette.mode === 'dark' 
                     ? '#1a2e2a' 
@@ -378,7 +380,7 @@ const adminMenuItems = [
                   onClick={() => navigate(item.path)}
                   sx={{
                     minHeight: collapsed ? 64 : 44,
-                    borderRadius: 1,
+                    borderRadius: 3,
                     flexDirection: collapsed ? 'column' : 'row',
                     justifyContent: collapsed ? 'center' : 'flex-start',
                     alignItems: 'center',
@@ -393,6 +395,7 @@ const adminMenuItems = [
                         : '#5cdf9924',
                       color: taxiMonterricoColors.greenLight,
                       boxShadow: 'none',
+                      ...(collapsed ? {} : { mx: 1, width: 'calc(100% - 16px)' }),
                       '&:hover': {
                         background: theme.palette.mode === 'dark' 
                           ? '#1a2e2a' 

@@ -13,6 +13,7 @@ import Login from './pages/Login';
 import { taxiMonterricoColors } from './theme/colors';
 import { logWarn } from './utils/logger';
 import { NotificationProvider } from './context/NotificationContext';
+import { InactivityLogoutProvider } from './components/InactivityLogout/InactivityLogoutProvider';
 
 // Importar fuente Inter con todos los pesos necesarios
 import '@fontsource/inter/400.css';
@@ -320,6 +321,7 @@ const AppContent: React.FC = () => {
     <MUIThemeProvider theme={theme}>
       <CssBaseline />
       <Router>
+        {user ? <InactivityLogoutProvider /> : null}
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Rutas públicas - accesibles sin autenticación */}
