@@ -1239,7 +1239,7 @@ const Deals: React.FC = () => {
                         transform: 'translate(-50%, -50%)',
                         fontSize: '0.625rem',
                         fontWeight: 600,
-                        color: showVal > 40 ? 'common.white' : theme.palette.text.primary,
+                        color: showVal > 40 ? theme.palette.common.white : theme.palette.text.primary,
                         textShadow: showVal > 40 ? '0 0 1px rgba(0,0,0,0.5)' : 'none',
                         pointerEvents: 'none',
                       }}

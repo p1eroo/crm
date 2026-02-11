@@ -109,10 +109,10 @@ export const CompanyFormContent: React.FC<CompanyFormContentProps> = (props) => 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 4, rowGap: 0.5, alignItems: 'start' }}>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
           RUC <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
         </Typography>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>Razón social</Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>Razón social</Typography>
         <Box sx={{ minWidth: 0 }}>
           <TextField
             size="small"
@@ -141,42 +141,42 @@ export const CompanyFormContent: React.FC<CompanyFormContentProps> = (props) => 
         <Box sx={{ minWidth: 0 }}>
           <TextField size="small" value={formData.companyname} onChange={onCompanyNameChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
         </Box>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>
           Nombre comercial <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
         </Typography>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Teléfono</Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Teléfono</Typography>
         <Box sx={{ minWidth: 0 }}>
           <TextField size="small" value={formData.name} onChange={(e) => onNameChange(e, formData)} error={!!nameError} helperText={nameError} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
         </Box>
         <Box sx={{ minWidth: 0 }}>
           <TextField size="small" value={formData.phone} onChange={onPhoneChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
         </Box>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Distrito</Typography>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Provincia</Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Distrito</Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Provincia</Typography>
         <Box sx={{ minWidth: 0 }}>
           <TextField size="small" value={formData.city} onChange={onCityChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
         </Box>
         <Box sx={{ minWidth: 0 }}>
           <TextField size="small" value={formData.state} onChange={onStateChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
         </Box>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Departamento</Typography>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Dirección</Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Departamento</Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Dirección</Typography>
         <Box sx={{ minWidth: 0 }}>
           <TextField size="small" value={formData.country} onChange={onCountryChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
         </Box>
         <Box sx={{ minWidth: 0 }}>
           <TextField size="small" value={formData.address} onChange={onAddressChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
         </Box>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Dominio</Typography>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>LinkedIn</Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Dominio</Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>LinkedIn</Typography>
         <Box sx={{ minWidth: 0 }}>
           <TextField size="small" value={formData.domain} onChange={onDomainChange} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
         </Box>
         <Box sx={{ minWidth: 0 }}>
           <TextField size="small" value={formData.linkedin} onChange={(e) => onFormDataChange({ linkedin: e.target.value })} placeholder="https://www.linkedin.com/company/..." fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
         </Box>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Correo</Typography>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Origen de lead</Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Correo</Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Origen de lead</Typography>
         <Box sx={{ minWidth: 0 }}>
           <TextField size="small" type="email" value={formData.email} onChange={(e) => onFormDataChange({ email: e.target.value })} fullWidth inputProps={{ style: { fontSize: '1rem' } }} InputProps={{ sx: { '& input': { py: 1.05 } } }} />
         </Box>
@@ -199,8 +199,8 @@ export const CompanyFormContent: React.FC<CompanyFormContentProps> = (props) => 
             <MenuItem value="masivo">Masivo</MenuItem>
           </TextField>
         </Box>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Etapa del Ciclo de Vida</Typography>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Facturación</Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Etapa del Ciclo de Vida</Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Facturación</Typography>
         <Box sx={{ minWidth: 0 }}>
           <TextField
             select
@@ -241,8 +241,8 @@ export const CompanyFormContent: React.FC<CompanyFormContentProps> = (props) => 
         </Box>
         {(user?.role === 'admin' || user?.role === 'jefe_comercial') ? (
           <>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Propietario</Typography>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Cliente Recuperado</Typography>
+            <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Propietario</Typography>
+            <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5 }}>Cliente Recuperado</Typography>
             <Box sx={{ minWidth: 0 }}>
               <TextField
                 select
@@ -278,7 +278,7 @@ export const CompanyFormContent: React.FC<CompanyFormContentProps> = (props) => 
           </>
         ) : (
           <>
-            <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5, gridColumn: '1 / -1' }}>Cliente Recuperado</Typography>
+            <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 1.5, gridColumn: '1 / -1' }}>Cliente Recuperado</Typography>
             <Box sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
               <TextField
                 select

@@ -1951,8 +1951,8 @@ const Tasks: React.FC = () => {
                   alignItems: 'start',
                 }}
               >
-                <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>Título <Typography component="span" sx={{ color: 'error.main' }}>*</Typography></Typography>
-                <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>Fecha de inicio</Typography>
+                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>Título <Typography component="span" sx={{ color: 'error.main' }}>*</Typography></Typography>
+                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>Fecha de inicio</Typography>
                 <Box sx={{ minWidth: 0 }}>
                   <TextField
                     size="small"
@@ -2007,8 +2007,8 @@ const Tasks: React.FC = () => {
                     }}
                   />
                 </Box>
-                <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Hora estimada</Typography>
-                <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Fecha Límite</Typography>
+                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Hora estimada</Typography>
+                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Fecha Límite</Typography>
                 <Box sx={{ minWidth: 0 }}>
                   <TextField
                     size="small"
@@ -2062,8 +2062,8 @@ const Tasks: React.FC = () => {
                     }}
                   />
                 </Box>
-                <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Estado</Typography>
-                <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Prioridad</Typography>
+                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Estado</Typography>
+                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Prioridad</Typography>
                 <Box sx={{ minWidth: 0 }}>
                   <TextField
                     select
@@ -2138,8 +2138,8 @@ const Tasks: React.FC = () => {
                     <MenuItem value="high">Alta</MenuItem>
                   </TextField>
                 </Box>
-                <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Empresa</Typography>
-                <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Contacto</Typography>
+                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Empresa</Typography>
+                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Contacto</Typography>
                 <Box sx={{ minWidth: 0 }}>
                   {(editingTask || linkedTaskLockCompanyContact) && formData.companyId ? (
                     <TextField
@@ -2322,7 +2322,7 @@ const Tasks: React.FC = () => {
                 </Box>
                 {users.length > 0 && (
                   <>
-                    <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Asignado a</Typography>
+                    <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Asignado a</Typography>
                     <Box />
                     <Box sx={{ minWidth: 0 }}>
                       <TextField
@@ -2366,7 +2366,7 @@ const Tasks: React.FC = () => {
                     <Box />
                   </>
                 )}
-                <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>Descripción</Typography>
+                <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>Descripción</Typography>
                 <Box sx={{ gridColumn: '1 / -1', minWidth: 0 }}>
                   <TextField
                     multiline

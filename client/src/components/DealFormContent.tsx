@@ -146,10 +146,10 @@ export const DealFormContent: React.FC<DealFormContentProps> = (props) => {
           alignItems: 'start',
         }}
       >
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
           Nombre <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
         </Typography>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
           Monto <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
         </Typography>
         <Box sx={{ minWidth: 0 }}>
@@ -177,8 +177,8 @@ export const DealFormContent: React.FC<DealFormContentProps> = (props) => {
             InputProps={{ sx: { '& input': { py: 1.05 } } }}
           />
         </Box>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Etapa</Typography>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Fecha de Cierre</Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Etapa</Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Fecha de Cierre</Typography>
         <Box sx={{ minWidth: 0 }}>
           <TextField
             select
@@ -211,8 +211,8 @@ export const DealFormContent: React.FC<DealFormContentProps> = (props) => {
             InputProps={{ sx: { '& input': { py: 1.05 } } }}
           />
         </Box>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Prioridad</Typography>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Empresa</Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Prioridad</Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Empresa</Typography>
         <Box sx={{ minWidth: 0 }}>
           <TextField
             select
@@ -350,7 +350,7 @@ export const DealFormContent: React.FC<DealFormContentProps> = (props) => {
             />
           )}
         </Box>
-        <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Contacto</Typography>
+        <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Contacto</Typography>
         <Box />
         <Box sx={{ minWidth: 0 }}>
           {useSimpleSelect ? (

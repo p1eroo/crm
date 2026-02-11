@@ -1529,10 +1529,10 @@ const ContactDetail: React.FC = () => {
                     alignItems: 'start',
                   }}
                 >
-                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
                     Nombre <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
                   </Typography>
-                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5 }}>
                     Apellido <Typography component="span" sx={{ color: 'error.main' }}>*</Typography>
                   </Typography>
                   <Box sx={{ minWidth: 0 }}>
@@ -1559,7 +1559,7 @@ const ContactDetail: React.FC = () => {
                       InputProps={{ sx: { '& input': { py: 1.05 } } }}
                     />
                   </Box>
-                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>Correo</Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>Correo</Typography>
                   <Box sx={{ minWidth: 0, gridColumn: '1 / -1' }}>
                     <TextField
                       size="small"
@@ -1572,8 +1572,8 @@ const ContactDetail: React.FC = () => {
                       InputProps={{ sx: { '& input': { py: 1.05 } } }}
                     />
                   </Box>
-                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Teléfono</Typography>
-                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Móvil</Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Teléfono</Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Móvil</Typography>
                   <Box sx={{ minWidth: 0 }}>
                     <TextField
                       size="small"
@@ -1596,7 +1596,7 @@ const ContactDetail: React.FC = () => {
                       InputProps={{ sx: { '& input': { py: 1.05 } } }}
                     />
                   </Box>
-                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>Cargo</Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>Cargo</Typography>
                   <Box sx={{ minWidth: 0, gridColumn: '1 / -1' }}>
                     <TextField
                       size="small"
@@ -1608,7 +1608,7 @@ const ContactDetail: React.FC = () => {
                       InputProps={{ sx: { '& input': { py: 1.05 } } }}
                     />
                   </Box>
-                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>Dirección</Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>Dirección</Typography>
                   <Box sx={{ minWidth: 0, gridColumn: '1 / -1' }}>
                     <TextField
                       size="small"
@@ -1621,8 +1621,8 @@ const ContactDetail: React.FC = () => {
                       inputProps={{ style: { fontSize: '1rem' } }}
                     />
                   </Box>
-                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Ciudad</Typography>
-                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Estado/Provincia</Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Ciudad</Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Estado/Provincia</Typography>
                   <Box sx={{ minWidth: 0 }}>
                     <TextField
                       size="small"
@@ -1645,8 +1645,8 @@ const ContactDetail: React.FC = () => {
                       InputProps={{ sx: { '& input': { py: 1.05 } } }}
                     />
                   </Box>
-                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>País</Typography>
-                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Código Postal</Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>País</Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Código Postal</Typography>
                   <Box sx={{ minWidth: 0 }}>
                     <TextField
                       size="small"
@@ -1669,7 +1669,7 @@ const ContactDetail: React.FC = () => {
                       InputProps={{ sx: { '& input': { py: 1.05 } } }}
                     />
                   </Box>
-                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>Sitio Web</Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>Sitio Web</Typography>
                   <Box sx={{ minWidth: 0, gridColumn: '1 / -1' }}>
                     <TextField
                       size="small"
@@ -1681,8 +1681,8 @@ const ContactDetail: React.FC = () => {
                       InputProps={{ sx: { '& input': { py: 1.05 } } }}
                     />
                   </Box>
-                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>LinkedIn</Typography>
-                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Facebook</Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>LinkedIn</Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Facebook</Typography>
                   <Box sx={{ minWidth: 0 }}>
                     <TextField
                       size="small"
@@ -1705,8 +1705,8 @@ const ContactDetail: React.FC = () => {
                       InputProps={{ sx: { '& input': { py: 1.05 } } }}
                     />
                   </Box>
-                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Twitter</Typography>
-                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>GitHub</Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>Twitter</Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3 }}>GitHub</Typography>
                   <Box sx={{ minWidth: 0 }}>
                     <TextField
                       size="small"
@@ -1729,7 +1729,7 @@ const ContactDetail: React.FC = () => {
                       InputProps={{ sx: { '& input': { py: 1.05 } } }}
                     />
                   </Box>
-                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>YouTube</Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>YouTube</Typography>
                   <Box sx={{ minWidth: 0, gridColumn: '1 / -1' }}>
                     <TextField
                       size="small"
@@ -1741,7 +1741,7 @@ const ContactDetail: React.FC = () => {
                       InputProps={{ sx: { '& input': { py: 1.05 } } }}
                     />
                   </Box>
-                  <Typography variant="body2" sx={{ color: 'common.white', fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>Etapa del Ciclo de Vida</Typography>
+                  <Typography variant="body2" sx={{ color: theme.palette.text.primary, fontWeight: 600, fontSize: '0.8125rem', lineHeight: 1.5, mt: 3, gridColumn: '1 / -1' }}>Etapa del Ciclo de Vida</Typography>
                   <Box sx={{ minWidth: 0, gridColumn: '1 / -1' }}>
                     <TextField
                       select
